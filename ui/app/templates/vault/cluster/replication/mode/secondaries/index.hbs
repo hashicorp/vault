@@ -31,9 +31,9 @@
                     {{/if}}
                     {{#if (eq replicationMode 'performance')}}
                       <li class="action">
-                        <a href={{href-to 'vault.cluster.replication.mode.secondaries.config-show' model.name replicationMode secondary}} data-test-replication-mount-filter-link=true>
+                        {{#link-to "vault.cluster.replication.mode.secondaries.config-show" model.name replicationMode secondary data-test-replication-mount-filter-link=true}}
                           Mount filter config
-                        </a>
+                        {{/link-to}}
                       </li>
                     {{/if}}
                   </ul>

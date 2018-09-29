@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import { assert } from '@ember/debug';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const { assert, computed } = Ember;
 export default DS.Model.extend({
   formFields: computed(function() {
     return assert('formFields should be overridden', false);

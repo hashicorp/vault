@@ -13,7 +13,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 const (

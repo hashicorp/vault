@@ -39,7 +39,7 @@ Vault will delegate the authentication to the auth method.
 access to paths in Vault. Policies are written in HCL in your editor of
 preference and saved to disk.
 
-1. The policy's contents are uploaded and store in Vault and referenced by name.
+1. The policy's contents are uploaded and stored in Vault and referenced by name.
 You can think of the policy's name as a pointer or symlink to its set of rules.
 
 1. Most importantly, the security team maps data in the auth method to a policy.
@@ -158,8 +158,7 @@ capabilities, which controls a token's access to credentials in Vault.
 an exact match or the longest-prefix match of a glob. This means if you define a
 policy for `"secret/foo*"`, the policy would also match `"secret/foobar"`.
 
-!> The glob character is only supported as the **last character of the path**,
-and **is not a regular expression**!
+!> The glob character referred to in this documentation is the asterisk (`*`). It *is not a regular expression* and is only supported **as the last character of the path**!
 
 When providing `list` capability, it is important to note that since listing
 always operates on a prefix, policies must operate on a prefix because Vault
@@ -225,6 +224,60 @@ action taken. This can be a common source of confusion. Generating database
 credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
 credentials, the policy would grant `read` access on the appropriate path.
+
+## Templated Policies
+
+The policy syntax allows for doing variable replacement in some policy strings
+with values available to the token. Currently `identity` information can be
+injected, and currently the `path` keys in policies allow injection.
+
+### Parameters
+
+|                                    Name                                |                                    Description                               |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------------------- |
+| `identity.entity.id`                                                   | The entity's ID                                                              |
+| `identity.entity.name`                                                 | The entity's name                                                            |
+| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                        |
+| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                          |
+| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                        |
+| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
+| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
+| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
+| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                                        |
+| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                                        |
+
+### Examples
+
+The following policy creates a section of the KVv2 Secret Engine to a specific user
+
+```ruby
+path "secret/data/{{identity.entity.id}}/*" {
+  capabilities = ["create", "update", "read", "delete"]
+}
+
+path "secret/metadata/{{identity.entity.id}}/*" {
+  capabilities = ["list"]
+}
+```
+
+If you wanted to create a shared section of KV that is associated with entities that are in a
+group.
+
+```ruby
+# In the example below, the group ID maps a group and the path 
+path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
+  capabilities = ["create", "update", "read", "delete"]
+}
+
+path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
+  capabilities = ["list"]
+}
+```
+
+ ~> When developing templated policies, use IDs wherever possible. Each ID is
+ unique to the user, whereas names can change over time and can be reused. This
+ ensures that if a given user or group name is changed, the policy will be
+ mapped to the intended entity or group.
 
 ## Fine-Grained Control
 

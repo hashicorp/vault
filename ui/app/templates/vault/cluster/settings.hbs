@@ -10,11 +10,26 @@
         Auth Methods
       {{/link-to}}
     </li>
-    <li>
-      {{#link-to "vault.cluster.settings.seal"}}
-        Seal
+     <li>
+      {{#link-to "vault.cluster.settings.control-groups" data-test-link=true}}
+        Control Groups
+
+        {{#unless (has-feature "Control Groups")}}
+          {{#if (is-version "OSS")}}
+            {{edition-badge edition="Enterprise"}}
+          {{else}}
+            {{edition-badge edition="Premium"}}
+          {{/if}}
+        {{/unless}}
       {{/link-to}}
     </li>
+    {{#if namespaceService.inRootNamespace}}
+      <li>
+        {{#link-to "vault.cluster.settings.seal"}}
+          Seal
+        {{/link-to}}
+      </li>
+    {{/if}}
   {{/menu-sidebar}}
   <div class="column is-9">
     {{outlet}}

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,7 @@ type PullRequest struct {
 	UpdatedAt           *time.Time `json:"updated_at,omitempty"`
 	ClosedAt            *time.Time `json:"closed_at,omitempty"`
 	MergedAt            *time.Time `json:"merged_at,omitempty"`
+	Labels              []*Label   `json:"labels,omitempty"`
 	User                *User      `json:"user,omitempty"`
 	Merged              *bool      `json:"merged,omitempty"`
 	Mergeable           *bool      `json:"mergeable,omitempty"`
@@ -46,6 +48,8 @@ type PullRequest struct {
 	StatusesURL         *string    `json:"statuses_url,omitempty"`
 	DiffURL             *string    `json:"diff_url,omitempty"`
 	PatchURL            *string    `json:"patch_url,omitempty"`
+	CommitsURL          *string    `json:"commits_url,omitempty"`
+	CommentsURL         *string    `json:"comments_url,omitempty"`
 	ReviewCommentsURL   *string    `json:"review_comments_url,omitempty"`
 	ReviewCommentURL    *string    `json:"review_comment_url,omitempty"`
 	Assignee            *User      `json:"assignee,omitempty"`
@@ -54,6 +58,7 @@ type PullRequest struct {
 	MaintainerCanModify *bool      `json:"maintainer_can_modify,omitempty"`
 	AuthorAssociation   *string    `json:"author_association,omitempty"`
 	NodeID              *string    `json:"node_id,omitempty"`
+	RequestedReviewers  []*User    `json:"requested_reviewers,omitempty"`
 
 	Head *PullRequestBranch `json:"head,omitempty"`
 	Base *PullRequestBranch `json:"base,omitempty"`
@@ -114,7 +119,8 @@ func (s *PullRequestsService) List(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var pulls []*PullRequest
 	resp, err := s.client.Do(ctx, req, &pulls)
@@ -136,7 +142,8 @@ func (s *PullRequestsService) Get(ctx context.Context, owner string, repo string
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	pull := new(PullRequest)
 	resp, err := s.client.Do(ctx, req, pull)
@@ -194,7 +201,8 @@ func (s *PullRequestsService) Create(ctx context.Context, owner string, repo str
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	p := new(PullRequest)
 	resp, err := s.client.Do(ctx, req, p)
@@ -243,7 +251,8 @@ func (s *PullRequestsService) Edit(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
+	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	p := new(PullRequest)
 	resp, err := s.client.Do(ctx, req, p)

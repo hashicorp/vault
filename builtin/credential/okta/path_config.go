@@ -153,12 +153,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	token, ok := d.GetOk("api_token")
 	if ok {
 		cfg.Token = token.(string)
-	}
-	if cfg.Token == "" {
-		token, ok = d.GetOk("token")
-		if ok {
-			cfg.Token = token.(string)
-		}
+	} else if token, ok = d.GetOk("token"); ok {
+		cfg.Token = token.(string)
 	}
 
 	baseURLRaw, ok := d.GetOk("base_url")

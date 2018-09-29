@@ -1,11 +1,11 @@
+import { hash, resolve } from 'rsvp';
+import { capitalize } from '@ember/string';
+import { set } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
-import Ember from 'ember';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
-
-  defaultSerializer: 'config',
 
   urlFor(backend, section) {
     const urls = {
@@ -18,7 +18,7 @@ export default ApplicationAdapter.extend({
 
   createOrUpdate(store, type, snapshot) {
     const url = this.urlFor(snapshot.record.get('backend'), snapshot.adapterOptions.method);
-    const serializer = store.serializerFor(this.get('defaultSerializer'));
+    const serializer = store.serializerFor(type.modelName);
     if (!url) {
       return;
     }
@@ -31,7 +31,11 @@ export default ApplicationAdapter.extend({
       }
       return data;
     }, {});
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then(resp => {
+      let response = resp || {};
+      response.id = `${snapshot.record.get('backend')}-${snapshot.adapterOptions.method}`;
+      return response;
+    });
   },
 
   createRecord() {
@@ -46,10 +50,10 @@ export default ApplicationAdapter.extend({
     const sections = ['cert', 'urls', 'crl', 'tidy'];
     if (!section || !sections.includes(section)) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
-    return this[`fetch${Ember.String.capitalize(section)}`](backendPath);
+    return this[`fetch${capitalize(section)}`](backendPath);
   },
 
   id(backendPath) {
@@ -62,12 +66,12 @@ export default ApplicationAdapter.extend({
     const pemURL = `${derURL}/pem`;
     const chainURL = `${derURL}_chain`;
 
-    return Ember.RSVP.hash({
+    return hash({
       backend: backendPath,
       id: this.id(backendPath),
-      der: this.rawRequest(derURL, { unauthenticate: true }).then(response => response.blob()),
-      pem: this.rawRequest(pemURL, { unauthenticate: true }).then(response => response.text()),
-      ca_chain: this.rawRequest(chainURL, { unauthenticate: true }).then(response => response.text()),
+      der: this.rawRequest(derURL, 'GET', { unauthenticated: true }).then(response => response.blob()),
+      pem: this.rawRequest(pemURL, 'GET', { unauthenticated: true }).then(response => response.text()),
+      ca_chain: this.rawRequest(chainURL, 'GET', { unauthenticated: true }).then(response => response.text()),
     });
   },
 
@@ -82,7 +86,7 @@ export default ApplicationAdapter.extend({
       })
       .catch(e => {
         if (e.httpStatus === 404) {
-          return Ember.RSVP.resolve({ id });
+          return resolve({ id });
         } else {
           throw e;
         }
@@ -109,7 +113,7 @@ export default ApplicationAdapter.extend({
 
   fetchTidy(backendPath) {
     const id = this.id(backendPath);
-    return Ember.RSVP.resolve({ id, backend: backendPath });
+    return resolve({ id, backend: backendPath });
   },
 
   queryRecord(store, type, query) {

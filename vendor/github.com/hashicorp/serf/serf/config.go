@@ -55,6 +55,13 @@ type Config struct {
 	// set, a timeout of 5 seconds will be set.
 	BroadcastTimeout time.Duration
 
+	// LeavePropagateDelay is for our leave (node dead) message to propagate
+	// through the cluster. In particular, we want to stay up long enough to
+	// service any probes from other nodes before they learn about us
+	// leaving and stop probing. Otherwise, we risk getting node failures as
+	// we leave.
+	LeavePropagateDelay time.Duration
+
 	// The settings below relate to Serf's event coalescence feature. Serf
 	// is able to coalesce multiple events into single events in order to
 	// reduce the amount of noise that is sent along the EventCh. For example
@@ -255,6 +262,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		NodeName:                     hostname,
 		BroadcastTimeout:             5 * time.Second,
+		LeavePropagateDelay:          1 * time.Second,
 		EventBuffer:                  512,
 		QueryBuffer:                  512,
 		LogOutput:                    os.Stderr,

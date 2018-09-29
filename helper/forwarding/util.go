@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -36,7 +39,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 		newBody, err = jsonutil.EncodeJSON(fq)
 	case "json_compress":
 		newBody, err = jsonutil.EncodeJSONAndCompress(fq, &compressutil.CompressionConfig{
-			Type: compressutil.CompressionTypeLzw,
+			Type: compressutil.CompressionTypeLZW,
 		})
 	case "proto3":
 		fallthrough
@@ -56,11 +59,30 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 }
 
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
+	var reader io.Reader = req.Body
+	ctx := req.Context()
+	maxRequestSize := ctx.Value("max_request_size")
+	if maxRequestSize != nil {
+		max, ok := maxRequestSize.(int64)
+		if !ok {
+			return nil, errors.New("could not parse max_request_size from request context")
+		}
+		if max > 0 {
+			reader = io.LimitReader(req.Body, max)
+		}
+	}
+
+	body, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
 	fq := Request{
 		Method:        req.Method,
 		HeaderEntries: make(map[string]*HeaderEntry, len(req.Header)),
 		Host:          req.Host,
 		RemoteAddr:    req.RemoteAddr,
+		Body:          body,
 	}
 
 	reqURL := req.URL
@@ -79,13 +101,6 @@ func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 			Values: v,
 		}
 	}
-
-	buf := bytes.NewBuffer(nil)
-	_, err := buf.ReadFrom(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	fq.Body = buf.Bytes()
 
 	if req.TLS != nil && req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
 		fq.PeerCertificates = make([][]byte, len(req.TLS.PeerCertificates))

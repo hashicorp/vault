@@ -491,6 +491,11 @@ specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
+				"token_bound_cidrs": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
@@ -595,6 +600,11 @@ formatted string containing metadata in key value pairs.`,
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
+				},
+				"token_bound_cidrs": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1222,6 +1232,7 @@ func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
 		"last_updated_time":  entry.LastUpdatedTime,
 		"metadata":           entry.Metadata,
 		"cidr_list":          entry.CIDRList,
+		"token_bound_cidrs":  entry.TokenBoundCIDRs,
 	}
 }
 
@@ -2278,9 +2289,23 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
 		}
 	}
-
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
 	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.SecretIDBoundCIDRs); err != nil {
+		return nil, err
+	}
+
+	secretIDTokenCIDRs := data.Get("token_bound_cidrs").([]string)
+	if len(secretIDTokenCIDRs) != 0 {
+		valid, err := cidrutil.ValidateCIDRListSlice(secretIDTokenCIDRs)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to validate token CIDR blocks: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate token CIDR blocks"), nil
+		}
+	}
+	// Ensure that the token CIDRs on the secret ID are a subset of that of role's
+	if err := verifyCIDRRoleSecretIDSubset(secretIDTokenCIDRs, role.TokenBoundCIDRs); err != nil {
 		return nil, err
 	}
 
@@ -2289,6 +2314,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		SecretIDTTL:     role.SecretIDTTL,
 		Metadata:        make(map[string]string),
 		CIDRList:        secretIDCIDRs,
+		TokenBoundCIDRs: secretIDTokenCIDRs,
 	}
 
 	if err = strutil.ParseArbitraryKeyValues(data.Get("metadata").(string), secretIDStorage.Metadata, ","); err != nil {

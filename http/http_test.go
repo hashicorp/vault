@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -68,7 +69,7 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 	req.Header.Set("Content-Type", "application/json")
 
 	if len(token) != 0 {
-		req.Header.Set("X-Vault-Token", token)
+		req.Header.Set(consts.AuthHeaderName, token)
 	}
 
 	client := cleanhttp.DefaultClient()
@@ -89,8 +90,8 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 			return nil
 		}
 		// mutate the subsequent redirect requests with the first Header
-		if token := via[0].Header.Get("X-Vault-Token"); len(token) != 0 {
-			req.Header.Set("X-Vault-Token", token)
+		if token := via[0].Header.Get(consts.AuthHeaderName); len(token) != 0 {
+			req.Header.Set(consts.AuthHeaderName, token)
 		}
 		return nil
 	}

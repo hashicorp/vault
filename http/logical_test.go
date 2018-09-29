@@ -15,7 +15,9 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
@@ -261,14 +263,16 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 
 	// Write a very large object, should fail
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
-		"data": make([]byte, MaxRequestSize),
+		"data": make([]byte, DefaultMaxRequestSize),
 	})
 	testResponseStatus(t, resp, 413)
 }
 
 func TestLogical_ListSuffix(t *testing.T) {
-	core, _, _ := vault.TestCoreUnsealed(t)
+	core, _, rootToken := vault.TestCoreUnsealed(t)
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
+	req = req.WithContext(namespace.RootContext(nil))
+	req.Header.Add(consts.AuthHeaderName, rootToken)
 	lreq, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -281,6 +285,8 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
+	req = req.WithContext(namespace.RootContext(nil))
+	req.Header.Add(consts.AuthHeaderName, rootToken)
 	lreq, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -293,6 +299,8 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
+	req = req.WithContext(namespace.RootContext(nil))
+	req.Header.Add(consts.AuthHeaderName, rootToken)
 	lreq, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -318,7 +326,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, nil, false, resp404)
+	respondLogical(w, nil, nil, resp404, false)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)

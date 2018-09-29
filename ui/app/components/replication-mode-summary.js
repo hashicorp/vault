@@ -1,6 +1,7 @@
-import Ember from 'ember';
-import { hrefTo } from 'vault/helpers/href-to';
-const { computed, get, getProperties } = Ember;
+import { inject as service } from '@ember/service';
+import { equal } from '@ember/object/computed';
+import { getProperties, get, computed } from '@ember/object';
+import Component from '@ember/component';
 
 const replicationAttr = function(attr) {
   return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
@@ -8,13 +9,14 @@ const replicationAttr = function(attr) {
     return get(cluster, `${mode}.${attr}`);
   });
 };
-export default Ember.Component.extend({
-  version: Ember.inject.service(),
-  classNames: ['level', 'box-label'],
-  classNameBindings: ['isMenu:is-mobile'],
+export default Component.extend({
+  version: service(),
+  router: service(),
+  namespace: service(),
+  classNameBindings: ['isMenu::box', 'isMenu::level'],
   attributeBindings: ['href', 'target'],
   display: 'banner',
-  isMenu: computed.equal('display', 'menu'),
+  isMenu: equal('display', 'menu'),
   href: computed('display', 'mode', 'replicationEnabled', 'version.hasPerfReplication', function() {
     const display = this.get('display');
     const mode = this.get('mode');
@@ -22,7 +24,11 @@ export default Ember.Component.extend({
       return 'https://www.hashicorp.com/products/vault';
     }
     if (this.get('replicationEnabled') || display === 'menu') {
-      return hrefTo(this, 'vault.cluster.replication.mode.index', this.get('cluster.name'), mode);
+      return this.get('router').urlFor(
+        'vault.cluster.replication.mode.index',
+        this.get('cluster.name'),
+        mode
+      );
     }
     return null;
   }),
@@ -32,9 +38,10 @@ export default Ember.Component.extend({
     }
     return null;
   }),
-  isPerformance: computed.equal('mode', 'performance'),
+  internalLink: false,
+  isPerformance: equal('mode', 'performance'),
   replicationEnabled: replicationAttr('replicationEnabled'),
-  replicationUnsupported: computed.equal('cluster.mode', 'unsupported'),
+  replicationUnsupported: equal('cluster.mode', 'unsupported'),
   replicationDisabled: replicationAttr('replicationDisabled'),
   syncProgressPercent: replicationAttr('syncProgressPercent'),
   syncProgress: replicationAttr('syncProgress'),

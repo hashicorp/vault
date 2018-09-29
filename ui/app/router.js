@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import EmberRouter from '@ember/routing/router';
 import config from './config/environment';
 
-const Router = Ember.Router.extend({
+const Router = EmberRouter.extend({
   location: config.locationType,
   rootURL: config.rootURL,
 });
@@ -28,10 +28,11 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
+        this.route('control-groups');
       });
       this.route('unseal');
       this.route('tools', function() {
-        this.route('tool', { path: '/:selectedAction' });
+        this.route('tool', { path: '/:selected_action' });
       });
       this.route('access', function() {
         this.route('methods', { path: '/' });
@@ -62,6 +63,12 @@ Router.map(function() {
             this.route('edit', { path: '/edit/:item_alias_id' });
             this.route('show', { path: '/:item_alias_id/:section' });
           });
+        });
+        this.route('control-groups');
+        this.route('control-group-accessor', { path: '/control-groups/:accessor' });
+        this.route('namespaces', function() {
+          this.route('index', { path: '/' });
+          this.route('create');
         });
       });
       this.route('secrets', function() {

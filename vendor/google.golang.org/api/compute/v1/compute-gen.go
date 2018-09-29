@@ -94,6 +94,7 @@ func New(client *http.Client) (*Service, error) {
 	s.InterconnectAttachments = NewInterconnectAttachmentsService(s)
 	s.InterconnectLocations = NewInterconnectLocationsService(s)
 	s.Interconnects = NewInterconnectsService(s)
+	s.LicenseCodes = NewLicenseCodesService(s)
 	s.Licenses = NewLicensesService(s)
 	s.MachineTypes = NewMachineTypesService(s)
 	s.Networks = NewNetworksService(s)
@@ -101,6 +102,8 @@ func New(client *http.Client) (*Service, error) {
 	s.RegionAutoscalers = NewRegionAutoscalersService(s)
 	s.RegionBackendServices = NewRegionBackendServicesService(s)
 	s.RegionCommitments = NewRegionCommitmentsService(s)
+	s.RegionDiskTypes = NewRegionDiskTypesService(s)
+	s.RegionDisks = NewRegionDisksService(s)
 	s.RegionInstanceGroupManagers = NewRegionInstanceGroupManagersService(s)
 	s.RegionInstanceGroups = NewRegionInstanceGroupsService(s)
 	s.RegionOperations = NewRegionOperationsService(s)
@@ -109,6 +112,7 @@ func New(client *http.Client) (*Service, error) {
 	s.Routes = NewRoutesService(s)
 	s.Snapshots = NewSnapshotsService(s)
 	s.SslCertificates = NewSslCertificatesService(s)
+	s.SslPolicies = NewSslPoliciesService(s)
 	s.Subnetworks = NewSubnetworksService(s)
 	s.TargetHttpProxies = NewTargetHttpProxiesService(s)
 	s.TargetHttpsProxies = NewTargetHttpsProxiesService(s)
@@ -175,6 +179,8 @@ type Service struct {
 
 	Interconnects *InterconnectsService
 
+	LicenseCodes *LicenseCodesService
+
 	Licenses *LicensesService
 
 	MachineTypes *MachineTypesService
@@ -188,6 +194,10 @@ type Service struct {
 	RegionBackendServices *RegionBackendServicesService
 
 	RegionCommitments *RegionCommitmentsService
+
+	RegionDiskTypes *RegionDiskTypesService
+
+	RegionDisks *RegionDisksService
 
 	RegionInstanceGroupManagers *RegionInstanceGroupManagersService
 
@@ -204,6 +214,8 @@ type Service struct {
 	Snapshots *SnapshotsService
 
 	SslCertificates *SslCertificatesService
+
+	SslPolicies *SslPoliciesService
 
 	Subnetworks *SubnetworksService
 
@@ -444,6 +456,15 @@ type InterconnectsService struct {
 	s *Service
 }
 
+func NewLicenseCodesService(s *Service) *LicenseCodesService {
+	rs := &LicenseCodesService{s: s}
+	return rs
+}
+
+type LicenseCodesService struct {
+	s *Service
+}
+
 func NewLicensesService(s *Service) *LicensesService {
 	rs := &LicensesService{s: s}
 	return rs
@@ -504,6 +525,24 @@ func NewRegionCommitmentsService(s *Service) *RegionCommitmentsService {
 }
 
 type RegionCommitmentsService struct {
+	s *Service
+}
+
+func NewRegionDiskTypesService(s *Service) *RegionDiskTypesService {
+	rs := &RegionDiskTypesService{s: s}
+	return rs
+}
+
+type RegionDiskTypesService struct {
+	s *Service
+}
+
+func NewRegionDisksService(s *Service) *RegionDisksService {
+	rs := &RegionDisksService{s: s}
+	return rs
+}
+
+type RegionDisksService struct {
 	s *Service
 }
 
@@ -576,6 +615,15 @@ func NewSslCertificatesService(s *Service) *SslCertificatesService {
 }
 
 type SslCertificatesService struct {
+	s *Service
+}
+
+func NewSslPoliciesService(s *Service) *SslPoliciesService {
+	rs := &SslPoliciesService{s: s}
+	return rs
+}
+
+type SslPoliciesService struct {
 	s *Service
 }
 
@@ -1104,7 +1152,7 @@ func (s *AcceleratorTypeListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type AcceleratorTypesScopedList struct {
-	// AcceleratorTypes: [Output Only] List of accelerator types contained
+	// AcceleratorTypes: [Output Only] A list of accelerator types contained
 	// in this scope.
 	AcceleratorTypes []*AcceleratorType `json:"acceleratorTypes,omitempty"`
 
@@ -1341,7 +1389,7 @@ type Address struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -1365,6 +1413,7 @@ type Address struct {
 	// Possible values:
 	//   "IN_USE"
 	//   "RESERVED"
+	//   "RESERVING"
 	Status string `json:"status,omitempty"`
 
 	// Subnetwork: The URL of the subnetwork in which to reserve the
@@ -1715,7 +1764,7 @@ func (s *AddressListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type AddressesScopedList struct {
-	// Addresses: [Output Only] List of addresses contained in this scope.
+	// Addresses: [Output Only] A list of addresses contained in this scope.
 	Addresses []*Address `json:"addresses,omitempty"`
 
 	// Warning: [Output Only] Informational warning which replaces the list
@@ -1932,6 +1981,11 @@ type AttachedDisk struct {
 	// group.
 	DiskEncryptionKey *CustomerEncryptionKey `json:"diskEncryptionKey,omitempty"`
 
+	// GuestOsFeatures: A list of features to enable on the guest operating
+	// system. Applicable only for bootable images. Read  Enabling guest
+	// operating system features to see a list of available options.
+	GuestOsFeatures []*GuestOsFeature `json:"guestOsFeatures,omitempty"`
+
 	// Index: [Output Only] A zero-based index to this disk, where 0 is
 	// reserved for the boot disk. If you have many disks attached to an
 	// instance, each disk would have a unique index number.
@@ -2027,7 +2081,9 @@ func (s *AttachedDisk) MarshalJSON() ([]byte, error) {
 // only define one or the other, but not both.
 type AttachedDiskInitializeParams struct {
 	// DiskName: Specifies the disk name. If not specified, the default is
-	// to use the name of the instance.
+	// to use the name of the instance. If the disk with the instance name
+	// exists already in the given zone/region, a new name will be
+	// automatically generated.
 	DiskName string `json:"diskName,omitempty"`
 
 	// DiskSizeGb: Specifies the size of the disk in base-2 GB.
@@ -2158,7 +2214,7 @@ type Autoscaler struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -2579,7 +2635,7 @@ func (s *AutoscalerStatusDetails) MarshalJSON() ([]byte, error) {
 }
 
 type AutoscalersScopedList struct {
-	// Autoscalers: [Output Only] List of autoscalers contained in this
+	// Autoscalers: [Output Only] A list of autoscalers contained in this
 	// scope.
 	Autoscalers []*Autoscaler `json:"autoscalers,omitempty"`
 
@@ -3077,6 +3133,9 @@ type BackendBucket struct {
 	// BucketName: Cloud Storage bucket name.
 	BucketName string `json:"bucketName,omitempty"`
 
+	// CdnPolicy: Cloud CDN Coniguration for this BackendBucket.
+	CdnPolicy *BackendBucketCdnPolicy `json:"cdnPolicy,omitempty"`
+
 	// CreationTimestamp: [Output Only] Creation timestamp in RFC3339 text
 	// format.
 	CreationTimestamp string `json:"creationTimestamp,omitempty"`
@@ -3098,7 +3157,7 @@ type BackendBucket struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -3130,6 +3189,48 @@ type BackendBucket struct {
 
 func (s *BackendBucket) MarshalJSON() ([]byte, error) {
 	type NoMethod BackendBucket
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// BackendBucketCdnPolicy: Message containing Cloud CDN configuration
+// for a backend bucket.
+type BackendBucketCdnPolicy struct {
+	// SignedUrlCacheMaxAgeSec: Number of seconds up to which the response
+	// to a signed URL request will be cached in the CDN. After this time
+	// period, the Signed URL will be revalidated before being served.
+	// Defaults to 1hr (3600s). If this field is set, Cloud CDN will
+	// internally act as though all responses from this bucket had a
+	// ?Cache-Control: public, max-age=[TTL]? header, regardless of any
+	// existing Cache-Control header. The actual headers served in responses
+	// will not be altered.
+	SignedUrlCacheMaxAgeSec int64 `json:"signedUrlCacheMaxAgeSec,omitempty,string"`
+
+	// SignedUrlKeyNames: [Output Only] Names of the keys currently
+	// configured for Cloud CDN Signed URL on this backend bucket.
+	SignedUrlKeyNames []string `json:"signedUrlKeyNames,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "SignedUrlCacheMaxAgeSec") to unconditionally include in API
+	// requests. By default, fields with empty values are omitted from API
+	// requests. However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "SignedUrlCacheMaxAgeSec")
+	// to include in API requests with the JSON null value. By default,
+	// fields with empty values are omitted from API requests. However, any
+	// field with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *BackendBucketCdnPolicy) MarshalJSON() ([]byte, error) {
+	type NoMethod BackendBucketCdnPolicy
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -3326,7 +3427,11 @@ type BackendService struct {
 	// Fingerprint: Fingerprint of this resource. A hash of the contents
 	// stored in this object. This field is used in optimistic locking. This
 	// field will be ignored when inserting a BackendService. An up-to-date
-	// fingerprint must be provided in order to update the BackendService.
+	// fingerprint must be provided in order to update the
+	// BackendService.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve a
+	// BackendService.
 	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// HealthChecks: The list of URLs to the HttpHealthCheck or
@@ -3364,7 +3469,7 @@ type BackendService struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -3623,6 +3728,20 @@ type BackendServiceCdnPolicy struct {
 	// CacheKeyPolicy: The CacheKeyPolicy for this CdnPolicy.
 	CacheKeyPolicy *CacheKeyPolicy `json:"cacheKeyPolicy,omitempty"`
 
+	// SignedUrlCacheMaxAgeSec: Number of seconds up to which the response
+	// to a signed URL request will be cached in the CDN. After this time
+	// period, the Signed URL will be revalidated before being served.
+	// Defaults to 1hr (3600s). If this field is set, Cloud CDN will
+	// internally act as though all responses from this backend had a
+	// ?Cache-Control: public, max-age=[TTL]? header, regardless of any
+	// existing Cache-Control header. The actual headers served in responses
+	// will not be altered.
+	SignedUrlCacheMaxAgeSec int64 `json:"signedUrlCacheMaxAgeSec,omitempty,string"`
+
+	// SignedUrlKeyNames: [Output Only] Names of the keys currently
+	// configured for Cloud CDN Signed URL on this backend service.
+	SignedUrlKeyNames []string `json:"signedUrlKeyNames,omitempty"`
+
 	// ForceSendFields is a list of field names (e.g. "CacheKeyPolicy") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
@@ -3873,7 +3992,7 @@ func (s *BackendServiceListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type BackendServicesScopedList struct {
-	// BackendServices: List of BackendServices contained in this scope.
+	// BackendServices: A list of BackendServices contained in this scope.
 	BackendServices []*BackendService `json:"backendServices,omitempty"`
 
 	// Warning: Informational warning which replaces the list of backend
@@ -4124,7 +4243,7 @@ type Commitment struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -4144,8 +4263,8 @@ type Commitment struct {
 	// used.
 	Region string `json:"region,omitempty"`
 
-	// Resources: List of commitment amounts for particular resources. Note
-	// that VCPU and MEMORY resource commitments must occur together.
+	// Resources: A list of commitment amounts for particular resources.
+	// Note that VCPU and MEMORY resource commitments must occur together.
 	Resources []*ResourceCommitment `json:"resources,omitempty"`
 
 	// SelfLink: [Output Only] Server-defined URL for the resource.
@@ -4509,7 +4628,7 @@ func (s *CommitmentListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type CommitmentsScopedList struct {
-	// Commitments: [Output Only] List of commitments contained in this
+	// Commitments: [Output Only] A list of commitments contained in this
 	// scope.
 	Commitments []*Commitment `json:"commitments,omitempty"`
 
@@ -4828,6 +4947,11 @@ type Disk struct {
 	// you do not need to provide a key to use the disk later.
 	DiskEncryptionKey *CustomerEncryptionKey `json:"diskEncryptionKey,omitempty"`
 
+	// GuestOsFeatures: A list of features to enable on the guest operating
+	// system. Applicable only for bootable images. Read  Enabling guest
+	// operating system features to see a list of available options.
+	GuestOsFeatures []*GuestOsFeature `json:"guestOsFeatures,omitempty"`
+
 	// Id: [Output Only] The unique identifier for the resource. This
 	// identifier is defined by the server.
 	Id uint64 `json:"id,omitempty,string"`
@@ -4859,13 +4983,17 @@ type Disk struct {
 	// text format.
 	LastDetachTimestamp string `json:"lastDetachTimestamp,omitempty"`
 
+	// LicenseCodes: Integer license codes indicating which licenses are
+	// attached to this disk.
+	LicenseCodes googleapi.Int64s `json:"licenseCodes,omitempty"`
+
 	// Licenses: Any applicable publicly visible licenses.
 	Licenses []string `json:"licenses,omitempty"`
 
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -4873,6 +5001,16 @@ type Disk struct {
 
 	// Options: Internal use only.
 	Options string `json:"options,omitempty"`
+
+	// Region: [Output Only] URL of the region where the disk resides. Only
+	// applicable for regional resources. You must specify this field as
+	// part of the HTTP request URL. It is not settable as a field in the
+	// request body.
+	Region string `json:"region,omitempty"`
+
+	// ReplicaZones: URLs of the zones where the disk should be replicated
+	// to. Only applicable for regional resources.
+	ReplicaZones []string `json:"replicaZones,omitempty"`
 
 	// SelfLink: [Output Only] Server-defined fully-qualified URL for this
 	// resource.
@@ -4964,7 +5102,8 @@ type Disk struct {
 	Status string `json:"status,omitempty"`
 
 	// Type: URL of the disk type resource describing which disk type to use
-	// to create the disk. Provide this when creating the disk.
+	// to create the disk. Provide this when creating the disk. For example:
+	// project/zones/zone/diskTypes/pd-standard or pd-ssd
 	Type string `json:"type,omitempty"`
 
 	// Users: [Output Only] Links to the users of the disk (attached
@@ -5155,6 +5294,71 @@ type DiskAggregatedListWarningData struct {
 
 func (s *DiskAggregatedListWarningData) MarshalJSON() ([]byte, error) {
 	type NoMethod DiskAggregatedListWarningData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// DiskInstantiationConfig: A specification of the desired way to
+// instantiate a disk in the instance template when its created from a
+// source instance.
+type DiskInstantiationConfig struct {
+	// AutoDelete: Specifies whether the disk will be auto-deleted when the
+	// instance is deleted (but not when the disk is detached from the
+	// instance).
+	AutoDelete bool `json:"autoDelete,omitempty"`
+
+	// CustomImage: The custom source image to be used to restore this disk
+	// when instantiating this instance template.
+	CustomImage string `json:"customImage,omitempty"`
+
+	// DeviceName: Specifies the device name of the disk to which the
+	// configurations apply to.
+	DeviceName string `json:"deviceName,omitempty"`
+
+	// InstantiateFrom: Specifies whether to include the disk and what image
+	// to use. Possible values are:
+	// - source-image: to use the same image that was used to create the
+	// source instance's corresponding disk. Applicable to the boot disk and
+	// additional read-write disks.
+	// - source-image-family: to use the same image family that was used to
+	// create the source instance's corresponding disk. Applicable to the
+	// boot disk and additional read-write disks.
+	// - custom-image: to use a user-provided image url for disk creation.
+	// Applicable to the boot disk and additional read-write disks.
+	// - attach-read-only: to attach a read-only disk. Applicable to
+	// read-only disks.
+	// - do-not-include: to exclude a disk from the template. Applicable to
+	// additional read-write disks, local SSDs, and read-only disks.
+	//
+	// Possible values:
+	//   "ATTACH_READ_ONLY"
+	//   "BLANK"
+	//   "CUSTOM_IMAGE"
+	//   "DEFAULT"
+	//   "DO_NOT_INCLUDE"
+	//   "SOURCE_IMAGE"
+	//   "SOURCE_IMAGE_FAMILY"
+	InstantiateFrom string `json:"instantiateFrom,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AutoDelete") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AutoDelete") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *DiskInstantiationConfig) MarshalJSON() ([]byte, error) {
+	type NoMethod DiskInstantiationConfig
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -5385,6 +5589,12 @@ type DiskType struct {
 
 	// Name: [Output Only] Name of the resource.
 	Name string `json:"name,omitempty"`
+
+	// Region: [Output Only] URL of the region where the disk type resides.
+	// Only applicable for regional resources. You must specify this field
+	// as part of the HTTP request URL. It is not settable as a field in the
+	// request body.
+	Region string `json:"region,omitempty"`
 
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
@@ -5737,7 +5947,8 @@ func (s *DiskTypeListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type DiskTypesScopedList struct {
-	// DiskTypes: [Output Only] List of disk types contained in this scope.
+	// DiskTypes: [Output Only] A list of disk types contained in this
+	// scope.
 	DiskTypes []*DiskType `json:"diskTypes,omitempty"`
 
 	// Warning: [Output Only] Informational warning which replaces the list
@@ -5898,7 +6109,7 @@ func (s *DisksResizeRequest) MarshalJSON() ([]byte, error) {
 }
 
 type DisksScopedList struct {
-	// Disks: [Output Only] List of disks contained in this scope.
+	// Disks: [Output Only] A list of disks contained in this scope.
 	Disks []*Disk `json:"disks,omitempty"`
 
 	// Warning: [Output Only] Informational warning which replaces the list
@@ -6030,6 +6241,62 @@ func (s *DisksScopedListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type DistributionPolicy struct {
+	// Zones: Zones where the regional managed instance group will create
+	// and manage instances.
+	Zones []*DistributionPolicyZoneConfiguration `json:"zones,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Zones") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Zones") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *DistributionPolicy) MarshalJSON() ([]byte, error) {
+	type NoMethod DistributionPolicy
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type DistributionPolicyZoneConfiguration struct {
+	// Zone: The URL of the zone. The zone must exist in the region where
+	// the managed instance group is located.
+	Zone string `json:"zone,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Zone") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Zone") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *DistributionPolicyZoneConfiguration) MarshalJSON() ([]byte, error) {
+	type NoMethod DistributionPolicyZoneConfiguration
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // Firewall: Represents a Firewall resource.
 type Firewall struct {
 	// Allowed: The list of ALLOW rules specified by this firewall. Each
@@ -6077,7 +6344,7 @@ type Firewall struct {
 	// Name: Name of the resource; provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -6442,6 +6709,10 @@ type ForwardingRule struct {
 	// rule supports IPv4 only. A global forwarding rule supports either
 	// IPv4 or IPv6.
 	//
+	// When the load balancing scheme is INTERNAL_SELF_MANAGED, this must be
+	// a URL reference to an existing Address resource ( internal regional
+	// static IP address).
+	//
 	// When the load balancing scheme is INTERNAL, this can only be an RFC
 	// 1918 IP address belonging to the network/subnet configured for the
 	// forwarding rule. By default, if this field is empty, an ephemeral
@@ -6464,7 +6735,8 @@ type ForwardingRule struct {
 	// are TCP, UDP, ESP, AH, SCTP or ICMP.
 	//
 	// When the load balancing scheme is INTERNAL, only TCP and UDP are
-	// valid.
+	// valid. When the load balancing scheme is INTERNAL_SELF_MANAGED, only
+	// TCPis valid.
 	//
 	// Possible values:
 	//   "AH"
@@ -6475,7 +6747,7 @@ type ForwardingRule struct {
 	//   "UDP"
 	IPProtocol string `json:"IPProtocol,omitempty"`
 
-	// BackendService: This field is not used for external load
+	// BackendService: This field is only used for INTERNAL load
 	// balancing.
 	//
 	// For internal load balancing, this field identifies the BackendService
@@ -6495,8 +6767,8 @@ type ForwardingRule struct {
 	Id uint64 `json:"id,omitempty,string"`
 
 	// IpVersion: The IP Version that will be used by this forwarding rule.
-	// Valid options are IPV4 or IPV6. This can only be specified for a
-	// global forwarding rule.
+	// Valid options are IPV4 or IPV6. This can only be specified for an
+	// external global forwarding rule.
 	//
 	// Possible values:
 	//   "IPV4"
@@ -6509,10 +6781,12 @@ type ForwardingRule struct {
 	Kind string `json:"kind,omitempty"`
 
 	// LoadBalancingScheme: This signifies what the ForwardingRule will be
-	// used for and can only take the following values: INTERNAL, EXTERNAL
-	// The value of INTERNAL means that this will be used for Internal
-	// Network Load Balancing (TCP, UDP). The value of EXTERNAL means that
-	// this will be used for External Load Balancing (HTTP(S) LB, External
+	// used for and can only take the following values: INTERNAL,
+	// INTERNAL_SELF_MANAGED, EXTERNAL. The value of INTERNAL means that
+	// this will be used for Internal Network Load Balancing (TCP, UDP). The
+	// value of INTERNAL_SELF_MANAGED means that this will be used for
+	// Internal Global HTTP(S) LB. The value of EXTERNAL means that this
+	// will be used for External Load Balancing (HTTP(S) LB, External
 	// TCP/UDP LB, SSL Proxy)
 	//
 	// Possible values:
@@ -6524,7 +6798,7 @@ type ForwardingRule struct {
 	// Name: Name of the resource; provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -6532,9 +6806,10 @@ type ForwardingRule struct {
 
 	// Network: This field is not used for external load balancing.
 	//
-	// For internal load balancing, this field identifies the network that
-	// the load balanced IP should belong to for this Forwarding Rule. If
-	// this field is not specified, the default network will be used.
+	// For INTERNAL and INTERNAL_SELF_MANAGED load balancing, this field
+	// identifies the network that the load balanced IP should belong to for
+	// this Forwarding Rule. If this field is not specified, the default
+	// network will be used.
 	Network string `json:"network,omitempty"`
 
 	// PortRange: This field is used along with the target field for
@@ -6551,9 +6826,9 @@ type ForwardingRule struct {
 	// - TargetHttpProxy: 80, 8080
 	// - TargetHttpsProxy: 443
 	// - TargetTcpProxy: 25, 43, 110, 143, 195, 443, 465, 587, 700, 993,
-	// 995, 1883, 5222
+	// 995, 1688, 1883, 5222
 	// - TargetSslProxy: 25, 43, 110, 143, 195, 443, 465, 587, 700, 993,
-	// 995, 1883, 5222
+	// 995, 1688, 1883, 5222
 	// - TargetVpnGateway: 500, 4500
 	PortRange string `json:"portRange,omitempty"`
 
@@ -6577,7 +6852,7 @@ type ForwardingRule struct {
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
 
-	// Subnetwork: This field is not used for external load balancing.
+	// Subnetwork: This field is only used for INTERNAL load balancing.
 	//
 	// For internal load balancing, this field identifies the subnetwork
 	// that the load balanced IP should belong to for this Forwarding
@@ -6592,7 +6867,9 @@ type ForwardingRule struct {
 	// traffic. For regional forwarding rules, this target must live in the
 	// same region as the forwarding rule. For global forwarding rules, this
 	// target must be a global load balancing resource. The forwarded
-	// traffic must be of a type appropriate to the target object.
+	// traffic must be of a type appropriate to the target object. For
+	// INTERNAL_SELF_MANAGED" load balancing, only HTTP and HTTPS targets
+	// are valid.
 	Target string `json:"target,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -6933,7 +7210,7 @@ func (s *ForwardingRuleListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type ForwardingRulesScopedList struct {
-	// ForwardingRules: List of forwarding rules contained in this scope.
+	// ForwardingRules: A list of forwarding rules contained in this scope.
 	ForwardingRules []*ForwardingRule `json:"forwardingRules,omitempty"`
 
 	// Warning: Informational warning which replaces the list of forwarding
@@ -7078,8 +7355,8 @@ type GlobalSetLabelsRequest struct {
 	// Labels: A list of labels to apply for this resource. Each label key &
 	// value must comply with RFC1035. Specifically, the name must be 1-63
 	// characters long and match the regular expression
-	// [a-z]([-a-z0-9]*[a-z0-9])? which means the first character must be a
-	// lowercase letter, and all following characters must be a dash,
+	// `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be
+	// a lowercase letter, and all following characters must be a dash,
 	// lowercase letter, or digit, except the last character, which cannot
 	// be a dash. For example, "webserver-frontend": "images". A label value
 	// can also be empty (e.g. "my-label": "").
@@ -7117,6 +7394,8 @@ type GuestOsFeature struct {
 	// Possible values:
 	//   "FEATURE_TYPE_UNSPECIFIED"
 	//   "MULTI_IP_SUBNET"
+	//   "SECURE_BOOT"
+	//   "UEFI_COMPATIBLE"
 	//   "VIRTIO_SCSI_MULTIQUEUE"
 	//   "WINDOWS"
 	Type string `json:"type,omitempty"`
@@ -7278,7 +7557,7 @@ type HealthCheck struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -7644,7 +7923,7 @@ type HttpHealthCheck struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -7889,7 +8168,7 @@ type HttpsHealthCheck struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -8171,13 +8450,17 @@ type Image struct {
 	// the setLabels method.
 	Labels map[string]string `json:"labels,omitempty"`
 
+	// LicenseCodes: Integer license codes indicating which licenses are
+	// attached to this image.
+	LicenseCodes googleapi.Int64s `json:"licenseCodes,omitempty"`
+
 	// Licenses: Any applicable license URI.
 	Licenses []string `json:"licenses,omitempty"`
 
 	// Name: Name of the resource; provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -8204,9 +8487,9 @@ type Image struct {
 	// customer-supplied encryption key.
 	SourceDiskEncryptionKey *CustomerEncryptionKey `json:"sourceDiskEncryptionKey,omitempty"`
 
-	// SourceDiskId: The ID value of the disk used to create this image.
-	// This value may be used to determine whether the image was taken from
-	// the current or a previous instance of a given disk name.
+	// SourceDiskId: [Output Only] The ID value of the disk used to create
+	// this image. This value may be used to determine whether the image was
+	// taken from the current or a previous instance of a given disk name.
 	SourceDiskId string `json:"sourceDiskId,omitempty"`
 
 	// SourceImage: URL of the source image used to create this image. This
@@ -8226,6 +8509,26 @@ type Image struct {
 	// this image. This value may be used to determine whether the image was
 	// taken from the current or a previous instance of a given image name.
 	SourceImageId string `json:"sourceImageId,omitempty"`
+
+	// SourceSnapshot: URL of the source snapshot used to create this image.
+	// This can be a full or valid partial URL. You must provide exactly one
+	// of:
+	// - this property, or
+	// - the sourceImage property, or
+	// - the rawDisk.source property, or
+	// - the sourceDisk property   in order to create an image.
+	SourceSnapshot string `json:"sourceSnapshot,omitempty"`
+
+	// SourceSnapshotEncryptionKey: The customer-supplied encryption key of
+	// the source snapshot. Required if the source snapshot is protected by
+	// a customer-supplied encryption key.
+	SourceSnapshotEncryptionKey *CustomerEncryptionKey `json:"sourceSnapshotEncryptionKey,omitempty"`
+
+	// SourceSnapshotId: [Output Only] The ID value of the snapshot used to
+	// create this image. This value may be used to determine whether the
+	// snapshot was taken from the current or a previous instance of a given
+	// snapshot name.
+	SourceSnapshotId string `json:"sourceSnapshotId,omitempty"`
 
 	// SourceType: The type of the image used to create this disk. The
 	// default and only value is RAW
@@ -8498,7 +8801,7 @@ type Instance struct {
 	// must be created before you can assign them.
 	Disks []*AttachedDisk `json:"disks,omitempty"`
 
-	// GuestAccelerators: List of the type and count of accelerator cards
+	// GuestAccelerators: A list of the type and count of accelerator cards
 	// attached to the instance.
 	GuestAccelerators []*AcceleratorConfig `json:"guestAccelerators,omitempty"`
 
@@ -8511,11 +8814,11 @@ type Instance struct {
 	Kind string `json:"kind,omitempty"`
 
 	// LabelFingerprint: A fingerprint for this request, which is
-	// essentially a hash of the metadata's contents and used for optimistic
+	// essentially a hash of the label's contents and used for optimistic
 	// locking. The fingerprint is initially generated by Compute Engine and
-	// changes after every request to modify or update metadata. You must
+	// changes after every request to modify or update labels. You must
 	// always provide an up-to-date fingerprint hash in order to update or
-	// change metadata.
+	// change labels.
 	//
 	// To see the latest fingerprint, make get() request to the instance.
 	LabelFingerprint string `json:"labelFingerprint,omitempty"`
@@ -8562,8 +8865,8 @@ type Instance struct {
 	// creating the resource. The resource name must be 1-63 characters
 	// long, and comply with RFC1035. Specifically, the name must be 1-63
 	// characters long and match the regular expression
-	// [a-z]([-a-z0-9]*[a-z0-9])? which means the first character must be a
-	// lowercase letter, and all following characters must be a dash,
+	// `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be
+	// a lowercase letter, and all following characters must be a dash,
 	// lowercase letter, or digit, except the last character, which cannot
 	// be a dash.
 	Name string `json:"name,omitempty"`
@@ -8852,8 +9155,8 @@ type InstanceGroup struct {
 	// instance group belong.
 	Network string `json:"network,omitempty"`
 
-	// Region: The URL of the region where the instance group is located
-	// (for regional resources).
+	// Region: [Output Only] The URL of the region where the instance group
+	// is located (for regional resources).
 	Region string `json:"region,omitempty"`
 
 	// SelfLink: [Output Only] The URL for this instance group. The server
@@ -8864,8 +9167,8 @@ type InstanceGroup struct {
 	// group.
 	Size int64 `json:"size,omitempty"`
 
-	// Subnetwork: The URL of the subnetwork to which all instances in the
-	// instance group belong.
+	// Subnetwork: [Output Only] The URL of the subnetwork to which all
+	// instances in the instance group belong.
 	Subnetwork string `json:"subnetwork,omitempty"`
 
 	// Zone: [Output Only] The URL of the zone where the instance group is
@@ -9237,9 +9540,17 @@ type InstanceGroupManager struct {
 	// property when you create the resource.
 	Description string `json:"description,omitempty"`
 
-	// Fingerprint: [Output Only] The fingerprint of the resource data. You
-	// can use this optional field for optimistic locking when you update
-	// the resource.
+	// DistributionPolicy: Policy specifying intended distribution of
+	// instances in regional managed instance group.
+	DistributionPolicy *DistributionPolicy `json:"distributionPolicy,omitempty"`
+
+	// Fingerprint: Fingerprint of this resource. This field may be used in
+	// optimistic locking. It will be ignored when inserting an
+	// InstanceGroupManager. An up-to-date fingerprint must be provided in
+	// order to update the InstanceGroupManager.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve an
+	// InstanceGroupManager.
 	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// Id: [Output Only] A unique identifier for this resource type. The
@@ -10935,7 +11246,7 @@ type InstanceTemplate struct {
 	// Name: Name of the resource; provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -10947,6 +11258,18 @@ type InstanceTemplate struct {
 	// SelfLink: [Output Only] The URL for this instance template. The
 	// server defines this URL.
 	SelfLink string `json:"selfLink,omitempty"`
+
+	// SourceInstance: The source instance used to create the template. You
+	// can provide this as a partial or full URL to the resource. For
+	// example, the following are valid values:
+	// -
+	// https://www.googleapis.com/compute/v1/projects/project/zones/zone/instances/instance
+	// - projects/project/zones/zone/instances/instance
+	SourceInstance string `json:"sourceInstance,omitempty"`
+
+	// SourceInstanceParams: The source instance params to use to create
+	// this instance template.
+	SourceInstanceParams *SourceInstanceParams `json:"sourceInstanceParams,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
@@ -11177,7 +11500,7 @@ func (s *InstanceWithNamedPorts) MarshalJSON() ([]byte, error) {
 }
 
 type InstancesScopedList struct {
-	// Instances: [Output Only] List of instances contained in this scope.
+	// Instances: [Output Only] A list of instances contained in this scope.
 	Instances []*Instance `json:"instances,omitempty"`
 
 	// Warning: [Output Only] Informational warning which replaces the list
@@ -11342,7 +11665,7 @@ func (s *InstancesSetLabelsRequest) MarshalJSON() ([]byte, error) {
 }
 
 type InstancesSetMachineResourcesRequest struct {
-	// GuestAccelerators: List of the type and count of accelerator cards
+	// GuestAccelerators: A list of the type and count of accelerator cards
 	// attached to the instance.
 	GuestAccelerators []*AcceleratorConfig `json:"guestAccelerators,omitempty"`
 
@@ -11506,7 +11829,7 @@ type Interconnect struct {
 	// set to true.
 	AdminEnabled bool `json:"adminEnabled,omitempty"`
 
-	// CircuitInfos: [Output Only] List of CircuitInfo objects, that
+	// CircuitInfos: [Output Only] A list of CircuitInfo objects, that
 	// describe the individual circuits in this LAG.
 	CircuitInfos []*InterconnectCircuitInfo `json:"circuitInfos,omitempty"`
 
@@ -11522,7 +11845,7 @@ type Interconnect struct {
 	// property when you create the resource.
 	Description string `json:"description,omitempty"`
 
-	// ExpectedOutages: [Output Only] List of outages expected for this
+	// ExpectedOutages: [Output Only] A list of outages expected for this
 	// Interconnect.
 	ExpectedOutages []*InterconnectOutageNotification `json:"expectedOutages,omitempty"`
 
@@ -11549,6 +11872,7 @@ type Interconnect struct {
 	// Possible values:
 	//   "DEDICATED"
 	//   "IT_PRIVATE"
+	//   "PARTNER"
 	InterconnectType string `json:"interconnectType,omitempty"`
 
 	// Kind: [Output Only] Type of the resource. Always compute#interconnect
@@ -11570,7 +11894,7 @@ type Interconnect struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -11608,6 +11932,14 @@ type Interconnect struct {
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
 
+	// State: [Output Only] The current state of whether or not this
+	// Interconnect is functional.
+	//
+	// Possible values:
+	//   "ACTIVE"
+	//   "UNPROVISIONED"
+	State string `json:"state,omitempty"`
+
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
 	googleapi.ServerResponse `json:"-"`
@@ -11640,6 +11972,38 @@ func (s *Interconnect) MarshalJSON() ([]byte, error) {
 // Attachments. (== resource_for beta.interconnectAttachments ==) (==
 // resource_for v1.interconnectAttachments ==)
 type InterconnectAttachment struct {
+	// AdminEnabled: Determines whether this Attachment will carry packets.
+	// Not present for PARTNER_PROVIDER.
+	AdminEnabled bool `json:"adminEnabled,omitempty"`
+
+	// Bandwidth: Provisioned bandwidth capacity for the
+	// interconnectAttachment. Can be set by the partner to update the
+	// customer's provisioned bandwidth. Output only for for PARTNER type,
+	// mutable for PARTNER_PROVIDER, not available for DEDICATED.
+	//
+	// Possible values:
+	//   "BPS_100M"
+	//   "BPS_10G"
+	//   "BPS_1G"
+	//   "BPS_200M"
+	//   "BPS_2G"
+	//   "BPS_300M"
+	//   "BPS_400M"
+	//   "BPS_500M"
+	//   "BPS_50M"
+	//   "BPS_5G"
+	Bandwidth string `json:"bandwidth,omitempty"`
+
+	// CandidateSubnets: Up to 16 candidate prefixes that can be used to
+	// restrict the allocation of cloudRouterIpAddress and
+	// customerRouterIpAddress for this attachment. All prefixes must be
+	// within link-local address space (169.254.0.0/16) and must be /29 or
+	// shorter (/28, /27, etc). Google will attempt to select an unused /29
+	// from the supplied candidate prefix(es). The request will fail if all
+	// possible /29s are in use on Google?s edge. If not supplied, Google
+	// will randomly select an unused /29 from all of link-local space.
+	CandidateSubnets []string `json:"candidateSubnets,omitempty"`
+
 	// CloudRouterIpAddress: [Output Only] IPv4 address + prefix length to
 	// be configured on Cloud Router Interface for this interconnect
 	// attachment.
@@ -11656,6 +12020,20 @@ type InterconnectAttachment struct {
 
 	// Description: An optional description of this resource.
 	Description string `json:"description,omitempty"`
+
+	// EdgeAvailabilityDomain: Desired availability domain for the
+	// attachment. Only available for type PARTNER, at creation time. For
+	// improved reliability, customers should configure a pair of
+	// attachments with one per availability domain. The selected
+	// availability domain will be provided to the Partner via the pairing
+	// key so that the provisioned circuit will lie in the specified domain.
+	// If not specified, the value will default to AVAILABILITY_DOMAIN_ANY.
+	//
+	// Possible values:
+	//   "AVAILABILITY_DOMAIN_1"
+	//   "AVAILABILITY_DOMAIN_2"
+	//   "AVAILABILITY_DOMAIN_ANY"
+	EdgeAvailabilityDomain string `json:"edgeAvailabilityDomain,omitempty"`
 
 	// GoogleReferenceId: [Output Only] Google reference ID, to be used when
 	// raising support tickets with Google or otherwise to debug backend
@@ -11677,7 +12055,7 @@ type InterconnectAttachment struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -11690,6 +12068,23 @@ type InterconnectAttachment struct {
 	//   "OS_ACTIVE"
 	//   "OS_UNPROVISIONED"
 	OperationalStatus string `json:"operationalStatus,omitempty"`
+
+	// PairingKey: [Output only for type PARTNER. Input only for
+	// PARTNER_PROVIDER. Not present for DEDICATED]. The opaque identifier
+	// of an PARTNER attachment used to initiate provisioning with a
+	// selected partner. Of the form "XXXXX/region/domain"
+	PairingKey string `json:"pairingKey,omitempty"`
+
+	// PartnerAsn: Optional BGP ASN for the router that should be supplied
+	// by a layer 3 Partner if they configured BGP on behalf of the
+	// customer. Output only for PARTNER type, input only for
+	// PARTNER_PROVIDER, not available for DEDICATED.
+	PartnerAsn int64 `json:"partnerAsn,omitempty,string"`
+
+	// PartnerMetadata: Informational metadata about Partner attachments
+	// from Partners to display to customers. Output only for for PARTNER
+	// type, mutable for PARTNER_PROVIDER, not available for DEDICATED.
+	PartnerMetadata *InterconnectAttachmentPartnerMetadata `json:"partnerMetadata,omitempty"`
 
 	// PrivateInterconnectInfo: [Output Only] Information specific to an
 	// InterconnectAttachment. This property is populated if the
@@ -11711,26 +12106,49 @@ type InterconnectAttachment struct {
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
 
+	// State: [Output Only] The current state of this attachment's
+	// functionality.
+	//
+	// Possible values:
+	//   "ACTIVE"
+	//   "DEFUNCT"
+	//   "PARTNER_REQUEST_RECEIVED"
+	//   "PENDING_CUSTOMER"
+	//   "PENDING_PARTNER"
+	//   "STATE_UNSPECIFIED"
+	//   "UNPROVISIONED"
+	State string `json:"state,omitempty"`
+
+	// Possible values:
+	//   "DEDICATED"
+	//   "PARTNER"
+	//   "PARTNER_PROVIDER"
+	Type string `json:"type,omitempty"`
+
+	// VlanTag8021q: Available only for DEDICATED and PARTNER_PROVIDER.
+	// Desired VLAN tag for this attachment, in the range 2-4094. This field
+	// refers to 802.1q VLAN tag, also known as IEEE 802.1Q Only specified
+	// at creation time.
+	VlanTag8021q int64 `json:"vlanTag8021q,omitempty"`
+
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
 	googleapi.ServerResponse `json:"-"`
 
-	// ForceSendFields is a list of field names (e.g.
-	// "CloudRouterIpAddress") to unconditionally include in API requests.
-	// By default, fields with empty values are omitted from API requests.
-	// However, any non-pointer, non-interface field appearing in
-	// ForceSendFields will be sent to the server regardless of whether the
-	// field is empty or not. This may be used to include empty fields in
-	// Patch requests.
+	// ForceSendFields is a list of field names (e.g. "AdminEnabled") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "CloudRouterIpAddress") to
-	// include in API requests with the JSON null value. By default, fields
-	// with empty values are omitted from API requests. However, any field
-	// with an empty value appearing in NullFields will be sent to the
-	// server as null. It is an error if a field in this list has a
-	// non-empty value. This may be used to include null fields in Patch
-	// requests.
+	// NullFields is a list of field names (e.g. "AdminEnabled") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
 	NullFields []string `json:"-"`
 }
 
@@ -12054,6 +12472,52 @@ func (s *InterconnectAttachmentListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// InterconnectAttachmentPartnerMetadata: Informational metadata about
+// Partner attachments from Partners to display to customers. These
+// fields are propagated from PARTNER_PROVIDER attachments to their
+// corresponding PARTNER attachments.
+type InterconnectAttachmentPartnerMetadata struct {
+	// InterconnectName: Plain text name of the Interconnect this attachment
+	// is connected to, as displayed in the Partner?s portal. For instance
+	// ?Chicago 1?. This value may be validated to match approved Partner
+	// values.
+	InterconnectName string `json:"interconnectName,omitempty"`
+
+	// PartnerName: Plain text name of the Partner providing this
+	// attachment. This value may be validated to match approved Partner
+	// values.
+	PartnerName string `json:"partnerName,omitempty"`
+
+	// PortalUrl: URL of the Partner?s portal for this Attachment. Partners
+	// may customise this to be a deep-link to the specific resource on the
+	// Partner portal. This value may be validated to match approved Partner
+	// values.
+	PortalUrl string `json:"portalUrl,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "InterconnectName") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "InterconnectName") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *InterconnectAttachmentPartnerMetadata) MarshalJSON() ([]byte, error) {
+	type NoMethod InterconnectAttachmentPartnerMetadata
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // InterconnectAttachmentPrivateInfo: Information for an interconnect
 // attachment when this belongs to an interconnect of type DEDICATED.
 type InterconnectAttachmentPrivateInfo struct {
@@ -12086,7 +12550,7 @@ func (s *InterconnectAttachmentPrivateInfo) MarshalJSON() ([]byte, error) {
 }
 
 type InterconnectAttachmentsScopedList struct {
-	// InterconnectAttachments: List of interconnect attachments contained
+	// InterconnectAttachments: A list of interconnect attachments contained
 	// in this scope.
 	InterconnectAttachments []*InterconnectAttachment `json:"interconnectAttachments,omitempty"`
 
@@ -12719,7 +13183,7 @@ func (s *InterconnectLocationRegionInfo) MarshalJSON() ([]byte, error) {
 // InterconnectOutageNotification: Description of a planned outage on
 // this Interconnect. Next id: 9
 type InterconnectOutageNotification struct {
-	// AffectedCircuits: Iff issue_type is IT_PARTIAL_OUTAGE, a list of the
+	// AffectedCircuits: If issue_type is IT_PARTIAL_OUTAGE, a list of the
 	// Google-side circuit IDs that will be affected.
 	AffectedCircuits []string `json:"affectedCircuits,omitempty"`
 
@@ -12796,16 +13260,39 @@ type License struct {
 	// reflects whether a license charges a usage fee.
 	ChargesUseFee bool `json:"chargesUseFee,omitempty"`
 
+	// CreationTimestamp: [Output Only] Creation timestamp in RFC3339 text
+	// format.
+	CreationTimestamp string `json:"creationTimestamp,omitempty"`
+
+	// Description: An optional textual description of the resource;
+	// provided by the client when the resource is created.
+	Description string `json:"description,omitempty"`
+
+	// Id: [Output Only] The unique identifier for the resource. This
+	// identifier is defined by the server.
+	Id uint64 `json:"id,omitempty,string"`
+
 	// Kind: [Output Only] Type of resource. Always compute#license for
 	// licenses.
 	Kind string `json:"kind,omitempty"`
+
+	// LicenseCode: [Output Only] The unique code used to attach this
+	// license to images, snapshots, and disks.
+	LicenseCode uint64 `json:"licenseCode,omitempty,string"`
 
 	// Name: [Output Only] Name of the resource. The name is 1-63 characters
 	// long and complies with RFC1035.
 	Name string `json:"name,omitempty"`
 
+	ResourceRequirements *LicenseResourceRequirements `json:"resourceRequirements,omitempty"`
+
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
+
+	// Transferable: If false, licenses will not be copied from the source
+	// resource when creating an image from a disk, disk from snapshot, or
+	// snapshot from disk.
+	Transferable bool `json:"transferable,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
@@ -12830,6 +13317,291 @@ type License struct {
 
 func (s *License) MarshalJSON() ([]byte, error) {
 	type NoMethod License
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LicenseCode struct {
+	// CreationTimestamp: [Output Only] Creation timestamp in RFC3339 text
+	// format.
+	CreationTimestamp string `json:"creationTimestamp,omitempty"`
+
+	// Description: [Output Only] Description of this License Code.
+	Description string `json:"description,omitempty"`
+
+	// Id: [Output Only] The unique identifier for the resource. This
+	// identifier is defined by the server.
+	Id uint64 `json:"id,omitempty,string"`
+
+	// Kind: [Output Only] Type of resource. Always compute#licenseCode for
+	// licenses.
+	Kind string `json:"kind,omitempty"`
+
+	// LicenseAlias: [Output Only] URL and description aliases of Licenses
+	// with the same License Code.
+	LicenseAlias []*LicenseCodeLicenseAlias `json:"licenseAlias,omitempty"`
+
+	// Name: [Output Only] Name of the resource. The name is 1-20 characters
+	// long and must be a valid 64 bit integer.
+	Name string `json:"name,omitempty"`
+
+	// SelfLink: [Output Only] Server-defined URL for the resource.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// State: [Output Only] Current state of this License Code.
+	//
+	// Possible values:
+	//   "DISABLED"
+	//   "ENABLED"
+	//   "RESTRICTED"
+	//   "STATE_UNSPECIFIED"
+	//   "TERMINATED"
+	State string `json:"state,omitempty"`
+
+	// Transferable: [Output Only] If true, the license will remain attached
+	// when creating images or snapshots from disks. Otherwise, the license
+	// is not transferred.
+	Transferable bool `json:"transferable,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "CreationTimestamp")
+	// to unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "CreationTimestamp") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicenseCode) MarshalJSON() ([]byte, error) {
+	type NoMethod LicenseCode
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LicenseCodeLicenseAlias struct {
+	// Description: [Output Only] Description of this License Code.
+	Description string `json:"description,omitempty"`
+
+	// SelfLink: [Output Only] URL of license corresponding to this License
+	// Code.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Description") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Description") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicenseCodeLicenseAlias) MarshalJSON() ([]byte, error) {
+	type NoMethod LicenseCodeLicenseAlias
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LicenseResourceRequirements struct {
+	// MinGuestCpuCount: Minimum number of guest cpus required to use the
+	// Instance. Enforced at Instance creation and Instance start.
+	MinGuestCpuCount int64 `json:"minGuestCpuCount,omitempty"`
+
+	// MinMemoryMb: Minimum memory required to use the Instance. Enforced at
+	// Instance creation and Instance start.
+	MinMemoryMb int64 `json:"minMemoryMb,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "MinGuestCpuCount") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "MinGuestCpuCount") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicenseResourceRequirements) MarshalJSON() ([]byte, error) {
+	type NoMethod LicenseResourceRequirements
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LicensesListResponse struct {
+	// Id: [Output Only] Unique identifier for the resource; defined by the
+	// server.
+	Id string `json:"id,omitempty"`
+
+	// Items: A list of License resources.
+	Items []*License `json:"items,omitempty"`
+
+	// NextPageToken: [Output Only] This token allows you to get the next
+	// page of results for list requests. If the number of results is larger
+	// than maxResults, use the nextPageToken as a value for the query
+	// parameter pageToken in the next list request. Subsequent list
+	// requests will have their own nextPageToken to continue paging through
+	// the results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// SelfLink: [Output Only] Server-defined URL for this resource.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// Warning: [Output Only] Informational warning message.
+	Warning *LicensesListResponseWarning `json:"warning,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Id") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Id") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicensesListResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod LicensesListResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// LicensesListResponseWarning: [Output Only] Informational warning
+// message.
+type LicensesListResponseWarning struct {
+	// Code: [Output Only] A warning code, if applicable. For example,
+	// Compute Engine returns NO_RESULTS_ON_PAGE if there are no results in
+	// the response.
+	//
+	// Possible values:
+	//   "CLEANUP_FAILED"
+	//   "DEPRECATED_RESOURCE_USED"
+	//   "DEPRECATED_TYPE_USED"
+	//   "DISK_SIZE_LARGER_THAN_IMAGE_SIZE"
+	//   "EXPERIMENTAL_TYPE_USED"
+	//   "EXTERNAL_API_WARNING"
+	//   "FIELD_VALUE_OVERRIDEN"
+	//   "INJECTED_KERNELS_DEPRECATED"
+	//   "MISSING_TYPE_DEPENDENCY"
+	//   "NEXT_HOP_ADDRESS_NOT_ASSIGNED"
+	//   "NEXT_HOP_CANNOT_IP_FORWARD"
+	//   "NEXT_HOP_INSTANCE_NOT_FOUND"
+	//   "NEXT_HOP_INSTANCE_NOT_ON_NETWORK"
+	//   "NEXT_HOP_NOT_RUNNING"
+	//   "NOT_CRITICAL_ERROR"
+	//   "NO_RESULTS_ON_PAGE"
+	//   "REQUIRED_TOS_AGREEMENT"
+	//   "RESOURCE_IN_USE_BY_OTHER_RESOURCE_WARNING"
+	//   "RESOURCE_NOT_DELETED"
+	//   "SCHEMA_VALIDATION_IGNORED"
+	//   "SINGLE_INSTANCE_PROPERTY_TEMPLATE"
+	//   "UNDECLARED_PROPERTIES"
+	//   "UNREACHABLE"
+	Code string `json:"code,omitempty"`
+
+	// Data: [Output Only] Metadata about this warning in key: value format.
+	// For example:
+	// "data": [ { "key": "scope", "value": "zones/us-east1-d" }
+	Data []*LicensesListResponseWarningData `json:"data,omitempty"`
+
+	// Message: [Output Only] A human-readable description of the warning
+	// code.
+	Message string `json:"message,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Code") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Code") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicensesListResponseWarning) MarshalJSON() ([]byte, error) {
+	type NoMethod LicensesListResponseWarning
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type LicensesListResponseWarningData struct {
+	// Key: [Output Only] A key that provides more detail on the warning
+	// being returned. For example, for warnings where there are no results
+	// in a list request for a particular zone, this key might be scope and
+	// the key value might be the zone name. Other examples might be a key
+	// indicating a deprecated resource and a suggested replacement, or a
+	// warning about invalid network settings (for example, if an instance
+	// attempts to perform IP forwarding but is not enabled for IP
+	// forwarding).
+	Key string `json:"key,omitempty"`
+
+	// Value: [Output Only] A warning data value corresponding to the key.
+	Value string `json:"value,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Key") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Key") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LicensesListResponseWarningData) MarshalJSON() ([]byte, error) {
+	type NoMethod LicensesListResponseWarningData
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -12884,7 +13656,7 @@ type MachineType struct {
 	// Name: [Output Only] Name of the resource.
 	Name string `json:"name,omitempty"`
 
-	// ScratchDisks: [Output Only] List of extended scratch disks assigned
+	// ScratchDisks: [Output Only] A list of extended scratch disks assigned
 	// to the instance.
 	ScratchDisks []*MachineTypeScratchDisks `json:"scratchDisks,omitempty"`
 
@@ -13262,7 +14034,7 @@ func (s *MachineTypeListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type MachineTypesScopedList struct {
-	// MachineTypes: [Output Only] List of machine types contained in this
+	// MachineTypes: [Output Only] A list of machine types contained in this
 	// scope.
 	MachineTypes []*MachineType `json:"machineTypes,omitempty"`
 
@@ -13395,6 +14167,7 @@ func (s *MachineTypesScopedListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// ManagedInstance: A Managed Instance resource.
 type ManagedInstance struct {
 	// CurrentAction: [Output Only] The current action that the managed
 	// instance group has scheduled for the instance. Possible values:
@@ -13583,6 +14356,9 @@ type Metadata struct {
 	// changes after every request to modify or update metadata. You must
 	// always provide an up-to-date fingerprint hash in order to update or
 	// change metadata.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve the
+	// resource.
 	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// Items: Array of key/value pairs. The total size of all keys and
@@ -13727,13 +14503,13 @@ type Network struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
 	Name string `json:"name,omitempty"`
 
-	// Peerings: [Output Only] List of network peerings for the resource.
+	// Peerings: [Output Only] A list of network peerings for the resource.
 	Peerings []*NetworkPeering `json:"peerings,omitempty"`
 
 	// RoutingConfig: The network-level routing configuration for this
@@ -13788,6 +14564,12 @@ type NetworkInterface struct {
 	// interface. Can only be specified for network interfaces on
 	// subnet-mode networks.
 	AliasIpRanges []*AliasIpRange `json:"aliasIpRanges,omitempty"`
+
+	// Fingerprint: Fingerprint hash of contents stored in this network
+	// interface. This field will be ignored when inserting an Instance or
+	// adding a NetworkInterface. An up-to-date fingerprint must be provided
+	// in order to update the NetworkInterface.
+	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// Kind: [Output Only] Type of the resource. Always
 	// compute#networkInterface for network interfaces.
@@ -14025,8 +14807,8 @@ type NetworkPeering struct {
 	// Name: Name of this peering. Provided by the client when the peering
 	// is created. The name must comply with RFC1035. Specifically, the name
 	// must be 1-63 characters long and match regular expression
-	// [a-z]([-a-z0-9]*[a-z0-9])? which means the first character must be a
-	// lowercase letter, and all the following characters must be a dash,
+	// `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be
+	// a lowercase letter, and all the following characters must be a dash,
 	// lowercase letter, or digit, except the last character, which cannot
 	// be a dash.
 	Name string `json:"name,omitempty"`
@@ -14182,7 +14964,8 @@ func (s *NetworksRemovePeeringRequest) MarshalJSON() ([]byte, error) {
 // (== resource_for beta.regionOperations ==) (== resource_for
 // v1.zoneOperations ==) (== resource_for beta.zoneOperations ==)
 type Operation struct {
-	// ClientOperationId: [Output Only] Reserved for future use.
+	// ClientOperationId: [Output Only] The value of `requestId` if you
+	// provided it in the request. Not present otherwise.
 	ClientOperationId string `json:"clientOperationId,omitempty"`
 
 	// CreationTimestamp: [Deprecated] This field is deprecated.
@@ -14787,7 +15570,8 @@ func (s *OperationListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type OperationsScopedList struct {
-	// Operations: [Output Only] List of operations contained in this scope.
+	// Operations: [Output Only] A list of operations contained in this
+	// scope.
 	Operations []*Operation `json:"operations,omitempty"`
 
 	// Warning: [Output Only] Informational warning which replaces the list
@@ -15239,16 +16023,20 @@ type Quota struct {
 	//   "INSTANCE_GROUP_MANAGERS"
 	//   "INSTANCE_TEMPLATES"
 	//   "INTERCONNECTS"
+	//   "INTERCONNECT_ATTACHMENTS_PER_REGION"
+	//   "INTERCONNECT_ATTACHMENTS_TOTAL_MBPS"
 	//   "INTERNAL_ADDRESSES"
 	//   "IN_USE_ADDRESSES"
 	//   "LOCAL_SSD_TOTAL_GB"
 	//   "NETWORKS"
 	//   "NVIDIA_K80_GPUS"
 	//   "NVIDIA_P100_GPUS"
+	//   "NVIDIA_V100_GPUS"
 	//   "PREEMPTIBLE_CPUS"
 	//   "PREEMPTIBLE_LOCAL_SSD_GB"
 	//   "PREEMPTIBLE_NVIDIA_K80_GPUS"
 	//   "PREEMPTIBLE_NVIDIA_P100_GPUS"
+	//   "PREEMPTIBLE_NVIDIA_V100_GPUS"
 	//   "REGIONAL_AUTOSCALERS"
 	//   "REGIONAL_INSTANCE_GROUP_MANAGERS"
 	//   "ROUTERS"
@@ -15574,6 +16362,189 @@ type RegionAutoscalerListWarningData struct {
 
 func (s *RegionAutoscalerListWarningData) MarshalJSON() ([]byte, error) {
 	type NoMethod RegionAutoscalerListWarningData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type RegionDiskTypeList struct {
+	// Id: [Output Only] Unique identifier for the resource; defined by the
+	// server.
+	Id string `json:"id,omitempty"`
+
+	// Items: A list of DiskType resources.
+	Items []*DiskType `json:"items,omitempty"`
+
+	// Kind: [Output Only] Type of resource. Always
+	// compute#regionDiskTypeList for region disk types.
+	Kind string `json:"kind,omitempty"`
+
+	// NextPageToken: [Output Only] This token allows you to get the next
+	// page of results for list requests. If the number of results is larger
+	// than maxResults, use the nextPageToken as a value for the query
+	// parameter pageToken in the next list request. Subsequent list
+	// requests will have their own nextPageToken to continue paging through
+	// the results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// SelfLink: [Output Only] Server-defined URL for this resource.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// Warning: [Output Only] Informational warning message.
+	Warning *RegionDiskTypeListWarning `json:"warning,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Id") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Id") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RegionDiskTypeList) MarshalJSON() ([]byte, error) {
+	type NoMethod RegionDiskTypeList
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// RegionDiskTypeListWarning: [Output Only] Informational warning
+// message.
+type RegionDiskTypeListWarning struct {
+	// Code: [Output Only] A warning code, if applicable. For example,
+	// Compute Engine returns NO_RESULTS_ON_PAGE if there are no results in
+	// the response.
+	//
+	// Possible values:
+	//   "CLEANUP_FAILED"
+	//   "DEPRECATED_RESOURCE_USED"
+	//   "DEPRECATED_TYPE_USED"
+	//   "DISK_SIZE_LARGER_THAN_IMAGE_SIZE"
+	//   "EXPERIMENTAL_TYPE_USED"
+	//   "EXTERNAL_API_WARNING"
+	//   "FIELD_VALUE_OVERRIDEN"
+	//   "INJECTED_KERNELS_DEPRECATED"
+	//   "MISSING_TYPE_DEPENDENCY"
+	//   "NEXT_HOP_ADDRESS_NOT_ASSIGNED"
+	//   "NEXT_HOP_CANNOT_IP_FORWARD"
+	//   "NEXT_HOP_INSTANCE_NOT_FOUND"
+	//   "NEXT_HOP_INSTANCE_NOT_ON_NETWORK"
+	//   "NEXT_HOP_NOT_RUNNING"
+	//   "NOT_CRITICAL_ERROR"
+	//   "NO_RESULTS_ON_PAGE"
+	//   "REQUIRED_TOS_AGREEMENT"
+	//   "RESOURCE_IN_USE_BY_OTHER_RESOURCE_WARNING"
+	//   "RESOURCE_NOT_DELETED"
+	//   "SCHEMA_VALIDATION_IGNORED"
+	//   "SINGLE_INSTANCE_PROPERTY_TEMPLATE"
+	//   "UNDECLARED_PROPERTIES"
+	//   "UNREACHABLE"
+	Code string `json:"code,omitempty"`
+
+	// Data: [Output Only] Metadata about this warning in key: value format.
+	// For example:
+	// "data": [ { "key": "scope", "value": "zones/us-east1-d" }
+	Data []*RegionDiskTypeListWarningData `json:"data,omitempty"`
+
+	// Message: [Output Only] A human-readable description of the warning
+	// code.
+	Message string `json:"message,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Code") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Code") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RegionDiskTypeListWarning) MarshalJSON() ([]byte, error) {
+	type NoMethod RegionDiskTypeListWarning
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type RegionDiskTypeListWarningData struct {
+	// Key: [Output Only] A key that provides more detail on the warning
+	// being returned. For example, for warnings where there are no results
+	// in a list request for a particular zone, this key might be scope and
+	// the key value might be the zone name. Other examples might be a key
+	// indicating a deprecated resource and a suggested replacement, or a
+	// warning about invalid network settings (for example, if an instance
+	// attempts to perform IP forwarding but is not enabled for IP
+	// forwarding).
+	Key string `json:"key,omitempty"`
+
+	// Value: [Output Only] A warning data value corresponding to the key.
+	Value string `json:"value,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Key") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Key") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RegionDiskTypeListWarningData) MarshalJSON() ([]byte, error) {
+	type NoMethod RegionDiskTypeListWarningData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type RegionDisksResizeRequest struct {
+	// SizeGb: The new size of the regional persistent disk, which is
+	// specified in GB.
+	SizeGb int64 `json:"sizeGb,omitempty,string"`
+
+	// ForceSendFields is a list of field names (e.g. "SizeGb") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "SizeGb") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RegionDisksResizeRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod RegionDisksResizeRequest
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -15950,7 +16921,7 @@ func (s *RegionInstanceGroupManagersDeleteInstancesRequest) MarshalJSON() ([]byt
 }
 
 type RegionInstanceGroupManagersListInstancesResponse struct {
-	// ManagedInstances: List of managed instances.
+	// ManagedInstances: A list of managed instances.
 	ManagedInstances []*ManagedInstance `json:"managedInstances,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -16455,6 +17426,42 @@ func (s *RegionListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type RegionSetLabelsRequest struct {
+	// LabelFingerprint: The fingerprint of the previous set of labels for
+	// this resource, used to detect conflicts. The fingerprint is initially
+	// generated by Compute Engine and changes after every request to modify
+	// or update labels. You must always provide an up-to-date fingerprint
+	// hash in order to update or change labels. Make a get() request to the
+	// resource to get the latest fingerprint.
+	LabelFingerprint string `json:"labelFingerprint,omitempty"`
+
+	// Labels: The labels to set for this resource.
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "LabelFingerprint") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "LabelFingerprint") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RegionSetLabelsRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod RegionSetLabelsRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // ResourceCommitment: Commitment for a particular resource (a
 // Commitment is composed of one or more of these).
 type ResourceCommitment struct {
@@ -16567,7 +17574,7 @@ type Route struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -16940,7 +17947,7 @@ type Router struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -16980,6 +17987,39 @@ type Router struct {
 
 func (s *Router) MarshalJSON() ([]byte, error) {
 	type NoMethod Router
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// RouterAdvertisedIpRange: Description-tagged IP ranges for the router
+// to advertise.
+type RouterAdvertisedIpRange struct {
+	// Description: User-specified description for the IP range.
+	Description string `json:"description,omitempty"`
+
+	// Range: The IP range to advertise. The value must be a CIDR-formatted
+	// string.
+	Range string `json:"range,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Description") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Description") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *RouterAdvertisedIpRange) MarshalJSON() ([]byte, error) {
+	type NoMethod RouterAdvertisedIpRange
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -17140,13 +18180,39 @@ func (s *RouterAggregatedListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type RouterBgp struct {
+	// AdvertiseMode: User-specified flag to indicate which mode to use for
+	// advertisement.
+	//
+	// Possible values:
+	//   "CUSTOM"
+	//   "DEFAULT"
+	AdvertiseMode string `json:"advertiseMode,omitempty"`
+
+	// AdvertisedGroups: User-specified list of prefix groups to advertise
+	// in custom mode. This field can only be populated if advertise_mode is
+	// CUSTOM and is advertised to all peers of the router. These groups
+	// will be advertised in addition to any specified prefixes. Leave this
+	// field blank to advertise no custom groups.
+	//
+	// Possible values:
+	//   "ALL_SUBNETS"
+	AdvertisedGroups []string `json:"advertisedGroups,omitempty"`
+
+	// AdvertisedIpRanges: User-specified list of individual IP ranges to
+	// advertise in custom mode. This field can only be populated if
+	// advertise_mode is CUSTOM and is advertised to all peers of the
+	// router. These IP ranges will be advertised in addition to any
+	// specified groups. Leave this field blank to advertise no custom IP
+	// ranges.
+	AdvertisedIpRanges []*RouterAdvertisedIpRange `json:"advertisedIpRanges,omitempty"`
+
 	// Asn: Local BGP Autonomous System Number (ASN). Must be an RFC6996
 	// private ASN, either 16-bit or 32-bit. The value will be fixed for
 	// this router resource. All VPN tunnels that link to this router will
 	// have the same local ASN.
 	Asn int64 `json:"asn,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "Asn") to
+	// ForceSendFields is a list of field names (e.g. "AdvertiseMode") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -17154,10 +18220,10 @@ type RouterBgp struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "Asn") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
+	// NullFields is a list of field names (e.g. "AdvertiseMode") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
 	// null. It is an error if a field in this list has a non-empty value.
 	// This may be used to include null fields in Patch requests.
 	NullFields []string `json:"-"`
@@ -17170,6 +18236,33 @@ func (s *RouterBgp) MarshalJSON() ([]byte, error) {
 }
 
 type RouterBgpPeer struct {
+	// AdvertiseMode: User-specified flag to indicate which mode to use for
+	// advertisement.
+	//
+	// Possible values:
+	//   "CUSTOM"
+	//   "DEFAULT"
+	AdvertiseMode string `json:"advertiseMode,omitempty"`
+
+	// AdvertisedGroups: User-specified list of prefix groups to advertise
+	// in custom mode. This field can only be populated if advertise_mode is
+	// CUSTOM and overrides the list defined for the router (in Bgp
+	// message). These groups will be advertised in addition to any
+	// specified prefixes. Leave this field blank to advertise no custom
+	// groups.
+	//
+	// Possible values:
+	//   "ALL_SUBNETS"
+	AdvertisedGroups []string `json:"advertisedGroups,omitempty"`
+
+	// AdvertisedIpRanges: User-specified list of individual IP ranges to
+	// advertise in custom mode. This field can only be populated if
+	// advertise_mode is CUSTOM and overrides the list defined for the
+	// router (in Bgp message). These IP ranges will be advertised in
+	// addition to any specified groups. Leave this field blank to advertise
+	// no custom IP ranges.
+	AdvertisedIpRanges []*RouterAdvertisedIpRange `json:"advertisedIpRanges,omitempty"`
+
 	// AdvertisedRoutePriority: The priority of routes advertised to this
 	// BGP peer. In the case where there is more than one matching route of
 	// maximum length, the routes with lowest priority value win.
@@ -17181,6 +18274,18 @@ type RouterBgpPeer struct {
 	// IpAddress: IP address of the interface inside Google Cloud Platform.
 	// Only IPv4 is supported.
 	IpAddress string `json:"ipAddress,omitempty"`
+
+	// ManagementType: [Output Only] Type of how the resource/configuration
+	// of the BGP peer is managed. MANAGED_BY_USER is the default value;
+	// MANAGED_BY_ATTACHMENT represents an BGP peer that is automatically
+	// created for PARTNER interconnectAttachment, Google will automatically
+	// create/delete this type of BGP peer when the PARTNER
+	// interconnectAttachment is created/deleted.
+	//
+	// Possible values:
+	//   "MANAGED_BY_ATTACHMENT"
+	//   "MANAGED_BY_USER"
+	ManagementType string `json:"managementType,omitempty"`
 
 	// Name: Name of this BGP peer. The name must be 1-63 characters long
 	// and comply with RFC1035.
@@ -17194,22 +18299,20 @@ type RouterBgpPeer struct {
 	// Only IPv4 is supported.
 	PeerIpAddress string `json:"peerIpAddress,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g.
-	// "AdvertisedRoutePriority") to unconditionally include in API
-	// requests. By default, fields with empty values are omitted from API
-	// requests. However, any non-pointer, non-interface field appearing in
-	// ForceSendFields will be sent to the server regardless of whether the
-	// field is empty or not. This may be used to include empty fields in
-	// Patch requests.
+	// ForceSendFields is a list of field names (e.g. "AdvertiseMode") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "AdvertisedRoutePriority")
-	// to include in API requests with the JSON null value. By default,
-	// fields with empty values are omitted from API requests. However, any
-	// field with an empty value appearing in NullFields will be sent to the
-	// server as null. It is an error if a field in this list has a
-	// non-empty value. This may be used to include null fields in Patch
-	// requests.
+	// NullFields is a list of field names (e.g. "AdvertiseMode") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
 	NullFields []string `json:"-"`
 }
 
@@ -17238,6 +18341,18 @@ type RouterInterface struct {
 	// resource and it could either be a VPN Tunnel or an interconnect
 	// attachment.
 	LinkedVpnTunnel string `json:"linkedVpnTunnel,omitempty"`
+
+	// ManagementType: [Output Only] Type of how the resource/configuration
+	// of the interface is managed. MANAGED_BY_USER is the default value;
+	// MANAGED_BY_ATTACHMENT represents an interface that is automatically
+	// created for PARTNER type interconnectAttachment, Google will
+	// automatically create/update/delete this type of interface when the
+	// PARTNER interconnectAttachment is created/provisioned/deleted.
+	//
+	// Possible values:
+	//   "MANAGED_BY_ATTACHMENT"
+	//   "MANAGED_BY_USER"
+	ManagementType string `json:"managementType,omitempty"`
 
 	// Name: Name of this interface entry. The name must be 1-63 characters
 	// long and comply with RFC1035.
@@ -17582,7 +18697,7 @@ func (s *RoutersPreviewResponse) MarshalJSON() ([]byte, error) {
 }
 
 type RoutersScopedList struct {
-	// Routers: List of routers contained in this scope.
+	// Routers: A list of routers contained in this scope.
 	Routers []*Router `json:"routers,omitempty"`
 
 	// Warning: Informational warning which replaces the list of routers
@@ -17901,6 +19016,44 @@ func (s *ServiceAccount) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// SignedUrlKey: Represents a customer-supplied Signing Key used by
+// Cloud CDN Signed URLs
+type SignedUrlKey struct {
+	// KeyName: Name of the key. The name must be 1-63 characters long, and
+	// comply with RFC1035. Specifically, the name must be 1-63 characters
+	// long and match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?`
+	// which means the first character must be a lowercase letter, and all
+	// following characters must be a dash, lowercase letter, or digit,
+	// except the last character, which cannot be a dash.
+	KeyName string `json:"keyName,omitempty"`
+
+	// KeyValue: 128-bit key value used for signing the URL. The key value
+	// must be a valid RFC 4648 Section 5 base64url encoded string.
+	KeyValue string `json:"keyValue,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "KeyName") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "KeyName") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SignedUrlKey) MarshalJSON() ([]byte, error) {
+	type NoMethod SignedUrlKey
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // Snapshot: A persistent disk snapshot resource. (== resource_for
 // beta.snapshots ==) (== resource_for v1.snapshots ==)
 type Snapshot struct {
@@ -17938,6 +19091,10 @@ type Snapshot struct {
 	// by the setLabels method. Label values may be empty.
 	Labels map[string]string `json:"labels,omitempty"`
 
+	// LicenseCodes: [Output Only] Integer license codes indicating which
+	// licenses are attached to this snapshot.
+	LicenseCodes googleapi.Int64s `json:"licenseCodes,omitempty"`
+
 	// Licenses: [Output Only] A list of public visible licenses that apply
 	// to this snapshot. This can be because the original image had licenses
 	// attached (such as a Windows image).
@@ -17946,7 +19103,7 @@ type Snapshot struct {
 	// Name: Name of the resource; provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -18195,6 +19352,39 @@ func (s *SnapshotListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// SourceInstanceParams: A specification of the parameters to use when
+// creating the instance template from a source instance.
+type SourceInstanceParams struct {
+	// DiskConfigs: Attached disks configuration. If not provided, defaults
+	// are applied: For boot disk and any other R/W disks, new custom images
+	// will be created from each disk. For read-only disks, they will be
+	// attached in read-only mode. Local SSD disks will be created as blank
+	// volumes.
+	DiskConfigs []*DiskInstantiationConfig `json:"diskConfigs,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DiskConfigs") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DiskConfigs") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SourceInstanceParams) MarshalJSON() ([]byte, error) {
+	type NoMethod SourceInstanceParams
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // SslCertificate: An SslCertificate resource. This resource provides a
 // mechanism to upload an SSL key and certificate to the load balancer
 // to serve secure connections from the user. (== resource_for
@@ -18224,7 +19414,7 @@ type SslCertificate struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -18419,6 +19609,428 @@ func (s *SslCertificateListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type SslPoliciesList struct {
+	// Id: [Output Only] Unique identifier for the resource; defined by the
+	// server.
+	Id string `json:"id,omitempty"`
+
+	// Items: A list of SslPolicy resources.
+	Items []*SslPolicy `json:"items,omitempty"`
+
+	// Kind: [Output Only] Type of the resource. Always
+	// compute#sslPoliciesList for lists of sslPolicies.
+	Kind string `json:"kind,omitempty"`
+
+	// NextPageToken: [Output Only] This token allows you to get the next
+	// page of results for list requests. If the number of results is larger
+	// than maxResults, use the nextPageToken as a value for the query
+	// parameter pageToken in the next list request. Subsequent list
+	// requests will have their own nextPageToken to continue paging through
+	// the results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// SelfLink: [Output Only] Server-defined URL for this resource.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// Warning: [Output Only] Informational warning message.
+	Warning *SslPoliciesListWarning `json:"warning,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Id") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Id") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPoliciesList) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPoliciesList
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// SslPoliciesListWarning: [Output Only] Informational warning message.
+type SslPoliciesListWarning struct {
+	// Code: [Output Only] A warning code, if applicable. For example,
+	// Compute Engine returns NO_RESULTS_ON_PAGE if there are no results in
+	// the response.
+	//
+	// Possible values:
+	//   "CLEANUP_FAILED"
+	//   "DEPRECATED_RESOURCE_USED"
+	//   "DEPRECATED_TYPE_USED"
+	//   "DISK_SIZE_LARGER_THAN_IMAGE_SIZE"
+	//   "EXPERIMENTAL_TYPE_USED"
+	//   "EXTERNAL_API_WARNING"
+	//   "FIELD_VALUE_OVERRIDEN"
+	//   "INJECTED_KERNELS_DEPRECATED"
+	//   "MISSING_TYPE_DEPENDENCY"
+	//   "NEXT_HOP_ADDRESS_NOT_ASSIGNED"
+	//   "NEXT_HOP_CANNOT_IP_FORWARD"
+	//   "NEXT_HOP_INSTANCE_NOT_FOUND"
+	//   "NEXT_HOP_INSTANCE_NOT_ON_NETWORK"
+	//   "NEXT_HOP_NOT_RUNNING"
+	//   "NOT_CRITICAL_ERROR"
+	//   "NO_RESULTS_ON_PAGE"
+	//   "REQUIRED_TOS_AGREEMENT"
+	//   "RESOURCE_IN_USE_BY_OTHER_RESOURCE_WARNING"
+	//   "RESOURCE_NOT_DELETED"
+	//   "SCHEMA_VALIDATION_IGNORED"
+	//   "SINGLE_INSTANCE_PROPERTY_TEMPLATE"
+	//   "UNDECLARED_PROPERTIES"
+	//   "UNREACHABLE"
+	Code string `json:"code,omitempty"`
+
+	// Data: [Output Only] Metadata about this warning in key: value format.
+	// For example:
+	// "data": [ { "key": "scope", "value": "zones/us-east1-d" }
+	Data []*SslPoliciesListWarningData `json:"data,omitempty"`
+
+	// Message: [Output Only] A human-readable description of the warning
+	// code.
+	Message string `json:"message,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Code") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Code") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPoliciesListWarning) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPoliciesListWarning
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SslPoliciesListWarningData struct {
+	// Key: [Output Only] A key that provides more detail on the warning
+	// being returned. For example, for warnings where there are no results
+	// in a list request for a particular zone, this key might be scope and
+	// the key value might be the zone name. Other examples might be a key
+	// indicating a deprecated resource and a suggested replacement, or a
+	// warning about invalid network settings (for example, if an instance
+	// attempts to perform IP forwarding but is not enabled for IP
+	// forwarding).
+	Key string `json:"key,omitempty"`
+
+	// Value: [Output Only] A warning data value corresponding to the key.
+	Value string `json:"value,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Key") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Key") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPoliciesListWarningData) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPoliciesListWarningData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SslPoliciesListAvailableFeaturesResponse struct {
+	Features []string `json:"features,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Features") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Features") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPoliciesListAvailableFeaturesResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPoliciesListAvailableFeaturesResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// SslPolicy: A SSL policy specifies the server-side support for SSL
+// features. This can be attached to a TargetHttpsProxy or a
+// TargetSslProxy. This affects connections between clients and the
+// HTTPS or SSL proxy load balancer. They do not affect the connection
+// between the load balancers and the backends.
+type SslPolicy struct {
+	// CreationTimestamp: [Output Only] Creation timestamp in RFC3339 text
+	// format.
+	CreationTimestamp string `json:"creationTimestamp,omitempty"`
+
+	// CustomFeatures: A list of features enabled when the selected profile
+	// is CUSTOM. The
+	// - method returns the set of features that can be specified in this
+	// list. This field must be empty if the profile is not CUSTOM.
+	CustomFeatures []string `json:"customFeatures,omitempty"`
+
+	// Description: An optional description of this resource. Provide this
+	// property when you create the resource.
+	Description string `json:"description,omitempty"`
+
+	// EnabledFeatures: [Output Only] The list of features enabled in the
+	// SSL policy.
+	EnabledFeatures []string `json:"enabledFeatures,omitempty"`
+
+	// Fingerprint: Fingerprint of this resource. A hash of the contents
+	// stored in this object. This field is used in optimistic locking. This
+	// field will be ignored when inserting a SslPolicy. An up-to-date
+	// fingerprint must be provided in order to update the SslPolicy.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve an
+	// SslPolicy.
+	Fingerprint string `json:"fingerprint,omitempty"`
+
+	// Id: [Output Only] The unique identifier for the resource. This
+	// identifier is defined by the server.
+	Id uint64 `json:"id,omitempty,string"`
+
+	// Kind: [Output only] Type of the resource. Always compute#sslPolicyfor
+	// SSL policies.
+	Kind string `json:"kind,omitempty"`
+
+	// MinTlsVersion: The minimum version of SSL protocol that can be used
+	// by the clients to establish a connection with the load balancer. This
+	// can be one of TLS_1_0, TLS_1_1, TLS_1_2.
+	//
+	// Possible values:
+	//   "TLS_1_0"
+	//   "TLS_1_1"
+	//   "TLS_1_2"
+	MinTlsVersion string `json:"minTlsVersion,omitempty"`
+
+	// Name: Name of the resource. The name must be 1-63 characters long,
+	// and comply with RFC1035. Specifically, the name must be 1-63
+	// characters long and match the regular expression
+	// `[a-z]([-a-z0-9]*[a-z0-9])?` which means the first character must be
+	// a lowercase letter, and all following characters must be a dash,
+	// lowercase letter, or digit, except the last character, which cannot
+	// be a dash.
+	Name string `json:"name,omitempty"`
+
+	// Profile: Profile specifies the set of SSL features that can be used
+	// by the load balancer when negotiating SSL with clients. This can be
+	// one of COMPATIBLE, MODERN, RESTRICTED, or CUSTOM. If using CUSTOM,
+	// the set of SSL features to enable must be specified in the
+	// customFeatures field.
+	//
+	// Possible values:
+	//   "COMPATIBLE"
+	//   "CUSTOM"
+	//   "MODERN"
+	//   "RESTRICTED"
+	Profile string `json:"profile,omitempty"`
+
+	// SelfLink: [Output Only] Server-defined URL for the resource.
+	SelfLink string `json:"selfLink,omitempty"`
+
+	// Warnings: [Output Only] If potential misconfigurations are detected
+	// for this SSL policy, this field will be populated with warning
+	// messages.
+	Warnings []*SslPolicyWarnings `json:"warnings,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "CreationTimestamp")
+	// to unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "CreationTimestamp") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPolicy) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPolicy
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SslPolicyWarnings struct {
+	// Code: [Output Only] A warning code, if applicable. For example,
+	// Compute Engine returns NO_RESULTS_ON_PAGE if there are no results in
+	// the response.
+	//
+	// Possible values:
+	//   "CLEANUP_FAILED"
+	//   "DEPRECATED_RESOURCE_USED"
+	//   "DEPRECATED_TYPE_USED"
+	//   "DISK_SIZE_LARGER_THAN_IMAGE_SIZE"
+	//   "EXPERIMENTAL_TYPE_USED"
+	//   "EXTERNAL_API_WARNING"
+	//   "FIELD_VALUE_OVERRIDEN"
+	//   "INJECTED_KERNELS_DEPRECATED"
+	//   "MISSING_TYPE_DEPENDENCY"
+	//   "NEXT_HOP_ADDRESS_NOT_ASSIGNED"
+	//   "NEXT_HOP_CANNOT_IP_FORWARD"
+	//   "NEXT_HOP_INSTANCE_NOT_FOUND"
+	//   "NEXT_HOP_INSTANCE_NOT_ON_NETWORK"
+	//   "NEXT_HOP_NOT_RUNNING"
+	//   "NOT_CRITICAL_ERROR"
+	//   "NO_RESULTS_ON_PAGE"
+	//   "REQUIRED_TOS_AGREEMENT"
+	//   "RESOURCE_IN_USE_BY_OTHER_RESOURCE_WARNING"
+	//   "RESOURCE_NOT_DELETED"
+	//   "SCHEMA_VALIDATION_IGNORED"
+	//   "SINGLE_INSTANCE_PROPERTY_TEMPLATE"
+	//   "UNDECLARED_PROPERTIES"
+	//   "UNREACHABLE"
+	Code string `json:"code,omitempty"`
+
+	// Data: [Output Only] Metadata about this warning in key: value format.
+	// For example:
+	// "data": [ { "key": "scope", "value": "zones/us-east1-d" }
+	Data []*SslPolicyWarningsData `json:"data,omitempty"`
+
+	// Message: [Output Only] A human-readable description of the warning
+	// code.
+	Message string `json:"message,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Code") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Code") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPolicyWarnings) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPolicyWarnings
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SslPolicyWarningsData struct {
+	// Key: [Output Only] A key that provides more detail on the warning
+	// being returned. For example, for warnings where there are no results
+	// in a list request for a particular zone, this key might be scope and
+	// the key value might be the zone name. Other examples might be a key
+	// indicating a deprecated resource and a suggested replacement, or a
+	// warning about invalid network settings (for example, if an instance
+	// attempts to perform IP forwarding but is not enabled for IP
+	// forwarding).
+	Key string `json:"key,omitempty"`
+
+	// Value: [Output Only] A warning data value corresponding to the key.
+	Value string `json:"value,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Key") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Key") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPolicyWarningsData) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPolicyWarningsData
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type SslPolicyReference struct {
+	// SslPolicy: URL of the SSL policy resource. Set this to empty string
+	// to clear any existing SSL policy associated with the target proxy
+	// resource.
+	SslPolicy string `json:"sslPolicy,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "SslPolicy") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "SslPolicy") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *SslPolicyReference) MarshalJSON() ([]byte, error) {
+	type NoMethod SslPolicyReference
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // Subnetwork: A Subnetwork resource. (== resource_for beta.subnetworks
 // ==) (== resource_for v1.subnetworks ==)
 type Subnetwork struct {
@@ -18430,6 +20042,18 @@ type Subnetwork struct {
 	// property when you create the resource. This field can be set only at
 	// resource creation time.
 	Description string `json:"description,omitempty"`
+
+	// EnableFlowLogs: Whether to enable flow logging for this subnetwork.
+	EnableFlowLogs bool `json:"enableFlowLogs,omitempty"`
+
+	// Fingerprint: Fingerprint of this resource. A hash of the contents
+	// stored in this object. This field is used in optimistic locking. This
+	// field will be ignored when inserting a Subnetwork. An up-to-date
+	// fingerprint must be provided in order to update the Subnetwork.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve a
+	// Subnetwork.
+	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// GatewayAddress: [Output Only] The gateway address for default routes
 	// to reach destination addresses outside this subnetwork.
@@ -18453,7 +20077,7 @@ type Subnetwork struct {
 	// Name: The name of the resource, provided by the client when initially
 	// creating the resource. The name must be 1-63 characters long, and
 	// comply with RFC1035. Specifically, the name must be 1-63 characters
-	// long and match the regular expression [a-z]([-a-z0-9]*[a-z0-9])?
+	// long and match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?`
 	// which means the first character must be a lowercase letter, and all
 	// following characters must be a dash, lowercase letter, or digit,
 	// except the last character, which cannot be a dash.
@@ -18893,7 +20517,7 @@ func (s *SubnetworksExpandIpCidrRangeRequest) MarshalJSON() ([]byte, error) {
 }
 
 type SubnetworksScopedList struct {
-	// Subnetworks: List of subnetworks contained in this scope.
+	// Subnetworks: A list of subnetworks contained in this scope.
 	Subnetworks []*Subnetwork `json:"subnetworks,omitempty"`
 
 	// Warning: An informational warning that appears when the list of
@@ -19108,11 +20732,11 @@ func (s *TCPHealthCheck) MarshalJSON() ([]byte, error) {
 // Tags: A set of instance tags.
 type Tags struct {
 	// Fingerprint: Specifies a fingerprint for this request, which is
-	// essentially a hash of the metadata's contents and used for optimistic
+	// essentially a hash of the tags' contents and used for optimistic
 	// locking. The fingerprint is initially generated by Compute Engine and
-	// changes after every request to modify or update metadata. You must
-	// always provide an up-to-date fingerprint hash in order to update or
-	// change metadata.
+	// changes after every request to modify or update tags. You must always
+	// provide an up-to-date fingerprint hash in order to update or change
+	// tags.
 	//
 	// To see the latest fingerprint, make get() request to the instance.
 	Fingerprint string `json:"fingerprint,omitempty"`
@@ -19167,7 +20791,7 @@ type TargetHttpProxy struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -19364,6 +20988,38 @@ func (s *TargetHttpProxyListWarningData) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type TargetHttpsProxiesSetQuicOverrideRequest struct {
+	// QuicOverride: QUIC policy for the TargetHttpsProxy resource.
+	//
+	// Possible values:
+	//   "DISABLE"
+	//   "ENABLE"
+	//   "NONE"
+	QuicOverride string `json:"quicOverride,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "QuicOverride") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "QuicOverride") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *TargetHttpsProxiesSetQuicOverrideRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod TargetHttpsProxiesSetQuicOverrideRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 type TargetHttpsProxiesSetSslCertificatesRequest struct {
 	// SslCertificates: New set of SslCertificate resources to associate
 	// with this TargetHttpsProxy resource. Currently exactly one
@@ -19417,11 +21073,26 @@ type TargetHttpsProxy struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
 	Name string `json:"name,omitempty"`
+
+	// QuicOverride: Specifies the QUIC override policy for this
+	// TargetHttpsProxy resource. This determines whether the load balancer
+	// will attempt to negotiate QUIC with clients or not. Can specify one
+	// of NONE, ENABLE, or DISABLE. Specify ENABLE to always enable QUIC,
+	// Enables QUIC when set to ENABLE, and disables QUIC when set to
+	// DISABLE. If NONE is specified, uses the QUIC policy with no user
+	// overrides, which is equivalent to DISABLE. Not specifying this field
+	// is equivalent to specifying NONE.
+	//
+	// Possible values:
+	//   "DISABLE"
+	//   "ENABLE"
+	//   "NONE"
+	QuicOverride string `json:"quicOverride,omitempty"`
 
 	// SelfLink: [Output Only] Server-defined URL for the resource.
 	SelfLink string `json:"selfLink,omitempty"`
@@ -19430,6 +21101,11 @@ type TargetHttpsProxy struct {
 	// authenticate connections between users and the load balancer.
 	// Currently, exactly one SSL certificate must be specified.
 	SslCertificates []string `json:"sslCertificates,omitempty"`
+
+	// SslPolicy: URL of SslPolicy resource that will be associated with the
+	// TargetHttpsProxy resource. If not set, the TargetHttpsProxy resource
+	// will not have any SSL policy configured.
+	SslPolicy string `json:"sslPolicy,omitempty"`
 
 	// UrlMap: A fully-qualified or valid partial URL to the UrlMap resource
 	// that defines the mapping from URL to the BackendService. For example,
@@ -19658,7 +21334,7 @@ type TargetInstance struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -20017,7 +21693,7 @@ func (s *TargetInstanceListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type TargetInstancesScopedList struct {
-	// TargetInstances: List of target instances contained in this scope.
+	// TargetInstances: A list of target instances contained in this scope.
 	TargetInstances []*TargetInstance `json:"targetInstances,omitempty"`
 
 	// Warning: Informational warning which replaces the list of addresses
@@ -20221,7 +21897,7 @@ type TargetPool struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -20760,7 +22436,7 @@ func (s *TargetPoolsRemoveInstanceRequest) MarshalJSON() ([]byte, error) {
 }
 
 type TargetPoolsScopedList struct {
-	// TargetPools: List of target pools contained in this scope.
+	// TargetPools: A list of target pools contained in this scope.
 	TargetPools []*TargetPool `json:"targetPools,omitempty"`
 
 	// Warning: Informational warning which replaces the list of addresses
@@ -21031,7 +22707,7 @@ type TargetSslProxy struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -21056,6 +22732,11 @@ type TargetSslProxy struct {
 	// authenticate connections to Backends. Currently exactly one SSL
 	// certificate must be specified.
 	SslCertificates []string `json:"sslCertificates,omitempty"`
+
+	// SslPolicy: URL of SslPolicy resource that will be associated with the
+	// TargetSslProxy resource. If not set, the TargetSslProxy resource will
+	// not have any SSL policy configured.
+	SslPolicy string `json:"sslPolicy,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
@@ -21323,7 +23004,7 @@ type TargetTcpProxy struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -21555,7 +23236,7 @@ type TargetVpnGateway struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -21927,7 +23608,7 @@ func (s *TargetVpnGatewayListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type TargetVpnGatewaysScopedList struct {
-	// TargetVpnGateways: [Output Only] List of target vpn gateways
+	// TargetVpnGateways: [Output Only] A list of target vpn gateways
 	// contained in this scope.
 	TargetVpnGateways []*TargetVpnGateway `json:"targetVpnGateways,omitempty"`
 
@@ -22093,6 +23774,67 @@ func (s *TestFailure) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+type TestPermissionsRequest struct {
+	// Permissions: The set of permissions to check for the 'resource'.
+	// Permissions with wildcards (such as '*' or 'storage.*') are not
+	// allowed.
+	Permissions []string `json:"permissions,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Permissions") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Permissions") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *TestPermissionsRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod TestPermissionsRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+type TestPermissionsResponse struct {
+	// Permissions: A subset of `TestPermissionsRequest.permissions` that
+	// the caller is allowed.
+	Permissions []string `json:"permissions,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Permissions") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Permissions") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *TestPermissionsResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod TestPermissionsResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // UrlMap: A UrlMap resource. This resource defines the mapping from URL
 // to the BackendService resource, based on the "longest-match" of the
 // URL's host and path.
@@ -22113,6 +23855,9 @@ type UrlMap struct {
 	// stored in this object. This field is used in optimistic locking. This
 	// field will be ignored when inserting a UrlMap. An up-to-date
 	// fingerprint must be provided in order to update the UrlMap.
+	//
+	// To see the latest fingerprint, make a get() request to retrieve a
+	// UrlMap.
 	Fingerprint string `json:"fingerprint,omitempty"`
 
 	// HostRules: The list of HostRules to use against the URL.
@@ -22129,7 +23874,7 @@ type UrlMap struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -22568,7 +24313,7 @@ type VpnTunnel struct {
 	// Name: Name of the resource. Provided by the client when the resource
 	// is created. The name must be 1-63 characters long, and comply with
 	// RFC1035. Specifically, the name must be 1-63 characters long and
-	// match the regular expression [a-z]([-a-z0-9]*[a-z0-9])? which means
+	// match the regular expression `[a-z]([-a-z0-9]*[a-z0-9])?` which means
 	// the first character must be a lowercase letter, and all following
 	// characters must be a dash, lowercase letter, or digit, except the
 	// last character, which cannot be a dash.
@@ -22962,7 +24707,7 @@ func (s *VpnTunnelListWarningData) MarshalJSON() ([]byte, error) {
 }
 
 type VpnTunnelsScopedList struct {
-	// VpnTunnels: List of vpn tunnels contained in this scope.
+	// VpnTunnels: A list of vpn tunnels contained in this scope.
 	VpnTunnels []*VpnTunnel `json:"vpnTunnels,omitempty"`
 
 	// Warning: Informational warning which replaces the list of addresses
@@ -23565,32 +25310,28 @@ func (r *AcceleratorTypesService) AggregatedList(project string) *AcceleratorTyp
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AcceleratorTypesAggregatedListCall) Filter(filter string) *AcceleratorTypesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -23734,7 +25475,7 @@ func (c *AcceleratorTypesAggregatedListCall) Do(opts ...googleapi.CallOption) (*
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -23811,8 +25552,7 @@ type AcceleratorTypesGetCall struct {
 	header_         http.Header
 }
 
-// Get: Returns the specified accelerator type. Get a list of available
-// accelerator types by making a list() request.
+// Get: Returns the specified accelerator type.
 func (r *AcceleratorTypesService) Get(project string, zone string, acceleratorType string) *AcceleratorTypesGetCall {
 	c := &AcceleratorTypesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.project = project
@@ -23917,7 +25657,7 @@ func (c *AcceleratorTypesGetCall) Do(opts ...googleapi.CallOption) (*Accelerator
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified accelerator type. Get a list of available accelerator types by making a list() request.",
+	//   "description": "Returns the specified accelerator type.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.acceleratorTypes.get",
 	//   "parameterOrder": [
@@ -23982,32 +25722,28 @@ func (r *AcceleratorTypesService) List(project string, zone string) *Accelerator
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AcceleratorTypesListCall) Filter(filter string) *AcceleratorTypesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -24153,7 +25889,7 @@ func (c *AcceleratorTypesListCall) Do(opts ...googleapi.CallOption) (*Accelerato
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -24243,32 +25979,28 @@ func (r *AddressesService) AggregatedList(project string) *AddressesAggregatedLi
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AddressesAggregatedListCall) Filter(filter string) *AddressesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -24412,7 +26144,7 @@ func (c *AddressesAggregatedListCall) Do(opts ...googleapi.CallOption) (*Address
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -25005,32 +26737,28 @@ func (r *AddressesService) List(project string, region string) *AddressesListCal
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AddressesListCall) Filter(filter string) *AddressesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -25176,7 +26904,7 @@ func (c *AddressesListCall) Do(opts ...googleapi.CallOption) (*AddressList, erro
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -25265,32 +26993,28 @@ func (r *AutoscalersService) AggregatedList(project string) *AutoscalersAggregat
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AutoscalersAggregatedListCall) Filter(filter string) *AutoscalersAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -25434,7 +27158,7 @@ func (c *AutoscalersAggregatedListCall) Do(opts ...googleapi.CallOption) (*Autos
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -25682,7 +27406,7 @@ type AutoscalersGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified autoscaler resource. Get a list of
+// Get: Returns the specified autoscaler resource. Gets a list of
 // available autoscalers by making a list() request.
 func (r *AutoscalersService) Get(project string, zone string, autoscaler string) *AutoscalersGetCall {
 	c := &AutoscalersGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -25788,7 +27512,7 @@ func (c *AutoscalersGetCall) Do(opts ...googleapi.CallOption) (*Autoscaler, erro
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified autoscaler resource. Get a list of available autoscalers by making a list() request.",
+	//   "description": "Returns the specified autoscaler resource. Gets a list of available autoscalers by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.autoscalers.get",
 	//   "parameterOrder": [
@@ -26024,32 +27748,28 @@ func (r *AutoscalersService) List(project string, zone string) *AutoscalersListC
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *AutoscalersListCall) Filter(filter string) *AutoscalersListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -26195,7 +27915,7 @@ func (c *AutoscalersListCall) Do(opts ...googleapi.CallOption) (*AutoscalerList,
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -26635,6 +28355,175 @@ func (c *AutoscalersUpdateCall) Do(opts ...googleapi.CallOption) (*Operation, er
 
 }
 
+// method id "compute.backendBuckets.addSignedUrlKey":
+
+type BackendBucketsAddSignedUrlKeyCall struct {
+	s             *Service
+	project       string
+	backendBucket string
+	signedurlkey  *SignedUrlKey
+	urlParams_    gensupport.URLParams
+	ctx_          context.Context
+	header_       http.Header
+}
+
+// AddSignedUrlKey: Adds the given Signed URL Key to the backend bucket.
+func (r *BackendBucketsService) AddSignedUrlKey(project string, backendBucket string, signedurlkey *SignedUrlKey) *BackendBucketsAddSignedUrlKeyCall {
+	c := &BackendBucketsAddSignedUrlKeyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.backendBucket = backendBucket
+	c.signedurlkey = signedurlkey
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *BackendBucketsAddSignedUrlKeyCall) RequestId(requestId string) *BackendBucketsAddSignedUrlKeyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *BackendBucketsAddSignedUrlKeyCall) Fields(s ...googleapi.Field) *BackendBucketsAddSignedUrlKeyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *BackendBucketsAddSignedUrlKeyCall) Context(ctx context.Context) *BackendBucketsAddSignedUrlKeyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *BackendBucketsAddSignedUrlKeyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *BackendBucketsAddSignedUrlKeyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.signedurlkey)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/backendBuckets/{backendBucket}/addSignedUrlKey")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":       c.project,
+		"backendBucket": c.backendBucket,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.backendBuckets.addSignedUrlKey" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *BackendBucketsAddSignedUrlKeyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Adds the given Signed URL Key to the backend bucket.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.backendBuckets.addSignedUrlKey",
+	//   "parameterOrder": [
+	//     "project",
+	//     "backendBucket"
+	//   ],
+	//   "parameters": {
+	//     "backendBucket": {
+	//       "description": "Name of the BackendBucket resource to which the Signed URL Key should be added. The name should conform to RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/backendBuckets/{backendBucket}/addSignedUrlKey",
+	//   "request": {
+	//     "$ref": "SignedUrlKey"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.backendBuckets.delete":
 
 type BackendBucketsDeleteCall struct {
@@ -26795,6 +28684,174 @@ func (c *BackendBucketsDeleteCall) Do(opts ...googleapi.CallOption) (*Operation,
 
 }
 
+// method id "compute.backendBuckets.deleteSignedUrlKey":
+
+type BackendBucketsDeleteSignedUrlKeyCall struct {
+	s             *Service
+	project       string
+	backendBucket string
+	urlParams_    gensupport.URLParams
+	ctx_          context.Context
+	header_       http.Header
+}
+
+// DeleteSignedUrlKey: Deletes the given Signed URL Key from the backend
+// bucket.
+func (r *BackendBucketsService) DeleteSignedUrlKey(project string, backendBucket string, keyName string) *BackendBucketsDeleteSignedUrlKeyCall {
+	c := &BackendBucketsDeleteSignedUrlKeyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.backendBucket = backendBucket
+	c.urlParams_.Set("keyName", keyName)
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *BackendBucketsDeleteSignedUrlKeyCall) RequestId(requestId string) *BackendBucketsDeleteSignedUrlKeyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *BackendBucketsDeleteSignedUrlKeyCall) Fields(s ...googleapi.Field) *BackendBucketsDeleteSignedUrlKeyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *BackendBucketsDeleteSignedUrlKeyCall) Context(ctx context.Context) *BackendBucketsDeleteSignedUrlKeyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *BackendBucketsDeleteSignedUrlKeyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *BackendBucketsDeleteSignedUrlKeyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/backendBuckets/{backendBucket}/deleteSignedUrlKey")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":       c.project,
+		"backendBucket": c.backendBucket,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.backendBuckets.deleteSignedUrlKey" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *BackendBucketsDeleteSignedUrlKeyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Deletes the given Signed URL Key from the backend bucket.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.backendBuckets.deleteSignedUrlKey",
+	//   "parameterOrder": [
+	//     "project",
+	//     "backendBucket",
+	//     "keyName"
+	//   ],
+	//   "parameters": {
+	//     "backendBucket": {
+	//       "description": "Name of the BackendBucket resource to which the Signed URL Key should be added. The name should conform to RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "keyName": {
+	//       "description": "The name of the Signed URL Key to delete.",
+	//       "location": "query",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/backendBuckets/{backendBucket}/deleteSignedUrlKey",
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.backendBuckets.get":
 
 type BackendBucketsGetCall struct {
@@ -26807,7 +28864,7 @@ type BackendBucketsGetCall struct {
 	header_       http.Header
 }
 
-// Get: Returns the specified BackendBucket resource. Get a list of
+// Get: Returns the specified BackendBucket resource. Gets a list of
 // available backend buckets by making a list() request.
 func (r *BackendBucketsService) Get(project string, backendBucket string) *BackendBucketsGetCall {
 	c := &BackendBucketsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -26911,7 +28968,7 @@ func (c *BackendBucketsGetCall) Do(opts ...googleapi.CallOption) (*BackendBucket
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified BackendBucket resource. Get a list of available backend buckets by making a list() request.",
+	//   "description": "Returns the specified BackendBucket resource. Gets a list of available backend buckets by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.backendBuckets.get",
 	//   "parameterOrder": [
@@ -27126,32 +29183,28 @@ func (r *BackendBucketsService) List(project string) *BackendBucketsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *BackendBucketsListCall) Filter(filter string) *BackendBucketsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -27295,7 +29348,7 @@ func (c *BackendBucketsListCall) Do(opts ...googleapi.CallOption) (*BackendBucke
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -27702,6 +29755,176 @@ func (c *BackendBucketsUpdateCall) Do(opts ...googleapi.CallOption) (*Operation,
 
 }
 
+// method id "compute.backendServices.addSignedUrlKey":
+
+type BackendServicesAddSignedUrlKeyCall struct {
+	s              *Service
+	project        string
+	backendService string
+	signedurlkey   *SignedUrlKey
+	urlParams_     gensupport.URLParams
+	ctx_           context.Context
+	header_        http.Header
+}
+
+// AddSignedUrlKey: Adds the given Signed URL Key to the specified
+// backend service.
+func (r *BackendServicesService) AddSignedUrlKey(project string, backendService string, signedurlkey *SignedUrlKey) *BackendServicesAddSignedUrlKeyCall {
+	c := &BackendServicesAddSignedUrlKeyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.backendService = backendService
+	c.signedurlkey = signedurlkey
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *BackendServicesAddSignedUrlKeyCall) RequestId(requestId string) *BackendServicesAddSignedUrlKeyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *BackendServicesAddSignedUrlKeyCall) Fields(s ...googleapi.Field) *BackendServicesAddSignedUrlKeyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *BackendServicesAddSignedUrlKeyCall) Context(ctx context.Context) *BackendServicesAddSignedUrlKeyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *BackendServicesAddSignedUrlKeyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *BackendServicesAddSignedUrlKeyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.signedurlkey)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/backendServices/{backendService}/addSignedUrlKey")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":        c.project,
+		"backendService": c.backendService,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.backendServices.addSignedUrlKey" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *BackendServicesAddSignedUrlKeyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Adds the given Signed URL Key to the specified backend service.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.backendServices.addSignedUrlKey",
+	//   "parameterOrder": [
+	//     "project",
+	//     "backendService"
+	//   ],
+	//   "parameters": {
+	//     "backendService": {
+	//       "description": "Name of the BackendService resource to which the Signed URL Key should be added. The name should conform to RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/backendServices/{backendService}/addSignedUrlKey",
+	//   "request": {
+	//     "$ref": "SignedUrlKey"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.backendServices.aggregatedList":
 
 type BackendServicesAggregatedListCall struct {
@@ -27721,32 +29944,28 @@ func (r *BackendServicesService) AggregatedList(project string) *BackendServices
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *BackendServicesAggregatedListCall) Filter(filter string) *BackendServicesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -27890,7 +30109,7 @@ func (c *BackendServicesAggregatedListCall) Do(opts ...googleapi.CallOption) (*B
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -28115,6 +30334,174 @@ func (c *BackendServicesDeleteCall) Do(opts ...googleapi.CallOption) (*Operation
 
 }
 
+// method id "compute.backendServices.deleteSignedUrlKey":
+
+type BackendServicesDeleteSignedUrlKeyCall struct {
+	s              *Service
+	project        string
+	backendService string
+	urlParams_     gensupport.URLParams
+	ctx_           context.Context
+	header_        http.Header
+}
+
+// DeleteSignedUrlKey: Deletes the given Signed URL Key from the
+// specified backend service.
+func (r *BackendServicesService) DeleteSignedUrlKey(project string, backendService string, keyName string) *BackendServicesDeleteSignedUrlKeyCall {
+	c := &BackendServicesDeleteSignedUrlKeyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.backendService = backendService
+	c.urlParams_.Set("keyName", keyName)
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *BackendServicesDeleteSignedUrlKeyCall) RequestId(requestId string) *BackendServicesDeleteSignedUrlKeyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *BackendServicesDeleteSignedUrlKeyCall) Fields(s ...googleapi.Field) *BackendServicesDeleteSignedUrlKeyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *BackendServicesDeleteSignedUrlKeyCall) Context(ctx context.Context) *BackendServicesDeleteSignedUrlKeyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *BackendServicesDeleteSignedUrlKeyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *BackendServicesDeleteSignedUrlKeyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/backendServices/{backendService}/deleteSignedUrlKey")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":        c.project,
+		"backendService": c.backendService,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.backendServices.deleteSignedUrlKey" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *BackendServicesDeleteSignedUrlKeyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Deletes the given Signed URL Key from the specified backend service.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.backendServices.deleteSignedUrlKey",
+	//   "parameterOrder": [
+	//     "project",
+	//     "backendService",
+	//     "keyName"
+	//   ],
+	//   "parameters": {
+	//     "backendService": {
+	//       "description": "Name of the BackendService resource to which the Signed URL Key should be added. The name should conform to RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "keyName": {
+	//       "description": "The name of the Signed URL Key to delete.",
+	//       "location": "query",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/backendServices/{backendService}/deleteSignedUrlKey",
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.backendServices.get":
 
 type BackendServicesGetCall struct {
@@ -28127,7 +30514,7 @@ type BackendServicesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified BackendService resource. Get a list of
+// Get: Returns the specified BackendService resource. Gets a list of
 // available backend services by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/backendServices/get
 func (r *BackendServicesService) Get(project string, backendService string) *BackendServicesGetCall {
@@ -28232,7 +30619,7 @@ func (c *BackendServicesGetCall) Do(opts ...googleapi.CallOption) (*BackendServi
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified BackendService resource. Get a list of available backend services by making a list() request.",
+	//   "description": "Returns the specified BackendService resource. Gets a list of available backend services by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.backendServices.get",
 	//   "parameterOrder": [
@@ -28599,32 +30986,28 @@ func (r *BackendServicesService) List(project string) *BackendServicesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *BackendServicesListCall) Filter(filter string) *BackendServicesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -28768,7 +31151,7 @@ func (c *BackendServicesListCall) Do(opts ...googleapi.CallOption) (*BackendServ
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -29201,32 +31584,28 @@ func (r *DiskTypesService) AggregatedList(project string) *DiskTypesAggregatedLi
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *DiskTypesAggregatedListCall) Filter(filter string) *DiskTypesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -29370,7 +31749,7 @@ func (c *DiskTypesAggregatedListCall) Do(opts ...googleapi.CallOption) (*DiskTyp
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -29447,7 +31826,7 @@ type DiskTypesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified disk type. Get a list of available disk
+// Get: Returns the specified disk type. Gets a list of available disk
 // types by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/diskTypes/get
 func (r *DiskTypesService) Get(project string, zone string, diskType string) *DiskTypesGetCall {
@@ -29554,7 +31933,7 @@ func (c *DiskTypesGetCall) Do(opts ...googleapi.CallOption) (*DiskType, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified disk type. Get a list of available disk types by making a list() request.",
+	//   "description": "Returns the specified disk type. Gets a list of available disk types by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.diskTypes.get",
 	//   "parameterOrder": [
@@ -29620,32 +31999,28 @@ func (r *DiskTypesService) List(project string, zone string) *DiskTypesListCall 
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *DiskTypesListCall) Filter(filter string) *DiskTypesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -29791,7 +32166,7 @@ func (c *DiskTypesListCall) Do(opts ...googleapi.CallOption) (*DiskTypeList, err
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -29881,32 +32256,28 @@ func (r *DisksService) AggregatedList(project string) *DisksAggregatedListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *DisksAggregatedListCall) Filter(filter string) *DisksAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -30050,7 +32421,7 @@ func (c *DisksAggregatedListCall) Do(opts ...googleapi.CallOption) (*DiskAggrega
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -30493,7 +32864,7 @@ type DisksGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns a specified persistent disk. Get a list of available
+// Get: Returns a specified persistent disk. Gets a list of available
 // persistent disks by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/disks/get
 func (r *DisksService) Get(project string, zone string, disk string) *DisksGetCall {
@@ -30600,7 +32971,7 @@ func (c *DisksGetCall) Do(opts ...googleapi.CallOption) (*Disk, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns a specified persistent disk. Get a list of available persistent disks by making a list() request.",
+	//   "description": "Returns a specified persistent disk. Gets a list of available persistent disks by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.disks.get",
 	//   "parameterOrder": [
@@ -30853,32 +33224,28 @@ func (r *DisksService) List(project string, zone string) *DisksListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *DisksListCall) Filter(filter string) *DisksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -31024,7 +33391,7 @@ func (c *DisksListCall) Do(opts ...googleapi.CallOption) (*DiskList, error) {
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -31953,32 +34320,28 @@ func (r *FirewallsService) List(project string) *FirewallsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *FirewallsListCall) Filter(filter string) *FirewallsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -32122,7 +34485,7 @@ func (c *FirewallsListCall) Do(opts ...googleapi.CallOption) (*FirewallList, err
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -32552,32 +34915,28 @@ func (r *ForwardingRulesService) AggregatedList(project string) *ForwardingRules
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *ForwardingRulesAggregatedListCall) Filter(filter string) *ForwardingRulesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -32721,7 +35080,7 @@ func (c *ForwardingRulesAggregatedListCall) Do(opts ...googleapi.CallOption) (*F
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -33314,32 +35673,28 @@ func (r *ForwardingRulesService) List(project string, region string) *Forwarding
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *ForwardingRulesListCall) Filter(filter string) *ForwardingRulesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -33485,7 +35840,7 @@ func (c *ForwardingRulesListCall) Do(opts ...googleapi.CallOption) (*ForwardingR
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -33912,7 +36267,7 @@ type GlobalAddressesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified address resource. Get a list of available
+// Get: Returns the specified address resource. Gets a list of available
 // addresses by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/globalAddresses/get
 func (r *GlobalAddressesService) Get(project string, address string) *GlobalAddressesGetCall {
@@ -34017,7 +36372,7 @@ func (c *GlobalAddressesGetCall) Do(opts ...googleapi.CallOption) (*Address, err
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified address resource. Get a list of available addresses by making a list() request.",
+	//   "description": "Returns the specified address resource. Gets a list of available addresses by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.globalAddresses.get",
 	//   "parameterOrder": [
@@ -34233,32 +36588,28 @@ func (r *GlobalAddressesService) List(project string) *GlobalAddressesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *GlobalAddressesListCall) Filter(filter string) *GlobalAddressesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -34402,7 +36753,7 @@ func (c *GlobalAddressesListCall) Do(opts ...googleapi.CallOption) (*AddressList
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -34639,7 +36990,7 @@ type GlobalForwardingRulesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified GlobalForwardingRule resource. Get a list
+// Get: Returns the specified GlobalForwardingRule resource. Gets a list
 // of available forwarding rules by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/globalForwardingRules/get
 func (r *GlobalForwardingRulesService) Get(project string, forwardingRule string) *GlobalForwardingRulesGetCall {
@@ -34744,7 +37095,7 @@ func (c *GlobalForwardingRulesGetCall) Do(opts ...googleapi.CallOption) (*Forwar
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified GlobalForwardingRule resource. Get a list of available forwarding rules by making a list() request.",
+	//   "description": "Returns the specified GlobalForwardingRule resource. Gets a list of available forwarding rules by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.globalForwardingRules.get",
 	//   "parameterOrder": [
@@ -34961,32 +37312,28 @@ func (r *GlobalForwardingRulesService) List(project string) *GlobalForwardingRul
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *GlobalForwardingRulesListCall) Filter(filter string) *GlobalForwardingRulesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -35130,7 +37477,7 @@ func (c *GlobalForwardingRulesListCall) Do(opts ...googleapi.CallOption) (*Forwa
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -35385,32 +37732,28 @@ func (r *GlobalOperationsService) AggregatedList(project string) *GlobalOperatio
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *GlobalOperationsAggregatedListCall) Filter(filter string) *GlobalOperationsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -35554,7 +37897,7 @@ func (c *GlobalOperationsAggregatedListCall) Do(opts ...googleapi.CallOption) (*
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -35739,7 +38082,7 @@ type GlobalOperationsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Retrieves the specified Operations resource. Get a list of
+// Get: Retrieves the specified Operations resource. Gets a list of
 // operations by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/globalOperations/get
 func (r *GlobalOperationsService) Get(project string, operation string) *GlobalOperationsGetCall {
@@ -35844,7 +38187,7 @@ func (c *GlobalOperationsGetCall) Do(opts ...googleapi.CallOption) (*Operation, 
 	}
 	return ret, nil
 	// {
-	//   "description": "Retrieves the specified Operations resource. Get a list of operations by making a list() request.",
+	//   "description": "Retrieves the specified Operations resource. Gets a list of operations by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.globalOperations.get",
 	//   "parameterOrder": [
@@ -35900,32 +38243,28 @@ func (r *GlobalOperationsService) List(project string) *GlobalOperationsListCall
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *GlobalOperationsListCall) Filter(filter string) *GlobalOperationsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -36069,7 +38408,7 @@ func (c *GlobalOperationsListCall) Do(opts ...googleapi.CallOption) (*OperationL
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -36305,7 +38644,7 @@ type HealthChecksGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified HealthCheck resource. Get a list of
+// Get: Returns the specified HealthCheck resource. Gets a list of
 // available health checks by making a list() request.
 func (r *HealthChecksService) Get(project string, healthCheck string) *HealthChecksGetCall {
 	c := &HealthChecksGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -36409,7 +38748,7 @@ func (c *HealthChecksGetCall) Do(opts ...googleapi.CallOption) (*HealthCheck, er
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified HealthCheck resource. Get a list of available health checks by making a list() request.",
+	//   "description": "Returns the specified HealthCheck resource. Gets a list of available health checks by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.healthChecks.get",
 	//   "parameterOrder": [
@@ -36624,32 +38963,28 @@ func (r *HealthChecksService) List(project string) *HealthChecksListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *HealthChecksListCall) Filter(filter string) *HealthChecksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -36793,7 +39128,7 @@ func (c *HealthChecksListCall) Do(opts ...googleapi.CallOption) (*HealthCheckLis
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -37373,7 +39708,7 @@ type HttpHealthChecksGetCall struct {
 	header_         http.Header
 }
 
-// Get: Returns the specified HttpHealthCheck resource. Get a list of
+// Get: Returns the specified HttpHealthCheck resource. Gets a list of
 // available HTTP health checks by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/httpHealthChecks/get
 func (r *HttpHealthChecksService) Get(project string, httpHealthCheck string) *HttpHealthChecksGetCall {
@@ -37478,7 +39813,7 @@ func (c *HttpHealthChecksGetCall) Do(opts ...googleapi.CallOption) (*HttpHealthC
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified HttpHealthCheck resource. Get a list of available HTTP health checks by making a list() request.",
+	//   "description": "Returns the specified HttpHealthCheck resource. Gets a list of available HTTP health checks by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.httpHealthChecks.get",
 	//   "parameterOrder": [
@@ -37695,32 +40030,28 @@ func (r *HttpHealthChecksService) List(project string) *HttpHealthChecksListCall
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *HttpHealthChecksListCall) Filter(filter string) *HttpHealthChecksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -37864,7 +40195,7 @@ func (c *HttpHealthChecksListCall) Do(opts ...googleapi.CallOption) (*HttpHealth
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -38445,7 +40776,7 @@ type HttpsHealthChecksGetCall struct {
 	header_          http.Header
 }
 
-// Get: Returns the specified HttpsHealthCheck resource. Get a list of
+// Get: Returns the specified HttpsHealthCheck resource. Gets a list of
 // available HTTPS health checks by making a list() request.
 func (r *HttpsHealthChecksService) Get(project string, httpsHealthCheck string) *HttpsHealthChecksGetCall {
 	c := &HttpsHealthChecksGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -38549,7 +40880,7 @@ func (c *HttpsHealthChecksGetCall) Do(opts ...googleapi.CallOption) (*HttpsHealt
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified HttpsHealthCheck resource. Get a list of available HTTPS health checks by making a list() request.",
+	//   "description": "Returns the specified HttpsHealthCheck resource. Gets a list of available HTTPS health checks by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.httpsHealthChecks.get",
 	//   "parameterOrder": [
@@ -38764,32 +41095,28 @@ func (r *HttpsHealthChecksService) List(project string) *HttpsHealthChecksListCa
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *HttpsHealthChecksListCall) Filter(filter string) *HttpsHealthChecksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -38933,7 +41260,7 @@ func (c *HttpsHealthChecksListCall) Do(opts ...googleapi.CallOption) (*HttpsHeal
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -39687,7 +42014,7 @@ type ImagesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified image. Get a list of available images by
+// Get: Returns the specified image. Gets a list of available images by
 // making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/images/get
 func (r *ImagesService) Get(project string, image string) *ImagesGetCall {
@@ -39792,7 +42119,7 @@ func (c *ImagesGetCall) Do(opts ...googleapi.CallOption) (*Image, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified image. Get a list of available images by making a list() request.",
+	//   "description": "Returns the specified image. Gets a list of available images by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.images.get",
 	//   "parameterOrder": [
@@ -40181,32 +42508,28 @@ func (r *ImagesService) List(project string) *ImagesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *ImagesListCall) Filter(filter string) *ImagesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -40350,7 +42673,7 @@ func (c *ImagesListCall) Do(opts ...googleapi.CallOption) (*ImageList, error) {
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -40775,32 +43098,28 @@ func (r *InstanceGroupManagersService) AggregatedList(project string) *InstanceG
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceGroupManagersAggregatedListCall) Filter(filter string) *InstanceGroupManagersAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -40945,7 +43264,7 @@ func (c *InstanceGroupManagersAggregatedListCall) Do(opts ...googleapi.CallOptio
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -41389,7 +43708,7 @@ type InstanceGroupManagersGetCall struct {
 }
 
 // Get: Returns all of the details about the specified managed instance
-// group. Get a list of available managed instance groups by making a
+// group. Gets a list of available managed instance groups by making a
 // list() request.
 func (r *InstanceGroupManagersService) Get(project string, zone string, instanceGroupManager string) *InstanceGroupManagersGetCall {
 	c := &InstanceGroupManagersGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -41495,7 +43814,7 @@ func (c *InstanceGroupManagersGetCall) Do(opts ...googleapi.CallOption) (*Instan
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns all of the details about the specified managed instance group. Get a list of available managed instance groups by making a list() request.",
+	//   "description": "Returns all of the details about the specified managed instance group. Gets a list of available managed instance groups by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.instanceGroupManagers.get",
 	//   "parameterOrder": [
@@ -41736,32 +44055,28 @@ func (r *InstanceGroupManagersService) List(project string, zone string) *Instan
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceGroupManagersListCall) Filter(filter string) *InstanceGroupManagersListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -41907,7 +44222,7 @@ func (c *InstanceGroupManagersListCall) Do(opts ...googleapi.CallOption) (*Insta
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -43120,32 +45435,28 @@ func (r *InstanceGroupsService) AggregatedList(project string) *InstanceGroupsAg
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceGroupsAggregatedListCall) Filter(filter string) *InstanceGroupsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -43289,7 +45600,7 @@ func (c *InstanceGroupsAggregatedListCall) Do(opts ...googleapi.CallOption) (*In
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -43538,7 +45849,7 @@ type InstanceGroupsGetCall struct {
 	header_       http.Header
 }
 
-// Get: Returns the specified instance group. Get a list of available
+// Get: Returns the specified instance group. Gets a list of available
 // instance groups by making a list() request.
 func (r *InstanceGroupsService) Get(project string, zone string, instanceGroup string) *InstanceGroupsGetCall {
 	c := &InstanceGroupsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -43644,7 +45955,7 @@ func (c *InstanceGroupsGetCall) Do(opts ...googleapi.CallOption) (*InstanceGroup
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified instance group. Get a list of available instance groups by making a list() request.",
+	//   "description": "Returns the specified instance group. Gets a list of available instance groups by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.instanceGroups.get",
 	//   "parameterOrder": [
@@ -43877,32 +46188,28 @@ func (r *InstanceGroupsService) List(project string, zone string) *InstanceGroup
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceGroupsListCall) Filter(filter string) *InstanceGroupsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -44048,7 +46355,7 @@ func (c *InstanceGroupsListCall) Do(opts ...googleapi.CallOption) (*InstanceGrou
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -44141,32 +46448,28 @@ func (r *InstanceGroupsService) ListInstances(project string, zone string, insta
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceGroupsListInstancesCall) Filter(filter string) *InstanceGroupsListInstancesCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -44306,7 +46609,7 @@ func (c *InstanceGroupsListInstancesCall) Do(opts ...googleapi.CallOption) (*Ins
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -44923,8 +47226,8 @@ type InstanceTemplatesGetCall struct {
 	header_          http.Header
 }
 
-// Get: Returns the specified instance template. Get a list of available
-// instance templates by making a list() request.
+// Get: Returns the specified instance template. Gets a list of
+// available instance templates by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/instanceTemplates/get
 func (r *InstanceTemplatesService) Get(project string, instanceTemplate string) *InstanceTemplatesGetCall {
 	c := &InstanceTemplatesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -45028,7 +47331,7 @@ func (c *InstanceTemplatesGetCall) Do(opts ...googleapi.CallOption) (*InstanceTe
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified instance template. Get a list of available instance templates by making a list() request.",
+	//   "description": "Returns the specified instance template. Gets a list of available instance templates by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.instanceTemplates.get",
 	//   "parameterOrder": [
@@ -45248,32 +47551,28 @@ func (r *InstanceTemplatesService) List(project string) *InstanceTemplatesListCa
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstanceTemplatesListCall) Filter(filter string) *InstanceTemplatesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -45417,7 +47716,7 @@ func (c *InstanceTemplatesListCall) Do(opts ...googleapi.CallOption) (*InstanceT
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -45691,32 +47990,28 @@ func (r *InstancesService) AggregatedList(project string) *InstancesAggregatedLi
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstancesAggregatedListCall) Filter(filter string) *InstancesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -45860,7 +48155,7 @@ func (c *InstancesAggregatedListCall) Do(opts ...googleapi.CallOption) (*Instanc
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -45948,6 +48243,14 @@ func (r *InstancesService) AttachDisk(project string, zone string, instance stri
 	c.zone = zone
 	c.instance = instance
 	c.attacheddisk = attacheddisk
+	return c
+}
+
+// ForceAttach sets the optional parameter "forceAttach": Whether to
+// force attach the disk even if it's currently attached to another
+// instance. This is only available for regional disks.
+func (c *InstancesAttachDiskCall) ForceAttach(forceAttach bool) *InstancesAttachDiskCall {
+	c.urlParams_.Set("forceAttach", fmt.Sprint(forceAttach))
 	return c
 }
 
@@ -46067,6 +48370,11 @@ func (c *InstancesAttachDiskCall) Do(opts ...googleapi.CallOption) (*Operation, 
 	//     "instance"
 	//   ],
 	//   "parameters": {
+	//     "forceAttach": {
+	//       "description": "Whether to force attach the disk even if it's currently attached to another instance. This is only available for regional disks.",
+	//       "location": "query",
+	//       "type": "boolean"
+	//     },
 	//     "instance": {
 	//       "description": "The instance name for this request.",
 	//       "location": "path",
@@ -46664,8 +48972,8 @@ type InstancesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Instance resource. Get a list of available
-// instances by making a list() request.
+// Get: Returns the specified Instance resource. Gets a list of
+// available instances by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/instances/get
 func (r *InstancesService) Get(project string, zone string, instance string) *InstancesGetCall {
 	c := &InstancesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -46771,7 +49079,7 @@ func (c *InstancesGetCall) Do(opts ...googleapi.CallOption) (*Instance, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Instance resource. Get a list of available instances by making a list() request.",
+	//   "description": "Returns the specified Instance resource. Gets a list of available instances by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.instances.get",
 	//   "parameterOrder": [
@@ -47054,6 +49362,22 @@ func (c *InstancesInsertCall) RequestId(requestId string) *InstancesInsertCall {
 	return c
 }
 
+// SourceInstanceTemplate sets the optional parameter
+// "sourceInstanceTemplate": Specifies instance template to create the
+// instance.
+//
+// This field is optional. It can be a full or partial URL. For example,
+// the following are all valid URLs to an instance template:
+// -
+// https://www.googleapis.com/compute/v1/projects/project/global/global/instanceTemplates/instanceTemplate
+// - projects/project/global/global/instanceTemplates/instanceTemplate
+//
+// - global/instancesTemplates/instanceTemplate
+func (c *InstancesInsertCall) SourceInstanceTemplate(sourceInstanceTemplate string) *InstancesInsertCall {
+	c.urlParams_.Set("sourceInstanceTemplate", sourceInstanceTemplate)
+	return c
+}
+
 // Fields allows partial responses to be retrieved. See
 // https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
 // for more information.
@@ -47161,6 +49485,11 @@ func (c *InstancesInsertCall) Do(opts ...googleapi.CallOption) (*Operation, erro
 	//       "location": "query",
 	//       "type": "string"
 	//     },
+	//     "sourceInstanceTemplate": {
+	//       "description": "Specifies instance template to create the instance.\n\nThis field is optional. It can be a full or partial URL. For example, the following are all valid URLs to an instance template:  \n- https://www.googleapis.com/compute/v1/projects/project/global/global/instanceTemplates/instanceTemplate \n- projects/project/global/global/instanceTemplates/instanceTemplate \n- global/instancesTemplates/instanceTemplate",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
 	//     "zone": {
 	//       "description": "The name of the zone for this request.",
 	//       "location": "path",
@@ -47206,32 +49535,28 @@ func (r *InstancesService) List(project string, zone string) *InstancesListCall 
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstancesListCall) Filter(filter string) *InstancesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -47377,7 +49702,7 @@ func (c *InstancesListCall) Do(opts ...googleapi.CallOption) (*InstanceList, err
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -47471,32 +49796,28 @@ func (r *InstancesService) ListReferrers(project string, zone string, instance s
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InstancesListReferrersCall) Filter(filter string) *InstancesListReferrersCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -47644,7 +49965,7 @@ func (c *InstancesListReferrersCall) Do(opts ...googleapi.CallOption) (*Instance
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -49742,9 +52063,8 @@ type InstancesStartCall struct {
 	header_    http.Header
 }
 
-// Start: Starts an instance that was stopped using the using the
-// instances().stop method. For more information, see Restart an
-// instance.
+// Start: Starts an instance that was stopped using the instances().stop
+// method. For more information, see Restart an instance.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/instances/start
 func (r *InstancesService) Start(project string, zone string, instance string) *InstancesStartCall {
 	c := &InstancesStartCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -49856,7 +52176,7 @@ func (c *InstancesStartCall) Do(opts ...googleapi.CallOption) (*Operation, error
 	}
 	return ret, nil
 	// {
-	//   "description": "Starts an instance that was stopped using the using the instances().stop method. For more information, see Restart an instance.",
+	//   "description": "Starts an instance that was stopped using the instances().stop method. For more information, see Restart an instance.",
 	//   "httpMethod": "POST",
 	//   "id": "compute.instances.start",
 	//   "parameterOrder": [
@@ -49918,8 +52238,8 @@ type InstancesStartWithEncryptionKeyCall struct {
 }
 
 // StartWithEncryptionKey: Starts an instance that was stopped using the
-// using the instances().stop method. For more information, see Restart
-// an instance.
+// instances().stop method. For more information, see Restart an
+// instance.
 func (r *InstancesService) StartWithEncryptionKey(project string, zone string, instance string, instancesstartwithencryptionkeyrequest *InstancesStartWithEncryptionKeyRequest) *InstancesStartWithEncryptionKeyCall {
 	c := &InstancesStartWithEncryptionKeyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.project = project
@@ -50036,7 +52356,7 @@ func (c *InstancesStartWithEncryptionKeyCall) Do(opts ...googleapi.CallOption) (
 	}
 	return ret, nil
 	// {
-	//   "description": "Starts an instance that was stopped using the using the instances().stop method. For more information, see Restart an instance.",
+	//   "description": "Starts an instance that was stopped using the instances().stop method. For more information, see Restart an instance.",
 	//   "httpMethod": "POST",
 	//   "id": "compute.instances.startWithEncryptionKey",
 	//   "parameterOrder": [
@@ -50456,6 +52776,196 @@ func (c *InstancesUpdateAccessConfigCall) Do(opts ...googleapi.CallOption) (*Ope
 
 }
 
+// method id "compute.instances.updateNetworkInterface":
+
+type InstancesUpdateNetworkInterfaceCall struct {
+	s                *Service
+	project          string
+	zone             string
+	instance         string
+	networkinterface *NetworkInterface
+	urlParams_       gensupport.URLParams
+	ctx_             context.Context
+	header_          http.Header
+}
+
+// UpdateNetworkInterface: Updates an instance's network interface. This
+// method follows PATCH semantics.
+func (r *InstancesService) UpdateNetworkInterface(project string, zone string, instance string, networkInterface string, networkinterface *NetworkInterface) *InstancesUpdateNetworkInterfaceCall {
+	c := &InstancesUpdateNetworkInterfaceCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.zone = zone
+	c.instance = instance
+	c.urlParams_.Set("networkInterface", networkInterface)
+	c.networkinterface = networkinterface
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *InstancesUpdateNetworkInterfaceCall) RequestId(requestId string) *InstancesUpdateNetworkInterfaceCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *InstancesUpdateNetworkInterfaceCall) Fields(s ...googleapi.Field) *InstancesUpdateNetworkInterfaceCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *InstancesUpdateNetworkInterfaceCall) Context(ctx context.Context) *InstancesUpdateNetworkInterfaceCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *InstancesUpdateNetworkInterfaceCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *InstancesUpdateNetworkInterfaceCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.networkinterface)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/zones/{zone}/instances/{instance}/updateNetworkInterface")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("PATCH", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"zone":     c.zone,
+		"instance": c.instance,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.instances.updateNetworkInterface" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *InstancesUpdateNetworkInterfaceCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Updates an instance's network interface. This method follows PATCH semantics.",
+	//   "httpMethod": "PATCH",
+	//   "id": "compute.instances.updateNetworkInterface",
+	//   "parameterOrder": [
+	//     "project",
+	//     "zone",
+	//     "instance",
+	//     "networkInterface"
+	//   ],
+	//   "parameters": {
+	//     "instance": {
+	//       "description": "The instance name for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "networkInterface": {
+	//       "description": "The name of the network interface to update.",
+	//       "location": "query",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "zone": {
+	//       "description": "The name of the zone for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/zones/{zone}/instances/{instance}/updateNetworkInterface",
+	//   "request": {
+	//     "$ref": "NetworkInterface"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.interconnectAttachments.aggregatedList":
 
 type InterconnectAttachmentsAggregatedListCall struct {
@@ -50475,32 +52985,28 @@ func (r *InterconnectAttachmentsService) AggregatedList(project string) *Interco
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InterconnectAttachmentsAggregatedListCall) Filter(filter string) *InterconnectAttachmentsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -50645,7 +53151,7 @@ func (c *InterconnectAttachmentsAggregatedListCall) Do(opts ...googleapi.CallOpt
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -51234,32 +53740,28 @@ func (r *InterconnectAttachmentsService) List(project string, region string) *In
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InterconnectAttachmentsListCall) Filter(filter string) *InterconnectAttachmentsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -51405,7 +53907,7 @@ func (c *InterconnectAttachmentsListCall) Do(opts ...googleapi.CallOption) (*Int
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -51476,6 +53978,189 @@ func (c *InterconnectAttachmentsListCall) Pages(ctx context.Context, f func(*Int
 	}
 }
 
+// method id "compute.interconnectAttachments.patch":
+
+type InterconnectAttachmentsPatchCall struct {
+	s                      *Service
+	project                string
+	region                 string
+	interconnectAttachment string
+	interconnectattachment *InterconnectAttachment
+	urlParams_             gensupport.URLParams
+	ctx_                   context.Context
+	header_                http.Header
+}
+
+// Patch: Updates the specified interconnect attachment with the data
+// included in the request. This method supports PATCH semantics and
+// uses the JSON merge patch format and processing rules.
+func (r *InterconnectAttachmentsService) Patch(project string, region string, interconnectAttachment string, interconnectattachment *InterconnectAttachment) *InterconnectAttachmentsPatchCall {
+	c := &InterconnectAttachmentsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.interconnectAttachment = interconnectAttachment
+	c.interconnectattachment = interconnectattachment
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *InterconnectAttachmentsPatchCall) RequestId(requestId string) *InterconnectAttachmentsPatchCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *InterconnectAttachmentsPatchCall) Fields(s ...googleapi.Field) *InterconnectAttachmentsPatchCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *InterconnectAttachmentsPatchCall) Context(ctx context.Context) *InterconnectAttachmentsPatchCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *InterconnectAttachmentsPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *InterconnectAttachmentsPatchCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.interconnectattachment)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/interconnectAttachments/{interconnectAttachment}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("PATCH", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":                c.project,
+		"region":                 c.region,
+		"interconnectAttachment": c.interconnectAttachment,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.interconnectAttachments.patch" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *InterconnectAttachmentsPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Updates the specified interconnect attachment with the data included in the request. This method supports PATCH semantics and uses the JSON merge patch format and processing rules.",
+	//   "httpMethod": "PATCH",
+	//   "id": "compute.interconnectAttachments.patch",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "interconnectAttachment"
+	//   ],
+	//   "parameters": {
+	//     "interconnectAttachment": {
+	//       "description": "Name of the interconnect attachment to patch.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region scoping this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/interconnectAttachments/{interconnectAttachment}",
+	//   "request": {
+	//     "$ref": "InterconnectAttachment"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.interconnectLocations.get":
 
 type InterconnectLocationsGetCall struct {
@@ -51488,8 +54173,8 @@ type InterconnectLocationsGetCall struct {
 	header_              http.Header
 }
 
-// Get: Returns the details for the specified interconnect location. Get
-// a list of available interconnect locations by making a list()
+// Get: Returns the details for the specified interconnect location.
+// Gets a list of available interconnect locations by making a list()
 // request.
 func (r *InterconnectLocationsService) Get(project string, interconnectLocation string) *InterconnectLocationsGetCall {
 	c := &InterconnectLocationsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -51593,7 +54278,7 @@ func (c *InterconnectLocationsGetCall) Do(opts ...googleapi.CallOption) (*Interc
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the details for the specified interconnect location. Get a list of available interconnect locations by making a list() request.",
+	//   "description": "Returns the details for the specified interconnect location. Gets a list of available interconnect locations by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.interconnectLocations.get",
 	//   "parameterOrder": [
@@ -51648,32 +54333,28 @@ func (r *InterconnectLocationsService) List(project string) *InterconnectLocatio
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InterconnectLocationsListCall) Filter(filter string) *InterconnectLocationsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -51817,7 +54498,7 @@ func (c *InterconnectLocationsListCall) Do(opts ...googleapi.CallOption) (*Inter
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -52372,32 +55053,28 @@ func (r *InterconnectsService) List(project string) *InterconnectsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *InterconnectsListCall) Filter(filter string) *InterconnectsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -52541,7 +55218,7 @@ func (c *InterconnectsListCall) Do(opts ...googleapi.CallOption) (*InterconnectL
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -52777,6 +55454,466 @@ func (c *InterconnectsPatchCall) Do(opts ...googleapi.CallOption) (*Operation, e
 
 }
 
+// method id "compute.licenseCodes.get":
+
+type LicenseCodesGetCall struct {
+	s            *Service
+	project      string
+	licenseCode  string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// Get: Return a specified license code. License codes are mirrored
+// across all projects that have permissions to read the License Code.
+func (r *LicenseCodesService) Get(project string, licenseCode string) *LicenseCodesGetCall {
+	c := &LicenseCodesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.licenseCode = licenseCode
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicenseCodesGetCall) Fields(s ...googleapi.Field) *LicenseCodesGetCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *LicenseCodesGetCall) IfNoneMatch(entityTag string) *LicenseCodesGetCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicenseCodesGetCall) Context(ctx context.Context) *LicenseCodesGetCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicenseCodesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicenseCodesGetCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenseCodes/{licenseCode}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":     c.project,
+		"licenseCode": c.licenseCode,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenseCodes.get" call.
+// Exactly one of *LicenseCode or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *LicenseCode.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *LicenseCodesGetCall) Do(opts ...googleapi.CallOption) (*LicenseCode, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &LicenseCode{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Return a specified license code. License codes are mirrored across all projects that have permissions to read the License Code.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.licenseCodes.get",
+	//   "parameterOrder": [
+	//     "project",
+	//     "licenseCode"
+	//   ],
+	//   "parameters": {
+	//     "licenseCode": {
+	//       "description": "Number corresponding to the License code resource to return.",
+	//       "location": "path",
+	//       "pattern": "[0-9]{0,61}?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenseCodes/{licenseCode}",
+	//   "response": {
+	//     "$ref": "LicenseCode"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.licenseCodes.testIamPermissions":
+
+type LicenseCodesTestIamPermissionsCall struct {
+	s                      *Service
+	project                string
+	resource               string
+	testpermissionsrequest *TestPermissionsRequest
+	urlParams_             gensupport.URLParams
+	ctx_                   context.Context
+	header_                http.Header
+}
+
+// TestIamPermissions: Returns permissions that a caller has on the
+// specified resource.
+func (r *LicenseCodesService) TestIamPermissions(project string, resource string, testpermissionsrequest *TestPermissionsRequest) *LicenseCodesTestIamPermissionsCall {
+	c := &LicenseCodesTestIamPermissionsCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.resource = resource
+	c.testpermissionsrequest = testpermissionsrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicenseCodesTestIamPermissionsCall) Fields(s ...googleapi.Field) *LicenseCodesTestIamPermissionsCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicenseCodesTestIamPermissionsCall) Context(ctx context.Context) *LicenseCodesTestIamPermissionsCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicenseCodesTestIamPermissionsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicenseCodesTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.testpermissionsrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenseCodes/{resource}/testIamPermissions")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"resource": c.resource,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenseCodes.testIamPermissions" call.
+// Exactly one of *TestPermissionsResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *TestPermissionsResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *LicenseCodesTestIamPermissionsCall) Do(opts ...googleapi.CallOption) (*TestPermissionsResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &TestPermissionsResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns permissions that a caller has on the specified resource.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.licenseCodes.testIamPermissions",
+	//   "parameterOrder": [
+	//     "project",
+	//     "resource"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "resource": {
+	//       "description": "Name of the resource for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:[-a-z0-9_]{0,62}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenseCodes/{resource}/testIamPermissions",
+	//   "request": {
+	//     "$ref": "TestPermissionsRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "TestPermissionsResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.licenses.delete":
+
+type LicensesDeleteCall struct {
+	s          *Service
+	project    string
+	license    string
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Delete: Deletes the specified license.
+func (r *LicensesService) Delete(project string, license string) *LicensesDeleteCall {
+	c := &LicensesDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.license = license
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *LicensesDeleteCall) RequestId(requestId string) *LicensesDeleteCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicensesDeleteCall) Fields(s ...googleapi.Field) *LicensesDeleteCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicensesDeleteCall) Context(ctx context.Context) *LicensesDeleteCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicensesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicensesDeleteCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenses/{license}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("DELETE", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"license": c.license,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenses.delete" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *LicensesDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Deletes the specified license.",
+	//   "httpMethod": "DELETE",
+	//   "id": "compute.licenses.delete",
+	//   "parameterOrder": [
+	//     "project",
+	//     "license"
+	//   ],
+	//   "parameters": {
+	//     "license": {
+	//       "description": "Name of the license resource to delete.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenses/{license}",
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.licenses.get":
 
 type LicensesGetCall struct {
@@ -52929,6 +56066,568 @@ func (c *LicensesGetCall) Do(opts ...googleapi.CallOption) (*License, error) {
 
 }
 
+// method id "compute.licenses.insert":
+
+type LicensesInsertCall struct {
+	s          *Service
+	project    string
+	license    *License
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Insert: Create a License resource in the specified project.
+func (r *LicensesService) Insert(project string, license *License) *LicensesInsertCall {
+	c := &LicensesInsertCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.license = license
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *LicensesInsertCall) RequestId(requestId string) *LicensesInsertCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicensesInsertCall) Fields(s ...googleapi.Field) *LicensesInsertCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicensesInsertCall) Context(ctx context.Context) *LicensesInsertCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicensesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicensesInsertCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.license)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenses")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenses.insert" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *LicensesInsertCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Create a License resource in the specified project.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.licenses.insert",
+	//   "parameterOrder": [
+	//     "project"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenses",
+	//   "request": {
+	//     "$ref": "License"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/devstorage.full_control",
+	//     "https://www.googleapis.com/auth/devstorage.read_only",
+	//     "https://www.googleapis.com/auth/devstorage.read_write"
+	//   ]
+	// }
+
+}
+
+// method id "compute.licenses.list":
+
+type LicensesListCall struct {
+	s            *Service
+	project      string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Retrieves the list of licenses available in the specified
+// project. This method does not get any licenses that belong to other
+// projects, including licenses attached to publicly-available images,
+// like Debian 9. If you want to get a list of publicly-available
+// licenses, use this method to make a request to the respective image
+// project, such as debian-cloud or windows-cloud.
+func (r *LicensesService) List(project string) *LicensesListCall {
+	c := &LicensesListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	return c
+}
+
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
+//
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
+//
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
+//
+// To filter on multiple expressions, provide each separate expression
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
+func (c *LicensesListCall) Filter(filter string) *LicensesListCall {
+	c.urlParams_.Set("filter", filter)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maximum
+// number of results per page that should be returned. If the number of
+// available results is larger than maxResults, Compute Engine returns a
+// nextPageToken that can be used to get the next page of results in
+// subsequent list requests. Acceptable values are 0 to 500, inclusive.
+// (Default: 500)
+func (c *LicensesListCall) MaxResults(maxResults int64) *LicensesListCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// OrderBy sets the optional parameter "orderBy": Sorts list results by
+// a certain order. By default, results are returned in alphanumerical
+// order based on the resource name.
+//
+// You can also sort results in descending order based on the creation
+// timestamp using orderBy="creationTimestamp desc". This sorts results
+// based on the creationTimestamp field in reverse chronological order
+// (newest result first). Use this to sort resources like operations so
+// that the newest operation is returned first.
+//
+// Currently, only sorting by name or creationTimestamp desc is
+// supported.
+func (c *LicensesListCall) OrderBy(orderBy string) *LicensesListCall {
+	c.urlParams_.Set("orderBy", orderBy)
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": Specifies a page
+// token to use. Set pageToken to the nextPageToken returned by a
+// previous list request to get the next page of results.
+func (c *LicensesListCall) PageToken(pageToken string) *LicensesListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicensesListCall) Fields(s ...googleapi.Field) *LicensesListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *LicensesListCall) IfNoneMatch(entityTag string) *LicensesListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicensesListCall) Context(ctx context.Context) *LicensesListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicensesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicensesListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenses")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenses.list" call.
+// Exactly one of *LicensesListResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *LicensesListResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *LicensesListCall) Do(opts ...googleapi.CallOption) (*LicensesListResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &LicensesListResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Retrieves the list of licenses available in the specified project. This method does not get any licenses that belong to other projects, including licenses attached to publicly-available images, like Debian 9. If you want to get a list of publicly-available licenses, use this method to make a request to the respective image project, such as debian-cloud or windows-cloud.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.licenses.list",
+	//   "parameterOrder": [
+	//     "project"
+	//   ],
+	//   "parameters": {
+	//     "filter": {
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "500",
+	//       "description": "The maximum number of results per page that should be returned. If the number of available results is larger than maxResults, Compute Engine returns a nextPageToken that can be used to get the next page of results in subsequent list requests. Acceptable values are 0 to 500, inclusive. (Default: 500)",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "orderBy": {
+	//       "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using orderBy=\"creationTimestamp desc\". This sorts results based on the creationTimestamp field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by name or creationTimestamp desc is supported.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "pageToken": {
+	//       "description": "Specifies a page token to use. Set pageToken to the nextPageToken returned by a previous list request to get the next page of results.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenses",
+	//   "response": {
+	//     "$ref": "LicensesListResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *LicensesListCall) Pages(ctx context.Context, f func(*LicensesListResponse) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
+}
+
+// method id "compute.licenses.testIamPermissions":
+
+type LicensesTestIamPermissionsCall struct {
+	s                      *Service
+	project                string
+	resource               string
+	testpermissionsrequest *TestPermissionsRequest
+	urlParams_             gensupport.URLParams
+	ctx_                   context.Context
+	header_                http.Header
+}
+
+// TestIamPermissions: Returns permissions that a caller has on the
+// specified resource.
+func (r *LicensesService) TestIamPermissions(project string, resource string, testpermissionsrequest *TestPermissionsRequest) *LicensesTestIamPermissionsCall {
+	c := &LicensesTestIamPermissionsCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.resource = resource
+	c.testpermissionsrequest = testpermissionsrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *LicensesTestIamPermissionsCall) Fields(s ...googleapi.Field) *LicensesTestIamPermissionsCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *LicensesTestIamPermissionsCall) Context(ctx context.Context) *LicensesTestIamPermissionsCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *LicensesTestIamPermissionsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *LicensesTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.testpermissionsrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/licenses/{resource}/testIamPermissions")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"resource": c.resource,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.licenses.testIamPermissions" call.
+// Exactly one of *TestPermissionsResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *TestPermissionsResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *LicensesTestIamPermissionsCall) Do(opts ...googleapi.CallOption) (*TestPermissionsResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &TestPermissionsResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns permissions that a caller has on the specified resource.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.licenses.testIamPermissions",
+	//   "parameterOrder": [
+	//     "project",
+	//     "resource"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "resource": {
+	//       "description": "Name of the resource for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:[-a-z0-9_]{0,62}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/licenses/{resource}/testIamPermissions",
+	//   "request": {
+	//     "$ref": "TestPermissionsRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "TestPermissionsResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
 // method id "compute.machineTypes.aggregatedList":
 
 type MachineTypesAggregatedListCall struct {
@@ -52948,32 +56647,28 @@ func (r *MachineTypesService) AggregatedList(project string) *MachineTypesAggreg
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *MachineTypesAggregatedListCall) Filter(filter string) *MachineTypesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -53117,7 +56812,7 @@ func (c *MachineTypesAggregatedListCall) Do(opts ...googleapi.CallOption) (*Mach
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -53194,7 +56889,7 @@ type MachineTypesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified machine type. Get a list of available
+// Get: Returns the specified machine type. Gets a list of available
 // machine types by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/machineTypes/get
 func (r *MachineTypesService) Get(project string, zone string, machineType string) *MachineTypesGetCall {
@@ -53301,7 +56996,7 @@ func (c *MachineTypesGetCall) Do(opts ...googleapi.CallOption) (*MachineType, er
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified machine type. Get a list of available machine types by making a list() request.",
+	//   "description": "Returns the specified machine type. Gets a list of available machine types by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.machineTypes.get",
 	//   "parameterOrder": [
@@ -53367,32 +57062,28 @@ func (r *MachineTypesService) List(project string, zone string) *MachineTypesLis
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *MachineTypesListCall) Filter(filter string) *MachineTypesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -53538,7 +57229,7 @@ func (c *MachineTypesListCall) Do(opts ...googleapi.CallOption) (*MachineTypeLis
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -53952,7 +57643,7 @@ type NetworksGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified network. Get a list of available networks
+// Get: Returns the specified network. Gets a list of available networks
 // by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/networks/get
 func (r *NetworksService) Get(project string, network string) *NetworksGetCall {
@@ -54057,7 +57748,7 @@ func (c *NetworksGetCall) Do(opts ...googleapi.CallOption) (*Network, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified network. Get a list of available networks by making a list() request.",
+	//   "description": "Returns the specified network. Gets a list of available networks by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.networks.get",
 	//   "parameterOrder": [
@@ -54274,32 +57965,28 @@ func (r *NetworksService) List(project string) *NetworksListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *NetworksListCall) Filter(filter string) *NetworksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -54443,7 +58130,7 @@ func (c *NetworksListCall) Do(opts ...googleapi.CallOption) (*NetworkList, error
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -55781,7 +59468,7 @@ type ProjectsGetXpnHostCall struct {
 	header_      http.Header
 }
 
-// GetXpnHost: Get the shared VPC host project that this project links
+// GetXpnHost: Gets the shared VPC host project that this project links
 // to. May be empty if no link exists.
 func (r *ProjectsService) GetXpnHost(project string) *ProjectsGetXpnHostCall {
 	c := &ProjectsGetXpnHostCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -55883,7 +59570,7 @@ func (c *ProjectsGetXpnHostCall) Do(opts ...googleapi.CallOption) (*Project, err
 	}
 	return ret, nil
 	// {
-	//   "description": "Get the shared VPC host project that this project links to. May be empty if no link exists.",
+	//   "description": "Gets the shared VPC host project that this project links to. May be empty if no link exists.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.projects.getXpnHost",
 	//   "parameterOrder": [
@@ -55921,7 +59608,7 @@ type ProjectsGetXpnResourcesCall struct {
 	header_      http.Header
 }
 
-// GetXpnResources: Get service resources (a.k.a service project)
+// GetXpnResources: Gets service resources (a.k.a service project)
 // associated with this host project.
 func (r *ProjectsService) GetXpnResources(project string) *ProjectsGetXpnResourcesCall {
 	c := &ProjectsGetXpnResourcesCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -56047,7 +59734,7 @@ func (c *ProjectsGetXpnResourcesCall) Do(opts ...googleapi.CallOption) (*Project
 	}
 	return ret, nil
 	// {
-	//   "description": "Get service resources (a.k.a service project) associated with this host project.",
+	//   "description": "Gets service resources (a.k.a service project) associated with this host project.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.projects.getXpnResources",
 	//   "parameterOrder": [
@@ -56125,7 +59812,7 @@ type ProjectsListXpnHostsCall struct {
 	header_                     http.Header
 }
 
-// ListXpnHosts: List all shared VPC host projects visible to the user
+// ListXpnHosts: Lists all shared VPC host projects visible to the user
 // in an organization.
 func (r *ProjectsService) ListXpnHosts(project string, projectslistxpnhostsrequest *ProjectsListXpnHostsRequest) *ProjectsListXpnHostsCall {
 	c := &ProjectsListXpnHostsCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -56244,7 +59931,7 @@ func (c *ProjectsListXpnHostsCall) Do(opts ...googleapi.CallOption) (*XpnHostLis
 	}
 	return ret, nil
 	// {
-	//   "description": "List all shared VPC host projects visible to the user in an organization.",
+	//   "description": "Lists all shared VPC host projects visible to the user in an organization.",
 	//   "httpMethod": "POST",
 	//   "id": "compute.projects.listXpnHosts",
 	//   "parameterOrder": [
@@ -57485,32 +61172,28 @@ func (r *RegionAutoscalersService) List(project string, region string) *RegionAu
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionAutoscalersListCall) Filter(filter string) *RegionAutoscalersListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -57656,7 +61339,7 @@ func (c *RegionAutoscalersListCall) Do(opts ...googleapi.CallOption) (*RegionAut
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -58782,32 +62465,28 @@ func (r *RegionBackendServicesService) List(project string, region string) *Regi
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionBackendServicesListCall) Filter(filter string) *RegionBackendServicesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -58953,7 +62632,7 @@ func (c *RegionBackendServicesListCall) Do(opts ...googleapi.CallOption) (*Backe
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -59412,32 +63091,28 @@ func (r *RegionCommitmentsService) AggregatedList(project string) *RegionCommitm
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionCommitmentsAggregatedListCall) Filter(filter string) *RegionCommitmentsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -59581,7 +63256,7 @@ func (c *RegionCommitmentsAggregatedListCall) Do(opts ...googleapi.CallOption) (
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -59658,7 +63333,7 @@ type RegionCommitmentsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified commitment resource. Get a list of
+// Get: Returns the specified commitment resource. Gets a list of
 // available commitments by making a list() request.
 func (r *RegionCommitmentsService) Get(project string, region string, commitment string) *RegionCommitmentsGetCall {
 	c := &RegionCommitmentsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -59764,7 +63439,7 @@ func (c *RegionCommitmentsGetCall) Do(opts ...googleapi.CallOption) (*Commitment
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified commitment resource. Get a list of available commitments by making a list() request.",
+	//   "description": "Returns the specified commitment resource. Gets a list of available commitments by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.regionCommitments.get",
 	//   "parameterOrder": [
@@ -60000,32 +63675,28 @@ func (r *RegionCommitmentsService) List(project string, region string) *RegionCo
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionCommitmentsListCall) Filter(filter string) *RegionCommitmentsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -60171,7 +63842,7 @@ func (c *RegionCommitmentsListCall) Do(opts ...googleapi.CallOption) (*Commitmen
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -60240,6 +63911,1907 @@ func (c *RegionCommitmentsListCall) Pages(ctx context.Context, f func(*Commitmen
 		}
 		c.PageToken(x.NextPageToken)
 	}
+}
+
+// method id "compute.regionDiskTypes.get":
+
+type RegionDiskTypesGetCall struct {
+	s            *Service
+	project      string
+	region       string
+	diskType     string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// Get: Returns the specified regional disk type. Gets a list of
+// available disk types by making a list() request.
+func (r *RegionDiskTypesService) Get(project string, region string, diskType string) *RegionDiskTypesGetCall {
+	c := &RegionDiskTypesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.diskType = diskType
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDiskTypesGetCall) Fields(s ...googleapi.Field) *RegionDiskTypesGetCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *RegionDiskTypesGetCall) IfNoneMatch(entityTag string) *RegionDiskTypesGetCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDiskTypesGetCall) Context(ctx context.Context) *RegionDiskTypesGetCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDiskTypesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDiskTypesGetCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/diskTypes/{diskType}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"region":   c.region,
+		"diskType": c.diskType,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDiskTypes.get" call.
+// Exactly one of *DiskType or error will be non-nil. Any non-2xx status
+// code is an error. Response headers are in either
+// *DiskType.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDiskTypesGetCall) Do(opts ...googleapi.CallOption) (*DiskType, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &DiskType{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns the specified regional disk type. Gets a list of available disk types by making a list() request.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.regionDiskTypes.get",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "diskType"
+	//   ],
+	//   "parameters": {
+	//     "diskType": {
+	//       "description": "Name of the disk type to return.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "The name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/diskTypes/{diskType}",
+	//   "response": {
+	//     "$ref": "DiskType"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDiskTypes.list":
+
+type RegionDiskTypesListCall struct {
+	s            *Service
+	project      string
+	region       string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Retrieves a list of regional disk types available to the
+// specified project.
+func (r *RegionDiskTypesService) List(project string, region string) *RegionDiskTypesListCall {
+	c := &RegionDiskTypesListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	return c
+}
+
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
+//
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
+//
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
+//
+// To filter on multiple expressions, provide each separate expression
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
+func (c *RegionDiskTypesListCall) Filter(filter string) *RegionDiskTypesListCall {
+	c.urlParams_.Set("filter", filter)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maximum
+// number of results per page that should be returned. If the number of
+// available results is larger than maxResults, Compute Engine returns a
+// nextPageToken that can be used to get the next page of results in
+// subsequent list requests. Acceptable values are 0 to 500, inclusive.
+// (Default: 500)
+func (c *RegionDiskTypesListCall) MaxResults(maxResults int64) *RegionDiskTypesListCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// OrderBy sets the optional parameter "orderBy": Sorts list results by
+// a certain order. By default, results are returned in alphanumerical
+// order based on the resource name.
+//
+// You can also sort results in descending order based on the creation
+// timestamp using orderBy="creationTimestamp desc". This sorts results
+// based on the creationTimestamp field in reverse chronological order
+// (newest result first). Use this to sort resources like operations so
+// that the newest operation is returned first.
+//
+// Currently, only sorting by name or creationTimestamp desc is
+// supported.
+func (c *RegionDiskTypesListCall) OrderBy(orderBy string) *RegionDiskTypesListCall {
+	c.urlParams_.Set("orderBy", orderBy)
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": Specifies a page
+// token to use. Set pageToken to the nextPageToken returned by a
+// previous list request to get the next page of results.
+func (c *RegionDiskTypesListCall) PageToken(pageToken string) *RegionDiskTypesListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDiskTypesListCall) Fields(s ...googleapi.Field) *RegionDiskTypesListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *RegionDiskTypesListCall) IfNoneMatch(entityTag string) *RegionDiskTypesListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDiskTypesListCall) Context(ctx context.Context) *RegionDiskTypesListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDiskTypesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDiskTypesListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/diskTypes")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDiskTypes.list" call.
+// Exactly one of *RegionDiskTypeList or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *RegionDiskTypeList.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *RegionDiskTypesListCall) Do(opts ...googleapi.CallOption) (*RegionDiskTypeList, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &RegionDiskTypeList{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Retrieves a list of regional disk types available to the specified project.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.regionDiskTypes.list",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region"
+	//   ],
+	//   "parameters": {
+	//     "filter": {
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "500",
+	//       "description": "The maximum number of results per page that should be returned. If the number of available results is larger than maxResults, Compute Engine returns a nextPageToken that can be used to get the next page of results in subsequent list requests. Acceptable values are 0 to 500, inclusive. (Default: 500)",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "orderBy": {
+	//       "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using orderBy=\"creationTimestamp desc\". This sorts results based on the creationTimestamp field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by name or creationTimestamp desc is supported.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "pageToken": {
+	//       "description": "Specifies a page token to use. Set pageToken to the nextPageToken returned by a previous list request to get the next page of results.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "The name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/diskTypes",
+	//   "response": {
+	//     "$ref": "RegionDiskTypeList"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *RegionDiskTypesListCall) Pages(ctx context.Context, f func(*RegionDiskTypeList) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
+}
+
+// method id "compute.regionDisks.createSnapshot":
+
+type RegionDisksCreateSnapshotCall struct {
+	s          *Service
+	project    string
+	region     string
+	disk       string
+	snapshot   *Snapshot
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// CreateSnapshot: Creates a snapshot of this regional disk.
+func (r *RegionDisksService) CreateSnapshot(project string, region string, disk string, snapshot *Snapshot) *RegionDisksCreateSnapshotCall {
+	c := &RegionDisksCreateSnapshotCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.disk = disk
+	c.snapshot = snapshot
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *RegionDisksCreateSnapshotCall) RequestId(requestId string) *RegionDisksCreateSnapshotCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksCreateSnapshotCall) Fields(s ...googleapi.Field) *RegionDisksCreateSnapshotCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksCreateSnapshotCall) Context(ctx context.Context) *RegionDisksCreateSnapshotCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksCreateSnapshotCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksCreateSnapshotCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.snapshot)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{disk}/createSnapshot")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+		"disk":    c.disk,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.createSnapshot" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksCreateSnapshotCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Creates a snapshot of this regional disk.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.regionDisks.createSnapshot",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "disk"
+	//   ],
+	//   "parameters": {
+	//     "disk": {
+	//       "description": "Name of the regional persistent disk to snapshot.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{disk}/createSnapshot",
+	//   "request": {
+	//     "$ref": "Snapshot"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.delete":
+
+type RegionDisksDeleteCall struct {
+	s          *Service
+	project    string
+	region     string
+	disk       string
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Delete: Deletes the specified regional persistent disk. Deleting a
+// regional disk removes all the replicas of its data permanently and is
+// irreversible. However, deleting a disk does not delete any snapshots
+// previously made from the disk. You must separately delete snapshots.
+func (r *RegionDisksService) Delete(project string, region string, disk string) *RegionDisksDeleteCall {
+	c := &RegionDisksDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.disk = disk
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *RegionDisksDeleteCall) RequestId(requestId string) *RegionDisksDeleteCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksDeleteCall) Fields(s ...googleapi.Field) *RegionDisksDeleteCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksDeleteCall) Context(ctx context.Context) *RegionDisksDeleteCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksDeleteCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{disk}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("DELETE", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+		"disk":    c.disk,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.delete" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Deletes the specified regional persistent disk. Deleting a regional disk removes all the replicas of its data permanently and is irreversible. However, deleting a disk does not delete any snapshots previously made from the disk. You must separately delete snapshots.",
+	//   "httpMethod": "DELETE",
+	//   "id": "compute.regionDisks.delete",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "disk"
+	//   ],
+	//   "parameters": {
+	//     "disk": {
+	//       "description": "Name of the regional persistent disk to delete.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{disk}",
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.get":
+
+type RegionDisksGetCall struct {
+	s            *Service
+	project      string
+	region       string
+	disk         string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// Get: Returns a specified regional persistent disk.
+func (r *RegionDisksService) Get(project string, region string, disk string) *RegionDisksGetCall {
+	c := &RegionDisksGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.disk = disk
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksGetCall) Fields(s ...googleapi.Field) *RegionDisksGetCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *RegionDisksGetCall) IfNoneMatch(entityTag string) *RegionDisksGetCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksGetCall) Context(ctx context.Context) *RegionDisksGetCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksGetCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{disk}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+		"disk":    c.disk,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.get" call.
+// Exactly one of *Disk or error will be non-nil. Any non-2xx status
+// code is an error. Response headers are in either
+// *Disk.ServerResponse.Header or (if a response was returned at all) in
+// error.(*googleapi.Error).Header. Use googleapi.IsNotModified to check
+// whether the returned error was because http.StatusNotModified was
+// returned.
+func (c *RegionDisksGetCall) Do(opts ...googleapi.CallOption) (*Disk, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Disk{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns a specified regional persistent disk.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.regionDisks.get",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "disk"
+	//   ],
+	//   "parameters": {
+	//     "disk": {
+	//       "description": "Name of the regional persistent disk to return.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{disk}",
+	//   "response": {
+	//     "$ref": "Disk"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.insert":
+
+type RegionDisksInsertCall struct {
+	s          *Service
+	project    string
+	region     string
+	disk       *Disk
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Insert: Creates a persistent regional disk in the specified project
+// using the data included in the request.
+func (r *RegionDisksService) Insert(project string, region string, disk *Disk) *RegionDisksInsertCall {
+	c := &RegionDisksInsertCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.disk = disk
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *RegionDisksInsertCall) RequestId(requestId string) *RegionDisksInsertCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// SourceImage sets the optional parameter "sourceImage": Source image
+// to restore onto a disk.
+func (c *RegionDisksInsertCall) SourceImage(sourceImage string) *RegionDisksInsertCall {
+	c.urlParams_.Set("sourceImage", sourceImage)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksInsertCall) Fields(s ...googleapi.Field) *RegionDisksInsertCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksInsertCall) Context(ctx context.Context) *RegionDisksInsertCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksInsertCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.disk)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.insert" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksInsertCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Creates a persistent regional disk in the specified project using the data included in the request.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.regionDisks.insert",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "sourceImage": {
+	//       "description": "Optional. Source image to restore onto a disk.",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks",
+	//   "request": {
+	//     "$ref": "Disk"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.list":
+
+type RegionDisksListCall struct {
+	s            *Service
+	project      string
+	region       string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Retrieves the list of persistent disks contained within the
+// specified region.
+func (r *RegionDisksService) List(project string, region string) *RegionDisksListCall {
+	c := &RegionDisksListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	return c
+}
+
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
+//
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
+//
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
+//
+// To filter on multiple expressions, provide each separate expression
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
+func (c *RegionDisksListCall) Filter(filter string) *RegionDisksListCall {
+	c.urlParams_.Set("filter", filter)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maximum
+// number of results per page that should be returned. If the number of
+// available results is larger than maxResults, Compute Engine returns a
+// nextPageToken that can be used to get the next page of results in
+// subsequent list requests. Acceptable values are 0 to 500, inclusive.
+// (Default: 500)
+func (c *RegionDisksListCall) MaxResults(maxResults int64) *RegionDisksListCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// OrderBy sets the optional parameter "orderBy": Sorts list results by
+// a certain order. By default, results are returned in alphanumerical
+// order based on the resource name.
+//
+// You can also sort results in descending order based on the creation
+// timestamp using orderBy="creationTimestamp desc". This sorts results
+// based on the creationTimestamp field in reverse chronological order
+// (newest result first). Use this to sort resources like operations so
+// that the newest operation is returned first.
+//
+// Currently, only sorting by name or creationTimestamp desc is
+// supported.
+func (c *RegionDisksListCall) OrderBy(orderBy string) *RegionDisksListCall {
+	c.urlParams_.Set("orderBy", orderBy)
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": Specifies a page
+// token to use. Set pageToken to the nextPageToken returned by a
+// previous list request to get the next page of results.
+func (c *RegionDisksListCall) PageToken(pageToken string) *RegionDisksListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksListCall) Fields(s ...googleapi.Field) *RegionDisksListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *RegionDisksListCall) IfNoneMatch(entityTag string) *RegionDisksListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksListCall) Context(ctx context.Context) *RegionDisksListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.list" call.
+// Exactly one of *DiskList or error will be non-nil. Any non-2xx status
+// code is an error. Response headers are in either
+// *DiskList.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksListCall) Do(opts ...googleapi.CallOption) (*DiskList, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &DiskList{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Retrieves the list of persistent disks contained within the specified region.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.regionDisks.list",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region"
+	//   ],
+	//   "parameters": {
+	//     "filter": {
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "500",
+	//       "description": "The maximum number of results per page that should be returned. If the number of available results is larger than maxResults, Compute Engine returns a nextPageToken that can be used to get the next page of results in subsequent list requests. Acceptable values are 0 to 500, inclusive. (Default: 500)",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "orderBy": {
+	//       "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using orderBy=\"creationTimestamp desc\". This sorts results based on the creationTimestamp field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by name or creationTimestamp desc is supported.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "pageToken": {
+	//       "description": "Specifies a page token to use. Set pageToken to the nextPageToken returned by a previous list request to get the next page of results.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks",
+	//   "response": {
+	//     "$ref": "DiskList"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *RegionDisksListCall) Pages(ctx context.Context, f func(*DiskList) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
+}
+
+// method id "compute.regionDisks.resize":
+
+type RegionDisksResizeCall struct {
+	s                        *Service
+	project                  string
+	region                   string
+	disk                     string
+	regiondisksresizerequest *RegionDisksResizeRequest
+	urlParams_               gensupport.URLParams
+	ctx_                     context.Context
+	header_                  http.Header
+}
+
+// Resize: Resizes the specified regional persistent disk.
+func (r *RegionDisksService) Resize(project string, region string, disk string, regiondisksresizerequest *RegionDisksResizeRequest) *RegionDisksResizeCall {
+	c := &RegionDisksResizeCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.disk = disk
+	c.regiondisksresizerequest = regiondisksresizerequest
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *RegionDisksResizeCall) RequestId(requestId string) *RegionDisksResizeCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksResizeCall) Fields(s ...googleapi.Field) *RegionDisksResizeCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksResizeCall) Context(ctx context.Context) *RegionDisksResizeCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksResizeCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksResizeCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.regiondisksresizerequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{disk}/resize")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+		"region":  c.region,
+		"disk":    c.disk,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.resize" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksResizeCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Resizes the specified regional persistent disk.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.regionDisks.resize",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "disk"
+	//   ],
+	//   "parameters": {
+	//     "disk": {
+	//       "description": "Name of the regional persistent disk.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "The project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{disk}/resize",
+	//   "request": {
+	//     "$ref": "RegionDisksResizeRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.setLabels":
+
+type RegionDisksSetLabelsCall struct {
+	s                      *Service
+	project                string
+	region                 string
+	resource               string
+	regionsetlabelsrequest *RegionSetLabelsRequest
+	urlParams_             gensupport.URLParams
+	ctx_                   context.Context
+	header_                http.Header
+}
+
+// SetLabels: Sets the labels on the target regional disk.
+func (r *RegionDisksService) SetLabels(project string, region string, resource string, regionsetlabelsrequest *RegionSetLabelsRequest) *RegionDisksSetLabelsCall {
+	c := &RegionDisksSetLabelsCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.resource = resource
+	c.regionsetlabelsrequest = regionsetlabelsrequest
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *RegionDisksSetLabelsCall) RequestId(requestId string) *RegionDisksSetLabelsCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksSetLabelsCall) Fields(s ...googleapi.Field) *RegionDisksSetLabelsCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksSetLabelsCall) Context(ctx context.Context) *RegionDisksSetLabelsCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksSetLabelsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksSetLabelsCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.regionsetlabelsrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{resource}/setLabels")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"region":   c.region,
+		"resource": c.resource,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.setLabels" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *RegionDisksSetLabelsCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Sets the labels on the target regional disk.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.regionDisks.setLabels",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "resource"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "The region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "resource": {
+	//       "description": "Name of the resource for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{resource}/setLabels",
+	//   "request": {
+	//     "$ref": "RegionSetLabelsRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.regionDisks.testIamPermissions":
+
+type RegionDisksTestIamPermissionsCall struct {
+	s                      *Service
+	project                string
+	region                 string
+	resource               string
+	testpermissionsrequest *TestPermissionsRequest
+	urlParams_             gensupport.URLParams
+	ctx_                   context.Context
+	header_                http.Header
+}
+
+// TestIamPermissions: Returns permissions that a caller has on the
+// specified resource.
+func (r *RegionDisksService) TestIamPermissions(project string, region string, resource string, testpermissionsrequest *TestPermissionsRequest) *RegionDisksTestIamPermissionsCall {
+	c := &RegionDisksTestIamPermissionsCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.resource = resource
+	c.testpermissionsrequest = testpermissionsrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *RegionDisksTestIamPermissionsCall) Fields(s ...googleapi.Field) *RegionDisksTestIamPermissionsCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *RegionDisksTestIamPermissionsCall) Context(ctx context.Context) *RegionDisksTestIamPermissionsCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *RegionDisksTestIamPermissionsCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *RegionDisksTestIamPermissionsCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.testpermissionsrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/disks/{resource}/testIamPermissions")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":  c.project,
+		"region":   c.region,
+		"resource": c.resource,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.regionDisks.testIamPermissions" call.
+// Exactly one of *TestPermissionsResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *TestPermissionsResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *RegionDisksTestIamPermissionsCall) Do(opts ...googleapi.CallOption) (*TestPermissionsResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &TestPermissionsResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns permissions that a caller has on the specified resource.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.regionDisks.testIamPermissions",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "resource"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "The name of the region for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "resource": {
+	//       "description": "Name of the resource for this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/disks/{resource}/testIamPermissions",
+	//   "request": {
+	//     "$ref": "TestPermissionsRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "TestPermissionsResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
 }
 
 // method id "compute.regionInstanceGroupManagers.abandonInstances":
@@ -61160,32 +66732,28 @@ func (r *RegionInstanceGroupManagersService) List(project string, region string)
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionInstanceGroupManagersListCall) Filter(filter string) *RegionInstanceGroupManagersListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -61331,7 +66899,7 @@ func (c *RegionInstanceGroupManagersListCall) Do(opts ...googleapi.CallOption) (
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -62521,32 +68089,28 @@ func (r *RegionInstanceGroupsService) List(project string, region string) *Regio
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionInstanceGroupsListCall) Filter(filter string) *RegionInstanceGroupsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -62692,7 +68256,7 @@ func (c *RegionInstanceGroupsListCall) Do(opts ...googleapi.CallOption) (*Region
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -62788,32 +68352,28 @@ func (r *RegionInstanceGroupsService) ListInstances(project string, region strin
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionInstanceGroupsListInstancesCall) Filter(filter string) *RegionInstanceGroupsListInstancesCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -62954,7 +68514,7 @@ func (c *RegionInstanceGroupsListInstancesCall) Do(opts ...googleapi.CallOption)
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -63518,32 +69078,28 @@ func (r *RegionOperationsService) List(project string, region string) *RegionOpe
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionOperationsListCall) Filter(filter string) *RegionOperationsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -63689,7 +69245,7 @@ func (c *RegionOperationsListCall) Do(opts ...googleapi.CallOption) (*OperationL
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -63772,7 +69328,7 @@ type RegionsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Region resource. Get a list of available
+// Get: Returns the specified Region resource. Gets a list of available
 // regions by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/regions/get
 func (r *RegionsService) Get(project string, region string) *RegionsGetCall {
@@ -63877,7 +69433,7 @@ func (c *RegionsGetCall) Do(opts ...googleapi.CallOption) (*Region, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Region resource. Get a list of available regions by making a list() request.",
+	//   "description": "Returns the specified Region resource. Gets a list of available regions by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.regions.get",
 	//   "parameterOrder": [
@@ -63933,32 +69489,28 @@ func (r *RegionsService) List(project string) *RegionsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RegionsListCall) Filter(filter string) *RegionsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -64102,7 +69654,7 @@ func (c *RegionsListCall) Do(opts ...googleapi.CallOption) (*RegionList, error) 
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -64184,32 +69736,28 @@ func (r *RoutersService) AggregatedList(project string) *RoutersAggregatedListCa
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RoutersAggregatedListCall) Filter(filter string) *RoutersAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -64353,7 +69901,7 @@ func (c *RoutersAggregatedListCall) Do(opts ...googleapi.CallOption) (*RouterAgg
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -64601,7 +70149,7 @@ type RoutersGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Router resource. Get a list of available
+// Get: Returns the specified Router resource. Gets a list of available
 // routers by making a list() request.
 func (r *RoutersService) Get(project string, region string, router string) *RoutersGetCall {
 	c := &RoutersGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -64707,7 +70255,7 @@ func (c *RoutersGetCall) Do(opts ...googleapi.CallOption) (*Router, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Router resource. Get a list of available routers by making a list() request.",
+	//   "description": "Returns the specified Router resource. Gets a list of available routers by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.routers.get",
 	//   "parameterOrder": [
@@ -65106,32 +70654,28 @@ func (r *RoutersService) List(project string, region string) *RoutersListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RoutersListCall) Filter(filter string) *RoutersListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -65277,7 +70821,7 @@ func (c *RoutersListCall) Do(opts ...googleapi.CallOption) (*RouterList, error) 
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -66046,7 +71590,7 @@ type RoutesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Route resource. Get a list of available
+// Get: Returns the specified Route resource. Gets a list of available
 // routes by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/routes/get
 func (r *RoutesService) Get(project string, route string) *RoutesGetCall {
@@ -66151,7 +71695,7 @@ func (c *RoutesGetCall) Do(opts ...googleapi.CallOption) (*Route, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Route resource. Get a list of available routes by making a list() request.",
+	//   "description": "Returns the specified Route resource. Gets a list of available routes by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.routes.get",
 	//   "parameterOrder": [
@@ -66368,32 +71912,28 @@ func (r *RoutesService) List(project string) *RoutesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *RoutesListCall) Filter(filter string) *RoutesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -66537,7 +72077,7 @@ func (c *RoutesListCall) Do(opts ...googleapi.CallOption) (*RouteList, error) {
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -66780,8 +72320,8 @@ type SnapshotsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Snapshot resource. Get a list of available
-// snapshots by making a list() request.
+// Get: Returns the specified Snapshot resource. Gets a list of
+// available snapshots by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/snapshots/get
 func (r *SnapshotsService) Get(project string, snapshot string) *SnapshotsGetCall {
 	c := &SnapshotsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -66885,7 +72425,7 @@ func (c *SnapshotsGetCall) Do(opts ...googleapi.CallOption) (*Snapshot, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Snapshot resource. Get a list of available snapshots by making a list() request.",
+	//   "description": "Returns the specified Snapshot resource. Gets a list of available snapshots by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.snapshots.get",
 	//   "parameterOrder": [
@@ -66941,32 +72481,28 @@ func (r *SnapshotsService) List(project string) *SnapshotsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *SnapshotsListCall) Filter(filter string) *SnapshotsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -67110,7 +72646,7 @@ func (c *SnapshotsListCall) Do(opts ...googleapi.CallOption) (*SnapshotList, err
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -67493,7 +73029,7 @@ type SslCertificatesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified SslCertificate resource. Get a list of
+// Get: Returns the specified SslCertificate resource. Gets a list of
 // available SSL certificates by making a list() request.
 func (r *SslCertificatesService) Get(project string, sslCertificate string) *SslCertificatesGetCall {
 	c := &SslCertificatesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -67597,7 +73133,7 @@ func (c *SslCertificatesGetCall) Do(opts ...googleapi.CallOption) (*SslCertifica
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified SslCertificate resource. Get a list of available SSL certificates by making a list() request.",
+	//   "description": "Returns the specified SslCertificate resource. Gets a list of available SSL certificates by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.sslCertificates.get",
 	//   "parameterOrder": [
@@ -67812,32 +73348,28 @@ func (r *SslCertificatesService) List(project string) *SslCertificatesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *SslCertificatesListCall) Filter(filter string) *SslCertificatesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -67981,7 +73513,7 @@ func (c *SslCertificatesListCall) Do(opts ...googleapi.CallOption) (*SslCertific
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -68045,6 +73577,1125 @@ func (c *SslCertificatesListCall) Pages(ctx context.Context, f func(*SslCertific
 	}
 }
 
+// method id "compute.sslPolicies.delete":
+
+type SslPoliciesDeleteCall struct {
+	s          *Service
+	project    string
+	sslPolicy  string
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Delete: Deletes the specified SSL policy. The SSL policy resource can
+// be deleted only if it is not in use by any TargetHttpsProxy or
+// TargetSslProxy resources.
+func (r *SslPoliciesService) Delete(project string, sslPolicy string) *SslPoliciesDeleteCall {
+	c := &SslPoliciesDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.sslPolicy = sslPolicy
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *SslPoliciesDeleteCall) RequestId(requestId string) *SslPoliciesDeleteCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesDeleteCall) Fields(s ...googleapi.Field) *SslPoliciesDeleteCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesDeleteCall) Context(ctx context.Context) *SslPoliciesDeleteCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesDeleteCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesDeleteCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies/{sslPolicy}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("DELETE", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":   c.project,
+		"sslPolicy": c.sslPolicy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.delete" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *SslPoliciesDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Deletes the specified SSL policy. The SSL policy resource can be deleted only if it is not in use by any TargetHttpsProxy or TargetSslProxy resources.",
+	//   "httpMethod": "DELETE",
+	//   "id": "compute.sslPolicies.delete",
+	//   "parameterOrder": [
+	//     "project",
+	//     "sslPolicy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "sslPolicy": {
+	//       "description": "Name of the SSL policy to delete. The name must be 1-63 characters long, and comply with RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies/{sslPolicy}",
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.sslPolicies.get":
+
+type SslPoliciesGetCall struct {
+	s            *Service
+	project      string
+	sslPolicy    string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// Get: Lists all of the ordered rules present in a single specified
+// policy.
+func (r *SslPoliciesService) Get(project string, sslPolicy string) *SslPoliciesGetCall {
+	c := &SslPoliciesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.sslPolicy = sslPolicy
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesGetCall) Fields(s ...googleapi.Field) *SslPoliciesGetCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *SslPoliciesGetCall) IfNoneMatch(entityTag string) *SslPoliciesGetCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesGetCall) Context(ctx context.Context) *SslPoliciesGetCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesGetCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesGetCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies/{sslPolicy}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":   c.project,
+		"sslPolicy": c.sslPolicy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.get" call.
+// Exactly one of *SslPolicy or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *SslPolicy.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *SslPoliciesGetCall) Do(opts ...googleapi.CallOption) (*SslPolicy, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SslPolicy{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists all of the ordered rules present in a single specified policy.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.sslPolicies.get",
+	//   "parameterOrder": [
+	//     "project",
+	//     "sslPolicy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "sslPolicy": {
+	//       "description": "Name of the SSL policy to update. The name must be 1-63 characters long, and comply with RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies/{sslPolicy}",
+	//   "response": {
+	//     "$ref": "SslPolicy"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.sslPolicies.insert":
+
+type SslPoliciesInsertCall struct {
+	s          *Service
+	project    string
+	sslpolicy  *SslPolicy
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Insert: Returns the specified SSL policy resource. Gets a list of
+// available SSL policies by making a list() request.
+func (r *SslPoliciesService) Insert(project string, sslpolicy *SslPolicy) *SslPoliciesInsertCall {
+	c := &SslPoliciesInsertCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.sslpolicy = sslpolicy
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *SslPoliciesInsertCall) RequestId(requestId string) *SslPoliciesInsertCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesInsertCall) Fields(s ...googleapi.Field) *SslPoliciesInsertCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesInsertCall) Context(ctx context.Context) *SslPoliciesInsertCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesInsertCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesInsertCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sslpolicy)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.insert" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *SslPoliciesInsertCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Returns the specified SSL policy resource. Gets a list of available SSL policies by making a list() request.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.sslPolicies.insert",
+	//   "parameterOrder": [
+	//     "project"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies",
+	//   "request": {
+	//     "$ref": "SslPolicy"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.sslPolicies.list":
+
+type SslPoliciesListCall struct {
+	s            *Service
+	project      string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Lists all the SSL policies that have been configured for the
+// specified project.
+func (r *SslPoliciesService) List(project string) *SslPoliciesListCall {
+	c := &SslPoliciesListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	return c
+}
+
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
+//
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
+//
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
+//
+// To filter on multiple expressions, provide each separate expression
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
+func (c *SslPoliciesListCall) Filter(filter string) *SslPoliciesListCall {
+	c.urlParams_.Set("filter", filter)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maximum
+// number of results per page that should be returned. If the number of
+// available results is larger than maxResults, Compute Engine returns a
+// nextPageToken that can be used to get the next page of results in
+// subsequent list requests. Acceptable values are 0 to 500, inclusive.
+// (Default: 500)
+func (c *SslPoliciesListCall) MaxResults(maxResults int64) *SslPoliciesListCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// OrderBy sets the optional parameter "orderBy": Sorts list results by
+// a certain order. By default, results are returned in alphanumerical
+// order based on the resource name.
+//
+// You can also sort results in descending order based on the creation
+// timestamp using orderBy="creationTimestamp desc". This sorts results
+// based on the creationTimestamp field in reverse chronological order
+// (newest result first). Use this to sort resources like operations so
+// that the newest operation is returned first.
+//
+// Currently, only sorting by name or creationTimestamp desc is
+// supported.
+func (c *SslPoliciesListCall) OrderBy(orderBy string) *SslPoliciesListCall {
+	c.urlParams_.Set("orderBy", orderBy)
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": Specifies a page
+// token to use. Set pageToken to the nextPageToken returned by a
+// previous list request to get the next page of results.
+func (c *SslPoliciesListCall) PageToken(pageToken string) *SslPoliciesListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesListCall) Fields(s ...googleapi.Field) *SslPoliciesListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *SslPoliciesListCall) IfNoneMatch(entityTag string) *SslPoliciesListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesListCall) Context(ctx context.Context) *SslPoliciesListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.list" call.
+// Exactly one of *SslPoliciesList or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *SslPoliciesList.ServerResponse.Header or (if a response was returned
+// at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *SslPoliciesListCall) Do(opts ...googleapi.CallOption) (*SslPoliciesList, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SslPoliciesList{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists all the SSL policies that have been configured for the specified project.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.sslPolicies.list",
+	//   "parameterOrder": [
+	//     "project"
+	//   ],
+	//   "parameters": {
+	//     "filter": {
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "500",
+	//       "description": "The maximum number of results per page that should be returned. If the number of available results is larger than maxResults, Compute Engine returns a nextPageToken that can be used to get the next page of results in subsequent list requests. Acceptable values are 0 to 500, inclusive. (Default: 500)",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "orderBy": {
+	//       "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using orderBy=\"creationTimestamp desc\". This sorts results based on the creationTimestamp field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by name or creationTimestamp desc is supported.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "pageToken": {
+	//       "description": "Specifies a page token to use. Set pageToken to the nextPageToken returned by a previous list request to get the next page of results.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies",
+	//   "response": {
+	//     "$ref": "SslPoliciesList"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *SslPoliciesListCall) Pages(ctx context.Context, f func(*SslPoliciesList) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
+}
+
+// method id "compute.sslPolicies.listAvailableFeatures":
+
+type SslPoliciesListAvailableFeaturesCall struct {
+	s            *Service
+	project      string
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// ListAvailableFeatures: Lists all features that can be specified in
+// the SSL policy when using custom profile.
+func (r *SslPoliciesService) ListAvailableFeatures(project string) *SslPoliciesListAvailableFeaturesCall {
+	c := &SslPoliciesListAvailableFeaturesCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	return c
+}
+
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
+//
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
+//
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
+//
+// To filter on multiple expressions, provide each separate expression
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
+func (c *SslPoliciesListAvailableFeaturesCall) Filter(filter string) *SslPoliciesListAvailableFeaturesCall {
+	c.urlParams_.Set("filter", filter)
+	return c
+}
+
+// MaxResults sets the optional parameter "maxResults": The maximum
+// number of results per page that should be returned. If the number of
+// available results is larger than maxResults, Compute Engine returns a
+// nextPageToken that can be used to get the next page of results in
+// subsequent list requests. Acceptable values are 0 to 500, inclusive.
+// (Default: 500)
+func (c *SslPoliciesListAvailableFeaturesCall) MaxResults(maxResults int64) *SslPoliciesListAvailableFeaturesCall {
+	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
+	return c
+}
+
+// OrderBy sets the optional parameter "orderBy": Sorts list results by
+// a certain order. By default, results are returned in alphanumerical
+// order based on the resource name.
+//
+// You can also sort results in descending order based on the creation
+// timestamp using orderBy="creationTimestamp desc". This sorts results
+// based on the creationTimestamp field in reverse chronological order
+// (newest result first). Use this to sort resources like operations so
+// that the newest operation is returned first.
+//
+// Currently, only sorting by name or creationTimestamp desc is
+// supported.
+func (c *SslPoliciesListAvailableFeaturesCall) OrderBy(orderBy string) *SslPoliciesListAvailableFeaturesCall {
+	c.urlParams_.Set("orderBy", orderBy)
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": Specifies a page
+// token to use. Set pageToken to the nextPageToken returned by a
+// previous list request to get the next page of results.
+func (c *SslPoliciesListAvailableFeaturesCall) PageToken(pageToken string) *SslPoliciesListAvailableFeaturesCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesListAvailableFeaturesCall) Fields(s ...googleapi.Field) *SslPoliciesListAvailableFeaturesCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *SslPoliciesListAvailableFeaturesCall) IfNoneMatch(entityTag string) *SslPoliciesListAvailableFeaturesCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesListAvailableFeaturesCall) Context(ctx context.Context) *SslPoliciesListAvailableFeaturesCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesListAvailableFeaturesCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesListAvailableFeaturesCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies/listAvailableFeatures")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("GET", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project": c.project,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.listAvailableFeatures" call.
+// Exactly one of *SslPoliciesListAvailableFeaturesResponse or error
+// will be non-nil. Any non-2xx status code is an error. Response
+// headers are in either
+// *SslPoliciesListAvailableFeaturesResponse.ServerResponse.Header or
+// (if a response was returned at all) in
+// error.(*googleapi.Error).Header. Use googleapi.IsNotModified to check
+// whether the returned error was because http.StatusNotModified was
+// returned.
+func (c *SslPoliciesListAvailableFeaturesCall) Do(opts ...googleapi.CallOption) (*SslPoliciesListAvailableFeaturesResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &SslPoliciesListAvailableFeaturesResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists all features that can be specified in the SSL policy when using custom profile.",
+	//   "httpMethod": "GET",
+	//   "id": "compute.sslPolicies.listAvailableFeatures",
+	//   "parameterOrder": [
+	//     "project"
+	//   ],
+	//   "parameters": {
+	//     "filter": {
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "maxResults": {
+	//       "default": "500",
+	//       "description": "The maximum number of results per page that should be returned. If the number of available results is larger than maxResults, Compute Engine returns a nextPageToken that can be used to get the next page of results in subsequent list requests. Acceptable values are 0 to 500, inclusive. (Default: 500)",
+	//       "format": "uint32",
+	//       "location": "query",
+	//       "minimum": "0",
+	//       "type": "integer"
+	//     },
+	//     "orderBy": {
+	//       "description": "Sorts list results by a certain order. By default, results are returned in alphanumerical order based on the resource name.\n\nYou can also sort results in descending order based on the creation timestamp using orderBy=\"creationTimestamp desc\". This sorts results based on the creationTimestamp field in reverse chronological order (newest result first). Use this to sort resources like operations so that the newest operation is returned first.\n\nCurrently, only sorting by name or creationTimestamp desc is supported.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "pageToken": {
+	//       "description": "Specifies a page token to use. Set pageToken to the nextPageToken returned by a previous list request to get the next page of results.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies/listAvailableFeatures",
+	//   "response": {
+	//     "$ref": "SslPoliciesListAvailableFeaturesResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute",
+	//     "https://www.googleapis.com/auth/compute.readonly"
+	//   ]
+	// }
+
+}
+
+// method id "compute.sslPolicies.patch":
+
+type SslPoliciesPatchCall struct {
+	s          *Service
+	project    string
+	sslPolicy  string
+	sslpolicy  *SslPolicy
+	urlParams_ gensupport.URLParams
+	ctx_       context.Context
+	header_    http.Header
+}
+
+// Patch: Patches the specified SSL policy with the data included in the
+// request.
+func (r *SslPoliciesService) Patch(project string, sslPolicy string, sslpolicy *SslPolicy) *SslPoliciesPatchCall {
+	c := &SslPoliciesPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.sslPolicy = sslPolicy
+	c.sslpolicy = sslpolicy
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *SslPoliciesPatchCall) RequestId(requestId string) *SslPoliciesPatchCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SslPoliciesPatchCall) Fields(s ...googleapi.Field) *SslPoliciesPatchCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SslPoliciesPatchCall) Context(ctx context.Context) *SslPoliciesPatchCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SslPoliciesPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SslPoliciesPatchCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sslpolicy)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/sslPolicies/{sslPolicy}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("PATCH", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":   c.project,
+		"sslPolicy": c.sslPolicy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.sslPolicies.patch" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *SslPoliciesPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Patches the specified SSL policy with the data included in the request.",
+	//   "httpMethod": "PATCH",
+	//   "id": "compute.sslPolicies.patch",
+	//   "parameterOrder": [
+	//     "project",
+	//     "sslPolicy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "sslPolicy": {
+	//       "description": "Name of the SSL policy to update. The name must be 1-63 characters long, and comply with RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/sslPolicies/{sslPolicy}",
+	//   "request": {
+	//     "$ref": "SslPolicy"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.subnetworks.aggregatedList":
 
 type SubnetworksAggregatedListCall struct {
@@ -68063,32 +74714,28 @@ func (r *SubnetworksService) AggregatedList(project string) *SubnetworksAggregat
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *SubnetworksAggregatedListCall) Filter(filter string) *SubnetworksAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -68232,7 +74879,7 @@ func (c *SubnetworksAggregatedListCall) Do(opts ...googleapi.CallOption) (*Subne
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -68662,7 +75309,7 @@ type SubnetworksGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified subnetwork. Get a list of available
+// Get: Returns the specified subnetwork. Gets a list of available
 // subnetworks list() request.
 func (r *SubnetworksService) Get(project string, region string, subnetwork string) *SubnetworksGetCall {
 	c := &SubnetworksGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -68768,7 +75415,7 @@ func (c *SubnetworksGetCall) Do(opts ...googleapi.CallOption) (*Subnetwork, erro
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified subnetwork. Get a list of available subnetworks list() request.",
+	//   "description": "Returns the specified subnetwork. Gets a list of available subnetworks list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.subnetworks.get",
 	//   "parameterOrder": [
@@ -69004,32 +75651,28 @@ func (r *SubnetworksService) List(project string, region string) *SubnetworksLis
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *SubnetworksListCall) Filter(filter string) *SubnetworksListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -69175,7 +75818,7 @@ func (c *SubnetworksListCall) Do(opts ...googleapi.CallOption) (*SubnetworkList,
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -69244,6 +75887,192 @@ func (c *SubnetworksListCall) Pages(ctx context.Context, f func(*SubnetworkList)
 		}
 		c.PageToken(x.NextPageToken)
 	}
+}
+
+// method id "compute.subnetworks.patch":
+
+type SubnetworksPatchCall struct {
+	s           *Service
+	project     string
+	region      string
+	subnetwork  string
+	subnetwork2 *Subnetwork
+	urlParams_  gensupport.URLParams
+	ctx_        context.Context
+	header_     http.Header
+}
+
+// Patch: Patches the specified subnetwork with the data included in the
+// request. Only the following fields within the subnetwork resource can
+// be specified in the request: secondary_ip_range,
+// allow_subnet_cidr_routes_overlap and role. It is also mandatory to
+// specify the current fingeprint of the subnetwork resource being
+// patched.
+func (r *SubnetworksService) Patch(project string, region string, subnetwork string, subnetwork2 *Subnetwork) *SubnetworksPatchCall {
+	c := &SubnetworksPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.region = region
+	c.subnetwork = subnetwork
+	c.subnetwork2 = subnetwork2
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *SubnetworksPatchCall) RequestId(requestId string) *SubnetworksPatchCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *SubnetworksPatchCall) Fields(s ...googleapi.Field) *SubnetworksPatchCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *SubnetworksPatchCall) Context(ctx context.Context) *SubnetworksPatchCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *SubnetworksPatchCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *SubnetworksPatchCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.subnetwork2)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/regions/{region}/subnetworks/{subnetwork}")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("PATCH", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":    c.project,
+		"region":     c.region,
+		"subnetwork": c.subnetwork,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.subnetworks.patch" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *SubnetworksPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Patches the specified subnetwork with the data included in the request. Only the following fields within the subnetwork resource can be specified in the request: secondary_ip_range, allow_subnet_cidr_routes_overlap and role. It is also mandatory to specify the current fingeprint of the subnetwork resource being patched.",
+	//   "httpMethod": "PATCH",
+	//   "id": "compute.subnetworks.patch",
+	//   "parameterOrder": [
+	//     "project",
+	//     "region",
+	//     "subnetwork"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "region": {
+	//       "description": "Name of the region scoping this request.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "subnetwork": {
+	//       "description": "Name of the Subnetwork resource to patch.",
+	//       "location": "path",
+	//       "pattern": "[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/regions/{region}/subnetworks/{subnetwork}",
+	//   "request": {
+	//     "$ref": "Subnetwork"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
 }
 
 // method id "compute.subnetworks.setPrivateIpGoogleAccess":
@@ -69602,7 +76431,7 @@ type TargetHttpProxiesGetCall struct {
 	header_         http.Header
 }
 
-// Get: Returns the specified TargetHttpProxy resource. Get a list of
+// Get: Returns the specified TargetHttpProxy resource. Gets a list of
 // available target HTTP proxies by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/targetHttpProxies/get
 func (r *TargetHttpProxiesService) Get(project string, targetHttpProxy string) *TargetHttpProxiesGetCall {
@@ -69707,7 +76536,7 @@ func (c *TargetHttpProxiesGetCall) Do(opts ...googleapi.CallOption) (*TargetHttp
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified TargetHttpProxy resource. Get a list of available target HTTP proxies by making a list() request.",
+	//   "description": "Returns the specified TargetHttpProxy resource. Gets a list of available target HTTP proxies by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetHttpProxies.get",
 	//   "parameterOrder": [
@@ -69924,32 +76753,28 @@ func (r *TargetHttpProxiesService) List(project string) *TargetHttpProxiesListCa
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetHttpProxiesListCall) Filter(filter string) *TargetHttpProxiesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -70093,7 +76918,7 @@ func (c *TargetHttpProxiesListCall) Do(opts ...googleapi.CallOption) (*TargetHtt
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -70500,7 +77325,7 @@ type TargetHttpsProxiesGetCall struct {
 	header_          http.Header
 }
 
-// Get: Returns the specified TargetHttpsProxy resource. Get a list of
+// Get: Returns the specified TargetHttpsProxy resource. Gets a list of
 // available target HTTPS proxies by making a list() request.
 func (r *TargetHttpsProxiesService) Get(project string, targetHttpsProxy string) *TargetHttpsProxiesGetCall {
 	c := &TargetHttpsProxiesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -70604,7 +77429,7 @@ func (c *TargetHttpsProxiesGetCall) Do(opts ...googleapi.CallOption) (*TargetHtt
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified TargetHttpsProxy resource. Get a list of available target HTTPS proxies by making a list() request.",
+	//   "description": "Returns the specified TargetHttpsProxy resource. Gets a list of available target HTTPS proxies by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetHttpsProxies.get",
 	//   "parameterOrder": [
@@ -70819,32 +77644,28 @@ func (r *TargetHttpsProxiesService) List(project string) *TargetHttpsProxiesList
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetHttpsProxiesListCall) Filter(filter string) *TargetHttpsProxiesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -70988,7 +77809,7 @@ func (c *TargetHttpsProxiesListCall) Do(opts ...googleapi.CallOption) (*TargetHt
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -71050,6 +77871,175 @@ func (c *TargetHttpsProxiesListCall) Pages(ctx context.Context, f func(*TargetHt
 		}
 		c.PageToken(x.NextPageToken)
 	}
+}
+
+// method id "compute.targetHttpsProxies.setQuicOverride":
+
+type TargetHttpsProxiesSetQuicOverrideCall struct {
+	s                                        *Service
+	project                                  string
+	targetHttpsProxy                         string
+	targethttpsproxiessetquicoverriderequest *TargetHttpsProxiesSetQuicOverrideRequest
+	urlParams_                               gensupport.URLParams
+	ctx_                                     context.Context
+	header_                                  http.Header
+}
+
+// SetQuicOverride: Sets the QUIC override policy for TargetHttpsProxy.
+func (r *TargetHttpsProxiesService) SetQuicOverride(project string, targetHttpsProxy string, targethttpsproxiessetquicoverriderequest *TargetHttpsProxiesSetQuicOverrideRequest) *TargetHttpsProxiesSetQuicOverrideCall {
+	c := &TargetHttpsProxiesSetQuicOverrideCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.targetHttpsProxy = targetHttpsProxy
+	c.targethttpsproxiessetquicoverriderequest = targethttpsproxiessetquicoverriderequest
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *TargetHttpsProxiesSetQuicOverrideCall) RequestId(requestId string) *TargetHttpsProxiesSetQuicOverrideCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *TargetHttpsProxiesSetQuicOverrideCall) Fields(s ...googleapi.Field) *TargetHttpsProxiesSetQuicOverrideCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *TargetHttpsProxiesSetQuicOverrideCall) Context(ctx context.Context) *TargetHttpsProxiesSetQuicOverrideCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TargetHttpsProxiesSetQuicOverrideCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *TargetHttpsProxiesSetQuicOverrideCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.targethttpsproxiessetquicoverriderequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/targetHttpsProxies/{targetHttpsProxy}/setQuicOverride")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":          c.project,
+		"targetHttpsProxy": c.targetHttpsProxy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.targetHttpsProxies.setQuicOverride" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *TargetHttpsProxiesSetQuicOverrideCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Sets the QUIC override policy for TargetHttpsProxy.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.targetHttpsProxies.setQuicOverride",
+	//   "parameterOrder": [
+	//     "project",
+	//     "targetHttpsProxy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "targetHttpsProxy": {
+	//       "description": "Name of the TargetHttpsProxy resource to set the QUIC override policy for. The name should conform to RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/targetHttpsProxies/{targetHttpsProxy}/setQuicOverride",
+	//   "request": {
+	//     "$ref": "TargetHttpsProxiesSetQuicOverrideRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
 }
 
 // method id "compute.targetHttpsProxies.setSslCertificates":
@@ -71210,6 +78200,179 @@ func (c *TargetHttpsProxiesSetSslCertificatesCall) Do(opts ...googleapi.CallOpti
 	//   "path": "{project}/targetHttpsProxies/{targetHttpsProxy}/setSslCertificates",
 	//   "request": {
 	//     "$ref": "TargetHttpsProxiesSetSslCertificatesRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
+// method id "compute.targetHttpsProxies.setSslPolicy":
+
+type TargetHttpsProxiesSetSslPolicyCall struct {
+	s                  *Service
+	project            string
+	targetHttpsProxy   string
+	sslpolicyreference *SslPolicyReference
+	urlParams_         gensupport.URLParams
+	ctx_               context.Context
+	header_            http.Header
+}
+
+// SetSslPolicy: Sets the SSL policy for TargetHttpsProxy. The SSL
+// policy specifies the server-side support for SSL features. This
+// affects connections between clients and the HTTPS proxy load
+// balancer. They do not affect the connection between the load balancer
+// and the backends.
+func (r *TargetHttpsProxiesService) SetSslPolicy(project string, targetHttpsProxy string, sslpolicyreference *SslPolicyReference) *TargetHttpsProxiesSetSslPolicyCall {
+	c := &TargetHttpsProxiesSetSslPolicyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.targetHttpsProxy = targetHttpsProxy
+	c.sslpolicyreference = sslpolicyreference
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *TargetHttpsProxiesSetSslPolicyCall) RequestId(requestId string) *TargetHttpsProxiesSetSslPolicyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *TargetHttpsProxiesSetSslPolicyCall) Fields(s ...googleapi.Field) *TargetHttpsProxiesSetSslPolicyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *TargetHttpsProxiesSetSslPolicyCall) Context(ctx context.Context) *TargetHttpsProxiesSetSslPolicyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TargetHttpsProxiesSetSslPolicyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *TargetHttpsProxiesSetSslPolicyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sslpolicyreference)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/targetHttpsProxies/{targetHttpsProxy}/setSslPolicy")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":          c.project,
+		"targetHttpsProxy": c.targetHttpsProxy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.targetHttpsProxies.setSslPolicy" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *TargetHttpsProxiesSetSslPolicyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Sets the SSL policy for TargetHttpsProxy. The SSL policy specifies the server-side support for SSL features. This affects connections between clients and the HTTPS proxy load balancer. They do not affect the connection between the load balancer and the backends.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.targetHttpsProxies.setSslPolicy",
+	//   "parameterOrder": [
+	//     "project",
+	//     "targetHttpsProxy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "targetHttpsProxy": {
+	//       "description": "Name of the TargetHttpsProxy resource whose SSL policy is to be set. The name must be 1-63 characters long, and comply with RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/targetHttpsProxies/{targetHttpsProxy}/setSslPolicy",
+	//   "request": {
+	//     "$ref": "SslPolicyReference"
 	//   },
 	//   "response": {
 	//     "$ref": "Operation"
@@ -71411,32 +78574,28 @@ func (r *TargetInstancesService) AggregatedList(project string) *TargetInstances
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetInstancesAggregatedListCall) Filter(filter string) *TargetInstancesAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -71580,7 +78739,7 @@ func (c *TargetInstancesAggregatedListCall) Do(opts ...googleapi.CallOption) (*T
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -71829,7 +78988,7 @@ type TargetInstancesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified TargetInstance resource. Get a list of
+// Get: Returns the specified TargetInstance resource. Gets a list of
 // available target instances by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/targetInstances/get
 func (r *TargetInstancesService) Get(project string, zone string, targetInstance string) *TargetInstancesGetCall {
@@ -71936,7 +79095,7 @@ func (c *TargetInstancesGetCall) Do(opts ...googleapi.CallOption) (*TargetInstan
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified TargetInstance resource. Get a list of available target instances by making a list() request.",
+	//   "description": "Returns the specified TargetInstance resource. Gets a list of available target instances by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetInstances.get",
 	//   "parameterOrder": [
@@ -72174,32 +79333,28 @@ func (r *TargetInstancesService) List(project string, zone string) *TargetInstan
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetInstancesListCall) Filter(filter string) *TargetInstancesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -72345,7 +79500,7 @@ func (c *TargetInstancesListCall) Do(opts ...googleapi.CallOption) (*TargetInsta
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -72799,32 +79954,28 @@ func (r *TargetPoolsService) AggregatedList(project string) *TargetPoolsAggregat
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetPoolsAggregatedListCall) Filter(filter string) *TargetPoolsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -72968,7 +80119,7 @@ func (c *TargetPoolsAggregatedListCall) Do(opts ...googleapi.CallOption) (*Targe
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -73217,7 +80368,7 @@ type TargetPoolsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified target pool. Get a list of available
+// Get: Returns the specified target pool. Gets a list of available
 // target pools by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/targetPools/get
 func (r *TargetPoolsService) Get(project string, region string, targetPool string) *TargetPoolsGetCall {
@@ -73324,7 +80475,7 @@ func (c *TargetPoolsGetCall) Do(opts ...googleapi.CallOption) (*TargetPool, erro
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified target pool. Get a list of available target pools by making a list() request.",
+	//   "description": "Returns the specified target pool. Gets a list of available target pools by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetPools.get",
 	//   "parameterOrder": [
@@ -73722,32 +80873,28 @@ func (r *TargetPoolsService) List(project string, region string) *TargetPoolsLis
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetPoolsListCall) Filter(filter string) *TargetPoolsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -73893,7 +81040,7 @@ func (c *TargetPoolsListCall) Do(opts ...googleapi.CallOption) (*TargetPoolList,
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -74695,7 +81842,7 @@ type TargetSslProxiesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified TargetSslProxy resource. Get a list of
+// Get: Returns the specified TargetSslProxy resource. Gets a list of
 // available target SSL proxies by making a list() request.
 func (r *TargetSslProxiesService) Get(project string, targetSslProxy string) *TargetSslProxiesGetCall {
 	c := &TargetSslProxiesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -74799,7 +81946,7 @@ func (c *TargetSslProxiesGetCall) Do(opts ...googleapi.CallOption) (*TargetSslPr
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified TargetSslProxy resource. Get a list of available target SSL proxies by making a list() request.",
+	//   "description": "Returns the specified TargetSslProxy resource. Gets a list of available target SSL proxies by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetSslProxies.get",
 	//   "parameterOrder": [
@@ -75014,32 +82161,28 @@ func (r *TargetSslProxiesService) List(project string) *TargetSslProxiesListCall
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetSslProxiesListCall) Filter(filter string) *TargetSslProxiesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -75183,7 +82326,7 @@ func (c *TargetSslProxiesListCall) Do(opts ...googleapi.CallOption) (*TargetSslP
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -75757,6 +82900,178 @@ func (c *TargetSslProxiesSetSslCertificatesCall) Do(opts ...googleapi.CallOption
 
 }
 
+// method id "compute.targetSslProxies.setSslPolicy":
+
+type TargetSslProxiesSetSslPolicyCall struct {
+	s                  *Service
+	project            string
+	targetSslProxy     string
+	sslpolicyreference *SslPolicyReference
+	urlParams_         gensupport.URLParams
+	ctx_               context.Context
+	header_            http.Header
+}
+
+// SetSslPolicy: Sets the SSL policy for TargetSslProxy. The SSL policy
+// specifies the server-side support for SSL features. This affects
+// connections between clients and the SSL proxy load balancer. They do
+// not affect the connection between the load balancer and the backends.
+func (r *TargetSslProxiesService) SetSslPolicy(project string, targetSslProxy string, sslpolicyreference *SslPolicyReference) *TargetSslProxiesSetSslPolicyCall {
+	c := &TargetSslProxiesSetSslPolicyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.project = project
+	c.targetSslProxy = targetSslProxy
+	c.sslpolicyreference = sslpolicyreference
+	return c
+}
+
+// RequestId sets the optional parameter "requestId": An optional
+// request ID to identify requests. Specify a unique request ID so that
+// if you must retry your request, the server will know to ignore the
+// request if it has already been completed.
+//
+// For example, consider a situation where you make an initial request
+// and the request times out. If you make the request again with the
+// same request ID, the server can check if original operation with the
+// same request ID was received, and if so, will ignore the second
+// request. This prevents clients from accidentally creating duplicate
+// commitments.
+//
+// The request ID must be a valid UUID with the exception that zero UUID
+// is not supported (00000000-0000-0000-0000-000000000000).
+func (c *TargetSslProxiesSetSslPolicyCall) RequestId(requestId string) *TargetSslProxiesSetSslPolicyCall {
+	c.urlParams_.Set("requestId", requestId)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *TargetSslProxiesSetSslPolicyCall) Fields(s ...googleapi.Field) *TargetSslProxiesSetSslPolicyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *TargetSslProxiesSetSslPolicyCall) Context(ctx context.Context) *TargetSslProxiesSetSslPolicyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *TargetSslProxiesSetSslPolicyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *TargetSslProxiesSetSslPolicyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.sslpolicyreference)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	urls := googleapi.ResolveRelative(c.s.BasePath, "{project}/global/targetSslProxies/{targetSslProxy}/setSslPolicy")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"project":        c.project,
+		"targetSslProxy": c.targetSslProxy,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "compute.targetSslProxies.setSslPolicy" call.
+// Exactly one of *Operation or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *Operation.ServerResponse.Header or (if a response was returned at
+// all) in error.(*googleapi.Error).Header. Use googleapi.IsNotModified
+// to check whether the returned error was because
+// http.StatusNotModified was returned.
+func (c *TargetSslProxiesSetSslPolicyCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &Operation{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Sets the SSL policy for TargetSslProxy. The SSL policy specifies the server-side support for SSL features. This affects connections between clients and the SSL proxy load balancer. They do not affect the connection between the load balancer and the backends.",
+	//   "httpMethod": "POST",
+	//   "id": "compute.targetSslProxies.setSslPolicy",
+	//   "parameterOrder": [
+	//     "project",
+	//     "targetSslProxy"
+	//   ],
+	//   "parameters": {
+	//     "project": {
+	//       "description": "Project ID for this request.",
+	//       "location": "path",
+	//       "pattern": "(?:(?:[-a-z0-9]{1,63}\\.)*(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?):)?(?:[0-9]{1,19}|(?:[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?))",
+	//       "required": true,
+	//       "type": "string"
+	//     },
+	//     "requestId": {
+	//       "description": "An optional request ID to identify requests. Specify a unique request ID so that if you must retry your request, the server will know to ignore the request if it has already been completed.\n\nFor example, consider a situation where you make an initial request and the request times out. If you make the request again with the same request ID, the server can check if original operation with the same request ID was received, and if so, will ignore the second request. This prevents clients from accidentally creating duplicate commitments.\n\nThe request ID must be a valid UUID with the exception that zero UUID is not supported (00000000-0000-0000-0000-000000000000).",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "targetSslProxy": {
+	//       "description": "Name of the TargetSslProxy resource whose SSL policy is to be set. The name must be 1-63 characters long, and comply with RFC1035.",
+	//       "location": "path",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "{project}/global/targetSslProxies/{targetSslProxy}/setSslPolicy",
+	//   "request": {
+	//     "$ref": "SslPolicyReference"
+	//   },
+	//   "response": {
+	//     "$ref": "Operation"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/compute"
+	//   ]
+	// }
+
+}
+
 // method id "compute.targetTcpProxies.delete":
 
 type TargetTcpProxiesDeleteCall struct {
@@ -75929,7 +83244,7 @@ type TargetTcpProxiesGetCall struct {
 	header_        http.Header
 }
 
-// Get: Returns the specified TargetTcpProxy resource. Get a list of
+// Get: Returns the specified TargetTcpProxy resource. Gets a list of
 // available target TCP proxies by making a list() request.
 func (r *TargetTcpProxiesService) Get(project string, targetTcpProxy string) *TargetTcpProxiesGetCall {
 	c := &TargetTcpProxiesGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -76033,7 +83348,7 @@ func (c *TargetTcpProxiesGetCall) Do(opts ...googleapi.CallOption) (*TargetTcpPr
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified TargetTcpProxy resource. Get a list of available target TCP proxies by making a list() request.",
+	//   "description": "Returns the specified TargetTcpProxy resource. Gets a list of available target TCP proxies by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetTcpProxies.get",
 	//   "parameterOrder": [
@@ -76248,32 +83563,28 @@ func (r *TargetTcpProxiesService) List(project string) *TargetTcpProxiesListCall
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetTcpProxiesListCall) Filter(filter string) *TargetTcpProxiesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -76417,7 +83728,7 @@ func (c *TargetTcpProxiesListCall) Do(opts ...googleapi.CallOption) (*TargetTcpP
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -76839,32 +84150,28 @@ func (r *TargetVpnGatewaysService) AggregatedList(project string) *TargetVpnGate
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetVpnGatewaysAggregatedListCall) Filter(filter string) *TargetVpnGatewaysAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -77008,7 +84315,7 @@ func (c *TargetVpnGatewaysAggregatedListCall) Do(opts ...googleapi.CallOption) (
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -77256,7 +84563,7 @@ type TargetVpnGatewaysGetCall struct {
 	header_          http.Header
 }
 
-// Get: Returns the specified target VPN gateway. Get a list of
+// Get: Returns the specified target VPN gateway. Gets a list of
 // available target VPN gateways by making a list() request.
 func (r *TargetVpnGatewaysService) Get(project string, region string, targetVpnGateway string) *TargetVpnGatewaysGetCall {
 	c := &TargetVpnGatewaysGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -77362,7 +84669,7 @@ func (c *TargetVpnGatewaysGetCall) Do(opts ...googleapi.CallOption) (*TargetVpnG
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified target VPN gateway. Get a list of available target VPN gateways by making a list() request.",
+	//   "description": "Returns the specified target VPN gateway. Gets a list of available target VPN gateways by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.targetVpnGateways.get",
 	//   "parameterOrder": [
@@ -77598,32 +84905,28 @@ func (r *TargetVpnGatewaysService) List(project string, region string) *TargetVp
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *TargetVpnGatewaysListCall) Filter(filter string) *TargetVpnGatewaysListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -77769,7 +85072,7 @@ func (c *TargetVpnGatewaysListCall) Do(opts ...googleapi.CallOption) (*TargetVpn
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -78013,7 +85316,7 @@ type UrlMapsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified UrlMap resource. Get a list of available
+// Get: Returns the specified UrlMap resource. Gets a list of available
 // URL maps by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/urlMaps/get
 func (r *UrlMapsService) Get(project string, urlMap string) *UrlMapsGetCall {
@@ -78118,7 +85421,7 @@ func (c *UrlMapsGetCall) Do(opts ...googleapi.CallOption) (*UrlMap, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified UrlMap resource. Get a list of available URL maps by making a list() request.",
+	//   "description": "Returns the specified UrlMap resource. Gets a list of available URL maps by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.urlMaps.get",
 	//   "parameterOrder": [
@@ -78506,32 +85809,28 @@ func (r *UrlMapsService) List(project string) *UrlMapsListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *UrlMapsListCall) Filter(filter string) *UrlMapsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -78675,7 +85974,7 @@ func (c *UrlMapsListCall) Do(opts ...googleapi.CallOption) (*UrlMapList, error) 
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -79251,32 +86550,28 @@ func (r *VpnTunnelsService) AggregatedList(project string) *VpnTunnelsAggregated
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *VpnTunnelsAggregatedListCall) Filter(filter string) *VpnTunnelsAggregatedListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -79420,7 +86715,7 @@ func (c *VpnTunnelsAggregatedListCall) Do(opts ...googleapi.CallOption) (*VpnTun
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -79668,7 +86963,7 @@ type VpnTunnelsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified VpnTunnel resource. Get a list of
+// Get: Returns the specified VpnTunnel resource. Gets a list of
 // available VPN tunnels by making a list() request.
 func (r *VpnTunnelsService) Get(project string, region string, vpnTunnel string) *VpnTunnelsGetCall {
 	c := &VpnTunnelsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -79774,7 +87069,7 @@ func (c *VpnTunnelsGetCall) Do(opts ...googleapi.CallOption) (*VpnTunnel, error)
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified VpnTunnel resource. Get a list of available VPN tunnels by making a list() request.",
+	//   "description": "Returns the specified VpnTunnel resource. Gets a list of available VPN tunnels by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.vpnTunnels.get",
 	//   "parameterOrder": [
@@ -80010,32 +87305,28 @@ func (r *VpnTunnelsService) List(project string, region string) *VpnTunnelsListC
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *VpnTunnelsListCall) Filter(filter string) *VpnTunnelsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -80181,7 +87472,7 @@ func (c *VpnTunnelsListCall) Do(opts ...googleapi.CallOption) (*VpnTunnelList, e
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -80557,32 +87848,28 @@ func (r *ZoneOperationsService) List(project string, zone string) *ZoneOperation
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *ZoneOperationsListCall) Filter(filter string) *ZoneOperationsListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -80728,7 +88015,7 @@ func (c *ZoneOperationsListCall) Do(opts ...googleapi.CallOption) (*OperationLis
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -80811,7 +88098,7 @@ type ZonesGetCall struct {
 	header_      http.Header
 }
 
-// Get: Returns the specified Zone resource. Get a list of available
+// Get: Returns the specified Zone resource. Gets a list of available
 // zones by making a list() request.
 // For details, see https://cloud.google.com/compute/docs/reference/latest/zones/get
 func (r *ZonesService) Get(project string, zone string) *ZonesGetCall {
@@ -80916,7 +88203,7 @@ func (c *ZonesGetCall) Do(opts ...googleapi.CallOption) (*Zone, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns the specified Zone resource. Get a list of available zones by making a list() request.",
+	//   "description": "Returns the specified Zone resource. Gets a list of available zones by making a list() request.",
 	//   "httpMethod": "GET",
 	//   "id": "compute.zones.get",
 	//   "parameterOrder": [
@@ -80972,32 +88259,28 @@ func (r *ZonesService) List(project string) *ZonesListCall {
 	return c
 }
 
-// Filter sets the optional parameter "filter": Sets a filter
-// {expression} for filtering listed resources. Your {expression} must
-// be in the format: field_name comparison_string literal_string.
+// Filter sets the optional parameter "filter": A filter expression that
+// filters resources listed in the response. The expression must specify
+// the field name, a comparison operator, and the value that you want to
+// use for filtering. The value must be a string, a number, or a
+// boolean. The comparison operator must be either =, !=, >, or <.
 //
-// The field_name is the name of the field you want to compare. Only
-// atomic field types are supported (string, number, boolean). The
-// comparison_string must be either eq (equals) or ne (not equals). The
-// literal_string is the string value to filter to. The literal value
-// must be valid for the type of field you are filtering by (string,
-// number, boolean). For string fields, the literal value is interpreted
-// as a regular expression using RE2 syntax. The literal value must
-// match the entire field.
+// For example, if you are filtering Compute Engine instances, you can
+// exclude instances named example-instance by specifying name !=
+// example-instance.
 //
-// For example, to filter for instances that do not have a name of
-// example-instance, you would use name ne example-instance.
-//
-// You can filter on nested fields. For example, you could filter on
-// instances that have set the scheduling.automaticRestart field to
-// true. Use filtering on nested fields to take advantage of labels to
-// organize and search for results based on label values.
+// You can also filter nested fields. For example, you could specify
+// scheduling.automaticRestart = false to include instances only if they
+// are not scheduled for automatic restarts. You can use filtering on
+// nested fields to filter based on resource labels.
 //
 // To filter on multiple expressions, provide each separate expression
-// within parentheses. For example, (scheduling.automaticRestart eq
-// true) (zone eq us-central1-f). Multiple expressions are treated as
-// AND expressions, meaning that resources must match all expressions to
-// pass the filters.
+// within parentheses. For example, (scheduling.automaticRestart = true)
+// (cpuPlatform = "Intel Skylake"). By default, each expression is an
+// AND expression. However, you can include AND and OR expressions
+// explicitly. For example, (cpuPlatform = "Intel Skylake") OR
+// (cpuPlatform = "Intel Broadwell") AND (scheduling.automaticRestart =
+// true).
 func (c *ZonesListCall) Filter(filter string) *ZonesListCall {
 	c.urlParams_.Set("filter", filter)
 	return c
@@ -81141,7 +88424,7 @@ func (c *ZonesListCall) Do(opts ...googleapi.CallOption) (*ZoneList, error) {
 	//   ],
 	//   "parameters": {
 	//     "filter": {
-	//       "description": "Sets a filter {expression} for filtering listed resources. Your {expression} must be in the format: field_name comparison_string literal_string.\n\nThe field_name is the name of the field you want to compare. Only atomic field types are supported (string, number, boolean). The comparison_string must be either eq (equals) or ne (not equals). The literal_string is the string value to filter to. The literal value must be valid for the type of field you are filtering by (string, number, boolean). For string fields, the literal value is interpreted as a regular expression using RE2 syntax. The literal value must match the entire field.\n\nFor example, to filter for instances that do not have a name of example-instance, you would use name ne example-instance.\n\nYou can filter on nested fields. For example, you could filter on instances that have set the scheduling.automaticRestart field to true. Use filtering on nested fields to take advantage of labels to organize and search for results based on label values.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart eq true) (zone eq us-central1-f). Multiple expressions are treated as AND expressions, meaning that resources must match all expressions to pass the filters.",
+	//       "description": "A filter expression that filters resources listed in the response. The expression must specify the field name, a comparison operator, and the value that you want to use for filtering. The value must be a string, a number, or a boolean. The comparison operator must be either =, !=, \u003e, or \u003c.\n\nFor example, if you are filtering Compute Engine instances, you can exclude instances named example-instance by specifying name != example-instance.\n\nYou can also filter nested fields. For example, you could specify scheduling.automaticRestart = false to include instances only if they are not scheduled for automatic restarts. You can use filtering on nested fields to filter based on resource labels.\n\nTo filter on multiple expressions, provide each separate expression within parentheses. For example, (scheduling.automaticRestart = true) (cpuPlatform = \"Intel Skylake\"). By default, each expression is an AND expression. However, you can include AND and OR expressions explicitly. For example, (cpuPlatform = \"Intel Skylake\") OR (cpuPlatform = \"Intel Broadwell\") AND (scheduling.automaticRestart = true).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },

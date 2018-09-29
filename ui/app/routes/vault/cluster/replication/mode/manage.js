@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { camelize } from '@ember/string';
+import { all } from 'rsvp';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import { replicationActionForMode } from 'vault/helpers/replication-action-for-mode';
 
 const pathForAction = (action, replicationMode, clusterMode) => {
@@ -11,8 +14,8 @@ const pathForAction = (action, replicationMode, clusterMode) => {
   return path;
 };
 
-export default Ember.Route.extend({
-  store: Ember.inject.service(),
+export default Route.extend({
+  store: service(),
   model() {
     const store = this.get('store');
     const model = this.modelFor('vault.cluster.replication.mode');
@@ -20,17 +23,15 @@ export default Ember.Route.extend({
     const replicationMode = this.paramsFor('vault.cluster.replication.mode').replication_mode;
     const clusterMode = model.get(replicationMode).get('modeForUrl');
     const actions = replicationActionForMode([replicationMode, clusterMode]);
-    return Ember.RSVP
-      .all(
-        actions.map(action => {
-          return store.findRecord('capabilities', pathForAction(action)).then(capability => {
-            model.set(`can${Ember.String.camelize(action)}`, capability.get('canUpdate'));
-          });
-        })
-      )
-      .then(() => {
-        return model;
-      });
+    return all(
+      actions.map(action => {
+        return store.findRecord('capabilities', pathForAction(action)).then(capability => {
+          model.set(`can${camelize(action)}`, capability.get('canUpdate'));
+        });
+      })
+    ).then(() => {
+      return model;
+    });
   },
 
   beforeModel() {

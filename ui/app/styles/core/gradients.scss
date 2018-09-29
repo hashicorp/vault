@@ -1,3 +1,4 @@
-.has-dark-grey-gradient {
-  background: linear-gradient(to right, darken($grey-dark, 25%), $grey-dark);
+$dark-vault-gradient: linear-gradient(to right, $vault-gray-dark, $vault-gray);
+.has-dark-vault-gradient {
+  background: $dark-vault-gradient;
 }

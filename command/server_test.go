@@ -1,4 +1,8 @@
-// +build !race
+// +build !race,!hsm
+
+// NOTE: we can't use this with HSM. We can't set testing mode on and it's not
+// safe to use env vars since that provides an attack vector in the real world.
+//
 // The server tests have a go-metrics/exp manager race condition :(.
 
 package command
@@ -16,10 +20,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/physical"
+	physInmem "github.com/hashicorp/vault/physical/inmem"
 	"github.com/mitchellh/cli"
-
-	physConsul "github.com/hashicorp/vault/physical/consul"
-	physFile "github.com/hashicorp/vault/physical/file"
 )
 
 func testRandomPort(tb testing.TB) int {
@@ -52,31 +54,23 @@ func testBaseHCL(tb testing.TB) string {
 }
 
 const (
-	consulHCL = `
-backend "consul" {
-  prefix               = "foo/"
+	inmemHCL = `
+backend "inmem_ha" {
   advertise_addr       = "http://127.0.0.1:8200"
-  disable_registration = "true"
 }
 `
-	haConsulHCL = `
-ha_backend "consul" {
-  prefix               = "bar/"
+	haInmemHCL = `
+ha_backend "inmem_ha" {
   redirect_addr        = "http://127.0.0.1:8200"
-  disable_registration = "true"
 }
 `
 
-	badHAConsulHCL = `
-ha_backend "file" {
-  path = "/dev/null"
-}
+	badHAInmemHCL = `
+ha_backend "inmem" {}
 `
 
 	reloadHCL = `
-backend "file" {
-  path = "/dev/null"
-}
+backend "inmem" {}
 disable_mlock = true
 listener "tcp" {
   address       = "127.0.0.1:8203"
@@ -97,8 +91,8 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
 		PhysicalBackends: map[string]physical.Factory{
-			"file":   physFile.NewFileBackend,
-			"consul": physConsul.NewConsulBackend,
+			"inmem":    physInmem.NewInmem,
+			"inmem_ha": physInmem.NewInmemHA,
 		},
 
 		// These prevent us from random sleep guessing...
@@ -140,9 +134,6 @@ func TestServer_ReloadListener(t *testing.T) {
 	ui, cmd := testServerCommand(t)
 	_ = ui
 
-	finished := false
-	finishedMutex := sync.Mutex{}
-
 	wg.Add(1)
 	args := []string{"-config", td + "/reload.hcl"}
 	go func() {
@@ -150,9 +141,6 @@ func TestServer_ReloadListener(t *testing.T) {
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
 			t.Errorf("got a non-zero exit status: %s", output)
 		}
-		finishedMutex.Lock()
-		finished = true
-		finishedMutex.Unlock()
 		wg.Done()
 	}()
 
@@ -218,19 +206,19 @@ func TestServer(t *testing.T) {
 	}{
 		{
 			"common_ha",
-			testBaseHCL(t) + consulHCL,
+			testBaseHCL(t) + inmemHCL,
 			"(HA available)",
 			0,
 		},
 		{
 			"separate_ha",
-			testBaseHCL(t) + consulHCL + haConsulHCL,
+			testBaseHCL(t) + inmemHCL + haInmemHCL,
 			"HA Storage:",
 			0,
 		},
 		{
 			"bad_separate_ha",
-			testBaseHCL(t) + consulHCL + badHAConsulHCL,
+			testBaseHCL(t) + inmemHCL + badHAInmemHCL,
 			"Specified HA storage does not support HA",
 			1,
 		},

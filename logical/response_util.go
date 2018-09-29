@@ -70,11 +70,13 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 
 	if errwrap.ContainsType(err, new(ReplicationCodedError)) {
 		var allErrors error
-		codedErr := errwrap.GetType(err, new(ReplicationCodedError)).(*ReplicationCodedError)
+		var codedErr *ReplicationCodedError
 		errwrap.Walk(err, func(inErr error) {
 			newErr, ok := inErr.(*ReplicationCodedError)
-			if !ok {
-				allErrors = multierror.Append(allErrors, newErr)
+			if ok {
+				codedErr = newErr
+			} else {
+				allErrors = multierror.Append(allErrors, inErr)
 			}
 		})
 		if allErrors != nil {
@@ -105,6 +107,8 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusNotFound
 		case errwrap.Contains(err, ErrInvalidRequest.Error()):
 			statusCode = http.StatusBadRequest
+		case errwrap.Contains(err, ErrUpstreamRateLimited.Error()):
+			statusCode = http.StatusBadGateway
 		}
 	}
 
@@ -119,6 +123,13 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 // conditions in a way that can be shared across http's respondError and other
 // locations.
 func AdjustErrorStatusCode(status *int, err error) {
+	// Handle nested errors
+	if t, ok := err.(*multierror.Error); ok {
+		for _, e := range t.Errors {
+			AdjustErrorStatusCode(status, e)
+		}
+	}
+
 	// Adjust status code when sealed
 	if errwrap.Contains(err, consts.ErrSealed.Error()) {
 		*status = http.StatusServiceUnavailable

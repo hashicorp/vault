@@ -32,6 +32,7 @@ type SSHCommand struct {
 	flagNoExec                bool
 	flagMountPoint            string
 	flagStrictHostKeyChecking string
+	flagSSHExecutable         string
 	flagUserKnownHostsFile    string
 
 	// SSH CA Mode options
@@ -203,6 +204,15 @@ func (c *SSHCommand) Flags() *FlagSets {
 			"user certificate. This is specified as a comma-separated list of values.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "ssh-executable",
+		Target:     &c.flagSSHExecutable,
+		Default:    "ssh",
+		EnvVar:     "VAULT_SSH_EXECUTABLE",
+		Completion: complete.PredictAnything,
+		Usage:      "Path to the SSH executable to use when connecting to the host",
+	})
+
 	return set
 }
 
@@ -284,8 +294,7 @@ func (c *SSHCommand) Run(args []string) int {
 			"WARNING: No -role specified. Use -role to tell Vault which ssh role " +
 				"to use for authentication. In the future, you will need to tell " +
 				"Vault which role to use. For now, Vault will attempt to guess based " +
-				"on the API response. This will be removed in the Vault 0.11 (or " +
-				"later."))
+				"on the API response. This will be removed in the Vault 0.12."))
 
 		role, err := c.defaultRole(c.flagMountPoint, ip)
 		if err != nil {
@@ -312,7 +321,7 @@ func (c *SSHCommand) Run(args []string) int {
 				"on the API response. This guess involves creating a temporary " +
 				"credential, reading its type, and then revoking it. To reduce the " +
 				"number of API calls and surface area, specify -mode directly. This " +
-				"will be removed in Vault 0.11 (or later)."))
+				"will be removed in Vault 0.12."))
 		secret, cred, err := c.generateCredential(username, ip)
 		if err != nil {
 			// This is _very_ hacky, but is the only sane backwards-compatible way
@@ -473,7 +482,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.Command(c.flagSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -522,7 +531,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	// only the Go libraries. Feel free to try and remove this dependency.
 	args := make([]string, 0)
 	env := os.Environ()
-	sshCmd := "ssh"
+	sshCmd := c.flagSSHExecutable
 
 	sshpassPath, err := exec.LookPath("sshpass")
 	if err != nil {
@@ -537,7 +546,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 		sshCmd = sshpassPath
 		args = append(args,
 			"-e", // Read password for SSHPASS environment variable
-			"ssh",
+			c.flagSSHExecutable,
 		)
 		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
 	}
@@ -634,7 +643,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 	// Add extra user defined ssh arguments
 	args = append(args, sshArgs...)
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.Command(c.flagSSHExecutable, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -761,12 +770,30 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 }
 
+func (c *SSHCommand) isSingleSSHArg(arg string) bool {
+	// list of single SSH arguments is taken from
+	// https://github.com/openssh/openssh-portable/blob/28013759f09ed3ebf7e8335e83a62936bd7a7f47/ssh.c#L204
+	singleArgs := []string{
+		"4", "6", "A", "a", "C", "f", "G", "g", "K", "k", "M", "N", "n", "q",
+		"s", "T", "t", "V", "v", "X", "x", "Y", "y",
+	}
+
+	// We want to get the first character after the dash. This is so args like -vvv are picked up as just being -v
+	flag := string(arg[1])
+
+	for _, a := range singleArgs {
+		if flag == a {
+			return true
+		}
+	}
+	return false
+}
+
 // Finds the hostname, username (optional) and port (optional) from any valid ssh command
 // Supports usrname@hostname but also specifying valid ssh flags like -o User=username,
 // -o Port=2222 and -p 2222 anywhere in the command
 func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username string, port string, err error) {
 	lastArg := ""
-
 	for _, i := range args {
 		arg := lastArg
 		lastArg = ""
@@ -807,9 +834,12 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			continue
 		}
 
-		// If this is an ssh argument we want to look at the value
+		// If this is an ssh argument with a value we want to look at it in the next loop
 		if strings.HasPrefix(i, "-") {
-			lastArg = i
+			// If this isn't a single SSH arg we want to store the flag to we can look at the value next loop
+			if !c.isSingleSSHArg(i) {
+				lastArg = i
+			}
 			continue
 		}
 

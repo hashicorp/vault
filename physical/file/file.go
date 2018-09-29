@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -97,6 +98,12 @@ func (b *FileBackend) DeleteInternal(ctx context.Context, path string) error {
 
 	basePath, key := b.expandPath(path)
 	fullPath := filepath.Join(basePath, key)
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
@@ -192,6 +199,12 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 		return nil, err
 	}
 
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	return &physical.Entry{
 		Key:   k,
 		Value: entry.Value,
@@ -236,6 +249,12 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 		return errors.New("could not successfully get a file handle")
 	}
 
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	enc := json.NewEncoder(f)
 	encErr := enc.Encode(&fileEntry{
 		Value: entry.Value,
@@ -270,10 +289,10 @@ func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error)
 	b.RLock()
 	defer b.RUnlock()
 
-	return b.ListInternal(prefix)
+	return b.ListInternal(ctx, prefix)
 }
 
-func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+func (b *FileBackend) ListInternal(ctx context.Context, prefix string) ([]string, error) {
 	if err := b.validatePath(prefix); err != nil {
 		return nil, err
 	}
@@ -313,6 +332,16 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 				names[i] = name[1:]
 			}
 		}
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	if len(names) > 0 {
+		sort.Strings(names)
 	}
 
 	return names, nil

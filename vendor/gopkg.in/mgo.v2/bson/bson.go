@@ -35,13 +35,11 @@ package bson
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"runtime"
@@ -194,12 +192,10 @@ var objectIdCounter uint32 = readRandomUint32()
 
 // readRandomUint32 returns a random objectIdCounter.
 func readRandomUint32() uint32 {
-	var b [4]byte
-	_, err := io.ReadFull(rand.Reader, b[:])
-	if err != nil {
-		panic(fmt.Errorf("cannot read random object id: %v", err))
-	}
-	return uint32((uint32(b[0]) << 0) | (uint32(b[1]) << 8) | (uint32(b[2]) << 16) | (uint32(b[3]) << 24))
+	// We've found systems hanging in this function due to lack of entropy.
+	// The randomness of these bytes is just preventing nearby clashes, so
+	// just look at the time.
+	return uint32(time.Now().UnixNano())
 }
 
 // machineId stores machine id generated once and used in subsequent calls
@@ -214,10 +210,10 @@ func readMachineId() []byte {
 	id := sum[:]
 	hostname, err1 := os.Hostname()
 	if err1 != nil {
-		_, err2 := io.ReadFull(rand.Reader, id)
-		if err2 != nil {
-			panic(fmt.Errorf("cannot get hostname: %v; %v", err1, err2))
-		}
+		n := uint32(time.Now().UnixNano())
+		sum[0] = byte(n >> 0)
+		sum[1] = byte(n >> 8)
+		sum[2] = byte(n >> 16)
 		return id
 	}
 	hw := md5.New()
@@ -279,7 +275,7 @@ var nullBytes = []byte("null")
 func (id *ObjectId) UnmarshalJSON(data []byte) error {
 	if len(data) > 0 && (data[0] == '{' || data[0] == 'O') {
 		var v struct {
-			Id json.RawMessage `json:"$oid"`
+			Id   json.RawMessage `json:"$oid"`
 			Func struct {
 				Id json.RawMessage
 			} `json:"$oidFunc"`

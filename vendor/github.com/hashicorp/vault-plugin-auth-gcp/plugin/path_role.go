@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-gcp-common/gcputil"
+	vaultconsts "github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -38,7 +39,7 @@ const (
 	maxJwtExpMaxMinutes int = 60
 )
 
-var baseRoleFieldSchema map[string]*framework.FieldSchema = map[string]*framework.FieldSchema{
+var baseRoleFieldSchema = map[string]*framework.FieldSchema{
 	"name": {
 		Type:        framework.TypeString,
 		Description: "Name of the role.",
@@ -89,7 +90,7 @@ var baseRoleFieldSchema map[string]*framework.FieldSchema = map[string]*framewor
 	},
 }
 
-var iamOnlyFieldSchema map[string]*framework.FieldSchema = map[string]*framework.FieldSchema{
+var iamOnlyFieldSchema = map[string]*framework.FieldSchema{
 	"max_jwt_exp": {
 		Type:        framework.TypeDurationSecond,
 		Default:     defaultIamMaxJwtExpMinutes * 60,
@@ -102,29 +103,48 @@ var iamOnlyFieldSchema map[string]*framework.FieldSchema = map[string]*framework
 	},
 }
 
-var gceOnlyFieldSchema map[string]*framework.FieldSchema = map[string]*framework.FieldSchema{
+var gceOnlyFieldSchema = map[string]*framework.FieldSchema{
+	"bound_zones": {
+		Type: framework.TypeCommaStringSlice,
+		Description: "Comma-separated list of permitted zones to which the GCE " +
+			"instance must belong. If a group is provided, it is assumed to be a " +
+			"zonal group. This can be a self-link or zone name. This option only " +
+			"applies to \"gce\" roles.",
+	},
+
+	"bound_regions": {
+		Type: framework.TypeCommaStringSlice,
+		Description: "Comma-separated list of permitted regions to which the GCE " +
+			"instance must belong. If a group is provided, it is assumed to be a " +
+			"regional group. If \"zone\" is provided, this option is ignored. This " +
+			"can be a self-link or region name. This option only applies to \"gce\" roles.",
+	},
+
+	"bound_instance_groups": {
+		Type: framework.TypeCommaStringSlice,
+		Description: "Comma-separated list of permitted instance groups to which " +
+			"the GCE instance must belong. This option only applies to \"gce\" roles.",
+	},
+
+	"bound_labels": {
+		Type: framework.TypeCommaStringSlice,
+		Description: "Comma-separated list of GCP labels formatted as" +
+			"\"key:value\" strings that must be present on the GCE instance " +
+			"in order to authenticate. This option only applies to \"gce\" roles.",
+	},
+
+	// Deprecated roles
 	"bound_zone": {
-		Type: framework.TypeString,
-		Description: `
-"gce" roles only. If set, determines the zone that a GCE instance must belong to. If a group is provided, it is assumed
-to be a zonal group and the group must belong to this zone. Accepts self-link or zone name.`,
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_zones\" instead.",
 	},
 	"bound_region": {
-		Type: framework.TypeString,
-		Description: `
-"gce" roles only. If set, determines the region that a GCE instance must belong to. If a group is provided, it is
-assumed to be a regional group and the group must belong to this region. If zone is provided, region will be ignored.
-Either self-link or region name are accepted.`,
+		Type:        framework.TypeString,
+		Description: "Deprecated: use \"bound_regions\" instead.",
 	},
 	"bound_instance_group": {
 		Type:        framework.TypeString,
-		Description: `"gce" roles only. If set, determines the instance group that an authorized instance must belong to.`,
-	},
-	"bound_labels": {
-		Type: framework.TypeCommaStringSlice,
-		Description: `
-"gce" roles only. A comma-separated list of Google Cloud Platform labels formatted as "$key:$value" strings that are
-required for authorized GCE instances.`,
+		Description: "Deprecated: use \"bound_instance_groups\" instead.",
 	},
 }
 
@@ -261,38 +281,67 @@ func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 		return nil, nil
 	}
 
-	roleMap := map[string]interface{}{
-		"role_type":              role.RoleType,
-		"project_id":             role.ProjectId,
-		"policies":               role.Policies,
-		"ttl":                    int64(role.TTL / time.Second),
-		"max_ttl":                int64(role.MaxTTL / time.Second),
-		"period":                 int64(role.Period / time.Second),
-		"bound_service_accounts": role.BoundServiceAccounts,
+	role.Period /= time.Second
+	role.TTL /= time.Second
+	role.MaxTTL /= time.Second
+	role.MaxJwtExp /= time.Second
+
+	resp := make(map[string]interface{})
+
+	if role.RoleType != "" {
+		resp["role_type"] = role.RoleType
+	}
+	if role.ProjectId != "" {
+		resp["project_id"] = role.ProjectId
+	}
+	if len(role.Policies) > 0 {
+		resp["policies"] = role.Policies
+	}
+	if role.TTL != 0 {
+		resp["ttl"] = role.TTL
+	}
+	if role.MaxTTL != 0 {
+		resp["max_ttl"] = role.MaxTTL
+	}
+	if role.Period != 0 {
+		resp["period"] = role.Period
+	}
+	if len(role.BoundServiceAccounts) > 0 {
+		resp["bound_service_accounts"] = role.BoundServiceAccounts
 	}
 
 	switch role.RoleType {
 	case iamRoleType:
-		roleMap["max_jwt_exp"] = int64(role.MaxJwtExp / time.Second)
-		roleMap["allow_gce_inference"] = role.AllowGCEInference
+		if role.MaxJwtExp != 0 {
+			resp["max_jwt_exp"] = role.MaxJwtExp
+		}
+		resp["allow_gce_inference"] = role.AllowGCEInference
 	case gceRoleType:
-		roleMap["bound_zone"] = role.BoundZone
-		roleMap["bound_region"] = role.BoundRegion
-		roleMap["bound_instance_group"] = role.BoundInstanceGroup
-		// Ensure values are not nil to avoid errors during plugin RPC conversions.
-		if role.BoundLabels != nil && len(role.BoundLabels) > 0 {
-			roleMap["bound_labels"] = role.BoundLabels
-		} else {
-			roleMap["bound_labels"] = ""
+		if len(role.BoundRegions) > 0 {
+			resp["bound_regions"] = role.BoundRegions
+		}
+		if len(role.BoundZones) > 0 {
+			resp["bound_zones"] = role.BoundZones
+		}
+		if len(role.BoundInstanceGroups) > 0 {
+			resp["bound_instance_groups"] = role.BoundInstanceGroups
+		}
+		if len(role.BoundLabels) > 0 {
+			resp["bound_labels"] = role.BoundLabels
 		}
 	}
 
 	return &logical.Response{
-		Data: roleMap,
+		Data: resp,
 	}, nil
 }
 
 func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
 	name := strings.ToLower(data.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -306,10 +355,15 @@ func (b *GcpAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 		role = &gcpRole{}
 	}
 
-	if err := role.updateRole(b.System(), req.Operation, data); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	warnings, err := role.updateRole(b.System(), req.Operation, data)
+	if err != nil {
+		resp := logical.ErrorResponse(err.Error())
+		for _, w := range warnings {
+			resp.AddWarning(w)
+		}
+		return resp, nil
 	}
-	return b.storeRole(ctx, req.Storage, name, role)
+	return b.storeRole(ctx, req.Storage, name, role, warnings)
 }
 
 func (b *GcpAuthBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -332,6 +386,13 @@ const pathListRolesHelpSyn = `Lists all the roles that are registered with Vault
 const pathListRolesHelpDesc = `Lists all roles under the GCP backends by name.`
 
 func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
+	var warnings []string
+
 	roleName := data.Get("name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -353,7 +414,7 @@ func (b *GcpAuthBackend) pathRoleEditIamServiceAccounts(ctx context.Context, req
 	}
 	role.BoundServiceAccounts = editStringValues(role.BoundServiceAccounts, toAdd, toRemove)
 
-	return b.storeRole(ctx, req.Storage, roleName, role)
+	return b.storeRole(ctx, req.Storage, roleName, role, warnings)
 }
 
 func editStringValues(initial []string, toAdd []string, toRemove []string) []string {
@@ -382,6 +443,13 @@ func editStringValues(initial []string, toAdd []string, toRemove []string) []str
 }
 
 func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Validate we didn't get extraneous fields
+	if err := validateFields(req, data); err != nil {
+		return nil, logical.CodedError(422, err.Error())
+	}
+
+	var warnings []string
+
 	roleName := data.Get("name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse(errEmptyRoleName), nil
@@ -407,6 +475,9 @@ func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical
 		return logical.ErrorResponse(fmt.Sprintf("given invalid labels to add: %q", invalidLabels)), nil
 	}
 	for k, v := range labelsToAdd {
+		if role.BoundLabels == nil {
+			role.BoundLabels = make(map[string]string, len(labelsToAdd))
+		}
 		role.BoundLabels[k] = v
 	}
 
@@ -414,13 +485,14 @@ func (b *GcpAuthBackend) pathRoleEditGceLabels(ctx context.Context, req *logical
 		delete(role.BoundLabels, k)
 	}
 
-	return b.storeRole(ctx, req.Storage, roleName, role)
+	return b.storeRole(ctx, req.Storage, roleName, role, warnings)
 }
 
 // role reads a gcpRole from storage. This assumes the caller has already obtained the role lock.
 func (b *GcpAuthBackend) role(ctx context.Context, s logical.Storage, name string) (*gcpRole, error) {
-	entry, err := s.Get(ctx, fmt.Sprintf("role/%s", strings.ToLower(name)))
+	name = strings.ToLower(name)
 
+	entry, err := s.Get(ctx, "role/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -428,174 +500,242 @@ func (b *GcpAuthBackend) role(ctx context.Context, s logical.Storage, name strin
 		return nil, nil
 	}
 
-	role := &gcpRole{}
-	if err := entry.DecodeJSON(role); err != nil {
+	var role gcpRole
+	if err := entry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
 
-	return role, nil
+	// Keep track of whether we do an in-place upgrade of old fields
+	modified := false
+
+	// Move old bindings to new fields.
+	if role.BoundRegion != "" && len(role.BoundRegions) == 0 {
+		role.BoundRegions = []string{role.BoundRegion}
+		role.BoundRegion = ""
+		modified = true
+	}
+	if role.BoundZone != "" && len(role.BoundZones) == 0 {
+		role.BoundZones = []string{role.BoundZone}
+		role.BoundZone = ""
+		modified = true
+	}
+	if role.BoundInstanceGroup != "" && len(role.BoundInstanceGroups) == 0 {
+		role.BoundInstanceGroups = []string{role.BoundInstanceGroup}
+		role.BoundInstanceGroup = ""
+		modified = true
+	}
+
+	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(vaultconsts.ReplicationPerformanceSecondary)) {
+		b.Logger().Info("upgrading role to new schema",
+			"role", name)
+
+		updatedRole, err := logical.StorageEntryJSON("role/"+name, &role)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.Put(ctx, updatedRole); err != nil {
+			// Only perform upgrades on replication primary
+			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return nil, err
+			}
+		}
+	}
+
+	return &role, nil
 }
 
 // storeRole saves the gcpRole to storage.
 // The returned response may contain either warnings or an error response,
 // but will be nil if error is not nil
-func (b *GcpAuthBackend) storeRole(ctx context.Context, s logical.Storage, roleName string, role *gcpRole) (*logical.Response, error) {
-	var resp *logical.Response
-	warnings, err := role.validate(b.System())
+func (b *GcpAuthBackend) storeRole(ctx context.Context, s logical.Storage, roleName string, role *gcpRole, warnings []string) (*logical.Response, error) {
+	var resp logical.Response
+	for _, w := range warnings {
+		resp.AddWarning(w)
+	}
 
+	validateWarnings, err := role.validate(b.System())
+	for _, w := range validateWarnings {
+		resp.AddWarning(w)
+	}
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
-	} else if len(warnings) > 0 {
-		resp = &logical.Response{
-			Warnings: warnings,
-		}
 	}
 
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("role/%s", roleName), role)
 	if err != nil {
 		return nil, err
 	}
-
 	if err := s.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
-	return resp, nil
+	return &resp, nil
 }
 
 type gcpRole struct {
 	// Type of this role. See path_role constants for currently supported types.
-	RoleType string `json:"role_type" structs:"role_type" mapstructure:"role_type"`
+	RoleType string `json:"role_type,omitempty"`
 
 	// Project ID in GCP for authorized entities.
-	ProjectId string `json:"project_id" structs:"project_id" mapstructure:"project_id"`
+	ProjectId string `json:"project_id,omitempty"`
 
 	// Policies for Vault to assign to authorized entities.
-	Policies []string `json:"policies" structs:"policies" mapstructure:"policies"`
+	Policies []string `json:"policies,omitempty"`
 
 	// TTL of Vault auth leases under this role.
-	TTL time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	TTL time.Duration `json:"ttl,omitempty"`
 
 	// Max total TTL including renewals, of Vault auth leases under this role.
-	MaxTTL time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	MaxTTL time.Duration `json:"max_ttl,omitempty"`
 
 	// Period, If set, indicates that this token should not expire and
 	// should be automatically renewed within this time period
 	// with TTL equal to this value.
-	Period time.Duration `json:"period" structs:"period" mapstructure:"period"`
+	Period time.Duration `json:"period,omitempty"`
 
 	// Service accounts allowed to login under this role.
-	BoundServiceAccounts []string `json:"bound_service_accounts" structs:"bound_service_accounts" mapstructure:"bound_service_accounts"`
+	BoundServiceAccounts []string `json:"bound_service_accounts,omitempty"`
 
 	// --| IAM-only attributes |--
 	// MaxJwtExp is the duration from time of authentication that a JWT used to authenticate to role must expire within.
 	// TODO(emilymye): Allow this to be updated for GCE roles once 'exp' parameter has been allowed for GCE metadata.
-	MaxJwtExp time.Duration `json:"max_jwt_exp" structs:"max_jwt_exp" mapstructure:"max_jwt_exp"`
+	MaxJwtExp time.Duration `json:"max_jwt_exp,omitempty"`
 
 	// AllowGCEInference, if false, does not allow a GCE instance to login under this 'iam' role. If true (default),
 	// a service account is inferred from the instance metadata and used as the authenticating instance.
-	AllowGCEInference bool `json:"allow_gce_inference" structs:"allow_gce_inference" mapstructure:"allow_gce_inference"`
+	AllowGCEInference bool `json:"allow_gce_inference,omitempty"`
 
 	// --| GCE-only attributes |--
-	// BoundRegion that instances must belong to in order to login under this role.
-	BoundRegion string `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
+	// BoundRegions that instances must belong to in order to login under this role.
+	BoundRegions []string `json:"bound_regions,omitempty"`
 
-	// BoundZone that instances must belong to in order to login under this role.
-	BoundZone string `json:"bound_zone" structs:"bound_zone" mapstructure:"bound_zone"`
+	// BoundZones that instances must belong to in order to login under this role.
+	BoundZones []string `json:"bound_zones,omitempty"`
 
-	// Instance group that instances must belong to in order to login under this role.
-	BoundInstanceGroup string `json:"bound_instance_group" structs:"bound_instance_group" mapstructure:"bound_instance_group"`
+	// BoundInstanceGroups are the instance group that instances must belong to in order to login under this role.
+	BoundInstanceGroups []string `json:"bound_instance_groups,omitempty"`
 
 	// BoundLabels that instances must currently have set in order to login under this role.
-	BoundLabels map[string]string `json:"bound_labels" structs:"bound_labels" mapstructure:"bound_labels"`
+	BoundLabels map[string]string `json:"bound_labels,omitempty"`
+
+	// Deprecated fields
+	// TODO: Remove in 0.5.0+
+	BoundRegion        string `json:"bound_region,omitempty"`
+	BoundZone          string `json:"bound_zone,omitempty"`
+	BoundInstanceGroup string `json:"bound_instance_group,omitempty"`
 }
 
 // Update updates the given role with values parsed/validated from given FieldData.
 // Exactly one of the response and error will be nil. The response is only used to pass back warnings.
 // This method does not validate the role. Validation is done before storage.
-func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, data *framework.FieldData) error {
+func (role *gcpRole) updateRole(sys logical.SystemView, op logical.Operation, data *framework.FieldData) (warnings []string, err error) {
 	// Set role type
-	roleTypeRaw, ok := data.GetOk("type")
-	if ok {
-		roleType := roleTypeRaw.(string)
+	if rt, ok := data.GetOk("type"); ok {
+		roleType := rt.(string)
 		if role.RoleType != roleType && op == logical.UpdateOperation {
-			return errors.New("role type cannot be changed for an existing role")
+			err = errors.New("role type cannot be changed for an existing role")
+			return
 		}
 		role.RoleType = roleType
 	} else if op == logical.CreateOperation {
-		return errors.New(errEmptyRoleType)
+		err = errors.New(errEmptyRoleType)
+		return
 	}
 
-	// Update policies.
-	policies, ok := data.GetOk("policies")
-	if ok {
+	// Update policies
+	if policies, ok := data.GetOk("policies"); ok {
 		role.Policies = policyutil.ParsePolicies(policies)
 	} else if op == logical.CreateOperation {
-		role.Policies = policyutil.ParsePolicies(data.Get("policies"))
+		// Force default policy
+		role.Policies = policyutil.ParsePolicies(nil)
 	}
 
 	// Update GCP project id.
-	projectIdRaw, ok := data.GetOk("project_id")
-	if ok {
-		role.ProjectId = projectIdRaw.(string)
+	if projectId, ok := data.GetOk("project_id"); ok {
+		role.ProjectId = projectId.(string)
+	} else if op == logical.CreateOperation {
+		role.ProjectId = data.Get("project_id").(string)
 	}
 
 	// Update token TTL.
-	ttlRaw, ok := data.GetOk("ttl")
-	if ok {
-		role.TTL = time.Duration(ttlRaw.(int)) * time.Second
+	if ttl, ok := data.GetOk("ttl"); ok {
+		role.TTL = time.Duration(ttl.(int)) * time.Second
 
+		def := sys.DefaultLeaseTTL()
+		if role.TTL > def {
+			warnings = append(warnings, fmt.Sprintf(`Given "ttl" of %q is greater `+
+				`than the maximum system/mount TTL of %q. The TTL will be capped at `+
+				`%q during login.`, role.TTL, def, def))
+		}
 	} else if op == logical.CreateOperation {
 		role.TTL = time.Duration(data.Get("ttl").(int)) * time.Second
 	}
 
 	// Update token Max TTL.
-	maxTTLRaw, ok := data.GetOk("max_ttl")
-	if ok {
-		role.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
+	if maxTTL, ok := data.GetOk("max_ttl"); ok {
+		role.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
+
+		def := sys.MaxLeaseTTL()
+		if role.MaxTTL > def {
+			warnings = append(warnings, fmt.Sprintf(`Given "max_ttl" of %q is greater `+
+				`than the maximum system/mount MaxTTL of %q. The MaxTTL will be `+
+				`capped at %q during login.`, role.MaxTTL, def, def))
+		}
 	} else if op == logical.CreateOperation {
 		role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
 	}
 
 	// Update token period.
-	periodRaw, ok := data.GetOk("period")
-	if ok {
-		role.Period = time.Second * time.Duration(periodRaw.(int))
+	if period, ok := data.GetOk("period"); ok {
+		role.Period = time.Duration(period.(int)) * time.Second
+
+		def := sys.MaxLeaseTTL()
+		if role.Period > def {
+			warnings = append(warnings, fmt.Sprintf(`Given "period" of %q is greater `+
+				`than the maximum system/mount period of %q. The period will be `+
+				`capped at %q during login.`, role.Period, def, def))
+		}
 	} else if op == logical.CreateOperation {
-		role.Period = time.Second * time.Duration(data.Get("period").(int))
+		role.Period = time.Duration(data.Get("period").(int)) * time.Second
 	}
 
 	// Update bound GCP service accounts.
-	serviceAccountsRaw, ok := data.GetOk("bound_service_accounts")
-	if ok {
-		role.BoundServiceAccounts = serviceAccountsRaw.([]string)
+	if sa, ok := data.GetOk("bound_service_accounts"); ok {
+		role.BoundServiceAccounts = sa.([]string)
 	} else {
 		// Check for older version of param name
-		serviceAccountsRaw, ok := data.GetOk("service_accounts")
-		if ok {
-			role.BoundServiceAccounts = serviceAccountsRaw.([]string)
+		if sa, ok := data.GetOk("service_accounts"); ok {
+			warnings = append(warnings, `The "service_accounts" field is deprecated. `+
+				`Please use "bound_service_accounts" instead. The "service_accounts" `+
+				`field will be removed in a later release, so please update accordingly.`)
+			role.BoundServiceAccounts = sa.([]string)
 		}
+	}
+
+	if len(role.BoundServiceAccounts) > 0 {
+		role.BoundServiceAccounts = strutil.TrimStrings(role.BoundServiceAccounts)
+		role.BoundServiceAccounts = strutil.RemoveDuplicates(role.BoundServiceAccounts, false)
 	}
 
 	// Update fields specific to this type
 	switch role.RoleType {
 	case iamRoleType:
-		if err := checkInvalidRoleTypeArgs(data, gceOnlyFieldSchema); err != nil {
-			return err
+		if err = checkInvalidRoleTypeArgs(data, gceOnlyFieldSchema); err != nil {
+			return
 		}
-		if err := role.updateIamFields(data, op); err != nil {
-			return err
+		if warnings, err = role.updateIamFields(data, op); err != nil {
+			return
 		}
 	case gceRoleType:
-		if err := checkInvalidRoleTypeArgs(data, iamOnlyFieldSchema); err != nil {
-			return err
+		if err = checkInvalidRoleTypeArgs(data, iamOnlyFieldSchema); err != nil {
+			return
 		}
-		if err := role.updateGceFields(data, op); err != nil {
-			return err
+		if warnings, err = role.updateGceFields(data, op); err != nil {
+			return
 		}
 	}
 
-	return nil
+	return
 }
 
 func (role *gcpRole) validate(sys logical.SystemView) (warnings []string, err error) {
@@ -648,51 +788,114 @@ func (role *gcpRole) validate(sys logical.SystemView) (warnings []string, err er
 }
 
 // updateIamFields updates IAM-only fields for a role.
-func (role *gcpRole) updateIamFields(data *framework.FieldData, op logical.Operation) error {
-	allowGCEInference, ok := data.GetOk("allow_gce_inference")
-	if ok {
+func (role *gcpRole) updateIamFields(data *framework.FieldData, op logical.Operation) (warnings []string, err error) {
+	if allowGCEInference, ok := data.GetOk("allow_gce_inference"); ok {
 		role.AllowGCEInference = allowGCEInference.(bool)
 	} else if op == logical.CreateOperation {
 		role.AllowGCEInference = data.Get("allow_gce_inference").(bool)
 	}
 
-	maxJwtExp, ok := data.GetOk("max_jwt_exp")
-	if ok {
+	if maxJwtExp, ok := data.GetOk("max_jwt_exp"); ok {
 		role.MaxJwtExp = time.Duration(maxJwtExp.(int)) * time.Second
 	} else if op == logical.CreateOperation {
 		role.MaxJwtExp = time.Duration(defaultIamMaxJwtExpMinutes) * time.Minute
 	}
 
-	return nil
+	return
 }
 
 // updateGceFields updates GCE-only fields for a role.
-func (role *gcpRole) updateGceFields(data *framework.FieldData, op logical.Operation) error {
-	region, hasRegion := data.GetOk("bound_region")
-	if hasRegion {
-		role.BoundRegion = strings.TrimSpace(region.(string))
+func (role *gcpRole) updateGceFields(data *framework.FieldData, op logical.Operation) (warnings []string, err error) {
+	if regions, ok := data.GetOk("bound_regions"); ok {
+		role.BoundRegions = regions.([]string)
+	} else if op == logical.CreateOperation {
+		role.BoundRegions = data.Get("bound_regions").([]string)
 	}
 
-	zone, hasZone := data.GetOk("bound_zone")
-	if hasZone {
-		role.BoundZone = strings.TrimSpace(zone.(string))
+	if zones, ok := data.GetOk("bound_zones"); ok {
+		role.BoundZones = zones.([]string)
+	} else if op == logical.CreateOperation {
+		role.BoundZones = data.Get("bound_zones").([]string)
 	}
 
-	instanceGroup, ok := data.GetOk("bound_instance_group")
-	if ok {
-		role.BoundInstanceGroup = strings.TrimSpace(instanceGroup.(string))
+	if instanceGroups, ok := data.GetOk("bound_instance_groups"); ok {
+		role.BoundInstanceGroups = instanceGroups.([]string)
+	} else if op == logical.CreateOperation {
+		role.BoundInstanceGroups = data.Get("bound_instance_groups").([]string)
 	}
 
-	labels, ok := data.GetOk("bound_labels")
-	if ok {
-		var invalidLabels []string
-		role.BoundLabels, invalidLabels = gcputil.ParseGcpLabels(labels.([]string))
-		if len(invalidLabels) > 0 {
-			return fmt.Errorf("invalid labels given: %q", invalidLabels)
+	if boundRegion, ok := data.GetOk("bound_region"); ok {
+		if _, ok := data.GetOk("bound_regions"); ok {
+			err = fmt.Errorf(`cannot specify both "bound_region" and "bound_regions"`)
+			return
 		}
+
+		warnings = append(warnings, `The "bound_region" field is deprecated. `+
+			`Please use "bound_regions" (plural) instead. You can still specify a `+
+			`single region, but multiple regions are also now supported. The `+
+			`"bound_region" field will be removed in a later release, so please `+
+			`update accordingly.`)
+		role.BoundRegions = append(role.BoundRegions, boundRegion.(string))
 	}
 
-	return nil
+	if boundZone, ok := data.GetOk("bound_zone"); ok {
+		if _, ok := data.GetOk("bound_zones"); ok {
+			err = fmt.Errorf(`cannot specify both "bound_zone" and "bound_zones"`)
+			return
+		}
+
+		warnings = append(warnings, `The "bound_zone" field is deprecated. `+
+			`Please use "bound_zones" (plural) instead. You can still specify a `+
+			`single zone, but multiple zones are also now supported. The `+
+			`"bound_zone" field will be removed in a later release, so please `+
+			`update accordingly.`)
+		role.BoundZones = append(role.BoundZones, boundZone.(string))
+	}
+
+	if boundInstanceGroup, ok := data.GetOk("bound_instance_group"); ok {
+		if _, ok := data.GetOk("bound_instance_groups"); ok {
+			err = fmt.Errorf(`cannot specify both "bound_instance_group" and "bound_instance_groups"`)
+			return
+		}
+
+		warnings = append(warnings, `The "bound_instance_group" field is deprecated. `+
+			`Please use "bound_instance_groups" (plural) instead. You can still specify a `+
+			`single instance group, but multiple instance groups are also now supported. The `+
+			`"bound_instance_group" field will be removed in a later release, so please `+
+			`update accordingly.`)
+		role.BoundInstanceGroups = append(role.BoundInstanceGroups, boundInstanceGroup.(string))
+	}
+
+	if labelsRaw, ok := data.GetOk("bound_labels"); ok {
+		labels, invalidLabels := gcputil.ParseGcpLabels(labelsRaw.([]string))
+		if len(invalidLabels) > 0 {
+			err = fmt.Errorf("invalid labels given: %q", invalidLabels)
+			return
+		}
+		role.BoundLabels = labels
+	}
+
+	if len(role.Policies) > 0 {
+		role.Policies = strutil.TrimStrings(role.Policies)
+		role.Policies = strutil.RemoveDuplicates(role.Policies, false)
+	}
+
+	if len(role.BoundRegions) > 0 {
+		role.BoundRegions = strutil.TrimStrings(role.BoundRegions)
+		role.BoundRegions = strutil.RemoveDuplicates(role.BoundRegions, false)
+	}
+
+	if len(role.BoundZones) > 0 {
+		role.BoundZones = strutil.TrimStrings(role.BoundZones)
+		role.BoundZones = strutil.RemoveDuplicates(role.BoundZones, false)
+	}
+
+	if len(role.BoundInstanceGroups) > 0 {
+		role.BoundInstanceGroups = strutil.TrimStrings(role.BoundInstanceGroups)
+		role.BoundInstanceGroups = strutil.RemoveDuplicates(role.BoundInstanceGroups, false)
+	}
+
+	return
 }
 
 // validateIamFields validates the IAM-only fields for a role.
@@ -717,18 +920,21 @@ func (role *gcpRole) validateForIAM() (warnings []string, err error) {
 func (role *gcpRole) validateForGCE() (warnings []string, err error) {
 	warnings = []string{}
 
-	hasRegion := len(role.BoundRegion) > 0
-	hasZone := len(role.BoundZone) > 0
+	hasRegion := len(role.BoundRegions) > 0
+	hasZone := len(role.BoundZones) > 0
 	hasRegionOrZone := hasRegion || hasZone
 
-	hasInstanceGroup := len(role.BoundInstanceGroup) > 0
+	hasInstanceGroup := len(role.BoundInstanceGroups) > 0
 
 	if hasInstanceGroup && !hasRegionOrZone {
-		return warnings, errors.New(`region or zone information must be specified if a group is given`)
+		return warnings, errors.New(`region or zone information must be specified if an instance group is given`)
 	}
 
 	if hasRegion && hasZone {
-		warnings = append(warnings, "Given both region and zone for role of type 'gce' - region will be ignored.")
+		warnings = append(warnings, `Given both "bound_regions" and "bound_zones" `+
+			`fields for role type "gce", "bound_regions" will be ignored in favor `+
+			`of the more specific "bound_zones" field. To fix this warning, update `+
+			`the role to remove either the "bound_regions" or "bound_zones" field.`)
 	}
 
 	return warnings, nil

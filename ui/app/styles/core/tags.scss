@@ -1,27 +1,28 @@
 .tag:not(body) {
-  background-color: lighten($grey-light, 17%);
+  background-color: $ui-gray-100;
   border-radius: 2px;
-  color: $grey-dark;
+  color: $grey;
   height: auto;
   padding: 0 $size-10;
   margin-right: 0.5rem;
   font-weight: normal;
 
   code {
-    color: $grey-dark;
+    color: $grey;
+  }
+
+  .icon {
+    height: 12px;
+    margin-left: -0.25em;
+    margin-right: 0.25em;
+    min-width: 0;
+    width: 12px;
   }
 }
 
 .tag.is-outlined {
-  border: 1px solid currentColor;
-}
-
-.tag.is-inverted {
-  border-color: $grey;
-  background: none;
-  code {
-    color: $grey-dark;
-  }
+  background-color: transparent;
+  border: 1px solid $grey-light;
 }
 
 .tag.is-bold {

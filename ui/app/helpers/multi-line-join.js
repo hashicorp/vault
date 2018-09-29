@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function multiLineJoin([arr]) {
   return arr.join('\n');
 }
 
-export default Ember.Helper.helper(multiLineJoin);
+export default buildHelper(multiLineJoin);

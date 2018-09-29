@@ -1,7 +1,5 @@
+import { assign } from '@ember/polyfills';
 import IvyCodemirrorComponent from './ivy-codemirror';
-import Ember from 'ember';
-
-const { assign } = Ember;
 const JSON_EDITOR_DEFAULTS = {
   // IMPORTANT: `gutters` must come before `lint` since the presence of
   // `gutters` is cached internally when `lint` is toggled
@@ -12,6 +10,7 @@ const JSON_EDITOR_DEFAULTS = {
   lint: { lintOnChange: false },
   theme: 'hashi',
   readOnly: false,
+  showCursorWhenSelecting: true,
 };
 
 export default IvyCodemirrorComponent.extend({

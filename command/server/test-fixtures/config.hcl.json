@@ -19,5 +19,6 @@
 	"cluster_name":"testcluster",
 	"ui":true,
 	"pid_file":"./pidfile",
-	"raw_storage_endpoint":true
+	"raw_storage_endpoint":true,
+	"disable_sealwrap":true
 }

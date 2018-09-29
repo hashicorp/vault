@@ -16,7 +16,6 @@
 package view
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -32,14 +31,14 @@ func init() {
 }
 
 type measureRef struct {
-	measure stats.Measure
-	views   map[*View]struct{}
+	measure string
+	views   map[*viewInternal]struct{}
 }
 
 type worker struct {
 	measures   map[string]*measureRef
-	views      map[string]*View
-	startTimes map[*View]time.Time
+	views      map[string]*viewInternal
+	startTimes map[*viewInternal]time.Time
 
 	timer      *time.Ticker
 	c          chan command
@@ -50,7 +49,7 @@ var defaultWorker *worker
 
 var defaultReportingDuration = 10 * time.Second
 
-// FindMeasure returns a registered view associated with this name.
+// Find returns a registered view associated with this name.
 // If no registered view is found, nil is returned.
 func Find(name string) (v *View) {
 	req := &getViewByNameReq{
@@ -62,67 +61,45 @@ func Find(name string) (v *View) {
 	return resp.v
 }
 
-// Register registers view. It returns an error if the view is already registered.
-//
-// Subscription automatically registers a view.
-// Most users will not register directly but register via subscription.
-// Registration can be used by libraries to claim a view name.
-//
-// Unregister the view once the view is not required anymore.
-func Register(v *View) error {
+// Register begins collecting data for the given views.
+// Once a view is registered, it reports data to the registered exporters.
+func Register(views ...*View) error {
+	for _, v := range views {
+		if err := v.canonicalize(); err != nil {
+			return err
+		}
+	}
 	req := &registerViewReq{
-		v:   v,
-		err: make(chan error),
+		views: views,
+		err:   make(chan error),
 	}
 	defaultWorker.c <- req
 	return <-req.err
 }
 
-// Unregister removes the previously registered view. It returns an error
-// if the view wasn't registered. All data collected and not reported for the
-// corresponding view will be lost. The view is automatically be unsubscribed.
-func Unregister(v *View) error {
-	req := &unregisterViewReq{
-		v:   v,
-		err: make(chan error),
+// Unregister the given views. Data will not longer be exported for these views
+// after Unregister returns.
+// It is not necessary to unregister from views you expect to collect for the
+// duration of your program execution.
+func Unregister(views ...*View) {
+	names := make([]string, len(views))
+	for i := range views {
+		names[i] = views[i].Name
+	}
+	req := &unregisterFromViewReq{
+		views: names,
+		done:  make(chan struct{}),
 	}
 	defaultWorker.c <- req
-	return <-req.err
+	<-req.done
 }
 
-// Subscribe subscribes a view. Once a view is subscribed, it reports data
-// via the exporters.
-// During subscription, if the view wasn't registered, it will be automatically
-// registered. Once the view is no longer needed to export data,
-// user should unsubscribe from the view.
-func (v *View) Subscribe() error {
-	req := &subscribeToViewReq{
-		v:   v,
-		err: make(chan error),
-	}
-	defaultWorker.c <- req
-	return <-req.err
-}
-
-// Unsubscribe unsubscribes a previously subscribed view.
-// Data will not be exported from this view once unsubscription happens.
-func (v *View) Unsubscribe() error {
-	req := &unsubscribeFromViewReq{
-		v:   v,
-		err: make(chan error),
-	}
-	defaultWorker.c <- req
-	return <-req.err
-}
-
-// RetrieveData returns the current collected data for the view.
-func (v *View) RetrieveData() ([]*Row, error) {
-	if v == nil {
-		return nil, errors.New("cannot retrieve data from nil view")
-	}
+// RetrieveData gets a snapshot of the data collected for the the view registered
+// with the given name. It is intended for testing only.
+func RetrieveData(viewName string) ([]*Row, error) {
 	req := &retrieveDataReq{
 		now: time.Now(),
-		v:   v,
+		v:   viewName,
 		c:   make(chan *retrieveDataResp),
 	}
 	defaultWorker.c <- req
@@ -130,11 +107,10 @@ func (v *View) RetrieveData() ([]*Row, error) {
 	return resp.rows, resp.err
 }
 
-func record(tags *tag.Map, now time.Time, ms interface{}) {
+func record(tags *tag.Map, ms interface{}) {
 	req := &recordReq{
-		now: now,
-		tm:  tags,
-		ms:  ms.([]stats.Measurement),
+		tm: tags,
+		ms: ms.([]stats.Measurement),
 	}
 	defaultWorker.c <- req
 }
@@ -156,10 +132,10 @@ func SetReportingPeriod(d time.Duration) {
 func newWorker() *worker {
 	return &worker{
 		measures:   make(map[string]*measureRef),
-		views:      make(map[string]*View),
-		startTimes: make(map[*View]time.Time),
+		views:      make(map[string]*viewInternal),
+		startTimes: make(map[*viewInternal]time.Time),
 		timer:      time.NewTicker(defaultReportingDuration),
-		c:          make(chan command),
+		c:          make(chan command, 1024),
 		quit:       make(chan bool),
 		done:       make(chan bool),
 	}
@@ -169,9 +145,7 @@ func (w *worker) start() {
 	for {
 		select {
 		case cmd := <-w.c:
-			if cmd != nil {
-				cmd.handleCommand(w)
-			}
+			cmd.handleCommand(w)
 		case <-w.timer.C:
 			w.reportUsage(time.Now())
 		case <-w.quit:
@@ -188,61 +162,51 @@ func (w *worker) stop() {
 	<-w.done
 }
 
-func (w *worker) getMeasureRef(m stats.Measure) *measureRef {
-	if mr, ok := w.measures[m.Name()]; ok {
+func (w *worker) getMeasureRef(name string) *measureRef {
+	if mr, ok := w.measures[name]; ok {
 		return mr
 	}
 	mr := &measureRef{
-		measure: m,
-		views:   make(map[*View]struct{}),
+		measure: name,
+		views:   make(map[*viewInternal]struct{}),
 	}
-	w.measures[m.Name()] = mr
+	w.measures[name] = mr
 	return mr
 }
 
-func (w *worker) tryRegisterView(v *View) error {
-	if err := checkViewName(v.name); err != nil {
-		return err
+func (w *worker) tryRegisterView(v *View) (*viewInternal, error) {
+	vi, err := newViewInternal(v)
+	if err != nil {
+		return nil, err
 	}
-	if x, ok := w.views[v.Name()]; ok {
-		if x != v {
-			return fmt.Errorf("cannot register view %q; another view with the same name is already registered", v.Name())
+	if x, ok := w.views[vi.view.Name]; ok {
+		if !x.view.same(vi.view) {
+			return nil, fmt.Errorf("cannot register view %q; a different view with the same name is already registered", v.Name)
 		}
 
 		// the view is already registered so there is nothing to do and the
 		// command is considered successful.
-		return nil
+		return x, nil
 	}
-
-	if v.Measure() == nil {
-		return fmt.Errorf("cannot register view %q: measure not defined", v.Name())
-	}
-
-	w.views[v.Name()] = v
-	ref := w.getMeasureRef(v.Measure())
-	ref.views[v] = struct{}{}
-
-	return nil
+	w.views[vi.view.Name] = vi
+	ref := w.getMeasureRef(vi.view.Measure.Name())
+	ref.views[vi] = struct{}{}
+	return vi, nil
 }
 
-func (w *worker) reportUsage(start time.Time) {
+func (w *worker) reportUsage(now time.Time) {
 	for _, v := range w.views {
 		if !v.isSubscribed() {
 			continue
 		}
-		rows := v.collectedRows(start)
-		s, ok := w.startTimes[v]
+		rows := v.collectedRows()
+		_, ok := w.startTimes[v]
 		if !ok {
-			w.startTimes[v] = start
-		} else {
-			start = s
+			w.startTimes[v] = now
 		}
-		// Make sure collector is never going
-		// to mutate the exported data.
-		rows = deepCopyRowData(rows)
 		viewData := &Data{
-			View:  v,
-			Start: start,
+			View:  v.view,
+			Start: w.startTimes[v],
 			End:   time.Now(),
 			Rows:  rows,
 		}
@@ -252,15 +216,4 @@ func (w *worker) reportUsage(start time.Time) {
 		}
 		exportersMu.Unlock()
 	}
-}
-
-func deepCopyRowData(rows []*Row) []*Row {
-	newRows := make([]*Row, 0, len(rows))
-	for _, r := range rows {
-		newRows = append(newRows, &Row{
-			Data: r.Data.clone(),
-			Tags: r.Tags,
-		})
-	}
-	return newRows
 }

@@ -36,10 +36,8 @@ func (s fetchsize) numArg() int {
 }
 
 func (s fetchsize) write(wr *bufio.Writer) error {
+	wr.WriteInt32(int32(s))
 
-	if err := wr.WriteInt32(int32(s)); err != nil {
-		return err
-	}
 	if trace {
 		outLogger.Printf("fetchsize: %d", s)
 	}

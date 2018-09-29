@@ -1,0 +1,17 @@
+<WizardContent
+  @headerText="Vault Web UI Guide"
+  @glyph="tour"
+  @class="collapsed"
+  @hidePopup={{true}}
+>
+  <button type="button" class="button is-transparent icon dismiss-collapsed" {{action onDismiss}}>
+    <ICon @glyph="close" />
+  </button>
+  <p>Feel free to explore Vault. Click below to get back to the guide or close this window.</p>
+  <div class="box wizard-divider-box">
+    <button type="button" class="button is-transparent has-icon-left has-text-white" {{action onAdvance}}>
+      <ICon @glyph="chevron-up" />
+      Back to guide
+    </button>
+  </div>
+</WizardContent>

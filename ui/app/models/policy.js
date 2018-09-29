@@ -1,9 +1,9 @@
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
-import Ember from 'ember';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 let { attr } = DS;
-let { computed } = Ember;
 
 export default DS.Model.extend({
   name: attr('string'),
@@ -13,9 +13,9 @@ export default DS.Model.extend({
   }),
 
   updatePath: lazyCapabilities(apiPath`sys/policies/${'policyType'}/${'id'}`, 'id', 'policyType'),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
-  canRead: computed.alias('updatePath.canRead'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
+  canRead: alias('updatePath.canRead'),
   format: computed('policy', function() {
     let policy = this.get('policy');
     let isJSON;

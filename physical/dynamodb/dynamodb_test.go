@@ -13,7 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -311,6 +311,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		}
 		return nil
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)
 	}
 	return cleanup, retAddress, credentials.NewStaticCredentials("fake", "fake", "")

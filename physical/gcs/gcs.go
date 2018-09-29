@@ -1,6 +1,7 @@
 package gcs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +19,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/armon/go-metrics"
-	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -86,7 +86,7 @@ type Backend struct {
 // specifying credentials via envvars, credential files, etc. from environment
 // variables or a service account file
 func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error) {
-	logger.Debug("physical/gcs: configuring backend")
+	logger.Debug("configuring backend")
 
 	// Bucket name
 	bucket := os.Getenv(envBucket)
@@ -133,13 +133,13 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
 	}
 
-	logger.Debug("physical/gcs: configuration",
+	logger.Debug("configuration",
 		"bucket", bucket,
 		"chunk_size", chunkSize,
 		"ha_enabled", haEnabled,
 		"max_parallel", maxParallel,
 	)
-	logger.Debug("physical/gcs: creating client")
+	logger.Debug("creating client")
 
 	// Client
 	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}

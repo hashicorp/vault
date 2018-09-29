@@ -1,9 +1,12 @@
 // Package mgo offers a rich MongoDB driver for Go.
 //
-// Details about the mgo project (pronounced as "mango") are found
-// in its web page:
+// #########################################################
 //
-//     http://labix.org/mgo
+// THIS DRIVER IS UNMAINTAINED! See here for details:
+//
+// https://github.com/go-mgo/mgo/blob/v2-unstable/README.md
+//
+// #########################################################
 //
 // Usage of the driver revolves around the concept of sessions.  To
 // get started, obtain a session using the Dial function:

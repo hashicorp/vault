@@ -40,69 +40,88 @@ const (
 	maxDouble   = math.MaxFloat64
 )
 
-// ErrorIntegerOutOfRange means that an integer exceeds the size of the hdb integer field.
+// ErrIntegerOutOfRange means that an integer exceeds the size of the hdb integer field.
 var ErrIntegerOutOfRange = errors.New("integer out of range error")
 
-// ErrorIntegerOutOfRange means that a float exceeds the size of the hdb float field.
+// ErrFloatOutOfRange means that a float exceeds the size of the hdb float field.
 var ErrFloatOutOfRange = errors.New("float out of range error")
 
 var typeOfTime = reflect.TypeOf((*time.Time)(nil)).Elem()
 var typeOfBytes = reflect.TypeOf((*[]byte)(nil)).Elem()
 
-func columnConverter(dt p.DataType) driver.ValueConverter {
+func checkNamedValue(prmFieldSet *p.ParameterFieldSet, nv *driver.NamedValue) error {
+	idx := nv.Ordinal - 1
+
+	if idx >= prmFieldSet.NumInputField() {
+		return nil
+	}
+
+	f := prmFieldSet.Field(idx)
+	dt := f.TypeCode().DataType()
+
+	value, err := convertNamedValue(idx, f, dt, nv.Value)
+
+	if err != nil {
+		return err
+	}
+
+	nv.Value = value
+	return nil
+}
+
+func convertNamedValue(idx int, f *p.ParameterField, dt p.DataType, v driver.Value) (driver.Value, error) {
+	var err error
+
+	// let fields with own Value converter convert themselves first (e.g. NullInt64, ...)
+	if _, ok := v.(driver.Valuer); ok {
+		if v, err = driver.DefaultParameterConverter.ConvertValue(v); err != nil {
+			return nil, err
+		}
+	}
 
 	switch dt {
 
 	default:
-		return dbUnknownType{}
+		return nil, fmt.Errorf("convert named value datatype error: %[1]d - %[1]s", dt)
+
 	case p.DtTinyint:
-		return dbTinyint
+		return convertNvInteger(v, minTinyint, maxTinyint)
+
 	case p.DtSmallint:
-		return dbSmallint
+		return convertNvInteger(v, minSmallint, maxSmallint)
+
 	case p.DtInteger:
-		return dbInteger
+		return convertNvInteger(v, minInteger, maxInteger)
+
 	case p.DtBigint:
-		return dbBigint
+		return convertNvInteger(v, minBigint, maxBigint)
+
 	case p.DtReal:
-		return dbReal
+		return convertNvFloat(v, maxReal)
+
 	case p.DtDouble:
-		return dbDouble
+		return convertNvFloat(v, maxDouble)
+
 	case p.DtTime:
-		return dbTime
+		return convertNvTime(v)
+
 	case p.DtDecimal:
-		return dbDecimal
+		return convertNvDecimal(v)
+
 	case p.DtString:
-		return dbString
+		return convertNvString(v)
+
 	case p.DtBytes:
-		return dbBytes
+		return convertNvBytes(v)
+
 	case p.DtLob:
-		return dbLob
+		return convertNvLob(idx, f, v)
+
 	}
 }
 
-// unknown type
-type dbUnknownType struct{}
-
-var _ driver.ValueConverter = dbUnknownType{} //check that type implements interface
-
-func (t dbUnknownType) ConvertValue(v interface{}) (driver.Value, error) {
-	return nil, fmt.Errorf("column converter for data %v type %T is not implemented", v, v)
-}
-
-// int types
-var dbTinyint = dbIntegerType{min: minTinyint, max: maxTinyint}
-var dbSmallint = dbIntegerType{min: minSmallint, max: maxSmallint}
-var dbInteger = dbIntegerType{min: minInteger, max: maxInteger}
-var dbBigint = dbIntegerType{min: minBigint, max: maxBigint}
-
-type dbIntegerType struct {
-	min int64
-	max int64
-}
-
-var _ driver.ValueConverter = dbIntegerType{} //check that type implements interface
-
-func (i dbIntegerType) ConvertValue(v interface{}) (driver.Value, error) {
+// integer types
+func convertNvInteger(v interface{}, min, max int64) (driver.Value, error) {
 
 	if v == nil {
 		return v, nil
@@ -116,13 +135,13 @@ func (i dbIntegerType) ConvertValue(v interface{}) (driver.Value, error) {
 		return rv.Bool(), nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i64 := rv.Int()
-		if i64 > i.max || i64 < i.min {
+		if i64 > max || i64 < min {
 			return nil, ErrIntegerOutOfRange
 		}
 		return i64, nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		u64 := rv.Uint()
-		if u64 > uint64(i.max) {
+		if u64 > uint64(max) {
 			return nil, ErrIntegerOutOfRange
 		}
 		return int64(u64), nil
@@ -131,23 +150,14 @@ func (i dbIntegerType) ConvertValue(v interface{}) (driver.Value, error) {
 		if rv.IsNil() {
 			return nil, nil
 		}
-		return i.ConvertValue(rv.Elem().Interface())
+		return convertNvInteger(rv.Elem().Interface(), min, max)
 	}
 
-	return nil, fmt.Errorf("unsupported integer conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported integer conversion type error %[1]T %[1]v", v)
 }
 
-//float types
-var dbReal = dbFloatType{max: maxReal}
-var dbDouble = dbFloatType{max: maxDouble}
-
-type dbFloatType struct {
-	max float64
-}
-
-var _ driver.ValueConverter = dbFloatType{} //check that type implements interface
-
-func (f dbFloatType) ConvertValue(v interface{}) (driver.Value, error) {
+// float types
+func convertNvFloat(v interface{}, max float64) (driver.Value, error) {
 
 	if v == nil {
 		return v, nil
@@ -158,7 +168,7 @@ func (f dbFloatType) ConvertValue(v interface{}) (driver.Value, error) {
 
 	case reflect.Float32, reflect.Float64:
 		f64 := rv.Float()
-		if math.Abs(f64) > f.max {
+		if math.Abs(f64) > max {
 			return nil, ErrFloatOutOfRange
 		}
 		return f64, nil
@@ -167,20 +177,14 @@ func (f dbFloatType) ConvertValue(v interface{}) (driver.Value, error) {
 		if rv.IsNil() {
 			return nil, nil
 		}
-		return f.ConvertValue(rv.Elem().Interface())
+		return convertNvFloat(rv.Elem().Interface(), max)
 	}
 
-	return nil, fmt.Errorf("unsupported float conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported float conversion type error %[1]T %[1]v", v)
 }
 
-//time
-var dbTime = dbTimeType{}
-
-type dbTimeType struct{}
-
-var _ driver.ValueConverter = dbTimeType{} //check that type implements interface
-
-func (t dbTimeType) ConvertValue(v interface{}) (driver.Value, error) {
+// time
+func convertNvTime(v interface{}) (driver.Value, error) {
 
 	if v == nil {
 		return nil, nil
@@ -201,7 +205,7 @@ func (t dbTimeType) ConvertValue(v interface{}) (driver.Value, error) {
 		if rv.IsNil() {
 			return nil, nil
 		}
-		return t.ConvertValue(rv.Elem().Interface())
+		return convertNvTime(rv.Elem().Interface())
 	}
 
 	if rv.Type().ConvertibleTo(typeOfTime) {
@@ -209,17 +213,11 @@ func (t dbTimeType) ConvertValue(v interface{}) (driver.Value, error) {
 		return tv.Interface().(time.Time), nil
 	}
 
-	return nil, fmt.Errorf("unsupported time conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported time conversion type error %[1]T %[1]v", v)
 }
 
-//decimal
-var dbDecimal = dbDecimalType{}
-
-type dbDecimalType struct{}
-
-var _ driver.ValueConverter = dbDecimalType{} //check that type implements interface
-
-func (d dbDecimalType) ConvertValue(v interface{}) (driver.Value, error) {
+// decimal
+func convertNvDecimal(v interface{}) (driver.Value, error) {
 
 	if v == nil {
 		return nil, nil
@@ -229,17 +227,11 @@ func (d dbDecimalType) ConvertValue(v interface{}) (driver.Value, error) {
 		return v, nil
 	}
 
-	return nil, fmt.Errorf("unsupported decimal conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported decimal conversion type error %[1]T %[1]v", v)
 }
 
-//string
-var dbString = dbStringType{}
-
-type dbStringType struct{}
-
-var _ driver.ValueConverter = dbStringType{} //check that type implements interface
-
-func (d dbStringType) ConvertValue(v interface{}) (driver.Value, error) {
+// string
+func convertNvString(v interface{}) (driver.Value, error) {
 
 	if v == nil {
 		return v, nil
@@ -268,7 +260,7 @@ func (d dbStringType) ConvertValue(v interface{}) (driver.Value, error) {
 		if rv.IsNil() {
 			return nil, nil
 		}
-		return d.ConvertValue(rv.Elem().Interface())
+		return convertNvString(rv.Elem().Interface())
 	}
 
 	if rv.Type().ConvertibleTo(typeOfBytes) {
@@ -276,17 +268,11 @@ func (d dbStringType) ConvertValue(v interface{}) (driver.Value, error) {
 		return bv.Interface().([]byte), nil
 	}
 
-	return nil, fmt.Errorf("unsupported character conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported character conversion type error %[1]T %[1]v", v)
 }
 
-//bytes
-var dbBytes = dbBytesType{}
-
-type dbBytesType struct{}
-
-var _ driver.ValueConverter = dbBytesType{} //check that type implements interface
-
-func (d dbBytesType) ConvertValue(v interface{}) (driver.Value, error) {
+// bytes
+func convertNvBytes(v interface{}) (driver.Value, error) {
 
 	if v == nil {
 		return v, nil
@@ -310,7 +296,7 @@ func (d dbBytesType) ConvertValue(v interface{}) (driver.Value, error) {
 		if rv.IsNil() {
 			return nil, nil
 		}
-		return d.ConvertValue(rv.Elem().Interface())
+		return convertNvBytes(rv.Elem().Interface())
 	}
 
 	if rv.Type().ConvertibleTo(typeOfBytes) {
@@ -318,21 +304,60 @@ func (d dbBytesType) ConvertValue(v interface{}) (driver.Value, error) {
 		return bv.Interface().([]byte), nil
 	}
 
-	return nil, fmt.Errorf("unsupported bytes conversion type error %T %v", v, v)
+	return nil, fmt.Errorf("unsupported bytes conversion type error %[1]T %[1]v", v)
 }
 
-//lob
-var dbLob = dbLobType{}
+// Lob
+func convertNvLob(idx int, f *p.ParameterField, v interface{}) (driver.Value, error) {
 
-type dbLobType struct{}
-
-var _ driver.ValueConverter = dbLobType{} //check that type implements interface
-
-func (d dbLobType) ConvertValue(v interface{}) (driver.Value, error) {
-
-	if v, ok := v.(int64); ok {
+	if v == nil {
 		return v, nil
 	}
 
-	return nil, fmt.Errorf("unsupported lob conversion type error %T %v", v, v)
+	switch v := v.(type) {
+	case Lob:
+		if v.rd == nil {
+			return nil, fmt.Errorf("lob error: initial reader %[1]T %[1]v", v)
+		}
+		f.SetLobReader(v.rd)
+		return fmt.Sprintf("<lob %d", idx), nil
+	case *Lob:
+		if v.rd == nil {
+			return nil, fmt.Errorf("lob error: initial reader %[1]T %[1]v", v)
+		}
+		f.SetLobReader(v.rd)
+		return fmt.Sprintf("<lob %d", idx), nil
+	case NullLob:
+		if !v.Valid {
+			return nil, nil
+		}
+		if v.Lob.rd == nil {
+			return nil, fmt.Errorf("lob error: initial reader %[1]T %[1]v", v)
+		}
+		f.SetLobReader(v.Lob.rd)
+		return fmt.Sprintf("<lob %d", idx), nil
+	case *NullLob:
+		if !v.Valid {
+			return nil, nil
+		}
+		if v.Lob.rd == nil {
+			return nil, fmt.Errorf("lob error: initial reader %[1]T %[1]v", v)
+		}
+		f.SetLobReader(v.Lob.rd)
+		return fmt.Sprintf("<lob %d", idx), nil
+	}
+
+	rv := reflect.ValueOf(v)
+
+	switch rv.Kind() {
+
+	case reflect.Ptr:
+		// indirect pointers
+		if rv.IsNil() {
+			return nil, nil
+		}
+		return convertNvLob(idx, f, rv.Elem().Interface())
+	}
+
+	return nil, fmt.Errorf("unsupported lob conversion type error %[1]T %[1]v", v)
 }

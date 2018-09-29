@@ -501,7 +501,7 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 		if len(splitType) != 2 {
 			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
 		}
-		if strings.ToLower(splitType[0]) != "utf8" {
+		if !strings.EqualFold(splitType[0], "utf8") {
 			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
 		}
 		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
@@ -556,7 +556,6 @@ func generateCert(ctx context.Context,
 
 	if isCA {
 		data.params.IsCA = isCA
-
 		data.params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.signingBundle == nil {
@@ -1217,11 +1216,6 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		caCert := data.signingBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
-		err = checkPermittedDNSDomains(certTemplate, caCert)
-		if err != nil {
-			return nil, errutil.UserError{Err: err.Error()}
-		}
-
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.signingBundle.PrivateKey)
 	} else {
 		// Creating a self-signed root
@@ -1386,6 +1380,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	if data.params.UseCSRValues {
 		certTemplate.Subject = data.csr.Subject
+		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
 
 		certTemplate.DNSNames = data.csr.DNSNames
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
@@ -1443,10 +1438,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
-	err = checkPermittedDNSDomains(certTemplate, caCert)
-	if err != nil {
-		return nil, errutil.UserError{Err: err.Error()}
-	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.csr.PublicKey, data.signingBundle.PrivateKey)
 
@@ -1463,42 +1454,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	result.CAChain = data.signingBundle.GetCAChain()
 
 	return result, nil
-}
-
-func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
-	if len(ca.PermittedDNSDomains) == 0 {
-		return nil
-	}
-
-	namesToCheck := map[string]struct{}{
-		template.Subject.CommonName: struct{}{},
-	}
-	for _, name := range template.DNSNames {
-		namesToCheck[name] = struct{}{}
-	}
-
-	var badName string
-NameCheck:
-	for name := range namesToCheck {
-		for _, perm := range ca.PermittedDNSDomains {
-			switch {
-			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
-				// .example.com matches my.host.example.com and
-				// host.example.com but does not match example.com
-				break NameCheck
-			case perm == name:
-				break NameCheck
-			}
-		}
-		badName = name
-		break
-	}
-
-	if badName == "" {
-		return nil
-	}
-
-	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {

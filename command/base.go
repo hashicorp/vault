@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -13,13 +14,19 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
 
-// maxLineLength is the maximum width of any line.
-const maxLineLength int = 78
+const (
+	// maxLineLength is the maximum width of any line.
+	maxLineLength int = 78
+
+	// notSetValue is a flag value for a not-set value
+	notSetValue = "(not set)"
+)
 
 // reRemoveWhitespace is a regular expression for stripping whitespace from
 // a string.
@@ -36,6 +43,8 @@ type BaseCommand struct {
 	flagCAPath        string
 	flagClientCert    string
 	flagClientKey     string
+	flagNamespace     string
+	flagNS            string
 	flagTLSServerName string
 	flagTLSSkipVerify bool
 	flagWrapTTL       time.Duration
@@ -88,6 +97,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		return nil, errors.Wrap(err, "failed to create client")
 	}
 
+	// Turn off retries on the CLI
+	if os.Getenv(api.EnvVaultMaxRetries) == "" {
+		client.SetMaxRetries(0)
+	}
+
 	// Set the wrapping function
 	client.SetWrappingLookupFunc(c.DefaultWrappingLookupFunc)
 
@@ -112,6 +126,15 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	client.SetMFACreds(c.flagMFA)
+
+	// flagNS takes precedence over flagNamespace. After resolution, point both
+	// flags to the same value to be able to use them interchangeably anywhere.
+	if c.flagNS != notSetValue {
+		c.flagNamespace = c.flagNS
+	}
+	if c.flagNamespace != notSetValue {
+		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
+	}
 
 	c.client = client
 
@@ -228,6 +251,26 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
 					"matching the client certificate from -client-cert.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "namespace",
+				Target:     &c.flagNamespace,
+				Default:    notSetValue, // this can never be a real value
+				EnvVar:     "VAULT_NAMESPACE",
+				Completion: complete.PredictAnything,
+				Usage: "The namespace to use for the command. Setting this is not " +
+					"necessary but allows using relative paths. -ns can be used as " +
+					"shortcut.",
+			})
+
+			f.StringVar(&StringVar{
+				Name:       "ns",
+				Target:     &c.flagNS,
+				Default:    notSetValue, // this can never be a real value
+				Completion: complete.PredictAnything,
+				Hidden:     true,
+				Usage:      "Alias for -namespace. This takes precedence over -namespace.",
 			})
 
 			f.StringVar(&StringVar{

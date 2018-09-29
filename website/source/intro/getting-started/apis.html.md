@@ -40,7 +40,7 @@ application would use that token for future communication with Vault.
 
 For the purpose of this guide, we will use the following configuration which
 disables TLS and uses a file-based backend. TLS is disabled here only for
-exemplary purposes; it should never be disabled in production.
+example purposes; it should never be disabled in production.
 
 ```hcl
 backend "file" {
@@ -83,7 +83,7 @@ The response should be JSON and looks something like this:
 ```
 
 This response contains our initial root token. It also includes the unseal key.
-You can use the unseal key to unseal the Vault and use the root token perform
+You can use the unseal key to unseal the Vault and use the root token to perform
 other requests in Vault that require authentication.
 
 To make this guide easy to copy-and-paste, we will be using the environment

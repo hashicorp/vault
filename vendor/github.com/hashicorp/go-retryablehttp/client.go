@@ -23,6 +23,7 @@ package retryablehttp
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -71,6 +72,13 @@ type Request struct {
 	// Embed an HTTP request directly. This makes a *Request act exactly
 	// like an *http.Request so that all meta methods are supported.
 	*http.Request
+}
+
+// WithContext returns wrapped Request with a shallow copy of underlying *http.Request
+// with its context changed to ctx. The provided ctx must be non-nil.
+func (r *Request) WithContext(ctx context.Context) *Request {
+	r.Request = r.Request.WithContext(ctx)
+	return r
 }
 
 // NewRequest creates a new wrapped request.
@@ -196,7 +204,7 @@ type ResponseLogHook func(*log.Logger, *http.Response)
 // Client will close any response body when retrying, but if the retry is
 // aborted it is up to the CheckResponse callback to properly close any
 // response body before returning.
-type CheckRetry func(resp *http.Response, err error) (bool, error)
+type CheckRetry func(ctx context.Context, resp *http.Response, err error) (bool, error)
 
 // Backoff specifies a policy for how long to wait between retries.
 // It is called after a failing request to determine the amount of time
@@ -253,7 +261,12 @@ func NewClient() *Client {
 
 // DefaultRetryPolicy provides a default callback for Client.CheckRetry, which
 // will retry on connection errors and server errors.
-func DefaultRetryPolicy(resp *http.Response, err error) (bool, error) {
+func DefaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	// do not retry on context.Canceled or context.DeadlineExceeded
+	if ctx.Err() != nil {
+		return false, ctx.Err()
+	}
+
 	if err != nil {
 		return true, err
 	}
@@ -361,7 +374,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		}
 
 		// Check if we should continue with retries.
-		checkOK, checkErr := c.CheckRetry(resp, err)
+		checkOK, checkErr := c.CheckRetry(req.Request.Context(), resp, err)
 
 		if err != nil {
 			if c.Logger != nil {

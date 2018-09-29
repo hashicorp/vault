@@ -50,10 +50,11 @@ many different key holders with many different keys.
 
 ## Solution
 
-Vault Enterprise supports opt-in automatic unsealing via cloud technologies such
-Amazon KMS or Google Cloud KMS. This feature enables operators to delegate the
-unsealing process to trusted cloud providers to ease operations in the event of
-partial failure and to aid in the creation of new or ephemeral clusters.
+Vault Enterprise supports opt-in automatic unsealing via cloud technologies:
+Amazon KMS, Azure Key Vault or GCP Cloud KMS. This feature enables operators to
+delegate the unsealing process to trusted cloud providers to ease operations in
+the event of partial failure and to aid in the creation of new or ephemeral
+clusters.
 
 ![Unseal with AWS KMS](/assets/images/vault-autounseal-2.png)
 
@@ -61,7 +62,7 @@ partial failure and to aid in the creation of new or ephemeral clusters.
 
 This guide assumes the following:   
 
-- Access to **Vault Enterprise 0.9.0 or later** which supports AWS KMS as an unseal mechanism
+- Access to **Vault Enterprise 0.9.0 or later** 
 - A URL to download Vault Enterprise from (an Amazon S3 bucket will suffice)
 - AWS account for provisioning cloud resources
 - [Terraform installed](https://www.terraform.io/intro/getting-started/install.html)
@@ -70,7 +71,7 @@ and basic understanding of its usage
 ### Download demo assets
 
 Clone or download the demo assets from the
-[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform)
+[hashicorp/vault-guides](https://github.com/hashicorp/vault-guides/tree/master/operations/aws-kms-unseal/terraform-aws)
 GitHub repository to perform the steps described in this guide.
 
 
@@ -97,7 +98,8 @@ You are going to perform the following steps:
 ### Step 1: Provision the Cloud Resources
 
 **Task 1:** Be sure to set your working directory to where the
-[`/aws-kms-unseal/terraform`](#download-demo-assets) folder is located.
+[`/operations/aws-kms-unseal/terraform-aws`](#download-demo-assets) folder is
+located.
 
 The working directory should contain the provided Terraform files:
 
@@ -122,12 +124,13 @@ $ export AWS_ACCESS_KEY_ID = "<YOUR_AWS_ACCESS_KEY_ID>"
 $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
 ```
 
-Specify your Vault Enterprise URL in a file named **`terraform.tfvars`**.
+Create a file named **`terraform.tfvars`** and specify your Vault Enterprise
+binary download URL.
 
-An example is provided (`terraform.tfvars.example`):
+**Example:**
 
 ```plaintext
-vault_url = "http://s3.amazonaws.com/some/path/to/vault-enterprise.zip"
+vault_url = "https://s3-us-west-2.amazonaws.com/hc-enterprise-binaries/vault/ent/0.10.3/vault-enterprise_0.10.3%2Bent_linux_amd64.zip"
 ```
 
 **Task 3:** Perform a **`terraform init`** to pull down the necessary provider

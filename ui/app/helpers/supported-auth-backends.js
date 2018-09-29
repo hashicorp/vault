@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_AUTH_BACKENDS = [
   {
     type: 'token',
+    typeDisplay: 'Token',
     description: 'Token authentication.',
     tokenPath: 'id',
     displayNamePath: 'display_name',
@@ -10,27 +11,31 @@ const SUPPORTED_AUTH_BACKENDS = [
   },
   {
     type: 'userpass',
+    typeDisplay: 'Username',
     description: 'A simple username and password backend.',
     tokenPath: 'client_token',
     displayNamePath: 'metadata.username',
     formAttributes: ['username', 'password'],
   },
   {
-    type: 'LDAP',
+    type: 'ldap',
+    typeDisplay: 'LDAP',
     description: 'LDAP authentication.',
     tokenPath: 'client_token',
     displayNamePath: 'metadata.username',
     formAttributes: ['username', 'password'],
   },
   {
-    type: 'Okta',
+    type: 'okta',
+    typeDisplay: 'Okta',
     description: 'Authenticate with your Okta username and password.',
     tokenPath: 'client_token',
     displayNamePath: 'metadata.username',
     formAttributes: ['username', 'password'],
   },
   {
-    type: 'GitHub',
+    type: 'github',
+    typeDisplay: 'GitHub',
     description: 'GitHub authentication.',
     tokenPath: 'client_token',
     displayNamePath: ['metadata.org', 'metadata.username'],
@@ -42,4 +47,4 @@ export function supportedAuthBackends() {
   return SUPPORTED_AUTH_BACKENDS;
 }
 
-export default Ember.Helper.helper(supportedAuthBackends);
+export default buildHelper(supportedAuthBackends);

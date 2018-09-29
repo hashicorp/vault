@@ -1,8 +1,13 @@
-import Ember from 'ember';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const { computed } = Ember;
 const GLYPHS_WITH_SVG_TAG = [
+  'learn',
+  'video',
+  'tour',
+  'stopwatch',
   'download',
   'folder',
   'file',
@@ -13,9 +18,13 @@ const GLYPHS_WITH_SVG_TAG = [
   'information-reversed',
   'true',
   'false',
+  'upload',
+  'control-lock',
+  'edition-enterprise',
+  'edition-oss',
 ];
 
-export default Ember.Component.extend({
+export default Component.extend({
   layout: hbs`
     {{#if excludeSVG}}
       {{partial partialName}}
@@ -36,15 +45,16 @@ export default Ember.Component.extend({
   glyph: null,
 
   excludeSVG: computed('glyph', function() {
-    return GLYPHS_WITH_SVG_TAG.includes(this.get('glyph'));
+    let glyph = this.get('glyph');
+    return glyph.startsWith('enable/') || GLYPHS_WITH_SVG_TAG.includes(glyph);
   }),
 
-  size: computed(function() {
-    return 12;
+  size: computed('glyph', function() {
+    return this.get('glyph').startsWith('enable/') ? 48 : 12;
   }),
 
   partialName: computed('glyph', function() {
     const glyph = this.get('glyph');
-    return `svg/icons/${Ember.String.camelize(glyph)}`;
+    return `svg/icons/${camelize(glyph)}`;
   }),
 });

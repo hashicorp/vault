@@ -1,0 +1,53 @@
+{{#if (and controlGroupResponse.token controlGroupResponse.uiParams.url)}}
+  <div class="control-group-success" data-test-navigate-message>
+    You have been granted access to <code>{{model.requestPath}}</code>. Be careful, you can only access this data once. 
+    If you need access again in the future you will need to get authorized again.
+    <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
+      <button data-test-navigate-button type="button" class="button is-primary" {{action (perform markAndNavigate)}}>Visit</button>
+    </div>
+  </div>
+{{else}}
+  {{#if unwrapData}}
+    <div class="control-group-success {{if unwrapData 'is-editor'}}">
+      <div class="has-copy-button">
+        <JsonEditor
+          data-test-json-viewer
+          @value={{ stringify unwrapData }}
+          @options={{hash
+          readOnly=true
+          lineNumbers=false
+          autoHeight=true
+          gutters=false
+          theme='hashi-read-only auto-height'
+          }}
+          />
+        <HoverCopyButton @copyValue={{stringify unwrapData}} />
+      </div>
+    </div>
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      {{#link-to 'vault.cluster.access.control-groups' class="button"}}
+        <ICon @glyph="chevron-left" @size=10 /> Back
+      {{/link-to}}
+    </div>
+  {{else}}
+    <div class="control-group-success" data-test-unwrap-form>
+      <form {{action (perform unwrap token) on="submit"}}>
+        {{message-error errorMessage=error}}
+          <p>
+          If you have the token, you can now can access <code>{{model.requestPath}}</code>
+          </p>
+          <label for="token" class="is-label">
+            Token to access data
+          </label>
+          <div class="control">
+            {{input data-test-token-input class="input" autocomplete="off" name="token" value=token}}
+          </div>
+        <div class="field is-grouped box is-fullwidth is-bottomless">
+          <button data-test-unwrap-button type="submit" class="button is-primary" disabled={{not token}}>
+            Access
+          </button>
+        </div>
+      </form>
+    </div>
+  {{/if}}
+{{/if}}

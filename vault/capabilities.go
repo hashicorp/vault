@@ -4,10 +4,12 @@ import (
 	"context"
 	"sort"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
 
-// Capabilities is used to fetch the capabilities of the given token on the given path
+// Capabilities is used to fetch the capabilities of the given token on the
+// given path
 func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, error) {
 	if path == "" {
 		return nil, &logical.StatusBadRequest{Err: "missing path"}
@@ -25,51 +27,50 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 		return nil, &logical.StatusBadRequest{Err: "invalid token"}
 	}
 
-	if te.Policies == nil {
-		return []string{DenyCapability}, nil
-	}
-
-	var policies []*Policy
-	for _, tePolicy := range te.Policies {
-		policy, err := c.policyStore.GetPolicy(ctx, tePolicy, PolicyTypeToken)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
-	}
-
-	entity, derivedPolicies, err := c.fetchEntityAndDerivedPolicies(te.EntityID)
+	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, c)
 	if err != nil {
 		return nil, err
 	}
+	if tokenNS == nil {
+		return nil, namespace.ErrNoNamespace
+	}
 
+	var policyCount int
+	policyNames := make(map[string][]string)
+	policyNames[tokenNS.ID] = te.Policies
+	policyCount += len(te.Policies)
+
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	if err != nil {
+		return nil, err
+	}
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
 		return nil, logical.ErrPermissionDenied
 	}
-	if te != nil && te.EntityID != "" && entity == nil {
+	if te.EntityID != "" && entity == nil {
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
 	}
 
-	for _, item := range derivedPolicies {
-		policy, err := c.policyStore.GetPolicy(ctx, item, PolicyTypeToken)
-		if err != nil {
-			return nil, err
-		}
-		policies = append(policies, policy)
+	for nsID, nsPolicies := range identityPolicies {
+		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
+		policyCount += len(nsPolicies)
 	}
 
-	if len(policies) == 0 {
+	if policyCount == 0 {
 		return []string{DenyCapability}, nil
 	}
 
-	acl, err := NewACL(policies)
+	// Construct the corresponding ACL object. ACL construction should be
+	// performed on the token's namespace.
+	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames)
 	if err != nil {
 		return nil, err
 	}
 
-	capabilities := acl.Capabilities(path)
+	capabilities := acl.Capabilities(ctx, path)
 	sort.Strings(capabilities)
 	return capabilities, nil
 }

@@ -1,5 +1,9 @@
-import Ember from 'ember';
-const { get, set } = Ember;
+import { assign } from '@ember/polyfills';
+import { copy } from 'ember-copy';
+import { assert } from '@ember/debug';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { set, get, computed } from '@ember/object';
 
 const TRANSIT_PARAMS = {
   hash_algorithm: 'sha2-256',
@@ -37,22 +41,21 @@ const PARAMS_FOR_ACTION = {
   decrypt: ['ciphertext', 'context', 'nonce'],
   rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
 };
-export default Ember.Component.extend(TRANSIT_PARAMS, {
-  store: Ember.inject.service(),
+export default Component.extend(TRANSIT_PARAMS, {
+  store: service(),
 
   // public attrs
   selectedAction: null,
   key: null,
 
-  refresh: 'refresh',
-
+  onRefresh() {},
   init() {
     this._super(...arguments);
     if (get(this, 'selectedAction')) {
       return;
     }
     set(this, 'selectedAction', get(this, 'key.supportedActions.firstObject'));
-    Ember.assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
+    assert('`key` is required for `' + this.toString() + '`.', this.getModelInfo());
   },
 
   didReceiveAttrs() {
@@ -72,7 +75,7 @@ export default Ember.Component.extend(TRANSIT_PARAMS, {
     });
   },
 
-  keyIsRSA: Ember.computed('key.type', function() {
+  keyIsRSA: computed('key.type', function() {
     let type = get(this, 'key.type');
     return type === 'rsa-2048' || type === 'rsa-4096';
   }),
@@ -100,7 +103,7 @@ export default Ember.Component.extend(TRANSIT_PARAMS, {
   },
 
   resetParams(oldAction, action) {
-    let params = Ember.copy(TRANSIT_PARAMS);
+    let params = copy(TRANSIT_PARAMS);
     let paramsToKeep;
     let clearWithoutCheck =
       !oldAction ||
@@ -134,14 +137,14 @@ export default Ember.Component.extend(TRANSIT_PARAMS, {
         const { keys, type, name } = resp.data;
         resp.data.keys = { keys, type, name };
       }
-      props = Ember.assign({}, props, resp.data);
+      props = assign({}, props, resp.data);
     }
     if (options.wrapTTL) {
-      props = Ember.assign({}, props, { wrappedToken: resp.wrap_info.token });
+      props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
     this.setProperties(props);
     if (action === 'rotate') {
-      this.sendAction('refresh');
+      this.get('onRefresh')();
     }
   },
 

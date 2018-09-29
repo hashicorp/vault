@@ -55,7 +55,7 @@
   }
 
   .menu-label {
-    color: $grey;
+    color: $grey-light;
     font-weight: $font-weight-semibold;
     font-size: $size-small;
     line-height: 1;
@@ -74,6 +74,12 @@
 
       &.is-active {
         border-right: 4px solid $blue;
+      }
+    }
+
+    .tag {
+      @include from($fullhd) {
+        float: right;
       }
     }
   }

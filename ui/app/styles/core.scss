@@ -1,4 +1,5 @@
-// Start with Bulma variables as a foundation
+// Start with Structure & Bulma variables as a foundation
+@import "./utils/colors";
 @import "bulma/sass/utilities/initial-variables";
 
 // Override variables where appropriate
@@ -41,13 +42,16 @@
 @import "./core/lists";
 
 @import "./components/auth-form";
-@import "./components/badge";
 @import "./components/b64-toggle";
 @import "./components/box-label";
+@import "./components/box-radio";
 @import "./components/codemirror";
 @import "./components/confirm";
 @import "./components/console-ui-panel";
+@import "./components/control-group";
+@import "./components/doc-link";
 @import "./components/env-banner";
+@import "./components/features-selection";
 @import "./components/form-section";
 @import "./components/global-flash";
 @import "./components/hover-copy-button";
@@ -55,11 +59,14 @@
 @import "./components/info-table-row";
 @import "./components/input-hint";
 @import "./components/linked-block";
+@import "./components/list-item-row";
 @import "./components/list-pagination";
 @import "./components/loader";
 @import "./components/login-form";
 @import "./components/masked-input";
 @import "./components/message-in-page";
+@import "./components/namespace-picker";
+@import "./components/namespace-reminder";
 @import "./components/page-header";
 @import "./components/popup-menu";
 @import "./components/radial-progress";
@@ -73,4 +80,5 @@
 @import "./components/tool-tip";
 @import "./components/unseal-warning";
 @import "./components/upgrade-overlay";
+@import "./components/ui-wizard";
 @import "./components/vault-loading";

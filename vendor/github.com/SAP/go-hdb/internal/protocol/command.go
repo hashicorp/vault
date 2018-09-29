@@ -37,10 +37,8 @@ func (c command) numArg() int {
 }
 
 func (c command) write(wr *bufio.Writer) error {
+	wr.WriteCesu8(c)
 
-	if _, err := wr.WriteCesu8(c); err != nil {
-		return err
-	}
 	if trace {
 		outLogger.Printf("command: %s", c)
 	}

@@ -1,8 +1,10 @@
-import Ember from 'ember';
+import { hash } from 'rsvp';
+import { inject as service } from '@ember/service';
+import EmberObject from '@ember/object';
 import EditBase from './secret-edit';
 import KeyMixin from 'vault/models/key-mixin';
 
-var SecretProxy = Ember.Object.extend(KeyMixin, {
+var SecretProxy = EmberObject.extend(KeyMixin, {
   store: null,
 
   toModel() {
@@ -20,6 +22,7 @@ var SecretProxy = Ember.Object.extend(KeyMixin, {
 });
 
 export default EditBase.extend({
+  wizard: service(),
   createModel(transition, parentKey) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const modelType = this.modelType(backend);
@@ -27,6 +30,9 @@ export default EditBase.extend({
       return this.store.createRecord(modelType, { keyType: 'ca' });
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
+      if (this.get('wizard.featureState') === 'details' && this.get('wizard.componentState') === 'transit') {
+        this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', 'transit');
+      }
       return this.store.createRecord(modelType);
     }
     const key = transition.queryParams.initialKey || '';
@@ -45,7 +51,7 @@ export default EditBase.extend({
 
   model(params, transition) {
     const parentKey = params.secret ? params.secret : '';
-    return Ember.RSVP.hash({
+    return hash({
       secret: this.createModel(transition, parentKey),
       capabilities: {},
     });

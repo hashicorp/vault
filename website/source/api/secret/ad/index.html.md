@@ -33,7 +33,7 @@ text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once a
 
 ### Connection parameters
 
-* `url` (string, required) - The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldap://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
+* `url` (string, required) - The LDAP server to connect to. Examples: `ldaps://ldap.myorg.com`, `ldaps://ldap.myorg.com:636`. This can also be a comma-delineated list of URLs, e.g. `ldaps://ldap.myorg.com,ldaps://ldap.myorg.com:636`, in which case the servers will be tried in-order if there are errors during the connection process.
 * `starttls` (bool, optional) - If true, issues a `StartTLS` command after establishing an unencrypted connection.
 * `insecure_tls` - (bool, optional) - If true, skips LDAP server SSL certificate verification - insecure, use with caution!
 * `certificate` - (string, optional) - CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded.
@@ -72,7 +72,7 @@ $ curl \
 {
   "binddn": "domain-admin",
   "bindpass": "pa$$w0rd",
-  "url": "ldap://127.0.0.11",
+  "url": "ldaps://127.0.0.11",
   "userdn": "dc=example,dc=com"
 }
 ```
@@ -91,7 +91,7 @@ $ curl \
   "tls_min_version": "tls12",
   "ttl": 2764800,
   "upndomain": "",
-  "url": "ldap://127.0.0.11",
+  "url": "ldaps://127.0.0.11",
   "userdn": "dc=example,dc=com"
 }
 
@@ -159,13 +159,16 @@ Performing a `LIST` on the `/ad/roles` endpoint will list the names of all the r
 
 The `creds` endpoint offers the credential information for a given role.
 
+| Method   | Path                   | Produces               |
+| :------- | :--------------------- | :--------------------- |
+| `GET`    | `/ad/creds/:role_name` | `200 application/json` |
+
 ### Sample Get Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    --data @payload.json \
     http://127.0.0.1:8200/v1/ad/creds/my-application
 ```
 

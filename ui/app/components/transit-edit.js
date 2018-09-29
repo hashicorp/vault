@@ -1,37 +1,45 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { or } from '@ember/object/computed';
+import { isBlank } from '@ember/utils';
+import $ from 'jquery';
+import Component from '@ember/component';
+import { set, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
-const { get, set, computed } = Ember;
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-export default Ember.Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, {
+  router: service(),
+  wizard: service(),
   mode: null,
-  onDataChange: null,
-  refresh: 'refresh',
+  onDataChange() {},
+  onRefresh() {},
   key: null,
-  routing: Ember.inject.service('-routing'),
-  requestInFlight: computed.or('key.isLoading', 'key.isReloading', 'key.isSaving'),
+  requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
+
+  init() {
+    this._super(...arguments);
+  },
+
+  didInsertElement() {
+    this._super(...arguments);
+    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
+  },
+
   willDestroyElement() {
+    this._super(...arguments);
     const key = this.get('key');
     if (get(key, 'isError')) {
       key.rollbackAttributes();
     }
+    $(document).off('keyup.keyEdit');
   },
 
   transitionToRoute() {
-    const router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
-
-  bindKeys: Ember.on('didInsertElement', function() {
-    Ember.$(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  }),
-
-  unbindKeys: Ember.on('willDestroyElement', function() {
-    Ember.$(document).off('keyup.keyEdit');
-  }),
 
   onEscape(e) {
     if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
@@ -47,7 +55,14 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   persistKey(method, successCallback) {
     const key = get(this, 'key');
     return key[method]().then(() => {
-      if (!Ember.get(key, 'isError')) {
+      if (!get(key, 'isError')) {
+        if (this.get('wizard.featureState') === 'secret') {
+          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+        } else {
+          if (this.get('wizard.featureState') === 'encryption') {
+            this.get('wizard').transitionFeatureMachine('encryption', 'CONTINUE', 'transit');
+          }
+        }
         successCallback(key);
       }
     });
@@ -72,7 +87,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
       const keyId = this.get('key.id');
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(keyId)) {
+      if (type === 'create' && isBlank(keyId)) {
         return;
       }
 
@@ -103,7 +118,7 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
     },
 
     refresh() {
-      this.sendAction('refresh');
+      this.get('onRefresh')();
     },
 
     deleteKey() {

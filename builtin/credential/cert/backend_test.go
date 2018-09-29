@@ -220,7 +220,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Sign the intermediate CSR using /pki
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
-		"csr": intermediateCSR,
+		"csr":                   intermediateCSR,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -353,7 +353,6 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Create a new api client with the desired TLS configuration
 	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
 
-	// Set the intermediate CA cert as a trusted certificate in the backend
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
 	})
@@ -1080,6 +1079,35 @@ func TestBackend_email_singleCert(t *testing.T) {
 	})
 }
 
+// Test a self-signed client with OU (root CA) that is trusted
+func TestBackend_organizationalUnit_singleCert(t *testing.T) {
+	connState, err := testConnState(
+		"test-fixtures/root/rootcawoucert.pem",
+		"test-fixtures/root/rootcawoukey.pem",
+		"test-fixtures/root/rootcawoucert.pem",
+	)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawoucert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "eng*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering,finance"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "foo"}, false),
+			testAccStepLoginInvalid(t, connState),
+		},
+	})
+}
+
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_uri_singleCert(t *testing.T) {
 	connState, err := testConnState(
@@ -1433,12 +1461,13 @@ func testAccStepListCerts(
 }
 
 type allowed struct {
-	names        string // allowed names in the certificate, looks at common, name, dns, email [depricated]
-	common_names string // allowed common names in the certificate
-	dns          string // allowed dns names in the SAN extension of the certificate
-	emails       string // allowed email names in SAN extension of the certificate
-	uris         string // allowed uris in SAN extension of the certificate
-	ext          string // required extensions in the certificate
+	names                string // allowed names in the certificate, looks at common, name, dns, email [depricated]
+	common_names         string // allowed common names in the certificate
+	dns                  string // allowed dns names in the SAN extension of the certificate
+	emails               string // allowed email names in SAN extension of the certificate
+	uris                 string // allowed uris in SAN extension of the certificate
+	organizational_units string // allowed OUs in the certificate
+	ext                  string // required extensions in the certificate
 }
 
 func testAccStepCert(
@@ -1448,16 +1477,17 @@ func testAccStepCert(
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
 		Data: map[string]interface{}{
-			"certificate":          string(cert),
-			"policies":             policies,
-			"display_name":         name,
-			"allowed_names":        testData.names,
-			"allowed_common_names": testData.common_names,
-			"allowed_dns_sans":     testData.dns,
-			"allowed_email_sans":   testData.emails,
-			"allowed_uri_sans":     testData.uris,
-			"required_extensions":  testData.ext,
-			"lease":                1000,
+			"certificate":                  string(cert),
+			"policies":                     policies,
+			"display_name":                 name,
+			"allowed_names":                testData.names,
+			"allowed_common_names":         testData.common_names,
+			"allowed_dns_sans":             testData.dns,
+			"allowed_email_sans":           testData.emails,
+			"allowed_uri_sans":             testData.uris,
+			"allowed_organizational_units": testData.organizational_units,
+			"required_extensions":          testData.ext,
+			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
@@ -1673,6 +1703,7 @@ func Test_Renew(t *testing.T) {
 	req.Auth.Metadata = resp.Auth.Metadata
 	req.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	req.Auth.Policies = resp.Auth.Policies
+	req.Auth.TokenPolicies = req.Auth.Policies
 	req.Auth.Period = resp.Auth.Period
 
 	// Normal renewal

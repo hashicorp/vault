@@ -962,6 +962,11 @@ This endpoint restores the backup as a named key. This will restore the key
 configurations and all the versions of the named key along with HMAC keys. The
 input to this endpoint should be the output of `/backup` endpoint.
 
+ ~> For safety, by default the backend will refuse to restore to an existing
+ key. If you want to reuse a key name, it is recommended you delete the key
+ before restoring. It is a good idea to attempt restoring to a different key
+ name first to verify that the operation successfully completes. 
+
 | Method   | Path                        | Produces               |
 | :------- | :-------------------------- | :--------------------- |
 | `POST`   | `/transit/restore(/:name)`  | `204 (empty body)`     |
@@ -973,6 +978,9 @@ input to this endpoint should be the output of `/backup` endpoint.
 
  - `name` `(string: <optional>)` - If set, this will be the name of the
    restored key.
+
+ - `force` `(bool: false)` - If set, force the restore to proceed even if a key
+   by this name already exists.
 
 ### Sample Payload
 

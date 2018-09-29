@@ -100,8 +100,7 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 }
 
 // An output formatter for yaml output format of an object
-type YamlFormatter struct {
-}
+type YamlFormatter struct{}
 
 func (y YamlFormatter) Format(data interface{}) ([]byte, error) {
 	return yaml.Marshal(data)
@@ -116,8 +115,7 @@ func (y YamlFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 }
 
 // An output formatter for table output of an object
-type TableFormatter struct {
-}
+type TableFormatter struct{}
 
 // We don't use this
 func (t TableFormatter) Format(data interface{}) ([]byte, error) {
@@ -133,8 +131,7 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 	case []string:
 		return t.OutputList(ui, nil, data)
 	case map[string]interface{}:
-		t.OutputMap(ui, data.(map[string]interface{}))
-		return nil
+		return t.OutputMap(ui, data.(map[string]interface{}))
 	default:
 		return errors.New("cannot use the table formatter for this type")
 	}
@@ -182,8 +179,8 @@ func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
 		ui.Warn("WARNING! The following warnings were returned from Vault:\n")
 		for _, warning := range secret.Warnings {
 			ui.Warn(wrapAtLengthWithPadding(fmt.Sprintf("* %s", warning), 2))
+			ui.Warn("")
 		}
-		ui.Warn("")
 	}
 }
 
@@ -198,12 +195,12 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret.LeaseDuration > 0 {
 		if secret.LeaseID != "" {
 			out = append(out, fmt.Sprintf("lease_id %s %s", hopeDelim, secret.LeaseID))
-			out = append(out, fmt.Sprintf("lease_duration %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
+			out = append(out, fmt.Sprintf("lease_duration %s %v", hopeDelim, humanDurationInt(secret.LeaseDuration)))
 			out = append(out, fmt.Sprintf("lease_renewable %s %t", hopeDelim, secret.Renewable))
 		} else {
 			// This is probably the generic secret backend which has leases, but we
 			// print them as refresh_interval to reduce confusion.
-			out = append(out, fmt.Sprintf("refresh_interval %s %s", hopeDelim, humanDurationInt(secret.LeaseDuration)))
+			out = append(out, fmt.Sprintf("refresh_interval %s %v", hopeDelim, humanDurationInt(secret.LeaseDuration)))
 		}
 	}
 
@@ -215,7 +212,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 		if secret.Auth.LeaseDuration == 0 {
 			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
 		} else {
-			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+			out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
 		}
 		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
 		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
@@ -229,7 +226,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	if secret.WrapInfo != nil {
 		out = append(out, fmt.Sprintf("wrapping_token: %s %s", hopeDelim, secret.WrapInfo.Token))
 		out = append(out, fmt.Sprintf("wrapping_accessor: %s %s", hopeDelim, secret.WrapInfo.Accessor))
-		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %s", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
+		out = append(out, fmt.Sprintf("wrapping_token_ttl: %s %v", hopeDelim, humanDurationInt(secret.WrapInfo.TTL)))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_time: %s %s", hopeDelim, secret.WrapInfo.CreationTime.String()))
 		out = append(out, fmt.Sprintf("wrapping_token_creation_path: %s %s", hopeDelim, secret.WrapInfo.CreationPath))
 		if secret.WrapInfo.WrappedAccessor != "" {
@@ -245,7 +242,14 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, secret.Data[k]))
+			v := secret.Data[k]
+
+			// If the field "looks" like a TTL, print it as a time duration instead.
+			if looksLikeDuration(k) {
+				v = humanDurationInt(v)
+			}
+
+			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, v))
 		}
 	}
 
@@ -264,7 +268,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	return nil
 }
 
-func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) {
+func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error {
 	out := make([]string, 0, len(data)+1)
 	if len(data) > 0 {
 		keys := make([]string, 0, len(data))
@@ -274,14 +278,21 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) {
 		sort.Strings(keys)
 
 		for _, k := range keys {
-			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, data[k]))
+			v := data[k]
+
+			// If the field "looks" like a TTL, print it as a time duration instead.
+			if looksLikeDuration(k) {
+				v = humanDurationInt(v)
+			}
+
+			out = append(out, fmt.Sprintf("%s %s %v", k, hopeDelim, v))
 		}
 	}
 
 	// If we got this far and still don't have any data, there's nothing to print,
 	// sorry.
 	if len(out) == 0 {
-		return
+		return nil
 	}
 
 	// Prepend the header
@@ -290,6 +301,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) {
 	ui.Output(tableOutput(out, &columnize.Config{
 		Delim: hopeDelim,
 	}))
+	return nil
 }
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
@@ -308,6 +320,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	out := []string{}
 	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
 	out = append(out, fmt.Sprintf("Threshold | %d", status.T))
@@ -358,9 +371,24 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 			if showLeaderAddr {
 				out = append(out, fmt.Sprintf("Active Node Address | %s", leaderStatus.LeaderAddress))
 			}
+
+			if leaderStatus.PerfStandby {
+				out = append(out, fmt.Sprintf("Performance Standby Node | %t", leaderStatus.PerfStandby))
+				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
+			}
 		}
 	}
 
 	ui.Output(tableOutput(out, nil))
 	return 0
+}
+
+// looksLikeDuration checks if the given key "k" looks like a duration value.
+// This is used to pretty-format duration values in responses, especially from
+// plugins.
+func looksLikeDuration(k string) bool {
+	return k == "period" || strings.HasSuffix(k, "_period") ||
+		k == "ttl" || strings.HasSuffix(k, "_ttl") ||
+		k == "duration" || strings.HasSuffix(k, "_duration") ||
+		k == "lease_max" || k == "ttl_max"
 }

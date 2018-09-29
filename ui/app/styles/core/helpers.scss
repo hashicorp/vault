@@ -113,6 +113,11 @@
 .is-size-9 {
   font-size: $size-9 !important;
 }
+.is-hint {
+  color: $grey;
+  font-size: $size-8;
+  padding: $size-8 0;
+}
 @each $name, $shade in $shades {
   .has-background-#{$name} {
     background: $shade !important;

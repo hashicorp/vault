@@ -2,16 +2,39 @@ package crdb
 
 import "fmt"
 
+// ErrorCauser is the type implemented by an error that remembers its cause.
+//
+// ErrorCauser is intentionally equivalent to the causer interface used by
+// the github.com/pkg/errors package.
+type ErrorCauser interface {
+	// Cause returns the proximate cause of this error.
+	Cause() error
+}
+
+// errorCause returns the original cause of the error, if possible. An error has
+// a proximate cause if it implements ErrorCauser; the original cause is the
+// first error in the cause chain that does not implement ErrorCauser.
+//
+// errorCause is intentionally equivalent to pkg/errors.Cause.
+func errorCause(err error) error {
+	for err != nil {
+		cause, ok := err.(ErrorCauser)
+		if !ok {
+			break
+		}
+		err = cause.Cause()
+	}
+	return err
+}
+
 type txError struct {
 	cause error
 }
 
-// Error implements the error interface
+// Error implements the error interface.
 func (e *txError) Error() string { return e.cause.Error() }
 
-// Cause returns the error encountered by the "ROLLBACK TO SAVEPOINT
-// cockroach_restart" statement. This method also implements the internal
-// pkg/errors.causer interface, so TxnRestartError works with pkg/errors.Cause().
+// Cause implements the ErrorCauser interface.
 func (e *txError) Cause() error { return e.cause }
 
 // AmbiguousCommitError represents an error that left a transaction in an
@@ -43,9 +66,8 @@ func newTxnRestartError(err error, retryErr error) *TxnRestartError {
 	}
 }
 
-// Error implements the error interface
+// Error implements the error interface.
 func (e *TxnRestartError) Error() string { return e.msg }
 
-// RetryCause returns the error encountered by the transaction, which caused the
-// transaction to be restarted.
+// RetryCause returns the error that caused the transaction to be restarted.
 func (e *TxnRestartError) RetryCause() error { return e.retryCause }

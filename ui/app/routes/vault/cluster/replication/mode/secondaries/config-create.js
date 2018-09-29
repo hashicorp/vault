@@ -1,8 +1,9 @@
-import Ember from 'ember';
+import { hash } from 'rsvp';
+import { inject as service } from '@ember/service';
 import Base from '../../replication-base';
 
 export default Base.extend({
-  flashMessages: Ember.inject.service(),
+  flashMessages: service(),
 
   modelPath: 'model.config',
 
@@ -45,7 +46,7 @@ export default Base.extend({
   },
 
   model(params) {
-    return Ember.RSVP.hash({
+    return hash({
       cluster: this.modelFor('vault.cluster.replication.mode'),
       config: this.findOrCreate(params.secondary_id),
       mounts: this.fetchMounts(),

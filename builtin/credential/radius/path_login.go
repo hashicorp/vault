@@ -122,7 +122,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return resp, err
 	}
 
-	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
+	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.TokenPolicies) {
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
@@ -151,8 +151,8 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 			Timeout: time.Duration(cfg.DialTimeout) * time.Second,
 		},
 	}
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(cfg.ReadTimeout)*time.Second)
-	received, err := client.Exchange(ctx, packet, hostport)
+	clientCtx, cancelFunc := context.WithTimeout(ctx, time.Duration(cfg.ReadTimeout)*time.Second)
+	received, err := client.Exchange(clientCtx, packet, hostport)
 	cancelFunc()
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil

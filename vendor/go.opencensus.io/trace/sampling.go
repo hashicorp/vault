@@ -20,31 +20,12 @@ import (
 
 const defaultSamplingProbability = 1e-4
 
-var defaultSampler Sampler
-
-func init() {
-	defaultSampler = newDefaultSampler()
-}
-
 func newDefaultSampler() Sampler {
 	return ProbabilitySampler(defaultSamplingProbability)
 }
 
-// SetDefaultSampler sets the default sampler used when creating new spans.
-func SetDefaultSampler(sampler Sampler) {
-	if sampler == nil {
-		sampler = newDefaultSampler()
-	}
-	mu.Lock()
-	defaultSampler = sampler
-	mu.Unlock()
-}
-
-// Sampler is an interface for values that have a method that the trace library
-// can call to determine whether to export a trace's spans.
-type Sampler interface {
-	Sample(p SamplingParameters) SamplingDecision
-}
+// Sampler decides whether a trace should be sampled and exported.
+type Sampler func(SamplingParameters) SamplingDecision
 
 // SamplingParameters contains the values passed to a Sampler.
 type SamplingParameters struct {
@@ -69,47 +50,27 @@ func ProbabilitySampler(fraction float64) Sampler {
 	} else if fraction >= 1 {
 		return AlwaysSample()
 	}
-	return probabilitySampler{
-		traceIDUpperBound: uint64(fraction * (1 << 63)),
-	}
-}
 
-type probabilitySampler struct {
-	traceIDUpperBound uint64
-}
-
-var _ Sampler = (*probabilitySampler)(nil)
-
-func (s probabilitySampler) Sample(p SamplingParameters) (d SamplingDecision) {
-	if p.ParentContext.IsSampled() {
-		return SamplingDecision{Sample: true}
-	}
-	x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
-	return SamplingDecision{Sample: x < s.traceIDUpperBound}
+	traceIDUpperBound := uint64(fraction * (1 << 63))
+	return Sampler(func(p SamplingParameters) SamplingDecision {
+		if p.ParentContext.IsSampled() {
+			return SamplingDecision{Sample: true}
+		}
+		x := binary.BigEndian.Uint64(p.TraceID[0:8]) >> 1
+		return SamplingDecision{Sample: x < traceIDUpperBound}
+	})
 }
 
 // AlwaysSample returns a Sampler that samples every trace.
 func AlwaysSample() Sampler {
-	return always{}
-}
-
-type always struct{}
-
-var _ Sampler = always{}
-
-func (a always) Sample(p SamplingParameters) SamplingDecision {
-	return SamplingDecision{Sample: true}
+	return func(p SamplingParameters) SamplingDecision {
+		return SamplingDecision{Sample: true}
+	}
 }
 
 // NeverSample returns a Sampler that samples no traces.
 func NeverSample() Sampler {
-	return never{}
-}
-
-type never struct{}
-
-var _ Sampler = never{}
-
-func (n never) Sample(p SamplingParameters) SamplingDecision {
-	return SamplingDecision{Sample: false}
+	return func(p SamplingParameters) SamplingDecision {
+		return SamplingDecision{Sample: false}
+	}
 }
