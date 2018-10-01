@@ -1,10 +1,9 @@
 import { inject as service } from '@ember/service';
-import { cancel, later } from '@ember/runloop';
 import { computed } from '@ember/object';
-import { on } from '@ember/object/evented';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
 import { getOwner } from '@ember/application';
+import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
@@ -67,39 +66,28 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     const id = this.getClusterId(params);
-
     return this.get('store').findRecord('cluster', id);
   },
 
-  stopPoll: on('deactivate', function() {
-    cancel(this.get('timer'));
-  }),
-
-  poll() {
+  poll: task(function*() {
     // when testing, the polling loop causes promises to never settle so acceptance tests hang
     // to get around that, we just disable the poll in tests
-    return Ember.testing
-      ? null
-      : later(() => {
-          this.controller
-            .get('model')
-            .reload()
-            .then(
-              () => {
-                this.set('timer', this.poll());
-                return this.transitionToTargetRoute();
-              },
-              () => {
-                this.set('timer', this.poll());
-              }
-            );
-        }, POLL_INTERVAL_MS);
-  },
+    do {
+      yield timeout(POLL_INTERVAL_MS);
+      try {
+        yield this.controller.model.reload();
+        yield this.transitionToTargetRoute();
+      } catch (e) {
+        // we want to keep polling here
+      }
+    } while (!Ember.testing);
+  })
+    .cancelOn('deactivate')
+    .keepLatest(),
 
   afterModel(model) {
-    this.get('currentCluster').setCluster(model);
     this._super(...arguments);
-    this.poll();
+    this.get('currentCluster').setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
@@ -107,6 +95,11 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
     return this.transitionToTargetRoute();
+  },
+
+  setupController() {
+    this._super(...arguments);
+    this.poll.perform();
   },
 
   actions: {
