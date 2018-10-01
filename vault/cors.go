@@ -26,6 +26,7 @@ var StdAllowedHeaders = []string{
 	"X-Vault-Wrap-Format",
 	"X-Vault-Wrap-TTL",
 	"X-Vault-Policy-Override",
+	"Authorization",
 	consts.AuthHeaderName,
 }
 

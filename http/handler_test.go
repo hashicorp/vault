@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/namespace"
+
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
@@ -170,7 +172,7 @@ func TestHandler_cors(t *testing.T) {
 		"Access-Control-Allow-Origin":  addr,
 		"Access-Control-Allow-Headers": strings.Join(vault.StdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
-		"Vary":                         "Origin",
+		"Vary": "Origin",
 	}
 
 	for expHeader, expected := range expHeaders {
@@ -519,6 +521,125 @@ func TestHandler_error(t *testing.T) {
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)
 	}
+}
+
+func TestHandler_requestAuth(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+
+	rootCtx := namespace.RootContext(nil)
+	te, err := core.LookupToken(rootCtx, token)
+
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	rWithAuthorization, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	rWithAuthorization.Header.Set("Authorization", "Bearer "+token)
+
+	rWithVault, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	rWithVault.Header.Set(consts.AuthHeaderName, token)
+
+	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
+		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
+		r = r.WithContext(rootCtx)
+		req, err = requestAuth(core, r, req)
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+
+		if req.ClientToken != token {
+			t.Fatalf("client token should be filled with %s, got %s", token, req.ClientToken)
+		}
+		if req.TokenEntry() == nil {
+			t.Fatal("token entry should not be nil")
+		}
+		if !reflect.DeepEqual(req.TokenEntry(), te) {
+			t.Fatalf("token entry should be the same as the core")
+		}
+		if req.ClientTokenAccessor == "" {
+			t.Fatal("token accessor should not be empty")
+		}
+	}
+
+	rInvalidScheme, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	rInvalidScheme.Header.Set("Authorization", "invalid_scheme something")
+	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
+
+	_, err = requestAuth(core, rInvalidScheme, req)
+	if err == nil {
+		t.Fatalf("expected an error, got none")
+	}
+
+	rNothing, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
+
+	req, err = requestAuth(core, rNothing, req)
+	if err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	}
+	if req.ClientToken != "" {
+		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
+	}
+
+	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
+	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
+
+	_, err = requestAuth(core, rFragmentedHeader, req)
+	if err == nil {
+		t.Fatalf("expected an error, got none")
+	}
+
+}
+
+func TestHandler_getTokenFromReq(t *testing.T) {
+	r := http.Request{Header: http.Header{}}
+
+	if tok, err := getTokenFromReq(&r); err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
+	}
+
+	r.Header.Set("Authorization", "Bearer TOKEN NOT_GOOD_TOKEN")
+	if tok, err := getTokenFromReq(&r); err == nil {
+		t.Fatalf("expected an error, got none")
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
+	}
+
+	r.Header.Set(consts.AuthHeaderName, "NEWTOKEN")
+	if tok, err := getTokenFromReq(&r); err != nil {
+		t.Fatalf("expected no error, got %s", err)
+	} else if tok == "TOKEN" {
+		t.Fatalf("%s header should be prioritized", consts.AuthHeaderName)
+	} else if tok != "NEWTOKEN" {
+		t.Fatalf("expected 'NEWTOKEN' as result, got '%s'", tok)
+	}
+
+	r.Header = http.Header{}
+	r.Header.Set("Authorization", "Basic TOKEN")
+	if tok, err := getTokenFromReq(&r); err == nil {
+		t.Fatal("expected error, got none")
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
+	}
+
 }
 
 func TestHandler_nonPrintableChars(t *testing.T) {
