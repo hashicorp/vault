@@ -302,12 +302,6 @@
 			"revisionTime": "2018-08-22T15:14:34Z"
 		},
 		{
-			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
-			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
-			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
-			"revisionTime": "2018-06-15T12:55:16Z"
-		},
-		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "58588f401c2cc130a7308a52ca3bc6c0a76db04b",
@@ -2146,6 +2140,20 @@
 			"path": "github.com/tv42/httpunix",
 			"revision": "b75d8614f926c077e48d85f1f8f7885b758c6225",
 			"revisionTime": "2015-04-27T01:28:21Z"
+		},
+		{
+			"checksumSHA1": "XcN5ljoQ7CTwkOW5NN9tT5ZPpPQ=",
+			"path": "github.com/tyrannosaurus-becks/aliyun-oss-go-sdk",
+			"revision": "fd883d86a1c750b7fbed812eec939f0292693160",
+			"revisionTime": "2018-09-13T16:03:13Z",
+			"version": "only-get-system-info-if-needed",
+			"versionExact": "only-get-system-info-if-needed"
+		},
+		{
+			"checksumSHA1": "6spheQ9+SUHtR6+2NIh71Q3bj+E=",
+			"path": "github.com/tyrannosaurus-becks/aliyun-oss-go-sdk/oss",
+			"revision": "fd883d86a1c750b7fbed812eec939f0292693160",
+			"revisionTime": "2018-09-13T16:03:13Z"
 		},
 		{
 			"checksumSHA1": "d3YqGxTQPV3bo+sXijGmbpjf+WA=",
