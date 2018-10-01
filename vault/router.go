@@ -764,7 +764,7 @@ func pathsToRadix(paths []string) *radix.Tree {
 // filteredPassthroughHeaders returns a headers map[string][]string that
 // contains the filtered values contained in passthroughHeaders. Filtering of
 // passthroughHeaders from the origHeaders is done is a case-insensitive manner.
-// Headers that match values denylistHeaders will be ignored.
+// Headers that match values from denylistHeaders will be ignored.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
 
