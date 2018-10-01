@@ -44,6 +44,14 @@ This field is deprecated, use canonical_id.`,
 					Type:        framework.TypeString,
 					Description: "Name of the alias; unused for a modify",
 				},
+				"metadata": {
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleAliasUpdateCommon(),
@@ -77,6 +85,14 @@ This field is deprecated, use canonical_id.`,
 					Type:        framework.TypeString,
 					Description: "(Unused)",
 				},
+				"metadata": {
+					Type: framework.TypeKVPairs,
+					Description: `Metadata to be associated with the entity alias.
+In CLI, this parameter can be repeated multiple times, and it all gets merged together.
+For example:
+vault <command> <path> metadata=key1=value1 metadata=key2=value2
+					`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleAliasUpdateCommon(),
@@ -106,6 +122,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		var alias *identity.Alias
 		var entity *identity.Entity
 		var previousEntity *identity.Entity
+		var newAlias bool
 
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -122,6 +139,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			}
 		} else {
 			alias = &identity.Alias{}
+			newAlias = true
 		}
 
 		// Get entity id
@@ -138,6 +156,15 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			}
 		} else {
 			alias.Name = aliasName
+		}
+
+		// Get entity metadata
+		metadata, ok, err := d.GetOkErr("metadata")
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
+		}
+		if ok {
+			alias.Metadata = metadata.(map[string]string)
 		}
 
 		// Get mount accessor
@@ -181,15 +208,14 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			if entity == nil {
 				return nil, fmt.Errorf("existing alias is not associated with an entity")
 			}
-			if canonicalID == "" || entity.ID == canonicalID {
-				// Nothing to do
-				return nil, nil
+			if canonicalID == "" {
+				canonicalID = entity.ID
 			}
 		}
 
 		resp := &logical.Response{}
 
-		// If we found an exisitng alias we won't hit this condition because
+		// If we found an existing alias we won't hit this condition because
 		// canonicalID being empty will result in nil being returned in the block
 		// above, so in this case we know that creating a new entity is the right
 		// thing.
@@ -230,6 +256,14 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 
 				entity.Aliases = append(entity.Aliases, alias)
 				resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", previousEntity.ID, entity.ID))
+			} else {
+				// Update the alias in the entity.
+				for aliasIndex, item := range entity.Aliases {
+					if item.ID == alias.ID {
+						entity.Aliases[aliasIndex] = alias
+						break
+					}
+				}
 			}
 		}
 
@@ -263,13 +297,16 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Return ID of both alias and entity
-		resp.Data = map[string]interface{}{
-			"id":           alias.ID,
-			"canonical_id": entity.ID,
+		if newAlias {
+			// Return ID of both alias and entity
+			resp.Data = map[string]interface{}{
+				"id":           alias.ID,
+				"canonical_id": entity.ID,
+			}
+			return resp, nil
 		}
 
-		return resp, nil
+		return nil, nil
 	}
 }
 
