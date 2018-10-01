@@ -1184,10 +1184,10 @@
 			"revisionTime": "2017-12-04T18:29:08Z"
 		},
 		{
-			"checksumSHA1": "8X6scmZ/Xfkme6wM7KPWs6vBvsY=",
+			"checksumSHA1": "MeoNU/LWnGkffAX0GQpQp4OXzh4=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "a4620f9913d19f03a6bf19b2f304daaaf83ea130",
-			"revisionTime": "2018-08-14T22:25:01Z"
+			"revision": "051b989fbf44280905aa30a5dde1cceab0261b9d",
+			"revisionTime": "2018-10-01T16:28:34Z"
 		},
 		{
 			"checksumSHA1": "/yKfFSspjuDzyOe/bBslrPzyfYM=",

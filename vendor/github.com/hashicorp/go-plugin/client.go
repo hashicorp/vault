@@ -542,6 +542,7 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 	// Set the process
 	c.process = cmd.Process
+	c.logger.Debug("plugin started", "path", cmd.Path, "pid", c.process.Pid)
 
 	// Make sure the command is properly cleaned up if there is an error
 	defer func() {
@@ -565,10 +566,19 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		defer stdout_w.Close()
 
 		// Wait for the command to end.
-		cmd.Wait()
+		err := cmd.Wait()
+
+		debugMsgArgs := []interface{}{
+			"path", cmd.Path,
+			"pid", c.process.Pid,
+		}
+		if err != nil {
+			debugMsgArgs = append(debugMsgArgs,
+				[]interface{}{"error", err.Error()}...)
+		}
 
 		// Log and make sure to flush the logs write away
-		c.logger.Debug("plugin process exited", "path", cmd.Path)
+		c.logger.Debug("plugin process exited", debugMsgArgs...)
 		os.Stderr.Sync()
 
 		// Mark that we exited
