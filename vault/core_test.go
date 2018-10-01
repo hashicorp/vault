@@ -2308,3 +2308,61 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
 	}
 }
+
+func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
+	noop := &NoopBackend{
+		Response: &logical.Response{
+			Data: map[string]interface{}{},
+		},
+	}
+
+	c, _, root := TestCoreUnsealed(t)
+	c.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
+		return noop, nil
+	}
+
+	// Enable the backend
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Mount tune
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/mounts/foo/tune")
+	req.Data["passthrough_request_headers"] = []string{"Authorization", consts.AuthHeaderName}
+	req.ClientToken = root
+	_, err = c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Attempt to read
+	lreq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "foo/test",
+		ClientToken: root,
+		Headers: map[string][]string{
+			consts.AuthHeaderName: []string{"foo"},
+			"Authorization":       []string{"baz"},
+		},
+	}
+	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the headers
+	headers := noop.Requests[0].Headers
+
+	// Test passthrough values, they should not be present in the backend
+	if _, ok := headers["Authorization"]; ok {
+		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
+	}
+
+	if _, ok := headers[consts.AuthHeaderName]; ok {
+		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
+	}
+}
