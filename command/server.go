@@ -463,16 +463,8 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	migrationStatus, err := CheckMigration(backend)
-	if err != nil {
-		c.UI.Error("Error checking migration status")
-		return 1
-	}
-
-	if migrationStatus != nil {
-		startTime := migrationStatus.Start.Format(time.RFC3339)
-		c.UI.Error(wrapAtLength(fmt.Sprintf("Storage migration in progress (started: %s). "+
-			"Use 'vault operator migrate -reset' to force clear the migration lock.", startTime)))
+	// Prevent server startup if migration is active
+	if c.migrationActive(backend) {
 		return 1
 	}
 
@@ -1787,6 +1779,41 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+// migrationActive checks and warns against in-progress storage migrations.
+// This function will block until storage is available.
+func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
+	first := true
+
+	for {
+		migrationStatus, err := CheckMigration(backend)
+		if err == nil {
+			if migrationStatus != nil {
+				startTime := migrationStatus.Start.Format(time.RFC3339)
+				c.UI.Error(wrapAtLength(fmt.Sprintf("ERROR! Storage migration in progress (started: %s). "+
+					"Server startup is prevented until the migration completes. Use 'vault operator migrate -reset' "+
+					"to force clear the migration lock.", startTime)))
+				return true
+			}
+			return false
+		}
+		if first {
+			first = false
+			c.UI.Warn("\nWARNING! Unable to read migration status.")
+
+			// unexpected state, so stop buffering log messages
+			c.logGate.Flush()
+		}
+		c.logger.Warn("migration_check: " + err.Error())
+
+		select {
+		case <-time.After(2 * time.Second):
+		case <-c.ShutdownCh:
+			return true
+		}
+	}
+	return false
 }
 
 type MigrationStatus struct {
