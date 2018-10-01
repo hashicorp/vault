@@ -36,6 +36,8 @@ IMPROVEMENTS:
    operators to include environment variables during plugin execution. [GH-5359]
  * secrets/aws: WAL Rollback improvements [GH-5202]
  * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
+ * replication: Reindex process now runs in the background and does not block other 
+   vault operations
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
