@@ -26,6 +26,7 @@ BUG FIXES:
  * replication: Fix DR API when using a token [GH-5398]
  * identity: Ensure old group alias is removed when a new one is written [GH-5350]
  * storage/alicloud: Don't call uname on package init [GH-5358]
+ * secret/jwt: Fix issue where request context would be canceled too early 
  
 IMPROVEMENTS:
 
