@@ -22,7 +22,9 @@ BUG FIXES:
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
  * replication: Fix DR API when using a token [GH-5398]
-
+ * identity: Ensure old group alias is removed when a new one is written [GH-5339]
+ * storage/alicloud: Don't call uname on package init [GH-5358]
+ 
 IMPROVEMENTS:
 
  * auth/aws: The identity alias name can now configured to be either IAM unique
@@ -33,6 +35,7 @@ IMPROVEMENTS:
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
  * secrets/aws: WAL Rollback improvements [GH-5202]
+ * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
