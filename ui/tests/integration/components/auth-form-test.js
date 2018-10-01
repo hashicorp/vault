@@ -32,7 +32,11 @@ const workingAuthService = Service.extend({
 
 const routerService = Service.extend({
   transitionTo() {
-    return resolve();
+    return {
+      followRedirects() {
+        return resolve();
+      },
+    };
   },
   replaceWith() {
     return resolve();
@@ -142,6 +146,7 @@ module('Integration | Component | auth form', function(hooks) {
       });
     });
 
+    this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster }}`);
     await settled();
     assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
@@ -165,6 +170,7 @@ module('Integration | Component | auth form', function(hooks) {
       });
     });
 
+    this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'foo/');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
     await component.login();
@@ -188,6 +194,7 @@ module('Integration | Component | auth form', function(hooks) {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
+    this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster}}`);
     await settled();
     server.shutdown();
@@ -214,6 +221,7 @@ module('Integration | Component | auth form', function(hooks) {
 
     let wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
+    this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
     later(() => run.cancelTimers(), 50);
     await settled();
