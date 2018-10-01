@@ -40,6 +40,7 @@ IMPROVEMENTS:
  * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
  * replication: Reindex process now runs in the background and does not block other 
    vault operations
+ * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
