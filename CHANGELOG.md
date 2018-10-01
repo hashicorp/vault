@@ -5,6 +5,8 @@ CHANGES:
  * `sys/seal-status` now includes an `initialized` boolean in the output. If
    Vault is not initialized, it will return a `200` with this value set `false`
    instead of a `400`.
+ * `passthrough_request_headers` will now deny certain headers from being
+   provided to backends based on a global denylist.
 
 FEATURES:
 
