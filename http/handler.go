@@ -576,14 +576,11 @@ func getTokenFromReq(r *http.Request) (string, error) {
 	if v := r.Header.Get("Authorization"); v != "" {
 		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
 
-		if !strings.HasPrefix(v, "Bearer") {
-			return "", fmt.Errorf("the Authorization header scheme should be Bearer")
+		// If string does not start by Bearer, or contains any space after it. It is a formatting error
+		if !strings.HasPrefix(v, "Bearer ") || strings.LastIndexByte(v, ' ') > 7 {
+			return "", fmt.Errorf("the Authorization header provided is wrongly formatted. Please use \"Bearer <token>\"")
 		}
-		vals := strings.Split(strings.TrimSpace(strings.TrimPrefix(v, "Bearer")), " ")
-		if len(vals) < 1 {
-			return "", fmt.Errorf("the Authorization header provided is wrongly formatted")
-		}
-		return vals[0], nil
+		return v[7:], nil
 	}
 	return "", nil
 }
