@@ -534,16 +534,16 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 
 	rWithAuthorization, err := http.NewRequest("GET", "v1/test/path", nil)
-	rWithAuthorization.Header.Set("Authorization", "Bearer "+token)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	rWithAuthorization.Header.Set("Authorization", "Bearer "+token)
 
 	rWithVault, err := http.NewRequest("GET", "v1/test/path", nil)
-	rWithVault.Header.Set(consts.AuthHeaderName, token)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	rWithVault.Header.Set(consts.AuthHeaderName, token)
 
 	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
 		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
@@ -568,11 +568,11 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 
 	rInvalidScheme, err := http.NewRequest("GET", "v1/test/path", nil)
-	rInvalidScheme.Header.Set("Authorization", "invalid_scheme something")
-	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	rInvalidScheme.Header.Set("Authorization", "invalid_scheme something")
+	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
 	_, err = requestAuth(core, rInvalidScheme, req)
 	if err == nil {
@@ -593,6 +593,18 @@ func TestHandler_requestAuth(t *testing.T) {
 		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
 	}
 
+	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
+	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
+
+	_, err = requestAuth(core, rFragmentedHeader, req)
+	if err == nil {
+		t.Fatalf("expected an error, got none")
+	}
+
 }
 
 func TestHandler_getTokenFromReq(t *testing.T) {
@@ -605,10 +617,10 @@ func TestHandler_getTokenFromReq(t *testing.T) {
 	}
 
 	r.Header.Set("Authorization", "Bearer TOKEN NOT_GOOD_TOKEN")
-	if tok, err := getTokenFromReq(&r); err != nil {
-		t.Fatalf("expected no error, got %s", err)
-	} else if tok != "TOKEN" {
-		t.Fatalf("expected 'TOKEN' as result, got '%s'", tok)
+	if tok, err := getTokenFromReq(&r); err == nil {
+		t.Fatalf("expected an error, got none")
+	} else if tok != "" {
+		t.Fatalf("expected '' as result, got '%s'", tok)
 	}
 
 	r.Header.Set(consts.AuthHeaderName, "NEWTOKEN")
