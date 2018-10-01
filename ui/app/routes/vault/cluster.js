@@ -1,7 +1,5 @@
 import { inject as service } from '@ember/service';
-import { cancel, later } from '@ember/runloop';
 import { computed } from '@ember/object';
-import { on } from '@ember/object/evented';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
 import { getOwner } from '@ember/application';
@@ -83,12 +81,13 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         // we want to keep polling here
       }
     } while (!Ember.testing);
-  }).drop(),
+  })
+    .cancelOn('deactivate')
+    .keepLatest(),
 
   afterModel(model) {
-    this.get('currentCluster').setCluster(model);
     this._super(...arguments);
-    this.poll.perform();
+    this.get('currentCluster').setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
@@ -98,15 +97,17 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return this.transitionToTargetRoute();
   },
 
+  setupController() {
+    this._super(...arguments);
+    this.poll.perform();
+  },
+
   actions: {
     error(e) {
       if (e.httpStatus === 503 && e.errors[0] === 'Vault is sealed') {
         this.refresh();
       }
       return true;
-    },
-    deactivate() {
-      this.poll.cancelAll();
     },
   },
 });
