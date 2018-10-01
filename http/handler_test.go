@@ -580,10 +580,10 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 
 	rNothing, err := http.NewRequest("GET", "v1/test/path", nil)
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
 
 	req, err = requestAuth(core, rNothing, req)
 	if err != nil {
