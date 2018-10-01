@@ -22,7 +22,7 @@ BUG FIXES:
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
  * replication: Fix DR API when using a token [GH-5398]
- * identity: Ensure old group alias is removed when a new one is written [GH-5339]
+ * identity: Ensure old group alias is removed when a new one is written [GH-5350]
  * storage/alicloud: Don't call uname on package init [GH-5358]
  
 IMPROVEMENTS:
