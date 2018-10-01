@@ -9,7 +9,7 @@
 </PageHeader>
 {{#if isTemporary}}
   <section class="box is-sideless">
-    <MessageInPage data-test-cluster-status @type="warning" @class="license-warning">
+    <MessageInPage data-test-cluster-status @type="warning" @class="license-warning" data-test-warning-text>
       Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
     </MessageInPage>
     <span class="title is-5">Temporary License</span>
@@ -18,13 +18,13 @@
         <div class="field">
           <label for="license-id" class="is-label">License</label>
           <div class="control">
-            {{input id="license-id" value=text autocomplete="off" class="input"}}
+            {{input id="license-id" value=text autocomplete="off" class="input" data-test-text-input="data-test-text-input"}}
           </div>
         </div>
       </div>
       <div class="field">
         <div class="control">
-          <button type="submit" class="button is-primary">Save</button>
+          <button type="submit" class="button is-primary" data-test-save-button>Save</button>
         </div>
       </div>
     </form>
@@ -37,15 +37,15 @@
         <div class="field">
           <label for="license-id" class="is-label">License</label>
           <div class="control">
-            {{input id="license-id" value=text autocomplete="off" class="input"}}
+            {{input id="license-id" value=text autocomplete="off" class="input" data-test-text-input="data-test-text-input"}}
           </div>
         </div>
         <div class="field is-grouped">
           <div class="control">
-            <button type="submit" class="button is-primary">Save</button>
+            <button type="submit" class="button is-primary" data-test-save-button>Save</button>
           </div>
           <div class="control">
-            <button type="button" {{action "toggleForm"}} class="button">Cancel</button>
+            <button type="button" {{action "toggleForm"}} class="button" data-test-cancel-button>Cancel</button>
           </div>
         </div>
       </form>
@@ -58,7 +58,7 @@
       </div>
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
         <div class="control">
-          <button type="button" {{action "toggleForm"}} class="button">Enter new license</button>
+          <button type="button" {{action "toggleForm"}} class="button" data-test-enter-button>Enter new license</button>
         </div>
       </div>
     {{/if}}
@@ -68,11 +68,11 @@
   <span class="title is-5">Features</span>
   <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
     {{#each featuresInfo as |info|}}
-      {{#info-table-row label=info.name value=info.active}}
+      {{#info-table-row label=info.name value=(if info.active "Active" "Not Active") data-test-feature-row="data-test-feature-row"}}
         {{#if info.active}}
-          <ICon @size=28 @glyph="true" /> Active
+          <ICon @size=28 @glyph="true" /> <span data-test-feature-status>Active</span>
         {{else}}
-          <ICon @size=28 @glyph="false" /> Not Active
+          <ICon @size=28 @glyph="false" /> <span data-test-feature-status>Not Active</span>
         {{/if}}
       {{/info-table-row}}
     {{/each}}
