@@ -289,7 +289,7 @@ for "generate_lease".`,
 			"not_before_duration": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     30,
-				Description: `The duration before now the cert need to be created / sign.`,
+				Description: `The duration before now the cert needs to be created / signed.`,
 			},
 		},
 
