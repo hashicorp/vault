@@ -31,21 +31,29 @@ func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
 }
 
-// NewIdentityStore creates a new identity store
-func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
+func (i *IdentityStore) resetDB(ctx context.Context) error {
 	var err error
 
-	// Create a new in-memory database for the identity store
-	db, err := memdb.NewMemDB(identityStoreSchema())
+	i.db, err = memdb.NewMemDB(identityStoreSchema(!i.disableLowerCasedNames))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create memdb for identity store: {{err}}", err)
+		return err
 	}
 
+	return nil
+}
+
+func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
 		view:   config.StorageView,
-		db:     db,
 		logger: logger,
 		core:   core,
+	}
+
+	// Create a memdb instance, which by default, operates on lower cased
+	// identity names
+	err := iStore.resetDB(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
