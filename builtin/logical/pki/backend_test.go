@@ -747,7 +747,6 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		KeyType:   "rsa",
 		KeyBits:   2048,
 		RequireCN: true,
-		NotBefore: 30,
 	}
 	issueVals := certutil.IssueData{}
 	ret := []logicaltest.TestStep{}
@@ -983,7 +982,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			cert := parsedCertBundle.Certificate
 
 			actualDiff := time.Now().Sub(cert.NotBefore)
-			certRoleDiff := role.NotBefore - actualDiff
+			certRoleDiff := role.NotBeforeDuration - actualDiff
 			// These times get truncated, so give a 1 second buffer on each side
 			if certRoleDiff > -1*time.Second && certRoleDiff < 1*time.Second {
 				return nil
@@ -1342,13 +1341,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// NotBefore tests
 	{
-		roleVals.NotBefore = 10 * time.Second
+		roleVals.NotBeforeDuration = 10 * time.Second
 		addTests(getNotBeforeCheck(roleVals))
 
-		roleVals.NotBefore = 30 * time.Second
+		roleVals.NotBeforeDuration = 30 * time.Second
 		addTests(getNotBeforeCheck(roleVals))
 
-		roleVals.NotBefore = 0
+		roleVals.NotBeforeDuration = 0
 	}
 	// IP SAN tests
 	{
@@ -1987,8 +1986,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber:          big.NewInt(1234),
-		IsCA:                  false,
+		SerialNumber: big.NewInt(1234),
+		IsCA:         false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2018,8 +2017,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber:          big.NewInt(2345),
-		IsCA:                  true,
+		SerialNumber: big.NewInt(2345),
+		IsCA:         true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2601,7 +2600,7 @@ func setCerts() {
 		SerialNumber:          big.NewInt(mathrand.Int63()),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA:                  true,
+		IsCA: true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {

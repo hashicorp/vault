@@ -286,7 +286,7 @@ for "generate_lease".`,
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 			},
-			"not_before": &framework.FieldSchema{
+			"not_before_duration": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     30,
 				Description: `The duration before now the cert need to be created / sign.`,
@@ -498,7 +498,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
-		NotBefore:                     time.Duration(data.Get("not_before").(int)) * time.Second,
+		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -689,7 +689,7 @@ type roleEntry struct {
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
-	NotBefore                     time.Duration `json:"not_before" mapstructure:"not_before"`
+	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -733,7 +733,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
-		"not_before":                         int64(r.NotBefore.Seconds()),
+		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

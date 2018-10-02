@@ -104,8 +104,8 @@ export default DS.Model.extend({
   basicConstraintsValidForNonCA: attr('boolean', {
     label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   }),
-  notBefore: attr({
-    label: 'Not Before',
+  notBeforeDuration: attr({
+    label: 'Not Before Duration',
     editType: 'ttl',
     defaultValue: '30s',
   }),
@@ -142,7 +142,7 @@ export default DS.Model.extend({
           'organization',
           'keyUsage',
           'allowedOtherSans',
-          'notBefore',
+          'notBeforeDuration',
         ],
       },
       {
