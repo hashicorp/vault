@@ -70,9 +70,12 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   poll: task(function*() {
-    // when testing, the polling loop causes promises to never settle so acceptance tests hang
-    // to get around that, we just disable the poll in tests
-    do {
+    while (true) {
+      // when testing, the polling loop causes promises to never settle so acceptance tests hang
+      // to get around that, we just disable the poll in tests
+      if (Ember.testing) {
+        return;
+      }
       yield timeout(POLL_INTERVAL_MS);
       try {
         yield this.controller.model.reload();
@@ -80,7 +83,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       } catch (e) {
         // we want to keep polling here
       }
-    } while (!Ember.testing);
+    }
   })
     .cancelOn('deactivate')
     .keepLatest(),
