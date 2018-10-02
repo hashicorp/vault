@@ -883,10 +883,12 @@ request is denied.
   optional while generating a certificate.
 
 - `policy_identifiers` `(list: [])` – A comma-separated string or list of policy
-  oids.
+  OIDs.
 
 - `basic_constraints_valid_for_non_ca` `(bool: false)` - Mark Basic Constraints
   valid when issuing non-CA certificates.
+
+- `not_before_duration` `(duration: "30s")` – Specifies the duration by which to backdate the NotBefore property.
 
 
 ### Sample Payload
