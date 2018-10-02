@@ -27,6 +27,8 @@ BUG FIXES:
  * identity: Ensure old group alias is removed when a new one is written [GH-5350]
  * storage/alicloud: Don't call uname on package init [GH-5358]
  * secret/jwt: Fix issue where request context would be canceled too early 
+ * ui: fix need to have update for aws iam creds generation [GF-5294]
+ * ui: fix calculation of token expiry [GH-5435]
  
 IMPROVEMENTS:
 
@@ -42,6 +44,8 @@ IMPROVEMENTS:
  * replication: Reindex process now runs in the background and does not block other 
    vault operations
  * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
+ * ui: you can now init a cluster with a seal config [GH-5428]
+ * ui: added the option to force promote replication clusters [GH-5438]
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
