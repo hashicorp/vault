@@ -50,6 +50,7 @@ IMPROVEMENTS:
  * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
  * ui: you can now init a cluster with a seal config [GH-5428]
  * ui: added the option to force promote replication clusters [GH-5438]
+ * replication: Allow promotion of a secondary when data is syncing with a "force" flag
  
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
