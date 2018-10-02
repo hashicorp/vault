@@ -1986,8 +1986,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber: big.NewInt(1234),
-		IsCA:         false,
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2017,8 +2017,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber: big.NewInt(2345),
-		IsCA:         true,
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2600,7 +2600,7 @@ func setCerts() {
 		SerialNumber:          big.NewInt(mathrand.Int63()),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {
