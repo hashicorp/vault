@@ -107,6 +107,7 @@ export default DS.Model.extend({
   notBefore: attr({
     label: 'Not Before',
     editType: 'ttl',
+    defaultValue: '30s',
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
