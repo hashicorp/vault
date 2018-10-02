@@ -17,7 +17,7 @@ RUN apt-get install -y nodejs
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g yarn@1.5.0
+RUN npm install -g yarn@1.9.4
 
 ENV GOVERSION 1.10.3
 RUN mkdir /goroot && mkdir /gopath
