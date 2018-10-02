@@ -26,7 +26,7 @@ BUG FIXES:
  * replication: Fix DR API when using a token [GH-5398]
  * identity: Ensure old group alias is removed when a new one is written [GH-5350]
  * storage/alicloud: Don't call uname on package init [GH-5358]
- * secret/jwt: Fix issue where request context would be canceled too early 
+ * secrets/jwt: Fix issue where request context would be canceled too early 
  * ui: fix need to have update for aws iam creds generation [GF-5294]
  * ui: fix calculation of token expiry [GH-5435]
  
@@ -40,6 +40,8 @@ IMPROVEMENTS:
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
  * secrets/aws: WAL Rollback improvements [GH-5202]
+ * secrets/aws: Allow specifying STS role-default TTLs [GH-5138]
+ * secrets/pki: Add configuration support for setting NotBefore [GH-5325]
  * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
  * replication: Reindex process now runs in the background and does not block other 
    vault operations
