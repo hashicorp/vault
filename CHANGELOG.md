@@ -15,6 +15,8 @@ FEATURES:
    credentials it is using. [GH-5140]
  * Storage Backend Migrator: A new `operator migrate` command allows offline
    migration of data between two storage backends.
+ * AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise): AliCloud KMS can now be used a support seal for 
+   Auto Unseal and Seal Wrapping.
 
 BUG FIXES:
 
