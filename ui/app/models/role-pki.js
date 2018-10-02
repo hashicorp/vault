@@ -104,9 +104,9 @@ export default DS.Model.extend({
   basicConstraintsValidForNonCA: attr('boolean', {
     label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   }),
-  notBefore: attr('number', {
-    defaultValue: 30,
-    label: 'Number of second used for the NotBefore declaration of certificate'
+  notBefore: attr({
+    label: 'Not Before',
+    editType: 'ttl',
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),

@@ -88,8 +88,8 @@ type creationParameters struct {
 	// The maximum path length to encode
 	MaxPathLength int
 
-	// The number of second the certificate will use NotBefore
-	NotBefore int
+	// The duration the certificate will use NotBefore
+	NotBefore time.Duration
 }
 
 type caInfoBundle struct {
@@ -1169,7 +1169,6 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
-		NotBefore:      time.Now().Add(-time.Duration(data.params.NotBefore) * time.Second),
 		NotAfter:       data.params.NotAfter,
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
@@ -1178,6 +1177,9 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
 		URIs:           data.params.URIs,
+	}
+	if data.params.NotBefore > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBefore)
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1369,10 +1371,12 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
 		Subject:        data.params.Subject,
-		NotBefore:      time.Now().Add(-time.Duration(data.params.NotBefore) * time.Second),
 		NotAfter:       data.params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
+	}
+	if data.params.NotBefore > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBefore)
 	}
 
 	switch data.signingBundle.PrivateKeyType {
