@@ -1,4 +1,4 @@
-## 0.11.2 (Unreleased)
+## 0.11.2 (October 2nd, 2018)
 
 CHANGES:
 
