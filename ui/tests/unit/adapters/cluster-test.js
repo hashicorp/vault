@@ -16,7 +16,13 @@ module('Unit | Adapter | cluster', function(hooks) {
     adapter.health();
     assert.equal('/v1/sys/health', url, 'health url OK');
     assert.deepEqual(
-      { standbycode: 200, sealedcode: 200, uninitcode: 200, drsecondarycode: 200 },
+      {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
       options.data,
       'health data params OK'
     );
