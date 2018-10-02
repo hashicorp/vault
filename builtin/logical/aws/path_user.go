@@ -58,7 +58,16 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 			"Role '%s' not found", roleName)), nil
 	}
 
-	ttl := int64(d.Get("ttl").(int))
+	var ttl int64
+	ttlRaw, ok := d.GetOk("ttl")
+	switch {
+	case ok:
+		ttl = int64(ttlRaw.(int))
+	case role.DefaultSTSTTL > 0:
+		ttl = int64(role.DefaultSTSTTL.Seconds())
+	default:
+		ttl = int64(d.Get("ttl").(int))
+	}
 	roleArn := d.Get("role_arn").(string)
 
 	var credentialType string
