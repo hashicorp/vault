@@ -110,7 +110,7 @@ The only knowledge necessary to write a plugin is basic command-line skills and 
 
 ### 4. Review 
 <p>
-HashiCorp will review and certify your Vault integration. Please send the Vault logs and other relevant logs for verification at: <a href="vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a>. For Auth, Secret and Storage plugins, submit a GitHub pull request (PR) against the Vault project (https://github.com/hashicorp/vault). Where applicable, the vendor will need to provide HashiCorp with a test account.
+HashiCorp will review and certify your Vault integration. Please send the Vault logs and other relevant logs for verification at: <a href="mailto:vault-integration-dev@hashicorp.com">vault-integration-dev@hashicorp.com</a>. For Auth, Secret and Storage plugins, submit a GitHub pull request (PR) against the Vault project (https://github.com/hashicorp/vault). Where applicable, the vendor will need to provide HashiCorp with a test account.
 </p>
 
 ### 5. Release 
