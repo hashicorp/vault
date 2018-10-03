@@ -1,9 +1,9 @@
-{{license-info
-  startTime=model.startTime
-  expirationTime=model.expirationTime
-  licenseId=model.licenseId
-  features=model.features
-  text=model.text
-  model=model
-  saveModel=(action "saveModel")
-}}
+<LicenseInfo
+  @startTime={{model.startTime}}
+  @expirationTime={{model.expirationTime}}
+  @licenseId={{model.licenseId}}
+  @features={{model.features}}
+  @text={{model.text}}
+  @saveModel={{action "saveModel"}}
+  @model
+/>

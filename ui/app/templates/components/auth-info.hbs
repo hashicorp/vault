@@ -51,11 +51,13 @@
             Restart guide
           </button>
         </li>
-        <li class="action">
-          {{#link-to "vault.cluster.license" activeClusterName id="license"}}
-            License
-          {{/link-to}}
-        </li>
+        {{#unless isOSS }}
+          <li class="action">
+            {{#link-to "vault.cluster.license" activeClusterName id="license"}}
+              License
+            {{/link-to}}
+          </li>
+        {{/unless}}
         <li class="action">
           {{#link-to "vault.cluster.logout" activeClusterName id="logout"}}
             Sign out

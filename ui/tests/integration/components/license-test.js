@@ -29,7 +29,7 @@ module('Integration | Component | license info', function(hooks) {
     this.set('startTime', moment.now());
     this.set('features', ['HSM', 'Namespaces']);
     await render(
-      hbs`{{license-info licenseId=licenseId expirationTime=expirationTime startTime=startTime features=features}}`
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
     assert.equal(component.warning, LICENSE_WARNING_TEXT, 'it renders warning text including time left');
     assert.equal(component.hasSaveButton, true, 'it renders the save button');
@@ -55,7 +55,7 @@ module('Integration | Component | license info', function(hooks) {
     this.set('startTime', moment.now());
     this.set('features', ['HSM', 'Namespaces']);
     await render(
-      hbs`{{license-info licenseId=licenseId expirationTime=expirationTime startTime=startTime features=features}}`
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
     assert.equal(component.featureRows.length, 12, 'it renders 12 features');
     let activeFeatures = component.featureRows.filter(f => f.featureStatus === 'Active');
@@ -68,7 +68,7 @@ module('Integration | Component | license info', function(hooks) {
     this.set('startTime', moment.now());
     this.set('features', ['HSM', 'Namespaces']);
     await render(
-      hbs`{{license-info licenseId=licenseId expirationTime=expirationTime startTime=startTime features=features}}`
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
     assert.equal(component.hasWarning, false, 'it does not have a warning');
     assert.equal(component.hasSaveButton, false, 'it does not render the save button');
@@ -82,7 +82,7 @@ module('Integration | Component | license info', function(hooks) {
     this.set('startTime', moment.now());
     this.set('features', ['HSM', 'Namespaces']);
     await render(
-      hbs`{{license-info licenseId=licenseId expirationTime=expirationTime startTime=startTime features=features}}`
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
     await component.enterButton();
     assert.equal(component.hasSaveButton, true, 'it does not render the save button');
@@ -101,7 +101,7 @@ module('Integration | Component | license info', function(hooks) {
     this.set('features', ['HSM', 'Namespaces']);
     this.set('saveModel', sinon.spy());
     await render(
-      hbs`{{license-info licenseId=licenseId expirationTime=expirationTime startTime=startTime features=features saveModel=saveModel}}`
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}} @saveModel={{this.saveModel}}/>`
     );
     await component.text('ABCDE12345');
     await component.saveButton();

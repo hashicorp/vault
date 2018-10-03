@@ -2,10 +2,13 @@ import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { run } from '@ember/runloop';
+import { computed } from '@ember/object';
+
 export default Component.extend({
   auth: service(),
   wizard: service(),
   router: service(),
+  version: service(),
 
   transitionToRoute: function() {
     this.get('router').transitionTo(...arguments);
@@ -14,6 +17,8 @@ export default Component.extend({
   classNames: 'user-menu auth-info',
 
   isRenewing: or('fakeRenew', 'auth.isRenewing'),
+
+  isOSS: computed.alias(this.version.isOSS),
 
   actions: {
     restartGuide() {

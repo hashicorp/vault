@@ -10,20 +10,20 @@ export default Component.extend({
   text: '',
   showForm: false,
   isTemporary: computed('licenseId', function() {
-    return this.get('licenseId') === 'temporary';
+    return this.licenseId === 'temporary';
   }),
   featuresInfo: computed('features', function() {
     let info = [];
     allFeatures().forEach(feature => {
-      let active = this.get('features').includes(feature) ? true : false;
+      let active = this.features.includes(feature) ? true : false;
       info.push({ name: feature, active: active });
     });
     return info;
   }),
   saveModel() {},
   actions: {
-    createModel(text) {
-      this.get('saveModel')(text);
+    saveModel(text) {
+      this.saveModel(text);
     },
     toggleForm() {
       this.toggleProperty('showForm');

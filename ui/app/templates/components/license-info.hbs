@@ -12,8 +12,8 @@
     <MessageInPage data-test-cluster-status @type="warning" @class="license-warning" data-test-warning-text>
       Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
     </MessageInPage>
-    <span class="title is-5">Temporary License</span>
-    <form {{action "createModel" text on="submit"}}>
+    <span class="title is-5" data-test-temp-license>Temporary License</span>
+    <form {{action "saveModel" text on="submit"}}>
       <div class="box is-shadowless is-fullwidth is-marginless">
         <div class="field">
           <label for="license-id" class="is-label">License</label>
@@ -33,7 +33,7 @@
   <section class="box is-sideless">
     <span class="title is-5">Details</span>
     {{#if showForm}}
-      <form {{action "createModel" text on="submit"}}>
+      <form {{action "saveModel" text on="submit"}}>
         <div class="field">
           <label for="license-id" class="is-label">License</label>
           <div class="control">
