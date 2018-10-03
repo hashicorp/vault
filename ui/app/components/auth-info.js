@@ -18,7 +18,7 @@ export default Component.extend({
 
   isRenewing: or('fakeRenew', 'auth.isRenewing'),
 
-  isOSS: computed.alias(this.version.isOSS),
+  isOSS: computed.alias('version.isOSS'),
 
   actions: {
     restartGuide() {
