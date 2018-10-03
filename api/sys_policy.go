@@ -60,11 +60,11 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 		return "", errors.New("data from server response is empty")
 	}
 
-	if policyRaw, ok := secret.Data["policy"]; ok {
+	if policyRaw, ok := secret.Data["rules"]; ok {
 		return policyRaw.(string), nil
 	}
 
-	return "", fmt.Errorf("no policy found in response")
+	return "", fmt.Errorf("no rules found in response")
 }
 
 func (c *Sys) PutPolicy(name, rules string) error {
