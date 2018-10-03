@@ -21,3 +21,8 @@ func JitterUp(duration time.Duration, jitter float64) time.Duration {
 	multiplier := jitter * (rand.Float64()*2 - 1)
 	return time.Duration(float64(duration) * (1 + multiplier))
 }
+
+// ExponentBase2 computes 2^(a-1) where a >= 1. If a is 0, the result is 0.
+func ExponentBase2(a uint) uint {
+	return (1 << a) >> 1
+}

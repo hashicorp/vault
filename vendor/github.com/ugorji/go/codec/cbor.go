@@ -105,12 +105,11 @@ func cbordesc(bd byte) string {
 type cborEncDriver struct {
 	noBuiltInTypes
 	encDriverNoopContainerWriter
-	// encNoSeparator
 	e *Encoder
 	w encWriter
 	h *CborHandle
 	x [8]byte
-	_ [3]uint64 // padding
+	// _ [3]uint64 // padding
 }
 
 func (e *cborEncDriver) EncodeNil() {
@@ -197,9 +196,11 @@ func (e *cborEncDriver) EncodeExt(rv interface{}, xtag uint64, ext Ext, en *Enco
 
 func (e *cborEncDriver) EncodeRawExt(re *RawExt, en *Encoder) {
 	e.encUint(uint64(re.Tag), cborBaseTag)
-	if false && re.Data != nil {
-		en.encode(re.Data)
-	} else if re.Value != nil {
+	// only encodes re.Value (never re.Data)
+	// if false && re.Data != nil {
+	// 	en.encode(re.Data)
+	// } else if re.Value != nil {
+	if re.Value != nil {
 		en.encode(re.Value)
 	} else {
 		e.EncodeNil()
@@ -283,17 +284,16 @@ func (e *cborEncDriver) encStringBytesS(bb byte, v string) {
 // ----------------------
 
 type cborDecDriver struct {
-	d *Decoder
-	h *CborHandle
-	r decReader
-	// b      [scratchByteArrayLen]byte
+	d      *Decoder
+	h      *CborHandle
+	r      decReader
 	br     bool // bytes reader
 	bdRead bool
 	bd     byte
 	noBuiltInTypes
 	// decNoSeparator
 	decDriverNoopContainerReader
-	_ [3]uint64 // padding
+	// _ [3]uint64 // padding
 }
 
 func (d *cborDecDriver) readNextBd() {

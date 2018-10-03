@@ -111,6 +111,11 @@ func AllocsFit(node *Node, allocs []*Allocation, netIdx *NetworkIndex) (bool, st
 
 	// For each alloc, add the resources
 	for _, alloc := range allocs {
+		// Do not consider the resource impact of terminal allocations
+		if alloc.TerminalStatus() {
+			continue
+		}
+
 		if alloc.Resources != nil {
 			if err := used.Add(alloc.Resources); err != nil {
 				return false, "", nil, err
@@ -202,6 +207,58 @@ func CopySliceConstraints(s []*Constraint) []*Constraint {
 	}
 
 	c := make([]*Constraint, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceAffinities(s []*Affinity) []*Affinity {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*Affinity, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceSpreads(s []*Spread) []*Spread {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*Spread, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceSpreadTarget(s []*SpreadTarget) []*SpreadTarget {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*SpreadTarget, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceNodeScoreMeta(s []*NodeScoreMeta) []*NodeScoreMeta {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*NodeScoreMeta, l)
 	for i, v := range s {
 		c[i] = v.Copy()
 	}

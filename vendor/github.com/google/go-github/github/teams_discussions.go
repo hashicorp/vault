@@ -16,19 +16,20 @@ type TeamDiscussion struct {
 	Body          *string    `json:"body,omitempty"`
 	BodyHTML      *string    `json:"body_html,omitempty"`
 	BodyVersion   *string    `json:"body_version,omitempty"`
-	CommentsCount *int64     `json:"comments_count,omitempty"`
+	CommentsCount *int       `json:"comments_count,omitempty"`
 	CommentsURL   *string    `json:"comments_url,omitempty"`
 	CreatedAt     *Timestamp `json:"created_at,omitempty"`
 	LastEditedAt  *Timestamp `json:"last_edited_at,omitempty"`
 	HTMLURL       *string    `json:"html_url,omitempty"`
 	NodeID        *string    `json:"node_id,omitempty"`
-	Number        *int64     `json:"number,omitempty"`
+	Number        *int       `json:"number,omitempty"`
 	Pinned        *bool      `json:"pinned,omitempty"`
 	Private       *bool      `json:"private,omitempty"`
 	TeamURL       *string    `json:"team_url,omitempty"`
 	Title         *string    `json:"title,omitempty"`
 	UpdatedAt     *Timestamp `json:"updated_at,omitempty"`
 	URL           *string    `json:"url,omitempty"`
+	Reactions     *Reactions `json:"reactions,omitempty"`
 }
 
 func (d TeamDiscussion) String() string {

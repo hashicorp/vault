@@ -92,17 +92,29 @@ func Handlers() request.Handlers {
 func CredChain(cfg *aws.Config, handlers request.Handlers) *credentials.Credentials {
 	return credentials.NewCredentials(&credentials.ChainProvider{
 		VerboseErrors: aws.BoolValue(cfg.CredentialsChainVerboseErrors),
-		Providers: []credentials.Provider{
-			&credentials.EnvProvider{},
-			&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-			RemoteCredProvider(*cfg, handlers),
-		},
+		Providers:     CredProviders(cfg, handlers),
 	})
 }
 
+// CredProviders returns the slice of providers used in
+// the default credential chain.
+//
+// For applications that need to use some other provider (for example use
+// different  environment variables for legacy reasons) but still fall back
+// on the default chain of providers. This allows that default chaint to be
+// automatically updated
+func CredProviders(cfg *aws.Config, handlers request.Handlers) []credentials.Provider {
+	return []credentials.Provider{
+		&credentials.EnvProvider{},
+		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
+		RemoteCredProvider(*cfg, handlers),
+	}
+}
+
 const (
-	httpProviderEnvVar     = "AWS_CONTAINER_CREDENTIALS_FULL_URI"
-	ecsCredsProviderEnvVar = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
+	httpProviderAuthorizationEnvVar = "AWS_CONTAINER_AUTHORIZATION_TOKEN"
+	httpProviderEnvVar              = "AWS_CONTAINER_CREDENTIALS_FULL_URI"
+	ecsCredsProviderEnvVar          = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
 )
 
 // RemoteCredProvider returns a credentials provider for the default remote
@@ -176,6 +188,7 @@ func httpCredProvider(cfg aws.Config, handlers request.Handlers, u string) crede
 	return endpointcreds.NewProviderClient(cfg, handlers, u,
 		func(p *endpointcreds.Provider) {
 			p.ExpiryWindow = 5 * time.Minute
+			p.AuthorizationToken = os.Getenv(httpProviderAuthorizationEnvVar)
 		},
 	)
 }

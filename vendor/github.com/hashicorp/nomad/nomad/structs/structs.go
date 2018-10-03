@@ -24,6 +24,9 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
+	"container/heap"
+	"math"
+
 	"github.com/gorhill/cronexpr"
 	"github.com/hashicorp/consul/api"
 	multierror "github.com/hashicorp/go-multierror"
@@ -32,10 +35,9 @@ import (
 	"github.com/hashicorp/nomad/helper"
 	"github.com/hashicorp/nomad/helper/args"
 	"github.com/hashicorp/nomad/helper/uuid"
+	"github.com/hashicorp/nomad/lib/kheap"
 	"github.com/mitchellh/copystructure"
 	"github.com/ugorji/go/codec"
-
-	"math"
 
 	hcodec "github.com/hashicorp/go-msgpack/codec"
 )
@@ -133,6 +135,13 @@ const (
 	// MaxRetainedNodeEvents is the maximum number of node events that will be
 	// retained for a single node
 	MaxRetainedNodeEvents = 10
+
+	// MaxRetainedNodeScores is the number of top scoring nodes for which we
+	// retain scoring metadata
+	MaxRetainedNodeScores = 5
+
+	// Normalized scorer name
+	NormScorerName = "normalized-score"
 )
 
 // Context defines the scope in which a search for Nomad object operates, and
@@ -1566,13 +1575,13 @@ func (n *Node) Stub() *NodeListStub {
 	addr, _, _ := net.SplitHostPort(n.HTTPAddr)
 
 	return &NodeListStub{
-		Address:    addr,
-		ID:         n.ID,
-		Datacenter: n.Datacenter,
-		Name:       n.Name,
-		NodeClass:  n.NodeClass,
-		Version:    n.Attributes["nomad.version"],
-		Drain:      n.Drain,
+		Address:               addr,
+		ID:                    n.ID,
+		Datacenter:            n.Datacenter,
+		Name:                  n.Name,
+		NodeClass:             n.NodeClass,
+		Version:               n.Attributes["nomad.version"],
+		Drain:                 n.Drain,
 		SchedulingEligibility: n.SchedulingEligibility,
 		Status:                n.Status,
 		StatusDescription:     n.StatusDescription,
@@ -2004,6 +2013,14 @@ type Job struct {
 	// all the task groups and tasks.
 	Constraints []*Constraint
 
+	// Affinities can be specified at the job level to express
+	// scheduling preferences that apply to all groups and tasks
+	Affinities []*Affinity
+
+	// Spread can be specified at the job level to express spreading
+	// allocations across a desired attribute, such as datacenter
+	Spreads []*Spread
+
 	// TaskGroups are the collections of task groups that this job needs
 	// to run. Each task group is an atomic unit of scheduling and placement.
 	TaskGroups []*TaskGroup
@@ -2112,6 +2129,7 @@ func (j *Job) Copy() *Job {
 	*nj = *j
 	nj.Datacenters = helper.CopySliceString(nj.Datacenters)
 	nj.Constraints = CopySliceConstraints(nj.Constraints)
+	nj.Affinities = CopySliceAffinities(nj.Affinities)
 
 	if j.TaskGroups != nil {
 		tgs := make([]*TaskGroup, len(nj.TaskGroups))
@@ -2165,6 +2183,31 @@ func (j *Job) Validate() error {
 		if err := constr.Validate(); err != nil {
 			outer := fmt.Errorf("Constraint %d validation failed: %s", idx+1, err)
 			mErr.Errors = append(mErr.Errors, outer)
+		}
+	}
+	if j.Type == JobTypeSystem {
+		if j.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range j.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
+	}
+
+	if j.Type == JobTypeSystem {
+		if j.Spreads != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have a spread stanza"))
+		}
+	} else {
+		for idx, spread := range j.Spreads {
+			if err := spread.Validate(); err != nil {
+				outer := fmt.Errorf("Spread %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
 		}
 	}
 
@@ -3315,6 +3358,14 @@ type TaskGroup struct {
 	// ReschedulePolicy is used to configure how the scheduler should
 	// retry failed allocations.
 	ReschedulePolicy *ReschedulePolicy
+
+	// Affinities can be specified at the task group level to express
+	// scheduling preferences.
+	Affinities []*Affinity
+
+	// Spread can be specified at the task group level to express spreading
+	// allocations across a desired attribute, such as datacenter
+	Spreads []*Spread
 }
 
 func (tg *TaskGroup) Copy() *TaskGroup {
@@ -3327,6 +3378,8 @@ func (tg *TaskGroup) Copy() *TaskGroup {
 	ntg.Constraints = CopySliceConstraints(ntg.Constraints)
 	ntg.RestartPolicy = ntg.RestartPolicy.Copy()
 	ntg.ReschedulePolicy = ntg.ReschedulePolicy.Copy()
+	ntg.Affinities = CopySliceAffinities(ntg.Affinities)
+	ntg.Spreads = CopySliceSpreads(ntg.Spreads)
 
 	if tg.Tasks != nil {
 		tasks := make([]*Task, len(ntg.Tasks))
@@ -3407,6 +3460,18 @@ func (tg *TaskGroup) Validate(j *Job) error {
 			mErr.Errors = append(mErr.Errors, outer)
 		}
 	}
+	if j.Type == JobTypeSystem {
+		if tg.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range tg.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
+	}
 
 	if tg.RestartPolicy != nil {
 		if err := tg.RestartPolicy.Validate(); err != nil {
@@ -3414,6 +3479,19 @@ func (tg *TaskGroup) Validate(j *Job) error {
 		}
 	} else {
 		mErr.Errors = append(mErr.Errors, fmt.Errorf("Task Group %v should have a restart policy", tg.Name))
+	}
+
+	if j.Type == JobTypeSystem {
+		if tg.Spreads != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have a spread stanza"))
+		}
+	} else {
+		for idx, spread := range tg.Spreads {
+			if err := spread.Validate(); err != nil {
+				outer := fmt.Errorf("Spread %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
 	}
 
 	if j.Type == JobTypeSystem {
@@ -3504,7 +3582,7 @@ func (tg *TaskGroup) Validate(j *Job) error {
 
 	// Validate the tasks
 	for _, task := range tg.Tasks {
-		if err := task.Validate(tg.EphemeralDisk); err != nil {
+		if err := task.Validate(tg.EphemeralDisk, j.Type); err != nil {
 			outer := fmt.Errorf("Task %s validation failed: %v", task.Name, err)
 			mErr.Errors = append(mErr.Errors, outer)
 		}
@@ -4007,6 +4085,10 @@ type Task struct {
 	// the particular task.
 	Constraints []*Constraint
 
+	// Affinities can be specified at the task level to express
+	// scheduling preferences
+	Affinities []*Affinity
+
 	// Resources is the resources needed by this task
 	Resources *Resources
 
@@ -4060,6 +4142,7 @@ func (t *Task) Copy() *Task {
 	}
 
 	nt.Constraints = CopySliceConstraints(nt.Constraints)
+	nt.Affinities = CopySliceAffinities(nt.Affinities)
 
 	nt.Vault = nt.Vault.Copy()
 	nt.Resources = nt.Resources.Copy()
@@ -4135,7 +4218,7 @@ func (t *Task) GoString() string {
 }
 
 // Validate is used to sanity check a task
-func (t *Task) Validate(ephemeralDisk *EphemeralDisk) error {
+func (t *Task) Validate(ephemeralDisk *EphemeralDisk, jobType string) error {
 	var mErr multierror.Error
 	if t.Name == "" {
 		mErr.Errors = append(mErr.Errors, errors.New("Missing task name"))
@@ -4186,6 +4269,19 @@ func (t *Task) Validate(ephemeralDisk *EphemeralDisk) error {
 		case ConstraintDistinctHosts, ConstraintDistinctProperty:
 			outer := fmt.Errorf("Constraint %d has disallowed Operand at task level: %s", idx+1, constr.Operand)
 			mErr.Errors = append(mErr.Errors, outer)
+		}
+	}
+
+	if jobType == JobTypeSystem {
+		if t.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range t.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
 		}
 	}
 
@@ -5165,6 +5261,8 @@ const (
 	ConstraintRegex            = "regexp"
 	ConstraintVersion          = "version"
 	ConstraintSetContains      = "set_contains"
+	ConstraintSetContainsAll   = "set_contains_all"
+	ConstraintSetContaintsAny  = "set_contains_any"
 )
 
 // Constraints are used to restrict placement options.
@@ -5249,6 +5347,180 @@ func (c *Constraint) Validate() error {
 	}
 
 	return mErr.ErrorOrNil()
+}
+
+// Affinity is used to score placement options based on a weight
+type Affinity struct {
+	LTarget string  // Left-hand target
+	RTarget string  // Right-hand target
+	Operand string  // Affinity operand (<=, <, =, !=, >, >=), set_contains_all, set_contains_any
+	Weight  float64 // Weight applied to nodes that match the affinity. Can be negative
+	str     string  // Memoized string
+}
+
+// Equal checks if two affinities are equal
+func (a *Affinity) Equal(o *Affinity) bool {
+	return a.LTarget == o.LTarget &&
+		a.RTarget == o.RTarget &&
+		a.Operand == o.Operand &&
+		a.Weight == o.Weight
+}
+
+func (a *Affinity) Copy() *Affinity {
+	if a == nil {
+		return nil
+	}
+	na := new(Affinity)
+	*na = *a
+	return na
+}
+
+func (a *Affinity) String() string {
+	if a.str != "" {
+		return a.str
+	}
+	a.str = fmt.Sprintf("%s %s %s %v", a.LTarget, a.Operand, a.RTarget, a.Weight)
+	return a.str
+}
+
+func (a *Affinity) Validate() error {
+	var mErr multierror.Error
+	if a.Operand == "" {
+		mErr.Errors = append(mErr.Errors, errors.New("Missing affinity operand"))
+	}
+
+	// Perform additional validation based on operand
+	switch a.Operand {
+	case ConstraintSetContainsAll, ConstraintSetContaintsAny, ConstraintSetContains:
+		if a.RTarget == "" {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Set contains operators require an RTarget"))
+		}
+	case ConstraintRegex:
+		if _, err := regexp.Compile(a.RTarget); err != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Regular expression failed to compile: %v", err))
+		}
+	case ConstraintVersion:
+		if _, err := version.NewConstraint(a.RTarget); err != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Version affinity is invalid: %v", err))
+		}
+	case "=", "==", "is", "!=", "not", "<", "<=", ">", ">=":
+		if a.RTarget == "" {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Operator %q requires an RTarget", a.Operand))
+		}
+	default:
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Unknown affinity operator %q", a.Operand))
+	}
+
+	// Ensure we have an LTarget
+	if a.LTarget == "" {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("No LTarget provided but is required"))
+	}
+
+	// Ensure that weight is between -100 and 100, and not zero
+	if a.Weight == 0 {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Affinity weight cannot be zero"))
+	}
+
+	if a.Weight > 100 || a.Weight < -100 {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Affinity weight must be within the range [-100,100]"))
+	}
+
+	return mErr.ErrorOrNil()
+}
+
+// Spread is used to specify desired distribution of allocations according to weight
+type Spread struct {
+	// Attribute is the node attribute used as the spread criteria
+	Attribute string
+
+	// Weight is the relative weight of this spread, useful when there are multiple
+	// spread and affinities
+	Weight int
+
+	// SpreadTarget is used to describe desired percentages for each attribute value
+	SpreadTarget []*SpreadTarget
+
+	// Memoized string representation
+	str string
+}
+
+func (s *Spread) Copy() *Spread {
+	if s == nil {
+		return nil
+	}
+	ns := new(Spread)
+	*ns = *s
+
+	ns.SpreadTarget = CopySliceSpreadTarget(s.SpreadTarget)
+	return ns
+}
+
+func (s *Spread) String() string {
+	if s.str != "" {
+		return s.str
+	}
+	s.str = fmt.Sprintf("%s %s %v", s.Attribute, s.SpreadTarget, s.Weight)
+	return s.str
+}
+
+func (s *Spread) Validate() error {
+	var mErr multierror.Error
+	if s.Attribute == "" {
+		mErr.Errors = append(mErr.Errors, errors.New("Missing spread attribute"))
+	}
+	if s.Weight <= 0 || s.Weight > 100 {
+		mErr.Errors = append(mErr.Errors, errors.New("Spread stanza must have a positive weight from 0 to 100"))
+	}
+	seen := make(map[string]struct{})
+	sumPercent := uint32(0)
+
+	for _, target := range s.SpreadTarget {
+		// Make sure there are no duplicates
+		_, ok := seen[target.Value]
+		if !ok {
+			seen[target.Value] = struct{}{}
+		} else {
+			mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Spread target value %q already defined", target.Value)))
+		}
+		if target.Percent < 0 || target.Percent > 100 {
+			mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Spread target percentage for value %q must be between 0 and 100", target.Value)))
+		}
+		sumPercent += target.Percent
+	}
+	if sumPercent > 100 {
+		mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Sum of spread target percentages must not be greater than 100%%; got %d%%", sumPercent)))
+	}
+	return mErr.ErrorOrNil()
+}
+
+// SpreadTarget is used to specify desired percentages for each attribute value
+type SpreadTarget struct {
+	// Value is a single attribute value, like "dc1"
+	Value string
+
+	// Percent is the desired percentage of allocs
+	Percent uint32
+
+	// Memoized string representation
+	str string
+}
+
+func (s *SpreadTarget) Copy() *SpreadTarget {
+	if s == nil {
+		return nil
+	}
+
+	ns := new(SpreadTarget)
+	*ns = *s
+	return ns
+}
+
+func (s *SpreadTarget) String() string {
+	if s.str != "" {
+		return s.str
+	}
+	s.str = fmt.Sprintf("%q %v%%", s.Value, s.Percent)
+	return s.str
 }
 
 // EphemeralDisk is an ephemeral disk object
@@ -6021,6 +6293,10 @@ func (a *Allocation) NextRescheduleTime() (time.Time, bool) {
 // It is calculated according to the delay function and previous reschedule attempts.
 func (a *Allocation) NextDelay() time.Duration {
 	policy := a.ReschedulePolicy()
+	// Can be nil if the task group was updated to remove its reschedule policy
+	if policy == nil {
+		return 0
+	}
 	delayDur := policy.Delay
 	if a.RescheduleTracker == nil || a.RescheduleTracker.Events == nil || len(a.RescheduleTracker.Events) == 0 {
 		return delayDur
@@ -6226,7 +6502,19 @@ type AllocMetric struct {
 
 	// Scores is the scores of the final few nodes remaining
 	// for placement. The top score is typically selected.
+	// Deprecated: Replaced by ScoreMetaData in Nomad 0.9
 	Scores map[string]float64
+
+	// ScoreMetaData is a slice of top scoring nodes displayed in the CLI
+	ScoreMetaData []*NodeScoreMeta
+
+	// nodeScoreMeta is used to keep scores for a single node id. It is cleared out after
+	// we receive normalized score during the last step of the scoring stack.
+	nodeScoreMeta *NodeScoreMeta
+
+	// topScores is used to maintain a heap of the top K nodes with
+	// the highest normalized score
+	topScores *kheap.ScoreHeap
 
 	// AllocationTime is a measure of how long the allocation
 	// attempt took. This can affect performance and SLAs.
@@ -6252,6 +6540,7 @@ func (a *AllocMetric) Copy() *AllocMetric {
 	na.DimensionExhausted = helper.CopyMapStringInt(na.DimensionExhausted)
 	na.QuotaExhausted = helper.CopySliceString(na.QuotaExhausted)
 	na.Scores = helper.CopyMapStringFloat64(na.Scores)
+	na.ScoreMetaData = CopySliceNodeScoreMeta(na.ScoreMetaData)
 	return na
 }
 
@@ -6299,12 +6588,77 @@ func (a *AllocMetric) ExhaustQuota(dimensions []string) {
 	a.QuotaExhausted = append(a.QuotaExhausted, dimensions...)
 }
 
+// ScoreNode is used to gather top K scoring nodes in a heap
 func (a *AllocMetric) ScoreNode(node *Node, name string, score float64) {
-	if a.Scores == nil {
-		a.Scores = make(map[string]float64)
+	// Create nodeScoreMeta lazily if its the first time or if its a new node
+	if a.nodeScoreMeta == nil || a.nodeScoreMeta.NodeID != node.ID {
+		a.nodeScoreMeta = &NodeScoreMeta{
+			NodeID: node.ID,
+			Scores: make(map[string]float64),
+		}
 	}
-	key := fmt.Sprintf("%s.%s", node.ID, name)
-	a.Scores[key] = score
+	if name == NormScorerName {
+		a.nodeScoreMeta.NormScore = score
+		// Once we have the normalized score we can push to the heap
+		// that tracks top K by normalized score
+
+		// Create the heap if its not there already
+		if a.topScores == nil {
+			a.topScores = kheap.NewScoreHeap(MaxRetainedNodeScores)
+		}
+		heap.Push(a.topScores, a.nodeScoreMeta)
+
+		// Clear out this entry because its now in the heap
+		a.nodeScoreMeta = nil
+	} else {
+		a.nodeScoreMeta.Scores[name] = score
+	}
+}
+
+// PopulateScoreMetaData populates a map of scorer to scoring metadata
+// The map is populated by popping elements from a heap of top K scores
+// maintained per scorer
+func (a *AllocMetric) PopulateScoreMetaData() {
+	if a.topScores == nil {
+		return
+	}
+
+	if a.ScoreMetaData == nil {
+		a.ScoreMetaData = make([]*NodeScoreMeta, a.topScores.Len())
+	}
+	heapItems := a.topScores.GetItemsReverse()
+	for i, item := range heapItems {
+		a.ScoreMetaData[i] = item.(*NodeScoreMeta)
+	}
+}
+
+// NodeScoreMeta captures scoring meta data derived from
+// different scoring factors.
+type NodeScoreMeta struct {
+	NodeID    string
+	Scores    map[string]float64
+	NormScore float64
+}
+
+func (s *NodeScoreMeta) Copy() *NodeScoreMeta {
+	if s == nil {
+		return nil
+	}
+	ns := new(NodeScoreMeta)
+	*ns = *s
+	return ns
+}
+
+func (s *NodeScoreMeta) String() string {
+	return fmt.Sprintf("%s %f %v", s.NodeID, s.NormScore, s.Scores)
+}
+
+func (s *NodeScoreMeta) Score() float64 {
+	return s.NormScore
+}
+
+func (s *NodeScoreMeta) Data() interface{} {
+	return s
 }
 
 // AllocDeploymentStatus captures the status of the allocation as part of the
@@ -6397,6 +6751,7 @@ const (
 	EvalTriggerFailedFollowUp    = "failed-follow-up"
 	EvalTriggerMaxPlans          = "max-plan-attempts"
 	EvalTriggerRetryFailedAlloc  = "alloc-failure"
+	EvalTriggerQueuedAllocs      = "queued-allocs"
 )
 
 const (
@@ -6528,8 +6883,11 @@ type Evaluation struct {
 	LeaderACL string
 
 	// SnapshotIndex is the Raft index of the snapshot used to process the
-	// evaluation. As such it will only be set once it has gone through the
-	// scheduler.
+	// evaluation. The index will either be set when it has gone through the
+	// scheduler or if a blocked evaluation is being created. The index is set
+	// in this case so we can determine if an early unblocking is required since
+	// capacity has changed since the evaluation was created. This can result in
+	// the SnapshotIndex being less than the CreateIndex.
 	SnapshotIndex uint64
 
 	// Raft Indexes
@@ -6659,7 +7017,7 @@ func (e *Evaluation) CreateBlockedEval(classEligibility map[string]bool,
 		Namespace:            e.Namespace,
 		Priority:             e.Priority,
 		Type:                 e.Type,
-		TriggeredBy:          e.TriggeredBy,
+		TriggeredBy:          EvalTriggerQueuedAllocs,
 		JobID:                e.JobID,
 		JobModifyIndex:       e.JobModifyIndex,
 		Status:               EvalStatusBlocked,
@@ -6784,6 +7142,10 @@ func (p *Plan) PopUpdate(alloc *Allocation) {
 func (p *Plan) AppendAlloc(alloc *Allocation) {
 	node := alloc.NodeID
 	existing := p.NodeAllocation[node]
+
+	// Normalize the job
+	alloc.Job = nil
+
 	p.NodeAllocation[node] = append(existing, alloc)
 }
 

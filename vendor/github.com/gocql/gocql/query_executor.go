@@ -10,6 +10,7 @@ type ExecutableQuery interface {
 	retryPolicy() RetryPolicy
 	GetRoutingKey() ([]byte, error)
 	Keyspace() string
+	Cancel()
 	RetryableQuery
 }
 

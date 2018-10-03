@@ -6,6 +6,10 @@ response body, for clients which support it. Although it's usually simpler to
 leave that to a reverse proxy (like nginx or Varnish), this package is useful
 when that's undesirable.
 
+## Install
+```bash
+go get -u github.com/NYTimes/gziphandler
+```
 
 ## Usage
 

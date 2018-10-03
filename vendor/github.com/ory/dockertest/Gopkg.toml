@@ -67,7 +67,7 @@
 
 [[constraint]]
   name = "github.com/opencontainers/runc"
-  version = "0.1.1"
+  version = "1.0.0-rc5"
 
 [[constraint]]
   name = "github.com/pkg/errors"
