@@ -134,7 +134,7 @@ $ curl \
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity/index.html.md) store. This currently only
+[Identity](/docs/secrets/identity/index.html) store. This currently only
 configures how identity aliases are generated when using the `iam` auth method.
 
 | Method   | Path                         | Produces               |
