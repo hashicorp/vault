@@ -2,11 +2,13 @@ package hclog
 
 import (
 	"bufio"
+	"bytes"
 	"encoding"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"runtime"
 	"sort"
 	"strconv"
@@ -20,8 +22,8 @@ var (
 	_levelToBracket = map[Level]string{
 		Debug: "[DEBUG]",
 		Trace: "[TRACE]",
-		Info:  "[INFO ]",
-		Warn:  "[WARN ]",
+		Info:  "[INFO] ",
+		Warn:  "[WARN] ",
 		Error: "[ERROR]",
 	}
 )
@@ -148,7 +150,7 @@ func (z *intLogger) log(t time.Time, level Level, msg string, args ...interface{
 	if ok {
 		z.w.WriteString(s)
 	} else {
-		z.w.WriteString("[UNKN ]")
+		z.w.WriteString("[?????]")
 	}
 
 	if z.caller {
@@ -189,7 +191,10 @@ func (z *intLogger) log(t time.Time, level Level, msg string, args ...interface{
 
 	FOR:
 		for i := 0; i < len(args); i = i + 2 {
-			var val string
+			var (
+				val string
+				raw bool
+			)
 
 			switch st := args[i+1].(type) {
 			case string:
@@ -220,14 +225,20 @@ func (z *intLogger) log(t time.Time, level Level, msg string, args ...interface{
 			case Format:
 				val = fmt.Sprintf(st[0].(string), st[1:]...)
 			default:
-				val = fmt.Sprintf("%v", st)
+				v := reflect.ValueOf(st)
+				if v.Kind() == reflect.Slice {
+					val = z.renderSlice(v)
+					raw = true
+				} else {
+					val = fmt.Sprintf("%v", st)
+				}
 			}
 
 			z.w.WriteByte(' ')
 			z.w.WriteString(args[i].(string))
 			z.w.WriteByte('=')
 
-			if strings.ContainsAny(val, " \t\n\r") {
+			if !raw && strings.ContainsAny(val, " \t\n\r") {
 				z.w.WriteByte('"')
 				z.w.WriteString(val)
 				z.w.WriteByte('"')
@@ -242,6 +253,45 @@ func (z *intLogger) log(t time.Time, level Level, msg string, args ...interface{
 	if stacktrace != "" {
 		z.w.WriteString(string(stacktrace))
 	}
+}
+
+func (z *intLogger) renderSlice(v reflect.Value) string {
+	var buf bytes.Buffer
+
+	buf.WriteRune('[')
+
+	for i := 0; i < v.Len(); i++ {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+
+		sv := v.Index(i)
+
+		var val string
+
+		switch sv.Kind() {
+		case reflect.String:
+			val = sv.String()
+		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+			val = strconv.FormatInt(sv.Int(), 10)
+		case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			val = strconv.FormatUint(sv.Uint(), 10)
+		default:
+			val = fmt.Sprintf("%v", sv.Interface())
+		}
+
+		if strings.ContainsAny(val, " \t\n\r") {
+			buf.WriteByte('"')
+			buf.WriteString(val)
+			buf.WriteByte('"')
+		} else {
+			buf.WriteString(val)
+		}
+	}
+
+	buf.WriteRune(']')
+
+	return buf.String()
 }
 
 // JSON logging function

@@ -10,7 +10,6 @@ import (
 )
 
 const maxTok = 2048 // Largest token we can return.
-const maxUint16 = 1<<16 - 1
 
 // Tokinize a RFC 1035 zone file. The tokenizer will normalize it:
 // * Add ownernames if they are left blank;
@@ -80,9 +79,9 @@ type lex struct {
 	length     int    // length of the token
 	err        bool   // when true, token text has lexer error
 	value      uint8  // value: zString, _BLANK, etc.
+	torc       uint16 // type or class as parsed in the lexer, we only need to look this up in the grammar
 	line       int    // line in the file
 	column     int    // column in the file
-	torc       uint16 // type or class as parsed in the lexer, we only need to look this up in the grammar
 	comment    string // any comment text seen
 }
 
@@ -209,10 +208,9 @@ func parseZone(r io.Reader, origin, f string, defttl *ttlState, t chan *Token, i
 	var prevName string
 	for l := range c {
 		// Lexer spotted an error already
-		if l.err == true {
+		if l.err {
 			t <- &Token{Error: &ParseError{f, l.token, l}}
 			return
-
 		}
 		switch st {
 		case zExpectOwnerDir:
@@ -639,7 +637,6 @@ func zlexer(s *scan, c chan lex) {
 			if quote {
 				str[stri] = x
 				stri++
-				break
 			}
 			// discard if outside of quotes
 		case '\n':

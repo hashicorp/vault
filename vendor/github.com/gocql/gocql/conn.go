@@ -124,8 +124,10 @@ var TimeoutLimit int64 = 0
 // queries, but users are usually advised to use a more reliable, higher
 // level API.
 type Conn struct {
-	conn          net.Conn
-	r             *bufio.Reader
+	conn net.Conn
+	r    *bufio.Reader
+	w    io.Writer
+
 	timeout       time.Duration
 	cfg           *ConnConfig
 	frameObserver FrameHeaderObserver
@@ -173,6 +175,9 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 	dialer := &net.Dialer{
 		Timeout: cfg.ConnectTimeout,
 	}
+	if cfg.Keepalive > 0 {
+		dialer.KeepAlive = cfg.Keepalive
+	}
 
 	// TODO(zariel): handle ipv6 zone
 	addr := (&net.TCPAddr{IP: ip, Port: port}).String()
@@ -205,10 +210,10 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		streams:       streams.New(cfg.ProtoVersion),
 		host:          host,
 		frameObserver: s.frameObserver,
-	}
-
-	if cfg.Keepalive > 0 {
-		c.setKeepalive(cfg.Keepalive)
+		w: &deadlineWriter{
+			w:       conn,
+			timeout: cfg.Timeout,
+		},
 	}
 
 	var (
@@ -216,9 +221,9 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		cancel func()
 	)
 	if cfg.ConnectTimeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), cfg.ConnectTimeout)
+		ctx, cancel = context.WithTimeout(context.TODO(), cfg.ConnectTimeout)
 	} else {
-		ctx, cancel = context.WithCancel(context.Background())
+		ctx, cancel = context.WithCancel(context.TODO())
 	}
 	defer cancel()
 
@@ -258,17 +263,24 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		return nil, errors.New("gocql: no response to connection startup within timeout")
 	}
 
+	// dont coalesce startup frames
+	if s.cfg.WriteCoalesceWaitTime > 0 {
+		w := &writeCoalescer{
+			fcond: sync.NewCond(&sync.Mutex{}),
+			cond:  sync.NewCond(&sync.Mutex{}),
+			w:     c.w,
+		}
+		go w.writeFlusher(s.cfg.WriteCoalesceWaitTime, c.quit)
+		c.w = w
+	}
+
 	go c.serve()
 
 	return c, nil
 }
 
-func (c *Conn) Write(p []byte) (int, error) {
-	if c.timeout > 0 {
-		c.conn.SetWriteDeadline(time.Now().Add(c.timeout))
-	}
-
-	return c.conn.Write(p)
+func (c *Conn) Write(p []byte) (n int, err error) {
+	return c.w.Write(p)
 }
 
 func (c *Conn) Read(p []byte) (n int, err error) {
@@ -473,10 +485,10 @@ func (c *Conn) recv() error {
 
 	if c.frameObserver != nil {
 		c.frameObserver.ObserveFrameHeader(context.Background(), ObservedFrameHeader{
-			Version: byte(head.version),
+			Version: protoVersion(head.version),
 			Flags:   head.flags,
 			Stream:  int16(head.stream),
-			Opcode:  byte(head.op),
+			Opcode:  frameOp(head.op),
 			Length:  int32(head.length),
 			Start:   headStartTime,
 			End:     headEndTime,
@@ -583,6 +595,110 @@ type callReq struct {
 	streamID int           // current stream in use
 
 	timer *time.Timer
+}
+
+type deadlineWriter struct {
+	w interface {
+		SetWriteDeadline(time.Time) error
+		io.Writer
+	}
+	timeout time.Duration
+}
+
+func (c *deadlineWriter) Write(p []byte) (int, error) {
+	if c.timeout > 0 {
+		c.w.SetWriteDeadline(time.Now().Add(c.timeout))
+	}
+	return c.w.Write(p)
+}
+
+type writeCoalescer struct {
+	w io.Writer
+
+	// fcond waits for a new write to start the flush loop
+	fcond   *sync.Cond
+	running bool
+
+	// cond waits for the buffer to be flushed
+	cond    *sync.Cond
+	buffers net.Buffers
+
+	// result of the write
+	err error
+}
+
+func (w *writeCoalescer) flush() {
+	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
+
+	if len(w.buffers) == 0 {
+		return
+	}
+
+	// Given we are going to do a fanout n is useless and according to
+	// the docs WriteTo should return 0 and err or bytes written and
+	// no error.
+	_, w.err = w.buffers.WriteTo(w.w)
+	if w.err != nil {
+		w.buffers = nil
+	}
+	w.cond.Broadcast()
+}
+
+func (w *writeCoalescer) Write(p []byte) (int, error) {
+	// TODO: use atomics for this?
+	w.fcond.L.Lock()
+	if !w.running {
+		w.running = true
+		w.fcond.Broadcast()
+	}
+	w.fcond.L.Unlock()
+
+	w.cond.L.Lock()
+	w.buffers = append(w.buffers, p)
+	for len(w.buffers) != 0 {
+		w.cond.Wait()
+	}
+
+	err := w.err
+	w.cond.L.Unlock()
+
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (w *writeCoalescer) writeFlusher(interval time.Duration, quit chan struct{}) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	defer w.flush()
+
+	if !timer.Stop() {
+		<-timer.C
+	}
+
+	for {
+		// wait for a write to start the flush loop
+		w.fcond.L.Lock()
+		for !w.running {
+			w.fcond.Wait()
+		}
+		w.fcond.L.Unlock()
+		timer.Reset(interval)
+
+		select {
+		case <-quit:
+			return
+		case <-timer.C:
+		}
+
+		w.fcond.L.Lock()
+		w.flush()
+
+		w.running = false
+		w.fcond.L.Unlock()
+	}
 }
 
 func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*framer, error) {
@@ -722,6 +838,9 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 	prep := &writePrepareFrame{
 		statement: stmt,
 	}
+	if c.version > protoVersion4 {
+		prep.keyspace = c.currentKeyspace
+	}
 
 	framer, err := c.exec(ctx, prep, tracer)
 	if err != nil {
@@ -806,6 +925,9 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 	if qry.pageSize > 0 {
 		params.pageSize = qry.pageSize
 	}
+	if c.version > protoVersion4 {
+		params.keyspace = c.currentKeyspace
+	}
 
 	var (
 		frame frameWriter
@@ -854,13 +976,15 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		params.skipMeta = !(c.session.cfg.DisableSkipMetadata || qry.disableSkipMetadata)
 
 		frame = &writeExecuteFrame{
-			preparedID: info.id,
-			params:     params,
+			preparedID:    info.id,
+			params:        params,
+			customPayload: qry.customPayload,
 		}
 	} else {
 		frame = &writeQueryFrame{
-			statement: qry.stmt,
-			params:    params,
+			statement:     qry.stmt,
+			params:        params,
+			customPayload: qry.customPayload,
 		}
 	}
 
@@ -1001,6 +1125,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 		serialConsistency:     batch.serialCons,
 		defaultTimestamp:      batch.defaultTimestamp,
 		defaultTimestampValue: batch.defaultTimestampValue,
+		customPayload:         batch.CustomPayload,
 	}
 
 	stmts := make(map[string]string, len(batch.Entries))
@@ -1091,19 +1216,6 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 	default:
 		return &Iter{err: NewErrProtocol("Unknown type in response to batch statement: %s", x), framer: framer}
 	}
-}
-
-func (c *Conn) setKeepalive(d time.Duration) error {
-	if tc, ok := c.conn.(*net.TCPConn); ok {
-		err := tc.SetKeepAlivePeriod(d)
-		if err != nil {
-			return err
-		}
-
-		return tc.SetKeepAlive(true)
-	}
-
-	return nil
 }
 
 func (c *Conn) query(statement string, values ...interface{}) (iter *Iter) {

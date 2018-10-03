@@ -109,9 +109,19 @@ type AllocationMetric struct {
 	ClassExhausted     map[string]int
 	DimensionExhausted map[string]int
 	QuotaExhausted     []string
-	Scores             map[string]float64
-	AllocationTime     time.Duration
-	CoalescedFailures  int
+	// Deprecated, replaced with ScoreMetaData
+	Scores            map[string]float64
+	AllocationTime    time.Duration
+	CoalescedFailures int
+	ScoreMetaData     []*NodeScoreMeta
+}
+
+// NodeScoreMeta is used to serialize node scoring metadata
+// displayed in the CLI during verbose mode
+type NodeScoreMeta struct {
+	NodeID    string
+	Scores    map[string]float64
+	NormScore float64
 }
 
 // AllocationListStub is used to return a subset of an allocation

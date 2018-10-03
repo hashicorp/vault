@@ -77,7 +77,9 @@ func (request *RoaRequest) buildQueries(needParamEncode bool) string {
 	// append urlBuilder
 	urlBuilder := bytes.Buffer{}
 	urlBuilder.WriteString(path)
-	urlBuilder.WriteString("?")
+	if len(queryKeys) > 0 {
+		urlBuilder.WriteString("?")
+	}
 	for i := 0; i < len(queryKeys); i++ {
 		queryKey := queryKeys[i]
 		urlBuilder.WriteString(queryKey)

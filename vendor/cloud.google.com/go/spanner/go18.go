@@ -19,6 +19,8 @@ package spanner
 import (
 	"fmt"
 
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
 	"golang.org/x/net/context"
 )
@@ -57,3 +59,25 @@ func tracePrintf(ctx context.Context, attrMap map[string]interface{}, format str
 	}
 	trace.FromContext(ctx).Annotatef(attrs, format, args...)
 }
+
+const statsPrefix = "cloud.google.com/go/spanner/"
+
+func recordStat(ctx context.Context, m *stats.Int64Measure, n int64) {
+	stats.Record(ctx, m.M(n))
+}
+
+var (
+	// OpenSessionCount is a measure of the number of sessions currently opened.
+	// It is EXPERIMENTAL and subject to change or removal without notice.
+	OpenSessionCount = stats.Int64(statsPrefix+"open_session_count", "Number of sessions currently opened",
+		stats.UnitDimensionless)
+
+	// OpenSessionCountView is a view of the last value of OpenSessionCount.
+	// It is EXPERIMENTAL and subject to change or removal without notice.
+	OpenSessionCountView = &view.View{
+		Name:        OpenSessionCount.Name(),
+		Description: OpenSessionCount.Description(),
+		Measure:     OpenSessionCount,
+		Aggregation: view.LastValue(),
+	}
+)

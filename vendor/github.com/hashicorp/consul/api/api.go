@@ -405,6 +405,29 @@ func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 	return tlsClientConfig, nil
 }
 
+func (c *Config) GenerateEnv() []string {
+	env := make([]string, 0, 10)
+
+	env = append(env,
+		fmt.Sprintf("%s=%s", HTTPAddrEnvName, c.Address),
+		fmt.Sprintf("%s=%s", HTTPTokenEnvName, c.Token),
+		fmt.Sprintf("%s=%t", HTTPSSLEnvName, c.Scheme == "https"),
+		fmt.Sprintf("%s=%s", HTTPCAFile, c.TLSConfig.CAFile),
+		fmt.Sprintf("%s=%s", HTTPCAPath, c.TLSConfig.CAPath),
+		fmt.Sprintf("%s=%s", HTTPClientCert, c.TLSConfig.CertFile),
+		fmt.Sprintf("%s=%s", HTTPClientKey, c.TLSConfig.KeyFile),
+		fmt.Sprintf("%s=%s", HTTPTLSServerName, c.TLSConfig.Address),
+		fmt.Sprintf("%s=%t", HTTPSSLVerifyEnvName, !c.TLSConfig.InsecureSkipVerify))
+
+	if c.HttpAuth != nil {
+		env = append(env, fmt.Sprintf("%s=%s:%s", HTTPAuthEnvName, c.HttpAuth.Username, c.HttpAuth.Password))
+	} else {
+		env = append(env, fmt.Sprintf("%s=", HTTPAuthEnvName))
+	}
+
+	return env
+}
+
 // Client provides a client to the Consul API
 type Client struct {
 	config Config

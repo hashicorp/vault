@@ -124,4 +124,8 @@ Try cleaning up the images with [docker-cleanup-volumes](https://github.com/chad
 ### Removing old containers
 
 Sometimes container clean up fails. Check out
-[this stackoverflow question](http://stackoverflow.com/questions/21398087/how-to-delete-dockers-images) on how to fix this.
+[this stackoverflow question](http://stackoverflow.com/questions/21398087/how-to-delete-dockers-images) on how to fix this. You may also set an absolute lifetime on containers: 
+
+```go
+resource.Expire(60) // Tell docker to hard kill the container in 60 seconds
+```
