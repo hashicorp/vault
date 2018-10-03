@@ -17,7 +17,6 @@ module('Integration | Component | license info', function(hooks) {
   });
 
   hooks.afterEach(function() {
-    this.owner.lookup('service:csp-event').remove();
     component.removeContext();
   });
 
