@@ -209,7 +209,7 @@ updated with the new attributes.
   prohibited otherwise. This is a comma-separated string or JSON array.
 
 - `policy_arns` `(list: [])` – Specifies the ARNs of the AWS managed policies to
-  be attached to IAM users when they are requsted. Valid only when
+  be attached to IAM users when they are requested. Valid only when
   `credential_type` is `iam_user`. When `credential_type` is `iam_user`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
