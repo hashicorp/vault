@@ -53,7 +53,7 @@ Additionally, Vault requires the following authentication information.
 - `username` `(string: <required>)` – Specifies the MySQL username to connect to
   the database.
 
-- `password` `(string: <required)` – Specifies the MySQL password to connect to
+- `password` `(string: <required>)` – Specifies the MySQL password to connect to
   the database.
 
 ### High Availability Parameters
