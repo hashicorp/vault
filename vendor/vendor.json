@@ -2207,6 +2207,12 @@
 			"revisionTime": "2018-10-03T14:42:16Z"
 		},
 		{
+			"checksumSHA1": "ZrqOBeBTSsupblYMeANSpd3xyhQ=",
+			"path": "go.etcd.io/etcd/clientv3/concurrency",
+			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
+			"revisionTime": "2018-10-03T14:42:16Z"
+		},
+		{
 			"checksumSHA1": "SDdAjoQeeV8tEDv05QZ7/Yv79CI=",
 			"path": "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes",
 			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
@@ -2251,6 +2257,12 @@
 		{
 			"checksumSHA1": "yl9eTlZ74Ixe7WxHQaO6rWJq+tU=",
 			"path": "go.etcd.io/etcd/pkg/tlsutil",
+			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
+			"revisionTime": "2018-10-03T14:42:16Z"
+		},
+		{
+			"checksumSHA1": "YQD4i+Li76ogXqgKS62MJVf1agE=",
+			"path": "go.etcd.io/etcd/pkg/transport",
 			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
 			"revisionTime": "2018-10-03T14:42:16Z"
 		},
