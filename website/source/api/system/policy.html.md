@@ -59,7 +59,8 @@ $ curl \
 
 ```json
 {
-  "policy": "path \"secret/foo\" {..."
+  "name": "my-policy",
+  "rules": "path \"secret/*\"...
 }
 ```
 

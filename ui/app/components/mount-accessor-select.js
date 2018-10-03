@@ -1,10 +1,9 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 
-const { inject } = Ember;
-
-export default Ember.Component.extend({
-  store: inject.service(),
+export default Component.extend({
+  store: service(),
 
   // Public API
   //value for the external mount selector

@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { hash } from 'rsvp';
+import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   beforeModel() {
     const params = this.paramsFor(this.routeName);
     let policyType = this.policyType();
@@ -12,7 +13,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
 
   model(params) {
     let type = this.policyType();
-    return Ember.RSVP.hash({
+    return hash({
       policy: this.store.findRecord(`policy/${type}`, params.policy_name),
       capabilities: this.store.findRecord('capabilities', `sys/policies/${type}/${params.policy_name}`),
     });

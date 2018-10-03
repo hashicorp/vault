@@ -1,31 +1,25 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
+import authPage from 'vault/tests/pages/auth';
 
-moduleForAcceptance('Acceptance | console', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | console', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('refresh reloads the current route\'s data', function(assert) {
-  let numEngines;
-  enginesPage.visit();
-  andThen(() => {
-    numEngines = enginesPage.rows().count;
-    enginesPage.consoleToggle();
+  hooks.beforeEach(function() {
+    return authPage.login();
+  });
+
+  test("refresh reloads the current route's data", async function(assert) {
+    await enginesPage.visit();
+    let numEngines = enginesPage.rows.length;
+    await enginesPage.consoleToggle();
     let now = Date.now();
-    [1, 2, 3].forEach(num => {
+    for (let num of [1, 2, 3]) {
       let inputString = `write sys/mounts/${now + num} type=kv`;
-      enginesPage.console.consoleInput(inputString);
-      enginesPage.console.enter();
-    });
-  });
-  andThen(() => {
-    enginesPage.console.consoleInput('refresh');
-    enginesPage.console.enter();
-  });
-  andThen(() => {
-    assert.equal(enginesPage.rows().count, numEngines + 3, 'new engines were added to the page');
+      await enginesPage.console.runCommands(inputString);
+    }
+    await enginesPage.console.runCommands('refresh');
+    assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
 });

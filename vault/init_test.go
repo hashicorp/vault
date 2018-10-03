@@ -15,13 +15,13 @@ import (
 func TestCore_Init(t *testing.T) {
 	c, conf := testCore_NewTestCore(t, nil)
 	testCore_Init_Common(t, c, conf, &SealConfig{SecretShares: 5, SecretThreshold: 3}, nil)
-
-	c, conf = testCore_NewTestCore(t, NewTestSeal(t, nil))
-	bc, _ := TestSealDefConfigs()
-	testCore_Init_Common(t, c, conf, bc, nil)
 }
 
 func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
+	return testCore_NewTestCoreLicensing(t, seal, nil)
+}
+
+func testCore_NewTestCoreLicensing(t *testing.T, seal Seal, licensingConfig *LicensingConfig) (*Core, *CoreConfig) {
 	logger := logging.NewVaultLogger(log.Trace)
 
 	inm, err := inmem.NewInmem(nil, logger)
@@ -34,7 +34,8 @@ func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 		LogicalBackends: map[string]logical.Factory{
 			"kv": LeasedPassthroughBackendFactory,
 		},
-		Seal: seal,
+		Seal:            seal,
+		LicensingConfig: licensingConfig,
 	}
 	c, err := NewCore(conf)
 	if err != nil {

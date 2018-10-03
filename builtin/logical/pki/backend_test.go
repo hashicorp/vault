@@ -424,14 +424,6 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		}
 	}
 
-	// 40 seconds since we add 30 second slack for clock skew
-	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 40 {
-		return nil, fmt.Errorf("validity period starts out of range")
-	}
-	if !cert.NotBefore.Before(time.Now().Add(-10 * time.Second)) {
-		return nil, fmt.Errorf("validity period not far enough in the past")
-	}
-
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
 		return nil, fmt.Errorf("certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
@@ -976,6 +968,29 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	getNotBeforeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			actualDiff := time.Now().Sub(cert.NotBefore)
+			certRoleDiff := role.NotBeforeDuration - actualDiff
+			// These times get truncated, so give a 1 second buffer on each side
+			if certRoleDiff > -1*time.Second && certRoleDiff < 1*time.Second {
+				return nil
+			}
+			return fmt.Errorf("validity period out of range diff: %v", certRoleDiff)
+		}
+	}
+
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
 	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
@@ -1323,6 +1338,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.PostalCode = []string{"f00", "b4r"}
 		addTests(getPostalCodeCheck(roleVals))
+	}
+	// NotBefore tests
+	{
+		roleVals.NotBeforeDuration = 10 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 30 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 0
 	}
 	// IP SAN tests
 	{
@@ -2573,7 +2598,6 @@ func setCerts() {
 		DNSNames:              []string{"root.localhost"},
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 		SerialNumber:          big.NewInt(mathrand.Int63()),
-		NotBefore:             time.Now().Add(-30 * time.Second),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
 		IsCA:                  true,

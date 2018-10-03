@@ -459,3 +459,59 @@ func TestStrUtil_MergeSlices(t *testing.T) {
 		t.Fatalf("expected %v, got %v", expect, res)
 	}
 }
+
+func TestDifference(t *testing.T) {
+	testCases := []struct {
+		Name           string
+		SetA           []string
+		SetB           []string
+		Lowercase      bool
+		ExpectedResult []string
+	}{
+		{
+			Name:           "case_sensitive",
+			SetA:           []string{"a", "b", "c"},
+			SetB:           []string{"b", "c"},
+			Lowercase:      false,
+			ExpectedResult: []string{"a"},
+		},
+		{
+			Name:           "case_insensitive",
+			SetA:           []string{"a", "B", "c"},
+			SetB:           []string{"b", "C"},
+			Lowercase:      true,
+			ExpectedResult: []string{"a"},
+		},
+		{
+			Name:           "no_match",
+			SetA:           []string{"a", "b", "c"},
+			SetB:           []string{"d"},
+			Lowercase:      false,
+			ExpectedResult: []string{"a", "b", "c"},
+		},
+		{
+			Name:           "empty_set_a",
+			SetA:           []string{},
+			SetB:           []string{"d", "e"},
+			Lowercase:      false,
+			ExpectedResult: []string{},
+		},
+		{
+			Name:           "empty_set_b",
+			SetA:           []string{"a", "b"},
+			SetB:           []string{},
+			Lowercase:      false,
+			ExpectedResult: []string{"a", "b"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			actualResult := Difference(tc.SetA, tc.SetB, tc.Lowercase)
+
+			if !reflect.DeepEqual(actualResult, tc.ExpectedResult) {
+				t.Fatalf("expected %v, got %v", tc.ExpectedResult, actualResult)
+			}
+		})
+	}
+}

@@ -37,8 +37,9 @@ var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
 
-// This is used for enterprise replication information
 type ReplicatedClusters struct {
+	DR          *ReplicatedCluster
+	Performance *ReplicatedCluster
 }
 
 // This can be one of a few key types so the different params may or may not be filled
@@ -206,7 +207,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 	if c.ha != nil {
 		// Create a private key
 		if c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey) == nil {
-			c.logger.Trace("generating cluster private key")
+			c.logger.Debug("generating cluster private key")
 			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 			if err != nil {
 				c.logger.Error("failed to generate local cluster key", "error", err)
@@ -339,92 +340,15 @@ func (c *Core) stopClusterListener() {
 
 // ClusterTLSConfig generates a TLS configuration based on the local/replicated
 // cluster key and cert.
-func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClusters) (*tls.Config, error) {
+func (c *Core) ClusterTLSConfig(ctx context.Context, repClusters *ReplicatedClusters, perfStandbyCluster *ReplicatedCluster) (*tls.Config, error) {
 	// Using lookup functions allows just-in-time lookup of the current state
 	// of clustering as connections come and go
 
-	serverLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		switch {
-		default:
-			currCert := c.localClusterCert.Load().([]byte)
-			if len(currCert) == 0 {
-				return nil, fmt.Errorf("got forwarding connection but no local cert")
-			}
-
-			localCert := make([]byte, len(currCert))
-			copy(localCert, currCert)
-
-			return &tls.Certificate{
-				Certificate: [][]byte{localCert},
-				PrivateKey:  c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
-				Leaf:        c.localClusterParsedCert.Load().(*x509.Certificate),
-			}, nil
-		}
-	}
-
-	clientLookup := func(requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-
-		if len(requestInfo.AcceptableCAs) != 1 {
-			return nil, fmt.Errorf("expected only a single acceptable CA")
-		}
-
-		currCert := c.localClusterCert.Load().([]byte)
-		if len(currCert) == 0 {
-			return nil, fmt.Errorf("forwarding connection client but no local cert")
-		}
-
-		localCert := make([]byte, len(currCert))
-		copy(localCert, currCert)
-
-		return &tls.Certificate{
-			Certificate: [][]byte{localCert},
-			PrivateKey:  c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
-			Leaf:        c.localClusterParsedCert.Load().(*x509.Certificate),
-		}, nil
-	}
-
-	serverConfigLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Config, error) {
-
-		for _, v := range clientHello.SupportedProtos {
-			switch v {
-			case "h2", requestForwardingALPN:
-			default:
-				return nil, fmt.Errorf("unknown ALPN proto %s", v)
-			}
-		}
-
-		caPool := x509.NewCertPool()
-
-		ret := &tls.Config{
-			ClientAuth:           tls.RequireAndVerifyClientCert,
-			GetCertificate:       serverLookup,
-			GetClientCertificate: clientLookup,
-			MinVersion:           tls.VersionTLS12,
-			RootCAs:              caPool,
-			ClientCAs:            caPool,
-			NextProtos:           clientHello.SupportedProtos,
-			CipherSuites:         c.clusterCipherSuites,
-		}
-
-		switch {
-		default:
-			parsedCert := c.localClusterParsedCert.Load().(*x509.Certificate)
-
-			if parsedCert == nil {
-				return nil, fmt.Errorf("forwarding connection client but no local cert")
-			}
-
-			caPool.AddCert(parsedCert)
-		}
-
-		return ret, nil
-	}
-
 	tlsConfig := &tls.Config{
 		ClientAuth:           tls.RequireAndVerifyClientCert,
-		GetCertificate:       serverLookup,
-		GetClientCertificate: clientLookup,
-		GetConfigForClient:   serverConfigLookup,
+		GetCertificate:       clusterTLSServerLookup(ctx, c, repClusters, perfStandbyCluster),
+		GetClientCertificate: clusterTLSClientLookup(ctx, c, repClusters, perfStandbyCluster),
+		GetConfigForClient:   clusterTLSServerConfigLookup(ctx, c, repClusters, perfStandbyCluster),
 		MinVersion:           tls.VersionTLS12,
 		CipherSuites:         c.clusterCipherSuites,
 	}

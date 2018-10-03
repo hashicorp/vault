@@ -50,5 +50,15 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 
+	if len(res) == 0 {
+		_, ok := secret.Data["capabilities"]
+		if ok {
+			err = mapstructure.Decode(secret.Data["capabilities"], &res)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return res, nil
 }

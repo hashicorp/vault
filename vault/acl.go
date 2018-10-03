@@ -6,10 +6,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/armon/go-radix"
+	radix "github.com/armon/go-radix"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -26,6 +27,9 @@ type ACL struct {
 
 	// root is enabled if the "root" named policy is present.
 	root bool
+
+	// Stores policies that are actually RGPs for later fetching
+	rgpPolicies []*Policy
 }
 
 type PolicyCheckOpts struct {
@@ -42,19 +46,29 @@ type AuthResults struct {
 }
 
 type ACLResults struct {
-	Allowed    bool
-	RootPrivs  bool
-	IsRoot     bool
-	MFAMethods []string
+	Allowed            bool
+	RootPrivs          bool
+	IsRoot             bool
+	MFAMethods         []string
+	ControlGroup       *ControlGroup
+	CapabilitiesBitmap uint32
 }
 
-// New is used to construct a policy based ACL from a set of policies.
-func NewACL(policies []*Policy) (*ACL, error) {
+// NewACL is used to construct a policy based ACL from a set of policies.
+func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
 		exactRules: radix.New(),
 		globRules:  radix.New(),
 		root:       false,
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if ns == nil {
+		return nil, namespace.ErrNoNamespace
 	}
 
 	// Inject each policy
@@ -66,12 +80,19 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 		switch policy.Type {
 		case PolicyTypeACL:
+		case PolicyTypeRGP:
+			a.rgpPolicies = append(a.rgpPolicies, policy)
+			continue
 		default:
 			return nil, fmt.Errorf("unable to parse policy (wrong type)")
 		}
 
 		// Check if this is root
 		if policy.Name == "root" {
+			if ns.ID != namespace.RootNamespaceID {
+				return nil, fmt.Errorf("root policy is only allowed in root namespace")
+			}
+
 			if len(policies) != 1 {
 				return nil, fmt.Errorf("other policies present along with root")
 			}
@@ -196,6 +217,30 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				}
 			}
 
+			if len(pc.Permissions.MFAMethods) > 0 {
+				if existingPerms.MFAMethods == nil {
+					existingPerms.MFAMethods = pc.Permissions.MFAMethods
+				} else {
+					for _, method := range pc.Permissions.MFAMethods {
+						existingPerms.MFAMethods = append(existingPerms.MFAMethods, method)
+					}
+				}
+				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
+			}
+
+			// No need to dedupe this list since any authorization can satisfy any factor
+			if pc.Permissions.ControlGroup != nil {
+				if len(pc.Permissions.ControlGroup.Factors) > 0 {
+					if existingPerms.ControlGroup == nil {
+						existingPerms.ControlGroup = pc.Permissions.ControlGroup
+					} else {
+						for _, authz := range pc.Permissions.ControlGroup.Factors {
+							existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, authz)
+						}
+					}
+				}
+			}
+
 		INSERT:
 			tree.Insert(pc.Prefix, existingPerms)
 		}
@@ -203,40 +248,21 @@ func NewACL(policies []*Policy) (*ACL, error) {
 	return a, nil
 }
 
-func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
-	// Fast-path root
-	if a.root {
+func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities []string) {
+	req := &logical.Request{
+		Path: path,
+		// doesn't matter, but use List to trigger fallback behavior so we can
+		// model real behavior
+		Operation: logical.ListOperation,
+	}
+
+	res := a.AllowOperation(ctx, req, true)
+	if res.IsRoot {
 		return []string{RootCapability}
 	}
 
-	// Find an exact matching rule, look for glob if no match
-	var capabilities uint32
-	raw, ok := a.exactRules.Get(path)
+	capabilities := res.CapabilitiesBitmap
 
-	if ok {
-		perm := raw.(*ACLPermissions)
-		capabilities = perm.CapabilitiesBitmap
-		goto CHECK
-	}
-	if strings.HasSuffix(path, "/") {
-		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
-		if ok {
-			perm := raw.(*ACLPermissions)
-			capabilities = perm.CapabilitiesBitmap
-			goto CHECK
-		}
-	}
-
-	// Find a glob rule, default deny if no match
-	_, raw, ok = a.globRules.LongestPrefix(path)
-	if !ok {
-		return []string{DenyCapability}
-	} else {
-		perm := raw.(*ACLPermissions)
-		capabilities = perm.CapabilitiesBitmap
-	}
-
-CHECK:
 	if capabilities&SudoCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, SudoCapability)
 	}
@@ -265,7 +291,7 @@ CHECK:
 }
 
 // AllowOperation is used to check if the given operation is permitted.
-func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
+func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheckOnly bool) (ret *ACLResults) {
 	ret = new(ACLResults)
 
 	// Fast-path root
@@ -276,7 +302,6 @@ func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
 		return
 	}
 	op := req.Operation
-	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
@@ -285,6 +310,12 @@ func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
 	}
 
 	var permissions *ACLPermissions
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return
+	}
+	path := ns.Path + req.Path
 
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
@@ -307,16 +338,25 @@ func (a *ACL) AllowOperation(req *logical.Request) (ret *ACLResults) {
 	_, raw, ok = a.globRules.LongestPrefix(path)
 	if !ok {
 		return
-	} else {
-		permissions = raw.(*ACLPermissions)
-		capabilities = permissions.CapabilitiesBitmap
 	}
+	permissions = raw.(*ACLPermissions)
+	capabilities = permissions.CapabilitiesBitmap
 
 CHECK:
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
 	ret.RootPrivs = capabilities&SudoCapabilityInt > 0
+
+	// This is after the RootPrivs check so we can gate on it being from sudo
+	// rather than policy root
+	if capCheckOnly {
+		ret.CapabilitiesBitmap = capabilities
+		return ret
+	}
+
+	ret.MFAMethods = permissions.MFAMethods
+	ret.ControlGroup = permissions.ControlGroup
 
 	operationAllowed := false
 	switch op {
@@ -427,31 +467,33 @@ CHECK:
 	ret.Allowed = true
 	return
 }
-func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) (ret *AuthResults) {
-	ret = new(AuthResults)
+
+func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
+	ret := new(AuthResults)
 
 	// First, perform normal ACL checks if requested. The only time no ACL
 	// should be applied is if we are only processing EGPs against a login
 	// path in which case opts.Unauth will be set.
 	if acl != nil && !opts.Unauth {
-		ret.ACLResults = acl.AllowOperation(req)
+		ret.ACLResults = acl.AllowOperation(ctx, req, false)
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			//c.logger.Warn("policy: token is root, skipping checks")
+			//logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
-			return
+			return ret
 		}
 		if !ret.ACLResults.Allowed {
-			return
+			return ret
 		}
 		if !ret.RootPrivs && opts.RootPrivsRequired {
-			return
+			return ret
 		}
 	}
 
-	ret.Allowed = true
-	return
+	c.performEntPolicyChecks(ctx, acl, te, req, inEntity, opts, ret)
+
+	return ret
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {

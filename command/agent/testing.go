@@ -1,15 +1,24 @@
 package agent
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/logical"
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+const envVarRunAccTests = "VAULT_ACC"
+
+var runAcceptanceTests = os.Getenv(envVarRunAccTests) == "1"
 
 func GetTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 	t.Helper()
@@ -49,6 +58,18 @@ func GetTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 	}
 
 	return raw, key
+}
+
+func readToken(fileName string) (*logical.HTTPWrapInfo, error) {
+	b, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	wrapper := &logical.HTTPWrapInfo{}
+	if err := json.NewDecoder(bytes.NewReader(b)).Decode(wrapper); err != nil {
+		return nil, err
+	}
+	return wrapper, nil
 }
 
 const (

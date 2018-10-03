@@ -1,12 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 
-const { inject } = Ember;
-
-export default Ember.Component.extend({
-  router: inject.service(),
-  controlGroup: inject.service(),
-  store: inject.service(),
+export default Component.extend({
+  router: service(),
+  controlGroup: service(),
+  store: service(),
 
   // public attrs
   model: null,

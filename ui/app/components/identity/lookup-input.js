@@ -1,13 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { underscore } from 'vault/helpers/underscore';
 
-const { inject } = Ember;
-
-export default Ember.Component.extend({
-  store: inject.service(),
-  flashMessages: inject.service(),
-  routing: inject.service('-routing'),
+export default Component.extend({
+  store: service(),
+  flashMessages: service(),
+  router: service(),
 
   // Public API - either 'entity' or 'group'
   // this will determine which adapter is used to make the lookup call
@@ -21,10 +20,12 @@ export default Ember.Component.extend({
 
   init() {
     this._super(...arguments);
-    this.get('store').findAll('auth-method').then(methods => {
-      this.set('authMethods', methods);
-      this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
-    });
+    this.get('store')
+      .findAll('auth-method')
+      .then(methods => {
+        this.set('authMethods', methods);
+        this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
+      });
   },
 
   adapter() {
@@ -63,11 +64,7 @@ export default Ember.Component.extend({
       return;
     }
     if (response) {
-      return this.get('routing.router').transitionTo(
-        'vault.cluster.access.identity.show',
-        response.id,
-        'details'
-      );
+      return this.get('router').transitionTo('vault.cluster.access.identity.show', response.id, 'details');
     } else {
       flash.danger(`We were unable to find an identity ${type} with a "${param}" of "${paramValue}".`);
     }

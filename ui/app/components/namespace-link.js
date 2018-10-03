@@ -1,10 +1,11 @@
-import Ember from 'ember';
-
-const { Component, computed, inject } = Ember;
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
 export default Component.extend({
-  namespaceService: inject.service('namespace'),
-  currentNamespace: computed.alias('namespaceService.path'),
+  namespaceService: service('namespace'),
+  currentNamespace: alias('namespaceService.path'),
 
   tagName: '',
   //public api

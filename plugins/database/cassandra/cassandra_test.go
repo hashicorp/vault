@@ -253,6 +253,9 @@ func TestCassandra_RevokeUser(t *testing.T) {
 }
 
 func TestCassandra_RotateRootCredentials(t *testing.T) {
+	if os.Getenv("TRAVIS") != "true" {
+		t.SkipNow()
+	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
 	defer cleanup()
 

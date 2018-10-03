@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_AUTH_BACKENDS = [
   {
@@ -47,4 +47,4 @@ export function supportedAuthBackends() {
   return SUPPORTED_AUTH_BACKENDS;
 }
 
-export default Ember.Helper.helper(supportedAuthBackends);
+export default buildHelper(supportedAuthBackends);

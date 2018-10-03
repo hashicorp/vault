@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/packet"
@@ -45,26 +46,9 @@ const (
 )
 
 const (
-	SealTypeShamir = "shamir"
-	SealTypePKCS11 = "pkcs11"
-	SealTypeAWSKMS = "awskms"
-	SealTypeTest   = "test-auto"
-
 	RecoveryTypeUnsupported = "unsupported"
 	RecoveryTypeShamir      = "shamir"
 )
-
-type KeyNotFoundError struct {
-	Err error
-}
-
-func (e *KeyNotFoundError) WrappedErrors() []error {
-	return []error{e.Err}
-}
-
-func (e *KeyNotFoundError) Error() string {
-	return e.Err.Error()
-}
 
 type Seal interface {
 	SetCore(*Core)
@@ -121,7 +105,7 @@ func (d *defaultSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *defaultSeal) BarrierType() string {
-	return SealTypeShamir
+	return seal.Shamir
 }
 
 func (d *defaultSeal) StoredKeysSupported() bool {

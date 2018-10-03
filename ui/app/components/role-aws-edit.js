@@ -1,7 +1,6 @@
+import { isBlank } from '@ember/utils';
+import { set, get } from '@ember/object';
 import RoleEdit from './role-edit';
-import Ember from 'ember';
-
-const { get, set } = Ember;
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
@@ -12,7 +11,7 @@ export default RoleEdit.extend({
       const modelId = this.get('model.id');
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(modelId)) {
+      if (type === 'create' && isBlank(modelId)) {
         return;
       }
 

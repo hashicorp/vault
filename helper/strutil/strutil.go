@@ -340,9 +340,42 @@ func MergeSlices(args ...[]string) []string {
 	}
 
 	result := make([]string, 0, len(all))
-	for k, _ := range all {
+	for k := range all {
 		result = append(result, k)
 	}
 	sort.Strings(result)
 	return result
+}
+
+// Difference returns the set difference (A - B) of the two given slices. The
+// result will also remove any duplicated values in set A regardless of whether
+// that matches any values in set B.
+func Difference(a, b []string, lowercase bool) []string {
+	if len(a) == 0 || len(b) == 0 {
+		return a
+	}
+
+	a = RemoveDuplicates(a, lowercase)
+	b = RemoveDuplicates(b, lowercase)
+
+	itemsMap := map[string]bool{}
+	for _, aVal := range a {
+		itemsMap[aVal] = true
+	}
+
+	// Perform difference calculation
+	for _, bVal := range b {
+		if _, ok := itemsMap[bVal]; ok {
+			itemsMap[bVal] = false
+		}
+	}
+
+	items := []string{}
+	for item, exists := range itemsMap {
+		if exists {
+			items = append(items, item)
+		}
+	}
+	sort.Strings(items)
+	return items
 }

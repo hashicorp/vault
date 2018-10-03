@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const MESSAGE_TYPES = {
   info: {
@@ -31,4 +31,4 @@ export function messageTypes([type]) {
   return MESSAGE_TYPES[type];
 }
 
-export default Ember.Helper.helper(messageTypes);
+export default buildHelper(messageTypes);

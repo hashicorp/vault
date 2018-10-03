@@ -1,9 +1,12 @@
-import IdentityModel from './_base';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
+import IdentityModel from './_base';
 const { attr } = DS;
 
 export default IdentityModel.extend({
-  formFields: ['toEntityId', 'fromEntityIds', 'force'],
+  formFields: computed(function() {
+    return ['toEntityId', 'fromEntityIds', 'force'];
+  }),
   toEntityId: attr('string', {
     label: 'Entity to merge to',
   }),

@@ -97,6 +97,9 @@
           <li<%= sidebar_current("docs-configuration-seal") %>>
           <a href="/docs/configuration/seal/index.html"><tt>seal</tt></a>
           <ul class="nav">
+            <li<%= sidebar_current("docs-configuration-seal-alicloudkms") %>>
+              <a href="/docs/configuration/seal/alicloudkms.html">AliCloud KMS <sup>ENT</sup></a>
+            </li>
             <li<%= sidebar_current("docs-configuration-seal-awskms") %>>
               <a href="/docs/configuration/seal/awskms.html">AWS KMS <sup>ENT</sup></a>
             </li>
@@ -250,6 +253,9 @@
               </li>
               <li<%= sidebar_current("docs-commands-operator-key-status") %>>
                 <a href="/docs/commands/operator/key-status.html">key-status</a>
+              </li>
+              <li<%= sidebar_current("docs-commands-migrate") %>>
+                <a href="/docs/commands/operator/migrate.html">migrate</a>
               </li>
               <li<%= sidebar_current("docs-commands-operator-rekey") %>>
                 <a href="/docs/commands/operator/rekey.html">rekey</a>
@@ -424,6 +430,10 @@
             <a href="/docs/secrets/ad/index.html">Active Directory</a>
           </li>
 
+          <li<%= sidebar_current("docs-secrets-alicloud") %>>
+            <a href="/docs/secrets/alicloud/index.html">AliCloud</a>
+          </li>
+
           <li<%= sidebar_current("docs-secrets-aws") %>>
             <a href="/docs/secrets/aws/index.html">AWS</a>
           </li>
@@ -573,7 +583,7 @@
           </li>
 
           <li<%= sidebar_current("docs-auth-jwt") %>>
-            <a href="/docs/auth/jwt.html">JWT/OIDC</a>
+            <a href="/docs/auth/jwt.html">JWT</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-kubernetes") %>>

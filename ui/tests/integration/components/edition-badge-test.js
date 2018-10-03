@@ -1,20 +1,22 @@
-import { moduleForComponent, test } from 'ember-qunit';
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'ember-qunit';
+import { render, find } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-moduleForComponent('edition-badge', 'Integration | Component | edition badge', {
-  integration: true,
-});
+module('Integration | Component | edition badge', function(hooks) {
+  setupRenderingTest(hooks);
 
-test('it renders', function(assert) {
-  this.render(hbs`
-    {{edition-badge edition="Custom"}}
-  `);
+  test('it renders', async function(assert) {
+    await render(hbs`
+      {{edition-badge edition="Custom"}}
+    `);
 
-  assert.equal(this.$('.edition-badge').text().trim(), 'Custom', 'contains edition');
+    assert.equal(find('.edition-badge').textContent.trim(), 'Custom', 'contains edition');
 
-  this.render(hbs`
-    {{edition-badge edition="Enterprise"}}
-  `);
+    await render(hbs`
+      {{edition-badge edition="Enterprise"}}
+    `);
 
-  assert.equal(this.$('.edition-badge').text().trim(), 'Enterprise', 'renders edition');
+    assert.equal(find('.edition-badge').textContent.trim(), 'Enterprise', 'renders edition');
+  });
 });

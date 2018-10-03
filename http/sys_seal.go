@@ -36,10 +36,9 @@ func handleSysSeal(core *vault.Core) http.Handler {
 			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				respondError(w, http.StatusForbidden, err)
 				return
-			} else {
-				respondError(w, http.StatusInternalServerError, err)
-				return
 			}
+			respondError(w, http.StatusInternalServerError, err)
+			return
 		}
 
 		respondOk(w, nil)
@@ -63,6 +62,10 @@ func handleSysStepDown(core *vault.Core) http.Handler {
 
 		// Seal with the token above
 		if err := core.StepDown(r.Context(), req); err != nil {
+			if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
+				respondError(w, http.StatusForbidden, err)
+				return
+			}
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -174,7 +177,12 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	if sealConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		respondOk(w, &SealStatusResponse{
+			Type:         core.SealAccess().BarrierType(),
+			Initialized:  false,
+			Sealed:       true,
+			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		})
 		return
 	}
 
@@ -197,28 +205,32 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	progress, nonce := core.SecretProgress()
 
 	respondOk(w, &SealStatusResponse{
-		Type:        sealConfig.Type,
-		Sealed:      sealed,
-		T:           sealConfig.SecretThreshold,
-		N:           sealConfig.SecretShares,
-		Progress:    progress,
-		Nonce:       nonce,
-		Version:     version.GetVersion().VersionNumber(),
-		ClusterName: clusterName,
-		ClusterID:   clusterID,
+		Type:         sealConfig.Type,
+		Initialized:  true,
+		Sealed:       sealed,
+		T:            sealConfig.SecretThreshold,
+		N:            sealConfig.SecretShares,
+		Progress:     progress,
+		Nonce:        nonce,
+		Version:      version.GetVersion().VersionNumber(),
+		ClusterName:  clusterName,
+		ClusterID:    clusterID,
+		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 	})
 }
 
 type SealStatusResponse struct {
-	Type        string `json:"type"`
-	Sealed      bool   `json:"sealed"`
-	T           int    `json:"t"`
-	N           int    `json:"n"`
-	Progress    int    `json:"progress"`
-	Nonce       string `json:"nonce"`
-	Version     string `json:"version"`
-	ClusterName string `json:"cluster_name,omitempty"`
-	ClusterID   string `json:"cluster_id,omitempty"`
+	Type         string `json:"type"`
+	Initialized  bool   `json:"initialized"`
+	Sealed       bool   `json:"sealed"`
+	T            int    `json:"t"`
+	N            int    `json:"n"`
+	Progress     int    `json:"progress"`
+	Nonce        string `json:"nonce"`
+	Version      string `json:"version"`
+	ClusterName  string `json:"cluster_name,omitempty"`
+	ClusterID    string `json:"cluster_id,omitempty"`
+	RecoverySeal bool   `json:"recovery_seal"`
 }
 
 type UnsealRequest struct {

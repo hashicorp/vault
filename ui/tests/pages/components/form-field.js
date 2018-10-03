@@ -9,7 +9,6 @@ import {
   text,
   triggerable,
 } from 'ember-cli-page-object';
-import { getter } from 'ember-cli-page-object/macros';
 
 export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
@@ -24,32 +23,31 @@ export default {
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   tooltipContent: text('[data-test-help-text]'),
 
-  fields: collection({
-    itemScope: '[data-test-field]',
-    item: {
-      clickLabel: clickable('label'),
-      for: attribute('for', 'label'),
-      labelText: text('label', { multiple: true }),
-      input: fillable('input'),
-      select: fillable('select'),
-      textarea: fillable('textarea'),
-      change: triggerable('keyup', 'input'),
-      inputValue: value('input'),
-      textareaValue: value('textarea'),
-      inputChecked: attribute('checked', 'input[type=checkbox]'),
-      selectValue: value('select'),
-    },
-    findByName(name) {
-      // we use name in the label `for` attribute
-      // this is consistent across all types of fields
-      //(otherwise we'd have to use name on select or input or textarea)
-      return this.toArray().findBy('for', name);
-    },
-    fillIn(name, value) {
-      return this.findByName(name).input(value);
-    },
+  fields: collection('[data-test-field]', {
+    clickLabel: clickable('label'),
+    for: attribute('for', 'label', { multiple: true }),
+    labelText: text('label', { multiple: true }),
+    input: fillable('input'),
+    select: fillable('select'),
+    textarea: fillable('textarea'),
+    change: triggerable('keyup', 'input'),
+    inputValue: value('input'),
+    textareaValue: value('textarea'),
+    inputChecked: attribute('checked', 'input[type=checkbox]'),
+    selectValue: value('select'),
   }),
-  field: getter(function() {
-    return this.fields(0);
-  }),
+  fillInTextarea: async function(name, value) {
+    return this.fields
+      .filter(field => {
+        return field.for.includes(name);
+      })[0]
+      .textarea(value);
+  },
+  fillIn: async function(name, value) {
+    return this.fields
+      .filter(field => {
+        return field.for.includes(name);
+      })[0]
+      .input(value);
+  },
 };

@@ -33,7 +33,7 @@ to have to do both depending on user settings.
 ## Authentication
 
 Once Vault is unsealed, almost every other operation requires a _client token_.
-A user may have a client token sent to her.  The client token must be sent as
+A user may have a client token sent to them.  The client token must be sent as
 the `X-Vault-Token` HTTP header.
 
 Otherwise, a client token can be retrieved via [authentication

@@ -11,6 +11,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/logical"
@@ -58,7 +59,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, cluster.RootToken)
+	req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		b.Fatal(err)
@@ -71,7 +72,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		req.Header.Set(AuthHeaderName, cluster.RootToken)
+		req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 		w := forwarding.NewRPCResponseWriter()
 		handler.ServeHTTP(w, req)
 		switch w.StatusCode() {

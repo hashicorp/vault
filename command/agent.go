@@ -281,7 +281,6 @@ func (c *AgentCommand) Run(args []string) int {
 	authConfig := &auth.AuthConfig{
 		Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
 		MountPath: config.AutoAuth.Method.MountPath,
-		WrapTTL:   config.AutoAuth.Method.WrapTTL,
 		Config:    config.AutoAuth.Method.Config,
 	}
 	switch config.AutoAuth.Method.Type {
@@ -324,8 +323,9 @@ func (c *AgentCommand) Run(args []string) int {
 	})
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger: c.logger.Named("auth.handler"),
-		Client: c.client,
+		Logger:  c.logger.Named("auth.handler"),
+		Client:  c.client,
+		WrapTTL: config.AutoAuth.Method.WrapTTL,
 	})
 
 	// Start things running

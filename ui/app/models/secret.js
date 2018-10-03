@@ -1,8 +1,7 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import KeyMixin from './key-mixin';
 const { attr } = DS;
-const { computed } = Ember;
 
 export default DS.Model.extend(KeyMixin, {
   auth: attr('string'),
