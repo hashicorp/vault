@@ -66,6 +66,14 @@ type encDriverAsis interface {
 	EncodeAsis(v []byte)
 }
 
+type encodeError struct {
+	codecError
+}
+
+func (e encodeError) Error() string {
+	return fmt.Sprintf("%s encode error: %v", e.name, e.err)
+}
+
 type encDriverNoopContainerWriter struct{}
 
 func (encDriverNoopContainerWriter) WriteArrayStart(length int) {}
@@ -492,14 +500,14 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 			for _, si := range tisfi {
 				ee.WriteMapElemKey()
 				// ee.EncodeString(cUTF8, si.encName)
-				encStructFieldKey(ee, fti.keyType, si.encName)
+				e.kStructFieldKey(fti.keyType, si)
 				ee.WriteMapElemValue()
 				e.encodeValue(sfn.field(si), nil, true)
 			}
 		} else {
 			for _, si := range tisfi {
 				// ee.EncodeString(cUTF8, si.encName)
-				encStructFieldKey(ee, fti.keyType, si.encName)
+				e.kStructFieldKey(fti.keyType, si)
 				e.encodeValue(sfn.field(si), nil, true)
 			}
 		}
@@ -520,22 +528,39 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 	}
 }
 
-func encStructFieldKey(ee encDriver, keyType valueType, s string) {
+func (e *Encoder) kStructFieldKey(keyType valueType, s *structFieldInfo) {
 	var m must
-
 	// use if-else-if, not switch (which compiles to binary-search)
 	// since keyType is typically valueTypeString, branch prediction is pretty good.
-
 	if keyType == valueTypeString {
-		ee.EncodeString(cUTF8, s)
+		if e.js && s.encNameAsciiAlphaNum { // keyType == valueTypeString
+			e.w.writen1('"')
+			e.w.writestr(s.encName)
+			e.w.writen1('"')
+		} else { // keyType == valueTypeString
+			e.e.EncodeString(cUTF8, s.encName)
+		}
 	} else if keyType == valueTypeInt {
-		ee.EncodeInt(m.Int(strconv.ParseInt(s, 10, 64)))
+		e.e.EncodeInt(m.Int(strconv.ParseInt(s.encName, 10, 64)))
 	} else if keyType == valueTypeUint {
-		ee.EncodeUint(m.Uint(strconv.ParseUint(s, 10, 64)))
+		e.e.EncodeUint(m.Uint(strconv.ParseUint(s.encName, 10, 64)))
 	} else if keyType == valueTypeFloat {
-		ee.EncodeFloat64(m.Float(strconv.ParseFloat(s, 64)))
-	} else {
-		ee.EncodeString(cUTF8, s)
+		e.e.EncodeFloat64(m.Float(strconv.ParseFloat(s.encName, 64)))
+	}
+}
+
+func (e *Encoder) kStructFieldKeyName(keyType valueType, encName string) {
+	var m must
+	// use if-else-if, not switch (which compiles to binary-search)
+	// since keyType is typically valueTypeString, branch prediction is pretty good.
+	if keyType == valueTypeString {
+		e.e.EncodeString(cUTF8, encName)
+	} else if keyType == valueTypeInt {
+		e.e.EncodeInt(m.Int(strconv.ParseInt(encName, 10, 64)))
+	} else if keyType == valueTypeUint {
+		e.e.EncodeUint(m.Uint(strconv.ParseUint(encName, 10, 64)))
+	} else if keyType == valueTypeFloat {
+		e.e.EncodeFloat64(m.Float(strconv.ParseFloat(encName, 64)))
 	}
 }
 
@@ -543,12 +568,30 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 	fti := f.ti
 	elemsep := e.esep
 	tisfi := fti.sfiSrc
+	var newlen int
 	toMap := !(fti.toArray || e.h.StructToArray)
+	var mf map[string]interface{}
+	if f.ti.mf {
+		mf = rv2i(rv).(MissingFielder).CodecMissingFields()
+		toMap = true
+		newlen += len(mf)
+	} else if f.ti.mfp {
+		if rv.CanAddr() {
+			mf = rv2i(rv.Addr()).(MissingFielder).CodecMissingFields()
+		} else {
+			// make a new addressable value of same one, and use it
+			rv2 := reflect.New(rv.Type())
+			rv2.Elem().Set(rv)
+			mf = rv2i(rv2).(MissingFielder).CodecMissingFields()
+		}
+		toMap = true
+		newlen += len(mf)
+	}
 	// if toMap, use the sorted array. If toArray, use unsorted array (to match sequence in struct)
 	if toMap {
 		tisfi = fti.sfiSort
 	}
-	newlen := len(fti.sfiSort)
+	newlen += len(tisfi)
 	ee := e.e
 
 	// Use sync.Pool to reduce allocating slices unnecessarily.
@@ -565,29 +608,29 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 
 	var spool *sync.Pool
 	var poolv interface{}
-	var fkvs []stringRv
+	var fkvs []sfiRv
 	// fmt.Printf(">>>>>>>>>>>>>> encode.kStruct: newlen: %d\n", newlen)
 	if newlen <= 8 {
-		spool, poolv = pool.stringRv8()
-		fkvs = poolv.(*[8]stringRv)[:newlen]
+		spool, poolv = pool.sfiRv8()
+		fkvs = poolv.(*[8]sfiRv)[:newlen]
 	} else if newlen <= 16 {
-		spool, poolv = pool.stringRv16()
-		fkvs = poolv.(*[16]stringRv)[:newlen]
+		spool, poolv = pool.sfiRv16()
+		fkvs = poolv.(*[16]sfiRv)[:newlen]
 	} else if newlen <= 32 {
-		spool, poolv = pool.stringRv32()
-		fkvs = poolv.(*[32]stringRv)[:newlen]
+		spool, poolv = pool.sfiRv32()
+		fkvs = poolv.(*[32]sfiRv)[:newlen]
 	} else if newlen <= 64 {
-		spool, poolv = pool.stringRv64()
-		fkvs = poolv.(*[64]stringRv)[:newlen]
+		spool, poolv = pool.sfiRv64()
+		fkvs = poolv.(*[64]sfiRv)[:newlen]
 	} else if newlen <= 128 {
-		spool, poolv = pool.stringRv128()
-		fkvs = poolv.(*[128]stringRv)[:newlen]
+		spool, poolv = pool.sfiRv128()
+		fkvs = poolv.(*[128]sfiRv)[:newlen]
 	} else {
-		fkvs = make([]stringRv, newlen)
+		fkvs = make([]sfiRv, newlen)
 	}
 
 	newlen = 0
-	var kv stringRv
+	var kv sfiRv
 	recur := e.h.RecursiveEmptyCheck
 	sfn := structFieldNode{v: rv, update: false}
 	for _, si := range tisfi {
@@ -597,7 +640,7 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			if si.omitEmpty() && isEmptyValue(kv.r, e.h.TypeInfos, recur, recur) {
 				continue
 			}
-			kv.v = si.encName
+			kv.v = si // si.encName
 		} else {
 			// use the zero value.
 			// if a reference or struct, set to nil (so you do not output too much)
@@ -612,14 +655,27 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 		newlen++
 	}
 
+	var mflen int
+	for k, v := range mf {
+		if k == "" {
+			delete(mf, k)
+			continue
+		}
+		if fti.infoFieldOmitempty && isEmptyValue(reflect.ValueOf(v), e.h.TypeInfos, recur, recur) {
+			delete(mf, k)
+			continue
+		}
+		mflen++
+	}
+
 	if toMap {
-		ee.WriteMapStart(newlen)
+		ee.WriteMapStart(newlen + mflen)
 		if elemsep {
 			for j := 0; j < newlen; j++ {
 				kv = fkvs[j]
 				ee.WriteMapElemKey()
 				// ee.EncodeString(cUTF8, kv.v)
-				encStructFieldKey(ee, fti.keyType, kv.v)
+				e.kStructFieldKey(fti.keyType, kv.v)
 				ee.WriteMapElemValue()
 				e.encodeValue(kv.r, nil, true)
 			}
@@ -627,9 +683,16 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			for j := 0; j < newlen; j++ {
 				kv = fkvs[j]
 				// ee.EncodeString(cUTF8, kv.v)
-				encStructFieldKey(ee, fti.keyType, kv.v)
+				e.kStructFieldKey(fti.keyType, kv.v)
 				e.encodeValue(kv.r, nil, true)
 			}
+		}
+		// now, add the others
+		for k, v := range mf {
+			ee.WriteMapElemKey()
+			e.kStructFieldKeyName(fti.keyType, k)
+			ee.WriteMapElemValue()
+			e.encode(v)
 		}
 		ee.WriteMapEnd()
 	} else {
@@ -895,44 +958,56 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 // // --------------------------------------------------
 
 type encWriterSwitch struct {
-	wi *ioEncWriter
-	// wb bytesEncWriter
+	wi   *ioEncWriter
 	wb   bytesEncAppender
-	wx   bool // if bytes, wx=true
-	esep bool // whether it has elem separators
-	isas bool // whether e.as != nil
+	wx   bool      // if bytes, wx=true
+	esep bool      // whether it has elem separators
+	isas bool      // whether e.as != nil
+	js   bool      // here, so that no need to piggy back on *codecFner for this
+	be   bool      // here, so that no need to piggy back on *codecFner for this
+	_    [3]byte   // padding
+	_    [2]uint64 // padding
 }
 
-// // TODO: Uncomment after mid-stack inlining enabled in go 1.11
+/*
 
-// func (z *encWriterSwitch) writeb(s []byte) {
-// 	if z.wx {
-// 		z.wb.writeb(s)
-// 	} else {
-// 		z.wi.writeb(s)
-// 	}
-// }
-// func (z *encWriterSwitch) writestr(s string) {
-// 	if z.wx {
-// 		z.wb.writestr(s)
-// 	} else {
-// 		z.wi.writestr(s)
-// 	}
-// }
-// func (z *encWriterSwitch) writen1(b1 byte) {
-// 	if z.wx {
-// 		z.wb.writen1(b1)
-// 	} else {
-// 		z.wi.writen1(b1)
-// 	}
-// }
-// func (z *encWriterSwitch) writen2(b1, b2 byte) {
-// 	if z.wx {
-// 		z.wb.writen2(b1, b2)
-// 	} else {
-// 		z.wi.writen2(b1, b2)
-// 	}
-// }
+func (z *encWriterSwitch) writeb(s []byte) {
+	if z.wx {
+		z.wb.writeb(s)
+	} else {
+		z.wi.writeb(s)
+	}
+}
+func (z *encWriterSwitch) writestr(s string) {
+	if z.wx {
+		z.wb.writestr(s)
+	} else {
+		z.wi.writestr(s)
+	}
+}
+func (z *encWriterSwitch) writen1(b1 byte) {
+	if z.wx {
+		z.wb.writen1(b1)
+	} else {
+		z.wi.writen1(b1)
+	}
+}
+func (z *encWriterSwitch) writen2(b1, b2 byte) {
+	if z.wx {
+		z.wb.writen2(b1, b2)
+	} else {
+		z.wi.writen2(b1, b2)
+	}
+}
+func (z *encWriterSwitch) atEndOfEncode() {
+	if z.wx {
+		z.wb.atEndOfEncode()
+	} else {
+		z.wi.atEndOfEncode()
+	}
+}
+
+*/
 
 // An Encoder writes an object to an output stream in the codec format.
 type Encoder struct {
@@ -943,22 +1018,18 @@ type Encoder struct {
 	// as the handler MAY need to do some coordination.
 	w encWriter
 
-	h  *BasicHandle
-	bw *bufio.Writer
+	// bw *bufio.Writer
 	as encDriverAsis
 
-	// ---- cpu cache line boundary?
-
-	// ---- cpu cache line boundary?
-	encWriterSwitch
 	err error
 
 	// ---- cpu cache line boundary?
+	encWriterSwitch
+
+	// ---- cpu cache line boundary?
+	h *BasicHandle
 	codecFnPooler
 	ci set
-	js bool    // here, so that no need to piggy back on *codecFner for this
-	be bool    // here, so that no need to piggy back on *codecFner for this
-	_  [6]byte // padding
 
 	// ---- writable fields during execution --- *try* to keep in sep cache line
 
@@ -997,6 +1068,7 @@ func newEncoder(h Handle) *Encoder {
 }
 
 func (e *Encoder) resetCommon() {
+	// e.w = &e.encWriterSwitch
 	if e.e == nil || e.hh.recreateEncDriver(e.e) {
 		e.e = e.hh.newEncDriver(e)
 		e.as, e.isas = e.e.(encDriverAsis)
@@ -1023,11 +1095,11 @@ func (e *Encoder) Reset(w io.Writer) {
 	e.wx = false
 	e.wi.w = w
 	if e.h.WriterBufferSize > 0 {
-		e.bw = bufio.NewWriterSize(w, e.h.WriterBufferSize)
-		e.wi.bw = e.bw
-		e.wi.sw = e.bw
-		e.wi.fw = e.bw
-		e.wi.ww = e.bw
+		bw := bufio.NewWriterSize(w, e.h.WriterBufferSize)
+		e.wi.bw = bw
+		e.wi.sw = bw
+		e.wi.fw = bw
+		e.wi.ww = bw
 	} else {
 		if e.wi.bw, ok = w.(io.ByteWriter); !ok {
 			e.wi.bw = e.wi
@@ -1370,6 +1442,6 @@ func (e *Encoder) rawBytes(vv Raw) {
 	e.asis(v)
 }
 
-func (e *Encoder) wrapErrstr(v interface{}, err *error) {
-	*err = fmt.Errorf("%s encode error: %v", e.hh.Name(), v)
+func (e *Encoder) wrapErr(v interface{}, err *error) {
+	*err = encodeError{codecError{name: e.hh.Name(), err: v}}
 }

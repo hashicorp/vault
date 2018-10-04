@@ -32,8 +32,8 @@ type ExchangeInfo struct {
 type ExchangeSettings struct {
 	Type       string                 `json:"type"`
 	Durable    bool                   `json:"durable"`
-	AutoDelete bool                   `json:"auto_delete"`
-	Arguments  map[string]interface{} `json:"arguments"`
+	AutoDelete bool                   `json:"auto_delete,omitempty"`
+	Arguments  map[string]interface{} `json:"arguments,omitempty"`
 }
 
 func (c *Client) ListExchanges() (rec []ExchangeInfo, err error) {

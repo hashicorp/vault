@@ -164,7 +164,7 @@ type Raft struct {
 // configuration on all the Voter servers. There is no need to bootstrap
 // Nonvoter and Staging servers.
 //
-// One sane approach is to boostrap a single server with a configuration
+// One sane approach is to bootstrap a single server with a configuration
 // listing just itself as a Voter, then invoke AddVoter() on it to add other
 // servers to the cluster.
 func BootstrapCluster(conf *Config, logs LogStore, stable StableStore,

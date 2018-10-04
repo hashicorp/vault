@@ -142,18 +142,21 @@ func handleRPCEnd(ctx context.Context, s *stats.End) {
 
 	latencyMillis := float64(elapsedTime) / float64(time.Millisecond)
 	if s.Client {
-		ctx, _ = tag.New(ctx,
-			tag.Upsert(KeyClientMethod, methodName(d.method)),
-			tag.Upsert(KeyClientStatus, st))
-		ocstats.Record(ctx,
+		ocstats.RecordWithTags(ctx,
+			[]tag.Mutator{
+				tag.Upsert(KeyClientMethod, methodName(d.method)),
+				tag.Upsert(KeyClientStatus, st),
+			},
 			ClientSentBytesPerRPC.M(atomic.LoadInt64(&d.sentBytes)),
 			ClientSentMessagesPerRPC.M(atomic.LoadInt64(&d.sentCount)),
 			ClientReceivedMessagesPerRPC.M(atomic.LoadInt64(&d.recvCount)),
 			ClientReceivedBytesPerRPC.M(atomic.LoadInt64(&d.recvBytes)),
 			ClientRoundtripLatency.M(latencyMillis))
 	} else {
-		ctx, _ = tag.New(ctx, tag.Upsert(KeyServerStatus, st))
-		ocstats.Record(ctx,
+		ocstats.RecordWithTags(ctx,
+			[]tag.Mutator{
+				tag.Upsert(KeyServerStatus, st),
+			},
 			ServerSentBytesPerRPC.M(atomic.LoadInt64(&d.sentBytes)),
 			ServerSentMessagesPerRPC.M(atomic.LoadInt64(&d.sentCount)),
 			ServerReceivedMessagesPerRPC.M(atomic.LoadInt64(&d.recvCount)),

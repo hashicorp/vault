@@ -29,3 +29,11 @@ func traceEndSpan(context.Context, error) {
 
 func tracePrintf(context.Context, map[string]interface{}, string, ...interface{}) {
 }
+
+type dummy struct{}
+
+// Not supported below Go 1.8.
+var OpenSessionCount dummy
+
+func recordStat(context.Context, dummy, int64) {
+}

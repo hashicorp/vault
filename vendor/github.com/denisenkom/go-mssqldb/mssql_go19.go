@@ -108,6 +108,10 @@ func (c *Conn) CheckNamedValue(nv *driver.NamedValue) error {
 			nv.Value = sql.Out{Dest: conv}
 		}
 		return nil
+	case *ReturnStatus:
+		*v = 0 // By default the return value should be zero.
+		c.returnStatus = v
+		return driver.ErrRemoveArgument
 	default:
 		var err error
 		nv.Value, err = convertInputParameter(nv.Value)
@@ -124,11 +128,11 @@ func (s *Stmt) makeParamExtra(val driver.Value) (res param, err error) {
 	case VarCharMax:
 		res.ti.TypeId = typeBigVarChar
 		res.buffer = []byte(val)
-		res.ti.Size = 0  // currently zero forces varchar(max)
+		res.ti.Size = 0 // currently zero forces varchar(max)
 	case NVarCharMax:
 		res.ti.TypeId = typeNVarChar
 		res.buffer = str2ucs2(string(val))
-		res.ti.Size = 0  // currently zero forces nvarchar(max)
+		res.ti.Size = 0 // currently zero forces nvarchar(max)
 	case DateTime1:
 		t := time.Time(val)
 		res.ti.TypeId = typeDateTimeN

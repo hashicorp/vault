@@ -60,12 +60,34 @@ type PullRequest struct {
 	NodeID              *string    `json:"node_id,omitempty"`
 	RequestedReviewers  []*User    `json:"requested_reviewers,omitempty"`
 
-	Head *PullRequestBranch `json:"head,omitempty"`
-	Base *PullRequestBranch `json:"base,omitempty"`
+	Links *PRLinks           `json:"_links,omitempty"`
+	Head  *PullRequestBranch `json:"head,omitempty"`
+	Base  *PullRequestBranch `json:"base,omitempty"`
+
+	// ActiveLockReason is populated only when LockReason is provided while locking the pull request.
+	// Possible values are: "off-topic", "too heated", "resolved", and "spam".
+	ActiveLockReason *string `json:"active_lock_reason,omitempty"`
 }
 
 func (p PullRequest) String() string {
 	return Stringify(p)
+}
+
+// PRLink represents a single link object from Github pull request _links.
+type PRLink struct {
+	HRef *string `json:"href,omitempty"`
+}
+
+// PRLinks represents the "_links" object in a Github pull request.
+type PRLinks struct {
+	Self           *PRLink `json:"self,omitempty"`
+	HTML           *PRLink `json:"html,omitempty"`
+	Issue          *PRLink `json:"issue,omitempty"`
+	Comments       *PRLink `json:"comments,omitempty"`
+	ReviewComments *PRLink `json:"review_comments,omitempty"`
+	ReviewComment  *PRLink `json:"review_comment,omitempty"`
+	Commits        *PRLink `json:"commits,omitempty"`
+	Statuses       *PRLink `json:"statuses,omitempty"`
 }
 
 // PullRequestBranch represents a base or head branch in a GitHub pull request.
@@ -119,7 +141,7 @@ func (s *PullRequestsService) List(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var pulls []*PullRequest
@@ -142,7 +164,7 @@ func (s *PullRequestsService) Get(ctx context.Context, owner string, repo string
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	pull := new(PullRequest)
@@ -201,8 +223,7 @@ func (s *PullRequestsService) Create(ctx context.Context, owner string, repo str
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeLabelDescriptionSearchPreview)
 
 	p := new(PullRequest)
 	resp, err := s.client.Do(ctx, req, p)
@@ -251,7 +272,7 @@ func (s *PullRequestsService) Edit(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeGraphQLNodeIDPreview, mediaTypeLabelDescriptionSearchPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	p := new(PullRequest)

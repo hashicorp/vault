@@ -115,7 +115,7 @@ type configurationChangeRequest struct {
 // prior one has been committed).
 //
 // One downside to storing just two configurations is that if you try to take a
-// snahpsot when your state machine hasn't yet applied the committedIndex, we
+// snapshot when your state machine hasn't yet applied the committedIndex, we
 // have no record of the configuration that would logically fit into that
 // snapshot. We disallow snapshots in that case now. An alternative approach,
 // which LogCabin uses, is to track every configuration change in the
@@ -198,7 +198,7 @@ func nextConfiguration(current Configuration, currentIndex uint64, change config
 		// TODO: barf on new address?
 		newServer := Server{
 			// TODO: This should add the server as Staging, to be automatically
-			// promoted to Voter later. However, the promoton to Voter is not yet
+			// promoted to Voter later. However, the promotion to Voter is not yet
 			// implemented, and doing so is not trivial with the way the leader loop
 			// coordinates with the replication goroutines today. So, for now, the
 			// server will have a vote right away, and the Promote case below is

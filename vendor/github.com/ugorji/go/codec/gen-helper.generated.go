@@ -10,6 +10,7 @@ package codec
 import (
 	"encoding"
 	"reflect"
+	"strconv"
 )
 
 // GenVersion is the current version of codecgen.
@@ -49,7 +50,17 @@ type genHelperEncDriver struct {
 
 func (x genHelperEncDriver) EncodeBuiltin(rt uintptr, v interface{}) {}
 func (x genHelperEncDriver) EncStructFieldKey(keyType valueType, s string) {
-	encStructFieldKey(x.encDriver, keyType, s)
+	var m must
+	if keyType == valueTypeString {
+		x.encDriver.EncodeString(cUTF8, s)
+	} else if keyType == valueTypeInt {
+		x.encDriver.EncodeInt(m.Int(strconv.ParseInt(s, 10, 64)))
+	} else if keyType == valueTypeUint {
+		x.encDriver.EncodeUint(m.Uint(strconv.ParseUint(s, 10, 64)))
+	} else if keyType == valueTypeFloat {
+		x.encDriver.EncodeFloat64(m.Float(strconv.ParseFloat(s, 64)))
+	}
+	// encStructFieldKey(x.encDriver, keyType, s)
 }
 func (x genHelperEncDriver) EncodeSymbol(s string) {
 	x.encDriver.EncodeString(cUTF8, s)
@@ -167,6 +178,11 @@ func (f genHelperEncoder) Extension(rtid uintptr) (xfn *extTypeTagFn) {
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) EncExtension(v interface{}, xfFn *extTypeTagFn) {
 	f.e.e.EncodeExt(v, xfFn.tag, xfFn.ext, f.e)
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperEncoder) WriteStr(s string) {
+	f.e.w.writestr(s)
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*

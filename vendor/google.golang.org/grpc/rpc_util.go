@@ -156,13 +156,11 @@ type callInfo struct {
 	compressorType        string
 	failFast              bool
 	stream                *clientStream
-	traceInfo             traceInfo // in trace.go
 	maxReceiveMessageSize *int
 	maxSendMessageSize    *int
 	creds                 credentials.PerRPCCredentials
 	contentSubtype        string
 	codec                 baseCodec
-	disableRetry          bool
 	maxRetryRPCBufferSize int
 }
 
@@ -470,7 +468,7 @@ type parser struct {
 //   * io.EOF, when no messages remain
 //   * io.ErrUnexpectedEOF
 //   * of type transport.ConnectionError
-//   * of type transport.StreamError
+//   * an error from the status package
 // No other error values or types must be returned, which also means
 // that the underlying io.Reader must not return an incompatible
 // error.
@@ -533,7 +531,10 @@ func compress(in []byte, cp Compressor, compressor encoding.Compressor) ([]byte,
 	}
 	cbuf := &bytes.Buffer{}
 	if compressor != nil {
-		z, _ := compressor.Compress(cbuf)
+		z, err := compressor.Compress(cbuf)
+		if err != nil {
+			return nil, wrapErr(err)
+		}
 		if _, err := z.Write(in); err != nil {
 			return nil, wrapErr(err)
 		}
@@ -748,6 +749,19 @@ func parseDialTarget(target string) (net string, addr string) {
 	}
 
 	return net, target
+}
+
+// channelzData is used to store channelz related data for ClientConn, addrConn and Server.
+// These fields cannot be embedded in the original structs (e.g. ClientConn), since to do atomic
+// operation on int64 variable on 32-bit machine, user is responsible to enforce memory alignment.
+// Here, by grouping those int64 fields inside a struct, we are enforcing the alignment.
+type channelzData struct {
+	callsStarted   int64
+	callsFailed    int64
+	callsSucceeded int64
+	// lastCallStartedTime stores the timestamp that last call starts. It is of int64 type instead of
+	// time.Time since it's more costly to atomically update time.Time variable than int64 variable.
+	lastCallStartedTime int64
 }
 
 // The SupportPackageIsVersion variables are referenced from generated protocol
