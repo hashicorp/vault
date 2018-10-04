@@ -932,7 +932,9 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
 
-	// Remove ParentGroupID from removed GroupMembers
+	// For those group member IDs that are removed from the list, remove current
+	// group ID as their respective ParentGroupID.
+
 	// Get the current MemberGroups IDs for this group
 	var currentMemberGroupIDs []string
 	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
@@ -943,8 +945,12 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
 	}
 
-	// Check if current MemberGroups should be removed
+	// Update parent group IDs in the removed members
 	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		if strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			continue
+		}
+
 		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
 		if err != nil {
 			return err
@@ -953,19 +959,11 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
 		}
 
-		// Remove ParentGroup Entry for this group from removed Group
-		if !strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
-			currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
-		}
+		// Remove group ID from the parent group IDs
+		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
 
-		// This technically is not upsert. It is only update, only the method
-		// name is upsert here.
 		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
 		if err != nil {
-			// Ideally we would want to revert the whole operation in case of
-			// errors while persisting in member groups. But there is no
-			// storage transaction support yet. When we do have it, this will need
-			// an update.
 			return err
 		}
 	}
