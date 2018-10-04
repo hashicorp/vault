@@ -72,7 +72,14 @@ export default Route.extend(UnloadModelRoute, {
       secret = secret.replace('cert/', '');
     }
     return hash({
-      secret: this.store.queryRecord(modelType, { id: secret, backend }),
+      secret: this.store.queryRecord(modelType, { id: secret, backend }).then(resp => {
+        if (modelType === 'secret-v2') {
+          // TODO, find by query param to enable viewing versions
+          let version = resp.versions.findBy('version', resp.currentVersion);
+          version.reload();
+        }
+        return resp;
+      }),
       capabilities: this.capabilities(secret),
     });
   },

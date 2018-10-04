@@ -1,34 +1,41 @@
+/* eslint-disable */
 import { isEmpty } from '@ember/utils';
-import SecretAdapter from './secret';
+import ApplicationAdapter from './application';
 
-export default SecretAdapter.extend({
-  createOrUpdate(store, type, snapshot) {
-    const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
-    const { id } = snapshot;
-
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', {
-      data: { data },
-    });
-  },
-
-  urlForSecret(backend, id, infix = 'data') {
-    let url = `${this.buildURL()}/${backend}/${infix}/`;
+export default ApplicationAdapter.extend({
+  namespace: 'v1',
+  _url(backend, id) {
+    let url = `${this.buildURL()}/${backend}/metadata/`;
     if (!isEmpty(id)) {
       url = url + id;
     }
     return url;
   },
 
-  fetchByQuery(query, methodCall) {
+  // we override query here because the query object has a bunch of client-side
+  // concerns and we only want to send "list" to the server
+  query(store, type, query) {
+    let { backend, id } = query;
+    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } });
+  },
+
+  urlForQueryRecord(query) {
     let { id, backend } = query;
-    let args = [backend, id];
-    if (methodCall === 'query') {
-      args.push('metadata');
-    }
-    return this.ajax(this.urlForSecret(...args), 'GET', this.optionsForQuery(id, methodCall)).then(resp => {
+    return this._url(backend) + id;
+  },
+
+  queryRecord(store, type, query) {
+    let { backend, id } = query;
+    return this._super(...arguments).then(resp => {
       resp.id = id;
+      resp.backend = backend;
       return resp;
     });
+  },
+
+  urlForDeleteRecord(store, type, snapshot) {
+    let backend = snapshot.belongsTo('secret-engine', { id: true });
+    let { id } = snapshot;
+    return this.urlForQueryRecord({ id, backend });
   },
 });
