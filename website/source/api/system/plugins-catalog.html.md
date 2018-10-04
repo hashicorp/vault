@@ -81,7 +81,7 @@ supplied name.
 
 ```json
 {
-  "sha_256": "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
+  "sha256": "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
   "command": "mysql-database-plugin"
 }
 ```

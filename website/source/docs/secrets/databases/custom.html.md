@@ -102,7 +102,7 @@ this your token will need sudo permissions.
 
 ```text
 $ vault write sys/plugins/catalog/myplugin-database-plugin \
-    sha_256="..." \
+    sha256="..." \
     command="myplugin"
 Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
 ```
