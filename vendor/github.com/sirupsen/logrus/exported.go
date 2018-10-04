@@ -2,6 +2,7 @@ package logrus
 
 import (
 	"io"
+	"time"
 )
 
 var (
@@ -20,30 +21,27 @@ func SetOutput(out io.Writer) {
 
 // SetFormatter sets the standard logger formatter.
 func SetFormatter(formatter Formatter) {
-	std.mu.Lock()
-	defer std.mu.Unlock()
-	std.Formatter = formatter
+	std.SetFormatter(formatter)
 }
 
 // SetLevel sets the standard logger level.
 func SetLevel(level Level) {
-	std.mu.Lock()
-	defer std.mu.Unlock()
 	std.SetLevel(level)
 }
 
 // GetLevel returns the standard logger level.
 func GetLevel() Level {
-	std.mu.Lock()
-	defer std.mu.Unlock()
-	return std.level()
+	return std.GetLevel()
+}
+
+// IsLevelEnabled checks if the log level of the standard logger is greater than the level param
+func IsLevelEnabled(level Level) bool {
+	return std.IsLevelEnabled(level)
 }
 
 // AddHook adds a hook to the standard logger hooks.
 func AddHook(hook Hook) {
-	std.mu.Lock()
-	defer std.mu.Unlock()
-	std.Hooks.Add(hook)
+	std.AddHook(hook)
 }
 
 // WithError creates an entry from the standard logger and adds an error to it, using the value defined in ErrorKey as key.
@@ -68,6 +66,15 @@ func WithField(key string, value interface{}) *Entry {
 // or Panic on the Entry it returns.
 func WithFields(fields Fields) *Entry {
 	return std.WithFields(fields)
+}
+
+// WithTime creats an entry from the standard logger and overrides the time of
+// logs generated with it.
+//
+// Note that it doesn't log until you call Debug, Print, Info, Warn, Fatal
+// or Panic on the Entry it returns.
+func WithTime(t time.Time) *Entry {
+	return std.WithTime(t)
 }
 
 // Debug logs a message at level Debug on the standard logger.

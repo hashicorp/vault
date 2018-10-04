@@ -16,11 +16,11 @@ import (
 
 // userAgent gets user agent
 // It has the SDK version information, OS information and GO version
-func userAgent() string {
+var userAgent = func() string {
 	sys := getSysInfo()
 	return fmt.Sprintf("aliyun-sdk-go/%s (%s/%s/%s;%s)", Version, sys.name,
 		sys.release, sys.machine, runtime.Version())
-}
+}()
 
 type sysInfo struct {
 	name    string // OS name such as windows/Linux

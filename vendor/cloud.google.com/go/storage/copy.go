@@ -115,6 +115,9 @@ func (c *Copier) callRewrite(ctx context.Context, rawObj *raw.Object) (*raw.Rewr
 	if c.DestinationKMSKeyName != "" {
 		call.DestinationKmsKeyName(c.DestinationKMSKeyName)
 	}
+	if c.PredefinedACL != "" {
+		call.DestinationPredefinedAcl(c.PredefinedACL)
+	}
 	if err := applyConds("Copy destination", c.dst.gen, c.dst.conds, call); err != nil {
 		return nil, err
 	}
@@ -208,6 +211,9 @@ func (c *Composer) Run(ctx context.Context) (attrs *ObjectAttrs, err error) {
 	}
 	if c.dst.userProject != "" {
 		call.UserProject(c.dst.userProject)
+	}
+	if c.PredefinedACL != "" {
+		call.DestinationPredefinedAcl(c.PredefinedACL)
 	}
 	if err := setEncryptionHeaders(call.Header(), c.dst.encryptionKey, false); err != nil {
 		return nil, err

@@ -24,7 +24,7 @@ const (
 	UnsupportedCredentialErrorMessage = "Specified credential (type = %s) is not supported, please check"
 
 	CanNotResolveEndpointErrorCode    = "SDK.CanNotResolveEndpoint"
-	CanNotResolveEndpointErrorMessage = "Can not resolve endpoint(param = %s), please check the user guide\n %s"
+	CanNotResolveEndpointErrorMessage = "Can not resolve endpoint(param = %s), please check your accessKey with secret, and read the user guide\n %s"
 
 	UnsupportedParamPositionErrorCode    = "SDK.UnsupportedParamPosition"
 	UnsupportedParamPositionErrorMessage = "Specified param position (%s) is not supported, please upgrade sdk and retry"

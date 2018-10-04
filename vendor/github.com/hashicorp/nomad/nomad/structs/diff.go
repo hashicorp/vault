@@ -105,6 +105,17 @@ func (j *Job) Diff(other *Job, contextual bool) (*JobDiff, error) {
 		diff.Objects = append(diff.Objects, conDiff...)
 	}
 
+	// Affinities diff
+	affinitiesDiff := primitiveObjectSetDiff(
+		interfaceSlice(j.Affinities),
+		interfaceSlice(other.Affinities),
+		[]string{"str"},
+		"Affinity",
+		contextual)
+	if affinitiesDiff != nil {
+		diff.Objects = append(diff.Objects, affinitiesDiff...)
+	}
+
 	// Task groups diff
 	tgs, err := taskGroupDiffs(j.TaskGroups, other.TaskGroups, contextual)
 	if err != nil {
@@ -226,6 +237,17 @@ func (tg *TaskGroup) Diff(other *TaskGroup, contextual bool) (*TaskGroupDiff, er
 		contextual)
 	if conDiff != nil {
 		diff.Objects = append(diff.Objects, conDiff...)
+	}
+
+	// Affinities diff
+	affinitiesDiff := primitiveObjectSetDiff(
+		interfaceSlice(tg.Affinities),
+		interfaceSlice(other.Affinities),
+		[]string{"str"},
+		"Affinity",
+		contextual)
+	if affinitiesDiff != nil {
+		diff.Objects = append(diff.Objects, affinitiesDiff...)
 	}
 
 	// Restart policy diff
@@ -385,6 +407,17 @@ func (t *Task) Diff(other *Task, contextual bool) (*TaskDiff, error) {
 		contextual)
 	if conDiff != nil {
 		diff.Objects = append(diff.Objects, conDiff...)
+	}
+
+	// Affinities diff
+	affinitiesDiff := primitiveObjectSetDiff(
+		interfaceSlice(t.Affinities),
+		interfaceSlice(other.Affinities),
+		[]string{"str"},
+		"Affinity",
+		contextual)
+	if affinitiesDiff != nil {
+		diff.Objects = append(diff.Objects, affinitiesDiff...)
 	}
 
 	// Config diff

@@ -41,7 +41,7 @@ type simpleEncDriver struct {
 	// c containerState
 	encDriverTrackContainerWriter
 	// encDriverNoopContainerWriter
-	_ [2]uint64 // padding
+	_ [3]uint64 // padding
 }
 
 func (e *simpleEncDriver) EncodeNil() {
@@ -210,7 +210,7 @@ type simpleDecDriver struct {
 	noBuiltInTypes
 	// noStreamingCodec
 	decDriverNoopContainerReader
-	_ [3]uint64 // padding
+	// _ [3]uint64 // padding
 }
 
 func (d *simpleDecDriver) readNextBd() {

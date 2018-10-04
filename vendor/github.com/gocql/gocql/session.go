@@ -658,6 +658,11 @@ func (s *Session) connect(host *HostInfo, errorHandler ConnErrorHandler) (*Conn,
 	return s.dial(host, s.connCfg, errorHandler)
 }
 
+type queryMetrics struct {
+	Attempts     int
+	TotalLatency int64
+}
+
 // Query represents a CQL statement that can be executed.
 type Query struct {
 	stmt                  string
@@ -673,14 +678,15 @@ type Query struct {
 	session               *Session
 	rt                    RetryPolicy
 	binding               func(q *QueryInfo) ([]interface{}, error)
-	attempts              int
-	totalLatency          int64
 	serialCons            SerialConsistency
 	defaultTimestamp      bool
 	defaultTimestampValue int64
 	disableSkipMetadata   bool
 	context               context.Context
+	cancelQuery           func()
 	idempotent            bool
+	metrics               map[string]*queryMetrics
+	customPayload         map[string][]byte
 
 	disableAutoPage bool
 }
@@ -698,7 +704,23 @@ func (q *Query) defaultsFromSession() {
 	q.serialCons = s.cfg.SerialConsistency
 	q.defaultTimestamp = s.cfg.DefaultTimestamp
 	q.idempotent = s.cfg.DefaultIdempotence
+	q.metrics = make(map[string]*queryMetrics)
+
+	// Initiate an empty context with a cancel call
+	q.WithContext(context.Background())
+
 	s.mu.RUnlock()
+}
+
+func (q *Query) getHostMetrics(host *HostInfo) *queryMetrics {
+	hostMetrics, exists := q.metrics[host.ConnectAddress().String()]
+	if !exists {
+		// if the host is not in the map, it means it's been accessed for the first time
+		hostMetrics = &queryMetrics{Attempts: 0, TotalLatency: 0}
+		q.metrics[host.ConnectAddress().String()] = hostMetrics
+	}
+
+	return hostMetrics
 }
 
 // Statement returns the statement that was used to generate this query.
@@ -713,13 +735,23 @@ func (q Query) String() string {
 
 //Attempts returns the number of times the query was executed.
 func (q *Query) Attempts() int {
-	return q.attempts
+	attempts := 0
+	for _, metric := range q.metrics {
+		attempts += metric.Attempts
+	}
+	return attempts
 }
 
 //Latency returns the average amount of nanoseconds per attempt of the query.
 func (q *Query) Latency() int64 {
-	if q.attempts > 0 {
-		return q.totalLatency / int64(q.attempts)
+	var attempts int
+	var latency int64
+	for _, metric := range q.metrics {
+		attempts += metric.Attempts
+		latency += metric.TotalLatency
+	}
+	if attempts > 0 {
+		return latency / int64(attempts)
 	}
 	return 0
 }
@@ -741,6 +773,12 @@ func (q *Query) GetConsistency() Consistency {
 // Same as Consistency but without a return value
 func (q *Query) SetConsistency(c Consistency) {
 	q.cons = c
+}
+
+// CustomPayload sets the custom payload level for this query.
+func (q *Query) CustomPayload(customPayload map[string][]byte) *Query {
+	q.customPayload = customPayload
+	return q
 }
 
 // Trace enables tracing of this query. Look at the documentation of the
@@ -797,10 +835,15 @@ func (q *Query) RoutingKey(routingKey []byte) *Query {
 }
 
 // WithContext will set the context to use during a query, it will be used to
-// timeout when waiting for responses from Cassandra.
+// timeout when waiting for responses from Cassandra. Additionally it adds
+// the cancel function so that it can be called whenever necessary.
 func (q *Query) WithContext(ctx context.Context) *Query {
-	q.context = ctx
+	q.context, q.cancelQuery = context.WithCancel(ctx)
 	return q
+}
+
+func (q *Query) Cancel() {
+	q.cancelQuery()
 }
 
 func (q *Query) execute(conn *Conn) *Iter {
@@ -808,9 +851,9 @@ func (q *Query) execute(conn *Conn) *Iter {
 }
 
 func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
-	q.attempts++
-	q.totalLatency += end.Sub(start).Nanoseconds()
-	// TODO: track latencies per host and things as well instead of just total
+	hostMetrics := q.getHostMetrics(host)
+	hostMetrics.Attempts++
+	hostMetrics.TotalLatency += end.Sub(start).Nanoseconds()
 
 	if q.observer != nil {
 		q.observer.ObserveQuery(q.context, ObservedQuery{
@@ -820,6 +863,7 @@ func (q *Query) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 			End:       end,
 			Rows:      iter.numRows,
 			Host:      host,
+			Metrics:   hostMetrics,
 			Err:       iter.err,
 		})
 	}
@@ -943,9 +987,9 @@ func (q *Query) IsIdempotent() bool {
 	return q.idempotent
 }
 
-// Idempontent marks the query as being idempontent or not depending on
+// Idempotent marks the query as being idempotent or not depending on
 // the value.
-func (q *Query) Idempontent(value bool) *Query {
+func (q *Query) Idempotent(value bool) *Query {
 	q.idempotent = value
 	return q
 }
@@ -1307,7 +1351,7 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 // custom QueryHandlers running in your C* cluster.
 // See https://datastax.github.io/java-driver/manual/custom_payloads/
 func (iter *Iter) GetCustomPayload() map[string][]byte {
-	return iter.framer.header.customPayload
+	return iter.framer.customPayload
 }
 
 // Warnings returns any warnings generated if given in the response from Cassandra.
@@ -1385,22 +1429,23 @@ type Batch struct {
 	Type                  BatchType
 	Entries               []BatchEntry
 	Cons                  Consistency
+	CustomPayload         map[string][]byte
 	rt                    RetryPolicy
 	observer              BatchObserver
-	attempts              int
-	totalLatency          int64
 	serialCons            SerialConsistency
 	defaultTimestamp      bool
 	defaultTimestampValue int64
 	context               context.Context
+	cancelBatch           func()
 	keyspace              string
+	metrics               map[string]*queryMetrics
 }
 
 // NewBatch creates a new batch operation without defaults from the cluster
 //
-// Depreicated: use session.NewBatch instead
+// Deprecated: use session.NewBatch instead
 func NewBatch(typ BatchType) *Batch {
-	return &Batch{Type: typ}
+	return &Batch{Type: typ, metrics: make(map[string]*queryMetrics)}
 }
 
 // NewBatch creates a new batch operation using defaults defined in the cluster
@@ -1414,9 +1459,25 @@ func (s *Session) NewBatch(typ BatchType) *Batch {
 		Cons:             s.cons,
 		defaultTimestamp: s.cfg.DefaultTimestamp,
 		keyspace:         s.cfg.Keyspace,
+		metrics:          make(map[string]*queryMetrics),
 	}
+
+	// Initiate an empty context with a cancel call
+	batch.WithContext(context.Background())
+
 	s.mu.RUnlock()
 	return batch
+}
+
+func (b *Batch) getHostMetrics(host *HostInfo) *queryMetrics {
+	hostMetrics, exists := b.metrics[host.ConnectAddress().String()]
+	if !exists {
+		// if the host is not in the map, it means it's been accessed for the first time
+		hostMetrics = &queryMetrics{Attempts: 0, TotalLatency: 0}
+		b.metrics[host.ConnectAddress().String()] = hostMetrics
+	}
+
+	return hostMetrics
 }
 
 // Observer enables batch-level observer on this batch.
@@ -1432,13 +1493,23 @@ func (b *Batch) Keyspace() string {
 
 // Attempts returns the number of attempts made to execute the batch.
 func (b *Batch) Attempts() int {
-	return b.attempts
+	attempts := 0
+	for _, metric := range b.metrics {
+		attempts += metric.Attempts
+	}
+	return attempts
 }
 
 //Latency returns the average number of nanoseconds to execute a single attempt of the batch.
 func (b *Batch) Latency() int64 {
-	if b.attempts > 0 {
-		return b.totalLatency / int64(b.attempts)
+	attempts := 0
+	var latency int64 = 0
+	for _, metric := range b.metrics {
+		attempts += metric.Attempts
+		latency += metric.TotalLatency
+	}
+	if attempts > 0 {
+		return latency / int64(attempts)
 	}
 	return 0
 }
@@ -1478,10 +1549,15 @@ func (b *Batch) RetryPolicy(r RetryPolicy) *Batch {
 }
 
 // WithContext will set the context to use during a query, it will be used to
-// timeout when waiting for responses from Cassandra.
+// timeout when waiting for responses from Cassandra. Additionally it adds
+// the cancel function so that it can be called whenever necessary.
 func (b *Batch) WithContext(ctx context.Context) *Batch {
-	b.context = ctx
+	b.context, b.cancelBatch = context.WithCancel(ctx)
 	return b
+}
+
+func (b *Batch) Cancel() {
+	b.cancelBatch()
 }
 
 // Size returns the number of batch statements to be executed by the batch operation.
@@ -1525,9 +1601,9 @@ func (b *Batch) WithTimestamp(timestamp int64) *Batch {
 }
 
 func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo) {
-	b.attempts++
-	b.totalLatency += end.Sub(start).Nanoseconds()
-	// TODO: track latencies per host and things as well instead of just total
+	hostMetrics := b.getHostMetrics(host)
+	hostMetrics.Attempts++
+	hostMetrics.TotalLatency += end.Sub(start).Nanoseconds()
 
 	if b.observer == nil {
 		return
@@ -1544,8 +1620,9 @@ func (b *Batch) attempt(keyspace string, end, start time.Time, iter *Iter, host 
 		Start:      start,
 		End:        end,
 		// Rows not used in batch observations // TODO - might be able to support it when using BatchCAS
-		Host: host,
-		Err:  iter.err,
+		Host:    host,
+		Metrics: hostMetrics,
+		Err:     iter.err,
 	})
 }
 
@@ -1697,6 +1774,9 @@ type ObservedQuery struct {
 	// Host is the informations about the host that performed the query
 	Host *HostInfo
 
+	// The metrics per this host
+	Metrics *queryMetrics
+
 	// Err is the error in the query.
 	// It only tracks network errors or errors of bad cassandra syntax, in particular selects with no match return nil error
 	Err error
@@ -1725,6 +1805,9 @@ type ObservedBatch struct {
 	// Err is the error in the batch query.
 	// It only tracks network errors or errors of bad cassandra syntax, in particular selects with no match return nil error
 	Err error
+
+	// The metrics per this host
+	Metrics *queryMetrics
 }
 
 // BatchObserver is the interface implemented by batch observers / stat collectors.

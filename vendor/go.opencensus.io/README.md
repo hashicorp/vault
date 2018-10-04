@@ -22,10 +22,32 @@ The use of vendoring or a dependency management tool is recommended.
 
 OpenCensus Go libraries require Go 1.8 or later.
 
+## Getting Started
+
+The easiest way to get started using OpenCensus in your application is to use an existing
+integration with your RPC framework:
+
+* [net/http](https://godoc.org/go.opencensus.io/plugin/ochttp)
+* [gRPC](https://godoc.org/go.opencensus.io/plugin/ocgrpc)
+* [database/sql](https://godoc.org/github.com/basvanbeek/ocsql)
+* [Go kit](https://godoc.org/github.com/go-kit/kit/tracing/opencensus)
+* [Groupcache](https://godoc.org/github.com/orijtech/groupcache)
+* [Caddy webserver](https://godoc.org/github.com/orijtech/caddy)
+* [MongoDB](https://godoc.org/github.com/orijtech/mongo-go-driver)
+* [Redis gomodule/redigo](https://godoc.org/github.com/orijtech/redigo)
+* [Redis goredis/redis](https://godoc.org/github.com/orijtech/redis)
+* [Memcache](https://godoc.org/github.com/orijtech/gomemcache)
+
+If you're a framework not listed here, you could either implement your own middleware for your
+framework or use [custom stats](#stats) and [spans](#spans) directly in your application.
+
 ## Exporters
 
-OpenCensus can export instrumentation data to various backends. 
-Currently, OpenCensus supports:
+OpenCensus can export instrumentation data to various backends.
+OpenCensus has exporter implementations for the following, users
+can implement their own exporters by implementing the exporter interfaces
+([stats](https://godoc.org/go.opencensus.io/stats/view#Exporter),
+[trace](https://godoc.org/go.opencensus.io/trace#Exporter)):
 
 * [Prometheus][exporter-prom] for stats
 * [OpenZipkin][exporter-zipkin] for traces
@@ -33,6 +55,8 @@ Currently, OpenCensus supports:
 * [Jaeger][exporter-jaeger] for traces
 * [AWS X-Ray][exporter-xray] for traces
 * [Datadog][exporter-datadog] for stats and traces
+* [Graphite][exporter-graphite] for stats
+* [Honeycomb][exporter-honeycomb] for traces
 
 ## Overview
 
@@ -42,13 +66,6 @@ In a microservices environment, a user request may go through
 multiple services until there is a response. OpenCensus allows
 you to instrument your services and collect diagnostics data all
 through your services end-to-end.
-
-Start with instrumenting HTTP and gRPC clients and servers,
-then add additional custom instrumentation if needed.
-
-* [HTTP guide](https://github.com/census-instrumentation/opencensus-go/tree/master/examples/http)
-* [gRPC guide](https://github.com/census-instrumentation/opencensus-go/tree/master/examples/grpc)
-
 
 ## Tags
 
@@ -220,7 +237,7 @@ Before version 1.0.0, the following deprecation policy will be observed:
 
 No backwards-incompatible changes will be made except for the removal of symbols that have
 been marked as *Deprecated* for at least one minor release (e.g. 0.9.0 to 0.10.0). A release
-removing the *Deprecated* functionality will be made no sooner than 28 days after the first 
+removing the *Deprecated* functionality will be made no sooner than 28 days after the first
 release in which the functionality was marked *Deprecated*.
 
 [travis-image]: https://travis-ci.org/census-instrumentation/opencensus-go.svg?branch=master
@@ -240,5 +257,7 @@ release in which the functionality was marked *Deprecated*.
 [exporter-stackdriver]: https://godoc.org/contrib.go.opencensus.io/exporter/stackdriver
 [exporter-zipkin]: https://godoc.org/go.opencensus.io/exporter/zipkin
 [exporter-jaeger]: https://godoc.org/go.opencensus.io/exporter/jaeger
-[exporter-xray]: https://github.com/census-instrumentation/opencensus-go-exporter-aws
+[exporter-xray]: https://github.com/census-ecosystem/opencensus-go-exporter-aws
 [exporter-datadog]: https://github.com/DataDog/opencensus-go-exporter-datadog
+[exporter-graphite]: https://github.com/census-ecosystem/opencensus-go-exporter-graphite
+[exporter-honeycomb]: https://github.com/honeycombio/opencensus-exporter

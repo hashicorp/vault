@@ -202,7 +202,7 @@ type msgpackEncDriver struct {
 	w encWriter
 	h *MsgpackHandle
 	x [8]byte
-	_ [3]uint64 // padding
+	// _ [3]uint64 // padding
 }
 
 func (e *msgpackEncDriver) EncodeNil() {
@@ -210,10 +210,9 @@ func (e *msgpackEncDriver) EncodeNil() {
 }
 
 func (e *msgpackEncDriver) EncodeInt(i int64) {
-	// if i >= 0 {
-	// 	e.EncodeUint(uint64(i))
-	// } else if false &&
-	if i > math.MaxInt8 {
+	if e.h.PositiveIntUnsigned && i >= 0 {
+		e.EncodeUint(uint64(i))
+	} else if i > math.MaxInt8 {
 		if i <= math.MaxInt16 {
 			e.w.writen1(mpInt16)
 			bigenHelper{e.x[:2], e.w}.writeUint16(uint16(i))
@@ -414,7 +413,7 @@ func (e *msgpackEncDriver) writeContainerLen(ct msgpackContainerType, l int) {
 
 type msgpackDecDriver struct {
 	d *Decoder
-	r decReader // *Decoder decReader decReaderT
+	r decReader
 	h *MsgpackHandle
 	// b      [scratchByteArrayLen]byte
 	bd     byte
@@ -424,7 +423,7 @@ type msgpackDecDriver struct {
 	// noStreamingCodec
 	// decNoSeparator
 	decDriverNoopContainerReader
-	_ [3]uint64 // padding
+	// _ [3]uint64 // padding
 }
 
 // Note: This returns either a primitive (int, bool, etc) for non-containers,
@@ -941,6 +940,9 @@ type MsgpackHandle struct {
 	// type is provided (e.g. decoding into a nil interface{}), you get back
 	// a []byte or string based on the setting of RawToString.
 	WriteExt bool
+
+	// PositiveIntUnsigned says to encode positive integers as unsigned.
+	PositiveIntUnsigned bool
 
 	binaryEncodingType
 	noElemSeparators
