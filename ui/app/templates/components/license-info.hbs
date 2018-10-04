@@ -3,6 +3,7 @@
     <h1 class="title is-3">License</h1>
   </p.levelLeft>
 </PageHeader>
+<MessageError @model={{model}} />
 {{#if isTemporary}}
   <section class="box is-sideless">
     <MessageInPage data-test-cluster-status @type="warning" @class="license-warning" data-test-warning-text>
