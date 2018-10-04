@@ -14,7 +14,7 @@ import (
 // PullRequestComment represents a comment left on a pull request.
 type PullRequestComment struct {
 	ID                  *int64     `json:"id,omitempty"`
-	InReplyTo           *int64     `json:"in_reply_to,omitempty"`
+	InReplyTo           *int64     `json:"in_reply_to_id,omitempty"`
 	Body                *string    `json:"body,omitempty"`
 	Path                *string    `json:"path,omitempty"`
 	DiffHunk            *string    `json:"diff_hunk,omitempty"`
@@ -114,6 +114,32 @@ func (s *PullRequestsService) GetComment(ctx context.Context, owner string, repo
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/comments/#create-a-comment
 func (s *PullRequestsService) CreateComment(ctx context.Context, owner string, repo string, number int, comment *PullRequestComment) (*PullRequestComment, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/pulls/%d/comments", owner, repo, number)
+	req, err := s.client.NewRequest("POST", u, comment)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	c := new(PullRequestComment)
+	resp, err := s.client.Do(ctx, req, c)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return c, resp, nil
+}
+
+// CreateCommentInReplyTo creates a new comment as a reply to an existing pull request comment.
+//
+// GitHub API docs: https://developer.github.com/v3/pulls/comments/#alternative-input
+func (s *PullRequestsService) CreateCommentInReplyTo(ctx context.Context, owner string, repo string, number int, body string, commentID int64) (*PullRequestComment, *Response, error) {
+	comment := &struct {
+		Body      string `json:"body,omitempty"`
+		InReplyTo int64  `json:"in_reply_to,omitempty"`
+	}{
+		Body:      body,
+		InReplyTo: commentID,
+	}
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/comments", owner, repo, number)
 	req, err := s.client.NewRequest("POST", u, comment)
 	if err != nil {

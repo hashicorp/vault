@@ -309,6 +309,9 @@ result in data loss!
   primary gives to secondary nodes. Useful if the primary's cluster address is
   not directly accessible and must be accessed via an alternate path/address
   (e.g. through a load balancer).
+- `force` `(bool: false)` - If true the cluster will be promoted even if it fails 
+  certain safety checks. Caution: Forcing promotion could result in data loss if 
+  data isn't fully replicated.
 
 ### Sample Payload
 

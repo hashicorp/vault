@@ -42,9 +42,9 @@ func completeROASignParams(request requests.AcsRequest, signer Signer, regionId 
 
 	// complete query params
 	queryParams := request.GetQueryParams()
-	if _, ok := queryParams["RegionId"]; !ok {
-		queryParams["RegionId"] = regionId
-	}
+	//if _, ok := queryParams["RegionId"]; !ok {
+	//	queryParams["RegionId"] = regionId
+	//}
 	if extraParam := signer.GetExtraParam(); extraParam != nil {
 		for key, value := range extraParam {
 			if key == "SecurityToken" {

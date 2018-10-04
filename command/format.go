@@ -320,6 +320,7 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	out := []string{}
 	out = append(out, "Key | Value")
 	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
 	out = append(out, fmt.Sprintf("Threshold | %d", status.T))

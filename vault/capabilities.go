@@ -40,8 +40,6 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 	policyNames[tokenNS.ID] = te.Policies
 	policyCount += len(te.Policies)
 
-	// Attach token's namespace information to the context
-	ctx = namespace.ContextWithNamespace(ctx, tokenNS)
 	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
 	if err != nil {
 		return nil, err
@@ -64,7 +62,10 @@ func (c *Core) Capabilities(ctx context.Context, token, path string) ([]string, 
 		return []string{DenyCapability}, nil
 	}
 
-	acl, err := c.policyStore.ACL(ctx, entity, policyNames)
+	// Construct the corresponding ACL object. ACL construction should be
+	// performed on the token's namespace.
+	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
+	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames)
 	if err != nil {
 		return nil, err
 	}

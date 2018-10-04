@@ -1,17 +1,63 @@
-## 0.11.2 (Unreleased)
+## 0.11.3 (Unreleased)
 
 BUG FIXES:
 
+ * database/mongodb: Fix panic that could occur at high load [GH-5463]
+
+## 0.11.2 (October 2nd, 2018)
+
+CHANGES:
+
+ * `sys/seal-status` now includes an `initialized` boolean in the output. If
+   Vault is not initialized, it will return a `200` with this value set `false`
+   instead of a `400`.
+ * `passthrough_request_headers` will now deny certain headers from being
+   provided to backends based on a global denylist.
+
+FEATURES:
+
+ * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
+   secret engine can now be rotated, to ensure that only Vault knows the
+   credentials it is using. [GH-5140]
+ * Storage Backend Migrator: A new `operator migrate` command allows offline
+   migration of data between two storage backends.
+ * AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise): AliCloud KMS can now be used a support seal for 
+   Auto Unseal and Seal Wrapping.
+
+BUG FIXES:
+
+ * auth/okta: Fix reading deprecated `token` parameter if a token was
+   previously set in the configuration [GH-5409]
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
-
+ * replication: Fix DR API when using a token [GH-5398]
+ * identity: Ensure old group alias is removed when a new one is written [GH-5350]
+ * storage/alicloud: Don't call uname on package init [GH-5358]
+ * secrets/jwt: Fix issue where request context would be canceled too early 
+ * ui: fix need to have update for aws iam creds generation [GF-5294]
+ * ui: fix calculation of token expiry [GH-5435]
+ 
 IMPROVEMENTS:
 
+ * auth/aws: The identity alias name can now configured to be either IAM unique
+   ID of the IAM Principal, or ARN of the caller identity [GH-5247]
+ * auth/cert: Add allowed_organizational_units support [GH-5252]
  * cli: Format TTLs for non-secret responses [GH-5367] 
+ * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
-
+ * secrets/aws: WAL Rollback improvements [GH-5202]
+ * secrets/aws: Allow specifying STS role-default TTLs [GH-5138]
+ * secrets/pki: Add configuration support for setting NotBefore [GH-5325]
+ * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
+ * replication: Reindex process now runs in the background and does not block other 
+   vault operations
+ * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
+ * ui: you can now init a cluster with a seal config [GH-5428]
+ * ui: added the option to force promote replication clusters [GH-5438]
+ * replication: Allow promotion of a secondary when data is syncing with a "force" flag
+ 
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:

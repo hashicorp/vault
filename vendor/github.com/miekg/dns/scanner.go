@@ -42,7 +42,7 @@ func (s *scan) tokenText() (byte, error) {
 
 	// delay the newline handling until the next token is delivered,
 	// fixes off-by-one errors when reporting a parse error.
-	if s.eof == true {
+	if s.eof {
 		s.position.Line++
 		s.position.Column = 0
 		s.eof = false

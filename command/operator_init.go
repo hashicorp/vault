@@ -61,7 +61,7 @@ Usage: vault operator init [options]
   key shares must come together to regenerate the master key. These keys are
   often called "unseal keys" in Vault's documentation.
 
-  This command cannot be run against already-initialized Vault cluster.
+  This command cannot be run against an already-initialized Vault cluster.
 
   Start initialization with the default options:
 

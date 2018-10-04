@@ -69,27 +69,55 @@ func (w WebHookAuthor) String() string {
 
 // Hook represents a GitHub (web and service) hook for a repository.
 type Hook struct {
-	CreatedAt *time.Time             `json:"created_at,omitempty"`
-	UpdatedAt *time.Time             `json:"updated_at,omitempty"`
-	Name      *string                `json:"name,omitempty"`
-	URL       *string                `json:"url,omitempty"`
-	Events    []string               `json:"events,omitempty"`
-	Active    *bool                  `json:"active,omitempty"`
-	Config    map[string]interface{} `json:"config,omitempty"`
-	ID        *int64                 `json:"id,omitempty"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	URL       *string    `json:"url,omitempty"`
+	ID        *int64     `json:"id,omitempty"`
+
+	// Only the following fields are used when creating a hook.
+	// Name and Config are required.
+	Name   *string                `json:"name,omitempty"`
+	Config map[string]interface{} `json:"config,omitempty"`
+	Events []string               `json:"events,omitempty"`
+	Active *bool                  `json:"active,omitempty"`
 }
 
 func (h Hook) String() string {
 	return Stringify(h)
 }
 
+// createHookRequest is a subset of Hook and is used internally
+// by CreateHook to pass only the known fields for the endpoint.
+//
+// See https://github.com/google/go-github/issues/1015 for more
+// information.
+type createHookRequest struct {
+	// Name and Config are required.
+	// Name must be passed as "web".
+	Name   *string                `json:"name,omitempty"`
+	Config map[string]interface{} `json:"config,omitempty"`
+	Events []string               `json:"events,omitempty"`
+	Active *bool                  `json:"active,omitempty"`
+}
+
 // CreateHook creates a Hook for the specified repository.
 // Name and Config are required fields.
+//
+// Note that only a subset of the hook fields are used and hook must
+// not be nil.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/hooks/#create-a-hook
 func (s *RepositoriesService) CreateHook(ctx context.Context, owner, repo string, hook *Hook) (*Hook, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/hooks", owner, repo)
-	req, err := s.client.NewRequest("POST", u, hook)
+
+	hookReq := &createHookRequest{
+		Name:   hook.Name,
+		Events: hook.Events,
+		Active: hook.Active,
+		Config: hook.Config,
+	}
+
+	req, err := s.client.NewRequest("POST", u, hookReq)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,9 +164,13 @@ func (s *RepositoriesService) GetHook(ctx context.Context, owner, repo string, i
 	if err != nil {
 		return nil, nil, err
 	}
-	hook := new(Hook)
-	resp, err := s.client.Do(ctx, req, hook)
-	return hook, resp, err
+	h := new(Hook)
+	resp, err := s.client.Do(ctx, req, h)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return h, resp, nil
 }
 
 // EditHook updates a specified Hook.
@@ -152,7 +184,11 @@ func (s *RepositoriesService) EditHook(ctx context.Context, owner, repo string, 
 	}
 	h := new(Hook)
 	resp, err := s.client.Do(ctx, req, h)
-	return h, resp, err
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return h, resp, nil
 }
 
 // DeleteHook deletes a specified Hook.

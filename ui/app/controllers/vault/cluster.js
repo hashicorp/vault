@@ -6,6 +6,7 @@ export default Controller.extend({
   auth: service(),
   store: service(),
   media: service(),
+  router: service(),
   namespaceService: service('namespace'),
 
   vaultVersion: service('version'),
@@ -38,6 +39,7 @@ export default Controller.extend({
   }),
 
   showNav: computed(
+    'router.currentRouteName',
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
@@ -49,7 +51,11 @@ export default Controller.extend({
       ) {
         return false;
       }
-      if (this.get('activeClusterName') && this.get('auth.currentToken')) {
+      if (
+        this.activeClusterName &&
+        this.auth.currentToken &&
+        this.router.currentRouteName !== 'vault.cluster.auth'
+      ) {
         return true;
       }
     }

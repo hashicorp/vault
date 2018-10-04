@@ -14,6 +14,122 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_EntityByName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create an entity using the "name" endpoint
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+
+	// Test the read by name endpoint
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil || resp.Data["name"].(string) != "testentityname" {
+		t.Fatalf("bad entity response: %#v", resp)
+	}
+
+	// Update entity metadata using the name endpoint
+	entityMetadata := map[string]string{
+		"foo": "bar",
+	}
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"metadata": entityMetadata,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Check the updated result
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil || !reflect.DeepEqual(resp.Data["metadata"].(map[string]string), entityMetadata) {
+		t.Fatalf("bad entity response: %#v", resp)
+	}
+
+	// Delete the entity using the name endpoint
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.DeleteOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Check if deletion was successful
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// Create 2 entities
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/testentityname2",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if resp == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+
+	// List the entities by name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	expected := []string{"testentityname2", "testentityname"}
+	sort.Strings(expected)
+	actual := resp.Data["keys"].([]string)
+	sort.Strings(actual)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: entity list response; expected: %#v\nactual: %#v", expected, actual)
+	}
+}
+
 func TestIdentityStore_EntityReadGroupIDs(t *testing.T) {
 	var err error
 	var resp *logical.Response
@@ -541,41 +657,6 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		t.Fatalf("bad: entity; expected: nil, actual: %#v\n", entityFetched)
 	}
 
-}
-
-// This test is required because MemDB does not take care of ensuring
-// uniqueness of indexes that are marked unique. It is the job of the higher
-// level abstraction, the identity store in this case.
-func TestIdentityStore_EntitySameEntityNames(t *testing.T) {
-	var err error
-	var resp *logical.Response
-	ctx := namespace.RootContext(nil)
-	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
-
-	registerData := map[string]interface{}{
-		"name": "testentityname",
-	}
-
-	registerReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity",
-		Data:      registerData,
-	}
-
-	// Register an entity
-	resp, err = is.HandleRequest(ctx, registerReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	// Register another entity with same name
-	resp, err = is.HandleRequest(ctx, registerReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected an error due to entity name not being unique")
-	}
 }
 
 func TestIdentityStore_EntityCRUD(t *testing.T) {

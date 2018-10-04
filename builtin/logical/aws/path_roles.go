@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/hashicorp/vault/helper/consts"
@@ -59,6 +60,11 @@ iam_user, then it will attach the contents of the policy_document to the IAM
 user generated. When credential_type is assumed_role or federation_token, this
 will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
+			},
+
+			"default_sts_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 			},
 
 			"arn": &framework.FieldSchema{
@@ -204,6 +210,16 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			}
 		}
 		roleEntry.PolicyDocument = compacted
+	}
+
+	if defaultSTSTTLRaw, ok := d.GetOk("default_sts_ttl"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with default_sts_ttl"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
+			return logical.ErrorResponse(fmt.Sprintf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
+		}
+		roleEntry.DefaultSTSTTL = time.Duration(defaultSTSTTLRaw.(int)) * time.Second
 	}
 
 	if legacyRole != "" {
@@ -374,13 +390,14 @@ func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEnt
 }
 
 type awsRoleEntry struct {
-	CredentialTypes          []string `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
-	PolicyArns               []string `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
-	RoleArns                 []string `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
-	PolicyDocument           string   `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
-	InvalidData              string   `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
-	ProhibitFlexibleCredPath bool     `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
-	Version                  int      `json:"version"`                               // Version number of the role format
+	CredentialTypes          []string      `json:"credential_types"`                      // Entries must all be in the set of ("iam_user", "assumed_role", "federation_token")
+	PolicyArns               []string      `json:"policy_arns"`                           // ARNs of managed policies to attach to an IAM user
+	RoleArns                 []string      `json:"role_arns"`                             // ARNs of roles to assume for AssumedRole credentials
+	PolicyDocument           string        `json:"policy_document"`                       // JSON-serialized inline policy to attach to IAM users and/or to specify as the Policy parameter in AssumeRole calls
+	InvalidData              string        `json:"invalid_data,omitempty"`                // Invalid role data. Exists to support converting the legacy role data into the new format
+	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
+	Version                  int           `json:"version"`                               // Version number of the role format
+	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -389,6 +406,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_arns":      r.PolicyArns,
 		"role_arns":        r.RoleArns,
 		"policy_document":  r.PolicyDocument,
+		"default_sts_ttl":  int64(r.DefaultSTSTTL.Seconds()),
 	}
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData

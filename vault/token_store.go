@@ -456,7 +456,7 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	}
 
 	// Many tests don't have a token store running
-	if c.tokenStore == nil {
+	if c.tokenStore == nil || c.tokenStore.expiration == nil {
 		return nil, nil
 	}
 

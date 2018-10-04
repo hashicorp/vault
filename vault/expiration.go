@@ -1277,6 +1277,13 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		return nil
 	}
 
+	if le.Secret != nil {
+		// not sure if this is really valid to have a leaseEntry with a nil Secret
+		// (if there's a nil Secret, what are you really leasing?), but the tests
+		// create one, and good to be defensive
+		le.Secret.IssueTime = le.IssueTime
+	}
+
 	// Make sure we're operating in the right namespace
 	nsCtx := namespace.ContextWithNamespace(ctx, le.namespace)
 

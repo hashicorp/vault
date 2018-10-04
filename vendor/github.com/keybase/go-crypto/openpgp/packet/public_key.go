@@ -10,6 +10,7 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
@@ -27,11 +28,12 @@ import (
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/rsa"
 	"github.com/keybase/go-crypto/openpgp/s2k"
 )
 
 var (
+	// NIST curve P-224
+	oidCurveP224 []byte = []byte{0x2B, 0x81, 0x04, 0x00, 0x21}
 	// NIST curve P-256
 	oidCurveP256 []byte = []byte{0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07}
 	// NIST curve P-384
@@ -129,6 +131,8 @@ func (f *ecdsaKey) serialize(w io.Writer) (err error) {
 
 func getCurveByOid(oid []byte) elliptic.Curve {
 	switch {
+	case bytes.Equal(oid, oidCurveP224):
+		return elliptic.P224()
 	case bytes.Equal(oid, oidCurveP256):
 		return elliptic.P256()
 	case bytes.Equal(oid, oidCurveP384):
@@ -327,6 +331,8 @@ func NewElGamalPublicKey(creationTime time.Time, pub *elgamal.PublicKey) *Public
 
 func getCurveOid(curve elliptic.Curve) (res []byte, err error) {
 	switch curve {
+	case elliptic.P224():
+		res = oidCurveP224
 	case elliptic.P256():
 		res = oidCurveP256
 	case elliptic.P384():
@@ -478,7 +484,7 @@ func (pk *PublicKey) parseRSA(r io.Reader) (err error) {
 	}
 	for i := 0; i < len(pk.e.bytes); i++ {
 		rsa.E <<= 8
-		rsa.E |= int64(pk.e.bytes[i])
+		rsa.E |= int(pk.e.bytes[i])
 	}
 	pk.PublicKey = rsa
 	return
@@ -680,7 +686,7 @@ func (pk *PublicKey) VerifySignature(signed hash.Hash, sig *Signature) (err erro
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSASignOnly:
 		rsaPublicKey, _ := pk.PublicKey.(*rsa.PublicKey)
-		err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, sig.RSASignature.bytes)
+		err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, padToKeySize(rsaPublicKey, sig.RSASignature.bytes))
 		if err != nil {
 			return errors.SignatureError("RSA verification failure")
 		}
@@ -737,7 +743,7 @@ func (pk *PublicKey) VerifySignatureV3(signed hash.Hash, sig *SignatureV3) (err 
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSASignOnly:
 		rsaPublicKey := pk.PublicKey.(*rsa.PublicKey)
-		if err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, sig.RSASignature.bytes); err != nil {
+		if err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, padToKeySize(rsaPublicKey, sig.RSASignature.bytes)); err != nil {
 			return errors.SignatureError("RSA verification failure")
 		}
 		return
