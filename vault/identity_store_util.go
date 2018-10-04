@@ -931,6 +931,45 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	defer txn.Abort()
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
+
+	// Remove ParentGroupID from removed GroupMembers
+	// Get the current MemberGroups IDs for this group
+	var currentMemberGroupIDs []string
+	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	if err != nil {
+		return err
+	}
+	for _, currentMemberGroup := range currentMemberGroups {
+		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
+	}
+
+	// Check if current MemberGroups should be removed
+	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
+		if err != nil {
+			return err
+		}
+		if currentMemberGroup == nil {
+			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
+		}
+
+		// Remove ParentGroup Entry for this group from removed Group
+		if !strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
+		}
+
+		// This technically is not upsert. It is only update, only the method
+		// name is upsert here.
+		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		if err != nil {
+			// Ideally we would want to revert the whole operation in case of
+			// errors while persisting in member groups. But there is no
+			// storage transaction support yet. When we do have it, this will need
+			// an update.
+			return err
+		}
+	}
+
 	// After the group lock is held, make membership updates to all the
 	// relevant groups
 	for _, memberGroupID := range memberGroupIDs {
