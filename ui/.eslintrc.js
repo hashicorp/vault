@@ -15,6 +15,7 @@ module.exports = {
   },
   rules: {
     'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    'eol-last': 'never',
   },
   globals: {
     TextEncoderLite: true,
