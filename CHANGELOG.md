@@ -1,3 +1,9 @@
+## 0.11.3 (Unreleased)
+
+BUG FIXES:
+
+ * database/mongodb: Fix panic that could occur at high load [GH-5463]
+
 ## 0.11.2 (October 2nd, 2018)
 
 CHANGES:

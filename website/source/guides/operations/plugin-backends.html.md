@@ -70,7 +70,7 @@ $ shasum -a 256 /etc/vault/vault_plugins/my-mock-plugin
 2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/my-mock-plugin
 
 $ vault write sys/plugins/catalog/my-mock-plugin \
-    sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 \
+    sha256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 \
     command=my-mock-plugin
 Success! Data written to: sys/plugins/catalog/my-mock-plugin
 ```

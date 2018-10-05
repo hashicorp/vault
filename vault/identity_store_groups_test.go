@@ -11,6 +11,75 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_MemberGroupIDDelete(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create a child group
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "child",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	childGroupID := resp.Data["id"].(string)
+
+	// Create a parent group with the above group ID as its child
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             "parent",
+			"member_group_ids": []string{childGroupID},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Ensure that member group ID is properly updated
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/parent",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	memberGroupIDs := resp.Data["member_group_ids"].([]string)
+	if len(memberGroupIDs) != 1 && memberGroupIDs[0] != childGroupID {
+		t.Fatalf("bad: member group ids; expected: %#v, actual: %#v", []string{childGroupID}, memberGroupIDs)
+	}
+
+	// Clear the member group IDs from the parent group
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/parent",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"member_group_ids": []string{},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Ensure that member group ID is properly deleted
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/parent",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	memberGroupIDs = resp.Data["member_group_ids"].([]string)
+	if len(memberGroupIDs) != 0 {
+		t.Fatalf("bad: length of member group ids; expected: %d, actual: %d", 0, len(memberGroupIDs))
+	}
+}
+
 func TestIdentityStore_GroupByName(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
@@ -894,6 +963,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	entityIDReq.Path = "group/id/" + engGroupID
 	entityIDReq.Data = map[string]interface{}{
 		"member_entity_ids": []string{entityID3},
+		"member_group_ids":  engMemberGroupIDs,
 	}
 	resp, err = is.HandleRequest(ctx, entityIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {

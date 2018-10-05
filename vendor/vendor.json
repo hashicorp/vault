@@ -2141,10 +2141,12 @@
 			"revisionTime": "2018-01-30T19:37:22Z"
 		},
 		{
-			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",
+			"checksumSHA1": "1myjT8gKwUI3WNE5a/85jNPL8Fo=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
-			"revisionTime": "2018-01-03T17:44:51Z"
+			"revision": "879c5887cd475cd7864858769793b2ceb0d44feb",
+			"revisionTime": "2016-06-07T14:43:47Z",
+			"version": "v1.1.0",
+			"versionExact": "v1.1.0"
 		},
 		{
 			"checksumSHA1": "tnMZLo/kR9Kqx6GtmWwowtTLlA8=",
@@ -2207,6 +2209,12 @@
 			"revisionTime": "2018-10-03T14:42:16Z"
 		},
 		{
+			"checksumSHA1": "ZrqOBeBTSsupblYMeANSpd3xyhQ=",
+			"path": "go.etcd.io/etcd/clientv3/concurrency",
+			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
+			"revisionTime": "2018-10-03T14:42:16Z"
+		},
+		{
 			"checksumSHA1": "SDdAjoQeeV8tEDv05QZ7/Yv79CI=",
 			"path": "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes",
 			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
@@ -2251,6 +2259,12 @@
 		{
 			"checksumSHA1": "yl9eTlZ74Ixe7WxHQaO6rWJq+tU=",
 			"path": "go.etcd.io/etcd/pkg/tlsutil",
+			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
+			"revisionTime": "2018-10-03T14:42:16Z"
+		},
+		{
+			"checksumSHA1": "YQD4i+Li76ogXqgKS62MJVf1agE=",
+			"path": "go.etcd.io/etcd/pkg/transport",
 			"revision": "eca5f03cea2ec6d275a4b86ca1aa764b9d6aaa84",
 			"revisionTime": "2018-10-03T14:42:16Z"
 		},
