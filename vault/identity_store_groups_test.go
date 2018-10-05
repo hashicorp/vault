@@ -1035,6 +1035,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	entityIDReq.Path = "group/id/" + engGroupID
 	entityIDReq.Data = map[string]interface{}{
 		"member_entity_ids": []string{entityID3},
+		"member_group_ids":  engMemberGroupIDs,
 	}
 	resp, err = is.HandleRequest(ctx, entityIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
