@@ -36,7 +36,7 @@ storage write is detected the standby will forward the request over the cluster
 port connection to the active node. If the request is read-only the Performance
 Standby will handle the requests locally.
 
-Sending requests to Performance Stanbys that result in forwarded writes will be
+Sending requests to Performance Standbys that result in forwarded writes will be
 slightly slower than going directly to the active node. A client that has
 advanced knowledge of the behavior of the call can choose to point the request
 to the appropriate node.
@@ -45,7 +45,7 @@ to the appropriate node.
 
 A Performance Standby will tag itself as such in consul if service registration
 is enabled. To access the set of Performance Standbys the `performance-standby`
-tag can be used. For example to send requets to only the performance standbys
+tag can be used. For example to send requests to only the performance standbys
 `https://performance-standby.vault.dc1.consul` could be used (host name may vary
 based on consul configuration).
 
