@@ -76,7 +76,10 @@ export default Route.extend(UnloadModelRoute, {
         if (modelType === 'secret-v2') {
           // TODO, find by query param to enable viewing versions
           let version = resp.versions.findBy('version', resp.currentVersion);
-          version.reload();
+          return version.reload().then(() => {
+            resp.set('selectedVersion', version);
+            return resp;
+          });
         }
         return resp;
       }),
@@ -127,6 +130,8 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
+      console.log(this.hasChanges);
+      console.log(this.controller.model.hasDirtyAttributes);
       if (this.get('hasChanges')) {
         if (
           window.confirm(
