@@ -16,26 +16,35 @@ export default ApplicationAdapter.extend({
   // concerns and we only want to send "list" to the server
   query(store, type, query) {
     let { backend, id } = query;
-    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } });
+    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } }).then(resp => {
+      resp.id = id;
+      return resp;
+    });
   },
 
   urlForQueryRecord(query) {
     let { id, backend } = query;
-    return this._url(backend) + id;
+    return this._url(backend, id);
   },
 
   queryRecord(store, type, query) {
     let { backend, id } = query;
-    return this._super(...arguments).then(resp => {
+    return this.ajax(this._url(backend, id), 'GET').then(resp => {
       resp.id = id;
       resp.backend = backend;
       return resp;
     });
   },
 
-  urlForDeleteRecord(store, type, snapshot) {
-    let backend = snapshot.belongsTo('secret-engine', { id: true });
+  urlForUpdateRecord(store, type, snapshot) {
+    let backend = snapshot.belongsTo('engine', { id: true });
     let { id } = snapshot;
-    return this.urlForQueryRecord({ id, backend });
+    return this._url(backend, id);
+  },
+
+  urlForDeleteRecord(store, type, snapshot) {
+    let backend = snapshot.belongsTo('engine', { id: true });
+    let { id } = snapshot;
+    return this._url(backend, id);
   },
 });
