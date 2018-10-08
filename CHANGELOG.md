@@ -1,8 +1,13 @@
 ## 0.11.3 (Unreleased)
 
+IMPROVEMENTS:
+
+ * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
+
 BUG FIXES:
 
  * database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
 
 ## 0.11.2 (October 2nd, 2018)
 
