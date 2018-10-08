@@ -4,44 +4,9 @@ import Service, { inject as service } from '@ember/service';
 import { Machine } from 'xstate';
 
 import getStorage from 'vault/lib/token-storage';
-
-import TutorialMachineConfig from 'vault/machines/tutorial-machine';
-import SecretsMachineConfig from 'vault/machines/secrets-machine';
-import PoliciesMachineConfig from 'vault/machines/policies-machine';
-import ReplicationMachineConfig from 'vault/machines/replication-machine';
-import ToolsMachineConfig from 'vault/machines/tools-machine';
-import AuthMachineConfig from 'vault/machines/auth-machine';
-
-const TutorialMachine = Machine(TutorialMachineConfig);
+import { STORAGE_KEYS, DEFAULTS, MACHINES } from 'vault/helpers/wizard-constants';
+const TutorialMachine = Machine(MACHINES.tutorial);
 let FeatureMachine = null;
-const TUTORIAL_STATE = 'vault:ui-tutorial-state';
-const FEATURE_LIST = 'vault:ui-feature-list';
-const FEATURE_STATE = 'vault:ui-feature-state';
-const COMPLETED_FEATURES = 'vault:ui-completed-list';
-const COMPONENT_STATE = 'vault:ui-component-state';
-const RESUME_URL = 'vault:ui-tutorial-resume-url';
-const RESUME_ROUTE = 'vault:ui-tutorial-resume-route';
-const MACHINES = {
-  secrets: SecretsMachineConfig,
-  policies: PoliciesMachineConfig,
-  replication: ReplicationMachineConfig,
-  tools: ToolsMachineConfig,
-  authentication: AuthMachineConfig,
-};
-
-const DEFAULTS = {
-  currentState: null,
-  featureList: null,
-  featureState: null,
-  currentMachine: null,
-  tutorialComponent: null,
-  featureComponent: null,
-  stepComponent: null,
-  detailsComponent: null,
-  componentState: null,
-  nextFeature: null,
-  nextStep: null,
-};
 
 export default Service.extend(DEFAULTS, {
   router: service(),
@@ -53,25 +18,25 @@ export default Service.extend(DEFAULTS, {
   },
 
   initializeMachines() {
-    if (!this.storageHasKey(TUTORIAL_STATE)) {
+    if (!this.storageHasKey(STORAGE_KEYS.TUTORIAL_STATE)) {
       let state = TutorialMachine.initialState;
       this.saveState('currentState', state.value);
-      this.saveExtState(TUTORIAL_STATE, state.value);
+      this.saveExtState(STORAGE_KEYS.TUTORIAL_STATE, state.value);
     }
-    this.saveState('currentState', this.getExtState(TUTORIAL_STATE));
-    if (this.storageHasKey(COMPONENT_STATE)) {
-      this.set('componentState', this.getExtState(COMPONENT_STATE));
+    this.saveState('currentState', this.getExtState(STORAGE_KEYS.TUTORIAL_STATE));
+    if (this.storageHasKey(STORAGE_KEYS.COMPONENT_STATE)) {
+      this.set('componentState', this.getExtState(STORAGE_KEYS.COMPONENT_STATE));
     }
     let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
-    if (this.storageHasKey(FEATURE_LIST)) {
-      this.set('featureList', this.getExtState(FEATURE_LIST));
-      if (this.storageHasKey(FEATURE_STATE)) {
-        this.saveState('featureState', this.getExtState(FEATURE_STATE));
+    if (this.storageHasKey(STORAGE_KEYS.FEATURE_LIST)) {
+      this.set('featureList', this.getExtState(STORAGE_KEYS.FEATURE_LIST));
+      if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
+        this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
       } else {
         if (FeatureMachine != null) {
           this.saveState('featureState', FeatureMachine.initialState);
-          this.saveExtState(FEATURE_STATE, this.get('featureState'));
+          this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.get('featureState'));
         }
       }
       this.buildFeatureMachine();
@@ -82,13 +47,13 @@ export default Service.extend(DEFAULTS, {
     let storage = this.storage();
     // empty storage
     [
-      TUTORIAL_STATE,
-      FEATURE_LIST,
-      FEATURE_STATE,
-      COMPLETED_FEATURES,
-      COMPONENT_STATE,
-      RESUME_URL,
-      RESUME_ROUTE,
+      STORAGE_KEYS.TUTORIAL_STATE,
+      STORAGE_KEYS.FEATURE_LIST,
+      STORAGE_KEYS.FEATURE_STATE,
+      STORAGE_KEYS.COMPLETED_FEATURES,
+      STORAGE_KEYS.COMPONENT_STATE,
+      STORAGE_KEYS.RESUME_URL,
+      STORAGE_KEYS.RESUME_ROUTE,
     ].forEach(key => storage.removeItem(key));
     // reset wizard state
     this.setProperties(DEFAULTS);
@@ -115,11 +80,11 @@ export default Service.extend(DEFAULTS, {
   transitionTutorialMachine(currentState, event, extendedState) {
     if (extendedState) {
       this.set('componentState', extendedState);
-      this.saveExtState(COMPONENT_STATE, extendedState);
+      this.saveExtState(STORAGE_KEYS.COMPONENT_STATE, extendedState);
     }
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
-    this.saveExtState(TUTORIAL_STATE, this.get('currentState'));
+    this.saveExtState(STORAGE_KEYS.TUTORIAL_STATE, this.get('currentState'));
     this.executeActions(actions, event, 'tutorial');
   },
 
@@ -129,12 +94,12 @@ export default Service.extend(DEFAULTS, {
     }
     if (extendedState) {
       this.set('componentState', extendedState);
-      this.saveExtState(COMPONENT_STATE, extendedState);
+      this.saveExtState(STORAGE_KEYS.COMPONENT_STATE, extendedState);
     }
 
     let { actions, value } = FeatureMachine.transition(currentState, event, this.get('componentState'));
     this.saveState('featureState', value);
-    this.saveExtState(FEATURE_STATE, value);
+    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, value);
     this.executeActions(actions, event, 'feature');
     // if all features were completed, the FeatureMachine gets nulled
     // out and won't exist here as there is no next step
@@ -229,33 +194,33 @@ export default Service.extend(DEFAULTS, {
   handlePaused() {
     let expected = this.get('expectedURL');
     if (expected) {
-      this.saveExtState(RESUME_URL, this.get('expectedURL'));
-      this.saveExtState(RESUME_ROUTE, this.get('expectedRouteName'));
+      this.saveExtState(STORAGE_KEYS.RESUME_URL, this.get('expectedURL'));
+      this.saveExtState(STORAGE_KEYS.RESUME_ROUTE, this.get('expectedRouteName'));
     }
   },
 
   handleResume() {
-    let resumeURL = this.storage().getItem(RESUME_URL);
+    let resumeURL = this.storage().getItem(STORAGE_KEYS.RESUME_URL);
     if (!resumeURL) {
       return;
     }
     this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
-      this.set('expectedRouteName', this.storage().getItem(RESUME_ROUTE));
+      this.set('expectedRouteName', this.storage().getItem(STORAGE_KEYS.RESUME_ROUTE));
       this.set('expectedURL', resumeURL);
       this.initializeMachines();
-      this.storage().removeItem(RESUME_URL);
+      this.storage().removeItem(STORAGE_KEYS.RESUME_URL);
     });
   },
 
   handleDismissed() {
-    this.storage().removeItem(FEATURE_STATE);
-    this.storage().removeItem(FEATURE_LIST);
-    this.storage().removeItem(COMPONENT_STATE);
+    this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE);
+    this.storage().removeItem(STORAGE_KEYS.FEATURE_LIST);
+    this.storage().removeItem(STORAGE_KEYS.COMPONENT_STATE);
   },
 
   saveFeatures(features) {
     this.set('featureList', features);
-    this.saveExtState(FEATURE_LIST, this.get('featureList'));
+    this.saveExtState(STORAGE_KEYS.FEATURE_LIST, this.get('featureList'));
     this.buildFeatureMachine();
   },
 
@@ -264,10 +229,10 @@ export default Service.extend(DEFAULTS, {
       return;
     }
     this.startFeature();
-    if (this.storageHasKey(FEATURE_STATE)) {
-      this.saveState('featureState', this.getExtState(FEATURE_STATE));
+    if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
+      this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
     }
-    this.saveExtState(FEATURE_STATE, this.get('featureState'));
+    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.get('featureState'));
     let nextFeature =
       this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
@@ -292,20 +257,23 @@ export default Service.extend(DEFAULTS, {
   completeFeature() {
     let features = this.get('featureList');
     let done = features.shift();
-    if (!this.getExtState(COMPLETED_FEATURES)) {
+    if (!this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES)) {
       let completed = [];
       completed.push(done);
-      this.saveExtState(COMPLETED_FEATURES, completed);
+      this.saveExtState(STORAGE_KEYS.COMPLETED_FEATURES, completed);
     } else {
-      this.saveExtState(COMPLETED_FEATURES, this.getExtState(COMPLETED_FEATURES).toArray().addObject(done));
+      this.saveExtState(
+        STORAGE_KEYS.COMPLETED_FEATURES,
+        this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES).toArray().addObject(done)
+      );
     }
 
-    this.saveExtState(FEATURE_LIST, features.length ? features : null);
-    this.storage().removeItem(FEATURE_STATE);
+    this.saveExtState(STORAGE_KEYS.FEATURE_LIST, features.length ? features : null);
+    this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE);
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {
-      this.storage().removeItem(FEATURE_LIST);
+      this.storage().removeItem(STORAGE_KEYS.FEATURE_LIST);
       FeatureMachine = null;
       this.transitionTutorialMachine(this.get('currentState'), 'DONE');
     }
