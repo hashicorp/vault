@@ -1,4 +1,10 @@
-## 0.11.3 (Unreleased)
+## 0.11.3 (October 8th, 2018)
+
+SECURITY:
+
+ * Revocation: A regression in 0.11.2 (OSS) and 0.11.0 (Enterprise) caused
+   lease IDs containing periods (`.`) to not be revoked properly. Upon startup
+   when revocation is tried again these should now revoke successfully.
 
 IMPROVEMENTS:
 
