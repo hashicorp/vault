@@ -7,6 +7,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * cli/auth: Fix panic if `vault auth` was given no parameters [GH-5473]
  * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
  * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
 
