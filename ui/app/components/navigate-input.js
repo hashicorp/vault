@@ -170,7 +170,6 @@ export default Component.extend(FocusOnInsertMixin, {
 
     setFilterFocused: function(isFocused) {
       this.get('filterFocusDidChange')(isFocused);
-      console.log(isFocused);
     },
 
     handleKeyPress: function(event) {

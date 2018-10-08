@@ -130,8 +130,6 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      console.log(this.hasChanges);
-      console.log(this.controller.model.hasDirtyAttributes);
       if (this.get('hasChanges')) {
         if (
           window.confirm(

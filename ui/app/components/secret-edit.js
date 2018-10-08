@@ -2,7 +2,7 @@ import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
@@ -74,7 +74,7 @@ export default Component.extend(FocusOnInsertMixin, {
   willDestroyElement() {
     this._super(...arguments);
     if (this.model.isError && !this.model.isDestroyed) {
-      model.rollbackAttributes();
+      this.model.rollbackAttributes();
     }
   },
 
@@ -172,7 +172,6 @@ export default Component.extend(FocusOnInsertMixin, {
         return;
       }
       let $form = this.element.querySelector('form');
-      console.log('form is: ', $form);
       if ($form.length) {
         $form.submit();
       }
