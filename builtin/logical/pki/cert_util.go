@@ -1178,6 +1178,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
+		NotBefore:      time.Now().Add(-30 * time.Second),
 		NotAfter:       data.params.NotAfter,
 		IsCA:           false,
 		SubjectKeyId:   subjKeyID,
@@ -1380,6 +1381,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
 		Subject:        data.params.Subject,
+		NotBefore:      time.Now().Add(-30 * time.Second),
 		NotAfter:       data.params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
