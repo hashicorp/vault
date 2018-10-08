@@ -1019,7 +1019,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 	mountEntry := b.Core.router.MatchingMountEntry(ctx, path)
 	if mountEntry == nil {
-		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
+		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
@@ -1040,7 +1040,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	// Check again after grabbing the lock
 	mountEntry = b.Core.router.MatchingMountEntry(ctx, path)
 	if mountEntry == nil {
-		b.Backend.Logger().Error("tune failed: no mount entry found", "path", path)
+		b.Backend.Logger().Error("tune failed", "error", "no mount entry found", "path", path)
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
