@@ -3,6 +3,9 @@ import Mixin from '@ember/object/mixin';
 import utils from '../lib/key-utils';
 
 export default Mixin.create({
+  // what attribute has the path for the key
+  // will.be 'path' for v2 or 'id' v1
+  pathAttr: 'id',
   flags: null,
 
   initialParentKey: null,
@@ -11,33 +14,39 @@ export default Mixin.create({
     return this.get('initialParentKey') != null;
   }),
 
-  isFolder: computed('id', function() {
-    return utils.keyIsFolder(this.get('id'));
+  pathVal() {
+    return this.get(this.pathAttr);
+  },
+
+  // rather than using defineProperty for all of these,
+  // we're just going to hardcode the known keys for the path ('id' and 'path')
+  isFolder: computed('id', 'path', function() {
+    return utils.keyIsFolder(this.pathVal());
   }),
 
-  keyParts: computed('id', function() {
-    return utils.keyPartsForKey(this.get('id'));
+  keyParts: computed('id', 'path', function() {
+    return utils.keyPartsForKey(this.pathVal());
   }),
 
-  parentKey: computed('id', 'isCreating', {
+  parentKey: computed('id', 'path', 'isCreating', {
     get: function() {
-      return this.get('isCreating') ? this.get('initialParentKey') : utils.parentKeyForKey(this.get('id'));
+      return this.isCreating ? this.initialParentKey : utils.parentKeyForKey(this.pathVal());
     },
     set: function(_, value) {
       return value;
     },
   }),
 
-  keyWithoutParent: computed('id', 'parentKey', {
+  keyWithoutParent: computed('id', 'path', 'parentKey', {
     get: function() {
-      var key = this.get('id');
-      return key ? key.replace(this.get('parentKey'), '') : null;
+      var key = this.pathVal();
+      return key ? key.replace(this.parentKey, '') : null;
     },
     set: function(_, value) {
       if (value && value.trim()) {
-        this.set('id', this.get('parentKey') + value);
+        this.set(this.pathAttr, this.parentKey + value);
       } else {
-        this.set('id', null);
+        this.set(this.pathAttr, null);
       }
       return value;
     },

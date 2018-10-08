@@ -1,9 +1,9 @@
 import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
-import $ from 'jquery';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
+import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
@@ -18,6 +18,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   // a key model
   key: null,
+  model: null,
 
   // a value to pre-fill the key input - this is populated by the corresponding
   // 'initialKey' queryParam
@@ -44,10 +45,15 @@ export default Component.extend(FocusOnInsertMixin, {
   codemirrorString: null,
 
   hasLintError: false,
+  isV2: false,
 
   init() {
     this._super(...arguments);
-    const secrets = this.get('key.secretData');
+    let secrets = this.model.secretData;
+    if (!secrets && this.model.selectedVersion) {
+      this.set('isV2', true);
+      secrets = this.model.belongsTo('selectedVersion').value().secretData;
+    }
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
     this.set('codemirrorString', data.toJSONString());
@@ -55,82 +61,76 @@ export default Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
-    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
-      let engine = this.get('key').backend.includes('kv') ? 'kv' : this.get('key').backend;
-      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    if (this.wizard.featureState === 'details' && this.mode === 'create') {
+      let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
 
-    if (this.get('mode') === 'edit') {
+    if (this.mode === 'edit') {
       this.send('addRow');
     }
   },
 
-  didInsertElement() {
-    this._super(...arguments);
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  },
-
   willDestroyElement() {
     this._super(...arguments);
-    const key = this.get('key');
-    if (get(key, 'isError') && !key.isDestroyed) {
-      key.rollbackAttributes();
+    if (this.model.isError && !this.model.isDestroyed) {
+      this.model.rollbackAttributes();
     }
-    $(document).off('keyup.keyEdit');
   },
 
+  waitForKeyUp: task(function*() {
+    while (true) {
+      let event = yield waitForEvent(document.body, 'keyup');
+      this.onEscape(event);
+    }
+  })
+    .on('didInsertElement')
+    .cancelOn('willDestroyElement'),
+
   partialName: computed('mode', function() {
-    return `partials/secret-form-${this.get('mode')}`;
+    return `partials/secret-form-${this.mode}`;
   }),
 
-  showPrefix: or('key.initialParentKey', 'key.parentKey'),
-
-  requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
+  requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
   buttonDisabled: or(
     'requestInFlight',
-    'key.isFolder',
-    'key.isError',
-    'key.flagsIsInvalid',
+    'model.isFolder',
+    'model.isError',
+    'model.flagsIsInvalid',
     'hasLintError',
     'error'
   ),
 
+  modelForData: computed('isV2', 'model', function() {
+    return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
+  }),
+
   basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
-    return this.get('secretDataIsAdvanced') || this.get('showAdvancedMode') === false;
+    return this.secretDataIsAdvanced || this.showAdvancedMode === false;
   }),
 
   secretDataAsJSON: computed('secretData', 'secretData.[]', function() {
-    return this.get('secretData').toJSON();
+    return this.secretData.toJSON();
   }),
 
   secretDataIsAdvanced: computed('secretData', 'secretData.[]', function() {
-    return this.get('secretData').isAdvanced();
+    return this.secretData.isAdvanced();
   }),
 
-  hasDataChanges() {
-    const keyDataString = this.get('key.dataAsJSONString');
-    const sameData = this.get('secretData').toJSONString() === keyDataString;
-    if (sameData === false) {
-      this.set('lastChange', Date.now());
-    }
-
-    this.get('onDataChange')(!sameData);
-  },
-
   showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
-    return this.get('secretDataIsAdvanced') || this.get('preferAdvancedEdit');
+    return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
   transitionToRoute() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.get('mode') !== 'show') {
+    if (e.keyCode !== keys.ESC || this.mode !== 'show') {
       return;
     }
-    const parentKey = this.get('key.parentKey');
+    const parentKey = this.model.parentKey;
     if (parentKey) {
       this.transitionToRoute(LIST_ROUTE, parentKey);
     } else {
@@ -139,25 +139,19 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   // successCallback is called in the context of the component
-  persistKey(method, successCallback, isCreate) {
-    let model = this.get('key');
-    let key = model.get('id');
+  persistKey(successCallback) {
+    let model = this.modelForData;
+    let key = model.get('path') || model.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
-      model.set('id', key);
+      model.set(model.pathAttr, key);
     }
 
-    if (isCreate && typeof model.createRecord === 'function') {
-      // create an ember data model from the proxy
-      model = model.createRecord(model.get('backend'));
-      this.set('key', model);
-    }
-
-    return model[method]().then(() => {
-      if (!get(model, 'isError')) {
-        if (this.get('wizard.featureState') === 'secret') {
-          this.get('wizard').transitionFeatureMachine('secret', 'CONTINUE');
+    return model.save().then(() => {
+      if (!model.isError) {
+        if (this.wizard.featureState === 'secret') {
+          this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
         }
         successCallback(key);
       }
@@ -165,85 +159,77 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   checkRows() {
-    if (this.get('secretData').get('length') === 0) {
+    if (this.secretData.length === 0) {
       this.send('addRow');
     }
   },
 
   actions: {
+    //submit on shift + enter
     handleKeyDown(e) {
       e.stopPropagation();
       if (!(e.keyCode === keys.ENTER && e.metaKey)) {
         return;
       }
-      let $form = this.$('form');
+      let $form = this.element.querySelector('form');
       if ($form.length) {
         $form.submit();
       }
-      $form = null;
     },
 
     handleChange() {
-      this.set('codemirrorString', this.get('secretData').toJSONString(true));
-      this.hasDataChanges();
+      this.set('codemirrorString', this.secretData.toJSONString(true));
     },
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      const newData = this.get('secretData').toJSON();
-      this.get('key').set('secretData', newData);
+      const newData = this.secretData.toJSON();
+      let model = this.modelForData;
+      model.set('secretData', newData);
 
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && isBlank(this.get('key.id'))) {
+      if (type === 'create' && isBlank(model.get('path') || model.id)) {
         return;
       }
 
-      this.persistKey(
-        'save',
-        key => {
-          this.hasDataChanges();
-          this.transitionToRoute(SHOW_ROUTE, key);
-        },
-        type === 'create'
-      );
+      this.persistKey(key => {
+        this.transitionToRoute(SHOW_ROUTE, key);
+      });
     },
 
     deleteKey() {
-      this.persistKey('destroyRecord', () => {
+      this.model.destroyRecord().then(() => {
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
     },
 
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
 
     addRow() {
-      const data = this.get('secretData');
+      const data = this.secretData;
       if (isNone(data.findBy('name', ''))) {
         data.pushObject({ name: '', value: '' });
         this.set('codemirrorString', data.toJSONString(true));
       }
       this.checkRows();
-      this.hasDataChanges();
     },
 
     deleteRow(name) {
-      const data = this.get('secretData');
+      const data = this.secretData;
       const item = data.findBy('name', name);
       if (isBlank(item.name)) {
         return;
       }
       data.removeObject(item);
       this.checkRows();
-      this.hasDataChanges();
       this.set('codemirrorString', data.toJSONString(true));
-      this.rerender();
     },
 
     toggleAdvanced(bool) {
-      this.get('onToggleAdvancedEdit')(bool);
+      this.onToggleAdvancedEdit(bool);
     },
 
     codemirrorUpdated(val, codemirror) {
@@ -252,7 +238,7 @@ export default Component.extend(FocusOnInsertMixin, {
       const noErrors = codemirror.state.lint.marked.length === 0;
       if (noErrors) {
         try {
-          this.get('secretData').fromJSONString(val);
+          this.secretData.fromJSONString(val);
         } catch (e) {
           this.set('error', e.message);
         }
@@ -262,7 +248,7 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     formatJSON() {
-      this.set('codemirrorString', this.get('secretData').toJSONString(true));
+      this.set('codemirrorString', this.secretData.toJSONString(true));
     },
   },
 });
