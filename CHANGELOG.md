@@ -1,3 +1,22 @@
+## 0.11.3 (October 8th, 2018)
+
+SECURITY:
+
+ * Revocation: A regression in 0.11.2 (OSS) and 0.11.0 (Enterprise) caused
+   lease IDs containing periods (`.`) to not be revoked properly. Upon startup
+   when revocation is tried again these should now revoke successfully.
+
+IMPROVEMENTS:
+
+ * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
+
+BUG FIXES:
+
+ * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * cli/auth: Fix panic if `vault auth` was given no parameters [GH-5473]
+ * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
+
 ## 0.11.2 (October 2nd, 2018)
 
 CHANGES:

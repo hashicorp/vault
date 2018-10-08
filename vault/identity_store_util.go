@@ -931,6 +931,43 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	defer txn.Abort()
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
+
+	// For those group member IDs that are removed from the list, remove current
+	// group ID as their respective ParentGroupID.
+
+	// Get the current MemberGroups IDs for this group
+	var currentMemberGroupIDs []string
+	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	if err != nil {
+		return err
+	}
+	for _, currentMemberGroup := range currentMemberGroups {
+		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
+	}
+
+	// Update parent group IDs in the removed members
+	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		if strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			continue
+		}
+
+		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
+		if err != nil {
+			return err
+		}
+		if currentMemberGroup == nil {
+			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
+		}
+
+		// Remove group ID from the parent group IDs
+		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
+
+		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	// After the group lock is held, make membership updates to all the
 	// relevant groups
 	for _, memberGroupID := range memberGroupIDs {
