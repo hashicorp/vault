@@ -61,9 +61,9 @@ export default Component.extend(FocusOnInsertMixin, {
       this.set('preferAdvancedEdit', true);
     }
     this.checkRows();
-    if (this.get('wizard.featureState') === 'details' && this.get('mode') === 'create') {
-      let engine = this.get('model').backend.includes('kv') ? 'kv' : this.get('model').backend;
-      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', engine);
+    if (this.wizard.featureState === 'details' && this.mode === 'create') {
+      let engine = this.model.backend.includes('kv') ? 'kv' : this.model.backend;
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
 
     if (this.mode === 'edit') {
@@ -88,7 +88,7 @@ export default Component.extend(FocusOnInsertMixin, {
     .cancelOn('willDestroyElement'),
 
   partialName: computed('mode', function() {
-    return `partials/secret-form-${this.get('mode')}`;
+    return `partials/secret-form-${this.mode}`;
   }),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
