@@ -6,7 +6,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
  * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
 
 ## 0.11.2 (October 2nd, 2018)
