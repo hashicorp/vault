@@ -31,8 +31,9 @@ func (c *WriteCommand) Help() string {
 Usage: vault write [options] PATH [DATA K=V...]
 
   Writes data to Vault at the given path. The data can be credentials, secrets,
-  configuration, or arbitrary data. The specific behavior of this command is
-  determined at the thing mounted at the path.
+  configuration, or arbitrary data. The specific behavior of this command
+  differs depending on the character prepended to the "value" of the relevant 
+  "key=value" pair. These characters are explained below.
 
   Data is specified as "key=value" pairs. If the value begins with an "@", then
   it is loaded from a file. If the value is "-", Vault will read the value from
