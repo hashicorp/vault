@@ -1805,7 +1805,7 @@ func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
 			// unexpected state, so stop buffering log messages
 			c.logGate.Flush()
 		}
-		c.logger.Warn("migration_check: " + err.Error())
+		c.logger.Warn("migration check error", "error", err.Error())
 
 		select {
 		case <-time.After(2 * time.Second):

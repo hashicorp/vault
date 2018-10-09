@@ -41,7 +41,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				s.core.logger.Error("forwarding: panic serving request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
+				s.core.logger.Error("panic serving forwarded request", "path", req.URL.Path, "error", err, "stacktrace", string(buf))
 			}
 		}()
 		s.handler.ServeHTTP(w, req)
