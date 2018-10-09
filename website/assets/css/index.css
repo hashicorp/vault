@@ -1,0 +1,24 @@
+@import 'normalize.css';
+@import '@hashicorp/hashi-global-styles/style';
+
+/* to be removed pending new components */
+@import '_alerts';
+@import '_inner';
+@import '_secondary-nav';
+
+/* Pages */
+@import 'pages/_downloads';
+@import 'pages/_docs';
+
+/* NPM Preact Components */
+@import '@hashicorp/hashi-logo-grid/dist/style.css';
+@import '@hashicorp/hashi-footer/dist/style.css';
+@import '@hashicorp/hashi-nav/dist/style.css';
+@import '@hashicorp/hashi-newsletter-signup-form/dist/style.css';
+@import '@hashicorp/hashi-button/dist/style.css';
+@import '@hashicorp/hashi-product-subnav/dist/style.css';
+@import '@hashicorp/hashi-content/dist/style.css';
+@import '@hashicorp/hashi-mega-nav/dist/style.css';
+@import '@hashicorp/hashi-docs-sidenav/dist/style.css';
+@import '@hashicorp/hashi-vertical-text-block-list/dist/style.css';
+@import '@hashicorp/hashi-section-header/dist/style.css';

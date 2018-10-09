@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Policies - Guides"
+sidebar_title: "Policies"
 sidebar_current: "guides-identity-policies"
 description: |-
   Policies in Vault control what a user can access.
@@ -158,7 +159,7 @@ path "sys/capabilities-self"
 
 The basic workflow of creating policies is:
 
-![Policy Creation Workflow](/assets/images/vault-policy-authoring-workflow.png)
+![Policy Creation Workflow](/img/vault-policy-authoring-workflow.png)
 
 This guide demonstrates basic policy authoring and management tasks.
 

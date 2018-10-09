@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secrets Management - Guides"
+sidebar_title: "Secrets Management"
 sidebar_current: "guides-secret-mgmt"
 description: |-
    A very common use case of Vault is to manage your organization's secrets from

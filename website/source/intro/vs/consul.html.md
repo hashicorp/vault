@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Consul"
+sidebar_title: "Consul"
 sidebar_current: "vs-other-consul"
 description: |-
   Comparison between Vault and attempting to store secrets with Consul.

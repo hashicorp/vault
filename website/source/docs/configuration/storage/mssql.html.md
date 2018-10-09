@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MSSQL - Storage Backends - Configuration"
+sidebar_title: 'MSSQL'
 sidebar_current: "docs-configuration-storage-mssql"
 description: |-
   The MSSQL storage backend is used to persist Vault's data in a Microsoft SQL Server.
@@ -36,8 +37,8 @@ storage "mssql" {
 
 - `server` `(string: <required>)` – host or host\instance.
 
-- `username` `(string: "")` - enter the SQL Server Authentication user id or 
-  the Windows Authentication user id in the DOMAIN\User format. 
+- `username` `(string: "")` - enter the SQL Server Authentication user id or
+  the Windows Authentication user id in the DOMAIN\User format.
   On Windows, if user id is empty or missing Single-Sign-On is used.
 
 - `password` `(string: "")` – specifies the MSSQL password to connect to
@@ -77,5 +78,3 @@ storage "mssql" {
   password = "pass5678"
 }
 ```
-
-

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/capabilities-accessor - HTTP API"
-sidebar_current: "docs-http-system-capabilities-accessor"
+sidebar_title: "<tt>/sys/capabilities-accessor</tt>"
+sidebar_current: "api-http-system-capabilities-accessor"
 description: |-
   The `/sys/capabilities-accessor` endpoint is used to fetch the capabilities of
   the token associated with an accessor, on the given paths.

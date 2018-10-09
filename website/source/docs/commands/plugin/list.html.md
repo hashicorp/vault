@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin list - Command"
+sidebar_title: "list"
 sidebar_current: "docs-commands-plugin-list"
 description: |-
   The "plugin list" command lists all available plugins in the plugin catalog.

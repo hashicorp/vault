@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Amazon Key Management Service"
+sidebar_title: "Amazon KMS"
 sidebar_current: "vs-other-kms"
 description: |-
   Comparison between Vault and Amazon Key Management Service.

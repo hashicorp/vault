@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. HSMs"
+sidebar_title: "HSMs"
 sidebar_current: "vs-other-hsm"
 description: |-
   Comparison between Vault and HSM systems.

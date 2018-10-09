@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/mounts - HTTP API"
-sidebar_current: "docs-http-system-mounts"
+sidebar_title: "<tt>/sys/mounts</tt>"
+sidebar_current: "api-http-system-mounts"
 description: |-
   The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 ---

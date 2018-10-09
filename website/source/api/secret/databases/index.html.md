@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases"
+sidebar_title: "Databases"
+sidebar_current: "api-http-secret-databases"
 description: |-
   Top page for database secrets engine information
 ---

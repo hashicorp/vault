@@ -1,0 +1,34 @@
+#page-downloads-sentinel {
+  & .os-list {
+    & > li ul li:before {
+      display: none;
+    }
+
+    & .os-icon,
+    & .details {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    & .details {
+      margin-left: 20px;
+    }
+
+    & .os-name {
+      margin: 6px 0 0;
+    }
+
+    & ul.vertical-divider {
+      margin: 0 0 16px;
+    }
+  }
+
+  & .poweredby-wrap {
+    margin-top: 20px;
+    text-align: center;
+
+    & a {
+      display: inline-block;
+    }
+  }
+}

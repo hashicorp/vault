@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Vault vs. Keywhiz"
+sidebar_title: "Keywhiz"
 sidebar_current: "vs-other-keywhiz"
 description: |-
   Comparison between Vault and Keywhiz.

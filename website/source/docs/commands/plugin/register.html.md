@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin register - Command"
+sidebar_title: "register"
 sidebar_current: "docs-commands-plugin-register"
 description: |-
   The "plugin register" command registers a new plugin in Vault's plugin

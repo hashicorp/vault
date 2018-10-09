@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "HANA - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-hanadb"
+sidebar_title: "HanaDB"
+sidebar_current: "api-http-secret-databases-hanadb"
 description: |-
   The HANA plugin for Vault's database secrets engine generates database credentials to access HANA servers.
 ---

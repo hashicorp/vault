@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Upgrading to Vault 0.10.2 - Guides"
+sidebar_title: "Upgrade to 0.10.2"
 sidebar_current: "guides-upgrading-to-0.10.2"
 description: |-
   This page contains the list of deprecations and important or breaking changes

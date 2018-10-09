@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Custom Plugin Backends"
+sidebar_title: "Plugin Backends"
 sidebar_current: "docs-plugin"
 description: |-
   Plugin backends are mountable backends that are implemented unsing Vault's plugin system.

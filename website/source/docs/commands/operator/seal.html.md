@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator seal - Command"
+sidebar_title: "seal"
 sidebar_current: "docs-commands-operator-seal"
 description: |-
   The "operator seal" command seals the Vault server. Sealing tells the Vault server to
