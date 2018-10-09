@@ -9,6 +9,7 @@
 /* Pages */
 @import 'pages/_downloads';
 @import 'pages/_docs';
+@import 'pages/_community';
 
 /* NPM Preact Components */
 @import '@hashicorp/hashi-logo-grid/dist/style.css';

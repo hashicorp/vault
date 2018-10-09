@@ -43,6 +43,7 @@
   <body id="<%= body_id_for(current_page) %>" class="<%= body_classes_for(current_page) %>">
     <hashi-mega-nav _data="<%= encode(dato.mega_nav) %>"></hashi-mega-nav>
     <main><%= yield %></main>
+    <hashi-footer _data="<%= encode(dato.global_footer) %>"></hashi-footer>
 
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
