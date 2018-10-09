@@ -21,9 +21,14 @@ command via the `DATA` argument. For example:
   
 The available prepend-characters are explained below.
 
-Data is specified as "key=value" pairs. If the value begins with an "@", then it
-is loaded from a file. If the value is "-", Vault will read the value from
-stdin.
+Data is specified as "key=value" pairs. 
+
+There are currently two available prepend-characters, `@` and `-`:
+
+| Prepend Character | Explanation |
+|-------------------|-------------|
+| @ | If the value is prepended with "@", then it is loaded from a file. |
+| - | If the value is prepended with "-", Vault will read the value from stdin. |
 
 For a full list of examples and paths, please see the documentation that
 corresponds to the secrets engines in use.
