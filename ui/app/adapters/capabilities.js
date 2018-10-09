@@ -18,6 +18,9 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     const { id } = query;
+    if (!id) {
+      return;
+    }
     return this.findRecord(store, type, id).then(resp => {
       resp.path = id;
       return resp;
