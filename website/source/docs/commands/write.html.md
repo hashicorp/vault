@@ -14,9 +14,14 @@ The `write` command writes data to Vault at the given path. The data can be
 credentials, secrets, configuration, or arbitrary data. The specific behavior of
 this command is determined at the thing mounted at the path.
 
-Data is specified as "key=value" pairs. If the value begins with an "@", then it
-is loaded from a file. If the value is "-", Vault will read the value from
-stdin.
+Data is specified as "key=value" pairs. 
+
+There are currently two available prepend-characters, `@` and `-`:
+
+| Prepend Character | Explanation |
+|-------------------|-------------|
+| @ | If the value begins with an "@", then it is loaded from a file. |
+| - | If the value is "-", Vault will read the value from stdin.      |
 
 For a full list of examples and paths, please see the documentation that
 corresponds to the secrets engines in use.
