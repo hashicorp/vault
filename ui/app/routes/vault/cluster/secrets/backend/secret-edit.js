@@ -1,5 +1,5 @@
 import { set } from '@ember/object';
-import { hash } from 'rsvp';
+import { hash, resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
@@ -9,16 +9,14 @@ export default Route.extend(UnloadModelRoute, {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.get('engineType');
-    let version = backendModel.get('options.version');
+    if (backendType === 'kv' || backendType === 'cubbyhole') {
+      return resolve({});
+    }
     let path;
     if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
-    } else if (version && version === 2) {
-      path = backend + '/data/' + secret;
-    } else {
-      path = backend + '/' + secret;
     }
     return this.store.findRecord('capabilities', path);
   },

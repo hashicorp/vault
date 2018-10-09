@@ -3,10 +3,12 @@ import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
+import { queryRecord } from 'ember-computed-query';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -15,6 +17,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default Component.extend(FocusOnInsertMixin, {
   wizard: service(),
   router: service(),
+  store: service(),
 
   // a key model
   key: null,
@@ -90,6 +93,27 @@ export default Component.extend(FocusOnInsertMixin, {
   partialName: computed('mode', function() {
     return `partials/secret-form-${this.mode}`;
   }),
+
+  updatePath: queryRecord(
+    'capabilities',
+    context => {
+      if (context.mode === 'create') {
+        return {};
+      }
+      let backend = context.isV2 ? context.model.belongsTo('engine').id : context.model.backend;
+      let id = context.model.id;
+      let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      return {
+        id: path,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  ),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
