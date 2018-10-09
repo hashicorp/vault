@@ -263,7 +263,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, false, err
 		}
 		if len(result) == 0 {
-			return nil, true, nil
+			return make([]interface{}, 0), true, nil
 		}
 		return result, true, nil
 
@@ -273,7 +273,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			return nil, false, err
 		}
 		if len(result) == 0 {
-			return nil, true, nil
+			return make([]string, 0), true, nil
 		}
 		return strutil.TrimStrings(result), true, nil
 
