@@ -28,7 +28,7 @@ ready do
   dato.tap do |dato|
     sitemap.resources.each do |page|
       if page.path.match(/\.html$/)
-        if page.metadata[:options][:layout]
+        if page.metadata[:options][:layout] && ['docs', 'guides', 'api', 'intro'].include?(page.metadata[:options][:layout])
           # get the page category from the url
           match = page.path.match(/^(.*?)\//)
           # proxy the page route
