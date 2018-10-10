@@ -73,10 +73,20 @@
     preact-portal "^1.1.3"
     prop-types "^15.6.1"
 
+"@hashicorp/hashi-alert@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-alert/-/hashi-alert-1.1.0.tgz#3a7b3f466ee9a863fe13ce9abd0bbcdcf415500c"
+  integrity sha512-jaYFcGvF8RWZhvK/b/XuwjQCV4TO3r+CBB9KVrRK91VvDwzT5Rk27utCyaoxkdw8InDD7/jfAOBOouuPVH2JLg==
+
 "@hashicorp/hashi-button@1.0.3":
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-button/-/hashi-button-1.0.3.tgz#384ca20fff25e72ee4b079674a5043086886e0b4"
   integrity sha512-mvrUT5U5BC2Pn3hmYevqsjOfj5RTyHDHAH/AsZummgJw8XYlEQ9xVZ0ZLs5VEmdaO+TeUAg8Tw4kMAdKvNlfLQ==
+
+"@hashicorp/hashi-callouts@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-callouts/-/hashi-callouts-2.0.0.tgz#232e5bde3ca7afced34ec289aa3dfa924cedf5af"
+  integrity sha512-Q7G9XAy3fFwYkOIefPEDu3OXVCLLuH57uBjxCW4zqZyI12O8ux2I35pFbFwe5eSTUCjC8Gd363J9PRUBln7dcQ==
 
 "@hashicorp/hashi-content@^0.0.3":
   version "0.0.3"
@@ -102,6 +112,11 @@
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-global-styles/-/hashi-global-styles-1.0.8.tgz#5b0ecb1a50a2c3eec3acd7e413092cdcb52ba1d3"
   integrity sha512-UClXKVALpVxcmDGB3DVTLdyDIxoo1Vz8B+drv3+hX/TwDPKBZxn4Rz3lW4bcP05g/zJ/udmVAr7ilMFOiCjk7Q==
+
+"@hashicorp/hashi-hero@^1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-hero/-/hashi-hero-1.1.4.tgz#42c69e5ad0fbc3fcfaf9904789f18aad6d68d994"
+  integrity sha512-i/BWLn9OjZlhJCwywa6eK19roiLW6KGGqX1qxNboEi2CUG4P/Te5VxgUersIbotK0yivRMAXy4EPAH2/LfZedg==
 
 "@hashicorp/hashi-image@1.0.3":
   version "1.0.3"
@@ -1634,6 +1649,13 @@ collection-visit@^1.0.0:
   dependencies:
     map-visit "^1.0.0"
     object-visit "^1.0.0"
+
+color-contrast@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/color-contrast/-/color-contrast-0.0.1.tgz#effaee7b3865acc94e1fd1eb078cde5ff75e38f7"
+  integrity sha1-7/ruezhlrMlOH9HrB4zeX/deOPc=
+  dependencies:
+    onecolor "^3.0.5"
 
 color-convert@^1.3.0, color-convert@^1.8.2, color-convert@^1.9.0, color-convert@^1.9.1:
   version "1.9.1"
@@ -4333,6 +4355,11 @@ once@^1.3.0:
   dependencies:
     wrappy "1"
 
+onecolor@^3.0.5:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/onecolor/-/onecolor-3.1.0.tgz#b72522270a49569ac20d244b3cd40fe157fda4d2"
+  integrity sha512-YZSypViXzu3ul5LMu/m6XjJ9ol8qAy9S2VjHl5E6UlhUH1KGKWabyEJifn0Jjpw23bYDzC2ucKMPGiH5kfwSGQ==
+
 onetime@^2.0.0:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/onetime/-/onetime-2.0.1.tgz#067428230fd67443b2794b22bba528b6867962d4"
@@ -6013,6 +6040,11 @@ shebang-regex@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-1.0.0.tgz#da42f49740c0b42db2ca9728571cb190c98efea3"
   integrity sha1-2kL0l0DAtC2yypcoVxyxkMmO/qM=
+
+siema@^1.5.1:
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/siema/-/siema-1.5.1.tgz#eff312b77e8340fa4d81d5d053ebbeb9113ff888"
+  integrity sha1-7/MSt36DQPpNgdXQU+u+uRE/+Ig=
 
 signal-exit@^3.0.0, signal-exit@^3.0.2:
   version "3.0.2"
