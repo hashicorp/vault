@@ -11,21 +11,21 @@
         width: $size-8 * 2;
       }
       &::after {
-        left: 0;
         width: $size-8 * 0.8;
         height: $size-8 * 0.8;
         transform: translateX(0.15rem);
+        left: 0;
         top: $size-8/ 4;
       }
     }
     &:checked + label::after {
       left: 0;
-      transform: translateX(($size-8 * 2) - ($size-8 * 0.9));
+      transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
     }
   }
 }
 .switch[type="checkbox"].is-small + label::after {
-  will-change: transform;
+  will-change: left;
 }
 .switch[type="checkbox"]:focus + label {
   box-shadow: 0 0 1px $blue;
