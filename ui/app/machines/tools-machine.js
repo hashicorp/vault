@@ -1,8 +1,8 @@
 export default {
   key: 'tools',
-  initial: 'wrap',
+  initial: 'idle',
   states: {
-    wrap: {
+    idle: {
       onEntry: [
         { type: 'routeTransition', params: ['vault.cluster.tools'] },
         { type: 'render', level: 'feature', component: 'wizard/tools-wrap' },
