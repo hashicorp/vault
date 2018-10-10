@@ -192,3 +192,14 @@
   height: 12px;
   background: #2eb039;
 }
+.feature-check {
+  height: 10px;
+}
+
+.completed-check svg {
+  fill: #2eb039;
+}
+
+.incomplete-check svg {
+  fill: $grey-light;
+}
