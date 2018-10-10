@@ -1,0 +1,15 @@
+#page-home {
+  & section {
+    padding-top: 96px;
+    padding-bottom: 96px;
+
+    &.gray {
+      background: var(--gray-10);
+    }
+  }
+
+  & .button-container {
+    display: flex;
+    justify-content: center;
+  }
+}
