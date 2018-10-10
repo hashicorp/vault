@@ -22,6 +22,7 @@ const GLYPHS_WITH_SVG_TAG = [
   'control-lock',
   'edition-enterprise',
   'edition-oss',
+  'cancel-square-outline',
 ];
 
 export default Component.extend({
