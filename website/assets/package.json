@@ -34,6 +34,7 @@
     "query-string": "^6.2.0",
     "reshape-preact-components": "^0.6.0",
     "slugify": "^1.3.1",
+    "strftime": "^0.10.0",
     "tippy.js": "^3.0.4",
     "unfetch": "^4.0.1"
   },
