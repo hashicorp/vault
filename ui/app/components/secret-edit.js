@@ -228,6 +228,11 @@ export default Component.extend(FocusOnInsertMixin, {
       });
     },
 
+    deleteVersion(deleteType = 'destroy') {
+      let id = this.modelForData.id;
+      return this.store.adapterFor('secret-v2-version').v2DeleteOperation(this.store, id, deleteType);
+    },
+
     refresh() {
       this.onRefresh();
     },

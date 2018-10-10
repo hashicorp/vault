@@ -1,6 +1,8 @@
 /* eslint-disable */
 import { isEmpty } from '@ember/utils';
+import { get } from '@ember/object';
 import ApplicationAdapter from './application';
+import DS from 'ember-data';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -15,6 +17,17 @@ export default ApplicationAdapter.extend({
   urlForFindRecord(id) {
     let [backend, path, version] = JSON.parse(id);
     return this._url(backend, path) + `?version=${version}`;
+  },
+
+  findRecord() {
+    return this._super(...arguments).catch(errorOrModel => {
+      // if it's a real 404, this will be an error, if not
+      // it will be the body of a deleted / destroyed version
+      if (errorOrModel instanceof DS.AdapterError) {
+        throw errorOrModel;
+      }
+      return errorOrModel;
+    });
   },
 
   urlForCreateRecord(modelName, snapshot) {
@@ -37,17 +50,23 @@ export default ApplicationAdapter.extend({
     return this._url(backend, path);
   },
 
-  deleteRecord(store, type, snapshot) {
-    // use adapterOptions to determine if it's delete or destroy for the version
-    // deleteType should be 'delete', 'destroy', 'undelete'
-    let infix = snapshot.adapterOptions.deleteType;
-    let [backend, path, version] = JSON.parse(snapshot.id);
+  v2DeleteOperation(store, id, deleteType = 'delete') {
+    let [backend, path, version] = JSON.parse(id);
 
-    return this.ajax(this._url(backend, path, infix), 'POST', { data: { versions: [version] } });
+    // deleteType should be 'delete', 'destroy', 'undelete'
+    return this.ajax(this._url(backend, path, deleteType), 'POST', { data: { versions: [version] } }).then(
+      () => {
+        let model = store.peekRecord('secret-v2-version', id);
+        return model && model.reload();
+      }
+    );
   },
 
-  handleResponse(/*status, headers, payload, requestData*/) {
+  handleResponse(status, headers, payload, requestData) {
     // the body of the 404 will have some relevant information
+    if (status === 404 && get(payload, 'data.metadata')) {
+      return this._super(200, headers, payload, requestData);
+    }
     return this._super(...arguments);
   },
 });
