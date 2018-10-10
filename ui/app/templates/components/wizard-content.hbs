@@ -15,19 +15,21 @@
   <h1 class="title is-5">
     <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
   </h1>
-  <div>{{currentFeatureProgress.text}}</div>
-  <div class="progress-container">
-    <ICon class="feature-check completed-check" @glyph="checkmark-circled" @size="21" />
-    {{#each progressBar as |bar|}}
-      <span class="progress-bar">
-        <span class="feature-progress" style={{bar.style}}></span>
-      </span>
-      {{#if bar.completed}}
-        <ICon class="feature-check completed-check" @glyph="checkmark-circled" @size="21" />
-      {{else}}
-        <ICon class="feature-check incomplete-check" @glyph="checkmark-circled-outline" @size="21" />
-      {{/if}}
-    {{/each}}
-  </div>
+  {{#if featureMachineHistory}}
+    <div>{{currentFeatureProgress.text}}</div>
+    <div class="progress-container">
+      <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="25" />
+      {{#each progressBar as |bar|}}
+        <span class="progress-bar">
+          <span class="feature-progress" style={{bar.style}}></span>
+        </span>
+        {{#if bar.completed}}
+          <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="25" />
+        {{else}}
+          <ICon class="feature-check incomplete-check" @glyph="check-circle-fill" @size="25" />
+        {{/if}}
+      {{/each}}
+    </div>
+  {{/if}}
 </div>
 {{yield}}
