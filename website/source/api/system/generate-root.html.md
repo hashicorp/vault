@@ -54,15 +54,18 @@ This endpoint initializes a new root generation attempt. Only a single root
 generation attempt can take place at a time. One (and only one) of `otp` or
 `pgp_key` are required.
 
+Note: `otp` can be empty, in which case an OTP of suitable length will be
+generated for you, which is recommended. Future versions of Vault will remove
+the need to set this parameter at all.
+
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `PUT`    | `/sys/generate-root/attempt` | `200 application/json` |
 
 ### Parameters
 
-- `otp` `(string: <required-unless-pgp>)` – Specifies a base64-encoded 16-byte
-  value. The raw bytes of the token will be XOR'd with this value before being
-  returned to the final unseal key provider.
+- `otp` `(string: <required-unless-pgp>)` – Set, but leave this value blank, to
+  have Vault generate a suitable OTP and return it.
 
 - `pgp_key` `(string: <required-unless-otp>)` – Specifies a base64-encoded PGP
   public key. The raw bytes of the token will be encrypted with this value
@@ -72,7 +75,7 @@ generation attempt can take place at a time. One (and only one) of `otp` or
 
 ```json
 {
-  "otp": "CB23=="
+  "otp": ""
 }
 ```
 
@@ -94,7 +97,8 @@ $ curl \
   "progress": 1,
   "required": 3,
   "encoded_token": "",
-  "pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
+  "otp": "2vPFYG8gUSW9npwzyvxXMug0",
+  "otp_length" :24,
   "complete": false
 }
 ```
