@@ -11,7 +11,7 @@ let FeatureMachine = null;
 export default Service.extend(DEFAULTS, {
   router: service(),
   showWhenUnauthenticated: false,
-
+  featureMachineHistory: null,
   init() {
     this._super(...arguments);
     this.initializeMachines();
@@ -27,16 +27,19 @@ export default Service.extend(DEFAULTS, {
     if (this.storageHasKey(STORAGE_KEYS.COMPONENT_STATE)) {
       this.set('componentState', this.getExtState(STORAGE_KEYS.COMPONENT_STATE));
     }
-    let stateNodes = TutorialMachine.getStateNodes(this.get('currentState'));
+    let stateNodes = TutorialMachine.getStateNodes(this.currentState);
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'tutorial');
     if (this.storageHasKey(STORAGE_KEYS.FEATURE_LIST)) {
       this.set('featureList', this.getExtState(STORAGE_KEYS.FEATURE_LIST));
       if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
+        if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE_HISTORY)) {
+          this.set('featureMachineHistory', this.getExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY));
+        }
         this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
       } else {
         if (FeatureMachine != null) {
           this.saveState('featureState', FeatureMachine.initialState);
-          this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.get('featureState'));
+          this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.featureState);
         }
       }
       this.buildFeatureMachine();
@@ -50,6 +53,7 @@ export default Service.extend(DEFAULTS, {
       STORAGE_KEYS.TUTORIAL_STATE,
       STORAGE_KEYS.FEATURE_LIST,
       STORAGE_KEYS.FEATURE_STATE,
+      STORAGE_KEYS.FEATURE_STATE_HISTORY,
       STORAGE_KEYS.COMPLETED_FEATURES,
       STORAGE_KEYS.COMPONENT_STATE,
       STORAGE_KEYS.RESUME_URL,
@@ -75,6 +79,24 @@ export default Service.extend(DEFAULTS, {
     }
     stateKey += state;
     this.set(stateType, stateKey);
+    if (stateType === 'featureState') {
+      //TODO: what if they are in the middle of the tutorial when they start tracking progress?
+      if (state === 'idle') {
+        let newHistory = [state];
+        this.set('featureMachineHistory', newHistory);
+      } else {
+        if (!this.featureMachineHistory.includes(state)) {
+          let newHistory = this.featureMachineHistory.addObject(state);
+          this.set('featureMachineHistory', newHistory);
+        } else {
+          //we're repeating steps
+          let stepIndex = this.featureMachineHistory.indexOf(state);
+          let newHistory = this.featureMachineHistory.splice(0, stepIndex + 1);
+          this.set('featureMachineHistory', newHistory);
+        }
+      }
+      this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, this.featureMachineHistory);
+    }
   },
 
   transitionTutorialMachine(currentState, event, extendedState) {
@@ -84,12 +106,12 @@ export default Service.extend(DEFAULTS, {
     }
     let { actions, value } = TutorialMachine.transition(currentState, event);
     this.saveState('currentState', value);
-    this.saveExtState(STORAGE_KEYS.TUTORIAL_STATE, this.get('currentState'));
+    this.saveExtState(STORAGE_KEYS.TUTORIAL_STATE, this.currentState);
     this.executeActions(actions, event, 'tutorial');
   },
 
   transitionFeatureMachine(currentState, event, extendedState) {
-    if (!FeatureMachine || !this.get('currentState').includes('active')) {
+    if (!FeatureMachine || !this.currentState.includes('active')) {
       return;
     }
     if (extendedState) {
@@ -105,10 +127,10 @@ export default Service.extend(DEFAULTS, {
     // out and won't exist here as there is no next step
     if (FeatureMachine) {
       let next;
-      if (this.get('currentMachine') === 'secrets' && value === 'display') {
-        next = FeatureMachine.transition(value, 'REPEAT', this.get('componentState'));
+      if (this.currentMachine === 'secrets' && value === 'display') {
+        next = FeatureMachine.transition(value, 'REPEAT', this.componentState);
       } else {
-        next = FeatureMachine.transition(value, 'CONTINUE', this.get('componentState'));
+        next = FeatureMachine.transition(value, 'CONTINUE', this.componentState);
       }
       this.saveState('nextStep', next.value);
     }
@@ -129,7 +151,7 @@ export default Service.extend(DEFAULTS, {
   executeActions(actions, event, machineType) {
     let transitionURL;
     let expectedRouteName;
-    let router = this.get('router');
+    let router = this.router;
 
     for (let action of actions) {
       let type = action;
@@ -169,7 +191,7 @@ export default Service.extend(DEFAULTS, {
           this.set('showWhenUnauthenticated', true);
           break;
         case 'continueFeature':
-          this.transitionFeatureMachine(this.get('featureState'), 'CONTINUE', this.get('componentState'));
+          this.transitionFeatureMachine(this.featureState, 'CONTINUE', this.componentState);
           break;
         default:
           break;
@@ -192,10 +214,10 @@ export default Service.extend(DEFAULTS, {
   },
 
   handlePaused() {
-    let expected = this.get('expectedURL');
+    let expected = this.expectedURL;
     if (expected) {
-      this.saveExtState(STORAGE_KEYS.RESUME_URL, this.get('expectedURL'));
-      this.saveExtState(STORAGE_KEYS.RESUME_ROUTE, this.get('expectedRouteName'));
+      this.saveExtState(STORAGE_KEYS.RESUME_URL, this.expectedURL);
+      this.saveExtState(STORAGE_KEYS.RESUME_ROUTE, this.expectedRouteName);
     }
   },
 
@@ -204,12 +226,15 @@ export default Service.extend(DEFAULTS, {
     if (!resumeURL) {
       return;
     }
-    this.get('router').transitionTo(resumeURL).followRedirects().then(() => {
-      this.set('expectedRouteName', this.storage().getItem(STORAGE_KEYS.RESUME_ROUTE));
-      this.set('expectedURL', resumeURL);
-      this.initializeMachines();
-      this.storage().removeItem(STORAGE_KEYS.RESUME_URL);
-    });
+    this.get('router')
+      .transitionTo(resumeURL)
+      .followRedirects()
+      .then(() => {
+        this.set('expectedRouteName', this.storage().getItem(STORAGE_KEYS.RESUME_ROUTE));
+        this.set('expectedURL', resumeURL);
+        this.initializeMachines();
+        this.storage().removeItem(STORAGE_KEYS.RESUME_URL);
+      });
   },
 
   handleDismissed() {
@@ -220,46 +245,45 @@ export default Service.extend(DEFAULTS, {
 
   saveFeatures(features) {
     this.set('featureList', features);
-    this.saveExtState(STORAGE_KEYS.FEATURE_LIST, this.get('featureList'));
+    this.saveExtState(STORAGE_KEYS.FEATURE_LIST, this.featureList);
     this.buildFeatureMachine();
   },
 
   buildFeatureMachine() {
-    if (this.get('featureList') === null) {
+    if (this.featureList === null) {
       return;
     }
     this.startFeature();
     if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
       this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
     }
-    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.get('featureState'));
-    let nextFeature =
-      this.get('featureList').length > 1
-        ? this.get('featureList')
-            .objectAt(1)
-            .capitalize()
-        : 'Finish';
+    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.featureState);
+    let nextFeature = this.featureList.length > 1 ? this.featureList.objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
-    if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
-      next = FeatureMachine.transition(this.get('featureState'), 'REPEAT', this.get('componentState'));
+    if (this.currentMachine === 'secrets' && this.featureState === 'display') {
+      next = FeatureMachine.transition(this.featureState, 'REPEAT', this.componentState);
     } else {
-      next = FeatureMachine.transition(this.get('featureState'), 'CONTINUE', this.get('componentState'));
+      next = FeatureMachine.transition(this.featureState, 'CONTINUE', this.componentState);
     }
     this.saveState('nextStep', next.value);
-    let stateNodes = FeatureMachine.getStateNodes(this.get('featureState'));
+    let stateNodes = FeatureMachine.getStateNodes(this.featureState);
     this.executeActions(stateNodes.reduce((acc, node) => acc.concat(node.onEntry), []), null, 'feature');
   },
 
   startFeature() {
-    const FeatureMachineConfig = MACHINES[this.get('featureList').objectAt(0)];
+    const FeatureMachineConfig = MACHINES[this.featureList.objectAt(0)];
     FeatureMachine = Machine(FeatureMachineConfig);
-    this.set('currentMachine', this.get('featureList').objectAt(0));
+    this.set('currentMachine', this.featureList.objectAt(0));
     this.saveState('featureState', FeatureMachine.initialState);
   },
 
+  getCompletedFeatures() {
+    return this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES).toArray();
+  },
+
   completeFeature() {
-    let features = this.get('featureList');
+    let features = this.featureList;
     let done = features.shift();
     if (!this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES)) {
       let completed = [];
@@ -268,7 +292,9 @@ export default Service.extend(DEFAULTS, {
     } else {
       this.saveExtState(
         STORAGE_KEYS.COMPLETED_FEATURES,
-        this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES).toArray().addObject(done)
+        this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES)
+          .toArray()
+          .addObject(done)
       );
     }
 
@@ -279,7 +305,7 @@ export default Service.extend(DEFAULTS, {
     } else {
       this.storage().removeItem(STORAGE_KEYS.FEATURE_LIST);
       FeatureMachine = null;
-      this.transitionTutorialMachine(this.get('currentState'), 'DONE');
+      this.transitionTutorialMachine(this.currentState, 'DONE');
     }
   },
 

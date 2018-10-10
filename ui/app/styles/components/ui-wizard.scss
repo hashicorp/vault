@@ -173,3 +173,22 @@
 .wizard-instructions {
   margin: $size-4 0;
 }
+
+.progress-container {
+  height: 12px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
+
+.progress-bar {
+  height: 12px;
+  background: $grey-light;
+  display: flex;
+  width: 100%;
+}
+
+.feature-progress {
+  height: 12px;
+  background: #2eb039;
+}

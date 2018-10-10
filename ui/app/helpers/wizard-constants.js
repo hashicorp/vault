@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   TUTORIAL_STATE: 'vault:ui-tutorial-state',
   FEATURE_LIST: 'vault:ui-feature-list',
   FEATURE_STATE: 'vault:ui-feature-state',
+  FEATURE_STATE_HISTORY: 'vault:ui-feature-state-history',
   COMPLETED_FEATURES: 'vault:ui-completed-list',
   COMPONENT_STATE: 'vault:ui-component-state',
   RESUME_URL: 'vault:ui-tutorial-resume-url',
@@ -36,4 +37,16 @@ export const DEFAULTS = {
   componentState: null,
   nextFeature: null,
   nextStep: null,
+};
+
+export const FEATURE_MACHINE_STEPS = {
+  secrets: {
+    encryption: 5,
+    secret: 5,
+    role: 7,
+  },
+  policies: 5,
+  replication: 2,
+  tools: 8,
+  authentication: 4,
 };
