@@ -6,7 +6,7 @@ const { attr, hasMany, belongsTo, Model } = DS;
 export default Model.extend({
   engine: belongsTo('secret-engine'),
   versions: hasMany('secret-v2-version', { async: false, inverse: null }),
-  selectedVersion: belongsTo('secret-v2-version', { inverse: 'secret' }),
+  selectedVersion: belongsTo('secret-v2-version', { async: false, inverse: 'secret' }),
   createdTime: attr(),
   updatedTime: attr(),
   currentVersion: attr('number'),
