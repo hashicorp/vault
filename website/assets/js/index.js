@@ -1,3 +1,4 @@
+import 'preact/devtools'
 // components
 import { each, initializeComponents } from './utils'
 // external components
@@ -7,6 +8,7 @@ import newsletterSignupForm from '@hashicorp/hashi-newsletter-signup-form'
 import productSubnav from '@hashicorp/hashi-product-subnav'
 import docsSidebar from './components/docs-sidebar'
 import megaNav from '@hashicorp/hashi-mega-nav'
+import productDownloader from '@hashicorp/hashi-product-downloader'
 
 const components = initializeComponents({
   nav,

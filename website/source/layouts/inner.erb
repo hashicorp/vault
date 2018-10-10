@@ -3,7 +3,8 @@
 		current_path: current_page.path,
 		dark: false,
 		products: dato.enterprise_products.map(&:to_hash),
-		subnav: dato.vault_product_page.subnav.to_hash
+		subnav: dato.vault_product_page.subnav.to_hash,
+		project_site: true
 	}) %>"></hashi-product-subnav>
 
 	<div class="content-wrap g-container">
@@ -11,7 +12,7 @@
 			<%= yield_content :sidebar %>
 		</div>
 
-		<div id="inner" class="g-container" role="main">
+		<div id="inner" role="main">
 			<%= yield %>
 		</div>
 	</div>

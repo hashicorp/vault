@@ -1,5 +1,6 @@
-PATH
-  remote: /Users/jeff/Sites/middleman-hashicorp-carrot
+GIT
+  remote: https://github.com/carrot/middleman-hashicorp
+  revision: 2ae888ea440b9cc78d445d71b88b89103c0d621f
   specs:
     middleman-hashicorp (0.3.28)
       activesupport (~> 5.0)
@@ -134,7 +135,7 @@ GEM
     minitest (5.11.3)
     multipart-post (2.0.0)
     netrc (0.11.0)
-    nokogiri (1.8.4)
+    nokogiri (1.8.5)
       mini_portile2 (~> 2.3.0)
     padrino-helpers (0.13.3.4)
       i18n (~> 0.6, >= 0.6.7)
@@ -189,4 +190,4 @@ DEPENDENCIES
   wdm (~> 0.1)
 
 BUNDLED WITH
-   1.16.1
+   1.16.5
