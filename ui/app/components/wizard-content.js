@@ -16,17 +16,17 @@ export default Component.extend({
   completedFeatures: computed('wizard.currentMachine', function() {
     return this.wizard.getCompletedFeatures();
   }),
-  currentFeatureProgress: computed('featureMachineHistory', function() {
+  currentFeatureProgress: computed('featureMachineHistory.[]', function() {
     let totalSteps = FEATURE_MACHINE_STEPS[this.currentMachine];
     if (this.currentMachine === 'secrets') {
-      if (this.featureMachineHistory.includes('role')) {
-        totalSteps = totalSteps['role'];
-      }
       if (this.featureMachineHistory.includes('secret')) {
         totalSteps = totalSteps['secret'];
       }
       if (this.featureMachineHistory.includes('encryption')) {
         totalSteps = totalSteps['encryption'];
+      }
+      if (this.featureMachineHistory.includes('role') || typeof totalSteps === 'object') {
+        totalSteps = totalSteps['role'];
       }
     }
     return {
@@ -43,7 +43,7 @@ export default Component.extend({
       if (feature === this.currentMachine) {
         bar.push({
           style: `width:${this.currentFeatureProgress.percentage}%;`,
-          completed: false,
+          completed: this.currentFeatureProgress.percentage == 100 ? true : false,
           feature: feature,
         });
       } else {

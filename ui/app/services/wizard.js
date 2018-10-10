@@ -81,18 +81,20 @@ export default Service.extend(DEFAULTS, {
     this.set(stateType, stateKey);
     if (stateType === 'featureState') {
       //TODO: what if they are in the middle of the tutorial when they start tracking progress?
-      if (state === 'idle') {
+      if (state === 'idle' || (state === 'wrap' && this.featureMachineHistory === null)) {
         let newHistory = [state];
         this.set('featureMachineHistory', newHistory);
       } else {
-        if (!this.featureMachineHistory.includes(state)) {
-          let newHistory = this.featureMachineHistory.addObject(state);
-          this.set('featureMachineHistory', newHistory);
-        } else {
-          //we're repeating steps
-          let stepIndex = this.featureMachineHistory.indexOf(state);
-          let newHistory = this.featureMachineHistory.splice(0, stepIndex + 1);
-          this.set('featureMachineHistory', newHistory);
+        if (this.featureMachineHistory) {
+          if (!this.featureMachineHistory.includes(state)) {
+            let newHistory = this.featureMachineHistory.addObject(state);
+            this.set('featureMachineHistory', newHistory);
+          } else {
+            //we're repeating steps
+            let stepIndex = this.featureMachineHistory.indexOf(state);
+            let newHistory = this.featureMachineHistory.splice(0, stepIndex + 1);
+            this.set('featureMachineHistory', newHistory);
+          }
         }
       }
       this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, this.featureMachineHistory);
@@ -250,14 +252,11 @@ export default Service.extend(DEFAULTS, {
   },
 
   buildFeatureMachine() {
+    
     if (this.featureList === null) {
       return;
     }
     this.startFeature();
-    if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
-      this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
-    }
-    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.featureState);
     let nextFeature = this.featureList.length > 1 ? this.featureList.objectAt(1).capitalize() : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
@@ -275,11 +274,19 @@ export default Service.extend(DEFAULTS, {
     const FeatureMachineConfig = MACHINES[this.featureList.objectAt(0)];
     FeatureMachine = Machine(FeatureMachineConfig);
     this.set('currentMachine', this.featureList.objectAt(0));
-    this.saveState('featureState', FeatureMachine.initialState);
+    if (this.storageHasKey(STORAGE_KEYS.FEATURE_STATE)) {
+      this.saveState('featureState', this.getExtState(STORAGE_KEYS.FEATURE_STATE));
+    } else {
+      this.saveState('featureState', FeatureMachine.initialState);
+    }
+    this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.featureState);
   },
 
   getCompletedFeatures() {
-    return this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES).toArray();
+    if (this.storageHasKey(STORAGE_KEYS.COMPLETED_FEATURES)) {
+      return this.getExtState(STORAGE_KEYS.COMPLETED_FEATURES).toArray();
+    }
+    return [];
   },
 
   completeFeature() {
@@ -300,6 +307,8 @@ export default Service.extend(DEFAULTS, {
 
     this.saveExtState(STORAGE_KEYS.FEATURE_LIST, features.length ? features : null);
     this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE);
+    this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE_HISTORY);
+    this.set('featureMachineHistory', null);
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {
