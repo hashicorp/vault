@@ -16,5 +16,6 @@ const components = initializeComponents({
   newsletterSignupForm,
   docsSidebar,
   productSubnav,
-  megaNav
+  megaNav,
+  productDownloader
 })

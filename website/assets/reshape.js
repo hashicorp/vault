@@ -6,7 +6,7 @@ const productSubnav = require('@hashicorp/hashi-product-subnav')
 const verticalTextBlockList = require('@hashicorp/hashi-vertical-text-block-list')
 const sectionHeader = require('@hashicorp/hashi-section-header')
 const content = require('@hashicorp/hashi-content')
-const productDownload = require('@hashicorp/hashi-product-downloader')
+const productDownloader = require('@hashicorp/hashi-product-downloader')
 const docsSidebar = require('@hashicorp/hashi-docs-sidenav')
 
 module.exports = {
@@ -17,7 +17,7 @@ module.exports = {
   'hashi-mega-nav': megaNav,
   'hashi-product-subnav': productSubnav,
   'hashi-content': content,
-  'hashi-product-download': productDownload,
+  'hashi-product-downloader': productDownloader,
   'hashi-vertical-text-block-list': verticalTextBlockList,
   'hashi-section-header': sectionHeader
 }
