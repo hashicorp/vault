@@ -37,6 +37,7 @@ export const DEFAULTS = {
   componentState: null,
   nextFeature: null,
   nextStep: null,
+  featureMachineHistory: null,
 };
 
 export const FEATURE_MACHINE_STEPS = {
@@ -49,4 +50,12 @@ export const FEATURE_MACHINE_STEPS = {
   replication: 2,
   tools: 8,
   authentication: 4,
+};
+
+export const FEATURE_MACHINE_TIME = {
+  secrets: 7,
+  policies: 5,
+  replication: 5,
+  tools: 8,
+  authentication: 5,
 };

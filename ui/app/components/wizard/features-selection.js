@@ -1,10 +1,12 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import { FEATURE_MACHINE_TIME } from 'vault/helpers/wizard-constants';
 
 export default Component.extend({
   wizard: service(),
   version: service(),
+
   init() {
     this._super(...arguments);
     this.maybeHideFeatures();
@@ -16,7 +18,15 @@ export default Component.extend({
       feature.show = false;
     }
   },
-
+  estimatedTime: computed('selectedFeatures', function() {
+    let time = 0;
+    for (let feature of Object.keys(FEATURE_MACHINE_TIME)) {
+      if (this.selectedFeatures.includes(feature)) {
+        time += FEATURE_MACHINE_TIME[feature];
+      }
+    }
+    return time;
+  }),
   allFeatures: computed(function() {
     return [
       {

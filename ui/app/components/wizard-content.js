@@ -9,6 +9,9 @@ export default Component.extend({
   glyph: null,
   headerText: null,
   currentMachine: computed.alias('wizard.currentMachine'),
+  showProgress: computed('wizard.featureComponent', function() {
+    return this.wizard.featureComponent && this.wizard.featureMachineHistory;
+  }),
   featureMachineHistory: computed.alias('wizard.featureMachineHistory'),
   totalFeatures: computed('wizard.featureList', function() {
     return this.wizard.featureList.length;
