@@ -75,15 +75,6 @@ func (a Attributes) Set(key Type, value Attribute) {
 	a[key] = append(a[key][:0], value)
 }
 
-// Len returns the total number of Attributes in a.
-func (a Attributes) Len() int {
-	var i int
-	for _, s := range a {
-		i += len(s)
-	}
-	return i
-}
-
 func (a Attributes) encodeTo(b []byte) {
 	types := make([]int, 0, len(a))
 	for typ := range a {

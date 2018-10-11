@@ -76,7 +76,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		barrierConfig.SecretShares = 1
 		barrierConfig.SecretThreshold = 1
 		barrierConfig.StoredShares = 1
-		core.Logger().Warn("init: stored keys supported, forcing shares/threshold to 1")
+		core.Logger().Warn("stored keys supported on init, forcing shares/threshold to 1")
 	} else {
 		if barrierConfig.StoredShares > 0 {
 			respondError(w, http.StatusBadRequest, fmt.Errorf("stored keys are not supported by the current seal type"))

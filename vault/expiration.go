@@ -187,7 +187,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	errorFunc := func() {
 		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
-			c.logger.Error("error shutting down core: %v", err)
+			c.logger.Error("error shutting down core", "error", err)
 		}
 	}
 	go c.expiration.Restore(errorFunc)

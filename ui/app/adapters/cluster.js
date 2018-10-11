@@ -58,7 +58,13 @@ export default ApplicationAdapter.extend({
 
   health() {
     return this.ajax(this.urlFor('health'), 'GET', {
-      data: { standbycode: 200, sealedcode: 200, uninitcode: 200, drsecondarycode: 200 },
+      data: {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
       unauthenticated: true,
     });
   },

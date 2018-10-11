@@ -121,7 +121,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("exactly one of 'oidc_discovery_url' and 'jwt_validation_pubkeys' must be set"), nil
 
 	case config.OIDCDiscoveryURL != "":
-		_, err := b.createProvider(ctx, config)
+		_, err := b.createProvider(config)
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error checking discovery URL: {{err}}", err).Error()), nil
 		}
@@ -150,7 +150,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) (*oidc.Provider, error) {
+func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, error) {
 	var certPool *x509.CertPool
 	if config.OIDCDiscoveryCAPEM != "" {
 		certPool = x509.NewCertPool()
@@ -168,7 +168,7 @@ func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) 
 	tc := &http.Client{
 		Transport: tr,
 	}
-	oidcCtx := context.WithValue(ctx, oauth2.HTTPClient, tc)
+	oidcCtx := context.WithValue(b.providerCtx, oauth2.HTTPClient, tc)
 
 	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
 	if err != nil {

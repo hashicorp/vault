@@ -104,6 +104,11 @@ export default DS.Model.extend({
   basicConstraintsValidForNonCA: attr('boolean', {
     label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   }),
+  notBeforeDuration: attr({
+    label: 'Not Before Duration',
+    editType: 'ttl',
+    defaultValue: '30s',
+  }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),
@@ -137,6 +142,7 @@ export default DS.Model.extend({
           'organization',
           'keyUsage',
           'allowedOtherSans',
+          'notBeforeDuration',
         ],
       },
       {

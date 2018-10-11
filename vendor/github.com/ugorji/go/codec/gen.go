@@ -41,6 +41,8 @@ import (
 // However, codecgen doesn't support the following:
 //   - Canonical option. (codecgen IGNORES it currently)
 //     This is just because it has not been implemented.
+//   - MissingFielder implementation.
+//     If a type implements MissingFielder, it is completely ignored by codecgen.
 //
 // During encode/decode, Selfer takes precedence.
 // A type implementing Selfer will know how to encode/decode itself statically.
@@ -738,8 +740,8 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	defer func() { x.line("}") }() //end if block
 
 	if t == timeTyp {
-		x.linef("} else { r.EncodeTime(%s)", varname)
-		return
+		x.linef("} else if !z.EncBasicHandle().TimeNotBuiltin { r.EncodeTime(%s)", varname)
+		// return
 	}
 	if t == rawTyp {
 		x.linef("} else { z.EncRaw(%s)", varname)
@@ -1057,7 +1059,13 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		case valueTypeFloat:
 			x.linef("r.EncodeFloat64(z.M.Float(strconv.ParseFloat(`%s`, 64)))", si.encName)
 		default: // string
+			if si.encNameAsciiAlphaNum {
+				x.linef(`if z.IsJSONHandle() { z.WriteStr("\"%s\"") } else { `, si.encName)
+			}
 			x.linef("r.EncodeString(codecSelferCcUTF8%s, `%s`)", x.xs, si.encName)
+			if si.encNameAsciiAlphaNum {
+				x.linef("}")
+			}
 		}
 		// x.linef("r.EncStructFieldKey(codecSelferValueType%s%s, `%s`)", ti.keyType.String(), x.xs, si.encName)
 		x.line("r.WriteMapElemValue()")
@@ -1324,8 +1332,8 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 		addrPfx = "&"
 	}
 	if t == timeTyp {
-		x.linef("} else { %s%v = r.DecodeTime()", ptrPfx, varname)
-		return
+		x.linef("} else if !z.DecBasicHandle().TimeNotBuiltin { %s%v = r.DecodeTime()", ptrPfx, varname)
+		// return
 	}
 	if t == rawTyp {
 		x.linef("} else { %s%v = z.DecRaw()", ptrPfx, varname)

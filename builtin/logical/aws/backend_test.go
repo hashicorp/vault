@@ -500,6 +500,23 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
+func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			if resp.Secret == nil {
+				return fmt.Errorf("bad: nil Secret returned")
+			}
+			ttl := resp.Secret.TTL
+			if ttl > maximumTTL {
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+			}
+			return nil
+		},
+	}
+}
+
 func describeInstancesTest(accessKey, secretKey, token string) error {
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
 	awsConfig := &aws.Config{
@@ -634,6 +651,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"role_arns":        []string(nil),
 				"policy_document":  value,
 				"credential_types": []string{iamUserCred, federationTokenCred},
+				"default_sts_ttl":  int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -730,6 +748,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"policy_arns":      []string{ec2PolicyArn, iamPolicyArn},
 		"credential_types": []string{iamUserCred},
 		"role_arns":        []string(nil),
+		"default_sts_ttl":  int64(0),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -796,6 +815,40 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	})
 }
 
+func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
+	t.Parallel()
+	roleName := generateUniqueName(t.Name())
+	minAwsAssumeRoleDuration := 900
+	awsAccountID, err := getAccountID()
+	if err != nil {
+		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
+	}
+	roleData := map[string]interface{}{
+		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
+		"credential_type": assumedRoleCred,
+		"default_sts_ttl": minAwsAssumeRoleDuration,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createRole(t, roleName, awsAccountID)
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		Backend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+		},
+		Teardown: func() error {
+			return deleteTestRole(roleName)
+		},
+	})
+}
+
 func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -829,6 +882,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"role_arns":        []string(nil),
 				"policy_document":  "",
 				"credential_types": []string{iamUserCred},
+				"default_sts_ttl":  int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

@@ -165,6 +165,195 @@ func (ao AADObject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for AADObject struct.
+func (ao *AADObject) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ao.AdditionalProperties == nil {
+					ao.AdditionalProperties = make(map[string]interface{})
+				}
+				ao.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				ao.ObjectID = &objectID
+			}
+		case "objectType":
+			if v != nil {
+				var objectType string
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				ao.ObjectType = &objectType
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				ao.DisplayName = &displayName
+			}
+		case "userPrincipalName":
+			if v != nil {
+				var userPrincipalName string
+				err = json.Unmarshal(*v, &userPrincipalName)
+				if err != nil {
+					return err
+				}
+				ao.UserPrincipalName = &userPrincipalName
+			}
+		case "mail":
+			if v != nil {
+				var mailVar string
+				err = json.Unmarshal(*v, &mailVar)
+				if err != nil {
+					return err
+				}
+				ao.Mail = &mailVar
+			}
+		case "mailEnabled":
+			if v != nil {
+				var mailEnabled bool
+				err = json.Unmarshal(*v, &mailEnabled)
+				if err != nil {
+					return err
+				}
+				ao.MailEnabled = &mailEnabled
+			}
+		case "mailNickname":
+			if v != nil {
+				var mailNickname string
+				err = json.Unmarshal(*v, &mailNickname)
+				if err != nil {
+					return err
+				}
+				ao.MailNickname = &mailNickname
+			}
+		case "securityEnabled":
+			if v != nil {
+				var securityEnabled bool
+				err = json.Unmarshal(*v, &securityEnabled)
+				if err != nil {
+					return err
+				}
+				ao.SecurityEnabled = &securityEnabled
+			}
+		case "signInName":
+			if v != nil {
+				var signInName string
+				err = json.Unmarshal(*v, &signInName)
+				if err != nil {
+					return err
+				}
+				ao.SignInName = &signInName
+			}
+		case "servicePrincipalNames":
+			if v != nil {
+				var servicePrincipalNames []string
+				err = json.Unmarshal(*v, &servicePrincipalNames)
+				if err != nil {
+					return err
+				}
+				ao.ServicePrincipalNames = &servicePrincipalNames
+			}
+		case "userType":
+			if v != nil {
+				var userType string
+				err = json.Unmarshal(*v, &userType)
+				if err != nil {
+					return err
+				}
+				ao.UserType = &userType
+			}
+		case "usageLocation":
+			if v != nil {
+				var usageLocation string
+				err = json.Unmarshal(*v, &usageLocation)
+				if err != nil {
+					return err
+				}
+				ao.UsageLocation = &usageLocation
+			}
+		case "appId":
+			if v != nil {
+				var appID string
+				err = json.Unmarshal(*v, &appID)
+				if err != nil {
+					return err
+				}
+				ao.AppID = &appID
+			}
+		case "appPermissions":
+			if v != nil {
+				var appPermissions []string
+				err = json.Unmarshal(*v, &appPermissions)
+				if err != nil {
+					return err
+				}
+				ao.AppPermissions = &appPermissions
+			}
+		case "availableToOtherTenants":
+			if v != nil {
+				var availableToOtherTenants bool
+				err = json.Unmarshal(*v, &availableToOtherTenants)
+				if err != nil {
+					return err
+				}
+				ao.AvailableToOtherTenants = &availableToOtherTenants
+			}
+		case "identifierUris":
+			if v != nil {
+				var identifierUris []string
+				err = json.Unmarshal(*v, &identifierUris)
+				if err != nil {
+					return err
+				}
+				ao.IdentifierUris = &identifierUris
+			}
+		case "replyUrls":
+			if v != nil {
+				var replyUrls []string
+				err = json.Unmarshal(*v, &replyUrls)
+				if err != nil {
+					return err
+				}
+				ao.ReplyUrls = &replyUrls
+			}
+		case "homepage":
+			if v != nil {
+				var homepage string
+				err = json.Unmarshal(*v, &homepage)
+				if err != nil {
+					return err
+				}
+				ao.Homepage = &homepage
+			}
+		}
+	}
+
+	return nil
+}
+
 // ADGroup active Directory group information.
 type ADGroup struct {
 	autorest.Response `json:"-"`
@@ -240,6 +429,87 @@ func (ag ADGroup) AsDirectoryObject() (*DirectoryObject, bool) {
 // AsBasicDirectoryObject is the BasicDirectoryObject implementation for ADGroup.
 func (ag ADGroup) AsBasicDirectoryObject() (BasicDirectoryObject, bool) {
 	return &ag, true
+}
+
+// UnmarshalJSON is the custom unmarshaler for ADGroup struct.
+func (ag *ADGroup) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				ag.DisplayName = &displayName
+			}
+		case "securityEnabled":
+			if v != nil {
+				var securityEnabled bool
+				err = json.Unmarshal(*v, &securityEnabled)
+				if err != nil {
+					return err
+				}
+				ag.SecurityEnabled = &securityEnabled
+			}
+		case "mail":
+			if v != nil {
+				var mailVar string
+				err = json.Unmarshal(*v, &mailVar)
+				if err != nil {
+					return err
+				}
+				ag.Mail = &mailVar
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ag.AdditionalProperties == nil {
+					ag.AdditionalProperties = make(map[string]interface{})
+				}
+				ag.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				ag.ObjectID = &objectID
+			}
+		case "deletionTimestamp":
+			if v != nil {
+				var deletionTimestamp date.Time
+				err = json.Unmarshal(*v, &deletionTimestamp)
+				if err != nil {
+					return err
+				}
+				ag.DeletionTimestamp = &deletionTimestamp
+			}
+		case "objectType":
+			if v != nil {
+				var objectType ObjectType
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				ag.ObjectType = objectType
+			}
+		}
+	}
+
+	return nil
 }
 
 // Application active Directory application information.
@@ -344,6 +614,132 @@ func (a Application) AsBasicDirectoryObject() (BasicDirectoryObject, bool) {
 	return &a, true
 }
 
+// UnmarshalJSON is the custom unmarshaler for Application struct.
+func (a *Application) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "appId":
+			if v != nil {
+				var appID string
+				err = json.Unmarshal(*v, &appID)
+				if err != nil {
+					return err
+				}
+				a.AppID = &appID
+			}
+		case "appPermissions":
+			if v != nil {
+				var appPermissions []string
+				err = json.Unmarshal(*v, &appPermissions)
+				if err != nil {
+					return err
+				}
+				a.AppPermissions = &appPermissions
+			}
+		case "availableToOtherTenants":
+			if v != nil {
+				var availableToOtherTenants bool
+				err = json.Unmarshal(*v, &availableToOtherTenants)
+				if err != nil {
+					return err
+				}
+				a.AvailableToOtherTenants = &availableToOtherTenants
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				a.DisplayName = &displayName
+			}
+		case "identifierUris":
+			if v != nil {
+				var identifierUris []string
+				err = json.Unmarshal(*v, &identifierUris)
+				if err != nil {
+					return err
+				}
+				a.IdentifierUris = &identifierUris
+			}
+		case "replyUrls":
+			if v != nil {
+				var replyUrls []string
+				err = json.Unmarshal(*v, &replyUrls)
+				if err != nil {
+					return err
+				}
+				a.ReplyUrls = &replyUrls
+			}
+		case "homepage":
+			if v != nil {
+				var homepage string
+				err = json.Unmarshal(*v, &homepage)
+				if err != nil {
+					return err
+				}
+				a.Homepage = &homepage
+			}
+		case "oauth2AllowImplicitFlow":
+			if v != nil {
+				var oauth2AllowImplicitFlow bool
+				err = json.Unmarshal(*v, &oauth2AllowImplicitFlow)
+				if err != nil {
+					return err
+				}
+				a.Oauth2AllowImplicitFlow = &oauth2AllowImplicitFlow
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if a.AdditionalProperties == nil {
+					a.AdditionalProperties = make(map[string]interface{})
+				}
+				a.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				a.ObjectID = &objectID
+			}
+		case "deletionTimestamp":
+			if v != nil {
+				var deletionTimestamp date.Time
+				err = json.Unmarshal(*v, &deletionTimestamp)
+				if err != nil {
+					return err
+				}
+				a.DeletionTimestamp = &deletionTimestamp
+			}
+		case "objectType":
+			if v != nil {
+				var objectType ObjectType
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				a.ObjectType = objectType
+			}
+		}
+	}
+
+	return nil
+}
+
 // ApplicationAddOwnerParameters request parameters for adding a owner to an application.
 type ApplicationAddOwnerParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -362,6 +758,42 @@ func (aaop ApplicationAddOwnerParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ApplicationAddOwnerParameters struct.
+func (aaop *ApplicationAddOwnerParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if aaop.AdditionalProperties == nil {
+					aaop.AdditionalProperties = make(map[string]interface{})
+				}
+				aaop.AdditionalProperties[k] = additionalProperties
+			}
+		case "url":
+			if v != nil {
+				var URL string
+				err = json.Unmarshal(*v, &URL)
+				if err != nil {
+					return err
+				}
+				aaop.URL = &URL
+			}
+		}
+	}
+
+	return nil
 }
 
 // ApplicationCreateParameters request parameters for creating a new application.
@@ -422,6 +854,114 @@ func (acp ApplicationCreateParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ApplicationCreateParameters struct.
+func (acp *ApplicationCreateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if acp.AdditionalProperties == nil {
+					acp.AdditionalProperties = make(map[string]interface{})
+				}
+				acp.AdditionalProperties[k] = additionalProperties
+			}
+		case "availableToOtherTenants":
+			if v != nil {
+				var availableToOtherTenants bool
+				err = json.Unmarshal(*v, &availableToOtherTenants)
+				if err != nil {
+					return err
+				}
+				acp.AvailableToOtherTenants = &availableToOtherTenants
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				acp.DisplayName = &displayName
+			}
+		case "homepage":
+			if v != nil {
+				var homepage string
+				err = json.Unmarshal(*v, &homepage)
+				if err != nil {
+					return err
+				}
+				acp.Homepage = &homepage
+			}
+		case "identifierUris":
+			if v != nil {
+				var identifierUris []string
+				err = json.Unmarshal(*v, &identifierUris)
+				if err != nil {
+					return err
+				}
+				acp.IdentifierUris = &identifierUris
+			}
+		case "replyUrls":
+			if v != nil {
+				var replyUrls []string
+				err = json.Unmarshal(*v, &replyUrls)
+				if err != nil {
+					return err
+				}
+				acp.ReplyUrls = &replyUrls
+			}
+		case "keyCredentials":
+			if v != nil {
+				var keyCredentials []KeyCredential
+				err = json.Unmarshal(*v, &keyCredentials)
+				if err != nil {
+					return err
+				}
+				acp.KeyCredentials = &keyCredentials
+			}
+		case "passwordCredentials":
+			if v != nil {
+				var passwordCredentials []PasswordCredential
+				err = json.Unmarshal(*v, &passwordCredentials)
+				if err != nil {
+					return err
+				}
+				acp.PasswordCredentials = &passwordCredentials
+			}
+		case "oauth2AllowImplicitFlow":
+			if v != nil {
+				var oauth2AllowImplicitFlow bool
+				err = json.Unmarshal(*v, &oauth2AllowImplicitFlow)
+				if err != nil {
+					return err
+				}
+				acp.Oauth2AllowImplicitFlow = &oauth2AllowImplicitFlow
+			}
+		case "requiredResourceAccess":
+			if v != nil {
+				var requiredResourceAccess []RequiredResourceAccess
+				err = json.Unmarshal(*v, &requiredResourceAccess)
+				if err != nil {
+					return err
+				}
+				acp.RequiredResourceAccess = &requiredResourceAccess
+			}
+		}
+	}
+
+	return nil
 }
 
 // ApplicationListResult application list operation result.
@@ -574,6 +1114,114 @@ func (aup ApplicationUpdateParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for ApplicationUpdateParameters struct.
+func (aup *ApplicationUpdateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if aup.AdditionalProperties == nil {
+					aup.AdditionalProperties = make(map[string]interface{})
+				}
+				aup.AdditionalProperties[k] = additionalProperties
+			}
+		case "availableToOtherTenants":
+			if v != nil {
+				var availableToOtherTenants bool
+				err = json.Unmarshal(*v, &availableToOtherTenants)
+				if err != nil {
+					return err
+				}
+				aup.AvailableToOtherTenants = &availableToOtherTenants
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				aup.DisplayName = &displayName
+			}
+		case "homepage":
+			if v != nil {
+				var homepage string
+				err = json.Unmarshal(*v, &homepage)
+				if err != nil {
+					return err
+				}
+				aup.Homepage = &homepage
+			}
+		case "identifierUris":
+			if v != nil {
+				var identifierUris []string
+				err = json.Unmarshal(*v, &identifierUris)
+				if err != nil {
+					return err
+				}
+				aup.IdentifierUris = &identifierUris
+			}
+		case "replyUrls":
+			if v != nil {
+				var replyUrls []string
+				err = json.Unmarshal(*v, &replyUrls)
+				if err != nil {
+					return err
+				}
+				aup.ReplyUrls = &replyUrls
+			}
+		case "keyCredentials":
+			if v != nil {
+				var keyCredentials []KeyCredential
+				err = json.Unmarshal(*v, &keyCredentials)
+				if err != nil {
+					return err
+				}
+				aup.KeyCredentials = &keyCredentials
+			}
+		case "passwordCredentials":
+			if v != nil {
+				var passwordCredentials []PasswordCredential
+				err = json.Unmarshal(*v, &passwordCredentials)
+				if err != nil {
+					return err
+				}
+				aup.PasswordCredentials = &passwordCredentials
+			}
+		case "oauth2AllowImplicitFlow":
+			if v != nil {
+				var oauth2AllowImplicitFlow bool
+				err = json.Unmarshal(*v, &oauth2AllowImplicitFlow)
+				if err != nil {
+					return err
+				}
+				aup.Oauth2AllowImplicitFlow = &oauth2AllowImplicitFlow
+			}
+		case "requiredResourceAccess":
+			if v != nil {
+				var requiredResourceAccess []RequiredResourceAccess
+				err = json.Unmarshal(*v, &requiredResourceAccess)
+				if err != nil {
+					return err
+				}
+				aup.RequiredResourceAccess = &requiredResourceAccess
+			}
+		}
+	}
+
+	return nil
+}
+
 // CheckGroupMembershipParameters request parameters for IsMemberOf API call.
 type CheckGroupMembershipParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -599,6 +1247,51 @@ func (cgmp CheckGroupMembershipParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for CheckGroupMembershipParameters struct.
+func (cgmp *CheckGroupMembershipParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if cgmp.AdditionalProperties == nil {
+					cgmp.AdditionalProperties = make(map[string]interface{})
+				}
+				cgmp.AdditionalProperties[k] = additionalProperties
+			}
+		case "groupId":
+			if v != nil {
+				var groupID string
+				err = json.Unmarshal(*v, &groupID)
+				if err != nil {
+					return err
+				}
+				cgmp.GroupID = &groupID
+			}
+		case "memberId":
+			if v != nil {
+				var memberID string
+				err = json.Unmarshal(*v, &memberID)
+				if err != nil {
+					return err
+				}
+				cgmp.MemberID = &memberID
+			}
+		}
+	}
+
+	return nil
+}
+
 // CheckGroupMembershipResult server response for IsMemberOf API call
 type CheckGroupMembershipResult struct {
 	autorest.Response `json:"-"`
@@ -618,6 +1311,42 @@ func (cgmr CheckGroupMembershipResult) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for CheckGroupMembershipResult struct.
+func (cgmr *CheckGroupMembershipResult) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if cgmr.AdditionalProperties == nil {
+					cgmr.AdditionalProperties = make(map[string]interface{})
+				}
+				cgmr.AdditionalProperties[k] = additionalProperties
+			}
+		case "value":
+			if v != nil {
+				var value bool
+				err = json.Unmarshal(*v, &value)
+				if err != nil {
+					return err
+				}
+				cgmr.Value = &value
+			}
+		}
+	}
+
+	return nil
 }
 
 // BasicDirectoryObject represents an Azure Active Directory object.
@@ -739,6 +1468,60 @@ func (do DirectoryObject) AsBasicDirectoryObject() (BasicDirectoryObject, bool) 
 	return &do, true
 }
 
+// UnmarshalJSON is the custom unmarshaler for DirectoryObject struct.
+func (do *DirectoryObject) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if do.AdditionalProperties == nil {
+					do.AdditionalProperties = make(map[string]interface{})
+				}
+				do.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				do.ObjectID = &objectID
+			}
+		case "deletionTimestamp":
+			if v != nil {
+				var deletionTimestamp date.Time
+				err = json.Unmarshal(*v, &deletionTimestamp)
+				if err != nil {
+					return err
+				}
+				do.DeletionTimestamp = &deletionTimestamp
+			}
+		case "objectType":
+			if v != nil {
+				var objectType ObjectType
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				do.ObjectType = objectType
+			}
+		}
+	}
+
+	return nil
+}
+
 // DirectoryObjectListResult directoryObject list operation result.
 type DirectoryObjectListResult struct {
 	autorest.Response `json:"-"`
@@ -805,6 +1588,69 @@ func (d Domain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for Domain struct.
+func (d *Domain) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if d.AdditionalProperties == nil {
+					d.AdditionalProperties = make(map[string]interface{})
+				}
+				d.AdditionalProperties[k] = additionalProperties
+			}
+		case "authenticationType":
+			if v != nil {
+				var authenticationType string
+				err = json.Unmarshal(*v, &authenticationType)
+				if err != nil {
+					return err
+				}
+				d.AuthenticationType = &authenticationType
+			}
+		case "isDefault":
+			if v != nil {
+				var isDefault bool
+				err = json.Unmarshal(*v, &isDefault)
+				if err != nil {
+					return err
+				}
+				d.IsDefault = &isDefault
+			}
+		case "isVerified":
+			if v != nil {
+				var isVerified bool
+				err = json.Unmarshal(*v, &isVerified)
+				if err != nil {
+					return err
+				}
+				d.IsVerified = &isVerified
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				d.Name = &name
+			}
+		}
+	}
+
+	return nil
+}
+
 // DomainListResult server response for Get tenant domains API call.
 type DomainListResult struct {
 	autorest.Response `json:"-"`
@@ -846,6 +1692,60 @@ func (gop GetObjectsParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GetObjectsParameters struct.
+func (gop *GetObjectsParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if gop.AdditionalProperties == nil {
+					gop.AdditionalProperties = make(map[string]interface{})
+				}
+				gop.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectIds":
+			if v != nil {
+				var objectIds []string
+				err = json.Unmarshal(*v, &objectIds)
+				if err != nil {
+					return err
+				}
+				gop.ObjectIds = &objectIds
+			}
+		case "types":
+			if v != nil {
+				var typesVar []string
+				err = json.Unmarshal(*v, &typesVar)
+				if err != nil {
+					return err
+				}
+				gop.Types = &typesVar
+			}
+		case "includeDirectoryObjectReferences":
+			if v != nil {
+				var includeDirectoryObjectReferences bool
+				err = json.Unmarshal(*v, &includeDirectoryObjectReferences)
+				if err != nil {
+					return err
+				}
+				gop.IncludeDirectoryObjectReferences = &includeDirectoryObjectReferences
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetObjectsResult the response to an Active Directory object inquiry API request.
@@ -997,6 +1897,42 @@ func (gamp GroupAddMemberParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for GroupAddMemberParameters struct.
+func (gamp *GroupAddMemberParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if gamp.AdditionalProperties == nil {
+					gamp.AdditionalProperties = make(map[string]interface{})
+				}
+				gamp.AdditionalProperties[k] = additionalProperties
+			}
+		case "url":
+			if v != nil {
+				var URL string
+				err = json.Unmarshal(*v, &URL)
+				if err != nil {
+					return err
+				}
+				gamp.URL = &URL
+			}
+		}
+	}
+
+	return nil
+}
+
 // GroupCreateParameters request parameters for creating a new group.
 type GroupCreateParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -1032,6 +1968,69 @@ func (gcp GroupCreateParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for GroupCreateParameters struct.
+func (gcp *GroupCreateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if gcp.AdditionalProperties == nil {
+					gcp.AdditionalProperties = make(map[string]interface{})
+				}
+				gcp.AdditionalProperties[k] = additionalProperties
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				gcp.DisplayName = &displayName
+			}
+		case "mailEnabled":
+			if v != nil {
+				var mailEnabled bool
+				err = json.Unmarshal(*v, &mailEnabled)
+				if err != nil {
+					return err
+				}
+				gcp.MailEnabled = &mailEnabled
+			}
+		case "mailNickname":
+			if v != nil {
+				var mailNickname string
+				err = json.Unmarshal(*v, &mailNickname)
+				if err != nil {
+					return err
+				}
+				gcp.MailNickname = &mailNickname
+			}
+		case "securityEnabled":
+			if v != nil {
+				var securityEnabled bool
+				err = json.Unmarshal(*v, &securityEnabled)
+				if err != nil {
+					return err
+				}
+				gcp.SecurityEnabled = &securityEnabled
+			}
+		}
+	}
+
+	return nil
+}
+
 // GroupGetMemberGroupsParameters request parameters for GetMemberGroups API call.
 type GroupGetMemberGroupsParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -1050,6 +2049,42 @@ func (ggmgp GroupGetMemberGroupsParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for GroupGetMemberGroupsParameters struct.
+func (ggmgp *GroupGetMemberGroupsParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ggmgp.AdditionalProperties == nil {
+					ggmgp.AdditionalProperties = make(map[string]interface{})
+				}
+				ggmgp.AdditionalProperties[k] = additionalProperties
+			}
+		case "securityEnabledOnly":
+			if v != nil {
+				var securityEnabledOnly bool
+				err = json.Unmarshal(*v, &securityEnabledOnly)
+				if err != nil {
+					return err
+				}
+				ggmgp.SecurityEnabledOnly = &securityEnabledOnly
+			}
+		}
+	}
+
+	return nil
 }
 
 // GroupGetMemberGroupsResult server response for GetMemberGroups API call.
@@ -1199,6 +2234,96 @@ func (kc KeyCredential) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for KeyCredential struct.
+func (kc *KeyCredential) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if kc.AdditionalProperties == nil {
+					kc.AdditionalProperties = make(map[string]interface{})
+				}
+				kc.AdditionalProperties[k] = additionalProperties
+			}
+		case "startDate":
+			if v != nil {
+				var startDate date.Time
+				err = json.Unmarshal(*v, &startDate)
+				if err != nil {
+					return err
+				}
+				kc.StartDate = &startDate
+			}
+		case "endDate":
+			if v != nil {
+				var endDate date.Time
+				err = json.Unmarshal(*v, &endDate)
+				if err != nil {
+					return err
+				}
+				kc.EndDate = &endDate
+			}
+		case "value":
+			if v != nil {
+				var value string
+				err = json.Unmarshal(*v, &value)
+				if err != nil {
+					return err
+				}
+				kc.Value = &value
+			}
+		case "keyId":
+			if v != nil {
+				var keyID string
+				err = json.Unmarshal(*v, &keyID)
+				if err != nil {
+					return err
+				}
+				kc.KeyID = &keyID
+			}
+		case "usage":
+			if v != nil {
+				var usage string
+				err = json.Unmarshal(*v, &usage)
+				if err != nil {
+					return err
+				}
+				kc.Usage = &usage
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				kc.Type = &typeVar
+			}
+		case "customKeyIdentifier":
+			if v != nil {
+				var customKeyIdentifier []byte
+				err = json.Unmarshal(*v, &customKeyIdentifier)
+				if err != nil {
+					return err
+				}
+				kc.CustomKeyIdentifier = &customKeyIdentifier
+			}
+		}
+	}
+
+	return nil
+}
+
 // KeyCredentialListResult keyCredential list operation result.
 type KeyCredentialListResult struct {
 	autorest.Response `json:"-"`
@@ -1300,6 +2425,69 @@ func (pc PasswordCredential) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for PasswordCredential struct.
+func (pc *PasswordCredential) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if pc.AdditionalProperties == nil {
+					pc.AdditionalProperties = make(map[string]interface{})
+				}
+				pc.AdditionalProperties[k] = additionalProperties
+			}
+		case "startDate":
+			if v != nil {
+				var startDate date.Time
+				err = json.Unmarshal(*v, &startDate)
+				if err != nil {
+					return err
+				}
+				pc.StartDate = &startDate
+			}
+		case "endDate":
+			if v != nil {
+				var endDate date.Time
+				err = json.Unmarshal(*v, &endDate)
+				if err != nil {
+					return err
+				}
+				pc.EndDate = &endDate
+			}
+		case "keyId":
+			if v != nil {
+				var keyID string
+				err = json.Unmarshal(*v, &keyID)
+				if err != nil {
+					return err
+				}
+				pc.KeyID = &keyID
+			}
+		case "value":
+			if v != nil {
+				var value string
+				err = json.Unmarshal(*v, &value)
+				if err != nil {
+					return err
+				}
+				pc.Value = &value
+			}
+		}
+	}
+
+	return nil
+}
+
 // PasswordCredentialListResult passwordCredential list operation result.
 type PasswordCredentialListResult struct {
 	autorest.Response `json:"-"`
@@ -1338,6 +2526,72 @@ func (pp PasswordProfile) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for PasswordProfile struct.
+func (pp *PasswordProfile) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if pp.AdditionalProperties == nil {
+					pp.AdditionalProperties = make(map[string]interface{})
+				}
+				pp.AdditionalProperties[k] = additionalProperties
+			}
+		case "password":
+			if v != nil {
+				var password string
+				err = json.Unmarshal(*v, &password)
+				if err != nil {
+					return err
+				}
+				pp.Password = &password
+			}
+		case "forceChangePasswordNextLogin":
+			if v != nil {
+				var forceChangePasswordNextLogin bool
+				err = json.Unmarshal(*v, &forceChangePasswordNextLogin)
+				if err != nil {
+					return err
+				}
+				pp.ForceChangePasswordNextLogin = &forceChangePasswordNextLogin
+			}
+		}
+	}
+
+	return nil
+}
+
+// Permissions ...
+type Permissions struct {
+	autorest.Response `json:"-"`
+	// OdataType - Microsoft.DirectoryServices.OAuth2PermissionGrant
+	OdataType *string `json:"odata.type,omitempty"`
+	// ClientID - The objectId of the Service Principal associated with the app
+	ClientID *string `json:"clientId,omitempty"`
+	// ConsentType - Typically set to AllPrincipals
+	ConsentType *string `json:"consentType,omitempty"`
+	// PrincipalID - Set to null if AllPrincipals is set
+	PrincipalID interface{} `json:"principalId,omitempty"`
+	// ResourceID - Service Principal Id of the resource you want to grant
+	ResourceID *string `json:"resourceId,omitempty"`
+	// Scope - Typically set to user_impersonation
+	Scope *string `json:"scope,omitempty"`
+	// StartTime - Start time for TTL
+	StartTime *string `json:"startTime,omitempty"`
+	// ExpiryTime - Expiry time for TTL
+	ExpiryTime *string `json:"expiryTime,omitempty"`
+}
+
 // RequiredResourceAccess specifies the set of OAuth 2.0 permission scopes and app roles under the specified
 // resource that an application requires access to. The specified OAuth 2.0 permission scopes may be requested by
 // client applications (through the requiredResourceAccess collection) when calling a resource application. The
@@ -1366,6 +2620,51 @@ func (rra RequiredResourceAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for RequiredResourceAccess struct.
+func (rra *RequiredResourceAccess) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if rra.AdditionalProperties == nil {
+					rra.AdditionalProperties = make(map[string]interface{})
+				}
+				rra.AdditionalProperties[k] = additionalProperties
+			}
+		case "resourceAccess":
+			if v != nil {
+				var resourceAccess []ResourceAccess
+				err = json.Unmarshal(*v, &resourceAccess)
+				if err != nil {
+					return err
+				}
+				rra.ResourceAccess = &resourceAccess
+			}
+		case "resourceAppId":
+			if v != nil {
+				var resourceAppID string
+				err = json.Unmarshal(*v, &resourceAppID)
+				if err != nil {
+					return err
+				}
+				rra.ResourceAppID = &resourceAppID
+			}
+		}
+	}
+
+	return nil
+}
+
 // ResourceAccess specifies an OAuth 2.0 permission scope or an app role that an application requires. The
 // resourceAccess property of the RequiredResourceAccess type is a collection of ResourceAccess.
 type ResourceAccess struct {
@@ -1390,6 +2689,51 @@ func (ra ResourceAccess) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ResourceAccess struct.
+func (ra *ResourceAccess) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ra.AdditionalProperties == nil {
+					ra.AdditionalProperties = make(map[string]interface{})
+				}
+				ra.AdditionalProperties[k] = additionalProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				ra.ID = &ID
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				ra.Type = &typeVar
+			}
+		}
+	}
+
+	return nil
 }
 
 // ServicePrincipal active Directory service principal information.
@@ -1469,6 +2813,87 @@ func (sp ServicePrincipal) AsBasicDirectoryObject() (BasicDirectoryObject, bool)
 	return &sp, true
 }
 
+// UnmarshalJSON is the custom unmarshaler for ServicePrincipal struct.
+func (sp *ServicePrincipal) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				sp.DisplayName = &displayName
+			}
+		case "appId":
+			if v != nil {
+				var appID string
+				err = json.Unmarshal(*v, &appID)
+				if err != nil {
+					return err
+				}
+				sp.AppID = &appID
+			}
+		case "servicePrincipalNames":
+			if v != nil {
+				var servicePrincipalNames []string
+				err = json.Unmarshal(*v, &servicePrincipalNames)
+				if err != nil {
+					return err
+				}
+				sp.ServicePrincipalNames = &servicePrincipalNames
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if sp.AdditionalProperties == nil {
+					sp.AdditionalProperties = make(map[string]interface{})
+				}
+				sp.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				sp.ObjectID = &objectID
+			}
+		case "deletionTimestamp":
+			if v != nil {
+				var deletionTimestamp date.Time
+				err = json.Unmarshal(*v, &deletionTimestamp)
+				if err != nil {
+					return err
+				}
+				sp.DeletionTimestamp = &deletionTimestamp
+			}
+		case "objectType":
+			if v != nil {
+				var objectType ObjectType
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				sp.ObjectType = objectType
+			}
+		}
+	}
+
+	return nil
+}
+
 // ServicePrincipalCreateParameters request parameters for creating a new service principal.
 type ServicePrincipalCreateParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -1502,6 +2927,69 @@ func (spcp ServicePrincipalCreateParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for ServicePrincipalCreateParameters struct.
+func (spcp *ServicePrincipalCreateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if spcp.AdditionalProperties == nil {
+					spcp.AdditionalProperties = make(map[string]interface{})
+				}
+				spcp.AdditionalProperties[k] = additionalProperties
+			}
+		case "appId":
+			if v != nil {
+				var appID string
+				err = json.Unmarshal(*v, &appID)
+				if err != nil {
+					return err
+				}
+				spcp.AppID = &appID
+			}
+		case "accountEnabled":
+			if v != nil {
+				var accountEnabled bool
+				err = json.Unmarshal(*v, &accountEnabled)
+				if err != nil {
+					return err
+				}
+				spcp.AccountEnabled = &accountEnabled
+			}
+		case "keyCredentials":
+			if v != nil {
+				var keyCredentials []KeyCredential
+				err = json.Unmarshal(*v, &keyCredentials)
+				if err != nil {
+					return err
+				}
+				spcp.KeyCredentials = &keyCredentials
+			}
+		case "passwordCredentials":
+			if v != nil {
+				var passwordCredentials []PasswordCredential
+				err = json.Unmarshal(*v, &passwordCredentials)
+				if err != nil {
+					return err
+				}
+				spcp.PasswordCredentials = &passwordCredentials
+			}
+		}
+	}
+
+	return nil
 }
 
 // ServicePrincipalListResult server response for get tenant service principals API call.
@@ -1618,6 +3106,51 @@ func (sin SignInName) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for SignInName struct.
+func (sin *SignInName) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if sin.AdditionalProperties == nil {
+					sin.AdditionalProperties = make(map[string]interface{})
+				}
+				sin.AdditionalProperties[k] = additionalProperties
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				sin.Type = &typeVar
+			}
+		case "value":
+			if v != nil {
+				var value string
+				err = json.Unmarshal(*v, &value)
+				if err != nil {
+					return err
+				}
+				sin.Value = &value
+			}
+		}
+	}
+
+	return nil
 }
 
 // User active Directory user information.
@@ -1737,6 +3270,159 @@ func (u User) AsBasicDirectoryObject() (BasicDirectoryObject, bool) {
 	return &u, true
 }
 
+// UnmarshalJSON is the custom unmarshaler for User struct.
+func (u *User) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "immutableId":
+			if v != nil {
+				var immutableID string
+				err = json.Unmarshal(*v, &immutableID)
+				if err != nil {
+					return err
+				}
+				u.ImmutableID = &immutableID
+			}
+		case "usageLocation":
+			if v != nil {
+				var usageLocation string
+				err = json.Unmarshal(*v, &usageLocation)
+				if err != nil {
+					return err
+				}
+				u.UsageLocation = &usageLocation
+			}
+		case "givenName":
+			if v != nil {
+				var givenName string
+				err = json.Unmarshal(*v, &givenName)
+				if err != nil {
+					return err
+				}
+				u.GivenName = &givenName
+			}
+		case "surname":
+			if v != nil {
+				var surname string
+				err = json.Unmarshal(*v, &surname)
+				if err != nil {
+					return err
+				}
+				u.Surname = &surname
+			}
+		case "userType":
+			if v != nil {
+				var userType UserType
+				err = json.Unmarshal(*v, &userType)
+				if err != nil {
+					return err
+				}
+				u.UserType = userType
+			}
+		case "accountEnabled":
+			if v != nil {
+				var accountEnabled bool
+				err = json.Unmarshal(*v, &accountEnabled)
+				if err != nil {
+					return err
+				}
+				u.AccountEnabled = &accountEnabled
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				u.DisplayName = &displayName
+			}
+		case "userPrincipalName":
+			if v != nil {
+				var userPrincipalName string
+				err = json.Unmarshal(*v, &userPrincipalName)
+				if err != nil {
+					return err
+				}
+				u.UserPrincipalName = &userPrincipalName
+			}
+		case "mailNickname":
+			if v != nil {
+				var mailNickname string
+				err = json.Unmarshal(*v, &mailNickname)
+				if err != nil {
+					return err
+				}
+				u.MailNickname = &mailNickname
+			}
+		case "mail":
+			if v != nil {
+				var mailVar string
+				err = json.Unmarshal(*v, &mailVar)
+				if err != nil {
+					return err
+				}
+				u.Mail = &mailVar
+			}
+		case "signInNames":
+			if v != nil {
+				var signInNames []SignInName
+				err = json.Unmarshal(*v, &signInNames)
+				if err != nil {
+					return err
+				}
+				u.SignInNames = &signInNames
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if u.AdditionalProperties == nil {
+					u.AdditionalProperties = make(map[string]interface{})
+				}
+				u.AdditionalProperties[k] = additionalProperties
+			}
+		case "objectId":
+			if v != nil {
+				var objectID string
+				err = json.Unmarshal(*v, &objectID)
+				if err != nil {
+					return err
+				}
+				u.ObjectID = &objectID
+			}
+		case "deletionTimestamp":
+			if v != nil {
+				var deletionTimestamp date.Time
+				err = json.Unmarshal(*v, &deletionTimestamp)
+				if err != nil {
+					return err
+				}
+				u.DeletionTimestamp = &deletionTimestamp
+			}
+		case "objectType":
+			if v != nil {
+				var objectType ObjectType
+				err = json.Unmarshal(*v, &objectType)
+				if err != nil {
+					return err
+				}
+				u.ObjectType = objectType
+			}
+		}
+	}
+
+	return nil
+}
+
 // UserBase ...
 type UserBase struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -1775,6 +3461,78 @@ func (ub UserBase) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for UserBase struct.
+func (ub *UserBase) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ub.AdditionalProperties == nil {
+					ub.AdditionalProperties = make(map[string]interface{})
+				}
+				ub.AdditionalProperties[k] = additionalProperties
+			}
+		case "immutableId":
+			if v != nil {
+				var immutableID string
+				err = json.Unmarshal(*v, &immutableID)
+				if err != nil {
+					return err
+				}
+				ub.ImmutableID = &immutableID
+			}
+		case "usageLocation":
+			if v != nil {
+				var usageLocation string
+				err = json.Unmarshal(*v, &usageLocation)
+				if err != nil {
+					return err
+				}
+				ub.UsageLocation = &usageLocation
+			}
+		case "givenName":
+			if v != nil {
+				var givenName string
+				err = json.Unmarshal(*v, &givenName)
+				if err != nil {
+					return err
+				}
+				ub.GivenName = &givenName
+			}
+		case "surname":
+			if v != nil {
+				var surname string
+				err = json.Unmarshal(*v, &surname)
+				if err != nil {
+					return err
+				}
+				ub.Surname = &surname
+			}
+		case "userType":
+			if v != nil {
+				var userType UserType
+				err = json.Unmarshal(*v, &userType)
+				if err != nil {
+					return err
+				}
+				ub.UserType = userType
+			}
+		}
+	}
+
+	return nil
 }
 
 // UserCreateParameters request parameters for creating a new work or school account user.
@@ -1847,6 +3605,132 @@ func (ucp UserCreateParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// UnmarshalJSON is the custom unmarshaler for UserCreateParameters struct.
+func (ucp *UserCreateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "accountEnabled":
+			if v != nil {
+				var accountEnabled bool
+				err = json.Unmarshal(*v, &accountEnabled)
+				if err != nil {
+					return err
+				}
+				ucp.AccountEnabled = &accountEnabled
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				ucp.DisplayName = &displayName
+			}
+		case "passwordProfile":
+			if v != nil {
+				var passwordProfile PasswordProfile
+				err = json.Unmarshal(*v, &passwordProfile)
+				if err != nil {
+					return err
+				}
+				ucp.PasswordProfile = &passwordProfile
+			}
+		case "userPrincipalName":
+			if v != nil {
+				var userPrincipalName string
+				err = json.Unmarshal(*v, &userPrincipalName)
+				if err != nil {
+					return err
+				}
+				ucp.UserPrincipalName = &userPrincipalName
+			}
+		case "mailNickname":
+			if v != nil {
+				var mailNickname string
+				err = json.Unmarshal(*v, &mailNickname)
+				if err != nil {
+					return err
+				}
+				ucp.MailNickname = &mailNickname
+			}
+		case "mail":
+			if v != nil {
+				var mailVar string
+				err = json.Unmarshal(*v, &mailVar)
+				if err != nil {
+					return err
+				}
+				ucp.Mail = &mailVar
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ucp.AdditionalProperties == nil {
+					ucp.AdditionalProperties = make(map[string]interface{})
+				}
+				ucp.AdditionalProperties[k] = additionalProperties
+			}
+		case "immutableId":
+			if v != nil {
+				var immutableID string
+				err = json.Unmarshal(*v, &immutableID)
+				if err != nil {
+					return err
+				}
+				ucp.ImmutableID = &immutableID
+			}
+		case "usageLocation":
+			if v != nil {
+				var usageLocation string
+				err = json.Unmarshal(*v, &usageLocation)
+				if err != nil {
+					return err
+				}
+				ucp.UsageLocation = &usageLocation
+			}
+		case "givenName":
+			if v != nil {
+				var givenName string
+				err = json.Unmarshal(*v, &givenName)
+				if err != nil {
+					return err
+				}
+				ucp.GivenName = &givenName
+			}
+		case "surname":
+			if v != nil {
+				var surname string
+				err = json.Unmarshal(*v, &surname)
+				if err != nil {
+					return err
+				}
+				ucp.Surname = &surname
+			}
+		case "userType":
+			if v != nil {
+				var userType UserType
+				err = json.Unmarshal(*v, &userType)
+				if err != nil {
+					return err
+				}
+				ucp.UserType = userType
+			}
+		}
+	}
+
+	return nil
+}
+
 // UserGetMemberGroupsParameters request parameters for GetMemberGroups API call.
 type UserGetMemberGroupsParameters struct {
 	// AdditionalProperties - Unmatched properties from the message are deserialized this collection
@@ -1865,6 +3749,42 @@ func (ugmgp UserGetMemberGroupsParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for UserGetMemberGroupsParameters struct.
+func (ugmgp *UserGetMemberGroupsParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if ugmgp.AdditionalProperties == nil {
+					ugmgp.AdditionalProperties = make(map[string]interface{})
+				}
+				ugmgp.AdditionalProperties[k] = additionalProperties
+			}
+		case "securityEnabledOnly":
+			if v != nil {
+				var securityEnabledOnly bool
+				err = json.Unmarshal(*v, &securityEnabledOnly)
+				if err != nil {
+					return err
+				}
+				ugmgp.SecurityEnabledOnly = &securityEnabledOnly
+			}
+		}
+	}
+
+	return nil
 }
 
 // UserGetMemberGroupsResult server response for GetMemberGroups API call.
@@ -2027,4 +3947,121 @@ func (uup UserUpdateParameters) MarshalJSON() ([]byte, error) {
 		objectMap[k] = v
 	}
 	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for UserUpdateParameters struct.
+func (uup *UserUpdateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "accountEnabled":
+			if v != nil {
+				var accountEnabled bool
+				err = json.Unmarshal(*v, &accountEnabled)
+				if err != nil {
+					return err
+				}
+				uup.AccountEnabled = &accountEnabled
+			}
+		case "displayName":
+			if v != nil {
+				var displayName string
+				err = json.Unmarshal(*v, &displayName)
+				if err != nil {
+					return err
+				}
+				uup.DisplayName = &displayName
+			}
+		case "passwordProfile":
+			if v != nil {
+				var passwordProfile PasswordProfile
+				err = json.Unmarshal(*v, &passwordProfile)
+				if err != nil {
+					return err
+				}
+				uup.PasswordProfile = &passwordProfile
+			}
+		case "userPrincipalName":
+			if v != nil {
+				var userPrincipalName string
+				err = json.Unmarshal(*v, &userPrincipalName)
+				if err != nil {
+					return err
+				}
+				uup.UserPrincipalName = &userPrincipalName
+			}
+		case "mailNickname":
+			if v != nil {
+				var mailNickname string
+				err = json.Unmarshal(*v, &mailNickname)
+				if err != nil {
+					return err
+				}
+				uup.MailNickname = &mailNickname
+			}
+		default:
+			if v != nil {
+				var additionalProperties interface{}
+				err = json.Unmarshal(*v, &additionalProperties)
+				if err != nil {
+					return err
+				}
+				if uup.AdditionalProperties == nil {
+					uup.AdditionalProperties = make(map[string]interface{})
+				}
+				uup.AdditionalProperties[k] = additionalProperties
+			}
+		case "immutableId":
+			if v != nil {
+				var immutableID string
+				err = json.Unmarshal(*v, &immutableID)
+				if err != nil {
+					return err
+				}
+				uup.ImmutableID = &immutableID
+			}
+		case "usageLocation":
+			if v != nil {
+				var usageLocation string
+				err = json.Unmarshal(*v, &usageLocation)
+				if err != nil {
+					return err
+				}
+				uup.UsageLocation = &usageLocation
+			}
+		case "givenName":
+			if v != nil {
+				var givenName string
+				err = json.Unmarshal(*v, &givenName)
+				if err != nil {
+					return err
+				}
+				uup.GivenName = &givenName
+			}
+		case "surname":
+			if v != nil {
+				var surname string
+				err = json.Unmarshal(*v, &surname)
+				if err != nil {
+					return err
+				}
+				uup.Surname = &surname
+			}
+		case "userType":
+			if v != nil {
+				var userType UserType
+				err = json.Unmarshal(*v, &userType)
+				if err != nil {
+					return err
+				}
+				uup.UserType = userType
+			}
+		}
+	}
+
+	return nil
 }

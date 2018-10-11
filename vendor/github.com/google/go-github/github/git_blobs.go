@@ -31,9 +31,6 @@ func (s *GitService) GetBlob(ctx context.Context, owner string, repo string, sha
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	blob := new(Blob)
 	resp, err := s.client.Do(ctx, req, blob)
 	return blob, resp, err
@@ -65,9 +62,6 @@ func (s *GitService) CreateBlob(ctx context.Context, owner string, repo string, 
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	t := new(Blob)
 	resp, err := s.client.Do(ctx, req, t)

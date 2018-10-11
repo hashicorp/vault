@@ -29,10 +29,14 @@ type jwtAuthBackend struct {
 	l            sync.RWMutex
 	provider     *oidc.Provider
 	cachedConfig *jwtConfig
+
+	providerCtx       context.Context
+	providerCtxCancel context.CancelFunc
 }
 
 func backend(c *logical.BackendConfig) *jwtAuthBackend {
 	b := new(jwtAuthBackend)
+	b.providerCtx, b.providerCtxCancel = context.WithCancel(context.Background())
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
@@ -55,9 +59,18 @@ func backend(c *logical.BackendConfig) *jwtAuthBackend {
 				pathConfig(b),
 			},
 		),
+		Clean: b.cleanup,
 	}
 
 	return b
+}
+
+func (b *jwtAuthBackend) cleanup(_ context.Context) {
+	b.l.Lock()
+	if b.providerCtxCancel != nil {
+		b.providerCtxCancel()
+	}
+	b.l.Unlock()
 }
 
 func (b *jwtAuthBackend) invalidate(ctx context.Context, key string) {
@@ -91,7 +104,7 @@ func (b *jwtAuthBackend) getProvider(ctx context.Context, config *jwtConfig) (*o
 		return b.provider, nil
 	}
 
-	provider, err := b.createProvider(ctx, config)
+	provider, err := b.createProvider(config)
 	if err != nil {
 		return nil, err
 	}

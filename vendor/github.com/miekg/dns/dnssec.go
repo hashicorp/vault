@@ -173,7 +173,7 @@ func (k *DNSKEY) KeyTag() uint16 {
 				keytag += int(v) << 8
 			}
 		}
-		keytag += (keytag >> 16) & 0xFFFF
+		keytag += keytag >> 16 & 0xFFFF
 		keytag &= 0xFFFF
 	}
 	return uint16(keytag)
@@ -512,8 +512,8 @@ func (rr *RRSIG) ValidityPeriod(t time.Time) bool {
 	}
 	modi := (int64(rr.Inception) - utc) / year68
 	mode := (int64(rr.Expiration) - utc) / year68
-	ti := int64(rr.Inception) + (modi * year68)
-	te := int64(rr.Expiration) + (mode * year68)
+	ti := int64(rr.Inception) + modi*year68
+	te := int64(rr.Expiration) + mode*year68
 	return ti <= utc && utc <= te
 }
 

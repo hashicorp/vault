@@ -1,5 +1,4 @@
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 export default create({
   visit: visitable('/vault/auth'),
@@ -11,6 +10,6 @@ export default create({
       return this.tokenInput(token).submit();
     }
 
-    return withFlash(this.tokenInput('root').submit());
+    return this.tokenInput('root').submit();
   },
 });

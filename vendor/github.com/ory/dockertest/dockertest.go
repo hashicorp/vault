@@ -88,6 +88,16 @@ func (r *Resource) Close() error {
 	return r.pool.Purge(r)
 }
 
+// Expire sets a resource's associated container to terminate after a period has passed
+func (r *Resource) Expire(seconds uint) error {
+	go func() {
+		if err := r.pool.Client.StopContainer(r.Container.ID, seconds); err != nil {
+			// Error handling?
+		}
+	}()
+	return nil
+}
+
 // NewTLSPool creates a new pool given an endpoint and the certificate path. This is required for endpoints that
 // require TLS communication.
 func NewTLSPool(endpoint, certpath string) (*Pool, error) {
@@ -160,10 +170,14 @@ type RunOptions struct {
 	Links        []string
 	ExposedPorts []string
 	ExtraHosts   []string
+	CapAdd       []string
+	SecurityOpt  []string
 	WorkingDir   string
+	NetworkID    string
 	Labels       map[string]string
 	Auth         dc.AuthConfiguration
 	PortBindings map[dc.Port][]dc.PortBinding
+	Privileged   bool
 }
 
 // BuildAndRunWithOptions builds and starts a docker container
@@ -230,6 +244,13 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 		tag = "latest"
 	}
 
+	networkingConfig := dc.NetworkingConfig{
+		EndpointsConfig: map[string]*dc.EndpointConfig{},
+	}
+	if opts.NetworkID != "" {
+		networkingConfig.EndpointsConfig[opts.NetworkID] = &dc.EndpointConfig{}
+	}
+
 	_, err := d.Client.InspectImage(fmt.Sprintf("%s:%s", repository, tag))
 	if err != nil {
 		if err := d.Client.PullImage(dc.PullImageOptions{
@@ -252,6 +273,7 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 			ExposedPorts: exp,
 			WorkingDir:   wd,
 			Labels:       opts.Labels,
+			StopSignal:   "SIGWINCH", // to support timeouts
 		},
 		HostConfig: &dc.HostConfig{
 			PublishAllPorts: true,
@@ -259,7 +281,11 @@ func (d *Pool) RunWithOptions(opts *RunOptions) (*Resource, error) {
 			Links:           opts.Links,
 			PortBindings:    opts.PortBindings,
 			ExtraHosts:      opts.ExtraHosts,
+			CapAdd:          opts.CapAdd,
+			SecurityOpt:     opts.SecurityOpt,
+			Privileged:      opts.Privileged,
 		},
+		NetworkingConfig: &networkingConfig,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "")

@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // ProjectListOptions specifies the optional parameters to the
@@ -36,8 +35,7 @@ func (s *RepositoriesService) ListProjects(ctx context.Context, owner, repo stri
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeProjectsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeProjectsPreview)
 
 	var projects []*Project
 	resp, err := s.client.Do(ctx, req, &projects)
@@ -59,8 +57,7 @@ func (s *RepositoriesService) CreateProject(ctx context.Context, owner, repo str
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeProjectsPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeProjectsPreview)
 
 	project := &Project{}
 	resp, err := s.client.Do(ctx, req, project)

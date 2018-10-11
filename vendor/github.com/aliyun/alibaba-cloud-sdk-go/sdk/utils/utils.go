@@ -20,11 +20,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/satori/go.uuid"
 	"net/url"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 // if you use go 1.10 or higher, you can hack this util by these to avoid "TimeZone.zip not found" on Windows

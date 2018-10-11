@@ -15,7 +15,7 @@ token managed by the `token` backend.
 
 Every token has a number of properties:
 
-* ID - The primary ID of a token is a randomly generated UUID
+* ID - The primary ID of a token is a randomly generated value
 * Display Name - Optionally, a human readable display name
 * Metadata - Metadata used for audit logging
 * Number of Uses - Optionally, a restricted use count

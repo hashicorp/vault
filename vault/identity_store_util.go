@@ -931,6 +931,43 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	defer txn.Abort()
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
+
+	// For those group member IDs that are removed from the list, remove current
+	// group ID as their respective ParentGroupID.
+
+	// Get the current MemberGroups IDs for this group
+	var currentMemberGroupIDs []string
+	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	if err != nil {
+		return err
+	}
+	for _, currentMemberGroup := range currentMemberGroups {
+		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
+	}
+
+	// Update parent group IDs in the removed members
+	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		if strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			continue
+		}
+
+		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
+		if err != nil {
+			return err
+		}
+		if currentMemberGroup == nil {
+			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
+		}
+
+		// Remove group ID from the parent group IDs
+		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
+
+		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	// After the group lock is held, make membership updates to all the
 	// relevant groups
 	for _, memberGroupID := range memberGroupIDs {
@@ -1162,6 +1199,19 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	// Clear the old alias from memdb
+	groupClone, err := i.MemDBGroupByID(group.ID, true)
+	if err != nil {
+		return err
+	}
+	if groupClone != nil && groupClone.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, groupClone.Alias.ID, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the new alias to memdb
 	if group.Alias != nil {
 		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {

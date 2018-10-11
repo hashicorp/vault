@@ -19,7 +19,7 @@
         onchange={{action (action "setAndBroadcast" valuePath) value="target.value"}}
         data-test-input={{attr.name}}
       >
-        {{#each attr.options.possibleValues as |val|}}
+        {{#each (path-or-array attr.options.possibleValues model) as |val|}}
           <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
             {{or val.displayName val}}
           </option>
@@ -77,7 +77,7 @@
     initialValue=(or (get model valuePath) attr.options.defaultValue)
     labelText=labelString
     warning=attr.options.warning
-    setDefaultValue=false
+    setDefaultValue=(or attr.options.setDefault false)
     onChange=(action (action "setAndBroadcast" valuePath))
   }}
 {{else if (eq attr.options.editType 'stringArray')}}

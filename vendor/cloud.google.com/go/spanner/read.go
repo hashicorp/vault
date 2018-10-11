@@ -290,8 +290,8 @@ type resumableStreamDecoder struct {
 // beginning at the restartToken if non-nil.
 func newResumableStreamDecoder(ctx context.Context, rpc func(ct context.Context, restartToken []byte) (streamingReceiver, error)) *resumableStreamDecoder {
 	return &resumableStreamDecoder{
-		ctx: ctx,
-		rpc: rpc,
+		ctx:                         ctx,
+		rpc:                         rpc,
 		maxBytesBetweenResumeTokens: atomic.LoadInt32(&maxBytesBetweenResumeTokens),
 		backoff:                     defaultBackoff,
 	}
