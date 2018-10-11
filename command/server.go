@@ -609,6 +609,9 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Attempt to detect the redirect address, if possible
+	if coreConfig.RedirectAddr == "" {
+		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
+	}
 	var detect physical.RedirectDetect
 	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
 		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
