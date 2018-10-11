@@ -179,6 +179,7 @@
   display: flex;
   width: 100%;
   align-items: center;
+  position: relative;
 }
 
 .progress-bar {
@@ -186,14 +187,33 @@
   background: $grey-light;
   display: flex;
   width: 100%;
+  position: relative;
+}
+.feature-progress-container {
+  flex: 1 0 auto;
+  position: relative;
+  align-items: center;
+
+  &:not(:first-of-type) {
+    margin-left: 16px;
+  }
 }
 
 .feature-progress {
   height: 12px;
   background: #2eb039;
 }
+
 .feature-check {
-  height: 10px;
+  position: absolute;
+  left: -18px;
+  z-index: 10;
+  top: -6px;
+}
+
+.feature-progress-container .feature-check {
+  right: 0;
+  left: 93%;
 }
 
 .completed-check svg {
