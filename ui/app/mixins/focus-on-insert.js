@@ -22,9 +22,9 @@ export default Mixin.create({
   },
 
   forceFocus() {
-    var $selector = this.$(this.get('focusOnInsertSelector') || 'input').first();
-    if (!$selector.is(':focus')) {
-      $selector.focus();
+    var $targ = this.element.querySelectorAll(this.get('focusOnInsertSelector') || 'input[type="text"]')[0];
+    if ($targ && $targ !== document.activeElement) {
+      $targ.focus();
     }
   },
 });
