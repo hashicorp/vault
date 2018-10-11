@@ -18,16 +18,18 @@
   {{#if featureMachineHistory}}
     <div>{{currentFeatureProgress.text}}</div>
     <div class="progress-container">
-      <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="25" />
+      <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
       {{#each progressBar as |bar|}}
-        <span class="progress-bar">
-          <span class="feature-progress" style={{bar.style}}></span>
-        </span>
-        {{#if bar.completed}}
-          <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="25" />
-        {{else}}
-          <ICon class="feature-check incomplete-check" @glyph="check-circle-fill" @size="25" />
-        {{/if}}
+        <div class="feature-progress-container">
+          <span class="progress-bar">
+            <span class="feature-progress" style={{bar.style}}></span>
+          </span>
+          {{#if bar.completed}}
+            <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
+          {{else}}
+            <ICon class="feature-check incomplete-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
+          {{/if}}
+        </div>
       {{/each}}
     </div>
   {{/if}}
