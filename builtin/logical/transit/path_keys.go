@@ -208,7 +208,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
 			"min_encryption_version": p.MinEncryptionVersion,
-			"trimmed_min_version":    p.TrimmedMinVersion,
+			"min_version":            p.MinVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
 			"allow_plaintext_backup": p.AllowPlaintextBackup,
