@@ -44,7 +44,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	case err == nil:
 		// If it succeeds, all is well
 		return nil
-	case err != nil && !errwrap.ContainsType(err, errDuplicateIdentityName):
+	case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
 		return err
 	}
 
