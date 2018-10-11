@@ -27,6 +27,16 @@ export default Component.extend({
     }
     return time;
   }),
+  selectProgress: computed('selectedFeatures', function() {
+    let bar = [];
+    this.selectedFeatures.forEach(feature => {
+      bar.push({ style: 'width:0%;', completed: false, showIcon: true, feature: feature });
+    });
+    if (bar.length === 0) {
+      bar.push({ style: 'width:0%;', showIcon: false });
+    }
+    return bar;
+  }),
   allFeatures: computed(function() {
     return [
       {
