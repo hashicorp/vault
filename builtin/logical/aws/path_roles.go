@@ -235,12 +235,13 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse(fmt.Sprintf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
 		}
 
-		maxSTSTTL := time.Duration(maxSTSTTLRaw.(int)) * time.Second
-		if roleEntry.DefaultSTSTTL > 0 && roleEntry.DefaultSTSTTL > maxSTSTTL {
-			return logical.ErrorResponse(`"default_sts_ttl" value must be less than "max_sts_ttl" value`), nil
-		}
+		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
+	}
 
-		roleEntry.MaxSTSTTL = maxSTSTTL
+	if roleEntry.MaxSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
+		return logical.ErrorResponse(`"default_sts_ttl" value must be less than "max_sts_ttl" value`), nil
 	}
 
 	if legacyRole != "" {
