@@ -33,11 +33,6 @@ to be used for signing. If set to zero, only
 the latest version of the key is allowed.`,
 			},
 
-			"trimmed_min_version": &framework.FieldSchema{
-				Type:        framework.TypeInt,
-				Description: `If set, permanently deletes all the key versions before the given version. This should always be greater than both 'min_decryption_version' and 'min_encryption_version'. This is not allowed to be set when either 'min_encryption_version' or 'min_decryption_version' is set to zero.`,
-			},
-
 			"deletion_allowed": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: "Whether to allow deletion of the key",
