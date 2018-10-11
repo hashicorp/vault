@@ -1019,9 +1019,7 @@ keyring. Once trimmed, previous versions of the key cannot be recovered.
 
 ```json
 {
-  {
     "min_version": 2
-  }
 }
 ```
 
