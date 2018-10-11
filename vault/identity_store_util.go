@@ -105,9 +105,11 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if groupByName != nil && !i.disableLowerCasedNames {
+			if groupByName != nil {
 				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name)
-				return errDuplicateIdentityName
+				if !i.disableLowerCasedNames {
+					return errDuplicateIdentityName
+				}
 			}
 
 			if i.logger.IsDebug() {
@@ -236,9 +238,11 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				if err != nil {
 					return nil
 				}
-				if entityByName != nil && !i.disableLowerCasedNames {
+				if entityByName != nil {
 					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name)
-					return errDuplicateIdentityName
+					if !i.disableLowerCasedNames {
+						return errDuplicateIdentityName
+					}
 				}
 
 				// Only update MemDB and don't hit the storage again
@@ -300,9 +304,11 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			return nil
 		}
 
-		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) && !i.disableLowerCasedNames {
+		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
 			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name)
-			return errDuplicateIdentityName
+			if !i.disableLowerCasedNames {
+				return errDuplicateIdentityName
+			}
 		}
 
 		// Insert or update alias in MemDB using the transaction created above
