@@ -16,22 +16,11 @@
     <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
   </h1>
   {{#if showProgress}}
-    <div>{{currentFeatureProgress.text}}</div>
-    <div class="progress-container">
-      <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
-      {{#each progressBar as |bar|}}
-        <div class="feature-progress-container">
-          <span class="progress-bar">
-            <span class="feature-progress" style={{bar.style}}></span>
-          </span>
-          {{#if bar.completed}}
-            <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
-          {{else}}
-            <ICon class="feature-check incomplete-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
-          {{/if}}
-        </div>
-      {{/each}}
-    </div>
+    <WizardProgress @currentFeatureProgress={{currentFeatureProgress}} @progressBar={{progressBar}} />
+  {{else}}
+    {{#if selectProgress}}
+      <WizardProgress @progressBar={{selectProgress}} />
+    {{/if}}
   {{/if}}
 </div>
 {{yield}}

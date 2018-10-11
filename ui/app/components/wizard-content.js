@@ -8,6 +8,7 @@ export default Component.extend({
   classNames: ['ui-wizard'],
   glyph: null,
   headerText: null,
+  selectProgress: null,
   currentMachine: computed.alias('wizard.currentMachine'),
   showProgress: computed('wizard.featureComponent', function() {
     return this.wizard.featureComponent && this.wizard.featureMachineHistory;
@@ -40,7 +41,7 @@ export default Component.extend({
   progressBar: computed('currentFeatureProgress', function() {
     let bar = [];
     this.completedFeatures.forEach(feature => {
-      bar.push({ style: 'width:100%;', completed: true, feature: feature });
+      bar.push({ style: 'width:100%;', completed: true, feature: feature, showIcon: true });
     });
     this.wizard.featureList.forEach(feature => {
       if (feature === this.currentMachine) {
@@ -48,9 +49,10 @@ export default Component.extend({
           style: `width:${this.currentFeatureProgress.percentage}%;`,
           completed: this.currentFeatureProgress.percentage == 100 ? true : false,
           feature: feature,
+          showIcon: true,
         });
       } else {
-        bar.push({ style: 'width:0%;', completed: false, feature: feature });
+        bar.push({ style: 'width:0%;', completed: false, feature: feature, showIcon: true });
       }
     });
     return bar;
