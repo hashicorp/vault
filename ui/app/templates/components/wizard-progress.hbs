@@ -1,5 +1,5 @@
 <div class="progress-container">
-  <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
+  <ICon class="feature-check {{if noProgress 'incomplete-check' 'completed-check'}}" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
   {{#each progressBar as |bar|}}
     <div class="feature-progress-container">
       <span class="progress-bar">

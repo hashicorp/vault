@@ -227,7 +227,7 @@
 
 .feature-progress-container .feature-check {
   right: 0;
-  left: 93%;
+  left: calc(100% - 4px);
 }
 
 .completed-check svg {
