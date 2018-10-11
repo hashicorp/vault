@@ -475,9 +475,9 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
 		} else {
-			core.Logger().Error("handleRequestForwarding: error forwarding request", "error", err)
+			core.Logger().Error("forward request error", "error", err)
 		}
 
 		// Fall back to redirection

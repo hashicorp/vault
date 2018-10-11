@@ -629,15 +629,15 @@ func (i *ZooKeeperHALock) Unlock() error {
 	var err error
 
 	if err = i.unlockInternal(); err != nil {
-		i.logger.Error("zookeeper: failed to release distributed lock", "error", err)
+		i.logger.Error("failed to release distributed lock", "error", err)
 
 		go func(i *ZooKeeperHALock) {
 			attempts := 0
-			i.logger.Info("zookeeper: launching automated distributed lock release")
+			i.logger.Info("launching automated distributed lock release")
 
 			for {
 				if err := i.unlockInternal(); err == nil {
-					i.logger.Info("zookeeper: distributed lock released")
+					i.logger.Info("distributed lock released")
 					return
 				}
 
@@ -645,7 +645,7 @@ func (i *ZooKeeperHALock) Unlock() error {
 				case <-time.After(time.Second):
 					attempts := attempts + 1
 					if attempts >= 10 {
-						i.logger.Error("zookeeper: release lock max attempts reached. Lock may not be released", "error", err)
+						i.logger.Error("release lock max attempts reached. Lock may not be released", "error", err)
 						return
 					}
 					continue

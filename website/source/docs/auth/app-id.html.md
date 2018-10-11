@@ -50,7 +50,7 @@ More details on this process follow:
 
 - The app ID is a unique ID that maps to a set of policies. This ID is generated
   by an operator and configured into the method. The ID itself is usually a
-  UUID, but any hard-to-guess unique value can be used.
+  UUID-formatted random value, but any hard-to-guess unique value can be used.
 
 - After creating app IDs, an operator authorizes a fixed set of user IDs with
   each app ID. When a valid {app ID, user ID} tuple is given to the "login"

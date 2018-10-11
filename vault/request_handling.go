@@ -851,7 +851,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			NonHMACReqDataKeys: nonHMACReqDataKeys,
 		}
 		if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
+			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
 
