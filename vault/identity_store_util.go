@@ -45,9 +45,10 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		// If it succeeds, all is well
 		return nil
 	case err != nil && !errwrap.ContainsType(err, errDuplicateIdentityName):
-		// Return all errors except one
 		return err
 	}
+
+	c.identityStore.logger.Warn("enabling case sensitive identity names")
 
 	// Set identity store to operate on case sensitive identity names
 	c.identityStore.disableLowerCasedNames = true
@@ -60,9 +61,8 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return err
 	}
 
-	c.identityStore.logger.Warn("enabling case sensitive identity names")
-
-	// Load everything from the beginning.
+	// Attempt to load identity artifacts once more after memdb is reset to
+	// accept case sensitive names
 	return loadFunc(ctx)
 }
 
