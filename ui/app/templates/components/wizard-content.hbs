@@ -15,7 +15,7 @@
   <h1 class="title is-5">
     <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
   </h1>
-  {{#if featureMachineHistory}}
+  {{#if showProgress}}
     <div>{{currentFeatureProgress.text}}</div>
     <div class="progress-container">
       <ICon class="feature-check completed-check" @glyph="check-circle-fill" @size="24" @excludeIconClass={{true}}/>
