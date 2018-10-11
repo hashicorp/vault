@@ -35,7 +35,8 @@ export default Component.extend({
     }
     return {
       percentage: (this.featureMachineHistory.length / totalSteps) * 100,
-      text: `Step ${this.featureMachineHistory.length}/${totalSteps}`,
+      feature: this.currentMachine,
+      text: `Step ${this.featureMachineHistory.length} of ${totalSteps}`,
     };
   }),
   progressBar: computed('currentFeatureProgress', function() {
