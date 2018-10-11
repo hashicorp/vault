@@ -36,6 +36,9 @@ CHANGES:
    instead of a `400`.
  * `passthrough_request_headers` will now deny certain headers from being
    provided to backends based on a global denylist.
+ * Token Format: Tokens are now represented as a base62 value; tokens in
+   namespaces will have the namespace identifier appended. (This appeared in
+   Enterprise in 0.11.0, but is only in OSS in 0.11.2.)
 
 FEATURES:
 
@@ -184,6 +187,8 @@ DEPRECATIONS/CHANGES:
    role's configuration has changed in backwards-incompatible ways. Anything
    that depended on reading role data from the AWS secret engine will break
    until it is updated to work with the new format.
+ * Token Format (Enterprise): Tokens are now represented as a base62 value;
+   tokens in namespaces will have the namespace identifier appended.
 
 FEATURES:
 
