@@ -20,7 +20,7 @@ func (b *backend) pathTrim() *framework.Path {
 			"min_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The minimum version for the key ring. All versions before this version will be
-permanently removed. This should always be greater than both
+permanently removed. This value can at most be equal to the lesser of
 'min_decryption_version' and 'min_encryption_version'. This is not allowed to
 be set when either 'min_encryption_version' or 'min_decryption_version' is set
 to zero.`,

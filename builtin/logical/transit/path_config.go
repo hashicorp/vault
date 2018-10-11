@@ -191,9 +191,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	switch {
 	case p.MinVersion > p.MinEncryptionVersion:
-		return logical.ErrorResponse("min encryption version should not be less than trimmed min version"), nil
+		return logical.ErrorResponse("min encryption version should not be less than min version"), nil
 	case p.MinVersion > p.MinDecryptionVersion:
-		return logical.ErrorResponse("min decryption version should not be less then trimmed min version"), nil
+		return logical.ErrorResponse("min decryption version should not be less then min version"), nil
 	}
 
 	if len(resp.Warnings) == 0 {
