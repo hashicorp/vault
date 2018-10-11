@@ -3,6 +3,7 @@ import { hash, resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import DS from 'ember-data';
 
 export default Route.extend(UnloadModelRoute, {
   capabilities(secret) {
@@ -72,8 +73,15 @@ export default Route.extend(UnloadModelRoute, {
     return hash({
       secret: this.store.queryRecord(modelType, { id: secret, backend }).then(resp => {
         if (modelType === 'secret-v2') {
-          // TODO, find by query param to enable viewing versions
-          let version = resp.versions.findBy('version', resp.currentVersion);
+          let targetVersion = parseInt(params.version || resp.currentVersion, 10);
+          let version = resp.versions.findBy('version', targetVersion);
+          // 404 if there's no version
+          if (!version) {
+            let error = new DS.AdapterError();
+            set(error, 'httpStatus', 404);
+            throw error;
+          }
+
           return version.reload().then(() => {
             resp.set('selectedVersion', version);
             return resp;

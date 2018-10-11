@@ -3,10 +3,12 @@ import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(BackendCrumbMixin, {
   backendController: controller('vault.cluster.secrets.backend'),
-  queryParams: ['tab'],
+  queryParams: ['tab', 'version'],
+  version: '',
   tab: '',
   reset() {
     this.set('tab', '');
+    this.set('version', '');
   },
   actions: {
     refresh: function() {
