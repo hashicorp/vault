@@ -107,7 +107,7 @@ path "auth/*"
 # Create, update, and delete auth methods
 path "sys/auth/*"
 {
-  capabilities = ["create", "read", "update", "delete", "sudo"]
+  capabilities = ["create", "update", "delete", "sudo"]
 }
 
 # List auth methods
@@ -258,7 +258,7 @@ path "auth/*"
 # Create, update, and delete auth methods
 path "sys/auth/*"
 {
-  capabilities = ["create", "read", "update", "delete", "sudo"]
+  capabilities = ["create", "update", "delete", "sudo"]
 }
 
 # List auth methods
@@ -321,10 +321,10 @@ path "auth/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-# List, create, update, and delete auth methods
+# Create, update, and delete auth methods
 path "sys/auth/*"
 {
-  capabilities = ["create", "read", "update", "delete", "sudo"]
+  capabilities = ["create", "update", "delete", "sudo"]
 }
 
 # List auth methods
