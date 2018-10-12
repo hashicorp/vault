@@ -8,9 +8,11 @@ export default Route.extend(ClusterRoute, {
   version: service(),
 
   beforeModel() {
-    return this.get('version').fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
+    return this.get('version')
+      .fetchFeatures()
+      .then(() => {
+        return this._super(...arguments);
+      });
   },
 
   model() {

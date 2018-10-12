@@ -1,0 +1,77 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">License</h1>
+  </p.levelLeft>
+</PageHeader>
+<MessageError @model={{model}} />
+{{#if isTemporary}}
+  <section class="box is-sideless">
+    <MessageInPage data-test-cluster-status @type="warning" @class="license-warning" data-test-warning-text>
+      Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
+    </MessageInPage>
+    <span class="title is-5" data-test-temp-license>Temporary License</span>
+    <form {{action "saveModel" text on="submit"}}>
+      <div class="box is-shadowless is-fullwidth is-marginless">
+        <div class="field">
+          <label for="license-id" class="is-label">License</label>
+          <div class="control">
+            {{input id="license-id" value=text autocomplete="off" class="input" data-test-text-input="data-test-text-input"}}
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="control">
+          <button type="submit" class="button is-primary" data-test-save-button>Save</button>
+        </div>
+      </div>
+    </form>
+  </section>
+{{else}}
+  <section class="box is-sideless">
+    <span class="title is-5">Details</span>
+    {{#if showForm}}
+      <form {{action "saveModel" text on="submit"}}>
+        <div class="field">
+          <label for="license-id" class="is-label">License</label>
+          <div class="control">
+            {{input id="license-id" value=text autocomplete="off" class="input" data-test-text-input="data-test-text-input"}}
+          </div>
+        </div>
+        <div class="field is-grouped">
+          <div class="control">
+            <button type="submit" class="button is-primary" data-test-save-button>Save</button>
+          </div>
+          <div class="control">
+            <button type="button" {{action "toggleForm"}} class="button" data-test-cancel-button>Cancel</button>
+          </div>
+        </div>
+      </form>
+    {{else}}
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        {{info-table-row label="License ID" value=licenseId}}
+        {{#info-table-row label="Valid from" value=startTime}}
+          {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}} to {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
+        {{/info-table-row}}
+      </div>
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        <div class="control">
+          <button type="button" {{action "toggleForm"}} class="button" data-test-enter-button>Enter new license</button>
+        </div>
+      </div>
+    {{/if}}
+    </section>
+  {{/if}}
+<section class="box is-sideless is-marginless is-shadowless">
+  <span class="title is-5">Features</span>
+  <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+    {{#each featuresInfo as |info|}}
+      {{#info-table-row label=info.name value=(if info.active "Active" "Not Active") data-test-feature-row="data-test-feature-row"}}
+        {{#if info.active}}
+          <ICon @size=28 @glyph="true" /> <span data-test-feature-status>Active</span>
+        {{else}}
+          <ICon @size=28 @glyph="false" /> <span data-test-feature-status>Not Active</span>
+        {{/if}}
+      {{/info-table-row}}
+    {{/each}}
+  </div>
+</section>

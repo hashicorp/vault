@@ -234,7 +234,11 @@ export default Service.extend(DEFAULTS, {
     }
     this.saveExtState(STORAGE_KEYS.FEATURE_STATE, this.get('featureState'));
     let nextFeature =
-      this.get('featureList').length > 1 ? this.get('featureList').objectAt(1).capitalize() : 'Finish';
+      this.get('featureList').length > 1
+        ? this.get('featureList')
+            .objectAt(1)
+            .capitalize()
+        : 'Finish';
     this.set('nextFeature', nextFeature);
     let next;
     if (this.get('currentMachine') === 'secrets' && this.get('featureState') === 'display') {
