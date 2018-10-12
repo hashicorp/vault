@@ -43,8 +43,10 @@ type AuthHandlerConfig struct {
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
-		DoneCh:   make(chan struct{}),
-		OutputCh: make(chan string),
+		DoneCh: make(chan struct{}),
+		// This is buffered so that if we try to output after the sink server
+		// has been shut down, during agent shutdown, we won't block
+		OutputCh: make(chan string, 1),
 		logger:   conf.Logger,
 		client:   conf.Client,
 		random:   rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
