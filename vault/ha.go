@@ -91,7 +91,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	// Initialize a lock
-	lock, err := c.ha.LockWith(coreLockPath, "read")
+	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
 		c.stateLock.RUnlock()
 		return false, "", "", err
@@ -392,7 +392,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			c.logger.Error("failed to generate uuid", "error", err)
 			return
 		}
-		lock, err := c.ha.LockWith(coreLockPath, uuid)
+		lock, err := c.ha.LockWith(CoreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("failed to create lock", "error", err)
 			return
