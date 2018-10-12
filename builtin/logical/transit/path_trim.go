@@ -2,7 +2,6 @@ package transit
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -59,37 +58,35 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		if !ok {
 			return logical.ErrorResponse("missing min_version"), nil
 		}
+		minVersion := minVersionRaw.(int)
 
-		// Ensure that cache doesn't get corrupted in error cases
 		originalMinVersion := p.MinVersion
-		defer func() {
-			if retErr != nil || (resp != nil && resp.IsError()) {
-				p.MinVersion = originalMinVersion
-			}
-		}()
-
-		p.MinVersion = minVersionRaw.(int)
 
 		switch {
-		case p.MinVersion < originalMinVersion:
+		case minVersion < originalMinVersion:
 			return logical.ErrorResponse("minimum version cannot be decremented"), nil
 		case p.MinEncryptionVersion == 0:
 			return logical.ErrorResponse("minimum version cannot be set when minimum encryption version is not set"), nil
 		case p.MinDecryptionVersion == 0:
 			return logical.ErrorResponse("minimum version cannot be set when minimum decryption version is not set"), nil
-		case p.MinVersion > p.MinEncryptionVersion:
+		case minVersion > p.MinEncryptionVersion:
 			return logical.ErrorResponse("minimum version cannot be greater than minmum encryption version"), nil
-		case p.MinVersion > p.MinDecryptionVersion:
+		case minVersion > p.MinDecryptionVersion:
 			return logical.ErrorResponse("minimum version cannot be greater than minimum decryption version"), nil
-		case p.MinVersion < 0:
+		case minVersion < 0:
 			return logical.ErrorResponse("minimum version cannot be negative"), nil
-		case p.MinVersion == 0:
+		case minVersion == 0:
 			return logical.ErrorResponse("minimum version should be positive"), nil
-		case p.MinVersion < p.MinVersion:
-			return logical.ErrorResponse(fmt.Sprintf("minimum version cannot be less than the already set value of %d", p.MinVersion)), nil
 		}
 
-		return nil, p.Persist(ctx, req.Storage)
+		// Ensure that cache doesn't get corrupted in error cases
+		p.MinVersion = minVersion
+		if err := p.Persist(ctx, req.Storage); err != nil {
+			p.MinVersion = originalMinVersion
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }
 
