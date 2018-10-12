@@ -95,6 +95,8 @@ type QueueInfo struct {
 	OwnerPidDetails OwnerPidDetails `json:"owner_pid_details"`
 
 	BackingQueueStatus BackingQueueStatus `json:"backing_queue_status"`
+	
+	ActiveConsumers int64 `json:"active_consumers"`	
 }
 
 type DetailedQueueInfo QueueInfo
@@ -249,9 +251,10 @@ func (c *Client) GetQueueWithParameters(vhost, queue string, qs url.Values) (rec
 //
 
 type QueueSettings struct {
+	Type       string                 `json:"type"`
 	Durable    bool                   `json:"durable"`
-	AutoDelete bool                   `json:"auto_delete"`
-	Arguments  map[string]interface{} `json:"arguments"`
+	AutoDelete bool                   `json:"auto_delete,omitempty"`
+	Arguments  map[string]interface{} `json:"arguments,omitempty"`
 }
 
 func (c *Client) DeclareQueue(vhost, queue string, info QueueSettings) (res *http.Response, err error) {

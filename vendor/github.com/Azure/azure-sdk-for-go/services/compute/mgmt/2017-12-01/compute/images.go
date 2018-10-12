@@ -21,7 +21,6 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/validation"
 	"net/http"
 )
 
@@ -41,19 +40,11 @@ func NewImagesClientWithBaseURI(baseURI string, subscriptionID string) ImagesCli
 }
 
 // CreateOrUpdate create or update an image.
-//
-// resourceGroupName is the name of the resource group. imageName is the name of the image. parameters is
-// parameters supplied to the Create Image operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// imageName - the name of the image.
+// parameters - parameters supplied to the Create Image operation.
 func (client ImagesClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, imageName string, parameters Image) (result ImagesCreateOrUpdateFuture, err error) {
-	if err := validation.Validate([]validation.Validation{
-		{TargetValue: parameters,
-			Constraints: []validation.Constraint{{Target: "parameters.ImageProperties", Name: validation.Null, Rule: false,
-				Chain: []validation.Constraint{{Target: "parameters.ImageProperties.StorageProfile", Name: validation.Null, Rule: false,
-					Chain: []validation.Constraint{{Target: "parameters.ImageProperties.StorageProfile.OsDisk", Name: validation.Null, Rule: true, Chain: nil}}},
-				}}}}}); err != nil {
-		return result, validation.NewError("compute.ImagesClient", "CreateOrUpdate", err.Error())
-	}
-
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, imageName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "CreateOrUpdate", nil, "Failure preparing request")
@@ -95,15 +86,17 @@ func (client ImagesClient) CreateOrUpdatePreparer(ctx context.Context, resourceG
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client ImagesClient) CreateOrUpdateSender(req *http.Request) (future ImagesCreateOrUpdateFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -121,8 +114,9 @@ func (client ImagesClient) CreateOrUpdateResponder(resp *http.Response) (result 
 }
 
 // Delete deletes an Image.
-//
-// resourceGroupName is the name of the resource group. imageName is the name of the image.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// imageName - the name of the image.
 func (client ImagesClient) Delete(ctx context.Context, resourceGroupName string, imageName string) (result ImagesDeleteFuture, err error) {
 	req, err := client.DeletePreparer(ctx, resourceGroupName, imageName)
 	if err != nil {
@@ -163,15 +157,17 @@ func (client ImagesClient) DeletePreparer(ctx context.Context, resourceGroupName
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client ImagesClient) DeleteSender(req *http.Request) (future ImagesDeleteFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
+	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -189,9 +185,10 @@ func (client ImagesClient) DeleteResponder(resp *http.Response) (result Operatio
 }
 
 // Get gets an image.
-//
-// resourceGroupName is the name of the resource group. imageName is the name of the image. expand is the expand
-// expression to apply on the operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// imageName - the name of the image.
+// expand - the expand expression to apply on the operation.
 func (client ImagesClient) Get(ctx context.Context, resourceGroupName string, imageName string, expand string) (result Image, err error) {
 	req, err := client.GetPreparer(ctx, resourceGroupName, imageName, expand)
 	if err != nil {
@@ -350,8 +347,8 @@ func (client ImagesClient) ListComplete(ctx context.Context) (result ImageListRe
 }
 
 // ListByResourceGroup gets the list of images under a resource group.
-//
-// resourceGroupName is the name of the resource group.
+// Parameters:
+// resourceGroupName - the name of the resource group.
 func (client ImagesClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result ImageListResultPage, err error) {
 	result.fn = client.listByResourceGroupNextResults
 	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName)
@@ -443,9 +440,10 @@ func (client ImagesClient) ListByResourceGroupComplete(ctx context.Context, reso
 }
 
 // Update update an image.
-//
-// resourceGroupName is the name of the resource group. imageName is the name of the image. parameters is
-// parameters supplied to the Update Image operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// imageName - the name of the image.
+// parameters - parameters supplied to the Update Image operation.
 func (client ImagesClient) Update(ctx context.Context, resourceGroupName string, imageName string, parameters ImageUpdate) (result ImagesUpdateFuture, err error) {
 	req, err := client.UpdatePreparer(ctx, resourceGroupName, imageName, parameters)
 	if err != nil {
@@ -488,15 +486,17 @@ func (client ImagesClient) UpdatePreparer(ctx context.Context, resourceGroupName
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
 func (client ImagesClient) UpdateSender(req *http.Request) (future ImagesUpdateFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 

@@ -69,9 +69,12 @@ func validDatabaseName(db string) error {
 // client is safe to use concurrently, except for its Close method.
 type Client struct {
 	// rr must be accessed through atomic operations.
-	rr       uint32
-	conns    []*grpc.ClientConn
-	clients  []sppb.SpannerClient
+	rr uint32
+	// TODO(deklerk): we should not keep multiple ClientConns / SpannerClients. Instead, we should
+	// have a single ClientConn that has many connections: https://github.com/googleapis/google-api-go-client/blob/003c13302b3ea5ae44344459ba080364bd46155f/internal/pool.go
+	conns   []*grpc.ClientConn
+	clients []sppb.SpannerClient
+
 	database string
 	// Metadata to be sent with each request.
 	md           metadata.MD

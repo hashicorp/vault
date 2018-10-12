@@ -102,13 +102,23 @@ func Canonicalize(nsPath string) string {
 }
 
 func SplitIDFromString(input string) (string, string) {
-	idx := strings.LastIndex(input, ".")
-	if idx == -1 {
-		return input, ""
-	}
-	if idx == len(input)-1 {
-		return input, ""
+	prefix := ""
+	slashIdx := strings.LastIndex(input, "/")
+	if slashIdx > 0 {
+		if slashIdx == len(input)-1 {
+			return input, ""
+		}
+		prefix = input[:slashIdx+1]
+		input = input[slashIdx+1:]
 	}
 
-	return input[:idx], input[idx+1:]
+	idx := strings.LastIndex(input, ".")
+	if idx == -1 {
+		return prefix + input, ""
+	}
+	if idx == len(input)-1 {
+		return prefix + input, ""
+	}
+
+	return prefix + input[:idx], input[idx+1:]
 }

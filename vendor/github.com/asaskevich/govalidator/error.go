@@ -26,11 +26,18 @@ type Error struct {
 
 	// Validator indicates the name of the validator that failed
 	Validator string
+	Path      []string
 }
 
 func (e Error) Error() string {
 	if e.CustomErrorMessageExists {
 		return e.Err.Error()
 	}
-	return e.Name + ": " + e.Err.Error()
+
+	errName := e.Name
+	if len(e.Path) > 0 {
+		errName = strings.Join(append(e.Path, e.Name), ".")
+	}
+
+	return errName + ": " + e.Err.Error()
 }

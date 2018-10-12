@@ -45,7 +45,7 @@ To fetch a secondary bootstrap token, run:
 The value for `id` is opaque to Vault and can be any identifying value you want;
 this can be used later to revoke the secondary and will be listed when you read
 replication status on the primary. You will get back a normal wrapped response,
-except that the token will be a JWT instead of UUID-formatted random bytes.
+except that the token will be JWT-formatted..
 
 ### Activating a Secondary
 

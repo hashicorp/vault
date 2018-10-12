@@ -178,7 +178,7 @@ _clean() {
 _usage() {
     cat <<EOF
 primary usage: $0 
-    -[tmpfxld] for [tests, make, prebuild (force) (external), mid-stack inlining, race detector]
+    -[tmpfxnld] for [tests, make, prebuild (force) (external), inlining diagnostics, mid-stack inlining, race detector]
 EOF
     if [[ "$(type -t _usage_run)" = "function" ]]; then _usage_run ; fi
 }
@@ -188,12 +188,13 @@ _main() {
     local x
     unset zforce zexternal
     zargs=()
-    while getopts ":ctbqmrgupfxlzd" flag
+    while getopts ":ctbqmnrgupfxlzd" flag
     do
         case "x$flag" in
             'xf') zforce=1 ;;
             'xx') zexternal=1 ;;
-            'xl') zargs+=("-gcflags=-l=4") ;;
+            'xl') zargs+=("-gcflags"); zargs+=("-l=4") ;;
+            'xn') zargs+=("-gcflags"); zargs+=("-m") ;;
             'xd') zargs+=("-race") ;;
             x\?) _usage; return 1 ;;
             *) x=$flag ;;

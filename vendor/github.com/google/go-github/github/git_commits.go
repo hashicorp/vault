@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -70,8 +69,7 @@ func (s *GitService) GetCommit(ctx context.Context, owner string, repo string, s
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeGitSigningPreview, mediaTypeGraphQLNodeIDPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	c := new(Commit)
 	resp, err := s.client.Do(ctx, req, c)
@@ -125,9 +123,6 @@ func (s *GitService) CreateCommit(ctx context.Context, owner string, repo string
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	c := new(Commit)
 	resp, err := s.client.Do(ctx, req, c)

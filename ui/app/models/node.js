@@ -1,4 +1,3 @@
-import { computed } from '@ember/object';
 import { alias, and, equal } from '@ember/object/computed';
 import DS from 'ember-data';
 const { attr } = DS;
@@ -24,13 +23,10 @@ export default DS.Model.extend({
   sealThreshold: alias('t'),
   sealNumShares: alias('n'),
   version: attr('string'),
+  type: attr('string'),
 
   //https://www.vaultproject.io/docs/http/sys-leader.html
   haEnabled: attr('boolean'),
   isSelf: attr('boolean'),
   leaderAddress: attr('string'),
-
-  type: computed(function() {
-    return this.constructor.modelName;
-  }),
 });

@@ -177,7 +177,12 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	if sealConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		respondOk(w, &SealStatusResponse{
+			Type:         core.SealAccess().BarrierType(),
+			Initialized:  false,
+			Sealed:       true,
+			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		})
 		return
 	}
 
@@ -201,6 +206,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	respondOk(w, &SealStatusResponse{
 		Type:         sealConfig.Type,
+		Initialized:  true,
 		Sealed:       sealed,
 		T:            sealConfig.SecretThreshold,
 		N:            sealConfig.SecretShares,
@@ -215,6 +221,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 type SealStatusResponse struct {
 	Type         string `json:"type"`
+	Initialized  bool   `json:"initialized"`
 	Sealed       bool   `json:"sealed"`
 	T            int    `json:"t"`
 	N            int    `json:"n"`

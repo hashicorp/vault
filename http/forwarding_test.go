@@ -209,7 +209,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				core.Logger().Error("got a panic: %v", err)
+				core.Logger().Error("got a panic", "error", err)
 				t.Fail()
 			}
 			atomic.AddUint32(totalOps, myTotalOps)

@@ -187,7 +187,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	errorFunc := func() {
 		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
-			c.logger.Error("error shutting down core: %v", err)
+			c.logger.Error("error shutting down core", "error", err)
 		}
 	}
 	go c.expiration.Restore(errorFunc)
@@ -1275,6 +1275,13 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		}
 
 		return nil
+	}
+
+	if le.Secret != nil {
+		// not sure if this is really valid to have a leaseEntry with a nil Secret
+		// (if there's a nil Secret, what are you really leasing?), but the tests
+		// create one, and good to be defensive
+		le.Secret.IssueTime = le.IssueTime
 	}
 
 	// Make sure we're operating in the right namespace

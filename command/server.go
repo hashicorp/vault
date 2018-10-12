@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -51,6 +52,8 @@ import (
 
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
+const migrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -460,6 +463,11 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Prevent server startup if migration is active
+	if c.migrationActive(backend) {
+		return 1
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = c.flagLogLevel
@@ -601,6 +609,9 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Attempt to detect the redirect address, if possible
+	if coreConfig.RedirectAddr == "" {
+		c.logger.Warn("no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set")
+	}
 	var detect physical.RedirectDetect
 	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
 		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
@@ -1771,6 +1782,86 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 		return nil
 	}
 	return os.Remove(pidPath)
+}
+
+// migrationActive checks and warns against in-progress storage migrations.
+// This function will block until storage is available.
+func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
+	first := true
+
+	for {
+		migrationStatus, err := CheckMigration(backend)
+		if err == nil {
+			if migrationStatus != nil {
+				startTime := migrationStatus.Start.Format(time.RFC3339)
+				c.UI.Error(wrapAtLength(fmt.Sprintf("ERROR! Storage migration in progress (started: %s). "+
+					"Server startup is prevented until the migration completes. Use 'vault operator migrate -reset' "+
+					"to force clear the migration lock.", startTime)))
+				return true
+			}
+			return false
+		}
+		if first {
+			first = false
+			c.UI.Warn("\nWARNING! Unable to read migration status.")
+
+			// unexpected state, so stop buffering log messages
+			c.logGate.Flush()
+		}
+		c.logger.Warn("migration check error", "error", err.Error())
+
+		select {
+		case <-time.After(2 * time.Second):
+		case <-c.ShutdownCh:
+			return true
+		}
+	}
+	return false
+}
+
+type MigrationStatus struct {
+	Start time.Time `json:"start"`
+}
+
+func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
+	entry, err := b.Get(context.Background(), migrationLock)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
+	}
+
+	var status MigrationStatus
+	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func SetMigration(b physical.Backend, active bool) error {
+	if !active {
+		return b.Delete(context.Background(), migrationLock)
+	}
+
+	status := MigrationStatus{
+		Start: time.Now(),
+	}
+
+	enc, err := jsonutil.EncodeJSON(status)
+	if err != nil {
+		return err
+	}
+
+	entry := &physical.Entry{
+		Key:   migrationLock,
+		Value: enc,
+	}
+
+	return b.Put(context.Background(), entry)
 }
 
 type grpclogFaker struct {

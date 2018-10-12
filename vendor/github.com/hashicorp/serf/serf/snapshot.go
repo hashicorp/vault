@@ -25,10 +25,34 @@ nodes to re-join, as well as restore our clock values to avoid replaying
 old events.
 */
 
-const flushInterval = 500 * time.Millisecond
-const clockUpdateInterval = 500 * time.Millisecond
-const tmpExt = ".compact"
-const snapshotErrorRecoveryInterval = 30 * time.Second
+const (
+	// flushInterval is how often we force a flush of the snapshot file
+	flushInterval = 500 * time.Millisecond
+
+	// clockUpdateInterval is how often we fetch the current lamport time of the cluster and write to the snapshot file
+	clockUpdateInterval = 500 * time.Millisecond
+
+	// tmpExt is the extention we use for the temporary file during compaction
+	tmpExt = ".compact"
+
+	// snapshotErrorRecoveryInterval is how often we attempt to recover from
+	// errors writing to the snapshot file.
+	snapshotErrorRecoveryInterval = 30 * time.Second
+
+	// eventChSize is the size of the event buffers between Serf and the
+	// consuming application. If this is exhausted we will block Serf and Memberlist.
+	eventChSize = 2048
+
+	// shutdownFlushTimeout is the time limit to write pending events to the snapshot during a shutdown
+	shutdownFlushTimeout = 250 * time.Millisecond
+
+	// snapshotBytesPerNode is an estimated bytes per node to snapshot
+	snapshotBytesPerNode = 128
+
+	// snapshotCompactionThreshold is the threshold we apply to
+	// the snapshot size estimate (nodes * bytes per node) before compacting.
+	snapshotCompactionThreshold = 2
+)
 
 // Snapshotter is responsible for ingesting events and persisting
 // them to disk, and providing a recovery mechanism at start time.
@@ -38,6 +62,7 @@ type Snapshotter struct {
 	fh                      *os.File
 	buffered                *bufio.Writer
 	inCh                    <-chan Event
+	streamCh                chan Event
 	lastFlush               time.Time
 	lastClock               LamportTime
 	lastEventClock          LamportTime
@@ -45,7 +70,7 @@ type Snapshotter struct {
 	leaveCh                 chan struct{}
 	leaving                 bool
 	logger                  *log.Logger
-	maxSize                 int64
+	minCompactSize          int64
 	path                    string
 	offset                  int64
 	outCh                   chan<- Event
@@ -72,13 +97,14 @@ func (p PreviousNode) String() string {
 // Setting rejoinAfterLeave makes leave not clear the state, and can be used
 // if you intend to rejoin the same cluster after a leave.
 func NewSnapshotter(path string,
-	maxSize int,
+	minCompactSize int,
 	rejoinAfterLeave bool,
 	logger *log.Logger,
 	clock *LamportClock,
 	outCh chan<- Event,
 	shutdownCh <-chan struct{}) (chan<- Event, *Snapshotter, error) {
-	inCh := make(chan Event, 1024)
+	inCh := make(chan Event, eventChSize)
+	streamCh := make(chan Event, eventChSize)
 
 	// Try to open the file
 	fh, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
@@ -101,12 +127,13 @@ func NewSnapshotter(path string,
 		fh:               fh,
 		buffered:         bufio.NewWriter(fh),
 		inCh:             inCh,
+		streamCh:         streamCh,
 		lastClock:        0,
 		lastEventClock:   0,
 		lastQueryClock:   0,
 		leaveCh:          make(chan struct{}),
 		logger:           logger,
-		maxSize:          int64(maxSize),
+		minCompactSize:   int64(minCompactSize),
 		path:             path,
 		offset:           offset,
 		outCh:            outCh,
@@ -122,6 +149,7 @@ func NewSnapshotter(path string,
 	}
 
 	// Start handling new commands
+	go snap.teeStream()
 	go snap.stream()
 	return inCh, snap, nil
 }
@@ -171,10 +199,68 @@ func (s *Snapshotter) Leave() {
 	}
 }
 
+// teeStream is a long running routine that is used to copy events
+// to the output channel and the internal event handler.
+func (s *Snapshotter) teeStream() {
+	flushEvent := func(e Event) {
+		// Forward to the internal stream, do not block
+		select {
+		case s.streamCh <- e:
+		default:
+		}
+
+		// Forward the event immediately, do not block
+		if s.outCh != nil {
+			select {
+			case s.outCh <- e:
+			default:
+			}
+		}
+	}
+
+OUTER:
+	for {
+		select {
+		case e := <-s.inCh:
+			flushEvent(e)
+		case <-s.shutdownCh:
+			break OUTER
+		}
+	}
+
+	// Drain any remaining events before exiting
+	for {
+		select {
+		case e := <-s.inCh:
+			flushEvent(e)
+		default:
+			return
+		}
+	}
+}
+
 // stream is a long running routine that is used to handle events
 func (s *Snapshotter) stream() {
 	clockTicker := time.NewTicker(clockUpdateInterval)
 	defer clockTicker.Stop()
+
+	// flushEvent is used to handle writing out an event
+	flushEvent := func(e Event) {
+		// Stop recording events after a leave is issued
+		if s.leaving {
+			return
+		}
+		switch typed := e.(type) {
+		case MemberEvent:
+			s.processMemberEvent(typed)
+		case UserEvent:
+			s.processUserEvent(typed)
+		case *Query:
+			s.processQuery(typed)
+		default:
+			s.logger.Printf("[ERR] serf: Unknown event to snapshot: %#v", e)
+		}
+	}
 
 	for {
 		select {
@@ -193,31 +279,32 @@ func (s *Snapshotter) stream() {
 				s.logger.Printf("[ERR] serf: failed to sync leave to snapshot: %v", err)
 			}
 
-		case e := <-s.inCh:
-			// Forward the event immediately
-			if s.outCh != nil {
-				s.outCh <- e
-			}
-
-			// Stop recording events after a leave is issued
-			if s.leaving {
-				continue
-			}
-			switch typed := e.(type) {
-			case MemberEvent:
-				s.processMemberEvent(typed)
-			case UserEvent:
-				s.processUserEvent(typed)
-			case *Query:
-				s.processQuery(typed)
-			default:
-				s.logger.Printf("[ERR] serf: Unknown event to snapshot: %#v", e)
-			}
+		case e := <-s.streamCh:
+			flushEvent(e)
 
 		case <-clockTicker.C:
 			s.updateClock()
 
 		case <-s.shutdownCh:
+			// Setup a timeout
+			flushTimeout := time.After(shutdownFlushTimeout)
+
+			// Snapshot the clock
+			s.updateClock()
+
+			// Clear out the buffers
+		FLUSH:
+			for {
+				select {
+				case e := <-s.streamCh:
+					flushEvent(e)
+				case <-flushTimeout:
+					break FLUSH
+				default:
+					break FLUSH
+				}
+			}
+
 			if err := s.buffered.Flush(); err != nil {
 				s.logger.Printf("[ERR] serf: failed to flush snapshot: %v", err)
 			}
@@ -321,10 +408,23 @@ func (s *Snapshotter) appendLine(l string) error {
 
 	// Check if a compaction is necessary
 	s.offset += int64(n)
-	if s.offset > s.maxSize {
+	if s.offset > s.snapshotMaxSize() {
 		return s.compact()
 	}
 	return nil
+}
+
+// snapshotMaxSize computes the maximum size and is used to force periodic compaction.
+func (s *Snapshotter) snapshotMaxSize() int64 {
+	nodes := int64(len(s.aliveNodes))
+	estSize := nodes * snapshotBytesPerNode
+	threshold := estSize * snapshotCompactionThreshold
+
+	// Apply a minimum threshold to avoid frequent compaction
+	if threshold < s.minCompactSize {
+		threshold = s.minCompactSize
+	}
+	return threshold
 }
 
 // Compact is used to compact the snapshot once it is too large

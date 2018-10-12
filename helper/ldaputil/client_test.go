@@ -11,6 +11,7 @@ func TestLDAPEscape(t *testing.T) {
 		"test,hel+lo": "test\\,hel\\+lo",
 		"test\\hello": "test\\\\hello",
 		"  test  ":    "\\  test \\ ",
+		"":            "",
 	}
 
 	for test, answer := range testcases {

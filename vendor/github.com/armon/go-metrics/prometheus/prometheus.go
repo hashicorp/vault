@@ -1,4 +1,5 @@
 // +build go1.3
+
 package prometheus
 
 import (
@@ -100,7 +101,7 @@ func (p *PrometheusSink) Collect(c chan<- prometheus.Metric) {
 	}
 }
 
-var forbiddenChars = regexp.MustCompile("[ .=\\-]")
+var forbiddenChars = regexp.MustCompile("[ .=\\-/]")
 
 func (p *PrometheusSink) flattenKey(parts []string, labels []metrics.Label) (string, string) {
 	key := strings.Join(parts, "_")

@@ -42,9 +42,9 @@ func NewLogAnalyticsClientWithBaseURI(baseURI string, subscriptionID string) Log
 
 // ExportRequestRateByInterval export logs that show Api requests made by this subscription in the given time window to
 // show throttling activities.
-//
-// parameters is parameters supplied to the LogAnalytics getRequestRateByInterval Api. location is the location
-// upon which virtual-machine-sizes is queried.
+// Parameters:
+// parameters - parameters supplied to the LogAnalytics getRequestRateByInterval Api.
+// location - the location upon which virtual-machine-sizes is queried.
 func (client LogAnalyticsClient) ExportRequestRateByInterval(ctx context.Context, parameters RequestRateByIntervalInput, location string) (result LogAnalyticsExportRequestRateByIntervalFuture, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
@@ -92,15 +92,17 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalPreparer(ctx context
 // ExportRequestRateByIntervalSender sends the ExportRequestRateByInterval request. The method will close the
 // http.Response Body if it receives an error.
 func (client LogAnalyticsClient) ExportRequestRateByIntervalSender(req *http.Request) (future LogAnalyticsExportRequestRateByIntervalFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 
@@ -119,9 +121,9 @@ func (client LogAnalyticsClient) ExportRequestRateByIntervalResponder(resp *http
 
 // ExportThrottledRequests export logs that show total throttled Api requests for this subscription in the given time
 // window.
-//
-// parameters is parameters supplied to the LogAnalytics getThrottledRequests Api. location is the location upon
-// which virtual-machine-sizes is queried.
+// Parameters:
+// parameters - parameters supplied to the LogAnalytics getThrottledRequests Api.
+// location - the location upon which virtual-machine-sizes is queried.
 func (client LogAnalyticsClient) ExportThrottledRequests(ctx context.Context, parameters ThrottledRequestsInput, location string) (result LogAnalyticsExportThrottledRequestsFuture, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
@@ -169,15 +171,17 @@ func (client LogAnalyticsClient) ExportThrottledRequestsPreparer(ctx context.Con
 // ExportThrottledRequestsSender sends the ExportThrottledRequests request. The method will close the
 // http.Response Body if it receives an error.
 func (client LogAnalyticsClient) ExportThrottledRequestsSender(req *http.Request) (future LogAnalyticsExportThrottledRequestsFuture, err error) {
-	sender := autorest.DecorateSender(client, azure.DoRetryWithRegistration(client.Client))
-	future.Future = azure.NewFuture(req)
-	future.req = req
-	_, err = future.Done(sender)
+	var resp *http.Response
+	resp, err = autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(future.Response(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	if err != nil {
+		return
+	}
+	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
 

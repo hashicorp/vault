@@ -79,7 +79,6 @@ func TestBackend_CA_Steps(t *testing.T) {
 			DNSNames:              []string{"root.localhost"},
 			KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 			SerialNumber:          big.NewInt(mathrand.Int63()),
-			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
 			IsCA:                  true,

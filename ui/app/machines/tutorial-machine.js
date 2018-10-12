@@ -34,7 +34,10 @@ export default {
               onEntry: { type: 'render', level: 'feature', component: 'wizard/init-setup' },
             },
             save: {
-              on: { TOUNSEAL: 'unseal' },
+              on: {
+                TOUNSEAL: 'unseal',
+                TOLOGIN: 'login',
+              },
               onEntry: { type: 'render', level: 'feature', component: 'wizard/init-save-keys' },
             },
             unseal: {

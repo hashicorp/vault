@@ -169,6 +169,7 @@ func (t *txReadOnly) QueryWithStats(ctx context.Context, statement Statement) *R
 // AnalyzeQuery returns the query plan for statement.
 func (t *txReadOnly) AnalyzeQuery(ctx context.Context, statement Statement) (*sppb.QueryPlan, error) {
 	iter := t.query(ctx, statement, sppb.ExecuteSqlRequest_PLAN)
+	defer iter.Stop()
 	for {
 		_, err := iter.Next()
 		if err == iterator.Done {
