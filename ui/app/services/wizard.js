@@ -46,15 +46,26 @@ export default Service.extend(DEFAULTS, {
     }
   },
 
-  restartGuide() {
+  clearFeatureData() {
     let storage = this.storage();
     // empty storage
     [
-      STORAGE_KEYS.TUTORIAL_STATE,
       STORAGE_KEYS.FEATURE_LIST,
       STORAGE_KEYS.FEATURE_STATE,
       STORAGE_KEYS.FEATURE_STATE_HISTORY,
       STORAGE_KEYS.COMPLETED_FEATURES,
+    ].forEach(key => storage.removeItem(key));
+
+    this.set('currentMachine', null);
+    this.set('featureMachineHistory', null);
+  },
+
+  restartGuide() {
+    this.clearFeatureData();
+    let storage = this.storage();
+    // empty storage
+    [
+      STORAGE_KEYS.TUTORIAL_STATE,
       STORAGE_KEYS.COMPONENT_STATE,
       STORAGE_KEYS.RESUME_URL,
       STORAGE_KEYS.RESUME_ROUTE,
@@ -192,6 +203,9 @@ export default Service.extend(DEFAULTS, {
         case 'showTutorialAlways':
           this.set('showWhenUnauthenticated', true);
           break;
+        case 'clearFeatureData':
+          this.clearFeatureData();
+          break;
         case 'continueFeature':
           this.transitionFeatureMachine(this.featureState, 'CONTINUE', this.componentState);
           break;
@@ -252,7 +266,6 @@ export default Service.extend(DEFAULTS, {
   },
 
   buildFeatureMachine() {
-    
     if (this.featureList === null) {
       return;
     }

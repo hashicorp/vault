@@ -52,6 +52,8 @@ export const FEATURE_MACHINE_STEPS = {
   authentication: 4,
 };
 
+export const INIT_STEPS = ['setup', 'save', 'unseal', 'login'];
+
 export const FEATURE_MACHINE_TIME = {
   secrets: 7,
   policies: 5,
