@@ -22,8 +22,12 @@
       </T.trigger>
       <T.content @class="tool-tip">
         <div class="box">
-          <p>{{capitalize currentFeatureProgress.feature}}</p>
-          {{currentFeatureProgress.text}}
+          {{#if currentTutorialProgress}}
+            {{currentTutorialProgress.text}}
+          {{else}}
+            <p>{{capitalize currentFeatureProgress.feature}}</p>
+            {{currentFeatureProgress.text}}
+          {{/if}}
         </div>
       </T.content>
     </ToolTip>
