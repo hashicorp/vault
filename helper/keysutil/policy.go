@@ -329,9 +329,9 @@ type Policy struct {
 	// ArchiveMinVersion is the minimum version of the key in the archive.
 	ArchiveMinVersion int `json:"archive_min_version"`
 
-	// MinVersion is the minimum version of the key present. All key versions
-	// before this would have been deleted.
-	MinVersion int `json:"min_version"`
+	// MinAvailableVersion is the minimum version of the key present. All key
+	// versions before this would have been deleted.
+	MinAvailableVersion int `json:"min_available_version"`
 
 	// Whether the key is allowed to be deleted
 	DeletionAllowed bool `json:"deletion_allowed"`
@@ -469,7 +469,7 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	if !keysContainsMinimum {
 		// Need to move keys *from* archive
 		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
-			p.Keys[strconv.Itoa(i)] = archive.Keys[i-p.MinVersion]
+			p.Keys[strconv.Itoa(i)] = archive.Keys[i-p.MinAvailableVersion]
 		}
 
 		return nil
@@ -480,9 +480,9 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	// We need a size that is equivalent to the latest version (number of keys)
 	// but adding one since slice numbering starts at 0 and we're indexing by
 	// key version
-	if len(archive.Keys)+p.MinVersion < p.LatestVersion+1 {
+	if len(archive.Keys)+p.MinAvailableVersion < p.LatestVersion+1 {
 		// Increase the size of the archive slice
-		newKeys := make([]KeyEntry, p.LatestVersion-p.MinVersion+1)
+		newKeys := make([]KeyEntry, p.LatestVersion-p.MinAvailableVersion+1)
 		copy(newKeys, archive.Keys)
 		archive.Keys = newKeys
 	}
@@ -490,14 +490,14 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	// We are storing all keys in the archive, so we ensure that it is up to
 	// date up to p.LatestVersion
 	for i := p.ArchiveVersion + 1; i <= p.LatestVersion; i++ {
-		archive.Keys[i-p.MinVersion] = p.Keys[strconv.Itoa(i)]
+		archive.Keys[i-p.MinAvailableVersion] = p.Keys[strconv.Itoa(i)]
 		p.ArchiveVersion = i
 	}
 
 	// Trim the keys if required
-	if p.ArchiveMinVersion < p.MinVersion {
-		archive.Keys = archive.Keys[p.MinVersion-p.ArchiveMinVersion:]
-		p.ArchiveMinVersion = p.MinVersion
+	if p.ArchiveMinVersion < p.MinAvailableVersion {
+		archive.Keys = archive.Keys[p.MinAvailableVersion-p.ArchiveMinVersion:]
+		p.ArchiveMinVersion = p.MinAvailableVersion
 	}
 
 	err = p.storeArchive(ctx, storage, archive)

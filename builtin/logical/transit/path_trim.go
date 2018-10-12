@@ -16,13 +16,14 @@ func (b *backend) pathTrim() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
-			"min_version": &framework.FieldSchema{
+			"min_available_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
-				Description: `The minimum version for the key ring. All versions before this version will be
-permanently deleted. This value can at most be equal to the lesser of
-'min_decryption_version' and 'min_encryption_version'. This is not allowed to
-be set when either 'min_encryption_version' or 'min_decryption_version' is set
-to zero.`,
+				Description: `
+The minimum available version for the key ring. All versions before this
+version will be permanently deleted. This value can at most be equal to the
+lesser of 'min_decryption_version' and 'min_encryption_version'. This is not
+allowed to be set when either 'min_encryption_version' or
+'min_decryption_version' is set to zero.`,
 			},
 		},
 
@@ -54,35 +55,35 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		}
 		defer p.Unlock()
 
-		minVersionRaw, ok := d.GetOk("min_version")
+		minAvailableVersionRaw, ok := d.GetOk("min_available_version")
 		if !ok {
-			return logical.ErrorResponse("missing min_version"), nil
+			return logical.ErrorResponse("missing min_available_version"), nil
 		}
-		minVersion := minVersionRaw.(int)
+		minAvailableVersion := minAvailableVersionRaw.(int)
 
-		originalMinVersion := p.MinVersion
+		originalMinAvailableVersion := p.MinAvailableVersion
 
 		switch {
-		case minVersion < originalMinVersion:
+		case minAvailableVersion < originalMinAvailableVersion:
 			return logical.ErrorResponse("minimum version cannot be decremented"), nil
 		case p.MinEncryptionVersion == 0:
 			return logical.ErrorResponse("minimum version cannot be set when minimum encryption version is not set"), nil
 		case p.MinDecryptionVersion == 0:
 			return logical.ErrorResponse("minimum version cannot be set when minimum decryption version is not set"), nil
-		case minVersion > p.MinEncryptionVersion:
+		case minAvailableVersion > p.MinEncryptionVersion:
 			return logical.ErrorResponse("minimum version cannot be greater than minmum encryption version"), nil
-		case minVersion > p.MinDecryptionVersion:
+		case minAvailableVersion > p.MinDecryptionVersion:
 			return logical.ErrorResponse("minimum version cannot be greater than minimum decryption version"), nil
-		case minVersion < 0:
+		case minAvailableVersion < 0:
 			return logical.ErrorResponse("minimum version cannot be negative"), nil
-		case minVersion == 0:
+		case minAvailableVersion == 0:
 			return logical.ErrorResponse("minimum version should be positive"), nil
 		}
 
 		// Ensure that cache doesn't get corrupted in error cases
-		p.MinVersion = minVersion
+		p.MinAvailableVersion = minAvailableVersion
 		if err := p.Persist(ctx, req.Storage); err != nil {
-			p.MinVersion = originalMinVersion
+			p.MinAvailableVersion = originalMinAvailableVersion
 			return nil, err
 		}
 

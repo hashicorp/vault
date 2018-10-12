@@ -75,7 +75,7 @@ func TestTransit_Trim(t *testing.T) {
 	// set
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
-		"min_version": 1,
+		"min_available_version": 1,
 	}
 	doErrReq(t, req)
 
@@ -95,25 +95,25 @@ func TestTransit_Trim(t *testing.T) {
 	// Min version cannot be greater than min encryption version
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
-		"min_version": 5,
+		"min_available_version": 5,
 	}
 	doErrReq(t, req)
 
 	// Min version cannot be greater than min decryption version
-	req.Data["min_version"] = 4
+	req.Data["min_available_version"] = 4
 	doErrReq(t, req)
 
 	// Min version cannot be negative
-	req.Data["min_version"] = -1
+	req.Data["min_available_version"] = -1
 	doErrReq(t, req)
 
 	// Min version should be positive
-	req.Data["min_version"] = 0
+	req.Data["min_available_version"] = 0
 	doErrReq(t, req)
 
 	// Trim all keys before version 3. Index 0 and index 1 will be deleted from
 	// archived keys.
-	req.Data["min_version"] = 3
+	req.Data["min_available_version"] = 3
 	doReq(t, req)
 
 	// Archive: 3, 4, 5
@@ -171,7 +171,7 @@ func TestTransit_Trim(t *testing.T) {
 	// Trim all versions before 7
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
-		"min_version": 7,
+		"min_available_version": 7,
 	}
 	doReq(t, req)
 
