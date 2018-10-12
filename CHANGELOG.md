@@ -1,5 +1,8 @@
 ## Next (Unreleased)
 
+CHANGES:
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
 BUG FIXES:
 
  * core: Fix generate-root operations requiring empty `otp` to be provided
