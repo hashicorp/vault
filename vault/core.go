@@ -37,9 +37,9 @@ import (
 )
 
 const (
-	// coreLockPath is the path used to acquire a coordinating lock
+	// CoreLockPath is the path used to acquire a coordinating lock
 	// for a highly-available deploy.
-	coreLockPath = "core/lock"
+	CoreLockPath = "core/lock"
 
 	// The poison pill is used as a check during certain scenarios to indicate
 	// to standby nodes that they should seal

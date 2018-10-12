@@ -82,8 +82,7 @@ flags](/docs/commands/index.html) included on all commands.
   "5m".
 
 - `-id` `(string: "")` - Value for the token. By default, this is an
-  auto-generated 36 character UUID. Specifying this value requires sudo
-  permissions.
+  auto-generated value. Specifying this value requires sudo permissions.
 
 - `-metadata` `(k=v: "")` - Arbitrary key=value metadata to associate with the
   token. This metadata will show in the audit log when the token is used. This

@@ -117,7 +117,7 @@ Any valid URI is accepted, these values support globbing.`,
 
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
+				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 			},
 
 			"allowed_serial_numbers": &framework.FieldSchema{

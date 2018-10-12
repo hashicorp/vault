@@ -195,6 +195,11 @@ The following HTTP status codes are used throughout the API. Vault tries to
 adhere to these whenever possible, but in some cases may not -- feel free to
 file a bug in that case to point our attention to it!
 
+~> *Note*: Applications should be prepared to accept both `200` and `204` as
+success. `204` is simply an indication that there is no response body to parse,
+but API endpoints that indicate that they return a `204` may return a `200` if
+warnings are generated during the operation.
+
 - `200` - Success with data.
 - `204` - Success, no data returned.
 - `400` - Invalid request, missing or invalid data.

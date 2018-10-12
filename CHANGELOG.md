@@ -1,8 +1,34 @@
-## 0.11.3 (Unreleased)
+## Next (Unreleased)
+
+CHANGES:
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
 
 BUG FIXES:
 
- * database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * core: Fix generate-root operations requiring empty `otp` to be provided
+   instead of an empty body [GH-5495]
+ * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
+   generated certificates to be set to the Unix epoch if the role value was not
+   set, instead of using the default of 30 seconds [GH-5481]
+
+## 0.11.3 (October 8th, 2018)
+
+SECURITY:
+
+ * Revocation: A regression in 0.11.2 (OSS) and 0.11.0 (Enterprise) caused
+   lease IDs containing periods (`.`) to not be revoked properly. Upon startup
+   when revocation is tried again these should now revoke successfully.
+
+IMPROVEMENTS:
+
+ * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
+
+BUG FIXES:
+
+ * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * cli/auth: Fix panic if `vault auth` was given no parameters [GH-5473]
+ * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
 
 ## 0.11.2 (October 2nd, 2018)
 
@@ -13,6 +39,9 @@ CHANGES:
    instead of a `400`.
  * `passthrough_request_headers` will now deny certain headers from being
    provided to backends based on a global denylist.
+ * Token Format: Tokens are now represented as a base62 value; tokens in
+   namespaces will have the namespace identifier appended. (This appeared in
+   Enterprise in 0.11.0, but is only in OSS in 0.11.2.)
 
 FEATURES:
 
@@ -161,6 +190,8 @@ DEPRECATIONS/CHANGES:
    role's configuration has changed in backwards-incompatible ways. Anything
    that depended on reading role data from the AWS secret engine will break
    until it is updated to work with the new format.
+ * Token Format (Enterprise): Tokens are now represented as a base62 value;
+   tokens in namespaces will have the namespace identifier appended.
 
 FEATURES:
 
