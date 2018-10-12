@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/base62"
@@ -85,7 +86,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request, generateStrategy vault.GenerateRootStrategy) {
 	// Parse the request
 	var req GenerateRootInitRequest
-	if err := parseRequest(r, w, &req); err != nil {
+	if err := parseRequest(r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
