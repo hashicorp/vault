@@ -16,13 +16,15 @@
     <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
   </h1>
   {{#if showProgress}}
-    <ToolTip as |T|>
-      <T.trigger>
+    <ToolTip @verticalPosition="below" as |T|>
+      <T.trigger @tabindex=false>
         <WizardProgress @currentFeatureProgress={{currentFeatureProgress}} @progressBar={{progressBar}} />
       </T.trigger>
-      <T.content>
-        <p>{{capitalize currentFeatureProgress.feature}}</p>
-        {{currentFeatureProgress.text}}
+      <T.content @class="tool-tip">
+        <div class="box">
+          <p>{{capitalize currentFeatureProgress.feature}}</p>
+          {{currentFeatureProgress.text}}
+        </div>
       </T.content>
     </ToolTip>
   {{else}}
