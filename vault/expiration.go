@@ -102,6 +102,7 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			case <-ctx.Done():
 			case <-m.quitCh:
 				cancel()
+			case <-revokeCtx.Done():
 			}
 		}()
 
