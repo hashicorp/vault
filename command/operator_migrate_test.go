@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/vault"
 )
 
 func init() {
@@ -262,6 +263,10 @@ func generateData() map[string][]byte {
 		result[strings.Join(segments, "/")] = data
 	}
 
+	// Add special keys that should be excluded from migration
+	result[migrationLock] = []byte{}
+	result[vault.CoreLockPath] = []byte{}
+
 	return result
 }
 
@@ -286,6 +291,14 @@ func compareStoredData(s physical.Backend, ref map[string][]byte, start string) 
 		if err != nil {
 			return err
 		}
+
+		if k == migrationLock || k == vault.CoreLockPath {
+			if entry == nil {
+				continue
+			}
+			return fmt.Errorf("key found that should have been excluded: %s", k)
+		}
+
 		if k >= start {
 			if entry == nil {
 				return fmt.Errorf("key not found: %s", k)

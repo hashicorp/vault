@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -196,7 +197,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
 	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == migrationLock {
+		if path < c.flagStart || path == migrationLock || path == vault.CoreLockPath {
 			return nil
 		}
 
