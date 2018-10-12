@@ -248,12 +248,18 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		if err := decoder.Decode(raw); err != nil {
 			return nil, true, err
 		}
+		if result == nil {
+			result = []int{}
+		}
 		return result, true, nil
 
 	case TypeSlice:
 		var result []interface{}
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
+		}
+		if result == nil {
+			result = []interface{}{}
 		}
 		return result, true, nil
 
