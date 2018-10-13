@@ -109,9 +109,11 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 		select {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		case <-m.quitContext.Done():
 			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		default:
 		}
