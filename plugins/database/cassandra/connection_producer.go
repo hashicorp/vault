@@ -240,7 +240,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	// Verify the info
 	err = session.Query(`LIST ALL`).Exec()
-	if err != nil && strings.Contains(err.Error(), "not authorized") {
+	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
 		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
 			"username": c.Username,
 		})).Iter().NumRows()
