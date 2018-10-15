@@ -33,7 +33,7 @@ type createTagRequest struct {
 	Tagger  *CommitAuthor `json:"tagger,omitempty"`
 }
 
-// GetTag fetchs a tag from a repo given a SHA.
+// GetTag fetches a tag from a repo given a SHA.
 //
 // GitHub API docs: https://developer.github.com/v3/git/tags/#get-a-tag
 func (s *GitService) GetTag(ctx context.Context, owner string, repo string, sha string) (*Tag, *Response, error) {

@@ -298,7 +298,7 @@ func (c *Conn) CopyFromReader(r io.Reader, sql string) error {
 	sp := len(buf)
 	for {
 		n, err := r.Read(buf[5:cap(buf)])
-		if err == io.EOF {
+		if err == io.EOF && n == 0 {
 			break
 		}
 		buf = buf[0 : n+5]

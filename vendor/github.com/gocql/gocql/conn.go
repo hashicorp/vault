@@ -227,51 +227,19 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 	}
 	defer cancel()
 
-	frameTicker := make(chan struct{}, 1)
-	startupErr := make(chan error)
-	go func() {
-		for range frameTicker {
-			err := c.recv()
-			if err != nil {
-				select {
-				case startupErr <- err:
-				case <-ctx.Done():
-				}
+	startup := &startupCoordinator{
+		frameTicker: make(chan struct{}),
+		conn:        c,
+	}
 
-				return
-			}
-		}
-	}()
-
-	go func() {
-		defer close(frameTicker)
-		err := c.startup(ctx, frameTicker)
-		select {
-		case startupErr <- err:
-		case <-ctx.Done():
-		}
-	}()
-
-	select {
-	case err := <-startupErr:
-		if err != nil {
-			c.Close()
-			return nil, err
-		}
-	case <-ctx.Done():
-		c.Close()
-		return nil, errors.New("gocql: no response to connection startup within timeout")
+	if err := startup.setupConn(ctx); err != nil {
+		c.close()
+		return nil, err
 	}
 
 	// dont coalesce startup frames
 	if s.cfg.WriteCoalesceWaitTime > 0 {
-		w := &writeCoalescer{
-			fcond: sync.NewCond(&sync.Mutex{}),
-			cond:  sync.NewCond(&sync.Mutex{}),
-			w:     c.w,
-		}
-		go w.writeFlusher(s.cfg.WriteCoalesceWaitTime, c.quit)
-		c.w = w
+		c.w = newWriteCoalescer(c.w, s.cfg.WriteCoalesceWaitTime, c.quit)
 	}
 
 	go c.serve()
@@ -306,27 +274,98 @@ func (c *Conn) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (c *Conn) startup(ctx context.Context, frameTicker chan struct{}) error {
-	m := map[string]string{
-		"CQL_VERSION": c.cfg.CQLVersion,
-	}
+type startupCoordinator struct {
+	conn        *Conn
+	frameTicker chan struct{}
+}
 
-	if c.compressor != nil {
-		m["COMPRESSION"] = c.compressor.Name()
-	}
+func (s *startupCoordinator) setupConn(ctx context.Context) error {
+	startupErr := make(chan error)
+	go func() {
+		for range s.frameTicker {
+			err := s.conn.recv()
+			if err != nil {
+				select {
+				case startupErr <- err:
+				case <-ctx.Done():
+				}
+
+				return
+			}
+		}
+	}()
+
+	go func() {
+		defer close(s.frameTicker)
+		err := s.options(ctx)
+		select {
+		case startupErr <- err:
+		case <-ctx.Done():
+		}
+	}()
 
 	select {
-	case frameTicker <- struct{}{}:
+	case err := <-startupErr:
+		if err != nil {
+			return err
+		}
 	case <-ctx.Done():
-		return ctx.Err()
+		return errors.New("gocql: no response to connection startup within timeout")
 	}
 
-	framer, err := c.exec(ctx, &writeStartupFrame{opts: m}, nil)
+	return nil
+}
+
+func (s *startupCoordinator) write(ctx context.Context, frame frameWriter) (frame, error) {
+	select {
+	case s.frameTicker <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	framer, err := s.conn.exec(ctx, frame, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return framer.parseFrame()
+}
+
+func (s *startupCoordinator) options(ctx context.Context) error {
+	frame, err := s.write(ctx, &writeOptionsFrame{})
 	if err != nil {
 		return err
 	}
 
-	frame, err := framer.parseFrame()
+	supported, ok := frame.(*supportedFrame)
+	if !ok {
+		return NewErrProtocol("Unknown type of response to startup frame: %T", frame)
+	}
+
+	return s.startup(ctx, supported.supported)
+}
+
+func (s *startupCoordinator) startup(ctx context.Context, supported map[string][]string) error {
+	m := map[string]string{
+		"CQL_VERSION": s.conn.cfg.CQLVersion,
+	}
+
+	if s.conn.compressor != nil {
+		comp := supported["COMPRESSION"]
+		name := s.conn.compressor.Name()
+		for _, compressor := range comp {
+			if compressor == name {
+				m["COMPRESSION"] = compressor
+				break
+			}
+		}
+
+		if _, ok := m["COMPRESSION"]; !ok {
+			s.conn.compressor = nil
+		}
+	}
+
+	frame, err := s.write(ctx, &writeStartupFrame{opts: m})
 	if err != nil {
 		return err
 	}
@@ -337,37 +376,25 @@ func (c *Conn) startup(ctx context.Context, frameTicker chan struct{}) error {
 	case *readyFrame:
 		return nil
 	case *authenticateFrame:
-		return c.authenticateHandshake(ctx, v, frameTicker)
+		return s.authenticateHandshake(ctx, v)
 	default:
 		return NewErrProtocol("Unknown type of response to startup frame: %s", v)
 	}
 }
 
-func (c *Conn) authenticateHandshake(ctx context.Context, authFrame *authenticateFrame, frameTicker chan struct{}) error {
-	if c.auth == nil {
+func (s *startupCoordinator) authenticateHandshake(ctx context.Context, authFrame *authenticateFrame) error {
+	if s.conn.auth == nil {
 		return fmt.Errorf("authentication required (using %q)", authFrame.class)
 	}
 
-	resp, challenger, err := c.auth.Challenge([]byte(authFrame.class))
+	resp, challenger, err := s.conn.auth.Challenge([]byte(authFrame.class))
 	if err != nil {
 		return err
 	}
 
 	req := &writeAuthResponseFrame{data: resp}
-
 	for {
-		select {
-		case frameTicker <- struct{}{}:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-
-		framer, err := c.exec(ctx, req, nil)
-		if err != nil {
-			return err
-		}
-
-		frame, err := framer.parseFrame()
+		frame, err := s.write(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -612,11 +639,22 @@ func (c *deadlineWriter) Write(p []byte) (int, error) {
 	return c.w.Write(p)
 }
 
+func newWriteCoalescer(w io.Writer, d time.Duration, quit <-chan struct{}) *writeCoalescer {
+	wc := &writeCoalescer{
+		writeCh: make(chan struct{}), // TODO: could this be sync?
+		cond:    sync.NewCond(&sync.Mutex{}),
+		w:       w,
+		quit:    quit,
+	}
+	go wc.writeFlusher(d)
+	return wc
+}
+
 type writeCoalescer struct {
 	w io.Writer
 
-	// fcond waits for a new write to start the flush loop
-	fcond   *sync.Cond
+	quit    <-chan struct{}
+	writeCh chan struct{}
 	running bool
 
 	// cond waits for the buffer to be flushed
@@ -627,10 +665,8 @@ type writeCoalescer struct {
 	err error
 }
 
-func (w *writeCoalescer) flush() {
-	w.cond.L.Lock()
-	defer w.cond.L.Unlock()
-
+func (w *writeCoalescer) flushLocked() {
+	w.running = false
 	if len(w.buffers) == 0 {
 		return
 	}
@@ -645,16 +681,36 @@ func (w *writeCoalescer) flush() {
 	w.cond.Broadcast()
 }
 
-func (w *writeCoalescer) Write(p []byte) (int, error) {
-	// TODO: use atomics for this?
-	w.fcond.L.Lock()
-	if !w.running {
-		w.running = true
-		w.fcond.Broadcast()
-	}
-	w.fcond.L.Unlock()
-
+func (w *writeCoalescer) flush() {
 	w.cond.L.Lock()
+	w.flushLocked()
+	w.cond.L.Unlock()
+}
+
+func (w *writeCoalescer) stop() {
+	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
+
+	w.flushLocked()
+	// nil the channel out sends block forever on it
+	// instead of closing which causes a send on closed channel
+	// panic.
+	w.writeCh = nil
+}
+
+func (w *writeCoalescer) Write(p []byte) (int, error) {
+	w.cond.L.Lock()
+
+	if !w.running {
+		select {
+		case w.writeCh <- struct{}{}:
+			w.running = true
+		case <-w.quit:
+			w.cond.L.Unlock()
+			return 0, io.EOF // TODO: better error here?
+		}
+	}
+
 	w.buffers = append(w.buffers, p)
 	for len(w.buffers) != 0 {
 		w.cond.Wait()
@@ -669,10 +725,10 @@ func (w *writeCoalescer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (w *writeCoalescer) writeFlusher(interval time.Duration, quit chan struct{}) {
+func (w *writeCoalescer) writeFlusher(interval time.Duration) {
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
-	defer w.flush()
+	defer w.stop()
 
 	if !timer.Stop() {
 		<-timer.C
@@ -680,24 +736,21 @@ func (w *writeCoalescer) writeFlusher(interval time.Duration, quit chan struct{}
 
 	for {
 		// wait for a write to start the flush loop
-		w.fcond.L.Lock()
-		for !w.running {
-			w.fcond.Wait()
+		select {
+		case <-w.writeCh:
+		case <-w.quit:
+			return
 		}
-		w.fcond.L.Unlock()
+
 		timer.Reset(interval)
 
 		select {
-		case <-quit:
+		case <-w.quit:
 			return
 		case <-timer.C:
 		}
 
-		w.fcond.L.Lock()
 		w.flush()
-
-		w.running = false
-		w.fcond.L.Unlock()
 	}
 }
 
@@ -1220,6 +1273,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 
 func (c *Conn) query(statement string, values ...interface{}) (iter *Iter) {
 	q := c.session.Query(statement, values...).Consistency(One)
+	q.trace = nil
 	return c.executeQuery(q)
 }
 

@@ -20,7 +20,7 @@ import (
 // of $ after that are interpreted.
 // Any error are returned as a string value, the empty string signals
 // "no error".
-func generate(l lex, c chan lex, t chan *Token, o string) string {
+func generate(l lex, c *zlexer, t chan *Token, o string) string {
 	step := 1
 	if i := strings.IndexAny(l.token, "/"); i != -1 {
 		if i+1 == len(l.token) {
@@ -52,11 +52,11 @@ func generate(l lex, c chan lex, t chan *Token, o string) string {
 		return "bad range in $GENERATE range"
 	}
 
-	<-c // _BLANK
+	c.Next() // _BLANK
 	// Create a complete new string, which we then parse again.
 	s := ""
 BuildRR:
-	l = <-c
+	l, _ = c.Next()
 	if l.value != zNewline && l.value != zEOF {
 		s += l.token
 		goto BuildRR
@@ -107,6 +107,8 @@ BuildRR:
 					mod, offset, err = modToPrintf(s[j+2 : j+2+sep])
 					if err != nil {
 						return err.Error()
+					} else if start+offset < 0 || end+offset > 1<<31-1 {
+						return "bad offset in $GENERATE"
 					}
 					j += 2 + sep // Jump to it
 				}
@@ -152,7 +154,7 @@ func modToPrintf(s string) (string, int, error) {
 		return "", 0, errors.New("bad base in $GENERATE")
 	}
 	offset, err := strconv.Atoi(xs[0])
-	if err != nil || offset > 255 {
+	if err != nil {
 		return "", 0, errors.New("bad offset in $GENERATE")
 	}
 	width, err := strconv.Atoi(xs[1])

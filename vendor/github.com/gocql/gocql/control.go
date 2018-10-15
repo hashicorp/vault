@@ -453,8 +453,7 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 			Logger.Printf("control: error executing %q: %v\n", statement, iter.err)
 		}
 
-		metric := q.getHostMetrics(c.getConn().host)
-		metric.Attempts++
+		q.AddAttempts(1, c.getConn().host)
 		if iter.err == nil || !c.retry.Attempt(q) {
 			break
 		}

@@ -1,3 +1,8 @@
+# 1.1.1
+This is a bug fix release.
+  * fix the build break on Solaris
+  * don't drop a whole trace in JSONFormatter when a field param is a function pointer which can not be serialized
+
 # 1.1.0
 This new release introduces:
   * several fixes:
