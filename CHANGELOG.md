@@ -1,7 +1,13 @@
 ## Next (Unreleased)
 
 CHANGES:
+
  * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
+IMPROVEMENTS:
+
+ * secret/database: Allow Cassandra user to be non-superuser so long as it has
+   role creation permissions [GH-5402]
 
 BUG FIXES:
 
