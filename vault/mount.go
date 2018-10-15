@@ -226,6 +226,7 @@ type MountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -238,6 +239,7 @@ type APIMountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 }
 
 // Clone returns a deep copy of the mount entry

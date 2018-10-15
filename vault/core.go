@@ -1047,6 +1047,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
 	}
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
@@ -1057,6 +1058,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
+		auth.TokenType = te.Type
 	}
 
 	logInput := &audit.LogInput{

@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/vault"
@@ -333,6 +334,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
 		"entity_id":        "",
+		"type":             "service",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -431,6 +433,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"explicit_max_ttl": json.Number("0"),
 		"expire_time":      nil,
 		"entity_id":        "",
+		"type":             "service",
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -440,7 +443,7 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
 	expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
 
-	if !reflect.DeepEqual(actual["data"], expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
+	if diff := deep.Equal(actual["data"], expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

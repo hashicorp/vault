@@ -317,6 +317,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -359,6 +360,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -401,6 +403,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -409,7 +412,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	if resp.Secret.TTL != c.defaultLeaseTTL {
-		t.Fatalf("bad: %#v, %d", resp.Secret, c.defaultLeaseTTL)
+		t.Fatalf("bad: %d, %d", resp.Secret.TTL/time.Second, c.defaultLeaseTTL/time.Second)
 	}
 	if resp.Secret.LeaseID == "" {
 		t.Fatalf("bad: %#v", resp.Secret)
@@ -481,7 +484,7 @@ func TestCore_HandleRequest_NoSlash(t *testing.T) {
 // Test a root path is denied if non-root
 func TestCore_HandleRequest_RootPath(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
+	testMakeServiceTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -516,7 +519,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 	}
 
 	// Child token (non-root) but with 'test' policy should have access
-	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
+	testMakeServiceTokenViaCore(t, c, root, "child", "", []string{"test"})
 	req = &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "sys/policy", // root protected!
@@ -534,7 +537,7 @@ func TestCore_HandleRequest_RootPath_WithSudo(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
+	testMakeServiceTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -554,7 +557,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 // Check that standard permissions work
 func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
-	testMakeTokenViaCore(t, c, root, "child", "", []string{"test"})
+	testMakeServiceTokenViaCore(t, c, root, "child", "", []string{"test"})
 
 	// Set the 'test' policy object to permit access to secret/
 	req := &logical.Request{
@@ -719,6 +722,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		TTL:          time.Hour * 24,
 		CreationTime: te.CreationTime,
 		NamespaceID:  namespace.RootNamespaceID,
+		Type:         logical.TokenTypeService,
 	}
 
 	if !reflect.DeepEqual(te, expect) {
@@ -884,6 +888,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1020,6 +1025,7 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		CreationTime: te.CreationTime,
 		TTL:          time.Hour * 24 * 32,
 		NamespaceID:  namespace.RootNamespaceID,
+		Type:         logical.TokenTypeService,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
@@ -1066,6 +1072,7 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 		CreationTime: te.CreationTime,
 		TTL:          time.Hour * 24 * 32,
 		NamespaceID:  namespace.RootNamespaceID,
+		Type:         logical.TokenTypeService,
 	}
 	if !reflect.DeepEqual(te, expect) {
 		t.Fatalf("Bad: %#v expect: %#v", te, expect)
@@ -1837,6 +1844,7 @@ func TestCore_HandleRequest_InternalData(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 	}
+	lreq.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	lresp, err := c.HandleRequest(namespace.RootContext(nil), lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1909,6 +1917,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2078,6 +2087,7 @@ path "secret/*" {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

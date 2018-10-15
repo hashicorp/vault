@@ -92,6 +92,8 @@ const (
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
 	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
+	// flagNameTokenType is the flag name used to force a specific token type
+	flagNameTokenType = "token-type"
 )
 
 var (

@@ -486,6 +486,7 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 
 	return &Auth{
 		LeaseOptions:     lo,
+		TokenType:        uint32(a.TokenType),
 		InternalData:     string(buf[:]),
 		DisplayName:      a.DisplayName,
 		Policies:         a.Policies,
@@ -532,6 +533,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 
 	return &logical.Auth{
 		LeaseOptions:     lo,
+		TokenType:        logical.TokenType(a.TokenType),
 		InternalData:     data,
 		DisplayName:      a.DisplayName,
 		Policies:         a.Policies,
@@ -578,6 +580,7 @@ func LogicalTokenEntryToProtoTokenEntry(t *logical.TokenEntry) *TokenEntry {
 		BoundCIDRs:     boundCIDRs,
 		NamespaceID:    t.NamespaceID,
 		CubbyholeID:    t.CubbyholeID,
+		Type:           uint32(t.Type),
 	}
 }
 
@@ -614,5 +617,6 @@ func ProtoTokenEntryToLogicalTokenEntry(t *TokenEntry) (*logical.TokenEntry, err
 		BoundCIDRs:     boundCIDRs,
 		NamespaceID:    t.NamespaceID,
 		CubbyholeID:    t.CubbyholeID,
+		Type:           logical.TokenType(t.Type),
 	}, nil
 }
