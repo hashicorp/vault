@@ -105,7 +105,7 @@ func PrivateHandle(rtypestr string, rtype uint16, generator func() PrivateRdata)
 		return rr, off, err
 	}
 
-	setPrivateRR := func(h RR_Header, c chan lex, o, f string) (RR, *ParseError, string) {
+	setPrivateRR := func(h RR_Header, c *zlexer, o, f string) (RR, *ParseError, string) {
 		rr := mkPrivateRR(h.Rrtype)
 		rr.Hdr = h
 
@@ -115,7 +115,7 @@ func PrivateHandle(rtypestr string, rtype uint16, generator func() PrivateRdata)
 		for {
 			// TODO(miek): we could also be returning _QUOTE, this might or might not
 			// be an issue (basically parsing TXT becomes hard)
-			switch l = <-c; l.value {
+			switch l, _ = c.Next(); l.value {
 			case zNewline, zEOF:
 				break Fetch
 			case zString:

@@ -306,6 +306,19 @@ mutations, which will all be executed at the end of the transaction:
         return nil
     })
 
+
+DML and Partitioned DML
+
+Spanner supports DML statements like INSERT, UPDATE and DELETE. Use
+ReadWriteTransaction.Update to run DML statements. It returns the number of rows
+affected. (You can call use ReadWriteTransaction.Query with a DML statement. The first
+call to Next on the resulting RowIterator will return iterator.Done, and the RowCount
+field of the iterator will hold the number of affected rows.)
+
+For large databases, it may be more efficient to partition the DML statement. Use
+client.PartitionedUpdate to run a DML statement in this way. Not all DML statements
+can be partitioned.
+
 Tracing
 
 This client has been instrumented to use OpenCensus tracing (http://opencensus.io).

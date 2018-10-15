@@ -707,6 +707,7 @@ func (d *jsonDecDriver) ReadMapEnd() {
 }
 
 func (d *jsonDecDriver) readLit(length, fromIdx uint8) {
+	// length here is always less than 8 (literals are: null, true, false)
 	bs := d.r.readx(int(length))
 	d.tok = 0
 	if jsonValidateSymbols && !bytes.Equal(bs, jsonLiterals[fromIdx:fromIdx+length]) {

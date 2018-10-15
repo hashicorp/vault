@@ -193,6 +193,7 @@ struct ltchars {
 #include <linux/falloc.h>
 #include <linux/filter.h>
 #include <linux/fs.h>
+#include <linux/kexec.h>
 #include <linux/keyctl.h>
 #include <linux/magic.h>
 #include <linux/memfd.h>
@@ -445,6 +446,7 @@ ccflags="$@"
 		$2 ~ /^(MS|MNT|UMOUNT)_/ ||
 		$2 ~ /^TUN(SET|GET|ATTACH|DETACH)/ ||
 		$2 ~ /^(O|F|E?FD|NAME|S|PTRACE|PT)_/ ||
+		$2 ~ /^KEXEC_/ ||
 		$2 ~ /^LINUX_REBOOT_CMD_/ ||
 		$2 ~ /^LINUX_REBOOT_MAGIC[12]$/ ||
 		$2 !~ "NLA_TYPE_MASK" &&

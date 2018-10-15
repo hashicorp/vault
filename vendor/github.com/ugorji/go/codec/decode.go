@@ -20,9 +20,12 @@ const (
 	msgDecCannotExpandArr = "cannot expand go array from %v to stream length: %v"
 )
 
-const decDefSliceCap = 8
-const decDefChanCap = 64 // should be large, as cap cannot be expanded
-const decScratchByteArrayLen = cacheLineSize - 8
+const (
+	decDefMaxDepth         = 1024 // maximum depth
+	decDefSliceCap         = 8
+	decDefChanCap          = 64 // should be large, as cap cannot be expanded
+	decScratchByteArrayLen = cacheLineSize - 8
+)
 
 var (
 	errstrOnlyMapOrArrayCanDecodeIntoStruct = "only encoded map or array can be decoded into a struct"
@@ -36,13 +39,13 @@ var (
 	errDecUnreadByteNothingToRead   = errors.New("cannot unread - nothing has been read")
 	errDecUnreadByteLastByteNotRead = errors.New("cannot unread - last byte has not been read")
 	errDecUnreadByteUnknown         = errors.New("cannot unread - reason unknown")
+	errMaxDepthExceeded             = errors.New("maximum decoding depth exceeded")
 )
 
 // decReader abstracts the reading source, allowing implementations that can
 // read from an io.Reader or directly off a byte slice with zero-copying.
 type decReader interface {
 	unreadn1()
-
 	// readx will use the implementation scratch buffer if possible i.e. n < len(scratchbuf), OR
 	// just return a view of the []byte being decoded from.
 	// Ensure you call detachZeroCopyBytes later if this needs to be sent outside codec control.
@@ -64,12 +67,13 @@ type decReader interface {
 type decDriver interface {
 	// this will check if the next token is a break.
 	CheckBreak() bool
+	// TryDecodeAsNil tries to decode as nil.
 	// Note: TryDecodeAsNil should be careful not to share any temporary []byte with
 	// the rest of the decDriver. This is because sometimes, we optimize by holding onto
 	// a transient []byte, and ensuring the only other call we make to the decDriver
 	// during that time is maybe a TryDecodeAsNil() call.
 	TryDecodeAsNil() bool
-	// vt is one of: Bytes, String, Nil, Slice or Map. Return unSet if not known.
+	// ContainerType returns one of: Bytes, String, Nil, Slice or Map. Return unSet if not known.
 	ContainerType() (vt valueType)
 	// IsBuiltinType(rt uintptr) bool
 
@@ -168,6 +172,9 @@ type DecodeOptions struct {
 	// Instead, we provision up to MaxInitLen, fill that up, and start appending after that.
 	MaxInitLen int
 
+	// MaxDepth defines the maximum depth when decoding nested
+	// maps and slices. If 0 or negative, we default to a suitably large number (currently 1024).
+	MaxDepth int16
 	// ReaderBufferSize is the size of the buffer used when reading.
 	//
 	// if > 0, we use a smart buffer internally for performance purposes.
@@ -1188,6 +1195,7 @@ func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			dd.ReadMapEnd()
 			return
 		}
+		d.depthIncr()
 		tisfi := fti.sfiSort
 		hasLen := containerLen >= 0
 
@@ -1219,12 +1227,14 @@ func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			// keepAlive4StringView(rvkencnameB) // not needed, as reference is outside loop
 		}
 		dd.ReadMapEnd()
+		d.depthDecr()
 	} else if ctyp == valueTypeArray {
 		containerLen := dd.ReadArrayStart()
 		if containerLen == 0 {
 			dd.ReadArrayEnd()
 			return
 		}
+		d.depthIncr()
 		// Not much gain from doing it two ways for array.
 		// Arrays are not used as much for structs.
 		hasLen := containerLen >= 0
@@ -1259,6 +1269,7 @@ func (d *Decoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			}
 		}
 		dd.ReadArrayEnd()
+		d.depthDecr()
 	} else {
 		d.errorstr(errstrOnlyMapOrArrayCanDecodeIntoStruct)
 		return
@@ -1327,6 +1338,8 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 		slh.End()
 		return
 	}
+
+	d.depthIncr()
 
 	rtelem0Size := int(rtelem0.Size())
 	rtElem0Kind := rtelem0.Kind()
@@ -1399,7 +1412,6 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 					rv = reflect.MakeSlice(ti.rt, rvlen, rvlen)
 					rvChanged = true
 				} else { // chan
-					// xdebugf(">>>>>> haslen = %v, make chan of type '%v' with length: %v", hasLen, ti.rt, rvlen)
 					rv = reflect.MakeChan(ti.rt, rvlen)
 					rvChanged = true
 				}
@@ -1421,7 +1433,6 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 				fn = d.cf.get(rtelem, true, true)
 			}
 			d.decodeValue(rv9, fn, true)
-			// xdebugf(">>>> rv9 sent on %v during decode: %v, with len=%v, cap=%v", rv.Type(), rv9, rv.Len(), rv.Cap())
 			rv.Send(rv9)
 		} else {
 			// if indefinite, etc, then expand the slice if necessary
@@ -1458,9 +1469,9 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 						rtelem0Zero = reflect.Zero(rtelem0)
 					}
 					rv9.Set(rtelem0Zero)
-				}
-				if decodeAsNil {
-					continue
+					if decodeAsNil {
+						continue
+					}
 				}
 
 				if fn == nil {
@@ -1491,6 +1502,8 @@ func (d *Decoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 	if rvChanged { // infers rvCanset=true, so it can be reset
 		rv0.Set(rv)
 	}
+
+	d.depthDecr()
 }
 
 // func (d *Decoder) kArray(f *codecFnInfo, rv reflect.Value) {
@@ -1504,13 +1517,16 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	elemsep := d.esep
 	ti := f.ti
 	if rv.IsNil() {
-		rv.Set(makeMapReflect(ti.rt, containerLen))
+		rvlen := decInferLen(containerLen, d.h.MaxInitLen, int(ti.key.Size()+ti.elem.Size()))
+		rv.Set(makeMapReflect(ti.rt, rvlen))
 	}
 
 	if containerLen == 0 {
 		dd.ReadMapEnd()
 		return
 	}
+
+	d.depthIncr()
 
 	ktype, vtype := ti.key, ti.elem
 	ktypeId := rt2id(ktype)
@@ -1558,13 +1574,14 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 		if elemsep {
 			dd.ReadMapElemKey()
 		}
-		if false && dd.TryDecodeAsNil() { // nil cannot be a map key, so disregard this block
-			// Previously, if a nil key, we just ignored the mapped value and continued.
-			// However, that makes the result of encoding and then decoding map[intf]intf{nil:nil}
-			// to be an empty map.
-			// Instead, we treat a nil key as the zero value of the type.
-			rvk.Set(reflect.Zero(ktype))
-		} else if ktypeIsString {
+		// if false && dd.TryDecodeAsNil() { // nil cannot be a map key, so disregard this block
+		// 	// Previously, if a nil key, we just ignored the mapped value and continued.
+		// 	// However, that makes the result of encoding and then decoding map[intf]intf{nil:nil}
+		// 	// to be an empty map.
+		// 	// Instead, we treat a nil key as the zero value of the type.
+		// 	rvk.Set(reflect.Zero(ktype))
+		// } else if ktypeIsString {
+		if ktypeIsString {
 			kstrbs = dd.DecodeStringAsBytes()
 			rvk.SetString(stringView(kstrbs))
 			// NOTE: if doing an insert, you MUST use a real string (not stringview)
@@ -1653,6 +1670,8 @@ func (d *Decoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	}
 
 	dd.ReadMapEnd()
+
+	d.depthDecr()
 }
 
 // decNaked is used to keep track of the primitives decoded.
@@ -1889,7 +1908,10 @@ type Decoder struct {
 	err error
 
 	h *BasicHandle
-	_ [1]uint64 // padding
+
+	depth    int16
+	maxdepth int16
+	_        [4]uint8 // padding
 
 	// ---- cpu cache line boundary?
 	b  [decScratchByteArrayLen]byte // scratch buffer, used by Decoder and xxxEncDrivers
@@ -1943,6 +1965,11 @@ func (d *Decoder) resetCommon() {
 	d.n.reset()
 	d.d.reset()
 	d.err = nil
+	d.depth = 0
+	d.maxdepth = d.h.MaxDepth
+	if d.maxdepth <= 0 {
+		d.maxdepth = decDefMaxDepth
+	}
 	// reset all things which were cached from the Handle, but could change
 	d.mtid, d.stid = 0, 0
 	d.mtr, d.str = false, false
@@ -2417,6 +2444,17 @@ func (d *Decoder) ensureDecodeable(rv reflect.Value) (rv2 reflect.Value) {
 	return
 }
 
+func (d *Decoder) depthIncr() {
+	d.depth++
+	if d.depth >= d.maxdepth {
+		panic(errMaxDepthExceeded)
+	}
+}
+
+func (d *Decoder) depthDecr() {
+	d.depth--
+}
+
 // Possibly get an interned version of a string
 //
 // This should mostly be used for map keys, where the key type is string.
@@ -2531,6 +2569,13 @@ func decByteSlice(r decReader, clen, maxInitLen int, bs []byte) (bsOut []byte) {
 	}
 	return
 }
+
+// func decByteSliceZeroCopy(r decReader, clen, maxInitLen int, bs []byte) (bsOut []byte) {
+// 	if _, ok := r.(*bytesDecReader); ok && clen <= maxInitLen {
+// 		return r.readx(clen)
+// 	}
+// 	return decByteSlice(r, clen, maxInitLen, bs)
+// }
 
 func detachZeroCopyBytes(isBytesReader bool, dest []byte, in []byte) (out []byte) {
 	if xlen := len(in); xlen > 0 {

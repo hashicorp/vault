@@ -100,7 +100,7 @@ func cleanComment(in []byte) ([]byte, bool) {
 	return in[i:], true
 }
 
-func readKeyName(in []byte) (string, int, error) {
+func readKeyName(delimiters string, in []byte) (string, int, error) {
 	line := string(in)
 
 	// Check if key name surrounded by quotes.
@@ -127,7 +127,7 @@ func readKeyName(in []byte) (string, int, error) {
 		pos += startIdx
 
 		// Find key-value delimiter
-		i := strings.IndexAny(line[pos+startIdx:], "=:")
+		i := strings.IndexAny(line[pos+startIdx:], delimiters)
 		if i < 0 {
 			return "", -1, ErrDelimiterNotFound{line}
 		}
@@ -135,7 +135,7 @@ func readKeyName(in []byte) (string, int, error) {
 		return strings.TrimSpace(line[startIdx:pos]), endIdx + startIdx + 1, nil
 	}
 
-	endIdx = strings.IndexAny(line, "=:")
+	endIdx = strings.IndexAny(line, delimiters)
 	if endIdx < 0 {
 		return "", -1, ErrDelimiterNotFound{line}
 	}
@@ -428,7 +428,7 @@ func (f *File) parse(reader io.Reader) (err error) {
 			continue
 		}
 
-		kname, offset, err := readKeyName(line)
+		kname, offset, err := readKeyName(f.options.KeyValueDelimiters, line)
 		if err != nil {
 			// Treat as boolean key when desired, and whole line is key name.
 			if IsErrDelimiterNotFound(err) {
