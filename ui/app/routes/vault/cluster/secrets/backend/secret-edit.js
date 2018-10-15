@@ -73,6 +73,7 @@ export default Route.extend(UnloadModelRoute, {
     return hash({
       secret: this.store.queryRecord(modelType, { id: secret, backend }).then(resp => {
         if (modelType === 'secret-v2') {
+          let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
           let targetVersion = parseInt(params.version || resp.currentVersion, 10);
           let version = resp.versions.findBy('version', targetVersion);
           // 404 if there's no version
@@ -81,6 +82,7 @@ export default Route.extend(UnloadModelRoute, {
             set(error, 'httpStatus', 404);
             throw error;
           }
+          resp.set('engine', backendModel);
 
           return version.reload().then(() => {
             resp.set('selectedVersion', version);
@@ -136,14 +138,17 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      if (this.get('hasChanges')) {
+      let model = this.controller.model;
+      let version = model.get('selectedVersion');
+      debugger; //eslint-disable-line
+      if (model.hasDirtyAttributes || (version && version.hasDirtyAttributes)) {
         if (
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
         ) {
+          version && version.rollbackAttributes();
           this.unloadModel();
-          this.set('hasChanges', false);
           return true;
         } else {
           transition.abort();
@@ -151,10 +156,6 @@ export default Route.extend(UnloadModelRoute, {
         }
       }
       return this._super(...arguments);
-    },
-
-    hasDataChanges(hasChanges) {
-      this.set('hasChanges', hasChanges);
     },
   },
 });
