@@ -71,7 +71,7 @@ func TestTransit_Trim(t *testing.T) {
 		t.Fatalf("bad: len of archived keys; expected: 6, actual: %d", len(archive.Keys))
 	}
 
-	// Min version should not be set when min_encryption_version is not
+	// Min available version should not be set when min_encryption_version is not
 	// set
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
@@ -92,22 +92,22 @@ func TestTransit_Trim(t *testing.T) {
 	}
 	doReq(t, req)
 
-	// Min version cannot be greater than min encryption version
+	// Min available version cannot be greater than min encryption version
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
 		"min_available_version": 5,
 	}
 	doErrReq(t, req)
 
-	// Min version cannot be greater than min decryption version
+	// Min available version cannot be greater than min decryption version
 	req.Data["min_available_version"] = 4
 	doErrReq(t, req)
 
-	// Min version cannot be negative
+	// Min available version cannot be negative
 	req.Data["min_available_version"] = -1
 	doErrReq(t, req)
 
-	// Min version should be positive
+	// Min available version should be positive
 	req.Data["min_available_version"] = 0
 	doErrReq(t, req)
 
@@ -125,14 +125,14 @@ func TestTransit_Trim(t *testing.T) {
 		t.Fatalf("bad: len of archived keys; expected: 3, actual: %d", len(archive.Keys))
 	}
 
-	// Min decryption version should not be less than min version
+	// Min decryption version should not be less than min available version
 	req.Path = "keys/aes/config"
 	req.Data = map[string]interface{}{
 		"min_decryption_version": 1,
 	}
 	doErrReq(t, req)
 
-	// Min encryption version should not be less than min version
+	// Min encryption version should not be less than min available version
 	req.Data = map[string]interface{}{
 		"min_encryption_version": 2,
 	}

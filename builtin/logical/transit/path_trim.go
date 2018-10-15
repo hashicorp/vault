@@ -65,19 +65,19 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 
 		switch {
 		case minAvailableVersion < originalMinAvailableVersion:
-			return logical.ErrorResponse("minimum version cannot be decremented"), nil
+			return logical.ErrorResponse("minimum available version cannot be decremented"), nil
 		case p.MinEncryptionVersion == 0:
-			return logical.ErrorResponse("minimum version cannot be set when minimum encryption version is not set"), nil
+			return logical.ErrorResponse("minimum available version cannot be set when minimum encryption version is not set"), nil
 		case p.MinDecryptionVersion == 0:
-			return logical.ErrorResponse("minimum version cannot be set when minimum decryption version is not set"), nil
+			return logical.ErrorResponse("minimum available version cannot be set when minimum decryption version is not set"), nil
 		case minAvailableVersion > p.MinEncryptionVersion:
-			return logical.ErrorResponse("minimum version cannot be greater than minmum encryption version"), nil
+			return logical.ErrorResponse("minimum available version cannot be greater than minmum encryption version"), nil
 		case minAvailableVersion > p.MinDecryptionVersion:
-			return logical.ErrorResponse("minimum version cannot be greater than minimum decryption version"), nil
+			return logical.ErrorResponse("minimum available version cannot be greater than minimum decryption version"), nil
 		case minAvailableVersion < 0:
-			return logical.ErrorResponse("minimum version cannot be negative"), nil
+			return logical.ErrorResponse("minimum available version cannot be negative"), nil
 		case minAvailableVersion == 0:
-			return logical.ErrorResponse("minimum version should be positive"), nil
+			return logical.ErrorResponse("minimum available version should be positive"), nil
 		}
 
 		// Ensure that cache doesn't get corrupted in error cases
