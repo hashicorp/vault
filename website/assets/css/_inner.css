@@ -9,6 +9,7 @@
   @media (min-width: 768px) {
     flex-direction: row;
     margin-top: 72px;
+    margin-bottom: 72px;
   }
 }
 
@@ -31,8 +32,4 @@
   & pre {
     font-size: 0.875em;
   }
-}
-
-.g-footer {
-  margin-top: 72px;
 }

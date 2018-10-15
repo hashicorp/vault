@@ -9,6 +9,7 @@ import productSubnav from '@hashicorp/hashi-product-subnav'
 import docsSidebar from './components/docs-sidebar'
 import megaNav from '@hashicorp/hashi-mega-nav'
 import productDownloader from '@hashicorp/hashi-product-downloader'
+import hero from '@hashicorp/hashi-hero'
 
 const components = initializeComponents({
   nav,
@@ -17,5 +18,6 @@ const components = initializeComponents({
   docsSidebar,
   productSubnav,
   megaNav,
-  productDownloader
+  productDownloader,
+  hero
 })
