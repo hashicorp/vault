@@ -241,7 +241,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	if roleEntry.MaxSTSTTL > 0 &&
 		roleEntry.DefaultSTSTTL > 0 &&
 		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
-		return logical.ErrorResponse(`"default_sts_ttl" value must be less than "max_sts_ttl" value`), nil
+		return logical.ErrorResponse(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`), nil
 	}
 
 	if legacyRole != "" {
