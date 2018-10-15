@@ -5,6 +5,7 @@ CHANGES:
 
 BUG FIXES:
 
+ * agent: Fix potential hang during agent shutdown [GH-5026]
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
