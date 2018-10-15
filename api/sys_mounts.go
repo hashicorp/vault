@@ -149,6 +149,7 @@ type MountConfigInput struct {
 	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	Credentials               string            `json:"credentials,omitempty" mapstructure:"credentials"`
 }
 
 type MountOutput struct {
