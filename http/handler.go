@@ -126,8 +126,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
-		mux.Handle("/", handleUIRedirect())
 		mux.Handle("/ui", handleUIRedirect())
+		mux.Handle("/", handleUIRedirect())
 	}
 
 	additionalRoutes(mux, core)
@@ -182,7 +182,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 			}
 			r = newR
 
-		case strings.HasPrefix(r.URL.Path, "/ui/"), r.URL.Path == "/":
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
