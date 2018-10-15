@@ -1,6 +1,6 @@
 import Secret from './secret';
 import DS from 'ember-data';
-import { bool } from '@ember/object/computed';
+import { alias, bool } from '@ember/object/computed';
 
 const { attr, belongsTo } = DS;
 

@@ -17,10 +17,6 @@ export default Controller.extend(BackendCrumbMixin, {
       this.send('refreshModel');
     },
 
-    hasChanges(hasChanges) {
-      this.send('hasDataChanges', hasChanges);
-    },
-
     toggleAdvancedEdit(bool) {
       this.set('preferAdvancedEdit', bool);
       this.get('backendController').set('preferAdvancedEdit', bool);

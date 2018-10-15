@@ -74,13 +74,6 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  willDestroyElement() {
-    this._super(...arguments);
-    if (this.model.isError && !this.model.isDestroyed) {
-      this.model.rollbackAttributes();
-    }
-  },
-
   waitForKeyUp: task(function*() {
     while (true) {
       let event = yield waitForEvent(document.body, 'keyup');
@@ -114,6 +107,25 @@ export default Component.extend(FocusOnInsertMixin, {
   ),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
+
+  v2UpdatePath: queryRecord(
+    'capabilities',
+    context => {
+      if (context.mode === 'create' || context.isV2 === false) {
+        return {};
+      }
+      let backend = context.model.belongsTo('engine').id;
+      let id = context.model.id;
+      return {
+        id: `${backend}/metadata/${id}`,
+      };
+    },
+    'isV2',
+    'model',
+    'model.id',
+    'mode'
+  ),
+  canEditV2Secret: alias('updatePath.canUpdate'),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
@@ -164,7 +176,9 @@ export default Component.extend(FocusOnInsertMixin, {
 
   // successCallback is called in the context of the component
   persistKey(successCallback) {
+    let secret = this.model;
     let model = this.modelForData;
+    let isV2 = this.isV2;
     let key = model.get('path') || model.id;
 
     if (key.startsWith('/')) {
@@ -174,12 +188,27 @@ export default Component.extend(FocusOnInsertMixin, {
 
     return model.save().then(() => {
       if (!model.isError) {
-        if (this.wizard.featureState === 'secret') {
-          this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
+        if (isV2 && Object.keys(secret.changedAttributes()).length) {
+          // save secret metadata
+          secret
+            .save()
+            .then(() => {
+              this.saveComplete(successCallback, key);
+            })
+            .catch(e => {
+              this.set(e, e.errors.join(' '));
+            });
+        } else {
+          this.saveComplete(successCallback, key);
         }
-        successCallback(key);
       }
     });
+  },
+  saveComplete(callback, key) {
+    if (this.wizard.featureState === 'secret') {
+      this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
+    }
+    callback(key);
   },
 
   checkRows() {
@@ -203,14 +232,11 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleChange() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
+      this.modelForData.set('secretData', this.secretData.toJSON());
     },
 
     createOrUpdateKey(type, event) {
       event.preventDefault();
-      const newData = this.secretData.toJSON();
-      let model = this.modelForData;
-      model.set('secretData', newData);
-
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(model.get('path') || model.id)) {
@@ -241,7 +267,7 @@ export default Component.extend(FocusOnInsertMixin, {
       const data = this.secretData;
       if (isNone(data.findBy('name', ''))) {
         data.pushObject({ name: '', value: '' });
-        this.set('codemirrorString', data.toJSONString(true));
+        this.send('handleChange');
       }
       this.checkRows();
     },
@@ -254,7 +280,7 @@ export default Component.extend(FocusOnInsertMixin, {
       }
       data.removeObject(item);
       this.checkRows();
-      this.set('codemirrorString', data.toJSONString(true));
+      this.send('handleChange');
     },
 
     toggleAdvanced(bool) {

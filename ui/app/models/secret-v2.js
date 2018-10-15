@@ -1,5 +1,7 @@
 import DS from 'ember-data';
+import { computed } from '@ember/object';
 import { match } from '@ember/object/computed';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr, hasMany, belongsTo, Model } = DS;
 
@@ -11,7 +13,18 @@ export default Model.extend({
   updatedTime: attr(),
   currentVersion: attr('number'),
   oldestVersion: attr('number'),
-  maxVersions: attr('number'),
-  casRequired: attr('boolean'),
+  maxVersions: attr('number', {
+    defaultValue: 10,
+    label: 'Maximum Number of Versions',
+  }),
+  casRequired: attr('boolean', {
+    defaultValue: false,
+    label: 'Require Check and Set',
+    helpText:
+      'Writes will only be allowed if the key’s current version matches the version specified in the cas parameter',
+  }),
   isFolder: match('id', /\/$/),
+  fields: computed(function() {
+    return expandAttributeMeta(this, ['maxVersions', 'casRequired']);
+  }),
 });
