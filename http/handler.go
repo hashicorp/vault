@@ -126,7 +126,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
-		mux.Handle("/", handleRootRedirect())
+		mux.Handle("/", handleUIRedirect())
+		mux.Handle("/ui", handleUIRedirect())
 	}
 
 	additionalRoutes(mux, core)
@@ -364,7 +365,7 @@ func handleUIStub() http.Handler {
 	})
 }
 
-func handleRootRedirect() http.Handler {
+func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/ui/", 307)
 		return
