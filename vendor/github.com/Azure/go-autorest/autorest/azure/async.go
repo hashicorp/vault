@@ -58,10 +58,7 @@ func NewFuture(req *http.Request) Future {
 // with the initial response from an asynchronous operation.
 func NewFutureFromResponse(resp *http.Response) (Future, error) {
 	pt, err := createPollingTracker(resp)
-	if err != nil {
-		return Future{}, err
-	}
-	return Future{pt: pt}, nil
+	return Future{pt: pt}, err
 }
 
 // Response returns the last HTTP response.
