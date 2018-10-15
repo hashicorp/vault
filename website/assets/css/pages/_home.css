@@ -6,6 +6,10 @@
     &.gray {
       background: var(--gray-10);
     }
+
+    &.no-pad {
+      padding: 0;
+    }
   }
 
   & .button-container {

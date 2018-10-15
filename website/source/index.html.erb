@@ -35,9 +35,41 @@
     description="<%= page.documentation_headline.description %>"
   ></hashi-section-header>
 
-  <p>TODO: docs list component</p>
+  <hashi-linked-text-summary-list _data="<%= encode([
+    {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }, {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }, {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }, {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }, {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }, {
+      title: 'Item 1',
+      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
+      link: 'https://www.hashicorp.com/',
+      external: true
+    }
+  ]) %>"></hashi-linked-text-summary-list>
 </section>
 
-<section class='g-container'>
-  <!-- <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta> -->
+<section class='no-pad'>
+  <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta>
 </section>

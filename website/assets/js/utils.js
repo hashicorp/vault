@@ -19,7 +19,7 @@ export function initializeComponents(obj) {
         }, [])
       if (matches.length > 1) return
       // if there's no data-state, don't try
-      if (!el.dataset.state) {
+      if (!el.dataset.state || !el.dataset.state.length) {
         return
       }
       // otherwise, initialize away
