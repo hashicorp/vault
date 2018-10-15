@@ -38,4 +38,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
     payload.data.id = payload.id;
     return requestType === 'queryRecord' ? payload.data : [payload.data];
   },
+  serializeHasMany() {
+    return;
+  },
 });

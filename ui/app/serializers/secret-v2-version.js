@@ -16,15 +16,16 @@ export default ApplicationSerializer.extend({
     return payload;
   },
   serialize(snapshot) {
-    let data = {
-      data: snapshot.attr('secretData'),
-    };
-    if (snapshot.attr('currentVersion')) {
-      data.options = {
-        cas: snapshot.attr('currentVerion'),
-      };
+    let version = 0;
+    let secret = snapshot.belongsTo('secret');
+    if (secret) {
+      version = secret.attr('currentVersion');
     }
-
-    return data;
+    return {
+      data: snapshot.attr('secretData'),
+      options: {
+        cas: version,
+      },
+    };
   },
 });
