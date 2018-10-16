@@ -75,8 +75,7 @@ type Hook struct {
 	ID        *int64     `json:"id,omitempty"`
 
 	// Only the following fields are used when creating a hook.
-	// Name and Config are required.
-	Name   *string                `json:"name,omitempty"`
+	// Config is required.
 	Config map[string]interface{} `json:"config,omitempty"`
 	Events []string               `json:"events,omitempty"`
 	Active *bool                  `json:"active,omitempty"`
@@ -92,16 +91,14 @@ func (h Hook) String() string {
 // See https://github.com/google/go-github/issues/1015 for more
 // information.
 type createHookRequest struct {
-	// Name and Config are required.
-	// Name must be passed as "web".
-	Name   *string                `json:"name,omitempty"`
+	// Config is required.
 	Config map[string]interface{} `json:"config,omitempty"`
 	Events []string               `json:"events,omitempty"`
 	Active *bool                  `json:"active,omitempty"`
 }
 
 // CreateHook creates a Hook for the specified repository.
-// Name and Config are required fields.
+// Config is a required field.
 //
 // Note that only a subset of the hook fields are used and hook must
 // not be nil.
@@ -111,7 +108,6 @@ func (s *RepositoriesService) CreateHook(ctx context.Context, owner, repo string
 	u := fmt.Sprintf("repos/%v/%v/hooks", owner, repo)
 
 	hookReq := &createHookRequest{
-		Name:   hook.Name,
 		Events: hook.Events,
 		Active: hook.Active,
 		Config: hook.Config,

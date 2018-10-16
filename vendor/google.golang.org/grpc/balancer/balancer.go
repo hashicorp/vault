@@ -28,6 +28,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/resolver"
 )
 
@@ -154,12 +155,17 @@ type PickOptions struct {
 	// FullMethodName is the method name that NewClientStream() is called
 	// with. The canonical format is /service/Method.
 	FullMethodName string
+	// Header contains the metadata from the RPC's client header.  The metadata
+	// should not be modified; make a copy first if needed.
+	Header metadata.MD
 }
 
 // DoneInfo contains additional information for done.
 type DoneInfo struct {
 	// Err is the rpc error the RPC finished with. It could be nil.
 	Err error
+	// Trailer contains the metadata from the RPC's trailer, if present.
+	Trailer metadata.MD
 	// BytesSent indicates if any bytes have been sent to the server.
 	BytesSent bool
 	// BytesReceived indicates if any byte has been received from the server.

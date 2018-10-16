@@ -60,6 +60,10 @@ type PullRequest struct {
 	NodeID              *string    `json:"node_id,omitempty"`
 	RequestedReviewers  []*User    `json:"requested_reviewers,omitempty"`
 
+	// RequestedTeams is populated as part of the PullRequestEvent.
+	// See, https://developer.github.com/v3/activity/events/types/#pullrequestevent for an example.
+	RequestedTeams []*Team `json:"requested_teams,omitempty"`
+
 	Links *PRLinks           `json:"_links,omitempty"`
 	Head  *PullRequestBranch `json:"head,omitempty"`
 	Base  *PullRequestBranch `json:"base,omitempty"`
