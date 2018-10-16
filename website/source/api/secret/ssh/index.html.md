@@ -400,7 +400,7 @@ This endpoint configures zero-address roles.
 
 ```json
 {
-  "roles": ["otp_key_role"]
+  "roles": "otp_key_role"
 }
 ```
 
