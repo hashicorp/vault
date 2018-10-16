@@ -12,20 +12,20 @@
     "@hashicorp/hashi-callouts": "^2.0.0",
     "@hashicorp/hashi-content": "^0.0.3",
     "@hashicorp/hashi-docs-sidenav": "^0.1.0",
-    "@hashicorp/hashi-docs-sitemap": "^0.0.1",
+    "@hashicorp/hashi-docs-sitemap": "^0.0.2",
     "@hashicorp/hashi-footer": "1.0.5",
     "@hashicorp/hashi-ga-form-fields": "1.0.2",
     "@hashicorp/hashi-global-styles": "^1.0.8",
-    "@hashicorp/hashi-hero": "^1.2.0",
+    "@hashicorp/hashi-hero": "^2.0.0",
     "@hashicorp/hashi-image": "1.0.3",
     "@hashicorp/hashi-linked-text-summary-list": "^0.1.2",
-    "@hashicorp/hashi-logo-grid": "2.0.0",
+    "@hashicorp/hashi-logo-grid": "2.1.0",
     "@hashicorp/hashi-mega-nav": "^0.0.7",
     "@hashicorp/hashi-nav": "1.0.5",
     "@hashicorp/hashi-newsletter-signup-form": "1.0.4",
     "@hashicorp/hashi-product-downloader": "^0.3.1",
-    "@hashicorp/hashi-product-subnav": "^0.2.0",
-    "@hashicorp/hashi-section-header": "2.0.0",
+    "@hashicorp/hashi-product-subnav": "^0.3.0",
+    "@hashicorp/hashi-section-header": "2.0.1",
     "@hashicorp/hashi-split-cta": "^0.0.4",
     "@hashicorp/hashi-vertical-text-block-list": "^0.1.0",
     "@hashicorp/localstorage-polyfill": "^1.0.2",
@@ -42,7 +42,7 @@
     "siema": "^1.5.1",
     "slugify": "^1.3.1",
     "strftime": "^0.10.0",
-    "tippy.js": "^3.0.4",
+    "tippy.js": "^3.0.6",
     "unfetch": "^4.0.1"
   },
   "devDependencies": {
@@ -52,6 +52,6 @@
     "spike": "^2.3.0",
     "spike-css-standards": "^4.0.0",
     "spike-js-standards": "^2.0.2",
-    "webpack-bundle-analyzer": "^3.0.2"
+    "webpack-bundle-analyzer": "^3.0.3"
   }
 }
