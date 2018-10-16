@@ -1,16 +1,13 @@
 -
-  title: "Installing Vault"
+  title: "Auth"
   docs:
-    - docs/install/index.html
+    - api/auth/index.html
 
 -
-  title: Configuration
+  title: Secret
   docs:
-    - docs/configuration/telemetry.html
-    - docs/configuration/seal/index.html
-    - docs/configuration/seal/pkcs11.html
-    - docs/configuration/seal/awskms.html
-    - docs/configuration/seal/azurekeyvault.html
-    - docs/configuration/listener/index.html
-    - docs/configuration/listener/tcp.html
-    - docs/configuration/ui/index.html
+    - api/secret/index.html
+    - api/secret/ad/index.html
+    - api/secret/alicloud/index.html
+    - api/secret/aws/index.html
+    - api/secret/azure/index.html

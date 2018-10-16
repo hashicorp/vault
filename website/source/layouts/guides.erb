@@ -4,7 +4,7 @@
       <hashi-docs-sidebar
         category='guides'
         current_page='<%= current_page.path %>'
-        data="<%= encode(sidebar_data) %>"
+        data="<%= encode(get_sidebar_data('guides')) %>"
         order="<%= encode([
           {
             category: 'getting-started',
@@ -87,5 +87,7 @@
     </div>
   <% end %>
 
-  <%= yield %>
+  <article class='g-content vault'>
+    <%= yield %>
+  </article>
 <% end %>

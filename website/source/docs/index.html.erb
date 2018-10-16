@@ -1,3 +1,9 @@
+---
+page_title: "Vault Documentation"
+description: |-
+  Vault reference documentation.
+---
+
 <div class='g-section-block'>
   <section id='intro' class='g-container'>
     <hashi-section-header
@@ -42,6 +48,9 @@
   <section id='categories' class='g-container'>
     <hashi-section-header headline='Documentation by Category'></hashi-section-header>
 
-    <hashi-docs-sitemap _data="<%= encode(data.docs_detailed_categories) %>"></hashi-docs-sitemap>
+    <hashi-docs-sitemap
+      order="<%= encode(data.docs_detailed_categories) %>"
+      data="<%= encode(get_sidebar_data('docs')) %>"
+    ></hashi-docs-sitemap>
   </section>
 </div>

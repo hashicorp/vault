@@ -4,7 +4,7 @@
       <hashi-docs-sidebar
         category='intro'
         current_page='<%= current_page.path %>'
-        data="<%= encode(sidebar_data) %>"
+        data="<%= encode(get_sidebar_data('intro')) %>"
         order="<%= encode([
           'use-cases',
           {
@@ -38,5 +38,7 @@
     </div>
   <% end %>
 
-  <%= yield %>
+  <article class='g-content vault'>
+    <%= yield %>
+  </article>
 <% end %>

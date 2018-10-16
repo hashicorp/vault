@@ -14,7 +14,7 @@ client/server architecture based on a RESTful API. Clients of Keywhiz access
 secrets through the API by authenticating with a client certificate or cookie.
 To allow for flexible consumption of secrets by arbitrary software, clients may
 also make use of a FUSE filesystem to expose secrets as files on disk, and use
-Unix file permissions for access control.  Human operators may authenticate
+Unix file permissions for access control. Human operators may authenticate
 using a cookie-based authentication either via command line utilities or
 through a management web interface.
 
@@ -27,7 +27,7 @@ operator usage.
 
 Vault and Keywhiz expose secrets via an API. The Vault [ACL
 system](/docs/concepts/policies.html) is used to protect secrets and gate
-access, similarly to the Keywhiz ACL system.  With Vault, all auditing is done
+access, similarly to the Keywhiz ACL system. With Vault, all auditing is done
 server side using [audit devices](/docs/audit/index.html).
 
 Keywhiz focuses on storage and distribution of secrets and supports rotation

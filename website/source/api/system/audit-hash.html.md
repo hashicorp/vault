@@ -1,6 +1,6 @@
 ---
 layout: "api"
-page_title: /sys/audit-hash - HTTP API"
+page_title: "/sys/audit-hash - HTTP API"
 sidebar_title: "<tt>/sys/audit-hash</tt>"
 sidebar_current: "api-http-system-audit-hash"
 description: |-
@@ -26,9 +26,9 @@ any binary data returned from an API call (such as a DER-format certificate) is
 base64-encoded by the Vault server in the response. As a result such information
 should also be base64-encoded to supply into the `input` parameter.
 
-| Method   | Path                    | Produces               |
-| :------- | :---------------------- | :--------------------- |
-| `POST`   | `/sys/audit-hash/:path` | `204 (empty body)`     |
+| Method | Path                    | Produces           |
+| :----- | :---------------------- | :----------------- |
+| `POST` | `/sys/audit-hash/:path` | `204 (empty body)` |
 
 ### Parameters
 
