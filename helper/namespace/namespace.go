@@ -114,10 +114,6 @@ func SplitIDFromString(input string) (string, string) {
 		prefix = "s."
 		input = input[2:]
 
-	case strings.HasPrefix(input, "r."):
-		prefix = "r."
-		input = input[2:]
-
 	case slashIdx > 0:
 		// Leases will never have a b./s. to start
 		if slashIdx == len(input)-1 {
