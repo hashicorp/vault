@@ -98,6 +98,11 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-docs-sidenav/-/hashi-docs-sidenav-0.1.0.tgz#567b68a57ec32d2a8bc8690e2cdfd61715a4fcc8"
   integrity sha512-9piu2dxHDWmeVBRxcLZGGu/GKmnmBtKzBzLnwnIiOHxp6pzY8PA2i1XwhGbOsH3o1qh/UzHqPVb9FMOSI1A0uQ==
 
+"@hashicorp/hashi-docs-sitemap@^0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-docs-sitemap/-/hashi-docs-sitemap-0.0.1.tgz#8702a90d302425dd6a2c6afb4b39c81770ce11e4"
+  integrity sha512-pvU83+rMVUKaSl6u9Pxqg6mO4fp3Le/nozYg8x7E4qjN3Ynkv01QfUhefe2EhdcdLkjbaHHeuCxxkdRyxLl8zg==
+
 "@hashicorp/hashi-footer@1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-footer/-/hashi-footer-1.0.5.tgz#c4907e6003c2cd0c3d973c7fee527ad468cca7f2"

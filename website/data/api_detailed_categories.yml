@@ -1,0 +1,16 @@
+-
+  title: "Installing Vault"
+  docs:
+    - docs/install/index.html
+
+-
+  title: Configuration
+  docs:
+    - docs/configuration/telemetry.html
+    - docs/configuration/seal/index.html
+    - docs/configuration/seal/pkcs11.html
+    - docs/configuration/seal/awskms.html
+    - docs/configuration/seal/azurekeyvault.html
+    - docs/configuration/listener/index.html
+    - docs/configuration/listener/tcp.html
+    - docs/configuration/ui/index.html

@@ -1,75 +1,44 @@
 <% page = dato.vault_oss_page %>
 
 <hashi-hero _data="<%= encode(page.hero) %>"></hashi-hero>
-
-<section class='g-container'>
-  <hashi-section-header
-    headline="<%= page.use_cases_headline.headline %>"
-    description="<%= page.use_cases_headline.description %>"
-  ></hashi-section-header>
-
-  <hashi-callouts _data="<%= encode(page.use_cases_callouts[0]) %>"></hashi-callouts>
-</section>
-
-<section class='gray'>
-  <div class='g-container'>
+<div class='g-section-block'>
+  <section class='g-container'>
     <hashi-section-header
-      headline="<%= page.features_headline.headline %>"
-      description="<%= page.features_headline.description %>"
+      headline="<%= page.use_cases_headline.headline %>"
+      description="<%= page.use_cases_headline.description %>"
     ></hashi-section-header>
 
-    <div class='button-container'>
-      <% page.features_buttons.buttons.each do |btn| %>
-        <hashi-button
-          title="<%= btn.text %>"
-          url="<%= btn.url %>"
-        ></hashi-button>
-      <% end %>
+    <hashi-callouts _data="<%= encode(page.use_cases_callouts[0]) %>"></hashi-callouts>
+  </section>
+
+  <section class='gray'>
+    <div class='g-container'>
+      <hashi-section-header
+        headline="<%= page.features_headline.headline %>"
+        description="<%= page.features_headline.description %>"
+      ></hashi-section-header>
+
+      <div class='button-container'>
+        <% page.features_buttons.buttons.each do |btn| %>
+          <hashi-button
+            title="<%= btn.text %>"
+            url="<%= btn.url %>"
+          ></hashi-button>
+        <% end %>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class='g-container'>
-  <hashi-section-header
-    headline="<%= page.documentation_headline.headline %>"
-    description="<%= page.documentation_headline.description %>"
-  ></hashi-section-header>
+  <section class='g-container'>
+    <hashi-section-header
+      headline="<%= page.documentation_headline.headline %>"
+      description="<%= page.documentation_headline.description %>"
+    ></hashi-section-header>
 
-  <hashi-linked-text-summary-list _data="<%= encode([
-    {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }, {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }, {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }, {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }, {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }, {
-      title: 'Item 1',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.',
-      link: 'https://www.hashicorp.com/',
-      external: true
-    }
-  ]) %>"></hashi-linked-text-summary-list>
-</section>
+    <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
+  </section>
 
-<section class='no-pad'>
-  <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta>
-</section>
+  <section class='no-pad'>
+    <hashi-split-cta _data="<%= encode(page.oss_enterprise_ctas.items) %>"></hashi-split-cta>
+  </section>
+</div>

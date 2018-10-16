@@ -12,6 +12,7 @@ const hero = require('@hashicorp/hashi-hero')
 const callouts = require('@hashicorp/hashi-callouts')
 const splitCta = require('@hashicorp/hashi-split-cta')
 const linkedTextSummaryList = require('@hashicorp/hashi-linked-text-summary-list')
+const docsSitemap = require('@hashicorp/hashi-docs-sitemap')
 
 module.exports = {
   'hashi-footer': footer,
@@ -27,5 +28,6 @@ module.exports = {
   'hashi-hero': hero,
   'hashi-callouts': callouts,
   'hashi-split-cta': splitCta,
-  'hashi-linked-text-summary-list': linkedTextSummaryList
+  'hashi-linked-text-summary-list': linkedTextSummaryList,
+  'hashi-docs-sitemap': docsSitemap
 }
