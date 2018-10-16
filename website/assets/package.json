@@ -12,6 +12,7 @@
     "@hashicorp/hashi-callouts": "^2.0.0",
     "@hashicorp/hashi-content": "^0.0.3",
     "@hashicorp/hashi-docs-sidenav": "^0.1.0",
+    "@hashicorp/hashi-docs-sitemap": "^0.0.1",
     "@hashicorp/hashi-footer": "1.0.5",
     "@hashicorp/hashi-ga-form-fields": "1.0.2",
     "@hashicorp/hashi-global-styles": "^1.0.8",

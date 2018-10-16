@@ -1,4 +1,4 @@
-#page-home {
+.g-section-block {
   & section {
     padding-top: 96px;
     padding-bottom: 96px;
@@ -15,5 +15,9 @@
   & .button-container {
     display: flex;
     justify-content: center;
+
+    & > a + a {
+      margin-left: 16px;
+    }
   }
 }
