@@ -1,3 +1,5 @@
+$progress-bar-height: 4px;
+
 .ui-wizard-container {
   display: flex;
   flex-direction: column;
@@ -182,58 +184,62 @@
 }
 
 .time-estimate {
-  display: flex;
   align-items: center;
   color: $grey-light;
+  display: flex;
   font-size: 12px;
 }
 
 .progress-container {
-  height: 12px;
-  display: flex;
-  width: 100%;
   align-items: center;
+  height: $progress-bar-height;
+  display: flex;
   position: relative;
+  width: 100%;
 }
 
 .progress-bar {
-  height: 12px;
-  background: $grey-light;
+  background: $ui-gray-100;
+  border: 1px solid $ui-gray-200;
+  border-radius: $progress-bar-height;
   display: flex;
+  height: $progress-bar-height;
+  position: relative;
   width: 100%;
-  position: relative;
 }
-.feature-progress-container {
-  flex: 1 0 auto;
-  position: relative;
-  align-items: center;
 
-  &:not(:first-of-type) {
-    margin-left: 16px;
-  }
+.feature-progress-container {
+  align-items: center;
+  flex: 1 0 auto;
+  padding: 0 $progress-bar-height;
+  position: relative;
 }
 
 .feature-progress {
-  height: 12px;
-  background: #2eb039;
+  background: $green;
+  height: $progress-bar-height;
 }
 
 .feature-check {
+  left: 0;
   position: absolute;
-  left: -18px;
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 10;
-  top: -6px;
+
+  svg {
+    margin: -2px;
+  }
 }
 
 .feature-progress-container .feature-check {
-  right: 0;
-  left: calc(100% - 4px);
-}
-
-.completed-check svg {
-  fill: #2eb039;
+  left: 100%;
 }
 
 .incomplete-check svg {
-  fill: $grey-light;
+  fill: $ui-gray-200;
+}
+
+.completed-check svg {
+  fill: $green;
 }
