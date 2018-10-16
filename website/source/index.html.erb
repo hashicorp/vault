@@ -1,4 +1,16 @@
+---
+page_title: "HashiCorp Vault"
+---
+
 <% page = dato.vault_oss_page %>
+
+<hashi-product-subnav _data="<%= encode({
+  current_path: current_page.path,
+  dark: false,
+  products: dato.enterprise_products.map(&:to_hash),
+  subnav: dato.vault_product_page.subnav.to_hash,
+  project_site: true
+}) %>"></hashi-product-subnav>
 
 <hashi-hero _data="<%= encode(page.hero) %>"></hashi-hero>
 <div class='g-section-block'>
