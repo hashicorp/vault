@@ -39,6 +39,7 @@ example.vault.d
 website/vendor
 website/.bundle
 website/build
+website/tmp
 
 # Vagrant
 .vagrant/
