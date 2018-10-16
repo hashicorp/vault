@@ -86,6 +86,7 @@ var (
 	enterprisePreSeal    = enterprisePreSealImpl
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
+	LastWAL              = lastWALImpl
 	LastRemoteWAL        = lastRemoteWALImpl
 	WaitUntilWALShipped  = waitUntilWALShippedImpl
 )
@@ -1512,6 +1513,10 @@ func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 
 func waitUntilWALShippedImpl(ctx context.Context, c *Core, index uint64) bool {
 	return true
+}
+
+func lastWALImpl(c *Core) uint64 {
+	return 0
 }
 
 func lastRemoteWALImpl(c *Core) uint64 {
