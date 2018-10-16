@@ -1072,7 +1072,7 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 	// Remove identity indices from aliases table for those that needs to
 	// be removed
 	for _, alias := range removeList {
-		err = i.MemDBDeleteAliasByIDInTxn(txn, aliasToBeRemoved.ID, false)
+		err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
 		if err != nil {
 			return err
 		}
