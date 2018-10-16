@@ -9,55 +9,46 @@ activate :hashicorp do |h|
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
   h.releases_enabled = true
-  h.minify_css = false
-  h.minify_javascript = false
-  h.hash_assets = false
+  h.datocms_api_key = '78d2968c99a076419fbb'
 end
 
-# compile js with webpack, css with postcss
-activate :external_pipeline,
-  name: 'assets',
-  command: "cd assets && ./node_modules/.bin/spike #{build? ? :compile : :watch}",
-  source: 'assets/public'
+# ready do
+#   dato.tap do |dato|
+#     sitemap.resources.each do |page|
+#       if page.path.match(/\.html$/)
+#         if page.metadata[:options][:layout] && ['docs', 'guides', 'api', 'intro'].include?(page.metadata[:options][:layout])
+#           # get the page category from the url
+#           match = page.path.match(/^(.*?)\//)
+#           # proxy the page route
+#           proxy "#{page.path}", "/content", {
+#             layout: page.metadata[:options][:layout],
+#             locals: page.metadata[:page].merge({
+#               content: render(page),
+#               sidebar_data: get_sidebar_data(match ? match[1] : nil)
+#             })
+#           }, ignore: true
+#         end
+#       end
+#     end
+#   end
+# end
 
-# pull site data from datocms
-activate :dato,
-  token: '78d2968c99a076419fbb'
-
-ready do
-  dato.tap do |dato|
-    sitemap.resources.each do |page|
-      if page.path.match(/\.html$/)
-        if page.metadata[:options][:layout] && ['docs', 'guides', 'api', 'intro'].include?(page.metadata[:options][:layout])
-          # get the page category from the url
-          match = page.path.match(/^(.*?)\//)
-          # proxy the page route
-          proxy "#{page.path}", "/content", {
-            layout: page.metadata[:options][:layout],
-            locals: page.metadata[:page].merge({
-              content: render(page),
-              sidebar_data: get_sidebar_data(match ? match[1] : nil)
-            })
-          }
-        end
-      end
-    end
-  end
-end
-
-# Formats and filters a category of docs for the sidebar component
-def get_sidebar_data(category)
-  sitemap.resources.select { |resource|
-    !!Regexp.new("^#{category}").match(resource.path)
-  }.map { |resource|
-    {
-      path: resource.path,
-      data: resource.data.to_hash.tap { |a| a.delete 'description'; a }
-    }
-  }
-end
+# Netlify redirects/headers
+proxy '_redirects', 'netlify-redirects', ignore: true
 
 helpers do
+  # Formats and filters a category of docs for the sidebar component
+  def get_sidebar_data(category)
+    sitemap.resources.select { |resource|
+      !!Regexp.new("^#{category}").match(resource.path)
+    }.map { |resource|
+      {
+        path: resource.path,
+        data: resource.data.to_hash.tap { |a| a.delete 'description'; a }
+      }
+    }
+  end
+
   # Returns the FQDN of the image URL.
   # @param [String] path
   # @return [String]

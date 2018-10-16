@@ -4,7 +4,7 @@
       <hashi-docs-sidebar
         category='api'
         current_page='<%= current_page.path %>'
-        data="<%= encode(sidebar_data) %>"
+        data="<%= encode(get_sidebar_data('api')) %>"
         order="<%= encode([
           'libraries',
           'relatedtools',
@@ -141,5 +141,7 @@
     </div>
   <% end %>
 
-  <%= yield %>
+  <article class='g-content vault'>
+    <%= yield %>
+  </article>
 <% end %>
