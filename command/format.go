@@ -379,6 +379,10 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		}
 	}
 
+	if leaderStatus.LastWAL != 0 {
+		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
+	}
+
 	ui.Output(tableOutput(out, nil))
 	return 0
 }
