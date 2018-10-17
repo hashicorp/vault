@@ -5,7 +5,7 @@
   external: true
 -
   title: 'Internals'
-  description: 'Technical details about Vault's architecture, cryptographic components, and security model'
+  description: "Technical details about Vault's architecture, cryptographic components, and security model"
   link: 'https://www.hashicorp.com/'
   external: true
 -
@@ -26,7 +26,7 @@
   title: 'Vault Agent'
   description: 'Configuring the Vault binary as a client daemon for performing security operations'
   link: 'https://www.hashicorp.com/'
-   external: true
+  external: true
 -
   title: 'Secret Engines'
   description: 'Engines for performing security operations using secrets stored within Vault'
@@ -37,18 +37,18 @@
   description: 'Methods for configuring how users and applications authenticate into Vault'
   link: 'https://www.hashicorp.com/'
   external: true
-  -
+-
   title: 'Audit Devices'
   description: 'Devices for capturing audit logs monitoring activity within Vault'
   link: 'https://www.hashicorp.com/'
   external: true
-  -
+-
   title: 'Plugin Backends'
   description: 'Configuring how Vault operates with external systems and applications via plugins'
   link: 'https://www.hashicorp.com/'
   external: true
-  -
+-
   title: 'Vault Enterprise'
-  description: 'Topics related to Vault Enterprise, Vault's premium varient for professional teams and organizations'
+  description: "Topics related to Vault Enterprise, Vault's premium varient for professional teams and organizations"
   link: 'https://www.hashicorp.com/'
   external: true

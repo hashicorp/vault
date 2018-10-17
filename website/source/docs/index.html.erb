@@ -25,7 +25,7 @@ description: |-
     </div>
   </section>
 
-  <section id='categories' class='g-container'>
+  <section id='categories'>
     <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
   </section>
 
@@ -45,7 +45,7 @@ description: |-
     </div>
   </section>
 
-  <section id='categories' class='g-container'>
+  <section id='sitemap' class='g-container'>
     <hashi-section-header headline='Documentation by Category'></hashi-section-header>
 
     <hashi-docs-sitemap
@@ -53,4 +53,32 @@ description: |-
       data="<%= encode(get_sidebar_data('docs')) %>"
     ></hashi-docs-sitemap>
   </section>
+
+  <div id='get-started'>
+    <hashi-hero
+      _data="<%= encode({
+        "centered": true,
+        "background_image": {
+          "url": "https://www.datocms-assets.com/2885/1538522323-vault-grid-background.jpg",
+          "format": "svg",
+          "alt": "vault background"
+        },
+        "title": "Ready to get started?",
+        "buttons": [
+          {
+            "title": "Learn Vault",
+            "url": "#",
+            "external": false,
+            "theme": "light-fill",
+          },
+          {
+            "title": "Download",
+            "url": "#",
+            "external": false,
+            "theme": "",
+          }
+        ]
+      }) %>"
+    ></hashi-hero>
+  </div>
 </div>

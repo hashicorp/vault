@@ -3,8 +3,13 @@
     padding-top: 96px;
     padding-bottom: 96px;
 
+    @media (max-width: 768px) {
+      padding-top: 60px;
+      padding-bottom: 60px;
+    }
+
     &.gray {
-      background: var(--gray-10);
+      background: #f6f7fa;
     }
 
     &.no-pad {
