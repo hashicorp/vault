@@ -27,7 +27,7 @@ By leveraging Vault's plugin system, vendors are able to build extensible secret
 </p>
 
 <p>
-<strong>Audit Devices</strong>: Audit devices are the components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors.  (no plugin interface - built into Vault Core. Leave it there - no reqs yet but expect some soon)
+<strong>Audit Devices</strong>: Audit devices are the components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors.  
 </p>
 
 <p>
