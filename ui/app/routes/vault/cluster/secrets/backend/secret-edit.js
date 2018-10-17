@@ -10,7 +10,7 @@ export default Route.extend(UnloadModelRoute, {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.get('engineType');
-    if (backendType === 'kv' || backendType === 'cubbyhole') {
+    if (backendType === 'kv' || backendType === 'cubbyhole' || backendType === 'generic') {
       return resolve({});
     }
     let path;
@@ -18,6 +18,8 @@ export default Route.extend(UnloadModelRoute, {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
+    } else {
+      path = backend + '/' + secret;
     }
     return this.store.findRecord('capabilities', path);
   },

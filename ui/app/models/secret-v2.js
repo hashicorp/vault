@@ -1,6 +1,5 @@
 import DS from 'ember-data';
 import { computed } from '@ember/object';
-import { match } from '@ember/object/computed';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import KeyMixin from 'vault/mixins/key-mixin';
 

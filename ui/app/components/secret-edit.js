@@ -2,7 +2,7 @@ import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { computed } from '@ember/object';
+import { computed, set } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
@@ -233,7 +233,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleChange() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
-      this.modelForData.set('secretData', this.secretData.toJSON());
+      set(this.modelForData, 'secretData', this.secretData.toJSON());
     },
 
     createOrUpdateKey(type, event) {
