@@ -4,6 +4,11 @@ CHANGES:
 
  * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
 
+FEATURES:
+
+ * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions [GH-5388]
+
 IMPROVEMENTS:
 
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
