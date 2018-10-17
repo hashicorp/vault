@@ -31,11 +31,13 @@ page_title: "HashiCorp Vault"
       ></hashi-section-header>
 
       <div class='button-container'>
-        <% page.features_buttons.buttons.each do |btn| %>
-          <hashi-button
-            title="<%= btn.text %>"
-            url="<%= btn.url %>"
-          ></hashi-button>
+        <% if page.features_buttons %>
+          <% page.features_buttons.buttons.each do |btn| %>
+            <hashi-button
+              title="<%= btn.text %>"
+              url="<%= btn.url %>"
+            ></hashi-button>
+          <% end %>
         <% end %>
       </div>
     </div>

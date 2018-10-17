@@ -1,18 +1,18 @@
 -
-  title: 'Overview'
-  description: 'Topics related to developing applications with the Vault API, including client libraries and related tools'
-  link: 'https://www.hashicorp.com/'
+  title: "Overview"
+  description: "Topics related to developing applications with the Vault API, including client libraries and related tools"
+  link: "https://www.hashicorp.com/"
   external: true
 -
-  title: 'Secrets Engines'
-  description: 'Functions related to managing secrets and secrets engines'
-  link: 'https://www.hashicorp.com/'
+  title: "Secrets Engines"
+  description: "Functions related to managing secrets and secrets engines"
+  link: "https://www.hashicorp.com/"
 -
-  title: 'Auth Methods'
-  description: 'Functions related to configuring how users and applications authenticate into Vault'
-  link: 'https://www.hashicorp.com/'
+  title: "Auth Methods"
+  description: "Functions related to configuring how users and applications authenticate into Vault"
+  link: "https://www.hashicorp.com/"
 -
-  title: 'System Backends'
-  description: 'Functions related to managing Vault's configuration, including replication, storage, and managing Vault's unseal processes'
-  link: 'https://www.hashicorp.com/'
+  title: "System Backends"
+  description: "Functions related to managing Vault's configuration, including replication, storage, and managing Vault's unseal processes"
+  link: "https://www.hashicorp.com/"
   external: true
