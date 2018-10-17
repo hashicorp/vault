@@ -91,8 +91,12 @@ export default Service.extend(DEFAULTS, {
     stateKey += state;
     this.set(stateType, stateKey);
     if (stateType === 'featureState') {
-      //TODO: what if they are in the middle of the tutorial when they start tracking progress?
-      if (state === 'idle' || (state === 'wrap' && this.featureMachineHistory === null)) {
+      //only track progress if we are on the first step of the first feature
+      if (
+        this.getCompletedFeatures().length === 0 &&
+        this.featureMachineHistory === null &&
+        (state === 'idle' || state === 'wrap')
+      ) {
         let newHistory = [state];
         this.set('featureMachineHistory', newHistory);
       } else {
@@ -108,7 +112,9 @@ export default Service.extend(DEFAULTS, {
           }
         }
       }
-      this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, this.featureMachineHistory);
+      if (this.featureMachineHistory) {
+        this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, this.featureMachineHistory);
+      }
     }
   },
 
@@ -320,8 +326,8 @@ export default Service.extend(DEFAULTS, {
 
     this.saveExtState(STORAGE_KEYS.FEATURE_LIST, features.length ? features : null);
     this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE);
-    this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE_HISTORY);
-    this.set('featureMachineHistory', null);
+    this.set('featureMachineHistory', []);
+    this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, []);
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {

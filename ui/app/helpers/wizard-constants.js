@@ -43,7 +43,10 @@ export const DEFAULTS = {
 export const FEATURE_MACHINE_STEPS = {
   secrets: {
     encryption: 5,
-    secret: 5,
+    secret: {
+      list: 4,
+      secret: 5,
+    },
     role: 7,
   },
   policies: 5,

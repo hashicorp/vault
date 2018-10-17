@@ -11,10 +11,12 @@ export default Component.extend({
   selectProgress: null,
   currentMachine: computed.alias('wizard.currentMachine'),
   tutorialState: computed.alias('wizard.currentState'),
+  tutorialComponent: computed.alias('wizard.tutorialComponent'),
   showProgress: computed('wizard.featureComponent', 'tutorialState', function() {
     return (
-      this.tutorialState.includes('init.active') ||
-      (this.wizard.featureComponent && this.wizard.featureMachineHistory)
+      this.tutorialComponent.includes('active') &&
+      (this.tutorialState.includes('init.active') ||
+        (this.wizard.featureComponent && this.wizard.featureMachineHistory))
     );
   }),
   featureMachineHistory: computed.alias('wizard.featureMachineHistory'),
@@ -29,7 +31,10 @@ export default Component.extend({
       let totalSteps = FEATURE_MACHINE_STEPS[this.currentMachine];
       if (this.currentMachine === 'secrets') {
         if (this.featureMachineHistory.includes('secret')) {
-          totalSteps = totalSteps['secret'];
+          totalSteps = totalSteps['secret']['secret'];
+        }
+        if (this.featureMachineHistory.includes('list')) {
+          totalSteps = totalSteps['secret']['list'];
         }
         if (this.featureMachineHistory.includes('encryption')) {
           totalSteps = totalSteps['encryption'];
@@ -66,21 +71,23 @@ export default Component.extend({
         showIcon: true,
       });
     } else {
-      this.completedFeatures.forEach(feature => {
-        bar.push({ style: 'width:100%;', completed: true, feature: feature, showIcon: true });
-      });
-      this.wizard.featureList.forEach(feature => {
-        if (feature === this.currentMachine) {
-          bar.push({
-            style: `width:${this.currentFeatureProgress.percentage}%;`,
-            completed: this.currentFeatureProgress.percentage == 100 ? true : false,
-            feature: feature,
-            showIcon: true,
-          });
-        } else {
-          bar.push({ style: 'width:0%;', completed: false, feature: feature, showIcon: true });
-        }
-      });
+      if (this.currentFeatureProgress) {
+        this.completedFeatures.forEach(feature => {
+          bar.push({ style: 'width:100%;', completed: true, feature: feature, showIcon: true });
+        });
+        this.wizard.featureList.forEach(feature => {
+          if (feature === this.currentMachine) {
+            bar.push({
+              style: `width:${this.currentFeatureProgress.percentage}%;`,
+              completed: this.currentFeatureProgress.percentage == 100 ? true : false,
+              feature: feature,
+              showIcon: true,
+            });
+          } else {
+            bar.push({ style: 'width:0%;', completed: false, feature: feature, showIcon: true });
+          }
+        });
+      }
     }
     return bar;
   }),
