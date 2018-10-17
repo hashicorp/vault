@@ -10,6 +10,7 @@
 @import 'pages/_downloads';
 @import 'pages/_docs';
 @import 'pages/_section_block';
+@import 'pages/_home';
 
 /* NPM Preact Components */
 @import '@hashicorp/hashi-logo-grid/dist/style.css';
