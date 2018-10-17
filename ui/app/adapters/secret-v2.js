@@ -36,15 +36,19 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  urlForUpdateRecord(store, type, snapshot) {
+  detailURL(snapshot) {
     let backend = snapshot.belongsTo('engine', { id: true });
     let { id } = snapshot;
     return this._url(backend, id);
   },
 
+  urlForUpdateRecord(store, type, snapshot) {
+    return this.detailURL(snapshot);
+  },
+  urlForCreateRecord(modelName, snapshot) {
+    return this.detailURL(snapshot);
+  },
   urlForDeleteRecord(store, type, snapshot) {
-    let backend = snapshot.belongsTo('engine', { id: true });
-    let { id } = snapshot;
-    return this._url(backend, id);
+    return this.detailURL(snapshot);
   },
 });
