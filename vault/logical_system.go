@@ -159,12 +159,25 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.handleRawRead,
-				logical.UpdateOperation: b.handleRawWrite,
-				logical.DeleteOperation: b.handleRawDelete,
-				logical.ListOperation:   b.handleRawList,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRawRead,
+					Summary:  "Read the value of the key at the given path.",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRawWrite,
+					Summary:  "Update the value of the key at the given path.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleRawDelete,
+					Summary:  "Delete the key with given path.",
+				},
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleRawList,
+					Summary:  "Return a list keys for a given path prefix.",
+				},
 			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		})
