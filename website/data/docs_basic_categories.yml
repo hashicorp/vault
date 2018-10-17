@@ -1,26 +1,54 @@
 -
-  title: 'Item 1'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
+  title: 'Installing Vault'
+  description: 'Installing Vault and Vault Enterprise'
   link: 'https://www.hashicorp.com/'
   external: true
 -
-  title: 'Item 2'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
-  link: 'https://www.hashicorp.com/'
--
-  title: 'Item 3'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
-  link: 'https://www.hashicorp.com/'
--
-  title: 'Item 4'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
+  title: 'Internals'
+  description: 'Technical details about Vault's architecture, cryptographic components, and security model'
   link: 'https://www.hashicorp.com/'
   external: true
 -
-  title: 'Item 5'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
+  title: 'Basic Concepts'
+  description: 'Foundational concepts critical to understanding how Vault operates'
+  link: 'https://www.hashicorp.com/'
+  external: true
+-
+  title: 'Commands (CLI)'
+  description: 'Managing Vault via its Command Line Interface (CLI)'
   link: 'https://www.hashicorp.com/'
 -
-  title: 'Item 6'
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae vulputate arcu. Cras tincidunt.'
+  title: 'Configuration'
+  description: 'Deploying Vault systems and configuring components such as storage and unseal interfaces'
   link: 'https://www.hashicorp.com/'
+  external: true
+-
+  title: 'Vault Agent'
+  description: 'Configuring the Vault binary as a client daemon for performing security operations'
+  link: 'https://www.hashicorp.com/'
+   external: true
+-
+  title: 'Secret Engines'
+  description: 'Engines for performing security operations using secrets stored within Vault'
+  link: 'https://www.hashicorp.com/'
+  external: true
+-
+  title: 'Auth Methods'
+  description: 'Methods for configuring how users and applications authenticate into Vault'
+  link: 'https://www.hashicorp.com/'
+  external: true
+  -
+  title: 'Audit Devices'
+  description: 'Devices for capturing audit logs monitoring activity within Vault'
+  link: 'https://www.hashicorp.com/'
+  external: true
+  -
+  title: 'Plugin Backends'
+  description: 'Configuring how Vault operates with external systems and applications via plugins'
+  link: 'https://www.hashicorp.com/'
+  external: true
+  -
+  title: 'Vault Enterprise'
+  description: 'Topics related to Vault Enterprise, Vault's premium varient for professional teams and organizations'
+  link: 'https://www.hashicorp.com/'
+  external: true
