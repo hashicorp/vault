@@ -816,11 +816,14 @@ func (a *csAttempt) finish(err error) {
 
 	if a.done != nil {
 		br := false
+		var tr metadata.MD
 		if a.s != nil {
 			br = a.s.BytesReceived()
+			tr = a.s.Trailer()
 		}
 		a.done(balancer.DoneInfo{
 			Err:           err,
+			Trailer:       tr,
 			BytesSent:     a.s != nil,
 			BytesReceived: br,
 		})

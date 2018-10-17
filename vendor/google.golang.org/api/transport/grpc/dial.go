@@ -59,7 +59,9 @@ func dial(ctx context.Context, insecure bool, opts []option.ClientOption) (*grpc
 	if o.GRPCConn != nil {
 		return o.GRPCConn, nil
 	}
-	var grpcOpts []grpc.DialOption
+	grpcOpts := []grpc.DialOption{
+		grpc.WithDisableRetry(), // We don't want to have two methods of retry until we're ready for it.
+	}
 	if insecure {
 		grpcOpts = []grpc.DialOption{grpc.WithInsecure()}
 	} else if !o.NoAuth {

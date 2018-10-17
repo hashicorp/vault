@@ -164,7 +164,7 @@ func (s *AppsService) ListUserInstallations(ctx context.Context, opt *ListOption
 //
 // GitHub API docs: https://developer.github.com/v3/apps/#create-a-new-installation-token
 func (s *AppsService) CreateInstallationToken(ctx context.Context, id int64) (*InstallationToken, *Response, error) {
-	u := fmt.Sprintf("installations/%v/access_tokens", id)
+	u := fmt.Sprintf("app/installations/%v/access_tokens", id)
 
 	req, err := s.client.NewRequest("POST", u, nil)
 	if err != nil {

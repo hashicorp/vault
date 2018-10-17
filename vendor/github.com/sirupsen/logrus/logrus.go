@@ -69,7 +69,7 @@ const (
 	// PanicLevel level, highest level of severity. Logs and then calls panic with the
 	// message passed to Debug, Info, ...
 	PanicLevel Level = iota
-	// FatalLevel level. Logs and then calls `os.Exit(1)`. It will exit even if the
+	// FatalLevel level. Logs and then calls `logger.Exit(1)`. It will exit even if the
 	// logging level is set to Panic.
 	FatalLevel
 	// ErrorLevel level. Logs. Used for errors that should definitely be noted.
