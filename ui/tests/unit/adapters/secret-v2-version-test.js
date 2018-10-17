@@ -13,6 +13,13 @@ module('Unit | Adapter | secret-v2-version', function(hooks) {
     this.server.shutdown();
   });
 
+  let fakeStore = {
+    peekRecord() {
+      return {
+        reload() {},
+      };
+    },
+  };
   [
     [
       'findRecord with version',
@@ -22,25 +29,25 @@ module('Unit | Adapter | secret-v2-version', function(hooks) {
       '/v1/secret/data/foo?version=2',
     ],
     [
-      'deleteRecord with delete',
-      'deleteRecord',
-      [null, {}, { id: JSON.stringify(['secret', 'foo', '2']), adapterOptions: { deleteType: 'delete' } }],
+      'v2DeleteOperation with delete',
+      'v2DeleteOperation',
+      [fakeStore, JSON.stringify(['secret', 'foo', '2']), 'delete'],
       'POST',
       '/v1/secret/delete/foo',
       { versions: ['2'] },
     ],
     [
-      'deleteRecord with destroy',
-      'deleteRecord',
-      [null, {}, { id: JSON.stringify(['secret', 'foo', '2']), adapterOptions: { deleteType: 'destroy' } }],
+      'v2DeleteOperation with destroy',
+      'v2DeleteOperation',
+      [fakeStore, JSON.stringify(['secret', 'foo', '2']), 'destroy'],
       'POST',
       '/v1/secret/destroy/foo',
       { versions: ['2'] },
     ],
     [
-      'deleteRecord with destroy',
-      'deleteRecord',
-      [null, {}, { id: JSON.stringify(['secret', 'foo', '2']), adapterOptions: { deleteType: 'undelete' } }],
+      'v2DeleteOperation with destroy',
+      'v2DeleteOperation',
+      [fakeStore, JSON.stringify(['secret', 'foo', '2']), 'undelete'],
       'POST',
       '/v1/secret/undelete/foo',
       { versions: ['2'] },
@@ -61,7 +68,7 @@ module('Unit | Adapter | secret-v2-version', function(hooks) {
       '/v1/secret/data/foo',
     ],
   ].forEach(([testName, adapterMethod, args, expectedHttpVerb, expectedURL, exptectedRequestBody]) => {
-    test(`secret-v2: ${testName}`, function(assert) {
+    test(`${testName}`, function(assert) {
       let adapter = this.owner.lookup('adapter:secret-v2-version');
       adapter[adapterMethod](...args);
       let { url, method, requestBody } = this.server.handledRequests[0];

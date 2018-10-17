@@ -29,12 +29,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `secret/data/${path}`,
-      'calls capabilites with the correct path'
-    );
+
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -55,12 +50,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `${enginePath}/${secretPath}`,
-      'calls capabilites with the correct path'
-    );
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('it redirects to the path ending in / for list pages', async function(assert) {
