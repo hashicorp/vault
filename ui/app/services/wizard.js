@@ -326,8 +326,10 @@ export default Service.extend(DEFAULTS, {
 
     this.saveExtState(STORAGE_KEYS.FEATURE_LIST, features.length ? features : null);
     this.storage().removeItem(STORAGE_KEYS.FEATURE_STATE);
-    this.set('featureMachineHistory', []);
-    this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, []);
+    if (this.featureMachineHistory) {
+      this.set('featureMachineHistory', []);
+      this.saveExtState(STORAGE_KEYS.FEATURE_STATE_HISTORY, []);
+    }
     if (features.length > 0) {
       this.buildFeatureMachine();
     } else {
