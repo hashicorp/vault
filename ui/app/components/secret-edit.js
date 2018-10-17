@@ -189,6 +189,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return model.save().then(() => {
       if (!model.isError) {
         if (isV2 && Object.keys(secret.changedAttributes()).length) {
+          secret.set('id', key);
           // save secret metadata
           secret
             .save()

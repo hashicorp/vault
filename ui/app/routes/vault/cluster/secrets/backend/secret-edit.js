@@ -140,11 +140,10 @@ export default Route.extend(UnloadModelRoute, {
     willTransition(transition) {
       let model = this.controller.model;
       let version = model.get('selectedVersion');
-      // if (model.isNew || (version && version.isNew)) {
-      //   return this._super(...arguments);
-      // }
-      if (model.hasDirtyAttributes || (version && version.hasDirtyAttributes)) {
-        console.log(model.changedAttributes(), version.changedAttributes());
+      if (
+        Object.keys(model.changedAttributes()).length ||
+        (version && Object.keys(version.changedAttributes()).length)
+      ) {
         if (
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
