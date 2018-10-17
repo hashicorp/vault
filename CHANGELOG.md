@@ -33,6 +33,7 @@ SECURITY:
 
 IMPROVEMENTS:
 
+ * auth/ldap: Listing of users and groups return absolute paths [GH-5537]
  * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
 
 BUG FIXES:
