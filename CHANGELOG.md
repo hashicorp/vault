@@ -6,6 +6,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/token: New tokens are salted using SHA2-256 HMAC instead of SHA1 hash
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
 
