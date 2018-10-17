@@ -14,7 +14,7 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 	doReq := func(req *logical.Request) *logical.Response {
 		resp, err := b.HandleRequest(context.Background(), req)
-		if err != nil {
+		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("got err:\n%#v\nreq:\n%#v\n", err, *req)
 		}
 		return resp
