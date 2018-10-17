@@ -46,11 +46,31 @@ description: |-
   </section>
 
   <section id='categories' class='g-container'>
-    <hashi-section-header headline='Documentation by Category'></hashi-section-header>
+    <hashi-section-header headline='API Reference'></hashi-section-header>
 
     <hashi-docs-sitemap
       order="<%= encode(data.api_detailed_categories) %>"
       data="<%= encode(get_sidebar_data('api')) %>"
     ></hashi-docs-sitemap>
   </section>
+
+  <section id='get-started' class='black'>
+    <div class='g-container'>
+      <hashi-section-header headline='Ready to get started?'></hashi-section-header>
+
+      <div class='button-container'>
+        <hashi-button
+          title="Learn Vault"
+          url="https://learn.hashicorp.com/vault"
+          theme='light-fill'
+        ></hashi-button>
+        <hashi-button
+          title="Download"
+          url="/downloads.html"
+          theme='light-outline'
+        ></hashi-button>
+      </div>
+    </div>
+  </section>
+
 </div>

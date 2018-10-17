@@ -1,17 +1,6 @@
 @import 'normalize.css';
 @import '@hashicorp/hashi-global-styles/style';
 
-/* to be removed pending new components */
-@import '_alerts';
-@import '_inner';
-@import '_secondary-nav';
-
-/* Pages */
-@import 'pages/_downloads';
-@import 'pages/_docs';
-@import 'pages/_section_block';
-@import 'pages/_home';
-
 /* NPM Preact Components */
 @import '@hashicorp/hashi-logo-grid/dist/style.css';
 @import '@hashicorp/hashi-footer/dist/style.css';
@@ -31,3 +20,14 @@
 @import '@hashicorp/hashi-split-cta/dist/style.css';
 @import '@hashicorp/hashi-linked-text-summary-list/dist/style.css';
 @import '@hashicorp/hashi-docs-sitemap/dist/style.css';
+
+/* to be removed pending new components */
+@import '_alerts';
+@import '_inner';
+@import '_secondary-nav';
+
+/* Pages */
+@import 'pages/_downloads';
+@import 'pages/_docs';
+@import 'pages/_section_block';
+@import 'pages/_home';

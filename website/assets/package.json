@@ -35,6 +35,7 @@
     "normalize.css": "^8.0.0",
     "object-assign": "^4.1.1",
     "object-fit-images": "^3.2.4",
+    "postcss-extend-rule": "^2.0.0",
     "preact": "^8.3.1",
     "promise-polyfill": "^8.1.0",
     "query-string": "^6.2.0",
