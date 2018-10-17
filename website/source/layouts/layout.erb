@@ -41,7 +41,7 @@
   </head>
 
   <body id="<%= body_id_for(current_page) %>" class="<%= body_classes_for(current_page) %>">
-    <hashi-mega-nav _data="<%= encode(dato.mega_nav) %>"></hashi-mega-nav>
+    <hashi-mega-nav title="<%= defined?(@meganav_title).nil? ? '' : @meganav_title %>" _data="<%= encode(dato.mega_nav) %>"></hashi-mega-nav>
     <main><%= yield %></main>
     <hashi-footer _data="<%= encode(dato.global_footer) %>"></hashi-footer>
 
