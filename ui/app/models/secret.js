@@ -1,6 +1,6 @@
 import { computed } from '@ember/object';
 import DS from 'ember-data';
-import KeyMixin from './key-mixin';
+import KeyMixin from 'vault/mixins/key-mixin';
 const { attr } = DS;
 
 export default DS.Model.extend(KeyMixin, {
@@ -21,5 +21,6 @@ export default DS.Model.extend(KeyMixin, {
   }),
 
   helpText: attr('string'),
+  // TODO this needs to be a relationship like `engine` on kv-v2
   backend: attr('string'),
 });

@@ -1,6 +1,6 @@
 import { match } from '@ember/object/computed';
 import DS from 'ember-data';
-import KeyMixin from './key-mixin';
+import KeyMixin from 'vault/mixins/key-mixin';
 const { attr } = DS;
 
 /* sample response
