@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
@@ -239,7 +240,15 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	// Verify the info
 	err = session.Query(`LIST ALL`).Exec()
-	if err != nil {
+	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
+		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
+			"username": c.Username,
+		})).Iter().NumRows()
+
+		if rowNum < 1 {
+			return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+		}
+	} else if err != nil {
 		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 	}
 

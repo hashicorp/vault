@@ -682,7 +682,9 @@ func (t *http2Client) CloseStream(s *Stream, err error) {
 func (t *http2Client) closeStream(s *Stream, err error, rst bool, rstCode http2.ErrCode, st *status.Status, mdata map[string][]string, eosReceived bool) {
 	// Set stream status to done.
 	if s.swapState(streamDone) == streamDone {
-		// If it was already done, return.
+		// If it was already done, return.  If multiple closeStream calls
+		// happen simultaneously, wait for the first to finish.
+		<-s.done
 		return
 	}
 	// status and trailers can be updated here without any synchronization because the stream goroutine will
@@ -696,8 +698,6 @@ func (t *http2Client) closeStream(s *Stream, err error, rst bool, rstCode http2.
 		// This will unblock reads eventually.
 		s.write(recvMsg{err: err})
 	}
-	// This will unblock write.
-	close(s.done)
 	// If headerChan isn't closed, then close it.
 	if atomic.SwapUint32(&s.headerDone, 1) == 0 {
 		s.noHeaders = true
@@ -733,6 +733,8 @@ func (t *http2Client) closeStream(s *Stream, err error, rst bool, rstCode http2.
 		return true
 	}
 	t.controlBuf.executeAndPut(addBackStreamQuota, cleanup)
+	// This will unblock write.
+	close(s.done)
 }
 
 // Close kicks off the shutdown process of the transport. This should be called
@@ -1171,7 +1173,9 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 	if !endStream {
 		return
 	}
-	t.closeStream(s, io.EOF, false, http2.ErrCodeNo, state.status(), state.mdata, true)
+	// if client received END_STREAM from server while stream was still active, send RST_STREAM
+	rst := s.getState() == streamActive
+	t.closeStream(s, io.EOF, rst, http2.ErrCodeNo, state.status(), state.mdata, true)
 }
 
 // reader runs as a separate goroutine in charge of reading data from network

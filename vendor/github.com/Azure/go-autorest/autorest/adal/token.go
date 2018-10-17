@@ -226,6 +226,8 @@ func (secret *ServicePrincipalCertificateSecret) SignJwt(spt *ServicePrincipalTo
 
 	token := jwt.New(jwt.SigningMethodRS256)
 	token.Header["x5t"] = thumbprint
+	x5c := []string{base64.StdEncoding.EncodeToString(secret.Certificate.Raw)}
+	token.Header["x5c"] = x5c
 	token.Claims = jwt.MapClaims{
 		"aud": spt.inner.OauthConfig.TokenEndpoint.String(),
 		"iss": spt.inner.ClientID,

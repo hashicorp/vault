@@ -302,6 +302,12 @@ func packDomainName(s string, msg []byte, off int, compression map[string]int, c
 	}
 	// If we did compression and we find something add the pointer here
 	if pointer != -1 {
+		// Clear the msg buffer after the pointer location, otherwise
+		// packDataNsec writes the wrong data to msg.
+		tainted := msg[nameoffset:off]
+		for i := range tainted {
+			tainted[i] = 0
+		}
 		// We have two bytes (14 bits) to put the pointer in
 		// if msg == nil, we will never do compression
 		binary.BigEndian.PutUint16(msg[nameoffset:], uint16(pointer^0xC000))
@@ -522,6 +528,10 @@ func unpackTxt(msg []byte, off0 int) (ss []string, off int, err error) {
 func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
 func dddToByte(s []byte) byte {
+	return byte((s[0]-'0')*100 + (s[1]-'0')*10 + (s[2] - '0'))
+}
+
+func dddStringToByte(s string) byte {
 	return byte((s[0]-'0')*100 + (s[1]-'0')*10 + (s[2] - '0'))
 }
 

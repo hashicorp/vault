@@ -10,6 +10,7 @@ type Resources struct {
 	DiskMB   *int `mapstructure:"disk"`
 	IOPS     *int
 	Networks []*NetworkResource
+	Devices  []*RequestedDevice
 }
 
 // Canonicalize will supply missing values in the cases
@@ -27,6 +28,9 @@ func (r *Resources) Canonicalize() {
 	}
 	for _, n := range r.Networks {
 		n.Canonicalize()
+	}
+	for _, d := range r.Devices {
+		d.Canonicalize()
 	}
 }
 
@@ -75,6 +79,9 @@ func (r *Resources) Merge(other *Resources) {
 	if len(other.Networks) != 0 {
 		r.Networks = other.Networks
 	}
+	if len(other.Devices) != 0 {
+		r.Devices = other.Devices
+	}
 }
 
 type Port struct {
@@ -96,5 +103,36 @@ type NetworkResource struct {
 func (n *NetworkResource) Canonicalize() {
 	if n.MBits == nil {
 		n.MBits = helper.IntToPtr(10)
+	}
+}
+
+// RequestedDevice is used to request a device for a task.
+type RequestedDevice struct {
+	// Name is the request name. The possible values are as follows:
+	// * <type>: A single value only specifies the type of request.
+	// * <vendor>/<type>: A single slash delimiter assumes the vendor and type of device is specified.
+	// * <vendor>/<type>/<name>: Two slash delimiters assume vendor, type and specific model are specified.
+	//
+	// Examples are as follows:
+	// * "gpu"
+	// * "nvidia/gpu"
+	// * "nvidia/gpu/GTX2080Ti"
+	Name string
+
+	// Count is the number of requested devices
+	Count *uint64
+
+	// Constraints are a set of constraints to apply when selecting the device
+	// to use.
+	Constraints []*Constraint
+
+	// Affinities are a set of affinites to apply when selecting the device
+	// to use.
+	Affinities []*Affinity
+}
+
+func (d *RequestedDevice) Canonicalize() {
+	if d.Count == nil {
+		d.Count = helper.Uint64ToPtr(1)
 	}
 }

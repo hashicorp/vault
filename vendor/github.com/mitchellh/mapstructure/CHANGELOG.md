@@ -1,8 +1,13 @@
+## 1.1.2
+
+* Fix error when decode hook decodes interface implementation into interface
+  type. [GH-140]
+
 ## 1.1.1
 
 * Fix panic that can happen in `decodePtr`
 
-## 1.1.0 (September 30, 2018)
+## 1.1.0
 
 * Added `StringToIPHookFunc` to convert `string` to `net.IP` and `net.IPNet` [GH-133]
 * Support struct to struct decoding [GH-137]

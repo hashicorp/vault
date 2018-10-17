@@ -110,6 +110,7 @@ var brokenAuthHeaderProviders = []string{
 	"https://login.salesforce.com/",
 	"https://login.windows.net",
 	"https://login.live.com/",
+	"https://login.live-int.com/",
 	"https://oauth.sandbox.trainingpeaks.com/",
 	"https://oauth.trainingpeaks.com/",
 	"https://oauth.vk.com/",

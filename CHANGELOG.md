@@ -1,7 +1,17 @@
 ## Next (Unreleased)
 
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
+IMPROVEMENTS:
+
+ * secret/database: Allow Cassandra user to be non-superuser so long as it has
+   role creation permissions [GH-5402]
+
 BUG FIXES:
 
+ * agent: Fix potential hang during agent shutdown [GH-5026]
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of

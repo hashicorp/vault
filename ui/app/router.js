@@ -12,6 +12,7 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.route('license');
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
