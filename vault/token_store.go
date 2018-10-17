@@ -672,11 +672,16 @@ func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 		return "", err
 	}
 
-	if ns.ID != namespace.RootNamespaceID {
-		return "h" + s.GetHMAC(id), nil
+	// For tokens of older format and belonging to the root namespace, use SHA1
+	// hash for salting.
+	if ns.ID == namespace.RootNamespaceID && !strings.Contains(id, ".") {
+		return s.SaltID(id), nil
 	}
 
-	return s.SaltID(id), nil
+	// For all other tokens, use SHA2-256 HMAC for salting. This includes
+	// tokens of older format, but belonging to a namespace other than the root
+	// namespace.
+	return "h" + s.GetHMAC(id), nil
 }
 
 // rootToken is used to generate a new token with root privileges and no parent
@@ -814,8 +819,21 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
+		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
+			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		}
+
+		if !userSelectedID {
+			entry.ID = fmt.Sprintf("s.%s", entry.ID)
+		}
+
+		// Attach namespace ID for tokens that are not belonging to the root
+		// namespace
 		if tokenNS.ID != namespace.RootNamespaceID {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength, true)
 				if err != nil {
@@ -1052,8 +1070,8 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
 
-	// If it starts with "b-" it's a batch token
-	if len(id) > 2 && id[0:2] == "b." {
+	// If it starts with "b." it's a batch token
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
 		return ts.lookupBatchToken(ctx, id)
 	}
 
@@ -1131,7 +1149,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	}
 
 	// If it starts with "b." it's a batch token
-	if len(id) > 2 && id[0:2] == "b." {
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
 		return ts.lookupBatchToken(ctx, id)
 	}
 
@@ -2525,6 +2543,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 		renewable = false
 		te.BoundCIDRs = nil
+	}
+
+	if te.ID != "" {
+		resp.AddWarning("Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups.")
 	}
 
 	// Create the token

@@ -557,8 +557,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" type tokens`), false, false, nil
 		}
 
-		switch te.NamespaceID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, "s."):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)

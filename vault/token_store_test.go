@@ -22,6 +22,95 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestTokenStore_Salting(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	saltedID, err := ts.SaltID(namespace.RootContext(nil), "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha1 hash; got sha2-256 hmac")
+	}
+
+	saltedID, err = ts.SaltID(namespace.RootContext(nil), "s.foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+
+	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{"testid", "ns1"})
+	saltedID, err = ts.SaltID(nsCtx, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+
+	saltedID, err = ts.SaltID(nsCtx, "s.foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+}
+
+func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
+	c, _, initToken := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	// Ensure that a regular service token has a "s." prefix
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
+		t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
+	}
+
+	// Ensure that using a custon token ID results in a warning
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"id": "foobar",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
+	if resp.Warnings[0] != expectedWarning {
+		t.Fatalf("expected warning not present")
+	}
+
+	// Ensure that custom token ID having a "s." prefix fails
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"id": "s.foobar",
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+	if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
+		t.Fatalf("expected input error not present in error response")
+	}
+}
+
 type TokenEntryOld struct {
 	ID             string
 	Accessor       string
@@ -1357,6 +1446,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1400,6 +1490,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1476,6 +1567,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
