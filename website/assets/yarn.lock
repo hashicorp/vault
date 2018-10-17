@@ -4860,6 +4860,14 @@ postcss-easings@^1.0.0:
     postcss "^6.0.14"
     postcss-value-parser "^3.3.0"
 
+postcss-extend-rule@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/postcss-extend-rule/-/postcss-extend-rule-2.0.0.tgz#031fe6f608cf6efd20cb58b11f343b164c18d370"
+  integrity sha512-dgr1GJzW3lUBczZJO5Fm51rktn34Uc99xR1uQyC2Td8JPep/Y+TRx6TjK0yngikOd4LxV1xyuohMMpcaOBgrfA==
+  dependencies:
+    postcss "^6.0.22"
+    postcss-nesting "^5.0.0"
+
 postcss-filter-plugins@^2.0.0:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/postcss-filter-plugins/-/postcss-filter-plugins-2.0.3.tgz#82245fdf82337041645e477114d8e593aa18b8ec"
