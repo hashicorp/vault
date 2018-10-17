@@ -140,8 +140,13 @@ export default Route.extend(UnloadModelRoute, {
     willTransition(transition) {
       let model = this.controller.model;
       let version = model.get('selectedVersion');
+      let changed = model.changedAttributes();
+      let changedKeys = Object.keys(changed);
+      // until we have time to move `backend` on a v1 model to a relationship,
+      // it's going to dirty the model state, so we need to look for it
+      // and explicity ignore it here
       if (
-        Object.keys(model.changedAttributes()).length ||
+        (changedKeys.length && changedKeys[0] !== 'backend') ||
         (version && Object.keys(version.changedAttributes()).length)
       ) {
         if (
