@@ -69,10 +69,10 @@ export default Controller.extend(BackendCrumbMixin, {
       const name = item.id;
       item.destroyRecord().then(() => {
         this.get('flashMessages').success(`${name} was successfully deleted.`);
+        this.send('reload');
         if (type === 'secret') {
           return this.transitionToRoute('vault.cluster.secrets.backend.list-root');
         }
-        this.send('reload');
       });
     },
   },
