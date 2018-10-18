@@ -3,6 +3,7 @@
 package openapi
 
 import (
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -97,4 +98,19 @@ func NewOperation() *Operation {
 	return &Operation{
 		Responses: make(map[int]*Response),
 	}
+}
+
+// Map converts the document to a map[string]interface{}.
+// This is primarily useful when combinings documents that may have been
+// serialized and deserialized, such as through the plugin interface.
+func (d *Document) Map() map[string]interface{} {
+	var out map[string]interface{}
+
+	if enc, err := jsonutil.EncodeJSON(d); err == nil {
+		if err := jsonutil.DecodeJSON(enc, &out); err == nil {
+			return out
+		}
+	}
+
+	return nil
 }

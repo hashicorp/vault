@@ -138,8 +138,8 @@ func TestOpenAPIPaths(t *testing.T) {
 			},
 
 			Callbacks: map[logical.Operation]OperationFunc{
-				logical.ReadOperation:   NullHandler,
-				logical.UpdateOperation: NullHandler,
+				logical.ReadOperation:   nil,
+				logical.UpdateOperation: nil,
 			},
 
 			HelpSynopsis:    "Synopsis",
@@ -157,7 +157,7 @@ func TestOpenAPIPaths(t *testing.T) {
 			HelpDescription: "Description",
 			Operations: map[logical.Operation]OperationHandler{
 				logical.ReadOperation: &PathOperation{
-					Handler:     NullHandler,
+					Callback:    nil,
 					Summary:     "My Summary",
 					Description: "My Description",
 				},

@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -111,7 +110,7 @@ type Path struct {
 
 // OperationHandler defines and describes a specific operation handler.
 type OperationHandler interface {
-	Handle(context.Context, *logical.Request, *FieldData) (*logical.Response, error)
+	Handler() OperationFunc
 	Properties() OperationProperties
 }
 
@@ -136,6 +135,11 @@ type OperationProperties struct {
 	// be shown in documentation that only allows a single example.
 	Responses map[int][]Response
 
+	// Unpublished indicates that this operation should not appear in public
+	// documentation or help text. The operation may still have documentation
+	// attached that can be used internally.
+	Unpublished bool
+
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 }
@@ -155,20 +159,17 @@ type Response struct {
 
 // PathOperation is a concrete implementation of OperationHandler.
 type PathOperation struct {
-	Handler     OperationFunc
+	Callback    OperationFunc
 	Summary     string
 	Description string
 	Examples    []RequestExample
 	Responses   map[int][]Response
+	Unpublished bool
 	Deprecated  bool
 }
 
-func (p *PathOperation) Handle(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
-	if p.Handler == nil {
-		return nil, errors.New("undefined operation callback")
-	}
-
-	return p.Handler(ctx, req, data)
+func (p *PathOperation) Handler() OperationFunc {
+	return p.Callback
 }
 
 func (p *PathOperation) Properties() OperationProperties {
@@ -176,8 +177,9 @@ func (p *PathOperation) Properties() OperationProperties {
 		Summary:     strings.TrimSpace(p.Summary),
 		Description: strings.TrimSpace(p.Description),
 		Responses:   p.Responses,
-		Deprecated:  p.Deprecated,
 		Examples:    p.Examples,
+		Unpublished: p.Unpublished,
+		Deprecated:  p.Deprecated,
 	}
 }
 
@@ -223,7 +225,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
-		// Build OpenAPI specification
+		// Build OpenAPI response for this path
 		var rootPaths []string
 		doc := openapi.NewDocument()
 

@@ -77,7 +77,7 @@ func TestBackendHandleRequest(t *testing.T) {
 					"amount": &FieldSchema{Type: TypeInt},
 				},
 				Operations: map[logical.Operation]OperationHandler{
-					logical.ReadOperation: &PathOperation{Handler: handler},
+					logical.ReadOperation: &PathOperation{Callback: handler},
 				},
 			},
 			{
@@ -89,7 +89,7 @@ func TestBackendHandleRequest(t *testing.T) {
 					logical.ReadOperation: callback,
 				},
 				Operations: map[logical.Operation]OperationHandler{
-					logical.ReadOperation: &PathOperation{Handler: handler},
+					logical.ReadOperation: &PathOperation{Callback: handler},
 				},
 			},
 		},

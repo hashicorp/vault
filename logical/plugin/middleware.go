@@ -5,7 +5,6 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -89,8 +88,4 @@ func (b *backendTracingMiddleware) Type() logical.BackendType {
 
 	b.logger.Trace("type", "status", "started")
 	return b.next.Type()
-}
-
-func (b *backendTracingMiddleware) Description() *openapi.Document {
-	return nil
 }

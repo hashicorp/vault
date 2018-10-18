@@ -68,14 +68,10 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 
 			for opType, cb := range p.Callbacks {
 				operations[opType] = &PathOperation{
-					Handler: cb,
-					Summary: p.HelpSynopsis,
+					Callback: cb,
+					Summary:  p.HelpSynopsis,
 				}
 			}
-		}
-
-		if _, ok := operations[logical.CreateOperation]; ok {
-			pi.Create = true
 		}
 
 		pathFields, bodyFields := splitFields(p.Fields, path)
@@ -83,15 +79,22 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
 		for opType, opHandler := range operations {
-
-			// If both Create and Update are defined, only process Update.
-			if opType == logical.CreateOperation && operations[logical.UpdateOperation] != nil {
+			props := opHandler.Properties()
+			if props.Unpublished {
 				continue
+			}
+
+			if opType == logical.CreateOperation {
+				pi.Create = true
+
+				// If both Create and Update are defined, only process Update.
+				if operations[logical.UpdateOperation] != nil {
+					continue
+				}
 			}
 
 			op := openapi.NewOperation()
 
-			props := opHandler.Properties()
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated

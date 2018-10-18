@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -631,11 +630,6 @@ func (n *rawHTTP) InvalidateKey(context.Context, string) {
 }
 
 func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	// noop
-	return nil
-}
-
-func (n *rawHTTP) Description() *openapi.Document {
 	// noop
 	return nil
 }

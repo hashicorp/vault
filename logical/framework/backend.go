@@ -110,11 +110,6 @@ type CleanupFunc func(context.Context)
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
 
-// NullHandler is a no-op, used for path operations that exist for documentation only.
-func NullHandler(_ context.Context, _ *logical.Request, _ *FieldData) (*logical.Response, error) {
-	return nil, nil
-}
-
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
 	b.once.Do(b.init)
@@ -213,7 +208,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	if path.Operations != nil {
 		if op, ok := path.Operations[req.Operation]; ok {
-			callback = op.Handle
+			callback = op.Handler()
 		}
 	} else {
 		callback = path.Callbacks[req.Operation]
@@ -294,17 +289,6 @@ func (b *Backend) Type() logical.BackendType {
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
 	return result
-}
-
-// Description populates a new OpenAPI document with all paths in this backend.
-func (b *Backend) Description() *openapi.Document {
-	doc := openapi.NewDocument()
-
-	if err := documentPaths(b, doc); err != nil {
-		return nil
-	}
-
-	return doc
 }
 
 // Secret is used to look up the secret with the given type.
@@ -392,7 +376,11 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
-	return logical.HelpResponse(help, nil, nil), nil
+	// Build OpenAPI response for the entire backend
+	doc := openapi.NewDocument()
+	documentPaths(b, doc)
+
+	return logical.HelpResponse(help, nil, doc), nil
 }
 
 func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {

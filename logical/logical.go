@@ -4,7 +4,6 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/openapi"
 )
 
 // BackendType is the type of backend that is being implemented
@@ -42,10 +41,6 @@ type Backend interface {
 	// HandleRequest is used to handle a request and generate a response.
 	// The backends must check the operation type and handle appropriately.
 	HandleRequest(context.Context, *Request) (*Response, error)
-
-	// Description returns an OpenAPI-structured document describing all of the
-	// backend's paths, operations and parameters.
-	Description() *openapi.Document
 
 	// SpecialPaths is a list of paths that are special in some way.
 	// See PathType for the types of special paths. The key is the type

@@ -2929,32 +2929,61 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
 
-	doc := openapi.NewDocument()
+	// Set up target document and convert to map[string]interface{} which is what will
+	// be received from plugin backends.
+	doc := openapi.NewDocument().Map()
 
-	procMountGroup := func(group, mountPrefix string, backends map[string]logical.Factory) {
-		for mount, mountInfo := range resp.Data[group].(map[string]interface{}) {
-			mountType := mountInfo.(map[string]interface{})["type"].(string)
+	procMountGroup := func(group, mountPrefix string) error {
+		for mount := range resp.Data[group].(map[string]interface{}) {
+			backend := b.Core.router.MatchingBackend(ctx, mount)
 
-			factory, ok := backends[mountType]
-			if ok {
-				paths := renderOpenAPIPaths(factory, mountPrefix+mount)
-				if paths != nil {
-					for k, v := range paths {
-						doc.Paths[k] = v
-					}
-				}
+			if backend == nil {
+				continue
+			}
+
+			req := &logical.Request{
+				Operation: logical.HelpOperation,
+			}
+
+			resp, err := backend.HandleRequest(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			// Normalize response into map[string]interface{}
+			var backendDoc map[string]interface{}
+
+			switch v := resp.Data["openapi"].(type) {
+			case *openapi.Document:
+				backendDoc = v.Map()
+			case map[string]interface{}:
+				backendDoc = v
+			default:
+				continue
+			}
+
+			// Merge backend paths with existing document
+			for path, obj := range backendDoc["paths"].(map[string]interface{}) {
+				path := strings.TrimPrefix(path, "/")
+				doc["paths"].(map[string]interface{})["/"+mountPrefix+mount+path] = obj
 			}
 		}
+		return nil
 	}
 
-	procMountGroup("secret", "", b.Core.logicalBackends)
-	procMountGroup("auth", "auth/", b.Core.credentialBackends)
+	if err := procMountGroup("secret", ""); err != nil {
+		return nil, err
+	}
+	if err := procMountGroup("auth", "auth/"); err != nil {
+		return nil, err
+	}
 
 	// This endpoint is more likely to be inspected directly by humans,
 	// so indent the JSON output to make it more readable.
@@ -2972,32 +3001,6 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	}
 
 	return resp, nil
-}
-
-// renderOpenAPIPaths instantiates a backend and calculates its set of OpenAPI paths.
-func renderOpenAPIPaths(factory logical.Factory, mount string) map[string]*openapi.PathItem {
-	// A dummy config is required for some backend factories to succeed
-	conf := &logical.BackendConfig{
-		Logger:      log.NewNullLogger(),
-		System:      logical.StaticSystemView{},
-		StorageView: &logical.InmemStorage{},
-	}
-
-	backend, err := factory(context.Background(), conf)
-	if err != nil {
-		return nil
-	}
-
-	p := make(map[string]*openapi.PathItem)
-	d := backend.Description()
-	if d != nil {
-		for path, pathObject := range d.Paths {
-			path := strings.TrimPrefix(path, "/")
-			p["/"+mount+path] = pathObject
-		}
-	}
-
-	return p
 }
 
 func sanitizeMountPath(path string) string {
