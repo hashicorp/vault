@@ -11,7 +11,7 @@ build: configure_cache
 		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
 		--env "ENV=production" \
 		netlify/build \
-		build middleman build --verbose
+		build sh bootstrap.sh && middleman build --verbose
 
 website: configure_cache
 	@echo "==> Starting website in Docker..."
@@ -25,6 +25,6 @@ website: configure_cache
 		--publish "35729:35729" \
 		--env "ENV=production" \
 		netlify/build \
-		build middleman
+		build sh bootstrap.sh && middleman
 
 .PHONY: build website
