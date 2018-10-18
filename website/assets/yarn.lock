@@ -153,10 +153,10 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-newsletter-signup-form/-/hashi-newsletter-signup-form-1.0.4.tgz#a9a9df40d2d68954cad95f871a2dfc169ccd9a3b"
   integrity sha512-4W7GiEocIA7YffKkh31FU5NMvZWBXfNOyuZ+3/tYNT0gSM8W5JzIYYqnu63cjqOuXIFUUrCDGQLRndYaKmzSMw==
 
-"@hashicorp/hashi-product-downloader@^0.3.1":
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.3.1.tgz#e4f1da2f7fd8fb841ffddc47a4202f57c1c5b831"
-  integrity sha512-M/gSOuWnOCYQrlw/qiiroM9kT4GrKcgxJkjyan5PYzN+GWFOoH0k51BUrIpu7Z/tDpPSKRnZel0N85syAHFK4A==
+"@hashicorp/hashi-product-downloader@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.4.0.tgz#68eb0048eccd3ce17231a93517fb91b29e2c40a8"
+  integrity sha512-UXc3JhHMuhDIlm++fe2N4vwUXHvthzXoqaGkLPWS/T7g7COlzzj/EIjLw7hoSnu4Wb3T0uQXHP6hkRu5NbRZNA==
 
 "@hashicorp/hashi-product-subnav@^0.4.3":
   version "0.4.3"

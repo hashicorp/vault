@@ -23,7 +23,7 @@
     "@hashicorp/hashi-mega-nav": "^1.0.0",
     "@hashicorp/hashi-nav": "1.0.5",
     "@hashicorp/hashi-newsletter-signup-form": "1.0.4",
-    "@hashicorp/hashi-product-downloader": "^0.3.1",
+    "@hashicorp/hashi-product-downloader": "^0.4.0",
     "@hashicorp/hashi-product-subnav": "^0.4.3",
     "@hashicorp/hashi-section-header": "2.0.2",
     "@hashicorp/hashi-split-cta": "^0.1.3",

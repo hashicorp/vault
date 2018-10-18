@@ -27,7 +27,6 @@
 @import '_secondary-nav';
 
 /* Pages */
-@import 'pages/_downloads';
 @import 'pages/_docs';
 @import 'pages/_section_block';
 @import 'pages/_home';
