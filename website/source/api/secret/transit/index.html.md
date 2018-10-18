@@ -997,3 +997,38 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/restore
 ```
+
+## Trim Key
+
+This endpoint trims older key versions setting a minimum version for the
+keyring. Once trimmed, previous versions of the key cannot be recovered.
+
+| Method   | Path                       | Produces               |
+| :------- | :------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/trim` | `200 application/json` |
+
+### Parameters
+
+- `min_version` `(int: <required>)` - The minimum version for the key ring. All
+  versions before this version will be permanently deleted. This value can at
+  most be equal to the lesser of `min_decryption_version` and
+  `min_encryption_version`. This is not allowed to be set when either
+  `min_encryption_version` or `min_decryption_version` is set to zero.
+
+### Sample Payload
+
+```json
+{
+    "min_version": 2
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/transit/keys/my-key/trim
+```
