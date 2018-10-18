@@ -47,6 +47,7 @@ export default ApplicationAdapter.extend({
     const { id, backend } = query;
     return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
       resp.id = id;
+      resp.backend = backend;
       return resp;
     });
   },

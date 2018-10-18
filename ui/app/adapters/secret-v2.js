@@ -18,6 +18,7 @@ export default ApplicationAdapter.extend({
     let { backend, id } = query;
     return this.ajax(this._url(backend, id), 'GET', { data: { list: true } }).then(resp => {
       resp.id = id;
+      resp.backend = backend;
       return resp;
     });
   },
@@ -37,7 +38,7 @@ export default ApplicationAdapter.extend({
   },
 
   detailURL(snapshot) {
-    let backend = snapshot.belongsTo('engine', { id: true });
+    let backend = snapshot.belongsTo('engine', { id: true }) || snapshot.attr('engineId');
     let { id } = snapshot;
     return this._url(backend, id);
   },

@@ -22,7 +22,10 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
         if (!fullSecretPath) {
           fullSecretPath = '\u0020';
         }
-        return { id: fullSecretPath };
+        return {
+          id: fullSecretPath,
+          engine_id: payload.backend,
+        };
       });
     }
     // transform versions to an array with composite IDs
