@@ -93,7 +93,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (context.mode === 'create') {
         return;
       }
-      let backend = context.isV2 ? context.model.belongsTo('engine').id : context.model.backend;
+      let backend = context.isV2 ? context.get('model.engine.id') : context.model.backend;
       let id = context.model.id;
       let path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
@@ -114,7 +114,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (context.mode === 'create' || context.isV2 === false) {
         return;
       }
-      let backend = context.model.belongsTo('engine').id;
+      let backend = context.get('model.engine.id');
       let id = context.model.id;
       return {
         id: `${backend}/metadata/${id}`,
@@ -126,6 +126,49 @@ export default Component.extend(FocusOnInsertMixin, {
     'mode'
   ),
   canEditV2Secret: alias('v2UpdatePath.canUpdate'),
+
+  deleteVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let backend = context.get('model.engine.id');
+      let id = context.model.id;
+      return {
+        id: `${backend}/delete/${id}`,
+      };
+    },
+    'model.id'
+  ),
+  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
+  destroyVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let backend = context.get('model.engine.id');
+      let id = context.model.id;
+      return {
+        id: `${backend}/destroy/${id}`,
+      };
+    },
+    'model.id'
+  ),
+  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
+  undeleteVersionPath: maybeQueryRecord(
+    'capabilities',
+    context => {
+      let backend = context.get('model.engine.id');
+      let id = context.model.id;
+      return {
+        id: `${backend}/undelete/${id}`,
+      };
+    },
+    'model.id'
+  ),
+  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
+
+  isFetchingVersionCapabilities: or(
+    'deleteVersionPath.isLoading',
+    'destroyVersionPath.isLoading',
+    'undeleteVersionPath.isLoading'
+  ),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
