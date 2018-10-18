@@ -12,19 +12,19 @@ export default Service.extend({
   connectionViolations: filterBy('events', 'violatedDirective', 'connect-src'),
 
   attach() {
-    this.get('monitor').perform();
+    this.monitor.perform();
   },
 
   remove() {
-    this.get('monitor').cancelAll();
+    this.monitor.cancelAll();
   },
 
   monitor: task(function*() {
-    this.get('events').clear();
+    this.events.clear();
 
     while (true) {
       let event = yield waitForEvent(window.document, 'securitypolicyviolation');
-      this.get('events').addObject(event);
+      this.events.addObject(event);
     }
   }),
 });
