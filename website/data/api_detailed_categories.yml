@@ -60,7 +60,7 @@
     - api/system/leases.html
     - api/system/license.html
     - api/system/namespaces.html
-    - api/system/mfa.html
+    - api/system/mfa/index.html
     - api/system/mounts.html
     - api/system/plugins-reload-backend.html
     - api/system/plugins-catalog.html
@@ -70,7 +70,7 @@
     - api/system/rekey.html
     - api/system/rekey-recovery-key.html
     - api/system/remount.html
-    - api/system/replication.html
+    - api/system/replication/index.html
     - api/system/rotate.html
     - api/system/seal.html
     - api/system/seal-status.html
