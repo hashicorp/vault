@@ -24,28 +24,6 @@
   }
 }
 
-#new-to-vault {
-  & .g-section-header {
-    margin-bottom: 32px;
-
-    & h3 {
-      font-size: 1em;
-      font-weight: 400;
-      line-height: 2em;
-      margin: 1.2em auto 1.5em auto;
-      width: 63%;
-
-      @media (max-width: 768px) {
-        width: 80%;
-      }
-
-      @media (max-width: 420px) {
-        width: 90%;
-      }
-    }
-  }
-}
-
 #sitemap {
   @media (max-width: 768px) {
     display: none;
