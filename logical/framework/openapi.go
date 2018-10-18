@@ -12,14 +12,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Regex for handling optional and named parameters, and string cleanup
-var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)
-var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)
-var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)
-var cleanCharsRe = regexp.MustCompile("[()^$?]")
-var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)
-var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)
-var wsRe = regexp.MustCompile(`\s+`)
+// Regex for handling optional and named parameters in paths, and string cleanup.
+// Predefined here to avoid substantial recompilation.
+var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // capture required named parameters
+var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // capture optional named parameters in ungreedy (?U) fashion
+var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // capture alternation elements
+var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // capture OpenAPI-format named parameters {example}
+var cleanCharsRe = regexp.MustCompile("[()^$?]")         // regex characters that will be stripped during cleaning
+var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // path suffix patterns that will be stripped during cleaning
+var wsRe = regexp.MustCompile(`\s+`)                     // match whitespace, to be compressed during cleaning
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *openapi.Document) error {
@@ -317,8 +318,10 @@ func convertType(t FieldType) schemaType {
 
 // cleanString prepares s for inclusion in the output
 func cleanString(s string) string {
+	// clean leading/trailing whitespace, and replace whitespace runs into a single space
 	s = strings.TrimSpace(s)
-	return wsRe.ReplaceAllString(s, " ")
+	s = wsRe.ReplaceAllString(s, " ")
+	return s
 }
 
 // splitFields partitions fields into path and body groups
