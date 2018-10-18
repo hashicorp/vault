@@ -148,11 +148,18 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	users, err := req.Storage.List(ctx, "user/")
+	keys, err := logical.CollectKeys(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(users), nil
+	retKeys := make([]string, 0)
+	for _, key := range keys {
+		if strings.HasPrefix(key, "user/") && !strings.HasPrefix(key, "/") {
+			retKeys = append(retKeys, strings.TrimPrefix(key, "user/"))
+		}
+	}
+	return logical.ListResponse(retKeys), nil
+
 }
 
 type UserEntry struct {
