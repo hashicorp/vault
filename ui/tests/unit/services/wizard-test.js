@@ -146,12 +146,26 @@ module('Unit | Service | wizard', function(hooks) {
         ],
         storage: [
           { key: STORAGE_KEYS.FEATURE_STATE, value: undefined },
+          { key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: undefined },
           { key: STORAGE_KEYS.FEATURE_LIST, value: undefined },
           { key: STORAGE_KEYS.COMPONENT_STATE, value: undefined },
           { key: STORAGE_KEYS.TUTORIAL_STATE, value: 'active.select' },
           { key: STORAGE_KEYS.COMPLETED_FEATURES, value: undefined },
           { key: STORAGE_KEYS.RESUME_URL, value: undefined },
           { key: STORAGE_KEYS.RESUME_ROUTE, value: undefined },
+        ],
+      },
+    },
+    {
+      method: 'clearFeatureData',
+      args: [],
+      expectedResults: {
+        props: [{ prop: 'currentMachine', value: null }, { prop: 'featureMachineHistory', value: null }],
+        storage: [
+          { key: STORAGE_KEYS.FEATURE_STATE, value: undefined },
+          { key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: undefined },
+          { key: STORAGE_KEYS.FEATURE_LIST, value: undefined },
+          { key: STORAGE_KEYS.COMPONENT_STATE, value: undefined },
         ],
       },
     },
@@ -192,6 +206,75 @@ module('Unit | Service | wizard', function(hooks) {
       args: ['currentState', 'login'],
       expectedResults: {
         props: [{ prop: 'currentState', value: 'login' }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['idle'],
+      properties: { featureList: ['policies', 'tools'] },
+      storage: [{ key: STORAGE_KEYS.COMPLETED_FEATURES, value: ['secrets'] }],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: null }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['idle'],
+      properties: { featureList: ['policies', 'tools'] },
+      storage: [],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['idle'],
+      properties: { featureList: ['policies', 'tools'] },
+      storage: [],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['idle'],
+      properties: { featureMachineHistory: [], featureList: ['policies', 'tools'] },
+      storage: [{ key: STORAGE_KEYS.COMPLETED_FEATURES, value: ['secrets'] }],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: ['idle'] }],
+        storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle'] }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['idle'],
+      properties: { featureMachineHistory: null, featureList: ['policies', 'tools'] },
+      storage: [{ key: STORAGE_KEYS.COMPLETED_FEATURES, value: ['secrets'] }],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: null }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['create'],
+      properties: { featureMachineHistory: ['idle'], featureList: ['policies', 'tools'] },
+      storage: [{ key: STORAGE_KEYS.COMPLETED_FEATURES, value: ['secrets'] }],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: ['idle', 'create'] }],
+        storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle', 'create'] }],
+      },
+    },
+    {
+      method: 'saveFeatureHistory',
+      args: ['create'],
+      properties: { featureMachineHistory: ['idle'], featureList: ['policies', 'tools'] },
+      storage: [
+        { key: STORAGE_KEYS.COMPLETED_FEATURES, value: ['secrets'] },
+        { key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle', 'create'] },
+      ],
+      expectedResults: {
+        props: [{ prop: 'featureMachineHistory', value: ['idle', 'create'] }],
+        storage: [{ key: STORAGE_KEYS.FEATURE_STATE_HISTORY, value: ['idle', 'create'] }],
       },
     },
     {
