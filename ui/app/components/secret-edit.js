@@ -165,9 +165,9 @@ export default Component.extend(FocusOnInsertMixin, {
   canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
 
   isFetchingVersionCapabilities: or(
-    'deleteVersionPath.isLoading',
-    'destroyVersionPath.isLoading',
-    'undeleteVersionPath.isLoading'
+    'deleteVersionPath.isPending',
+    'destroyVersionPath.isPending',
+    'undeleteVersionPath.isPending'
   ),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
