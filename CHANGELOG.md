@@ -13,6 +13,8 @@ IMPROVEMENTS:
 
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
+ * secret/radius: Allow setting the NAS Identifier value in the generated
+   packet [GH-5465]
 
 BUG FIXES:
 
