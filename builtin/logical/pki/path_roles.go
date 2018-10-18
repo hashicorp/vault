@@ -117,7 +117,7 @@ Any valid URI is accepted, these values support globbing.`,
 
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
+				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 			},
 
 			"allowed_serial_numbers": &framework.FieldSchema{
@@ -285,6 +285,11 @@ for "generate_lease".`,
 			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
+			},
+			"not_before_duration": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Default:     30,
+				Description: `The duration before now the cert needs to be created / signed.`,
 			},
 		},
 
@@ -493,6 +498,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
+		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -683,6 +689,7 @@ type roleEntry struct {
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
+	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -726,6 +733,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
+		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

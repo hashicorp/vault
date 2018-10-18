@@ -1,9 +1,13 @@
-import Ember from 'ember';
+import { resolve } from 'rsvp';
+import { assign } from '@ember/polyfills';
+import $ from 'jquery';
+import { isArray } from '@ember/array';
+import { computed, get } from '@ember/object';
+import { getOwner } from '@ember/application';
+import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-
-const { get, isArray, computed, getOwner, Service, inject } = Ember;
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -14,7 +18,7 @@ const BACKENDS = supportedAuthBackends();
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
-  namespace: inject.service(),
+  namespace: service(),
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -57,6 +61,10 @@ export default Service.extend({
     return ENV.environment;
   },
 
+  now() {
+    return Date.now();
+  },
+
   setCluster(clusterId) {
     this.set('activeCluster', clusterId);
   },
@@ -76,7 +84,7 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    return Ember.$.ajax(Ember.assign(defaults, options));
+    return $.ajax(assign(defaults, options));
   },
 
   renewCurrentToken() {
@@ -91,18 +99,15 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp, creationTime) {
-    const creationTTL = resp.creation_ttl || resp.lease_duration;
-    const leaseMilli = creationTTL ? creationTTL * 1e3 : null;
-    const tokenIssueEpoch = resp.creation_time ? resp.creation_time * 1e3 : creationTime || Date.now();
-    const tokenExpirationEpoch = tokenIssueEpoch + leaseMilli;
-    const expirationData = {
-      tokenIssueEpoch,
+  calculateExpiration(resp) {
+    let now = this.now();
+    const ttl = resp.ttl || resp.lease_duration;
+    const tokenExpirationEpoch = now + ttl * 1e3;
+    this.set('expirationCalcTS', now);
+    return {
+      ttl,
       tokenExpirationEpoch,
-      leaseMilli,
     };
-    this.set('expirationCalcTS', Date.now());
-    return expirationData;
   },
 
   persistAuthData() {
@@ -165,7 +170,7 @@ export default Service.extend({
     );
 
     if (resp.renewable) {
-      Ember.assign(data, this.calculateExpiration(resp));
+      assign(data, this.calculateExpiration(resp));
     }
 
     if (!data.displayName) {
@@ -175,7 +180,7 @@ export default Service.extend({
     this.set('tokens', tokens);
     this.set('allowExpiration', false);
     this.setTokenData(tokenName, data);
-    return Ember.RSVP.resolve({
+    return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
       isRoot: policies.includes('root'),
@@ -206,17 +211,19 @@ export default Service.extend({
 
   tokenExpired: computed(function() {
     const expiration = this.get('tokenExpirationDate');
-    return expiration ? Date.now() >= expiration : null;
+    return expiration ? this.now() >= expiration : null;
   }).volatile(),
 
   renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
     const tokenName = this.get('currentTokenName');
+    let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
     if (!tokenName || !data) {
       return null;
     }
-    const { leaseMilli, tokenIssueEpoch, renewable } = data;
-    return data && renewable ? Math.floor(leaseMilli / 2) + tokenIssueEpoch : null;
+    const { ttl, renewable } = data;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
   }),
 
   renew() {
@@ -239,7 +246,7 @@ export default Service.extend({
   },
 
   shouldRenew: computed(function() {
-    const now = Date.now();
+    const now = this.now();
     const lastFetch = this.get('lastFetch');
     const renewTime = this.get('renewAfterEpoch');
     if (this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
@@ -260,9 +267,11 @@ export default Service.extend({
   },
 
   getTokensFromStorage(filterFn) {
-    return this.storage().keys().reject(key => {
-      return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
-    });
+    return this.storage()
+      .keys()
+      .reject(key => {
+        return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
+      });
   },
 
   checkForRootToken() {
@@ -318,7 +327,7 @@ export default Service.extend({
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
 
-    return Ember.assign(stored, {
+    return assign(stored, {
       backend: BACKENDS.findBy('type', backend),
     });
   }),

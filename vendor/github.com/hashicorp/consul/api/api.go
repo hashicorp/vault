@@ -61,6 +61,12 @@ const (
 	// HTTPSSLVerifyEnvName defines an environment variable name which sets
 	// whether or not to disable certificate checking.
 	HTTPSSLVerifyEnvName = "CONSUL_HTTP_SSL_VERIFY"
+
+	// GRPCAddrEnvName defines an environment variable name which sets the gRPC
+	// address for consul connect envoy. Note this isn't actually used by the api
+	// client in this package but is defined here for consistency with all the
+	// other ENV names we use.
+	GRPCAddrEnvName = "CONSUL_GRPC_ADDR"
 )
 
 // QueryOptions are used to parameterize a query
@@ -77,6 +83,27 @@ type QueryOptions struct {
 	// This is more expensive but prevents ever performing a stale
 	// read.
 	RequireConsistent bool
+
+	// UseCache requests that the agent cache results locally. See
+	// https://www.consul.io/api/index.html#agent-caching for more details on the
+	// semantics.
+	UseCache bool
+
+	// MaxAge limits how old a cached value will be returned if UseCache is true.
+	// If there is a cached response that is older than the MaxAge, it is treated
+	// as a cache miss and a new fetch invoked. If the fetch fails, the error is
+	// returned. Clients that wish to allow for stale results on error can set
+	// StaleIfError to a longer duration to change this behaviour. It is ignored
+	// if the endpoint supports background refresh caching. See
+	// https://www.consul.io/api/index.html#agent-caching for more details.
+	MaxAge time.Duration
+
+	// StaleIfError specifies how stale the client will accept a cached response
+	// if the servers are unavailable to fetch a fresh one. Only makes sense when
+	// UseCache is true and MaxAge is set to a lower, non-zero value. It is
+	// ignored if the endpoint supports background refresh caching. See
+	// https://www.consul.io/api/index.html#agent-caching for more details.
+	StaleIfError time.Duration
 
 	// WaitIndex is used to enable a blocking query. Waits
 	// until the timeout or the next index is reached
@@ -196,6 +223,13 @@ type QueryMeta struct {
 
 	// Is address translation enabled for HTTP responses on this agent
 	AddressTranslationEnabled bool
+
+	// CacheHit is true if the result was served from agent-local cache.
+	CacheHit bool
+
+	// CacheAge is set if request was ?cached and indicates how stale the cached
+	// response is.
+	CacheAge time.Duration
 }
 
 // WriteMeta is used to return meta data about a write
@@ -405,6 +439,29 @@ func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 	return tlsClientConfig, nil
 }
 
+func (c *Config) GenerateEnv() []string {
+	env := make([]string, 0, 10)
+
+	env = append(env,
+		fmt.Sprintf("%s=%s", HTTPAddrEnvName, c.Address),
+		fmt.Sprintf("%s=%s", HTTPTokenEnvName, c.Token),
+		fmt.Sprintf("%s=%t", HTTPSSLEnvName, c.Scheme == "https"),
+		fmt.Sprintf("%s=%s", HTTPCAFile, c.TLSConfig.CAFile),
+		fmt.Sprintf("%s=%s", HTTPCAPath, c.TLSConfig.CAPath),
+		fmt.Sprintf("%s=%s", HTTPClientCert, c.TLSConfig.CertFile),
+		fmt.Sprintf("%s=%s", HTTPClientKey, c.TLSConfig.KeyFile),
+		fmt.Sprintf("%s=%s", HTTPTLSServerName, c.TLSConfig.Address),
+		fmt.Sprintf("%s=%t", HTTPSSLVerifyEnvName, !c.TLSConfig.InsecureSkipVerify))
+
+	if c.HttpAuth != nil {
+		env = append(env, fmt.Sprintf("%s=%s:%s", HTTPAuthEnvName, c.HttpAuth.Username, c.HttpAuth.Password))
+	} else {
+		env = append(env, fmt.Sprintf("%s=", HTTPAuthEnvName))
+	}
+
+	return env
+}
+
 // Client provides a client to the Consul API
 type Client struct {
 	config Config
@@ -567,6 +624,20 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 	if q.Connect {
 		r.params.Set("connect", "true")
+	}
+	if q.UseCache && !q.RequireConsistent {
+		r.params.Set("cached", "")
+
+		cc := []string{}
+		if q.MaxAge > 0 {
+			cc = append(cc, fmt.Sprintf("max-age=%.0f", q.MaxAge.Seconds()))
+		}
+		if q.StaleIfError > 0 {
+			cc = append(cc, fmt.Sprintf("stale-if-error=%.0f", q.StaleIfError.Seconds()))
+		}
+		if len(cc) > 0 {
+			r.header.Set("Cache-Control", strings.Join(cc, ", "))
+		}
 	}
 	r.ctx = q.ctx
 }
@@ -777,6 +848,18 @@ func parseQueryMeta(resp *http.Response, q *QueryMeta) error {
 		q.AddressTranslationEnabled = true
 	default:
 		q.AddressTranslationEnabled = false
+	}
+
+	// Parse Cache info
+	if cacheStr := header.Get("X-Cache"); cacheStr != "" {
+		q.CacheHit = strings.EqualFold(cacheStr, "HIT")
+	}
+	if ageStr := header.Get("Age"); ageStr != "" {
+		age, err := strconv.ParseUint(ageStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("Failed to parse Age Header: %v", err)
+		}
+		q.CacheAge = time.Duration(age) * time.Second
 	}
 
 	return nil

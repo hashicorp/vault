@@ -48,9 +48,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 	}
 
 	retAddress = fmt.Sprintf("http://localhost:%s/", resource.GetPort("4646/tcp"))
-	// Give Nomad time to initialize
 
-	time.Sleep(5000 * time.Millisecond)
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
@@ -62,7 +60,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 		}
 		aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			return err
 		}
 		nomadToken = aclbootstrap.SecretID
 		t.Logf("[WARN] Generated Master token: %s", nomadToken)
@@ -94,13 +92,13 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 		nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
 		_, err = nomadAuth.ACLPolicies().Upsert(policy, nil)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 		_, err = nomadAuth.ACLPolicies().Upsert(anonPolicy, nil)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
-		return err
+		return nil
 	}); err != nil {
 		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)

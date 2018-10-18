@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
-export default Ember.Controller.extend({
-  wizard: Ember.inject.service(),
+export default Controller.extend({
+  wizard: service(),
   actions: {
     onMountSuccess: function(type) {
       let transition = this.transitionToRoute('vault.cluster.access.methods');

@@ -70,22 +70,36 @@ func (idx *NetworkIndex) Overcommitted() bool {
 // SetNode is used to setup the available network resources. Returns
 // true if there is a collision
 func (idx *NetworkIndex) SetNode(node *Node) (collide bool) {
+
+	// COMPAT(0.11): Remove in 0.11
+	// Grab the network resources, handling both new and old
+	var networks []*NetworkResource
+	if node.NodeResources != nil && len(node.NodeResources.Networks) != 0 {
+		networks = node.NodeResources.Networks
+	} else if node.Resources != nil {
+		networks = node.Resources.Networks
+	}
+
 	// Add the available CIDR blocks
-	for _, n := range node.Resources.Networks {
+	for _, n := range networks {
 		if n.Device != "" {
 			idx.AvailNetworks = append(idx.AvailNetworks, n)
 			idx.AvailBandwidth[n.Device] = n.MBits
 		}
 	}
 
-	// Add the reserved resources
-	if r := node.Reserved; r != nil {
-		for _, n := range r.Networks {
+	// COMPAT(0.11): Remove in 0.11
+	// Handle reserving ports, handling both new and old
+	if node.ReservedResources != nil && node.ReservedResources.Networks.ReservedHostPorts != "" {
+		collide = idx.AddReservedPortRange(node.ReservedResources.Networks.ReservedHostPorts)
+	} else if node.Reserved != nil {
+		for _, n := range node.Reserved.Networks {
 			if idx.AddReserved(n) {
 				collide = true
 			}
 		}
 	}
+
 	return
 }
 
@@ -93,13 +107,31 @@ func (idx *NetworkIndex) SetNode(node *Node) (collide bool) {
 // true if there is a collision
 func (idx *NetworkIndex) AddAllocs(allocs []*Allocation) (collide bool) {
 	for _, alloc := range allocs {
-		for _, task := range alloc.TaskResources {
-			if len(task.Networks) == 0 {
-				continue
+		// Do not consider the resource impact of terminal allocations
+		if alloc.TerminalStatus() {
+			continue
+		}
+
+		if alloc.AllocatedResources != nil {
+			for _, task := range alloc.AllocatedResources.Tasks {
+				if len(task.Networks) == 0 {
+					continue
+				}
+				n := task.Networks[0]
+				if idx.AddReserved(n) {
+					collide = true
+				}
 			}
-			n := task.Networks[0]
-			if idx.AddReserved(n) {
-				collide = true
+		} else {
+			// COMPAT(0.11): Remove in 0.11
+			for _, task := range alloc.TaskResources {
+				if len(task.Networks) == 0 {
+					continue
+				}
+				n := task.Networks[0]
+				if idx.AddReserved(n) {
+					collide = true
+				}
 			}
 		}
 	}
@@ -139,6 +171,49 @@ func (idx *NetworkIndex) AddReserved(n *NetworkResource) (collide bool) {
 
 	// Add the bandwidth
 	idx.UsedBandwidth[n.Device] += n.MBits
+	return
+}
+
+// AddReservedPortRange marks the ports given as reserved on all network
+// interfaces. The port format is comma delimited, with spans given as n1-n2
+// (80,100-200,205)
+func (idx *NetworkIndex) AddReservedPortRange(ports string) (collide bool) {
+	// Convert the ports into a slice of ints
+	resPorts, err := ParsePortRanges(ports)
+	if err != nil {
+		return
+	}
+
+	// Ensure we create a bitmap for each available network
+	for _, n := range idx.AvailNetworks {
+		used := idx.UsedPorts[n.IP]
+		if used == nil {
+			// Try to get a bitmap from the pool, else create
+			raw := bitmapPool.Get()
+			if raw != nil {
+				used = raw.(Bitmap)
+				used.Clear()
+			} else {
+				used, _ = NewBitmap(maxValidPort)
+			}
+			idx.UsedPorts[n.IP] = used
+		}
+	}
+
+	for _, used := range idx.UsedPorts {
+		for _, port := range resPorts {
+			// Guard against invalid port
+			if port < 0 || port >= maxValidPort {
+				return true
+			}
+			if used.Check(uint(port)) {
+				collide = true
+			} else {
+				used.Set(uint(port))
+			}
+		}
+	}
+
 	return
 }
 

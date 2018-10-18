@@ -174,7 +174,7 @@ curl \
 }' http://127.0.0.1:8500/v1/acl/create
 ```
 
-The response includes the UUID you will use as the `token` parameter value in Vault's storage stanza configuration. An example response:
+The response includes the value you will use as the `token` parameter value in Vault's storage stanza configuration. An example response:
 
 ```json
 {"ID":"fe3b8d40-0ee0-8783-6cc2-ab1aa9bb16c1"}

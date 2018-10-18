@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.9.1 (06 Aug 2018)
+
+Bugfixes:
+
+* [#614][]: MapObjectEncoder should not ignore empty slices.
+
+## v1.9.0 (19 Jul 2018)
+
+Enhancements:
+* [#602][]: Reduce number of allocations when logging with reflection.
+* [#572][], [#606][]: Expose a registry for third-party logging sinks.
+
+Thanks to @nfarah86, @AlekSi, @JeanMertz, @philippgille, @etsangsplk, and
+@dimroc for their contributions to this release.
+
 ## v1.8.0 (13 Apr 2018)
 
 Enhancements:
@@ -284,3 +299,7 @@ upgrade to the upcoming stable release.
 [#518]: https://github.com/uber-go/zap/pull/518
 [#577]: https://github.com/uber-go/zap/pull/577
 [#574]: https://github.com/uber-go/zap/pull/574
+[#602]: https://github.com/uber-go/zap/pull/602
+[#572]: https://github.com/uber-go/zap/pull/572
+[#606]: https://github.com/uber-go/zap/pull/606
+[#614]: https://github.com/uber-go/zap/pull/614

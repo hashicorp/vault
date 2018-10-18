@@ -3,7 +3,7 @@
 }
 
 .masked-input .masked-value {
-  padding-left: 2.50rem;
+  padding-left: 2.5rem;
 }
 
 // we want to style the boxes the same everywhere so they
@@ -25,6 +25,8 @@
 .masked-input .display-only {
   line-height: 1.5;
   font-size: 1rem;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .masked-input-toggle {

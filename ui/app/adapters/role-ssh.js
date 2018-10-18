@@ -1,5 +1,6 @@
+import { assign } from '@ember/polyfills';
+import { resolve, allSettled } from 'rsvp';
 import ApplicationAdapter from './application';
-import Ember from 'ember';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -50,13 +51,13 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { id, backend } = query;
-    let zeroAddressAjax = Ember.RSVP.resolve();
+    let zeroAddressAjax = resolve();
     const queryAjax = this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id));
     if (!id) {
       zeroAddressAjax = this.findAllZeroAddress(store, query);
     }
 
-    return Ember.RSVP.allSettled([queryAjax, zeroAddressAjax]).then(results => {
+    return allSettled([queryAjax, zeroAddressAjax]).then(results => {
       // query result 404d, so throw the adapterError
       if (!results[0].value) {
         throw results[0].reason;
@@ -65,14 +66,15 @@ export default ApplicationAdapter.extend({
         id,
         name: id,
         backend,
+        data: {},
       };
 
       results.forEach(result => {
         if (result.value) {
           if (result.value.data.roles) {
-            resp = Ember.assign({}, resp, { zero_address_roles: result.value.data.roles });
+            resp.data = assign({}, resp.data, { zero_address_roles: result.value.data.roles });
           } else {
-            resp = Ember.assign({}, resp, result.value);
+            resp.data = assign({}, resp.data, result.value.data);
           }
         }
       });

@@ -1,6 +1,6 @@
+import { set } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
-import Ember from 'ember';
 
 export default ApplicationAdapter.extend({
   pathForType() {
@@ -10,7 +10,7 @@ export default ApplicationAdapter.extend({
   findRecord(store, type, id) {
     return this.ajax(this.buildURL(type), 'POST', { data: { paths: [id] } }).catch(e => {
       if (e instanceof DS.AdapterError) {
-        Ember.set(e, 'policyPath', 'sys/capabilities-self');
+        set(e, 'policyPath', 'sys/capabilities-self');
       }
       throw e;
     });
@@ -18,6 +18,9 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     const { id } = query;
+    if (!id) {
+      return;
+    }
     return this.findRecord(store, type, id).then(resp => {
       resp.path = id;
       return resp;

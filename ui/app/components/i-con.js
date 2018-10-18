@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const { computed } = Ember;
 const GLYPHS_WITH_SVG_TAG = [
   'learn',
   'video',
@@ -21,9 +22,12 @@ const GLYPHS_WITH_SVG_TAG = [
   'control-lock',
   'edition-enterprise',
   'edition-oss',
+  'check-plain',
+  'check-circle-fill',
+  'cancel-square-outline',
 ];
 
-export default Ember.Component.extend({
+export default Component.extend({
   layout: hbs`
     {{#if excludeSVG}}
       {{partial partialName}}
@@ -54,6 +58,6 @@ export default Ember.Component.extend({
 
   partialName: computed('glyph', function() {
     const glyph = this.get('glyph');
-    return `svg/icons/${Ember.String.camelize(glyph)}`;
+    return `svg/icons/${camelize(glyph)}`;
   }),
 });

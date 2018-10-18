@@ -115,8 +115,7 @@ func init() {
 // ----------------
 
 type jsonEncDriverTypical struct {
-	w encWriter
-	// w  *encWriterSwitch
+	w  encWriter
 	b  *[jsonScratchArrayLen]byte
 	tw bool // term white space
 	c  containerState
@@ -126,7 +125,6 @@ func (e *jsonEncDriverTypical) typical() {}
 
 func (e *jsonEncDriverTypical) reset(ee *jsonEncDriver) {
 	e.w = ee.ew
-	// e.w = &ee.e.encWriterSwitch
 	e.b = &ee.b
 	e.tw = ee.h.TermWhitespace
 	e.c = 0
@@ -205,7 +203,7 @@ func (e *jsonEncDriverTypical) atEndOfEncode() {
 // ----------------
 
 type jsonEncDriverGeneric struct {
-	w encWriter // encWriter // *encWriterSwitch
+	w encWriter
 	b *[jsonScratchArrayLen]byte
 	c containerState
 	// ds string // indent string
@@ -407,12 +405,13 @@ type jsonEncDriver struct {
 	noBuiltInTypes
 	e  *Encoder
 	h  *JsonHandle
-	ew encWriter // encWriter // *encWriterSwitch
+	ew encWriter
 	se extWrapper
 	// ---- cpu cache line boundary?
 	bs []byte // scratch
 	// ---- cpu cache line boundary?
 	b [jsonScratchArrayLen]byte // scratch (encode time,
+	_ [2]uint64                 // padding
 }
 
 func (e *jsonEncDriver) EncodeNil() {
@@ -569,7 +568,7 @@ type jsonDecDriver struct {
 	noBuiltInTypes
 	d  *Decoder
 	h  *JsonHandle
-	r  decReader // *decReaderSwitch // decReader
+	r  decReader
 	se extWrapper
 
 	// ---- writable fields during execution --- *try* to keep in sep cache line
@@ -708,6 +707,7 @@ func (d *jsonDecDriver) ReadMapEnd() {
 }
 
 func (d *jsonDecDriver) readLit(length, fromIdx uint8) {
+	// length here is always less than 8 (literals are: null, true, false)
 	bs := d.r.readx(int(length))
 	d.tok = 0
 	if jsonValidateSymbols && !bytes.Equal(bs, jsonLiterals[fromIdx:fromIdx+length]) {
@@ -808,6 +808,9 @@ func (d *jsonDecDriver) decNumBytes() (bs []byte) {
 
 func (d *jsonDecDriver) DecodeUint64() (u uint64) {
 	bs := d.decNumBytes()
+	if len(bs) == 0 {
+		return
+	}
 	n, neg, badsyntax, overflow := jsonParseInteger(bs)
 	if overflow {
 		d.d.errorf("overflow parsing unsigned integer: %s", bs)
@@ -823,6 +826,9 @@ func (d *jsonDecDriver) DecodeUint64() (u uint64) {
 func (d *jsonDecDriver) DecodeInt64() (i int64) {
 	const cutoff = uint64(1 << uint(64-1))
 	bs := d.decNumBytes()
+	if len(bs) == 0 {
+		return
+	}
 	n, neg, badsyntax, overflow := jsonParseInteger(bs)
 	if overflow {
 		d.d.errorf("overflow parsing integer: %s", bs)
@@ -850,6 +856,9 @@ func (d *jsonDecDriver) DecodeInt64() (i int64) {
 }
 
 func (d *jsonDecDriver) decUint64ViaFloat(s string) (u uint64) {
+	if len(s) == 0 {
+		return
+	}
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		d.d.errorf("invalid syntax for integer: %s", s)
@@ -866,6 +875,9 @@ func (d *jsonDecDriver) decUint64ViaFloat(s string) (u uint64) {
 
 func (d *jsonDecDriver) DecodeFloat64() (f float64) {
 	bs := d.decNumBytes()
+	if len(bs) == 0 {
+		return
+	}
 	f, err := strconv.ParseFloat(stringView(bs), 64)
 	if err != nil {
 		d.d.errorv(err)
@@ -1086,9 +1098,23 @@ func (d *jsonDecDriver) appendStringAsBytes() {
 
 func (d *jsonDecDriver) nakedNum(z *decNaked, bs []byte) (err error) {
 	const cutoff = uint64(1 << uint(64-1))
+
 	var n uint64
 	var neg, badsyntax, overflow bool
 
+	if len(bs) == 0 {
+		if d.h.PreferFloat {
+			z.v = valueTypeFloat
+			z.f = 0
+		} else if d.h.SignedInteger {
+			z.v = valueTypeInt
+			z.i = 0
+		} else {
+			z.v = valueTypeUint
+			z.u = 0
+		}
+		return
+	}
 	if d.h.PreferFloat {
 		goto F
 	}
@@ -1295,7 +1321,7 @@ func (h *JsonHandle) SetInterfaceExt(rt reflect.Type, tag uint64, ext InterfaceE
 type jsonEncDriverTypicalImpl struct {
 	jsonEncDriver
 	jsonEncDriverTypical
-	_ [1]uint64 // padding
+	_ [3]uint64 // padding
 }
 
 func (x *jsonEncDriverTypicalImpl) reset() {
@@ -1306,6 +1332,7 @@ func (x *jsonEncDriverTypicalImpl) reset() {
 type jsonEncDriverGenericImpl struct {
 	jsonEncDriver
 	jsonEncDriverGeneric
+	_ [2]uint64 // padding
 }
 
 func (x *jsonEncDriverGenericImpl) reset() {
@@ -1340,7 +1367,7 @@ func (h *JsonHandle) newDecDriver(d *Decoder) decDriver {
 }
 
 func (e *jsonEncDriver) reset() {
-	e.ew = e.e.w // e.e.w // &e.e.encWriterSwitch
+	e.ew = e.e.w
 	e.se.InterfaceExt = e.h.RawBytesExt
 	if e.bs != nil {
 		e.bs = e.bs[:0]
@@ -1348,7 +1375,7 @@ func (e *jsonEncDriver) reset() {
 }
 
 func (d *jsonDecDriver) reset() {
-	d.r = d.d.r // &d.d.decReaderSwitch // d.d.r
+	d.r = d.d.r
 	d.se.InterfaceExt = d.h.RawBytesExt
 	if d.bs != nil {
 		d.bs = d.bs[:0]
@@ -1380,14 +1407,16 @@ func jsonFloatStrconvFmtPrec(f float64) (fmt byte, prec int) {
 
 // custom-fitted version of strconv.Parse(Ui|I)nt.
 // Also ensures we don't have to search for .eE to determine if a float or not.
+// Note: s CANNOT be a zero-length slice.
 func jsonParseInteger(s []byte) (n uint64, neg, badSyntax, overflow bool) {
 	const maxUint64 = (1<<64 - 1)
 	const cutoff = maxUint64/10 + 1
 
-	if len(s) == 0 {
-		badSyntax = true
-		return
-	}
+	// if len(s) == 0 {
+	// 	// treat empty string as zero value
+	// 	// badSyntax = true
+	// 	return
+	// }
 	switch s[0] {
 	case '+':
 		s = s[1:]

@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default DS.Model.extend({
   backend: attr('string', {
@@ -104,20 +104,25 @@ export default DS.Model.extend({
   basicConstraintsValidForNonCA: attr('boolean', {
     label: 'Mark Basic Constraints valid when issuing non-CA certificates.',
   }),
+  notBeforeDuration: attr({
+    label: 'Not Before Duration',
+    editType: 'ttl',
+    defaultValue: '30s',
+  }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
-  canRead: computed.alias('updatePath.canRead'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
+  canRead: alias('updatePath.canRead'),
 
   generatePath: lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id'),
-  canGenerate: computed.alias('generatePath.canUpdate'),
+  canGenerate: alias('generatePath.canUpdate'),
 
   signPath: lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id'),
-  canSign: computed.alias('signPath.canUpdate'),
+  canSign: alias('signPath.canUpdate'),
 
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
-  canSignVerbatim: computed.alias('signVerbatimPath.canUpdate'),
+  canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
   fieldGroups: computed(function() {
     const groups = [
@@ -137,6 +142,7 @@ export default DS.Model.extend({
           'organization',
           'keyUsage',
           'allowedOtherSans',
+          'notBeforeDuration',
         ],
       },
       {

@@ -1,4 +1,7 @@
-import Ember from 'ember';
+import { schedule, debounce } from '@ember/runloop';
+import { observer } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
@@ -22,7 +25,9 @@ const routeFor = function(type, mode) {
   return useSuffix ? modeVal + '.' + typeVal : modeVal;
 };
 
-export default Ember.Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, {
+  router: service(),
+
   classNames: ['navigate-filter'],
 
   // these get passed in from the outside
@@ -38,18 +43,15 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   filterMatchesKey: null,
   firstPartialMatch: null,
 
-  routing: Ember.inject.service('-routing'),
-
   transitionToRoute: function() {
-    var router = this.get('routing.router');
-    router.transitionTo.apply(router, arguments);
+    this.get('router').transitionTo(...arguments);
   },
 
   shouldFocus: false,
 
-  focusFilter: Ember.observer('filter', function() {
+  focusFilter: observer('filter', function() {
     if (!this.get('filter')) return;
-    Ember.run.schedule('afterRender', this, 'forceFocus');
+    schedule('afterRender', this, 'forceFocus');
   }).on('didInsertElement'),
 
   keyForNav(key) {
@@ -161,24 +163,24 @@ export default Ember.Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleInput: function(event) {
-      var filter = event.target.value;
+    handleInput: function(filter) {
       this.get('filterDidChange')(filter);
-      Ember.run.debounce(this, 'filterUpdated', filter, 200);
+      debounce(this, 'filterUpdated', filter, 200);
     },
 
     setFilterFocused: function(isFocused) {
       this.get('filterFocusDidChange')(isFocused);
     },
 
-    handleKeyPress: function(val, event) {
+    handleKeyPress: function(event) {
       if (event.keyCode === keys.TAB) {
         this.onTab(event);
       }
     },
 
-    handleKeyUp: function(val, event) {
+    handleKeyUp: function(event) {
       var keyCode = event.keyCode;
+      let val = event.target.value;
       if (keyCode === keys.ENTER) {
         this.onEnter(val);
       }

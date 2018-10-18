@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -10,7 +11,6 @@ import (
 )
 
 const maxTok = 2048 // Largest token we can return.
-const maxUint16 = 1<<16 - 1
 
 // Tokinize a RFC 1035 zone file. The tokenizer will normalize it:
 // * Add ownernames if they are left blank;
@@ -75,15 +75,13 @@ func (e *ParseError) Error() (s string) {
 }
 
 type lex struct {
-	token      string // text of the token
-	tokenUpper string // uppercase text of the token
-	length     int    // length of the token
-	err        bool   // when true, token text has lexer error
-	value      uint8  // value: zString, _BLANK, etc.
-	line       int    // line in the file
-	column     int    // column in the file
-	torc       uint16 // type or class as parsed in the lexer, we only need to look this up in the grammar
-	comment    string // any comment text seen
+	token   string // text of the token
+	err     bool   // when true, token text has lexer error
+	value   uint8  // value: zString, _BLANK, etc.
+	torc    uint16 // type or class as parsed in the lexer, we only need to look this up in the grammar
+	line    int    // line in the file
+	column  int    // column in the file
+	comment string // any comment text seen
 }
 
 // Token holds the token that are returned when a zone file is parsed.
@@ -153,7 +151,8 @@ func ReadRR(q io.Reader, filename string) (RR, error) {
 //	foo. IN A 10.0.0.1 ; this is a comment
 //
 // The text "; this is comment" is returned in Token.Comment. Comments inside the
-// RR are discarded. Comments on a line by themselves are discarded too.
+// RR are returned concatenated along with the RR. Comments on a line by themselves
+// are discarded.
 func ParseZone(r io.Reader, origin, file string) chan *Token {
 	return parseZoneHelper(r, origin, file, nil, 10000)
 }
@@ -170,22 +169,9 @@ func parseZone(r io.Reader, origin, f string, defttl *ttlState, t chan *Token, i
 			close(t)
 		}
 	}()
-	s, cancel := scanInit(r)
-	c := make(chan lex)
-	// Start the lexer
-	go zlexer(s, c)
 
-	defer func() {
-		cancel()
-		// zlexer can send up to three tokens, the next one and possibly 2 remainders.
-		// Do a non-blocking read.
-		_, ok := <-c
-		_, ok = <-c
-		_, ok = <-c
-		if !ok {
-			// too bad
-		}
-	}()
+	c := newZLexer(r)
+
 	// 6 possible beginnings of a line, _ is a space
 	// 0. zRRTYPE                              -> all omitted until the rrtype
 	// 1. zOwner _ zRrtype                     -> class/ttl omitted
@@ -207,12 +193,11 @@ func parseZone(r io.Reader, origin, f string, defttl *ttlState, t chan *Token, i
 	st := zExpectOwnerDir // initial state
 	var h RR_Header
 	var prevName string
-	for l := range c {
+	for l, ok := c.Next(); ok; l, ok = c.Next() {
 		// Lexer spotted an error already
-		if l.err == true {
+		if l.err {
 			t <- &Token{Error: &ParseError{f, l.token, l}}
 			return
-
 		}
 		switch st {
 		case zExpectOwnerDir:
@@ -281,9 +266,9 @@ func parseZone(r io.Reader, origin, f string, defttl *ttlState, t chan *Token, i
 				return
 			}
 			neworigin := origin // There may be optionally a new origin set after the filename, if not use current one
-			switch l := <-c; l.value {
+			switch l, _ := c.Next(); l.value {
 			case zBlank:
-				l := <-c
+				l, _ := c.Next()
 				if l.value == zString {
 					name, ok := toAbsoluteName(l.token, origin)
 					if !ok {
@@ -484,69 +469,157 @@ func parseZone(r io.Reader, origin, f string, defttl *ttlState, t chan *Token, i
 	}
 	// If we get here, we and the h.Rrtype is still zero, we haven't parsed anything, this
 	// is not an error, because an empty zone file is still a zone file.
+
+	// Surface any read errors from r.
+	if err := c.Err(); err != nil {
+		t <- &Token{Error: &ParseError{file: f, err: err.Error()}}
+	}
 }
 
-// zlexer scans the sourcefile and returns tokens on the channel c.
-func zlexer(s *scan, c chan lex) {
-	var l lex
-	str := make([]byte, maxTok) // Should be enough for any token
-	stri := 0                   // Offset in str (0 means empty)
-	com := make([]byte, maxTok) // Hold comment text
-	comi := 0
-	quote := false
-	escape := false
-	space := false
-	commt := false
-	rrtype := false
-	owner := true
-	brace := 0
-	x, err := s.tokenText()
-	defer close(c)
-	for err == nil {
-		l.column = s.position.Column
-		l.line = s.position.Line
-		if stri >= maxTok {
+type zlexer struct {
+	br io.ByteReader
+
+	readErr error
+
+	line   int
+	column int
+
+	com string
+
+	l lex
+
+	brace  int
+	quote  bool
+	space  bool
+	commt  bool
+	rrtype bool
+	owner  bool
+
+	nextL bool
+
+	eol bool // end-of-line
+}
+
+func newZLexer(r io.Reader) *zlexer {
+	br, ok := r.(io.ByteReader)
+	if !ok {
+		br = bufio.NewReaderSize(r, 1024)
+	}
+
+	return &zlexer{
+		br: br,
+
+		line: 1,
+
+		owner: true,
+	}
+}
+
+func (zl *zlexer) Err() error {
+	if zl.readErr == io.EOF {
+		return nil
+	}
+
+	return zl.readErr
+}
+
+// readByte returns the next byte from the input
+func (zl *zlexer) readByte() (byte, bool) {
+	if zl.readErr != nil {
+		return 0, false
+	}
+
+	c, err := zl.br.ReadByte()
+	if err != nil {
+		zl.readErr = err
+		return 0, false
+	}
+
+	// delay the newline handling until the next token is delivered,
+	// fixes off-by-one errors when reporting a parse error.
+	if zl.eol {
+		zl.line++
+		zl.column = 0
+		zl.eol = false
+	}
+
+	if c == '\n' {
+		zl.eol = true
+	} else {
+		zl.column++
+	}
+
+	return c, true
+}
+
+func (zl *zlexer) Next() (lex, bool) {
+	l := &zl.l
+	if zl.nextL {
+		zl.nextL = false
+		return *l, true
+	}
+	if l.err {
+		// Parsing errors should be sticky.
+		return lex{value: zEOF}, false
+	}
+
+	var (
+		str [maxTok]byte // Hold string text
+		com [maxTok]byte // Hold comment text
+
+		stri int // Offset in str (0 means empty)
+		comi int // Offset in com (0 means empty)
+
+		escape bool
+	)
+
+	if zl.com != "" {
+		comi = copy(com[:], zl.com)
+		zl.com = ""
+	}
+
+	for x, ok := zl.readByte(); ok; x, ok = zl.readByte() {
+		l.line, l.column = zl.line, zl.column
+		l.comment = ""
+
+		if stri >= len(str) {
 			l.token = "token length insufficient for parsing"
 			l.err = true
-			c <- l
-			return
+			return *l, true
 		}
-		if comi >= maxTok {
+		if comi >= len(com) {
 			l.token = "comment length insufficient for parsing"
 			l.err = true
-			c <- l
-			return
+			return *l, true
 		}
 
 		switch x {
 		case ' ', '\t':
-			if escape {
+			if escape || zl.quote {
+				// Inside quotes or escaped this is legal.
+				str[stri] = x
+				stri++
+
 				escape = false
-				str[stri] = x
-				stri++
 				break
 			}
-			if quote {
-				// Inside quotes this is legal
-				str[stri] = x
-				stri++
-				break
-			}
-			if commt {
+
+			if zl.commt {
 				com[comi] = x
 				comi++
 				break
 			}
+
+			var retL lex
 			if stri == 0 {
 				// Space directly in the beginning, handled in the grammar
-			} else if owner {
+			} else if zl.owner {
 				// If we have a string and its the first, make it an owner
 				l.value = zOwner
 				l.token = string(str[:stri])
-				l.tokenUpper = strings.ToUpper(l.token)
-				l.length = stri
+
 				// escape $... start with a \ not a $, so this will work
-				switch l.tokenUpper {
+				switch strings.ToUpper(l.token) {
 				case "$TTL":
 					l.value = zDirTTL
 				case "$ORIGIN":
@@ -556,259 +629,311 @@ func zlexer(s *scan, c chan lex) {
 				case "$GENERATE":
 					l.value = zDirGenerate
 				}
-				c <- l
+
+				retL = *l
 			} else {
 				l.value = zString
 				l.token = string(str[:stri])
-				l.tokenUpper = strings.ToUpper(l.token)
-				l.length = stri
-				if !rrtype {
-					if t, ok := StringToType[l.tokenUpper]; ok {
+
+				if !zl.rrtype {
+					tokenUpper := strings.ToUpper(l.token)
+					if t, ok := StringToType[tokenUpper]; ok {
 						l.value = zRrtpe
 						l.torc = t
-						rrtype = true
-					} else {
-						if strings.HasPrefix(l.tokenUpper, "TYPE") {
-							t, ok := typeToInt(l.token)
-							if !ok {
-								l.token = "unknown RR type"
-								l.err = true
-								c <- l
-								return
-							}
-							l.value = zRrtpe
-							rrtype = true
-							l.torc = t
+
+						zl.rrtype = true
+					} else if strings.HasPrefix(tokenUpper, "TYPE") {
+						t, ok := typeToInt(l.token)
+						if !ok {
+							l.token = "unknown RR type"
+							l.err = true
+							return *l, true
 						}
+
+						l.value = zRrtpe
+						l.torc = t
+
+						zl.rrtype = true
 					}
-					if t, ok := StringToClass[l.tokenUpper]; ok {
+
+					if t, ok := StringToClass[tokenUpper]; ok {
 						l.value = zClass
 						l.torc = t
-					} else {
-						if strings.HasPrefix(l.tokenUpper, "CLASS") {
-							t, ok := classToInt(l.token)
-							if !ok {
-								l.token = "unknown class"
-								l.err = true
-								c <- l
-								return
-							}
-							l.value = zClass
-							l.torc = t
+					} else if strings.HasPrefix(tokenUpper, "CLASS") {
+						t, ok := classToInt(l.token)
+						if !ok {
+							l.token = "unknown class"
+							l.err = true
+							return *l, true
 						}
+
+						l.value = zClass
+						l.torc = t
 					}
 				}
-				c <- l
-			}
-			stri = 0
 
-			if !space && !commt {
+				retL = *l
+			}
+
+			zl.owner = false
+
+			if !zl.space {
+				zl.space = true
+
 				l.value = zBlank
 				l.token = " "
-				l.length = 1
-				c <- l
+
+				if retL == (lex{}) {
+					return *l, true
+				}
+
+				zl.nextL = true
 			}
-			owner = false
-			space = true
+
+			if retL != (lex{}) {
+				return retL, true
+			}
 		case ';':
-			if escape {
+			if escape || zl.quote {
+				// Inside quotes or escaped this is legal.
+				str[stri] = x
+				stri++
+
 				escape = false
-				str[stri] = x
-				stri++
 				break
 			}
-			if quote {
-				// Inside quotes this is legal
-				str[stri] = x
-				stri++
-				break
+
+			zl.commt = true
+			zl.com = ""
+
+			if comi > 1 {
+				// A newline was previously seen inside a comment that
+				// was inside braces and we delayed adding it until now.
+				com[comi] = ' ' // convert newline to space
+				comi++
 			}
-			if stri > 0 {
-				l.value = zString
-				l.token = string(str[:stri])
-				l.tokenUpper = strings.ToUpper(l.token)
-				l.length = stri
-				c <- l
-				stri = 0
-			}
-			commt = true
+
 			com[comi] = ';'
 			comi++
+
+			if stri > 0 {
+				zl.com = string(com[:comi])
+
+				l.value = zString
+				l.token = string(str[:stri])
+				return *l, true
+			}
 		case '\r':
 			escape = false
-			if quote {
+
+			if zl.quote {
 				str[stri] = x
 				stri++
-				break
 			}
+
 			// discard if outside of quotes
 		case '\n':
 			escape = false
+
 			// Escaped newline
-			if quote {
+			if zl.quote {
 				str[stri] = x
 				stri++
 				break
 			}
-			// inside quotes this is legal
-			if commt {
+
+			if zl.commt {
 				// Reset a comment
-				commt = false
-				rrtype = false
-				stri = 0
+				zl.commt = false
+				zl.rrtype = false
+
 				// If not in a brace this ends the comment AND the RR
-				if brace == 0 {
-					owner = true
-					owner = true
+				if zl.brace == 0 {
+					zl.owner = true
+
 					l.value = zNewline
 					l.token = "\n"
-					l.tokenUpper = l.token
-					l.length = 1
 					l.comment = string(com[:comi])
-					c <- l
-					l.comment = ""
-					comi = 0
-					break
+					return *l, true
 				}
-				com[comi] = ' ' // convert newline to space
-				comi++
+
+				zl.com = string(com[:comi])
 				break
 			}
 
-			if brace == 0 {
+			if zl.brace == 0 {
 				// If there is previous text, we should output it here
+				var retL lex
 				if stri != 0 {
 					l.value = zString
 					l.token = string(str[:stri])
-					l.tokenUpper = strings.ToUpper(l.token)
 
-					l.length = stri
-					if !rrtype {
-						if t, ok := StringToType[l.tokenUpper]; ok {
+					if !zl.rrtype {
+						tokenUpper := strings.ToUpper(l.token)
+						if t, ok := StringToType[tokenUpper]; ok {
+							zl.rrtype = true
+
 							l.value = zRrtpe
 							l.torc = t
-							rrtype = true
 						}
 					}
-					c <- l
+
+					retL = *l
 				}
+
 				l.value = zNewline
 				l.token = "\n"
-				l.tokenUpper = l.token
-				l.length = 1
-				c <- l
-				stri = 0
-				commt = false
-				rrtype = false
-				owner = true
-				comi = 0
+				l.comment = zl.com
+
+				zl.com = ""
+				zl.rrtype = false
+				zl.owner = true
+
+				if retL != (lex{}) {
+					zl.nextL = true
+					return retL, true
+				}
+
+				return *l, true
 			}
 		case '\\':
 			// comments do not get escaped chars, everything is copied
-			if commt {
+			if zl.commt {
 				com[comi] = x
 				comi++
 				break
 			}
+
 			// something already escaped must be in string
 			if escape {
 				str[stri] = x
 				stri++
+
 				escape = false
 				break
 			}
+
 			// something escaped outside of string gets added to string
 			str[stri] = x
 			stri++
+
 			escape = true
 		case '"':
-			if commt {
+			if zl.commt {
 				com[comi] = x
 				comi++
 				break
 			}
+
 			if escape {
 				str[stri] = x
 				stri++
+
 				escape = false
 				break
 			}
-			space = false
+
+			zl.space = false
+
 			// send previous gathered text and the quote
+			var retL lex
 			if stri != 0 {
 				l.value = zString
 				l.token = string(str[:stri])
-				l.tokenUpper = strings.ToUpper(l.token)
-				l.length = stri
 
-				c <- l
-				stri = 0
+				retL = *l
 			}
 
 			// send quote itself as separate token
 			l.value = zQuote
 			l.token = "\""
-			l.tokenUpper = l.token
-			l.length = 1
-			c <- l
-			quote = !quote
+
+			zl.quote = !zl.quote
+
+			if retL != (lex{}) {
+				zl.nextL = true
+				return retL, true
+			}
+
+			return *l, true
 		case '(', ')':
-			if commt {
+			if zl.commt {
 				com[comi] = x
 				comi++
 				break
 			}
-			if escape {
+
+			if escape || zl.quote {
+				// Inside quotes or escaped this is legal.
 				str[stri] = x
 				stri++
+
 				escape = false
 				break
 			}
-			if quote {
-				str[stri] = x
-				stri++
-				break
-			}
+
 			switch x {
 			case ')':
-				brace--
-				if brace < 0 {
+				zl.brace--
+
+				if zl.brace < 0 {
 					l.token = "extra closing brace"
-					l.tokenUpper = l.token
 					l.err = true
-					c <- l
-					return
+					return *l, true
 				}
 			case '(':
-				brace++
+				zl.brace++
 			}
 		default:
 			escape = false
-			if commt {
+
+			if zl.commt {
 				com[comi] = x
 				comi++
 				break
 			}
+
 			str[stri] = x
 			stri++
-			space = false
+
+			zl.space = false
 		}
-		x, err = s.tokenText()
 	}
+
+	var retL lex
 	if stri > 0 {
-		// Send remainder
-		l.token = string(str[:stri])
-		l.tokenUpper = strings.ToUpper(l.token)
-		l.length = stri
+		// Send remainder of str
 		l.value = zString
-		c <- l
+		l.token = string(str[:stri])
+		retL = *l
+
+		if comi <= 0 {
+			return retL, true
+		}
 	}
-	if brace != 0 {
+
+	if comi > 0 {
+		// Send remainder of com
+		l.value = zNewline
+		l.token = "\n"
+		l.comment = string(com[:comi])
+
+		if retL != (lex{}) {
+			zl.nextL = true
+			return retL, true
+		}
+
+		return *l, true
+	}
+
+	if zl.brace != 0 {
+		l.comment = "" // in case there was left over string and comment
 		l.token = "unbalanced brace"
-		l.tokenUpper = l.token
 		l.err = true
-		c <- l
+		return *l, true
 	}
+
+	return lex{value: zEOF}, false
 }
 
 // Extract the class number from CLASSxx
@@ -969,12 +1094,12 @@ func locCheckEast(token string, longitude uint32) (uint32, bool) {
 }
 
 // "Eat" the rest of the "line". Return potential comments
-func slurpRemainder(c chan lex, f string) (*ParseError, string) {
-	l := <-c
+func slurpRemainder(c *zlexer, f string) (*ParseError, string) {
+	l, _ := c.Next()
 	com := ""
 	switch l.value {
 	case zBlank:
-		l = <-c
+		l, _ = c.Next()
 		com = l.comment
 		if l.value != zNewline && l.value != zEOF {
 			return &ParseError{f, "garbage after rdata", l}, ""

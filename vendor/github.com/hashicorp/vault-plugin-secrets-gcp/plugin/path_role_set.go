@@ -226,17 +226,19 @@ func (b *backend) pathRoleSetDelete(ctx context.Context, req *logical.Request, d
 
 	warnings := make([]string, 0)
 	if rs.AccountId != nil {
-		if err := b.deleteServiceAccount(ctx, iamAdmin, rs.AccountId); err != nil {
-			w := fmt.Sprintf("unable to delete service account '%s' (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
-			warnings = append(warnings, w)
-		}
 		if err := b.deleteTokenGenKey(ctx, iamAdmin, rs.TokenGen); err != nil {
-			w := fmt.Sprintf("unable to delete key for service account '%s' (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
+			w := fmt.Sprintf("unable to delete key under service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
 			warnings = append(warnings, w)
 		}
+
+		if err := b.deleteServiceAccount(ctx, iamAdmin, rs.AccountId); err != nil {
+			w := fmt.Sprintf("unable to delete service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.ResourceName(), err)
+			warnings = append(warnings, w)
+		}
+
 		if merr := b.removeBindings(ctx, iamHandle, rs.AccountId.EmailOrId, rs.Bindings); merr != nil {
 			for _, err := range merr.Errors {
-				w := fmt.Sprintf("unable to delete IAM policy bindings for service account '%s' (WAL entry to clean-up later has been added): %v", rs.AccountId.EmailOrId, err)
+				w := fmt.Sprintf("unable to delete IAM policy bindings for service account %q (WAL entry to clean-up later has been added): %v", rs.AccountId.EmailOrId, err)
 				warnings = append(warnings, w)
 			}
 		}

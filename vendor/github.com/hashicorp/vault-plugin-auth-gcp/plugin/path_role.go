@@ -289,7 +289,7 @@ func (b *GcpAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 	resp := make(map[string]interface{})
 
 	if role.RoleType != "" {
-		resp["role_type"] = role.RoleType
+		resp["role"] = role.RoleType
 	}
 	if role.ProjectId != "" {
 		resp["project_id"] = role.ProjectId

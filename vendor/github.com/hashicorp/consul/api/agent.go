@@ -38,6 +38,18 @@ const (
 	ProxyExecModeScript ProxyExecMode = "script"
 )
 
+// UpstreamDestType is the type of upstream discovery mechanism.
+type UpstreamDestType string
+
+const (
+	// UpstreamDestTypeService discovers instances via healthy service lookup.
+	UpstreamDestTypeService UpstreamDestType = "service"
+
+	// UpstreamDestTypePreparedQuery discovers instances via prepared query
+	// execution.
+	UpstreamDestTypePreparedQuery UpstreamDestType = "prepared_query"
+)
+
 // AgentCheck represents a check known to the agent
 type AgentCheck struct {
 	Node        string
@@ -51,34 +63,57 @@ type AgentCheck struct {
 	Definition  HealthCheckDefinition
 }
 
+// AgentWeights represent optional weights for a service
+type AgentWeights struct {
+	Passing int
+	Warning int
+}
+
 // AgentService represents a service known to the agent
 type AgentService struct {
-	Kind              ServiceKind
+	Kind              ServiceKind `json:",omitempty"`
 	ID                string
 	Service           string
 	Tags              []string
 	Meta              map[string]string
 	Port              int
 	Address           string
+	Weights           AgentWeights
 	EnableTagOverride bool
-	CreateIndex       uint64
-	ModifyIndex       uint64
-	ProxyDestination  string
-	Connect           *AgentServiceConnect
+	CreateIndex       uint64 `json:",omitempty"`
+	ModifyIndex       uint64 `json:",omitempty"`
+	ContentHash       string `json:",omitempty"`
+	// DEPRECATED (ProxyDestination) - remove this field
+	ProxyDestination string                          `json:",omitempty"`
+	Proxy            *AgentServiceConnectProxyConfig `json:",omitempty"`
+	Connect          *AgentServiceConnect            `json:",omitempty"`
 }
 
 // AgentServiceConnect represents the Connect configuration of a service.
 type AgentServiceConnect struct {
-	Native bool
-	Proxy  *AgentServiceConnectProxy
+	Native         bool                      `json:",omitempty"`
+	Proxy          *AgentServiceConnectProxy `json:",omitempty"`
+	SidecarService *AgentServiceRegistration `json:",omitempty"`
 }
 
 // AgentServiceConnectProxy represents the Connect Proxy configuration of a
 // service.
 type AgentServiceConnectProxy struct {
-	ExecMode ProxyExecMode
-	Command  []string
-	Config   map[string]interface{}
+	ExecMode  ProxyExecMode          `json:",omitempty"`
+	Command   []string               `json:",omitempty"`
+	Config    map[string]interface{} `json:",omitempty"`
+	Upstreams []Upstream             `json:",omitempty"`
+}
+
+// AgentServiceConnectProxyConfig is the proxy configuration in a connect-proxy
+// ServiceDefinition or response.
+type AgentServiceConnectProxyConfig struct {
+	DestinationServiceName string
+	DestinationServiceID   string                 `json:",omitempty"`
+	LocalServiceAddress    string                 `json:",omitempty"`
+	LocalServicePort       int                    `json:",omitempty"`
+	Config                 map[string]interface{} `json:",omitempty"`
+	Upstreams              []Upstream
 }
 
 // AgentMember represents a cluster member known to the agent
@@ -119,10 +154,13 @@ type AgentServiceRegistration struct {
 	Address           string            `json:",omitempty"`
 	EnableTagOverride bool              `json:",omitempty"`
 	Meta              map[string]string `json:",omitempty"`
+	Weights           *AgentWeights     `json:",omitempty"`
 	Check             *AgentServiceCheck
 	Checks            AgentServiceChecks
-	ProxyDestination  string               `json:",omitempty"`
-	Connect           *AgentServiceConnect `json:",omitempty"`
+	// DEPRECATED (ProxyDestination) - remove this field
+	ProxyDestination string                          `json:",omitempty"`
+	Proxy            *AgentServiceConnectProxyConfig `json:",omitempty"`
+	Connect          *AgentServiceConnect            `json:",omitempty"`
 }
 
 // AgentCheckRegistration is used to register a new check
@@ -153,6 +191,8 @@ type AgentServiceCheck struct {
 	TLSSkipVerify     bool                `json:",omitempty"`
 	GRPC              string              `json:",omitempty"`
 	GRPCUseTLS        bool                `json:",omitempty"`
+	AliasNode         string              `json:",omitempty"`
+	AliasService      string              `json:",omitempty"`
 
 	// In Consul 0.7 and later, checks that are associated with a service
 	// may also contain this optional DeregisterCriticalServiceAfter field,
@@ -225,9 +265,23 @@ type ConnectProxyConfig struct {
 	TargetServiceID   string
 	TargetServiceName string
 	ContentHash       string
-	ExecMode          ProxyExecMode
-	Command           []string
-	Config            map[string]interface{}
+	// DEPRECATED(managed-proxies) - this struct is re-used for sidecar configs
+	// but they don't need ExecMode or Command
+	ExecMode  ProxyExecMode `json:",omitempty"`
+	Command   []string      `json:",omitempty"`
+	Config    map[string]interface{}
+	Upstreams []Upstream
+}
+
+// Upstream is the response structure for a proxy upstream configuration.
+type Upstream struct {
+	DestinationType      UpstreamDestType `json:",omitempty"`
+	DestinationNamespace string           `json:",omitempty"`
+	DestinationName      string
+	Datacenter           string                 `json:",omitempty"`
+	LocalBindAddress     string                 `json:",omitempty"`
+	LocalBindPort        int                    `json:",omitempty"`
+	Config               map[string]interface{} `json:",omitempty"`
 }
 
 // Agent can be used to query the Agent endpoints
@@ -333,6 +387,33 @@ func (a *Agent) Services() (map[string]*AgentService, error) {
 	}
 
 	return out, nil
+}
+
+// Service returns a locally registered service instance and allows for
+// hash-based blocking.
+//
+// Note that this uses an unconventional blocking mechanism since it's
+// agent-local state. That means there is no persistent raft index so we block
+// based on object hash instead.
+func (a *Agent) Service(serviceID string, q *QueryOptions) (*AgentService, *QueryMeta, error) {
+	r := a.c.newRequest("GET", "/v1/agent/service/"+serviceID)
+	r.setQueryOptions(q)
+	rtt, resp, err := requireOK(a.c.doRequest(r))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	qm := &QueryMeta{}
+	parseQueryMeta(resp, qm)
+	qm.RequestTime = rtt
+
+	var out *AgentService
+	if err := decodeBody(resp, &out); err != nil {
+		return nil, nil, err
+	}
+
+	return out, qm, nil
 }
 
 // Members returns the known gossip members. The WAN

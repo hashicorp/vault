@@ -87,6 +87,9 @@ type creationParameters struct {
 
 	// The maximum path length to encode
 	MaxPathLength int
+
+	// The duration the certificate will use NotBefore
+	NotBeforeDuration time.Duration
 }
 
 type caInfoBundle struct {
@@ -462,6 +465,12 @@ func validateNames(data *dataBundle, names []string) string {
 // allowed, it will be returned as the second string. Empty strings + error
 // means everything is okay.
 func validateOtherSANs(data *dataBundle, requested map[string][]string) (string, string, error) {
+	for _, val := range data.role.AllowedOtherSANs {
+		if val == "*" {
+			// Anything is allowed
+			return "", "", nil
+		}
+	}
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
 		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
@@ -501,7 +510,10 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 		if len(splitType) != 2 {
 			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
 		}
-		if strings.ToLower(splitType[0]) != "utf8" {
+		switch {
+		case strings.EqualFold(splitType[0], "utf8"):
+		case strings.EqualFold(splitType[0], "utf-8"):
+		default:
 			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
 		}
 		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
@@ -1019,6 +1031,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
+		NotBeforeDuration:             data.role.NotBeforeDuration,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1174,6 +1187,9 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
 		URIs:           data.params.URIs,
+	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1369,6 +1385,9 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		NotAfter:       data.params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
+	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
 	}
 
 	switch data.signingBundle.PrivateKeyType {

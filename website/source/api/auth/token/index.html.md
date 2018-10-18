@@ -68,7 +68,7 @@ during this call.
 ### Parameters
 
 - `id` `(string: "")` – The ID of the client token. Can only be specified by a
-  root token.  Otherwise, the token ID is a randomly generated UUID.
+  root token.  Otherwise, the token ID is a randomly generated value.
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.
@@ -735,4 +735,21 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     http://127.0.0.1:8200/v1/auth/token/tidy
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "84437c7f-36a1-6c1d-381d-14ec99217e94",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": [
+    "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs."
+  ],
+  "auth": null
+}
 ```

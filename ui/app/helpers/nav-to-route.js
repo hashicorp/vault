@@ -1,9 +1,8 @@
-import Ember from 'ember';
-
-const { Helper, inject } = Ember;
+import { inject as service } from '@ember/service';
+import Helper from '@ember/component/helper';
 
 export default Helper.extend({
-  router: inject.service(),
+  router: service(),
 
   compute([routeName, ...models], { replace = false }) {
     return () => {

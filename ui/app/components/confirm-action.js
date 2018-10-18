@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
 
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'span',
   classNames: ['confirm-action'],
   layout: hbs`

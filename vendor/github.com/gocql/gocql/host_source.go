@@ -73,12 +73,17 @@ func (c *cassVersion) unmarshal(data []byte) error {
 }
 
 func (c cassVersion) Before(major, minor, patch int) bool {
-	if c.Major > major {
+	// We're comparing us (cassVersion) with the provided version (major, minor, patch)
+	// We return true if our version is lower (comes before) than the provided one.
+	if c.Major < major {
 		return true
-	} else if c.Minor > minor {
-		return true
-	} else if c.Patch > patch {
-		return true
+	} else if c.Major == major {
+		if c.Minor < minor {
+			return true
+		} else if c.Minor == minor && c.Patch < patch {
+			return true
+		}
+
 	}
 	return false
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
 )
@@ -26,6 +27,10 @@ type InitResult struct {
 	RecoveryShares [][]byte
 	RootToken      string
 }
+
+var (
+	initPTFunc = func(c *Core) func() { return nil }
+)
 
 // Initialized checks if the Vault is already initialized
 func (c *Core) Initialized(ctx context.Context) (bool, error) {
@@ -141,6 +146,11 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, err
 	}
 
+	initPTCleanup := initPTFunc(c)
+	if initPTCleanup != nil {
+		defer initPTCleanup()
+	}
+
 	// Initialize the barrier
 	if err := c.barrier.Initialize(ctx, barrierKey); err != nil {
 		c.logger.Error("failed to initialize barrier", "error", err)
@@ -196,8 +206,13 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, err
 	}
 
-	activeCtx, ctxCancel := context.WithCancel(context.Background())
-	if err := c.postUnseal(activeCtx, ctxCancel); err != nil {
+	// Start tracking
+	if initPTCleanup != nil {
+		initPTCleanup()
+	}
+
+	activeCtx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
+	if err := c.postUnseal(activeCtx, ctxCancel, standardUnsealStrategy{}); err != nil {
 		c.logger.Error("post-unseal setup failed during init", "error", err)
 		return nil, err
 	}

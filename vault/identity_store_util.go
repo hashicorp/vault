@@ -12,6 +12,8 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -186,7 +188,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				}
 
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(entity, nil, false)
+				err = i.upsertEntity(ctx, entity, nil, false)
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
@@ -210,7 +212,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 // one entity to another, both the source and destination entities should get
 // updated, in which case, callers should send in both entity and
 // previousEntity.
-func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
 	var err error
 
 	if txn == nil {
@@ -230,7 +232,7 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 
 		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID)
-			respErr, intErr := i.mergeEntity(txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
+			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
 			switch {
 			case respErr != nil:
 				return respErr
@@ -302,13 +304,13 @@ func (i *IdentityStore) upsertEntityInTxn(txn *memdb.Txn, entity *identity.Entit
 // entity to another, both the source and destination entities should get
 // updated, in which case, callers should send in both entity and
 // previousEntity.
-func (i *IdentityStore) upsertEntity(entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
+func (i *IdentityStore) upsertEntity(ctx context.Context, entity *identity.Entity, previousEntity *identity.Entity, persist bool) error {
 
 	// Create a MemDB transaction to update both alias and entity
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.upsertEntityInTxn(txn, entity, previousEntity, persist)
+	err := i.upsertEntityInTxn(ctx, txn, entity, previousEntity, persist)
 	if err != nil {
 		return err
 	}
@@ -325,6 +327,10 @@ func (i *IdentityStore) MemDBUpsertAliasInTxn(txn *memdb.Txn, alias *identity.Al
 
 	if alias == nil {
 		return fmt.Errorf("alias is nil")
+	}
+
+	if alias.NamespaceID == "" {
+		alias.NamespaceID = namespace.RootNamespaceID
 	}
 
 	tableName := entityAliasesTable
@@ -507,6 +513,10 @@ func (i *IdentityStore) MemDBUpsertEntityInTxn(txn *memdb.Txn, entity *identity.
 		return fmt.Errorf("entity is nil")
 	}
 
+	if entity.NamespaceID == "" {
+		entity.NamespaceID = namespace.RootNamespaceID
+	}
+
 	entityRaw, err := txn.First(entitiesTable, "id", entity.ID)
 	if err != nil {
 		return errwrap.Wrapf("failed to lookup entity from memdb using entity id: {{err}}", err)
@@ -566,14 +576,27 @@ func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.
 	return i.MemDBEntityByIDInTxn(txn, entityID, clone)
 }
 
-func (i *IdentityStore) MemDBEntityByName(entityName string, clone bool) (*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
 	if entityName == "" {
 		return nil, fmt.Errorf("missing entity name")
 	}
 
 	txn := i.db.Txn(false)
 
-	entityRaw, err := txn.First(entitiesTable, "name", entityName)
+	return i.MemDBEntityByNameInTxn(txn, ctx, entityName, clone)
+}
+
+func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
+	if entityName == "" {
+		return nil, fmt.Errorf("missing entity name")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entityRaw, err := txn.First(entitiesTable, "name", ns.ID, entityName)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch entity from memdb using entity name: {{err}}", err)
 	}
@@ -719,7 +742,7 @@ func (i *IdentityStore) MemDBDeleteEntityByIDInTxn(txn *memdb.Txn, entityID stri
 	return nil
 }
 
-func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
+func (i *IdentityStore) sanitizeAlias(ctx context.Context, alias *identity.Alias) error {
 	var err error
 
 	if alias == nil {
@@ -750,6 +773,22 @@ func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 		}
 	}
 
+	if alias.NamespaceID == "" {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return err
+		}
+		alias.NamespaceID = ns.ID
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if ns.ID != alias.NamespaceID {
+		return fmt.Errorf("alias belongs to a different namespace")
+	}
+
 	// Set the creation and last update times
 	if alias.CreationTime == nil {
 		alias.CreationTime = ptypes.TimestampNow()
@@ -761,7 +800,7 @@ func (i *IdentityStore) sanitizeAlias(alias *identity.Alias) error {
 	return nil
 }
 
-func (i *IdentityStore) sanitizeEntity(entity *identity.Entity) error {
+func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Entity) error {
 	var err error
 
 	if entity == nil {
@@ -779,9 +818,20 @@ func (i *IdentityStore) sanitizeEntity(entity *identity.Entity) error {
 		entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if entity.NamespaceID == "" {
+		entity.NamespaceID = ns.ID
+	}
+	if ns.ID != entity.NamespaceID {
+		return fmt.Errorf("entity does not belong to this namespace")
+	}
+
 	// Create a name if there isn't one already
 	if entity.Name == "" {
-		entity.Name, err = i.generateName("entity")
+		entity.Name, err = i.generateName(ctx, "entity")
 		if err != nil {
 			return fmt.Errorf("failed to generate entity name")
 		}
@@ -801,10 +851,16 @@ func (i *IdentityStore) sanitizeEntity(entity *identity.Entity) error {
 		entity.LastUpdateTime = ptypes.TimestampNow()
 	}
 
+	// Ensure that MFASecrets is non-nil at any time. This is useful when MFA
+	// secret generation procedures try to append MFA info to entity.
+	if entity.MFASecrets == nil {
+		entity.MFASecrets = make(map[string]*mfa.Secret)
+	}
+
 	return nil
 }
 
-func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGroupIDs []string) error {
+func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *identity.Group, memberGroupIDs []string) error {
 	var err error
 
 	if group == nil {
@@ -822,9 +878,24 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 		group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
 	}
 
+	if group.NamespaceID == "" {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return err
+		}
+		group.NamespaceID = ns.ID
+	}
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if ns.ID != group.NamespaceID {
+		return fmt.Errorf("group does not belong to this namespace")
+	}
+
 	// Create a name if there isn't one already
 	if group.Name == "" {
-		group.Name, err = i.generateName("group")
+		group.Name, err = i.generateName(ctx, "group")
 		if err != nil {
 			return fmt.Errorf("failed to generate group name")
 		}
@@ -860,6 +931,43 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	defer txn.Abort()
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
+
+	// For those group member IDs that are removed from the list, remove current
+	// group ID as their respective ParentGroupID.
+
+	// Get the current MemberGroups IDs for this group
+	var currentMemberGroupIDs []string
+	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	if err != nil {
+		return err
+	}
+	for _, currentMemberGroup := range currentMemberGroups {
+		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
+	}
+
+	// Update parent group IDs in the removed members
+	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		if strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			continue
+		}
+
+		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
+		if err != nil {
+			return err
+		}
+		if currentMemberGroup == nil {
+			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
+		}
+
+		// Remove group ID from the parent group IDs
+		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
+
+		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	// After the group lock is held, make membership updates to all the
 	// relevant groups
 	for _, memberGroupID := range memberGroupIDs {
@@ -923,7 +1031,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(group *identity.Group, memberGrou
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
-		err = i.sanitizeAlias(group.Alias)
+		err = i.sanitizeAlias(ctx, group.Alias)
 		if err != nil {
 			return err
 		}
@@ -964,14 +1072,7 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 	// Remove identity indices from aliases table for those that needs to
 	// be removed
 	for _, alias := range removeList {
-		aliasToBeRemoved, err := i.MemDBAliasByIDInTxn(txn, alias.ID, false, false)
-		if err != nil {
-			return err
-		}
-		if aliasToBeRemoved == nil {
-			return fmt.Errorf("alias was not indexed")
-		}
-		err = i.MemDBDeleteAliasByIDInTxn(txn, aliasToBeRemoved.ID, false)
+		err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
 		if err != nil {
 			return err
 		}
@@ -1018,7 +1119,7 @@ func validateMetaPair(key, value string) error {
 	return nil
 }
 
-func (i *IdentityStore) MemDBGroupByNameInTxn(txn *memdb.Txn, groupName string, clone bool) (*identity.Group, error) {
+func (i *IdentityStore) MemDBGroupByNameInTxn(ctx context.Context, txn *memdb.Txn, groupName string, clone bool) (*identity.Group, error) {
 	if groupName == "" {
 		return nil, fmt.Errorf("missing group name")
 	}
@@ -1027,7 +1128,12 @@ func (i *IdentityStore) MemDBGroupByNameInTxn(txn *memdb.Txn, groupName string, 
 		return nil, fmt.Errorf("txn is nil")
 	}
 
-	groupRaw, err := txn.First(groupsTable, "name", groupName)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	groupRaw, err := txn.First(groupsTable, "name", ns.ID, groupName)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch group from memdb using group name: {{err}}", err)
 	}
@@ -1048,14 +1154,14 @@ func (i *IdentityStore) MemDBGroupByNameInTxn(txn *memdb.Txn, groupName string, 
 	return group, nil
 }
 
-func (i *IdentityStore) MemDBGroupByName(groupName string, clone bool) (*identity.Group, error) {
+func (i *IdentityStore) MemDBGroupByName(ctx context.Context, groupName string, clone bool) (*identity.Group, error) {
 	if groupName == "" {
 		return nil, fmt.Errorf("missing group name")
 	}
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBGroupByNameInTxn(txn, groupName, clone)
+	return i.MemDBGroupByNameInTxn(ctx, txn, groupName, clone)
 }
 
 func (i *IdentityStore) UpsertGroup(group *identity.Group, persist bool) error {
@@ -1086,12 +1192,26 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	// Clear the old alias from memdb
+	groupClone, err := i.MemDBGroupByID(group.ID, true)
+	if err != nil {
+		return err
+	}
+	if groupClone != nil && groupClone.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, groupClone.Alias.ID, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the new alias to memdb
 	if group.Alias != nil {
 		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {
 			return err
 		}
 	}
+
 	// Insert or update group in MemDB using the transaction created above
 	err = i.MemDBUpsertGroupInTxn(txn, group)
 	if err != nil {
@@ -1109,9 +1229,14 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 			Message: groupAsAny,
 		}
 
-		err = i.groupPacker.PutItem(item)
+		sent, err := sendGroupUpgrade(i, group)
 		if err != nil {
 			return err
+		}
+		if !sent {
+			if err := i.groupPacker.PutItem(item); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1125,6 +1250,10 @@ func (i *IdentityStore) MemDBUpsertGroupInTxn(txn *memdb.Txn, group *identity.Gr
 
 	if group == nil {
 		return fmt.Errorf("group is nil")
+	}
+
+	if group.NamespaceID == "" {
+		group.NamespaceID = namespace.RootNamespaceID
 	}
 
 	groupRaw, err := txn.First(groupsTable, "id", group.ID)
@@ -1282,7 +1411,7 @@ func (i *IdentityStore) MemDBGroupsByMemberEntityIDInTxn(txn *memdb.Txn, entityI
 	return groups, nil
 }
 
-func (i *IdentityStore) groupPoliciesByEntityID(entityID string) ([]string, error) {
+func (i *IdentityStore) groupPoliciesByEntityID(entityID string) (map[string][]string, error) {
 	if entityID == "" {
 		return nil, fmt.Errorf("empty entity ID")
 	}
@@ -1293,16 +1422,15 @@ func (i *IdentityStore) groupPoliciesByEntityID(entityID string) ([]string, erro
 	}
 
 	visited := make(map[string]bool)
-	var policies []string
+	policies := make(map[string][]string)
 	for _, group := range groups {
-		groupPolicies, err := i.collectPoliciesReverseDFS(group, visited, nil)
+		err := i.collectPoliciesReverseDFS(group, visited, policies)
 		if err != nil {
 			return nil, err
 		}
-		policies = append(policies, groupPolicies...)
 	}
 
-	return strutil.RemoveDuplicates(policies, false), nil
+	return policies, nil
 }
 
 func (i *IdentityStore) groupsByEntityID(entityID string) ([]*identity.Group, []*identity.Group, error) {
@@ -1379,36 +1507,35 @@ func (i *IdentityStore) collectGroupsReverseDFS(group *identity.Group, visited m
 	return groups, nil
 }
 
-func (i *IdentityStore) collectPoliciesReverseDFS(group *identity.Group, visited map[string]bool, policies []string) ([]string, error) {
+func (i *IdentityStore) collectPoliciesReverseDFS(group *identity.Group, visited map[string]bool, policies map[string][]string) error {
 	if group == nil {
-		return nil, fmt.Errorf("nil group")
+		return fmt.Errorf("nil group")
 	}
 
 	// If traversal for a groupID is performed before, skip it
 	if visited[group.ID] {
-		return policies, nil
+		return nil
 	}
 	visited[group.ID] = true
 
-	policies = append(policies, group.Policies...)
+	policies[group.NamespaceID] = append(policies[group.NamespaceID], group.Policies...)
 
 	// Traverse all the parent groups
 	for _, parentGroupID := range group.ParentGroupIDs {
 		parentGroup, err := i.MemDBGroupByID(parentGroupID, false)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if parentGroup == nil {
 			continue
 		}
-		parentPolicies, err := i.collectPoliciesReverseDFS(parentGroup, visited, policies)
+		err = i.collectPoliciesReverseDFS(parentGroup, visited, policies)
 		if err != nil {
-			return nil, fmt.Errorf("failed to collect policies at parent group ID %q", parentGroup.ID)
+			return fmt.Errorf("failed to collect policies at parent group ID %q", parentGroup.ID)
 		}
-		policies = append(policies, parentPolicies...)
 	}
 
-	return strutil.RemoveDuplicates(policies, false), nil
+	return nil
 }
 
 func (i *IdentityStore) detectCycleDFS(visited map[string]bool, startingGroupID, groupID string) (bool, error) {
@@ -1464,7 +1591,7 @@ func (i *IdentityStore) memberGroupIDsByID(groupID string) ([]string, error) {
 	return memberGroupIDs, nil
 }
 
-func (i *IdentityStore) generateName(entryType string) (string, error) {
+func (i *IdentityStore) generateName(ctx context.Context, entryType string) (string, error) {
 	var name string
 OUTER:
 	for {
@@ -1476,7 +1603,7 @@ OUTER:
 
 		switch entryType {
 		case "entity":
-			entity, err := i.MemDBEntityByName(name, false)
+			entity, err := i.MemDBEntityByName(ctx, name, false)
 			if err != nil {
 				return "", err
 			}
@@ -1484,7 +1611,7 @@ OUTER:
 				break OUTER
 			}
 		case "group":
-			group, err := i.MemDBGroupByName(name, false)
+			group, err := i.MemDBGroupByName(ctx, name, false)
 			if err != nil {
 				return "", err
 			}
@@ -1553,6 +1680,7 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 }
 
 func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
+	i.logger.Debug("refreshing external group memberships", "entity_id", entityID, "group_aliases", groupAliases)
 	if entityID == "" {
 		return nil, fmt.Errorf("empty entity ID")
 	}
@@ -1590,6 +1718,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 		if mappingGroup == nil {
 			return nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
 		}
+
 		newGroups = append(newGroups, mappingGroup)
 		validAliases = append(validAliases, alias)
 	}
@@ -1672,4 +1801,69 @@ func diffGroups(old, new []*identity.Group) *groupDiff {
 	}
 
 	return diff
+}
+
+func (i *IdentityStore) handleAliasListCommon(ctx context.Context, groupAlias bool) (*logical.Response, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	tableName := entityAliasesTable
+	if groupAlias {
+		tableName = groupAliasesTable
+	}
+
+	ws := memdb.NewWatchSet()
+
+	txn := i.db.Txn(false)
+
+	iter, err := txn.Get(tableName, "namespace_id", ns.ID)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to fetch iterator for aliases in memdb: {{err}}", err)
+	}
+
+	ws.Add(iter.WatchCh())
+
+	var aliasIDs []string
+	aliasInfo := map[string]interface{}{}
+
+	type mountInfo struct {
+		MountType string
+		MountPath string
+	}
+	mountAccessorMap := map[string]mountInfo{}
+
+	for {
+		raw := iter.Next()
+		if raw == nil {
+			break
+		}
+		alias := raw.(*identity.Alias)
+		aliasIDs = append(aliasIDs, alias.ID)
+		aliasInfoEntry := map[string]interface{}{
+			"name":           alias.Name,
+			"canonical_id":   alias.CanonicalID,
+			"mount_accessor": alias.MountAccessor,
+		}
+
+		mi, ok := mountAccessorMap[alias.MountAccessor]
+		if ok {
+			aliasInfoEntry["mount_type"] = mi.MountType
+			aliasInfoEntry["mount_path"] = mi.MountPath
+		} else {
+			mi = mountInfo{}
+			if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
+				mi.MountType = mountValidationResp.MountType
+				mi.MountPath = mountValidationResp.MountPath
+				aliasInfoEntry["mount_type"] = mi.MountType
+				aliasInfoEntry["mount_path"] = mi.MountPath
+			}
+			mountAccessorMap[alias.MountAccessor] = mi
+		}
+
+		aliasInfo[alias.ID] = aliasInfoEntry
+	}
+
+	return logical.ListResponseWithInfo(aliasIDs, aliasInfo), nil
 }

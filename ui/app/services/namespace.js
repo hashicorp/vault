@@ -1,26 +1,23 @@
-import Ember from 'ember';
+import { alias, equal } from '@ember/object/computed';
+import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-const { Service, computed, inject } = Ember;
 const ROOT_NAMESPACE = '';
 export default Service.extend({
-  store: inject.service(),
-  auth: inject.service(),
-  userRootNamespace: computed.alias('auth.authData.userRootNamespace'),
+  store: service(),
+  auth: service(),
+  userRootNamespace: alias('auth.authData.userRootNamespace'),
   //populated by the query param on the cluster route
   path: null,
   // list of namespaces available to the current user under the
   // current namespace
   accessibleNamespaces: null,
 
-  inRootNamespace: computed.equal('path', ROOT_NAMESPACE),
+  inRootNamespace: equal('path', ROOT_NAMESPACE),
 
   setNamespace(path) {
     this.set('path', path);
   },
-  listPath: lazyCapabilities(apiPath`sys/namespaces/`, 'path'),
-  canList: computed.alias('listPath.canList'),
 
   findNamespacesForUser: task(function*() {
     // uses the adapter and the raw response here since

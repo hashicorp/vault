@@ -1,9 +1,10 @@
-import Ember from 'ember';
-const { assert, inject, Component } = Ember;
+import { inject as service } from '@ember/service';
+import { assert } from '@ember/debug';
+import Component from '@ember/component';
 
 export default Component.extend({
   tagName: '',
-  flashMessages: inject.service(),
+  flashMessages: service(),
   params: null,
   successMessage() {
     return 'Save was successful';

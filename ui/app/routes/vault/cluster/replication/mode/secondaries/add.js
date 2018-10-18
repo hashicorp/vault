@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { hash } from 'rsvp';
 import Base from '../../replication-base';
 
 export default Base.extend({
   model() {
-    return Ember.RSVP.hash({
+    return hash({
       cluster: this.modelFor('vault.cluster.replication.mode.secondaries'),
       mounts: this.fetchMounts(),
     });

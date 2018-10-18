@@ -9,7 +9,9 @@ import (
 	"crypto"
 	"crypto/dsa"
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"encoding/binary"
+	"fmt"
 	"hash"
 	"io"
 	"strconv"
@@ -17,7 +19,6 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
-	"github.com/keybase/go-crypto/rsa"
 )
 
 const (
@@ -716,6 +717,28 @@ func (sig *Signature) SignKeyWithSigner(signeePubKey *PublicKey, signerPubKey *P
 	return sig.Sign(s, nil, config)
 }
 
+// CrossSignKey creates PrimaryKeyBinding signature in sig.EmbeddedSignature by
+// signing `primary` key's hash using `priv` subkey private key. Primary public
+// key is the `signee` here.
+func (sig *Signature) CrossSignKey(primary *PublicKey, priv *PrivateKey, config *Config) error {
+	if len(sig.outSubpackets) > 0 {
+		return fmt.Errorf("outSubpackets already exists, looks like CrossSignKey was called after Sign")
+	}
+
+	sig.EmbeddedSignature = &Signature{
+		CreationTime: sig.CreationTime,
+		SigType:      SigTypePrimaryKeyBinding,
+		PubKeyAlgo:   priv.PubKeyAlgo,
+		Hash:         sig.Hash,
+	}
+
+	h, err := keySignatureHash(primary, &priv.PublicKey, sig.Hash)
+	if err != nil {
+		return err
+	}
+	return sig.EmbeddedSignature.Sign(h, priv, config)
+}
+
 // Serialize marshals sig to w. Sign, SignUserId or SignKey must have been
 // called first.
 func (sig *Signature) Serialize(w io.Writer) (err error) {
@@ -842,6 +865,14 @@ func (sig *Signature) buildSubpackets() (subpackets []outputSubpacket) {
 
 	if len(sig.PreferredCompression) > 0 {
 		subpackets = append(subpackets, outputSubpacket{true, prefCompressionSubpacket, false, sig.PreferredCompression})
+	}
+
+	if sig.EmbeddedSignature != nil {
+		buf := bytes.NewBuffer(nil)
+		if err := sig.EmbeddedSignature.Serialize(buf); err == nil {
+			byteContent := buf.Bytes()[2:] // skip 2-byte length header
+			subpackets = append(subpackets, outputSubpacket{false, embeddedSignatureSubpacket, true, byteContent})
+		}
 	}
 
 	return

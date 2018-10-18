@@ -1,6 +1,8 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
-export default Ember.Controller.extend({
-  rm: Ember.inject.service('replication-mode'),
-  replicationMode: Ember.computed.alias('rm.mode'),
+export default Controller.extend({
+  rm: service('replication-mode'),
+  replicationMode: alias('rm.mode'),
 });

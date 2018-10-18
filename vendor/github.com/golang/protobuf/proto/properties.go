@@ -334,9 +334,6 @@ func GetProperties(t reflect.Type) *StructProperties {
 	sprop, ok := propertiesMap[t]
 	propertiesMu.RUnlock()
 	if ok {
-		if collectStats {
-			stats.Chit++
-		}
 		return sprop
 	}
 
@@ -349,13 +346,7 @@ func GetProperties(t reflect.Type) *StructProperties {
 // getPropertiesLocked requires that propertiesMu is held.
 func getPropertiesLocked(t reflect.Type) *StructProperties {
 	if prop, ok := propertiesMap[t]; ok {
-		if collectStats {
-			stats.Chit++
-		}
 		return prop
-	}
-	if collectStats {
-		stats.Cmiss++
 	}
 
 	prop := new(StructProperties)

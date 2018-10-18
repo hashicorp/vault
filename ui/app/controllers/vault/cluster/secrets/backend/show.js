@@ -1,11 +1,14 @@
-import Ember from 'ember';
+import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
-export default Ember.Controller.extend(BackendCrumbMixin, {
-  queryParams: ['tab'],
+export default Controller.extend(BackendCrumbMixin, {
+  backendController: controller('vault.cluster.secrets.backend'),
+  queryParams: ['tab', 'version'],
+  version: '',
   tab: '',
   reset() {
     this.set('tab', '');
+    this.set('version', '');
   },
   actions: {
     refresh: function() {
@@ -14,8 +17,9 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
       this.send('refreshModel');
     },
 
-    hasChanges(hasChanges) {
-      this.send('hasDataChanges', hasChanges);
+    toggleAdvancedEdit(bool) {
+      this.set('preferAdvancedEdit', bool);
+      this.get('backendController').set('preferAdvancedEdit', bool);
     },
   },
 });

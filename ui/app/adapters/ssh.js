@@ -1,5 +1,5 @@
+import { assert } from '@ember/debug';
 import ApplicationAdapter from './application';
-import Ember from 'ember';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -7,7 +7,7 @@ export default ApplicationAdapter.extend({
   defaultSerializer: 'ssh',
 
   url(/*role*/) {
-    Ember.assert('Override the `url` method to extend the SSH adapter', false);
+    assert('Override the `url` method to extend the SSH adapter', false);
   },
 
   createRecord(store, type, snapshot, requestType) {

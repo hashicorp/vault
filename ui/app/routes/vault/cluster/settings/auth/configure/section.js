@@ -1,11 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
+import RSVP from 'rsvp';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
-const { RSVP, inject } = Ember;
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
-  wizard: inject.service(),
+  wizard: service(),
   modelType(backendType, section) {
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
@@ -40,7 +42,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
     const modelType = this.modelType(backend.get('type'), section);
     if (!modelType) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
     const model = this.store.peekRecord(modelType, backend.id);

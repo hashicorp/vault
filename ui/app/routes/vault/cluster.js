@@ -1,18 +1,27 @@
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import { reject } from 'rsvp';
+import Route from '@ember/routing/route';
+import { getOwner } from '@ember/application';
+import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 const POLL_INTERVAL_MS = 10000;
-const { inject, Route, getOwner } = Ember;
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
-  namespaceService: inject.service('namespace'),
-  version: inject.service(),
-  store: inject.service(),
-  auth: inject.service(),
-  currentCluster: inject.service(),
-  modelTypes: ['node', 'secret', 'secret-engine'],
-  globalNamespaceModels: ['node', 'cluster'],
+  namespaceService: service('namespace'),
+  version: service(),
+  store: service(),
+  auth: service(),
+  currentCluster: service(),
+  modelTypes: computed(function() {
+    return ['node', 'secret', 'secret-engine'];
+  }),
+  globalNamespaceModels: computed(function() {
+    return ['node', 'cluster'];
+  }),
 
   queryParams: {
     namespaceQueryParam: {
@@ -31,7 +40,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
     let modelsToKeep = this.get('globalNamespaceModels');
-    for (let model of getOwner(this).lookup('data-adapter:main').getModelTypes()) {
+    for (let model of getOwner(this)
+      .lookup('data-adapter:main')
+      .getModelTypes()) {
       let { name } = model;
       if (modelsToKeep.includes(name)) {
         return;
@@ -49,42 +60,37 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       this.get('auth').setCluster(id);
       return this.get('version').fetchFeatures();
     } else {
-      return Ember.RSVP.reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
+      return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
     }
   },
 
   model(params) {
     const id = this.getClusterId(params);
-
     return this.get('store').findRecord('cluster', id);
   },
 
-  stopPoll: Ember.on('deactivate', function() {
-    Ember.run.cancel(this.get('timer'));
-  }),
-
-  poll() {
-    // when testing, the polling loop causes promises to never settle so acceptance tests hang
-    // to get around that, we just disable the poll in tests
-    return Ember.testing
-      ? null
-      : Ember.run.later(() => {
-          this.controller.get('model').reload().then(
-            () => {
-              this.set('timer', this.poll());
-              return this.transitionToTargetRoute();
-            },
-            () => {
-              this.set('timer', this.poll());
-            }
-          );
-        }, POLL_INTERVAL_MS);
-  },
+  poll: task(function*() {
+    while (true) {
+      // when testing, the polling loop causes promises to never settle so acceptance tests hang
+      // to get around that, we just disable the poll in tests
+      if (Ember.testing) {
+        return;
+      }
+      yield timeout(POLL_INTERVAL_MS);
+      try {
+        yield this.controller.model.reload();
+        yield this.transitionToTargetRoute();
+      } catch (e) {
+        // we want to keep polling here
+      }
+    }
+  })
+    .cancelOn('deactivate')
+    .keepLatest(),
 
   afterModel(model) {
-    this.get('currentCluster').setCluster(model);
     this._super(...arguments);
-    this.poll();
+    this.get('currentCluster').setCluster(model);
 
     // Check that namespaces is enabled and if not,
     // clear the namespace by transition to this route w/o it
@@ -92,6 +98,11 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
     return this.transitionToTargetRoute();
+  },
+
+  setupController() {
+    this._super(...arguments);
+    this.poll.perform();
   },
 
   actions: {

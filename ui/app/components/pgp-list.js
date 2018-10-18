@@ -1,13 +1,16 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   onDataUpdate: () => {},
-  listData: Ember.computed('listLength', function() {
+  listData: computed('listLength', function() {
     let num = this.get('listLength');
     if (num) {
       num = parseInt(num, 10);
     }
-    return Array(num || 0).fill(null).map(() => ({ value: '' }));
+    return Array(num || 0)
+      .fill(null)
+      .map(() => ({ value: '' }));
   }),
   listLength: 0,
   actions: {

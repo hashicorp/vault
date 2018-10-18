@@ -1,8 +1,11 @@
-import Ember from 'ember';
+import { next } from '@ember/runloop';
+import { hash } from 'rsvp';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
 import DS from 'ember-data';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 
-export default Ember.Route.extend({
+export default Route.extend({
   model(params) {
     let { section } = params;
     let itemType = this.modelFor('vault.cluster.access.identity');
@@ -10,7 +13,7 @@ export default Ember.Route.extend({
     let modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
 
@@ -27,7 +30,7 @@ export default Ember.Route.extend({
       model = this.store.findRecord(modelType, params.item_id);
     }
 
-    return Ember.RSVP.hash({
+    return hash({
       model,
       section,
     });
@@ -37,7 +40,7 @@ export default Ember.Route.extend({
     // if we're just entering the route, and it's not a hard reload
     // reload to make sure we have the newest info
     if (this.currentModel) {
-      Ember.run.next(() => {
+      next(() => {
         this.controller.get('model').reload();
       });
     }

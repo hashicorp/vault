@@ -104,7 +104,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	var lastTLSConfig *tls.Config
 	checkListenersFunc := func(expectFail bool) {
-		tlsConfig, err := cores[0].ClusterTLSConfig(context.Background(), nil)
+		tlsConfig, err := cores[0].ClusterTLSConfig(context.Background(), nil, nil)
 		if err != nil {
 			if err.Error() != consts.ErrSealed.Error() {
 				t.Fatal(err)
@@ -345,7 +345,8 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("X-Vault-Token", rootToken)
+	req.Header.Add(consts.AuthHeaderName, rootToken)
+	req = req.WithContext(context.WithValue(req.Context(), "original_request_path", req.URL.Path))
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {
@@ -391,7 +392,7 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	tlsConf, err := core.Core.ClusterTLSConfig(context.Background(), nil)
+	tlsConf, err := core.Core.ClusterTLSConfig(context.Background(), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

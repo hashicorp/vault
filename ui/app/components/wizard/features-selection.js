@@ -1,10 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
+import { FEATURE_MACHINE_TIME } from 'vault/helpers/wizard-constants';
 
-const { inject, computed } = Ember;
+export default Component.extend({
+  wizard: service(),
+  version: service(),
 
-export default Ember.Component.extend({
-  wizard: inject.service(),
-  version: inject.service(),
   init() {
     this._super(...arguments);
     this.maybeHideFeatures();
@@ -16,7 +18,24 @@ export default Ember.Component.extend({
       feature.show = false;
     }
   },
-
+  estimatedTime: computed('selectedFeatures', function() {
+    let time = 0;
+    for (let feature of Object.keys(FEATURE_MACHINE_TIME)) {
+      if (this.selectedFeatures.includes(feature)) {
+        time += FEATURE_MACHINE_TIME[feature];
+      }
+    }
+    return time;
+  }),
+  selectProgress: computed('selectedFeatures', function() {
+    let bar = this.selectedFeatures.map(feature => {
+      return { style: 'width:0%;', completed: false, showIcon: true, feature: feature };
+    });
+    if (bar.length === 0) {
+      bar = [{ style: 'width:0%;', showIcon: false }];
+    }
+    return bar;
+  }),
   allFeatures: computed(function() {
     return [
       {
@@ -36,7 +55,12 @@ export default Ember.Component.extend({
       {
         key: 'policies',
         name: 'Policies',
-        steps: ['Choosing a policy type', 'Creating a policy', 'Deleting your policy', 'Other types of policies'],
+        steps: [
+          'Choosing a policy type',
+          'Creating a policy',
+          'Deleting your policy',
+          'Other types of policies',
+        ],
         selected: false,
         show: true,
       },
@@ -57,12 +81,14 @@ export default Ember.Component.extend({
     ];
   }),
 
-  showReplication: computed('version.hasPerfReplication', 'version.hasDRReplication', function() {
+  showReplication: computed('version.{hasPerfReplication,hasDRReplication}', function() {
     return this.get('version.hasPerfReplication') || this.get('version.hasDRReplication');
   }),
 
   selectedFeatures: computed('allFeatures.@each.selected', function() {
-    return this.get('allFeatures').filterBy('selected').mapBy('key');
+    return this.get('allFeatures')
+      .filterBy('selected')
+      .mapBy('key');
   }),
 
   actions: {

@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import ArrayProxy from '@ember/array/proxy';
+import { typeOf } from '@ember/utils';
+import { guidFor } from '@ember/object/internals';
 
-const { typeOf, guidFor } = Ember;
-
-export default Ember.ArrayProxy.extend({
+export default ArrayProxy.extend({
   fromJSON(json) {
     if (json && typeOf(json) !== 'object') {
       throw new Error('Vault expects data to be formatted as an JSON object.');

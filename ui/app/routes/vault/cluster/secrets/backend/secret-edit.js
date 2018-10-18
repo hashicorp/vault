@@ -1,20 +1,23 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash, resolve } from 'rsvp';
+import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import DS from 'ember-data';
 
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.get('engineType');
-    let version = backendModel.get('options.version');
+    if (backendType === 'kv' || backendType === 'cubbyhole' || backendType === 'generic') {
+      return resolve({});
+    }
     let path;
     if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
-    } else if (version && version === 2) {
-      path = backend + '/data/' + secret;
     } else {
       path = backend + '/' + secret;
     }
@@ -69,8 +72,27 @@ export default Ember.Route.extend(UnloadModelRoute, {
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
     }
-    return Ember.RSVP.hash({
-      secret: this.store.queryRecord(modelType, { id: secret, backend }),
+    return hash({
+      secret: this.store.queryRecord(modelType, { id: secret, backend }).then(resp => {
+        if (modelType === 'secret-v2') {
+          let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
+          let targetVersion = parseInt(params.version || resp.currentVersion, 10);
+          let version = resp.versions.findBy('version', targetVersion);
+          // 404 if there's no version
+          if (!version) {
+            let error = new DS.AdapterError();
+            set(error, 'httpStatus', 404);
+            throw error;
+          }
+          resp.set('engine', backendModel);
+
+          return version.reload().then(() => {
+            resp.set('selectedVersion', version);
+            return resp;
+          });
+        }
+        return resp;
+      }),
       capabilities: this.capabilities(secret),
     });
   },
@@ -88,7 +110,10 @@ export default Ember.Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       baseKey: { id: secret },
       // mode will be 'show', 'edit', 'create'
-      mode: this.routeName.split('.').pop().replace('-root', ''),
+      mode: this.routeName
+        .split('.')
+        .pop()
+        .replace('-root', ''),
       backend,
       preferAdvancedEdit,
       backendType,
@@ -105,8 +130,8 @@ export default Ember.Route.extend(UnloadModelRoute, {
     error(error) {
       const { secret } = this.paramsFor(this.routeName);
       const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-      Ember.set(error, 'keyId', backend + '/' + secret);
-      Ember.set(error, 'backend', backend);
+      set(error, 'keyId', backend + '/' + secret);
+      set(error, 'backend', backend);
       return true;
     },
 
@@ -115,33 +140,31 @@ export default Ember.Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      const mode = this.routeName.split('.').pop();
-      if (mode === 'show') {
-        return transition;
-      }
-      if (this.get('hasChanges')) {
+      let model = this.controller.model;
+      let version = model.get('selectedVersion');
+      let changed = model.changedAttributes();
+      let changedKeys = Object.keys(changed);
+      // until we have time to move `backend` on a v1 model to a relationship,
+      // it's going to dirty the model state, so we need to look for it
+      // and explicity ignore it here
+      if (
+        (changedKeys.length && changedKeys[0] !== 'backend') ||
+        (version && Object.keys(version.changedAttributes()).length)
+      ) {
         if (
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
         ) {
+          version && version.rollbackAttributes();
           this.unloadModel();
-          this.set('hasChanges', false);
-          return transition;
+          return true;
         } else {
           transition.abort();
           return false;
         }
       }
-    },
-
-    hasDataChanges(hasChanges) {
-      this.set('hasChanges', hasChanges);
-    },
-
-    toggleAdvancedEdit(bool) {
-      this.controller.set('preferAdvancedEdit', bool);
-      this.controllerFor('vault.cluster.secrets.backend').set('preferAdvancedEdit', bool);
+      return this._super(...arguments);
     },
   },
 });

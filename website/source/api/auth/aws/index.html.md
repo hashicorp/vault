@@ -131,6 +131,75 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
+## Configure Identity Integration
+
+This configures the way that Vault interacts with the
+[Identity](/docs/secrets/identity/index.html) store. This currently only
+configures how identity aliases are generated when using the `iam` auth method.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/identity`  | `204 (empty body)`     |
+
+### Parameters
+
+- `iam_alias` `(string: "unique_id")` - How to generate the Identity alias when
+  using the `iam` auth method. Valid choices are `unique_id` and `full_arn`.
+  When `unique_id` is selected, the [IAM Unique ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+  of the IAM principal (either the user or role) is used as the Identity alias.
+  When `full_arn` is selected, the ARN returned by the `sts:GetCallerIdentity`
+  call is used as the alias. This is either
+  `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
+  `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.
+  **Note**: if you select `full_arn` and then delete and recreate the IAM role,
+  Vault won't be aware and any identity aliases set up for the role name will
+  still be valid.
+
+### Sample Payload
+
+```json
+{
+  "iam_alias": "full_arn"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    -- header "X-Vault-Token:..." \
+    --request POST
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/aws/config/identity
+```
+
+## Read Identity Integration Configuration
+
+Returns the previously configured Identity integration configuration
+
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/identity`   | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token:..." \
+    http://127.0.0.1:8200/v1/auth/aws/config/identity
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "iam_alias": "full_arn"
+  }
+}
+```
+
 ## Create Certificate Configuration
 
 Registers an AWS public key to be used to verify the instance identity
@@ -923,15 +992,15 @@ along with its RSA digest can be supplied to this endpoint.
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
   required when using the iam auth method.
-- `iam_request_headers` `(string: <required-iam>)` - Base64-encoded,
-  JSON-serialized representation of the sts:GetCallerIdentity HTTP request
-  headers. The JSON serialization assumes that each header key maps to either a
-  string value or an array of string values (though the length of that array
-  will probably only be one). If the `iam_server_id_header_value` is configured
-  in Vault for the aws auth mount, then the headers must include the
-  X-Vault-AWS-IAM-Server-ID header, its value must match the value configured,
-  and the header must be included in the signed headers.  This is required when
-  using the iam auth method.
+- `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
+  for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
+  Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The
+  JSON serialization assumes that each header key maps to either a string value or
+  an array of string values (though the length of that array will probably only be
+  one). If the `iam_server_id_header_value` is configured in Vault for the aws
+  auth mount, then the headers must include the X-Vault-AWS-IAM-Server-ID header,
+  its value must match the value configured, and the header must be included in
+  the signed headers.  This is required when using the iam auth method.
 
 
 ### Sample Payload
@@ -1163,7 +1232,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist
 ```
 
 ### Sample Response
