@@ -77,7 +77,7 @@
                     {{#confirm-action
                       confirmButtonClasses="button is-primary"
                       buttonClasses="link is-destroy"
-                      onConfirmAction=(action "delete" item)
+                      onConfirmAction=(action "delete" item "secret")
                       confirmMessage=(concat "Are you sure you want to permanently delete " item.id " and all its versions?")
                       showConfirm=(get this (concat "shouldDelete-" item.id))
                       class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
