@@ -150,7 +150,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		// Create the required table if it doesn't exists.
 		if !lockTableExist {
 			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
-				" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
+				" (node_job varbinary(512), current_leader varbinary(512), PRIMARY KEY (node_job))"
 			if _, err := db.Exec(create_query); err != nil {
 				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 			}
