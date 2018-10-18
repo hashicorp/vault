@@ -1,4 +1,3 @@
-import 'preact/devtools'
 // components
 import { each, initializeComponents } from './utils'
 // external components

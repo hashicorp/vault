@@ -88,10 +88,10 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-callouts/-/hashi-callouts-2.0.2.tgz#7e633dd6d97045143ccd7ca4f5aa7df2936b6a47"
   integrity sha512-RSTIjz2RWsshQrzM1kHN2dqWEcd1Iv1RTZ0rlj/Qdueamq9nUwHnjQ8vBvF3UC845KwcUrGySCW62+THt4S4vQ==
 
-"@hashicorp/hashi-content@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.3.tgz#3b662cc5813806c12a9c5b105fa1b78ff1ccbd0d"
-  integrity sha512-9jShe9XVmx1CtrszFhzVWAPjU6ADEynfzA5+yCMi/k3Ub0xccE90kNc08gVENt6lQSPVrhsgr9qIzFo3WwixEQ==
+"@hashicorp/hashi-content@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.4.tgz#33a3526e94eef83fde2cfd2770f45fbe2edb51cc"
+  integrity sha512-aZQF47Vew1QBb+sBhHxZjwLRsfH0auR5o3x8/iSGyWXNr1Jke5JD3SQRQG8xMu1tcztTxSiebij/a1wN1AWseg==
 
 "@hashicorp/hashi-docs-sidenav@^0.1.0":
   version "0.1.0"
@@ -118,10 +118,10 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-global-styles/-/hashi-global-styles-1.0.8.tgz#5b0ecb1a50a2c3eec3acd7e413092cdcb52ba1d3"
   integrity sha512-UClXKVALpVxcmDGB3DVTLdyDIxoo1Vz8B+drv3+hX/TwDPKBZxn4Rz3lW4bcP05g/zJ/udmVAr7ilMFOiCjk7Q==
 
-"@hashicorp/hashi-hero@^2.1.0":
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-hero/-/hashi-hero-2.1.0.tgz#50cb4cd6767fb39262d2d941a5a1ccf8969f92d5"
-  integrity sha512-h08i2K8ow973waZKNT4jurYnIyFfoexpQ6ttrjweBkaU162y418LYZZlo3kFoGu4x22KrG4mMBCUsIrMWE0nKA==
+"@hashicorp/hashi-hero@^2.1.2":
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-hero/-/hashi-hero-2.1.2.tgz#3ceb4b415d25f66e369bd6329acf581d5810b419"
+  integrity sha512-5zKWysspca+aTr75hZqIazL1lq5UliHsZDYm2rCdoOq8cqWlQKjvV3In3HQYzt9OUCJ6jOBQWmHmpnho3BIL4w==
 
 "@hashicorp/hashi-image@1.0.3":
   version "1.0.3"
@@ -158,20 +158,20 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.3.1.tgz#e4f1da2f7fd8fb841ffddc47a4202f57c1c5b831"
   integrity sha512-M/gSOuWnOCYQrlw/qiiroM9kT4GrKcgxJkjyan5PYzN+GWFOoH0k51BUrIpu7Z/tDpPSKRnZel0N85syAHFK4A==
 
-"@hashicorp/hashi-product-subnav@^0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.4.1.tgz#00cb873d3eb1da59ba38c3ca44638687dd88dee9"
-  integrity sha512-W4TUwEqFNW0h9fueIQvUHGIJzq5u7XGQFni/qfsWHzOEAbBEVwo7PtHHklaPOi2Rh+mplim+SDx3EWiWA+aGpA==
+"@hashicorp/hashi-product-subnav@^0.4.3":
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.4.3.tgz#9ffa0992df3440c18cadac7f1cb8f43287563b41"
+  integrity sha512-V3tTZYwreWtxPxdCmeJ0KVrvgI5Mq3T2SkslmVtGUyq/O1UGjqCYnBe7iA8XIBux2nhJzFDH5YITNTEbEOAvnw==
 
 "@hashicorp/hashi-section-header@2.0.2":
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-section-header/-/hashi-section-header-2.0.2.tgz#c48159c9e53b8c2ac67a11cf82e81e06be873c0b"
   integrity sha512-a2O0W2q+PM/DHB9qJCtiTiI10AsIK7t5qGNAS59Sx9t7nw0Bc2VUzj+y57vNfV0IKKTtCbB7wWp+BtRXZqSGKA==
 
-"@hashicorp/hashi-split-cta@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-split-cta/-/hashi-split-cta-0.1.1.tgz#cb9d0149e1de4f2252c12053a3d7cdc2ecff273b"
-  integrity sha512-AdhbKkL+pzs+dP5v7m/jfcTI2BJHct5bQo/IwFUZl60qDDVDLWna7gm0BpwyxOTUGVYac3Xa4YiQTkcJ4F+LMQ==
+"@hashicorp/hashi-split-cta@^0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-split-cta/-/hashi-split-cta-0.1.3.tgz#a5acce87f7139572f88b9b0d3140d7a6f3aba9ab"
+  integrity sha512-Hm6Z91iNMo16yxr7sIPU4vf06CJ7edn9GH+wXhtvxQYAb1wgXbezVsYF6i1AeAOaQe8hZvWA7rQb+aHKupDyPA==
 
 "@hashicorp/hashi-vertical-text-block-list@^0.1.0":
   version "0.1.0"
@@ -5425,13 +5425,14 @@ query-string@^4.1.0:
     object-assign "^4.1.0"
     strict-uri-encode "^1.0.0"
 
-query-string@^6.2.0:
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/query-string/-/query-string-6.2.0.tgz#468edeb542b7e0538f9f9b1aeb26f034f19c86e1"
-  integrity sha512-5wupExkIt8RYL4h/FE+WTg3JHk62e6fFPWtAZA9J5IWK1PfTfKkMS93HBUHcFpeYi9KsY5pFbh+ldvEyaz5MyA==
+query-string@^5.1.1:
+  version "5.1.1"
+  resolved "https://registry.yarnpkg.com/query-string/-/query-string-5.1.1.tgz#a78c012b71c17e05f2e3fa2319dd330682efb3cb"
+  integrity sha512-gjWOsm2SoGlgLEdAGt7a6slVOk9mGiXmPFMqrEhLQ68rhQuBnpfs3+EmlvqKyxnCo9/PPlF+9MtY02S1aFg+Jw==
   dependencies:
     decode-uri-component "^0.2.0"
-    strict-uri-encode "^2.0.0"
+    object-assign "^4.1.0"
+    strict-uri-encode "^1.0.0"
 
 querystring-es3@^0.2.0:
   version "0.2.1"
@@ -6481,11 +6482,6 @@ strict-uri-encode@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/strict-uri-encode/-/strict-uri-encode-1.1.0.tgz#279b225df1d582b1f54e65addd4352e18faa0713"
   integrity sha1-J5siXfHVgrH1TmWt3UNS4Y+qBxM=
-
-strict-uri-encode@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/strict-uri-encode/-/strict-uri-encode-2.0.0.tgz#b9c7330c7042862f6b142dc274bbcc5866ce3546"
-  integrity sha1-ucczDHBChi9rFC3CdLvMWGbONUY=
 
 string-width@^1.0.1, string-width@^1.0.2:
   version "1.0.2"
