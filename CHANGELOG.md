@@ -15,6 +15,8 @@ IMPROVEMENTS:
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
    packet [GH-5465]
+ * ui: Allow viewing and updating Vault license via the UI
+ * ui: Onboarding will now display your progress through the chosen tutorials
 
 BUG FIXES:
 
