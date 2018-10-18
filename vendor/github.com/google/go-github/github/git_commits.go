@@ -58,7 +58,7 @@ func (c CommitAuthor) String() string {
 	return Stringify(c)
 }
 
-// GetCommit fetchs the Commit object for a given SHA.
+// GetCommit fetches the Commit object for a given SHA.
 //
 // GitHub API docs: https://developer.github.com/v3/git/commits/#get-a-commit
 func (s *GitService) GetCommit(ctx context.Context, owner string, repo string, sha string) (*Commit, *Response, error) {

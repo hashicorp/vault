@@ -32,6 +32,7 @@ var (
 	ClientLatency = stats.Float64("opencensus.io/http/client/latency", "End-to-end latency", stats.UnitMilliseconds)
 )
 
+// Client measures supported for use in custom views.
 var (
 	ClientSentBytes = stats.Int64(
 		"opencensus.io/http/client/sent_bytes",

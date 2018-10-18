@@ -423,6 +423,7 @@ func (_ fastpathT) {{ .MethodNamePfx "Dec" false }}V(v []{{ .Elem }}, canChange 
 		slh.End()
 		return v, changed
 	}
+	d.depthIncr()
 	hasLen := containerLenS > 0
 	var xlen int 
 	if hasLen && canChange {
@@ -480,6 +481,7 @@ func (_ fastpathT) {{ .MethodNamePfx "Dec" false }}V(v []{{ .Elem }}, canChange 
 		}
 	}
 	slh.End()
+	d.depthDecr()
 	return v, changed 
 }
 {{end}}{{end}}{{end}}
@@ -518,6 +520,7 @@ func (_ fastpathT) {{ .MethodNamePfx "Dec" false }}V(v map[{{ .MapKey }}]{{ .Ele
 		dd.ReadMapEnd()
 		return v, changed
 	}
+	d.depthIncr()
 	{{ if eq .Elem "interface{}" }}mapGet := v != nil && !d.h.MapValueReset && !d.h.InterfaceReset
     {{end}}var mk {{ .MapKey }}
 	var mv {{ .Elem }}
@@ -539,6 +542,7 @@ func (_ fastpathT) {{ .MethodNamePfx "Dec" false }}V(v map[{{ .MapKey }}]{{ .Ele
 		if v != nil { v[mk] = mv }
 	}
 	dd.ReadMapEnd()
+	d.depthDecr()
 	return v, changed
 }
 {{end}}{{end}}{{end}}

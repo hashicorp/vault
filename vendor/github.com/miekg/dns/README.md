@@ -67,6 +67,7 @@ A not-so-up-to-date-list-that-may-be-actually-current:
 * https://github.com/xor-gate/sshfp
 * https://github.com/rs/dnstrace
 * https://blitiri.com.ar/p/dnss ([github mirror](https://github.com/albertito/dnss))
+* https://github.com/semihalev/sdns
 
 Send pull request if you want to be listed here.
 

@@ -1622,15 +1622,17 @@ func (s *Role) MarshalJSON() ([]byte, error) {
 // the
 // `unique_id` of the service account.
 type ServiceAccount struct {
-	// DisplayName: Optional. A user-specified description of the service
-	// account.  Must be
-	// fewer than 100 UTF-8 bytes.
+	// DisplayName: Optional. A user-specified name for the service
+	// account.
+	// Must be less than or equal to 100 UTF-8 bytes.
 	DisplayName string `json:"displayName,omitempty"`
 
 	// Email: @OutputOnly The email address of the service account.
 	Email string `json:"email,omitempty"`
 
-	// Etag: Used to perform a consistent read-modify-write.
+	// Etag: Optional. Note: `etag` is an inoperable legacy field that is
+	// only returned
+	// for backwards compatibility.
 	Etag string `json:"etag,omitempty"`
 
 	// Name: The resource name of the service account in the following

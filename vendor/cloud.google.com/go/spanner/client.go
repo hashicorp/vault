@@ -18,7 +18,6 @@ package spanner
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"sync/atomic"
 	"time"
@@ -255,26 +254,12 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 	)
 	defer func() {
 		if err != nil && sh != nil {
-			e := runRetryable(ctx, func(ctx context.Context) error {
-				_, e := s.client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: s.getID()})
-				return e
-			})
-			if e != nil {
-				log.Printf("Failed to delete session %v. Error: %v", s.getID(), e)
-			}
+			s.delete(ctx)
 		}
 	}()
 	// create session
 	sc := c.rrNext()
-	err = runRetryable(ctx, func(ctx context.Context) error {
-		sid, e := sc.CreateSession(ctx, &sppb.CreateSessionRequest{Database: c.database, Session: &sppb.Session{Labels: c.sessionLabels}})
-		if e != nil {
-			return e
-		}
-		// If no error, construct the new session.
-		s = &session{valid: true, client: sc, id: sid.Name, createTime: time.Now(), md: c.md}
-		return nil
-	})
+	s, err = createSession(ctx, sc, c.database, c.sessionLabels, c.md)
 	if err != nil {
 		return nil, err
 	}

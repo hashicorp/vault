@@ -4,6 +4,11 @@ CHANGES:
 
  * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
 
+FEATURES:
+
+ * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions [GH-5388]
+
 IMPROVEMENTS:
 
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
@@ -17,6 +22,7 @@ BUG FIXES:
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
    generated certificates to be set to the Unix epoch if the role value was not
    set, instead of using the default of 30 seconds [GH-5481]
+ * identity: Remove lookup check during alias removal from entity [GH-5524]
 
 ## 0.11.3 (October 8th, 2018)
 
@@ -28,6 +34,7 @@ SECURITY:
 
 IMPROVEMENTS:
 
+ * auth/ldap: Listing of users and groups return absolute paths [GH-5537]
  * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
 
 BUG FIXES:
