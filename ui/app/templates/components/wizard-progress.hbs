@@ -2,7 +2,7 @@
   {{#each progressBar as |bar|}}
     <div class="feature-progress-container">
       <span class="progress-bar">
-        <span class="feature-progress" style={{bar.style}}></span>
+        <span class="feature-progress" style={{bar.style}} {{! template-lint-disable }}></span>
       </span>
       {{#if bar.showIcon}}
         <ICon class="feature-check {{if bar.completed 'completed-check' 'incomplete-check'}}" @glyph="check-circle-fill" @size="16" @excludeIconClass={{true}}/>
