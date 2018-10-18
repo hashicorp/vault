@@ -2,34 +2,31 @@
   title: "Installing Vault"
   docs:
     - docs/install/index.html
-    
 -
   title: Internals
   docs:
     - docs/internals/index.html
     - docs/internals/architecture.html
     - docs/internals/high-availability.html
-    - docs/internals/security-model.html
+    - docs/internals/security.html
     - docs/internals/telemetry.html
-    - docs/internals/token-authentication.html
-    - docs/internals/key-rotation.html
+    - docs/internals/token.html
+    - docs/internals/rotation.html
     - docs/internals/replication.html
     - docs/internals/plugins.html
-
 -
   title: "Basic Concepts"
   docs:
     - docs/concepts/index.html
     - docs/concepts/dev-server.html
     - docs/concepts/seal.html
-    - docs/concepts/leases.html
-    - docs/concepts/authentication.html
+    - docs/concepts/lease.html
+    - docs/concepts/auth.html
     - docs/concepts/tokens.html
     - docs/concepts/response-wrapping.html
     - docs/concepts/policies.html
-    - docs/concepts/high-availability.html
+    - docs/concepts/ha.html
     - docs/concepts/pgp-gpg-keybase.html
-       
 -
   title: Configuration
   docs:
@@ -38,40 +35,37 @@
     - docs/configuration/seal/index.html
     - docs/configuration/listener/index.html
     - docs/configuration/ui/index.html
-    
- -
+-
   title: "CLI Commands"
   docs:
     - docs/commands/index.html
     - docs/commands/agent.html
-    - docs/commands/audit.html
-    - docs/commands/auth.html
+    - docs/commands/audit/index.html
+    - docs/commands/auth/index.html
     - docs/commands/delete.html
-    - docs/commands/lease.html
+    - docs/commands/lease/index.html
     - docs/commands/list.html
     - docs/commands/login.html
-    - docs/commands/operator.html
+    - docs/commands/operator/index.html
     - docs/commands/path-help.html
     - docs/commands/namespace.html
-    - docs/commands/plugin.html
-    - docs/commands/policy.html
+    - docs/commands/plugin/index.html
+    - docs/commands/policy/index.html
     - docs/commands/read.html
-    - docs/commands/secrets.html
+    - docs/commands/secrets/index.html
     - docs/commands/server.html
     - docs/commands/ssh.html
     - docs/commands/status.html
-    - docs/commands/token.html
+    - docs/commands/token/index.html
     - docs/commands/unwrap.html
     - docs/commands/write.html
     - docs/commands/token-helper.html
-    
 -
   title: "Vault Agent"
   docs:
     - docs/agent/index.html
     - docs/agent/autoauth/index.html
-    
- -
+-
   title: "Secret Engines"
   docs:
     - docs/secrets/index.html
@@ -96,8 +90,7 @@
     - docs/secrets/mssql/index.html
     - docs/secrets/mysql/index.html
     - docs/secrets/postgresql/index.html
- 
- -
+-
   title: "Auth Methods"
   docs:
     - docs/auth/index.html
@@ -113,11 +106,10 @@
     - docs/auth/okta.html
     - docs/auth/radius.html
     - docs/auth/cert.html
-    - docs/auth/tokens.html
+    - docs/auth/token.html
     - docs/auth/userpass.html
     - docs/auth/app-id.html
     - docs/auth/mfa.html
-    
 -
   title: "Audit Devices"
   docs:
@@ -125,23 +117,19 @@
     - docs/audit/file.html
     - docs/audit/syslog.html
     - docs/audit/socket.html
-    
 -
   title: "Plugin Backends"
   docs:
     - docs/plugin/index.html
-    
 -
   title: "Vault Enterprise"
   docs:
     - docs/enterprise/replication/index.html
     - docs/enterprise/auto-unseal/index.html
-    - docs/enterprise/hsm-support/index.html
+    - docs/enterprise/hsm/index.html
     - docs/enterprise/sealwrap/index.html
     - docs/enterprise/namespaces/index.html
     - docs/enterprise/performance-standby/index.html
     - docs/enterprise/control-groups/index.html
     - docs/enterprise/mfa/index.html
     - docs/enterprise/sentinel/index.html
-
-   
