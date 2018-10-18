@@ -1,54 +1,44 @@
 -
   description: "Installing Vault and Vault Enterprise"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/install"
   title: "Installing Vault"
 -
   description: "Technical details about Vault's architecture, cryptographic components, and security model"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/internals"
   title: Internals
 -
   description: "Foundational concepts critical to understanding how Vault operates"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/concepts"
   title: "Basic Concepts"
 -
   description: "Managing Vault via its Command Line Interface (CLI)"
-  link: "https://www.hashicorp.com/"
+  link: "/docs/commands"
   title: "Commands (CLI)"
 -
   description: "Deploying Vault systems and configuring components such as storage and unseal interfaces"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/configuration"
   title: Configuration
 -
   description: "Configuring the Vault binary as a client daemon for performing security operations"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/agent"
   title: "Vault Agent"
 -
   description: "Engines for performing security operations using secrets stored within Vault"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/secrets"
   title: "Secret Engines"
 -
   description: "Methods for configuring how users and applications authenticate into Vault"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/auth"
   title: "Auth Methods"
 -
   description: "Devices for capturing audit logs monitoring activity within Vault"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/audit"
   title: "Audit Devices"
 -
   description: "Configuring how Vault operates with external systems and applications via plugins"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/plugin"
   title: "Plugin Backends"
 -
   description: "Topics related to Vault Enterprise, Vault's premium varient for professional teams and organizations"
-  external: true
-  link: "https://www.hashicorp.com/"
+  link: "/docs/enterprise"
   title: "Vault Enterprise"
