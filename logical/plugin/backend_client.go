@@ -7,6 +7,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -245,4 +246,8 @@ func (b *backendPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
+}
+
+func (b *backendPluginClient) Description() *openapi.Document {
+	return nil
 }

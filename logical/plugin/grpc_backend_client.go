@@ -6,13 +6,13 @@ import (
 	"math"
 	"sync/atomic"
 
-	"google.golang.org/grpc"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 var ErrPluginShutdown = errors.New("plugin is shut down")
@@ -242,4 +242,8 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
+}
+
+func (b *backendGRPCPluginClient) Description() *openapi.Document {
+	return nil
 }

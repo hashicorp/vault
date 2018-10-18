@@ -14,11 +14,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -109,6 +109,11 @@ type CleanupFunc func(context.Context)
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(context.Context, string)
+
+// NullHandler is a no-op, used for path operations that exist for documentation only.
+func NullHandler(_ context.Context, _ *logical.Request, _ *FieldData) (*logical.Response, error) {
+	return nil, nil
+}
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -202,15 +207,22 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		raw[k] = v
 	}
 
-	// Look up the callback for this operation
+	// Look up the callback for this operation, preferring the
+	// path.Operations definition if present.
 	var callback OperationFunc
-	var ok bool
-	if path.Callbacks != nil {
-		callback, ok = path.Callbacks[req.Operation]
+
+	if path.Operations != nil {
+		if op, ok := path.Operations[req.Operation]; ok {
+			callback = op.Handle
+		}
+	} else {
+		callback = path.Callbacks[req.Operation]
 	}
+	ok := callback != nil
+
 	if !ok {
 		if req.Operation == logical.HelpOperation {
-			callback = path.helpCallback()
+			callback = path.helpCallback(b)
 			ok = true
 		}
 	}
@@ -229,7 +241,6 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
-	// Call the callback with the request and the data
 	return callback(ctx, req, &fd)
 }
 
@@ -283,6 +294,17 @@ func (b *Backend) Type() logical.BackendType {
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
 	return result
+}
+
+// Description populates a new OpenAPI document with all paths in this backend.
+func (b *Backend) Description() *openapi.Document {
+	doc := openapi.NewDocument()
+
+	if err := documentPaths(b, doc); err != nil {
+		return nil
+	}
+
+	return doc
 }
 
 // Secret is used to look up the secret with the given type.
@@ -370,7 +392,7 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
-	return logical.HelpResponse(help, nil), nil
+	return logical.HelpResponse(help, nil, nil), nil
 }
 
 func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -492,6 +514,8 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
+	Required    bool
+	Deprecated  bool
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise

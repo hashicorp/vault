@@ -27,24 +27,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/mitchellh/copystructure"
-
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/net/http2"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
-	"github.com/mitchellh/go-testing-interface"
-
 	physInmem "github.com/hashicorp/vault/physical/inmem"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -633,6 +631,11 @@ func (n *rawHTTP) InvalidateKey(context.Context, string) {
 }
 
 func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) error {
+	// noop
+	return nil
+}
+
+func (n *rawHTTP) Description() *openapi.Document {
 	// noop
 	return nil
 }

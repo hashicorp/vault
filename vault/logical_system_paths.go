@@ -423,8 +423,14 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) internalUIPaths() []*framework.Path {
+func (b *SystemBackend) internalPaths() []*framework.Path {
 	return []*framework.Path{
+		{
+			Pattern: "internal/specs/openapi",
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathInternalOpenAPI,
+			},
+		},
 		{
 			Pattern: "internal/ui/mounts",
 			Callbacks: map[logical.Operation]framework.OperationFunc{

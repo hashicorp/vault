@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -105,6 +106,10 @@ func (n *NoopBackend) Initialize(ctx context.Context) error {
 
 func (n *NoopBackend) Type() logical.BackendType {
 	return logical.TypeLogical
+}
+
+func (n *NoopBackend) Description() *openapi.Document {
+	return nil
 }
 
 func TestRouter_Mount(t *testing.T) {

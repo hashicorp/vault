@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -108,6 +109,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
+				"internal/specs/openapi",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -141,7 +143,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.wrappingPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.toolsPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.internalUIPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
 
 	if core.rawEnabled {
@@ -2924,6 +2926,78 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	resp.Data["glob_paths"] = glob
 
 	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// Limit output to authorized paths
+	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
+	if err != nil {
+		return nil, err
+	}
+
+	doc := openapi.NewDocument()
+
+	procMountGroup := func(group, mountPrefix string, backends map[string]logical.Factory) {
+		for mount, mountInfo := range resp.Data[group].(map[string]interface{}) {
+			mountType := mountInfo.(map[string]interface{})["type"].(string)
+
+			factory, ok := backends[mountType]
+			if ok {
+				paths := renderOpenAPIPaths(factory, mountPrefix+mount)
+				if paths != nil {
+					for k, v := range paths {
+						doc.Paths[k] = v
+					}
+				}
+			}
+		}
+	}
+
+	procMountGroup("secret", "", b.Core.logicalBackends)
+	procMountGroup("auth", "auth/", b.Core.credentialBackends)
+
+	// This endpoint is more likely to be inspected directly by humans,
+	// so indent the JSON output to make it more readable.
+	buf, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	resp = &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
+// renderOpenAPIPaths instantiates a backend and calculates its set of OpenAPI paths.
+func renderOpenAPIPaths(factory logical.Factory, mount string) map[string]*openapi.PathItem {
+	// A dummy config is required for some backend factories to succeed
+	conf := &logical.BackendConfig{
+		Logger:      log.NewNullLogger(),
+		System:      logical.StaticSystemView{},
+		StorageView: &logical.InmemStorage{},
+	}
+
+	backend, err := factory(context.Background(), conf)
+	if err != nil {
+		return nil
+	}
+
+	p := make(map[string]*openapi.PathItem)
+	d := backend.Description()
+	if d != nil {
+		for path, pathObject := range d.Paths {
+			path := strings.TrimPrefix(path, "/")
+			p["/"+mount+path] = pathObject
+		}
+	}
+
+	return p
 }
 
 func sanitizeMountPath(path string) string {
