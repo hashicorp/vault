@@ -122,9 +122,6 @@
 /guides/operations/autounseal-aws-kms.html      https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms.html
 /guides/operations/seal-wrap.html               https://learn.hashicorp.com/vault/operations/ops-seal-wrap.html
 
-# Not sure about this one
-/guides/operations/monitoring.html              /vault
-
 # Identity
 /guides/identity/index.html                     https://learn.hashicorp.com/vault?track=identity-access-management#identity-access-management
 /guides/identity/secure-intro.html              https://learn.hashicorp.com/vault/identity-access-management/iam-secure-intro.html
