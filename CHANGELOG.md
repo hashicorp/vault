@@ -22,6 +22,7 @@ BUG FIXES:
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
    generated certificates to be set to the Unix epoch if the role value was not
    set, instead of using the default of 30 seconds [GH-5481]
+ * identity: Remove lookup check during alias removal from entity [GH-5524]
 
 ## 0.11.3 (October 8th, 2018)
 
