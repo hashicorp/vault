@@ -8,13 +8,13 @@
   docs:
     - docs/internals/index.html
     - docs/internals/architecture.html
-		- docs/internals/high-availability.html
-		- docs/internals/security-model.html
-		- docs/internals/telemetry.html
-		- docs/internals/token-authentication.html
-		- docs/internals/key-rotation.html
-		- docs/internals/replication.html
-		- docs/internals/plugins.html
+    - docs/internals/high-availability.html
+    - docs/internals/security-model.html
+    - docs/internals/telemetry.html
+    - docs/internals/token-authentication.html
+    - docs/internals/key-rotation.html
+    - docs/internals/replication.html
+    - docs/internals/plugins.html
 
 -
   title: "Basic Concepts"
@@ -76,26 +76,26 @@
   docs:
     - docs/secrets/index.html
     - docs/secrets/ad/index.html
-		- docs/secrets/alicloud/index.html
-		- docs/secrets/aws/index.html
-		- docs/secrets/azure/index.html
-		- docs/secrets/consul/index.html
-		- docs/secrets/cubbyhole/index.html
-		- docs/secrets/databases/index.html
-		- docs/secrets/gcp/index.html
-		- docs/secrets/kv/index.html
-		- docs/secrets/identity/index.html
-		- docs/secrets/nomad/index.html
-		- docs/secrets/pki/index.html
-		- docs/secrets/rabbitmq/index.html
-		- docs/secrets/ssh/index.html
-		- docs/secrets/totp/index.html
-		- docs/secrets/transit/index.html
-		- docs/secrets/cassandra/index.html 
-		- docs/secrets/mongodb/index.html
-		- docs/secrets/mssql/index.html
-		- docs/secrets/mysql/index.html
-		- docs/secrets/postgresql/index.html
+    - docs/secrets/alicloud/index.html
+    - docs/secrets/aws/index.html
+    - docs/secrets/azure/index.html
+    - docs/secrets/consul/index.html
+    - docs/secrets/cubbyhole/index.html
+    - docs/secrets/databases/index.html
+    - docs/secrets/gcp/index.html
+    - docs/secrets/kv/index.html
+    - docs/secrets/identity/index.html
+    - docs/secrets/nomad/index.html
+    - docs/secrets/pki/index.html
+    - docs/secrets/rabbitmq/index.html
+    - docs/secrets/ssh/index.html
+    - docs/secrets/totp/index.html
+    - docs/secrets/transit/index.html
+    - docs/secrets/cassandra/index.html
+    - docs/secrets/mongodb/index.html
+    - docs/secrets/mssql/index.html
+    - docs/secrets/mysql/index.html
+    - docs/secrets/postgresql/index.html
  
  -
   title: "Auth Methods"
