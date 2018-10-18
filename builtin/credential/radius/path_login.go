@@ -144,6 +144,9 @@ func (b *backend) RadiusLogin(ctx context.Context, req *logical.Request, usernam
 	packet := radius.New(radius.CodeAccessRequest, []byte(cfg.Secret))
 	UserName_SetString(packet, username)
 	UserPassword_SetString(packet, password)
+	if cfg.NasIdentifier != "" {
+		NASIdentifier_AddString(packet, cfg.NasIdentifier)
+	}
 	packet.Add(5, radius.NewInteger(uint32(cfg.NasPort)))
 
 	client := radius.Client{
