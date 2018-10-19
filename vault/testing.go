@@ -27,8 +27,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/mitchellh/copystructure"
+
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/http2"
+
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logging"
@@ -37,11 +42,9 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
-	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/net/http2"
+
+	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
 
 // This file contains a number of methods that are useful for unit
