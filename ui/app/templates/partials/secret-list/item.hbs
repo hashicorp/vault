@@ -52,13 +52,17 @@
                       Details
                     </SecretLink>
                   </li>
-                  {{!--  // will add a link to the history view once it exists
                   {{#if backendModel.isV2KV}}
                     <li class="action">
-                      Verion History
+                      <SecretLink
+                        @mode="versions"
+                        @secret={{item.id}}
+                        @class="has-text-black has-text-weight-semibold"
+                      > 
+                        View version history
+                      </SecretLink>
                     </li>
                   {{/if}}
-                  --}}
                 {{/if}}
                 {{#if item.canEdit}}
                   <li class="action">
