@@ -106,7 +106,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				return err
 			}
 			if groupByName != nil {
-				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name)
+				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
 				if !i.disableLowerCasedNames {
 					return errDuplicateIdentityName
 				}
@@ -239,7 +239,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					return nil
 				}
 				if entityByName != nil {
-					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name)
+					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name, "action", "merge the duplicate entities into one")
 					if !i.disableLowerCasedNames {
 						return errDuplicateIdentityName
 					}
@@ -305,7 +305,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		}
 
 		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
-			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name)
+			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
 			if !i.disableLowerCasedNames {
 				return errDuplicateIdentityName
 			}
