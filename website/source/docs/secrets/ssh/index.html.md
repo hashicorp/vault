@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "SSH - Secrets Engines"
+sidebar_title: "SSH"
 sidebar_current: "docs-secrets-ssh"
 description: |-
   The Vault SSH secrets engine provides secure authentication and authorization

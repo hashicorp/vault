@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth Kubernetes Method"
+sidebar_title: "Kubernetes"
 sidebar_current: "docs-agent-autoauth-methods-kubernetes"
 description: |-
   Kubernetes Method for Vault Agent Auto-Auth

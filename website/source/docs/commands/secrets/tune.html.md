@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets tune - Command"
+sidebar_title: "tune"
 sidebar_current: "docs-commands-secrets-tune"
 description: |-
   The "secrets tune" command tunes the configuration options for the secrets

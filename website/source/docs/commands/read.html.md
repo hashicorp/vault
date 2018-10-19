@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "read - Command"
+sidebar_title: "read"
 sidebar_current: "docs-commands-read"
 description: |-
   The "read" command reads data from Vault at the given path. This can be used

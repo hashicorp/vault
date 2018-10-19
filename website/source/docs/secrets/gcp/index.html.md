@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud - Secrets Engines"
+sidebar_title: "Google Cloud"
 sidebar_current: "docs-secrets-gcp"
 description: |-
   The Google Cloud secrets engine for Vault dynamically generates Google Cloud

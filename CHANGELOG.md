@@ -24,6 +24,7 @@ BUG FIXES:
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
    generated certificates to be set to the Unix epoch if the role value was not
    set, instead of using the default of 30 seconds [GH-5481]

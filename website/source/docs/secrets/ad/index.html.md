@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Active Directory - Secrets Engines"
+sidebar_title: "Active Directory"
 sidebar_current: "docs-secrets-active-directory"
 description: |-
   The Active Directory secrets engine for Vault generates passwords dynamically based on

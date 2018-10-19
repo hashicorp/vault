@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator rekey - Command"
+sidebar_title: "rekey"
 sidebar_current: "docs-commands-operator-rekey"
 description: |-
   The "operator rekey" command generates a new set of unseal keys. This can

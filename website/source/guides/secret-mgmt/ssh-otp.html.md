@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "One-Time SSH Password - Guides"
+sidebar_title: "One-Time SSH Password"
 sidebar_current: "guides-secret-mgmt-ssh-otp"
 description: |-
   The one-time SSH password secrets engine allows Vault to issue a one-time
@@ -52,7 +53,7 @@ Vault can create a one-time password (OTP) for SSH authentication on a network
 every time a client wants to SSH into a remote host using a helper command on
 the remote host to perform verification.
 
-![SSH OTP Workflow](/assets/images/vault-ssh-otp-1.png)
+![SSH OTP Workflow](/img/vault-ssh-otp-1.png)
 
 An authenticated client requests an OTP from the Vault server. If the client is
 authorized, Vault issues and returns an OTP. The client uses this OTP during the
@@ -303,7 +304,7 @@ field.
 1. Select **More options** to expand the optional parameter fields, and then
 enter **`0.0.0.0/0`** in the **CIDR list** field.
 
-![Create Role](/assets/images/vault-ssh-otp-2.png)
+![Create Role](/img/vault-ssh-otp-2.png)
 
 1. Click **Create role**.
 

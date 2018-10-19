@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Rekeying & Rotating Vault - Guides"
+sidebar_title: "Rekeying & Rotating"
 sidebar_current: "guides-operations-rekeying-and-rotating"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying
@@ -36,7 +37,7 @@ Typically each of these key shares is distributed to trusted parties in the
 organization. These parties must come together to "unseal" the Vault by entering
 their key share.
 
-[![Vault Shamir Secret Sharing Algorithm](/assets/images/vault-shamir-secret-sharing.svg)](/assets/images/vault-shamir-secret-sharing.svg)
+[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
 
 [shamir]: https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing
 
@@ -50,7 +51,7 @@ are a few examples:
 In addition to rekeying the master key, there may be an independent desire to
 rotate the underlying encryption key Vault uses to encrypt data at rest.
 
-[![Vault Rekey vs Rotate](/assets/images/vault-rekey-vs-rotate.svg)](/assets/images/vault-rekey-vs-rotate.svg)
+[![Vault Rekey vs Rotate](/img/vault-rekey-vs-rotate.svg)](/img/vault-rekey-vs-rotate.svg)
 
 In Vault, _rekeying_ and _rotating_ are two separate operations. The process for
 generating a new master key and applying Shamir's algorithm is called

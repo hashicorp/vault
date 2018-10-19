@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "High Availability"
+sidebar_title: "High Availability"
 sidebar_current: "docs-internals-ha"
 description: |-
   Learn about the high availability design of Vault.

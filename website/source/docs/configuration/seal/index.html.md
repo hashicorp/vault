@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Seals - Configuration"
+sidebar_title: "<tt>seal</tt>"
 sidebar_current: "docs-configuration-seal"
 description: |-
   The seal stanza configures the seal type to use for additional data protection.

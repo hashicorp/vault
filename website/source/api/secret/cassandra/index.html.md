@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Cassandra - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-cassandra"
+sidebar_title: "Cassandra <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-cassandra"
 description: |-
   This is the API documentation for the Vault Cassandra secrets engine.
 ---
