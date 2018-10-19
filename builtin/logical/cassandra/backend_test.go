@@ -62,6 +62,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 			Password: "cassandra",
 		}
 		clusterConfig.ProtoVersion = 4
+		clusterConfig.DisableInitialHostLookup = true
 		clusterConfig.Port = port
 
 		session, err := clusterConfig.CreateSession()
