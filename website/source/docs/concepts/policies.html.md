@@ -564,10 +564,6 @@ policy in Vault:
 $ vault policy write policy-name policy-file.hcl
 ```
 
--> The `@` tells Vault to read from a file on disk. In the example above, Vault
--will read the contents of `my-policy.hcl` in the current working directory into
--the value for that parameter.
-
 or via the API:
 
 ```sh
