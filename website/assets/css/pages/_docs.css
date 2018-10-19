@@ -1,0 +1,67 @@
+#sidebar {
+  & .g-docs-sidebar {
+    margin-right: 25px;
+  }
+}
+
+#intro {
+  padding-bottom: 0px;
+
+  & .g-section-header {
+    margin-bottom: 48px;
+
+    & h3 {
+      margin: 1em auto 0 auto;
+      width: 85%;
+    }
+  }
+}
+
+#categories {
+  & .g-linked-text-summary-list {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+#sitemap {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+#get-started {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.g-content {
+  & h1 {
+    @extend %typography-display-2;
+  }
+
+  & h2 {
+    @extend %typography-section-2;
+    border-bottom: 1px solid var(--gray-8);
+    padding-bottom: 16px;
+  }
+
+  & h3 {
+    @extend %typography-section-3;
+    border-bottom: none;
+  }
+
+  & h4 {
+    @extend %typography-section-4;
+  }
+
+  & .alert {
+    margin-top: calc(var(--baseline) * 1.1rem);
+    margin-bottom: calc(var(--baseline) * 1.1rem);
+
+    & p:first-child {
+      margin-top: 0;
+    }
+  }
+}

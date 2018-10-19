@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/key-status - HTTP API"
-sidebar_current: "docs-http-system-key-status"
+sidebar_title: "<tt>/sys/key-status</tt>"
+sidebar_current: "api-http-system-key-status"
 description: |-
   The `/sys/key-status` endpoint is used to query info about the current
   encryption key of Vault.

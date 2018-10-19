@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Lease, Renew, and Revoke"
+sidebar_title: "Lease, Renew, and Revoke"
 sidebar_current: "docs-concepts-lease"
 description: |-
   Vault provides a lease with every secret. When this lease is expired, Vault will revoke that secret.

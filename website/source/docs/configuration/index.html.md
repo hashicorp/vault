@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Server Configuration"
+sidebar_title: "Configuration"
 sidebar_current: "docs-configuration"
 description: |-
   Vault server configuration reference.

@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Dynamic Secrets - Getting Started"
-sidebar_current: "gettingstarted-dynamicsecrets"
+sidebar_title: "Dynamic Secrets"
+sidebar_current: "gettingstarted-dynamic-secrets"
 description: |-
   On this page we introduce dynamic secrets by showing you how to create AWS access keys with Vault.
 ---

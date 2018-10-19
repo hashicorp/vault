@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS - Secrets Engines"
+sidebar_title: "AWS"
 sidebar_current: "docs-secrets-aws"
 description: |-
   The AWS secrets engine for Vault generates access keys dynamically based on

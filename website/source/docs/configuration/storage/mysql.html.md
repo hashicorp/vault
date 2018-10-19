@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MySQL - Storage Backends - Configuration"
+sidebar_title: "MySQL"
 sidebar_current: "docs-configuration-storage-mysql"
 description: |-
   The MySQL storage backend is used to persist Vault's data in a MySQL server or

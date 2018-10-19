@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "JWT - Auth Methods"
+sidebar_title: "JWT"
 sidebar_current: "docs-auth-jwt"
 description: |-
   The JWT auth method allows authentication using JWTs, with support for OIDC Discovery for key fetching

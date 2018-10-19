@@ -2,12 +2,96 @@ package vault
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestIdentityStore_CaseInsensitiveEntityAliasName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, accessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	// Create an entity
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	testAliasName := "testAliasName"
+	// Create a case sensitive alias name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"mount_accessor": accessor,
+			"canonical_id":   entityID,
+			"name":           testAliasName,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasID := resp.Data["id"].(string)
+
+	// Ensure that reading the alias returns case sensitive alias name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias/id/" + aliasID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName := resp.Data["name"].(string)
+	if aliasName != testAliasName {
+		t.Fatalf("bad alias name; expected: %q, actual: %q", testAliasName, aliasName)
+	}
+
+	// Overwrite the alias using lower cased alias name. This shouldn't error.
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias/id/" + aliasID,
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"mount_accessor": accessor,
+			"canonical_id":   entityID,
+			"name":           strings.ToLower(testAliasName),
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Ensure that reading the alias returns lower cased alias name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias/id/" + aliasID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	aliasName = resp.Data["name"].(string)
+	if aliasName != strings.ToLower(testAliasName) {
+		t.Fatalf("bad alias name; expected: %q, actual: %q", testAliasName, aliasName)
+	}
+
+	// Ensure that there is one entity alias
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity-alias/id",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("bad length of entity aliases; expected: 1, actual: %d", len(resp.Data["keys"].([]string)))
+	}
+}
 
 // This test is required because MemDB does not take care of ensuring
 // uniqueness of indexes that are marked unique.

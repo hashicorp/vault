@@ -3,6 +3,11 @@
 CHANGES:
 
  * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+ * core: Tokens are now prefixed by a designation to indicate what type of
+   token they are. Service tokens start with `s.` and batch tokens start with
+   `b.`. Existing tokens will still work (they are all of service type and will
+   be considered as such). Prefixing allows us to be more efficient when
+   consuming a token, which keeps the critical path of requests faster.
 
 FEATURES:
 
@@ -12,12 +17,15 @@ FEATURES:
 IMPROVEMENTS:
 
  * auth/token: New tokens are salted using SHA2-256 HMAC instead of SHA1 hash
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
    packet [GH-5465]
  * ui: Allow viewing and updating Vault license via the UI
  * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and visibility is toggleable
 
 BUG FIXES:
 
@@ -25,6 +33,7 @@ BUG FIXES:
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
    generated certificates to be set to the Unix epoch if the role value was not
    set, instead of using the default of 30 seconds [GH-5481]

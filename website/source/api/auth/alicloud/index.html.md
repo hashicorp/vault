@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AliCloud - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-alicloud"
+sidebar_title: "AliCloud"
+sidebar_current: "api-http-auth-alicloud"
 description: |-
   This is the API documentation for the Vault AliCloud auth method.
 ---

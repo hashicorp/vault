@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Concepts"
+sidebar_title: "Concepts"
 sidebar_current: "docs-concepts"
 description: |-
   Concepts that are important to understand for Vault usage.

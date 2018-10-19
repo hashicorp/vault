@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
+sidebar_title: "Key/Value"
 sidebar_current: "docs-secrets-kv"
 description: |-
   The KV secrets engine can store arbitrary secrets.

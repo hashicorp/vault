@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MySQL/MariaDB - Database - Secrets Engines"
+sidebar_title: "MySQL/MariaDB"
 sidebar_current: "docs-secrets-databases-mysql-maria"
 description: |-
   MySQL is one of the supported plugins for the database secrets engine. This
