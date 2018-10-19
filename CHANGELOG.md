@@ -11,6 +11,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
