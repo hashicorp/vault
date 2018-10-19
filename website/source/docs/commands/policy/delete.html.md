@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy delete - Command"
+sidebar_title: "delete"
 sidebar_current: "docs-commands-policy-delete"
 description: |-
   The "policy delete" command deletes the policy named NAME in the Vault server.

@@ -467,7 +467,7 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 		defer txn.Abort()
 
 		// Fetch the entity using its name
-		entity, err := i.MemDBEntityByNameInTxn(txn, ctx, entityName, true)
+		entity, err := i.MemDBEntityByNameInTxn(ctx, txn, entityName, true)
 		if err != nil {
 			return nil, err
 		}

@@ -102,15 +102,18 @@ func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, le *le
 			case <-ctx.Done():
 			case <-m.quitCh:
 				cancel()
+			case <-revokeCtx.Done():
 			}
 		}()
 
 		select {
 		case <-m.quitCh:
 			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		case <-m.quitContext.Done():
 			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", le.LeaseID)
+			cancel()
 			return
 		default:
 		}
@@ -187,7 +190,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	errorFunc := func() {
 		c.logger.Error("shutting down")
 		if err := c.Shutdown(); err != nil {
-			c.logger.Error("error shutting down core: %v", err)
+			c.logger.Error("error shutting down core", "error", err)
 		}
 	}
 	go c.expiration.Restore(errorFunc)
@@ -494,9 +497,12 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	wg.Wait()
 
 	m.restoreModeLock.Lock()
-	m.restoreLoaded = sync.Map{}
-	m.restoreLocks = nil
 	atomic.StoreInt32(m.restoreMode, 0)
+	m.restoreLoaded.Range(func(k, v interface{}) bool {
+		m.restoreLoaded.Delete(k)
+		return true
+	})
+	m.restoreLocks = nil
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
@@ -1275,6 +1281,13 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 		}
 
 		return nil
+	}
+
+	if le.Secret != nil {
+		// not sure if this is really valid to have a leaseEntry with a nil Secret
+		// (if there's a nil Secret, what are you really leasing?), but the tests
+		// create one, and good to be defensive
+		le.Secret.IssueTime = le.IssueTime
 	}
 
 	// Make sure we're operating in the right namespace

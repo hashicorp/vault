@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "FoundationDB - Storage Backends - Configuration"
+sidebar_title: "FoundationDB"
 sidebar_current: "docs-configuration-storage-foundationdb"
 description: |-
   The FoundationDB storage backend is used to persist Vault's data in the

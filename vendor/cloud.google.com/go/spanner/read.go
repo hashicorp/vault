@@ -67,6 +67,10 @@ type RowIterator struct {
 	// if QueryWithStats was called.
 	QueryStats map[string]interface{}
 
+	// For a DML statement, the number of rows affected. For PDML, this is a lower bound.
+	// Available for DML statements after RowIterator.Next returns iterator.Done.
+	RowCount int64
+
 	streamd      *resumableStreamDecoder
 	rowd         *partialResultSetDecoder
 	setTimestamp func(time.Time)
@@ -74,6 +78,7 @@ type RowIterator struct {
 	cancel       func()
 	err          error
 	rows         []*Row
+	sawStats     bool
 }
 
 // Next returns the next result. Its second return value is iterator.Done if
@@ -86,8 +91,16 @@ func (r *RowIterator) Next() (*Row, error) {
 	for len(r.rows) == 0 && r.streamd.next() {
 		prs := r.streamd.get()
 		if prs.Stats != nil {
+			r.sawStats = true
 			r.QueryPlan = prs.Stats.QueryPlan
 			r.QueryStats = protostruct.DecodeToMap(prs.Stats.QueryStats)
+			if prs.Stats.RowCount != nil {
+				rc, err := extractRowCount(prs.Stats)
+				if err != nil {
+					return nil, err
+				}
+				r.RowCount = rc
+			}
 		}
 		r.rows, r.err = r.rowd.add(prs)
 		if r.err != nil {
@@ -111,6 +124,20 @@ func (r *RowIterator) Next() (*Row, error) {
 		r.err = iterator.Done
 	}
 	return nil, r.err
+}
+
+func extractRowCount(stats *sppb.ResultSetStats) (int64, error) {
+	if stats.RowCount == nil {
+		return 0, spannerErrorf(codes.Internal, "missing RowCount")
+	}
+	switch rc := stats.RowCount.(type) {
+	case *sppb.ResultSetStats_RowCountExact:
+		return rc.RowCountExact, nil
+	case *sppb.ResultSetStats_RowCountLowerBound:
+		return rc.RowCountLowerBound, nil
+	default:
+		return 0, spannerErrorf(codes.Internal, "unknown RowCount type %T", stats.RowCount)
+	}
 }
 
 // Do calls the provided function once in sequence for each row in the iteration.  If the
@@ -290,8 +317,8 @@ type resumableStreamDecoder struct {
 // beginning at the restartToken if non-nil.
 func newResumableStreamDecoder(ctx context.Context, rpc func(ct context.Context, restartToken []byte) (streamingReceiver, error)) *resumableStreamDecoder {
 	return &resumableStreamDecoder{
-		ctx: ctx,
-		rpc: rpc,
+		ctx:                         ctx,
+		rpc:                         rpc,
 		maxBytesBetweenResumeTokens: atomic.LoadInt32(&maxBytesBetweenResumeTokens),
 		backoff:                     defaultBackoff,
 	}

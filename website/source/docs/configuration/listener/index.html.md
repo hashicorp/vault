@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Listeners - Configuration"
+sidebar_title: "<tt>listener</tt>"
 sidebar_current: "docs-configuration-listener"
 description: |-
   The listener stanza configures the addresses and ports on which Vault will

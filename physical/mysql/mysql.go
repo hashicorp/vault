@@ -150,7 +150,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		// Create the required table if it doesn't exists.
 		if !lockTableExist {
 			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
-				" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
+				" (node_job varbinary(512), current_leader varbinary(512), PRIMARY KEY (node_job))"
 			if _, err := db.Exec(create_query); err != nil {
 				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 			}
@@ -621,9 +621,9 @@ func (i *MySQLLock) becomeLeader() error {
 func (i *MySQLLock) Lock() error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
-	// Lock timeout math.MaxUint32 instead of -1 solves compatibility issues with
+	// Lock timeout math.MaxInt32 instead of -1 solves compatibility issues with
 	// different MySQL flavours i.e. MariaDB
-	rows, err := i.in.Query("SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxUint32, i.key)
+	rows, err := i.in.Query("SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxInt32, i.key)
 	if err != nil {
 		return err
 	}

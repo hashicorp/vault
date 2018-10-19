@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Google Cloud - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-gcp"
+sidebar_title: "Google Cloud"
+sidebar_current: "api-http-auth-gcp"
 description: |-
   This is the API documentation for the Vault Google Cloud authentication
   method.
@@ -41,6 +42,8 @@ to confirm signed JWTs passed in during login.
 
     If this value is empty, Vault will try to use [Application Default
     Credentials][gcp-adc] from the machine on which the Vault server is running.
+    
+    The project must have the `iam.googleapis.com` API [enabled](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com).
 
 - `google_certs_endpoint` `(string:
   "https://www.googleapis.com/oauth2/v3/certs")`: The Google OAuth2 endpoint

@@ -76,7 +76,11 @@ export default ApplicationAdapter.extend({
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = snapshot.id;
-    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
+    const roles = store
+      .peekAll('role-ssh')
+      .filterBy('zeroAddress')
+      .mapBy('id')
+      .join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

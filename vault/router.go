@@ -10,9 +10,18 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
+)
+
+var (
+	denylistHeaders = []string{
+		"Authorization",
+		consts.AuthHeaderName,
+	}
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
@@ -753,9 +762,9 @@ func pathsToRadix(paths []string) *radix.Tree {
 }
 
 // filteredPassthroughHeaders returns a headers map[string][]string that
-// contains the filtered values contained in passthroughHeaders, as well as the
-// values in whitelistedHeaders. Filtering of passthroughHeaders from the
-// origHeaders is done is a case-insensitive manner.
+// contains the filtered values contained in passthroughHeaders. Filtering of
+// passthroughHeaders from the origHeaders is done is a case-insensitive manner.
+// Headers that match values from denylistHeaders will be ignored.
 func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
 	retHeaders := make(map[string][]string)
 
@@ -763,6 +772,10 @@ func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHead
 	if len(passthroughHeaders) == 0 {
 		return retHeaders
 	}
+
+	// Filter passthroughHeaders values through denyListHeaders first. Returns the
+	// lowercased the complement set.
+	passthroughHeadersSubset := strutil.Difference(passthroughHeaders, denylistHeaders, true)
 
 	// Create a map that uses lowercased header values as the key and the original
 	// header naming as the value for comparison down below.
@@ -774,8 +787,8 @@ func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHead
 	// Case-insensitive compare of passthrough headers against originating
 	// headers. The returned headers will be the same casing as the originating
 	// header name.
-	for _, ph := range passthroughHeaders {
-		if header, ok := lowerHeadersRef[strings.ToLower(ph)]; ok {
+	for _, ph := range passthroughHeadersSubset {
+		if header, ok := lowerHeadersRef[ph]; ok {
 			retHeaders[header] = origHeaders[header]
 		}
 	}

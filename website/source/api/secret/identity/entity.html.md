@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Entity - HTTP API"
-sidebar_current: "docs-http-secret-identity-entity"
+sidebar_title: "Entity"
+sidebar_current: "api-http-secret-identity-entity"
 description: |-
   This is the API documentation for managing entities in the identity store.
 ---
@@ -287,7 +288,7 @@ This endpoint queries the entity by its name.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    http://127.0.0.1:8200/v1/identity/entity/id/testentityname
+    http://127.0.0.1:8200/v1/identity/entity/name/testentityname
 ```
 
 ### Sample Response

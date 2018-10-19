@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/rekey-recovery-key - HTTP API"
-sidebar_current: "docs-http-system-rekey-recovery-key"
+sidebar_title: "<tt>/sys/rekey-recovery-key</tt>"
+sidebar_current: "api-http-system-rekey-recovery-key"
 description: |-
   The `/sys/rekey-recovery-key` endpoints are used to rekey the recovery keys for Vault.
 ---

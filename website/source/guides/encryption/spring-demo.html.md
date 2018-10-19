@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Java Application Demo - Guides"
+sidebar_title: "Java Application Demo"
 sidebar_current: "guides-encryption-spring-demo"
 description: |-
   This guide discusses the concepts necessary to help users
@@ -20,7 +21,7 @@ with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)
 webinar.
 
-[![YouTube](/assets/images/vault-java-demo-1.png)](https://youtu.be/NxL2-XuZ3kc)
+[![YouTube](/img/vault-java-demo-1.png)](https://youtu.be/NxL2-XuZ3kc)
 
 The Java application in this demo leverages the [_Spring Cloud
 Vault_](https://cloud.spring.io/spring-cloud-vault/) library which provides
@@ -30,7 +31,7 @@ environment.
 
 ## Reference Material
 
-- [Encryption as a Service](/guides/encryption/transit.html) 
+- [Encryption as a Service](/guides/encryption/transit.html)
 - [Manage secrets, access, and encryption in
 the public cloud with
 Vault](https://www.hashicorp.com/resources/solutions-engineering-webinar-series-episode-2-vault)
@@ -60,7 +61,7 @@ data.  Your system can communicate with Vault easily through the Vault API to
 encrypt and decrypt your data, and the encryption keys never have to leave the
 Vault.
 
-![Encryption as a Service](/assets/images/vault-eaas.png)
+![Encryption as a Service](/img/vault-eaas.png)
 
 
 ## Prerequisites
@@ -100,7 +101,7 @@ In this guide, you will perform the following:
 1. [Run the demo application](#step3)
 1. [Reload the Static Secrets](#step4)
 
-![Encryption as a Service](/assets/images/vault-java-demo-10.png)
+![Encryption as a Service](/img/vault-java-demo-10.png)
 
 ### <a name="step1"></a>Step 1: Review the demo application implementation
 
@@ -275,11 +276,11 @@ click **Sign In**.
 Select the **`transit/`** secrets engine, and you should find an encryption key
 named, "`order`".
 
-![Vault UI](/assets/images/vault-java-demo-2.png)
+![Vault UI](/img/vault-java-demo-2.png)
 
 Under the **Policies**, verify that the `order` policy exists.
 
-![Vault UI](/assets/images/vault-java-demo-3.png)
+![Vault UI](/img/vault-java-demo-3.png)
 
 This `order` policy is for the application.  It permits `read` on the
 `database/creds/order` path so that the demo app can get a dynamically generated
@@ -429,7 +430,7 @@ and SSH into the demo virtual machine.
 
 If everything looked fine in [Step 2](#step2), you are ready to write some data.
 
-![Vault UI](/assets/images/vault-java-demo-9.png)
+![Vault UI](/img/vault-java-demo-9.png)
 
 You have [verified in the `spring` log](#task-3-examine-the-sprig-container)
 that the demo app successfully retrieved a database credential from the Vault
@@ -462,7 +463,7 @@ EOF
 [Postman](https://www.getpostman.com/apps) instead of cURL to invoke the API if
 you prefer.
 
-![Postman](/assets/images/vault-java-demo-4.png)
+![Postman](/img/vault-java-demo-4.png)
 
 
 The order data you sent gets encrypted by Vault. The database only sees the
@@ -518,20 +519,20 @@ Vault UI makes it easy to decrypt the data.
 In the **Secrets** tab, select **`transit/` > `orders`**, and select **Key
 actions**.
 
-![Web UI](/assets/images/vault-java-demo-5.png)
+![Web UI](/img/vault-java-demo-5.png)
 
 Select **Decrypt** from the transit actions.  Now, copy the ciphertext from the
 **`orders`** table and paste it in.
 
-![Web UI](/assets/images/vault-java-demo-6.png)
+![Web UI](/img/vault-java-demo-6.png)
 
 Click **Decrypt**.
 
-![Web UI](/assets/images/vault-java-demo-7.png)
+![Web UI](/img/vault-java-demo-7.png)
 
 Finally, click **Decode from base64** to reveal the customer name.
 
-![Web UI](/assets/images/vault-java-demo-8.png)
+![Web UI](/img/vault-java-demo-8.png)
 
 
 ### <a name="step4"></a>Step 4: Reloading the Static Secrets
@@ -573,7 +574,7 @@ The demo app retrieved the secret from `secret/spring-vault-demo` and has a
 local copy.  If someone (or perhaps another app) updates the secret, it makes the
 secret held by the demo app to be obsolete.
 
-![Static Secret](/assets/images/vault-java-demo-11.png)
+![Static Secret](/img/vault-java-demo-11.png)
 
 Spring offers [Spring Boot
 Actuator](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#production-ready)

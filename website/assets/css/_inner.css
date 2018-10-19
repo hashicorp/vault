@@ -1,0 +1,35 @@
+.content-wrap {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  flex: 1 0 auto;
+  position: relative;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    margin-top: 72px;
+    margin-bottom: 72px;
+  }
+}
+
+#inner {
+  flex: 1;
+  margin: 100px 0;
+  overflow: auto;
+
+  @media (min-width: 768px) {
+    margin: 0;
+  }
+
+  & .g-content > h1:first-child {
+    margin-top: 0;
+  }
+
+  /* TODO: this should be applied in global styles, temporary override here */
+  & pre code,
+  & code,
+  & pre {
+    font-size: 0.875em;
+  }
+}

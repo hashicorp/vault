@@ -16,7 +16,7 @@ export default {
         { type: 'render', level: 'tutorial', component: 'wizard/tutorial-idle' },
         { type: 'render', level: 'feature', component: null },
       ],
-      onExit: ['showTutorialWhenAuthenticated'],
+      onExit: ['showTutorialWhenAuthenticated', 'clearFeatureData'],
       states: {
         idle: {
           on: {
@@ -34,7 +34,10 @@ export default {
               onEntry: { type: 'render', level: 'feature', component: 'wizard/init-setup' },
             },
             save: {
-              on: { TOUNSEAL: 'unseal' },
+              on: {
+                TOUNSEAL: 'unseal',
+                TOLOGIN: 'login',
+              },
               onEntry: { type: 'render', level: 'feature', component: 'wizard/init-save-keys' },
             },
             unseal: {

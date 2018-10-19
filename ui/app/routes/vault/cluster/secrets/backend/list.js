@@ -166,8 +166,8 @@ export default Route.extend({
       return true;
     },
     reload() {
-      this.refresh();
       this.store.clearAllDatasets();
+      this.refresh();
     },
   },
 });

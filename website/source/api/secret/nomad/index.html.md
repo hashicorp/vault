@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Nomad Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-nomad"
+sidebar_title: "Nomad"
+sidebar_current: "api-http-secret-nomad"
 description: |-
   This is the API documentation for the Vault Nomad secret backend.
 ---

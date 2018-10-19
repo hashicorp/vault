@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases"
+sidebar_title: "Databases"
+sidebar_current: "api-http-secret-databases"
 description: |-
   Top page for database secrets engine information
 ---
@@ -170,7 +171,7 @@ with the configuration stored in the barrier.
 
 ### Parameters
 
-- `name` `(string: <required>)` – Specifies the name of the connection to delete.
+- `name` `(string: <required>)` – Specifies the name of the connection to reset.
   This is specified as part of the URL.
 
 ### Sample Request

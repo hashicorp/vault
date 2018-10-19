@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Userpass - Auth Methods"
+sidebar_title: "Username &amp; Password"
 sidebar_current: "docs-auth-userpass"
 description: |-
   The "userpass" auth method allows users to authenticate with Vault using a username and password.

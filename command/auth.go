@@ -62,6 +62,10 @@ func (c *AuthCommand) Run(args []string) int {
 	// Deprecation
 	// TODO: remove in 0.9.0
 
+	if len(args) == 0 {
+		return cli.RunResultHelp
+	}
+
 	// Parse the args for our deprecations and defer to the proper areas.
 	for _, arg := range args {
 		switch {

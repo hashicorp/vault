@@ -179,6 +179,11 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
 	}
+
+	if init && !sealed && !standby {
+		body.LastWAL = vault.LastWAL(core)
+	}
+
 	return code, body, nil
 }
 
@@ -193,4 +198,5 @@ type HealthResponse struct {
 	Version                    string `json:"version"`
 	ClusterName                string `json:"cluster_name,omitempty"`
 	ClusterID                  string `json:"cluster_id,omitempty"`
+	LastWAL                    uint64 `json:"last_wal,omitempty"`
 }

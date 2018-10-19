@@ -1,12 +1,13 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth AliCloud Method"
+sidebar_title: "AliCloud"
 sidebar_current: "docs-agent-autoauth-methods-alicloud"
 description: |-
   AliCloud Method for Vault Agent Auto-Auth
 ---
 
-# Vault Agent Auto-Auth AliCloud Method 
+# Vault Agent Auto-Auth AliCloud Method
 
 The `alicloud` method performs authentication against the [AliCloud Auth
 method](https://www.vaultproject.io/docs/auth/alicloud.html).
@@ -20,8 +21,8 @@ The Vault agent will use the first credential it can successfully obtain in the 
 3. Instance metadata (recommended)
 
 Wherever possible, we recommend using instance metadata for credentials. These rotate every hour
-and require no effort on your part to provision, making instance metadata the most secure of the three methods. If 
-using instance metadata _and_ a custom `credential_poll_interval`, be sure the frequency is set for 
+and require no effort on your part to provision, making instance metadata the most secure of the three methods. If
+using instance metadata _and_ a custom `credential_poll_interval`, be sure the frequency is set for
 less than an hour, because instance metadata credentials expire every hour.
 
 Environment variables are given first precedence to provide the ability to quickly override your

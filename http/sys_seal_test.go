@@ -34,6 +34,7 @@ func TestSysSealStatus(t *testing.T) {
 		"nonce":         "",
 		"type":          "shamir",
 		"recovery_seal": false,
+		"initialized":   true,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -65,7 +66,7 @@ func TestSysSealStatus_uninit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	testResponseStatus(t, resp, 400)
+	testResponseStatus(t, resp, 200)
 }
 
 func TestSysSeal(t *testing.T) {
@@ -116,6 +117,7 @@ func TestSysUnseal(t *testing.T) {
 			"nonce":         "",
 			"type":          "shamir",
 			"recovery_seal": false,
+			"initialized":   true,
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -195,6 +197,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 			"progress":      json.Number(strconv.Itoa(i + 1)),
 			"type":          "shamir",
 			"recovery_seal": false,
+			"initialized":   true,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -233,6 +236,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"progress":      json.Number("0"),
 		"type":          "shamir",
 		"recovery_seal": false,
+		"initialized":   true,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

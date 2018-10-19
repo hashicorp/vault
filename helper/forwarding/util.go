@@ -39,7 +39,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 		newBody, err = jsonutil.EncodeJSON(fq)
 	case "json_compress":
 		newBody, err = jsonutil.EncodeJSONAndCompress(fq, &compressutil.CompressionConfig{
-			Type: compressutil.CompressionTypeLzw,
+			Type: compressutil.CompressionTypeLZW,
 		})
 	case "proto3":
 		fallthrough

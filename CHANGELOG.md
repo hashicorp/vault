@@ -1,19 +1,116 @@
-## 0.11.2 (Unreleased)
+## Next (Unreleased)
+
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
+FEATURES:
+
+ * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions [GH-5388]
+
+IMPROVEMENTS:
+
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
+ * secret/database: Allow Cassandra user to be non-superuser so long as it has
+   role creation permissions [GH-5402]
+ * secret/radius: Allow setting the NAS Identifier value in the generated
+   packet [GH-5465]
+ * ui: Allow viewing and updating Vault license via the UI
+ * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and visibility is toggleable
 
 BUG FIXES:
 
+ * agent: Fix potential hang during agent shutdown [GH-5026]
+ * core: Fix generate-root operations requiring empty `otp` to be provided
+   instead of an empty body [GH-5495]
+ * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
+ * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
+   generated certificates to be set to the Unix epoch if the role value was not
+   set, instead of using the default of 30 seconds [GH-5481]
+ * storage/mysql: Use `varbinary` instead of `varchar` when creating HA tables
+   [GH-5529]
+
+## 0.11.3 (October 8th, 2018)
+
+SECURITY:
+
+ * Revocation: A regression in 0.11.2 (OSS) and 0.11.0 (Enterprise) caused
+   lease IDs containing periods (`.`) to not be revoked properly. Upon startup
+   when revocation is tried again these should now revoke successfully.
+
+IMPROVEMENTS:
+
+ * auth/ldap: Listing of users and groups return absolute paths [GH-5537]
+ * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
+
+BUG FIXES:
+
+ * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * cli/auth: Fix panic if `vault auth` was given no parameters [GH-5473]
+ * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
+
+## 0.11.2 (October 2nd, 2018)
+
+CHANGES:
+
+ * `sys/seal-status` now includes an `initialized` boolean in the output. If
+   Vault is not initialized, it will return a `200` with this value set `false`
+   instead of a `400`.
+ * `passthrough_request_headers` will now deny certain headers from being
+   provided to backends based on a global denylist.
+ * Token Format: Tokens are now represented as a base62 value; tokens in
+   namespaces will have the namespace identifier appended. (This appeared in
+   Enterprise in 0.11.0, but is only in OSS in 0.11.2.)
+
+FEATURES:
+
+ * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
+   secret engine can now be rotated, to ensure that only Vault knows the
+   credentials it is using. [GH-5140]
+ * Storage Backend Migrator: A new `operator migrate` command allows offline
+   migration of data between two storage backends.
+ * AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise): AliCloud KMS can now be used a support seal for 
+   Auto Unseal and Seal Wrapping.
+
+BUG FIXES:
+
+ * auth/okta: Fix reading deprecated `token` parameter if a token was
+   previously set in the configuration [GH-5409]
  * core: Re-add deprecated capabilities information for now [GH-5360]
  * core: Fix handling of cyclic token relationships [GH-4803]
  * storage/mysql: Fix locking on MariaDB [GH-5343]
  * replication: Fix DR API when using a token [GH-5398]
-
+ * identity: Ensure old group alias is removed when a new one is written [GH-5350]
+ * storage/alicloud: Don't call uname on package init [GH-5358]
+ * secrets/jwt: Fix issue where request context would be canceled too early 
+ * ui: fix need to have update for aws iam creds generation [GF-5294]
+ * ui: fix calculation of token expiry [GH-5435]
+ 
 IMPROVEMENTS:
 
+ * auth/aws: The identity alias name can now configured to be either IAM unique
+   ID of the IAM Principal, or ARN of the caller identity [GH-5247]
+ * auth/cert: Add allowed_organizational_units support [GH-5252]
  * cli: Format TTLs for non-secret responses [GH-5367] 
  * identity: Support operating on entities and groups by their names [GH-5355]
  * plugins: Add `env` parameter when registering plugins to the catalog to allow
    operators to include environment variables during plugin execution. [GH-5359]
-
+ * secrets/aws: WAL Rollback improvements [GH-5202]
+ * secrets/aws: Allow specifying STS role-default TTLs [GH-5138]
+ * secrets/pki: Add configuration support for setting NotBefore [GH-5325]
+ * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
+ * replication: Reindex process now runs in the background and does not block other 
+   vault operations
+ * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
+ * ui: you can now init a cluster with a seal config [GH-5428]
+ * ui: added the option to force promote replication clusters [GH-5438]
+ * replication: Allow promotion of a secondary when data is syncing with a "force" flag
+ 
 ## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
 
 BUG FIXES:
@@ -117,6 +214,8 @@ DEPRECATIONS/CHANGES:
    role's configuration has changed in backwards-incompatible ways. Anything
    that depended on reading role data from the AWS secret engine will break
    until it is updated to work with the new format.
+ * Token Format (Enterprise): Tokens are now represented as a base62 value;
+   tokens in namespaces will have the namespace identifier appended.
 
 FEATURES:
 

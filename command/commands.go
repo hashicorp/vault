@@ -375,6 +375,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator migrate": func() (cli.Command, error) {
+			return &OperatorMigrateCommand{
+				BaseCommand:      getBaseCommand(),
+				PhysicalBackends: physicalBackends,
+				ShutdownCh:       MakeShutdownCh(),
+			}, nil
+		},
 		"operator rekey": func() (cli.Command, error) {
 			return &OperatorRekeyCommand{
 				BaseCommand: getBaseCommand(),

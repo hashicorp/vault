@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/plugins/catalog - HTTP API"
-sidebar_current: "docs-http-system-plugins-catalog"
+sidebar_title: "<tt>/sys/plugins/catalog</tt>"
+sidebar_current: "api-http-system-plugins-catalog"
 description: |-
   The `/sys/plugins/catalog` endpoint is used to manage plugins.
 ---
@@ -81,7 +82,7 @@ supplied name.
 
 ```json
 {
-  "sha_256": "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
+  "sha256": "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
   "command": "mysql-database-plugin"
 }
 ```

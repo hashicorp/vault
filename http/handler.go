@@ -126,7 +126,8 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
-		mux.Handle("/", handleRootRedirect())
+		mux.Handle("/ui", handleUIRedirect())
+		mux.Handle("/", handleUIRedirect())
 	}
 
 	additionalRoutes(mux, core)
@@ -181,7 +182,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 			}
 			r = newR
 
-		case strings.HasPrefix(r.URL.Path, "/ui/"), r.URL.Path == "/":
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
@@ -364,7 +365,7 @@ func handleUIStub() http.Handler {
 	})
 }
 
-func handleRootRedirect() http.Handler {
+func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/ui/", 307)
 		return
@@ -475,9 +476,9 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	statusCode, header, retBytes, err := core.ForwardRequest(r)
 	if err != nil {
 		if err == vault.ErrCannotForward {
-			core.Logger().Debug("handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
 		} else {
-			core.Logger().Error("handleRequestForwarding: error forwarding request", "error", err)
+			core.Logger().Error("forward request error", "error", err)
 		}
 
 		// Fall back to redirection
@@ -567,18 +568,38 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	w.WriteHeader(307)
 }
 
+// getTokenFromReq parse headers of the incoming request to extract token if present
+// it accepts Authorization Bearer (RFC6750) and X-Vault-Token header
+func getTokenFromReq(r *http.Request) (string, error) {
+	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
+		return token, nil
+	}
+	if v := r.Header.Get("Authorization"); v != "" {
+		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
+
+		// If string does not start by Bearer, or contains any space after it. It is a formatting error
+		if !strings.HasPrefix(v, "Bearer ") || strings.LastIndexByte(v, ' ') > 7 {
+			return "", fmt.Errorf("the Authorization header provided is wrongly formatted. Please use \"Bearer <token>\"")
+		}
+		return v[7:], nil
+	}
+	return "", nil
+}
+
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if v := r.Header.Get(consts.AuthHeaderName); v != "" {
-		req.ClientToken = v
+	if token, err := getTokenFromReq(r); err != nil {
+		return req, err
+	} else if token != "" {
+		req.ClientToken = token
 
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
 		// a token from a Vault version pre-accessors.
-		te, err := core.LookupToken(r.Context(), v)
-		if err != nil && strings.Count(v, ".") != 2 {
+		te, err := core.LookupToken(r.Context(), token)
+		if err != nil && strings.Count(token, ".") != 2 {
 			return req, err
 		}
 		if err == nil && te != nil {

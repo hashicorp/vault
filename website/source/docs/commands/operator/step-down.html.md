@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator step-down - Command"
+sidebar_title: "step-down"
 sidebar_current: "docs-commands-operator-step-down"
 description: |-
   The "operator step-down" forces the Vault server at the given address to step

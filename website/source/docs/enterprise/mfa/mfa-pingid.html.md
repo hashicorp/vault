@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PingID MFA - MFA Support - Vault Enterprise"
+sidebar_title: "PingID MFA"
 sidebar_current: "docs-vault-enterprise-mfa-pingid"
 description: |-
   Vault Enterprise supports PingID MFA type.

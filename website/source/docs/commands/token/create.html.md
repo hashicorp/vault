@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token create - Command"
+sidebar_title: "create"
 sidebar_current: "docs-commands-token-create"
 description: |-
   The "token create" command creates a new token that can be used for
@@ -82,8 +83,7 @@ flags](/docs/commands/index.html) included on all commands.
   "5m".
 
 - `-id` `(string: "")` - Value for the token. By default, this is an
-  auto-generated 36 character UUID. Specifying this value requires sudo
-  permissions.
+  auto-generated value. Specifying this value requires sudo permissions.
 
 - `-metadata` `(k=v: "")` - Arbitrary key=value metadata to associate with the
   token. This metadata will show in the audit log when the token is used. This

@@ -52,7 +52,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
           'otp credential url is correct'
         );
         assert.dom('[data-test-row-label="Key"]').exists({ count: 1 }, 'renders the key');
-        assert.dom('[data-test-row-value="Key"]').exists({ count: 1 }, "renders the key's value");
+        assert.dom('[data-test-masked-input]').exists({ count: 1 }, 'renders mask for key value');
         assert.dom('[data-test-row-label="Port"]').exists({ count: 1 }, 'renders the port');
         assert.dom('[data-test-row-value="Port"]').exists({ count: 1 }, "renders the port's value");
       },

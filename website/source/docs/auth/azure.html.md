@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Auth Methods"
+sidebar_title: "Azure"
 sidebar_current: "docs-auth-azure"
 description: |-
   The azure auth method plugin allows automated authentication of Azure Active
@@ -178,7 +179,7 @@ for your server at `path/to/plugins`:
     ```text
     $ vault write sys/plugins/catalog/azure-auth \
         command="vault-plugin-auth-azure" \
-        sha_256="..."
+        sha256="..."
     ```
 
 1. Enable the azure auth method as a plugin:

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "PKI - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-pki"
+sidebar_title: "PKI"
+sidebar_current: "api-http-secret-pki"
 description: |-
   This is the API documentation for the Vault PKI secrets engine.
 ---
@@ -786,8 +787,11 @@ request is denied.
 
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
-  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
-  be a comma-delimited list or a JSON string slice.
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8` (or
+  `UTF-8`). This can be a comma-delimited list or a JSON string slice. All
+  values, including globbing values, must use the correct syntax, with the
+  exception being a single `*` which allows any OID and any value (but type
+  must still be UTF8).
 
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
@@ -883,10 +887,12 @@ request is denied.
   optional while generating a certificate.
 
 - `policy_identifiers` `(list: [])` – A comma-separated string or list of policy
-  oids.
+  OIDs.
 
 - `basic_constraints_valid_for_non_ca` `(bool: false)` - Mark Basic Constraints
   valid when issuing non-CA certificates.
+
+- `not_before_duration` `(duration: "30s")` – Specifies the duration by which to backdate the NotBefore property.
 
 
 ### Sample Payload

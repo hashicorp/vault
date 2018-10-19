@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Token - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-token"
+sidebar_title: "Tokens"
+sidebar_current: "api-http-auth-token"
 description: |-
   This is the API documentation for the Vault token auth method.
 ---
@@ -68,7 +69,7 @@ during this call.
 ### Parameters
 
 - `id` `(string: "")` – The ID of the client token. Can only be specified by a
-  root token.  Otherwise, the token ID is a randomly generated UUID.
+  root token.  Otherwise, the token ID is a randomly generated value.
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.

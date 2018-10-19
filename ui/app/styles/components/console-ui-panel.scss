@@ -30,6 +30,7 @@
     color: inherit;
     font-size: $body-size;
     min-height: 2rem;
+    padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
       padding-left: $console-spacing;
@@ -152,14 +153,14 @@ header .navbar-sections {
 .console-spinner.control {
   height: 21px;
   width: 21px;
-  transform: scale(.75);
+  transform: scale(0.75);
   transform-origin: center;
   &::after {
     height: auto;
     width: auto;
-    right: .25rem;
-    left: .25rem;
-    top: .25rem;
-    bottom: .25rem;
+    right: 0.25rem;
+    left: 0.25rem;
+    top: 0.25rem;
+    bottom: 0.25rem;
   }
 }

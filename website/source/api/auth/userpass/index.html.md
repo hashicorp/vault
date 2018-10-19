@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Userpass - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-userpass"
+sidebar_title: "Username & Password"
+sidebar_current: "api-http-auth-userpass"
 description: |-
   This is the API documentation for the Vault username and password
   auth method.

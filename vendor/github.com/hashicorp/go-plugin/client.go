@@ -358,10 +358,18 @@ func (c *Client) Kill() {
 	doneCh := c.doneLogging
 	c.l.Unlock()
 
-	// If there is no process, we never started anything. Nothing to kill.
+	// If there is no process, there is nothing to kill.
 	if process == nil {
 		return
 	}
+
+	defer func() {
+		// Make sure there is no reference to the old process after it has been
+		// killed.
+		c.l.Lock()
+		defer c.l.Unlock()
+		c.process = nil
+	}()
 
 	// We need to check for address here. It is possible that the plugin
 	// started (process != nil) but has no address (addr == nil) if the
@@ -392,8 +400,12 @@ func (c *Client) Kill() {
 	if graceful {
 		select {
 		case <-doneCh:
+			// FIXME: this is never reached under normal circumstances, because
+			// the plugin process is never signaled to exit. We can reach this
+			// if the child process exited abnormally before the Kill call.
 			return
 		case <-time.After(250 * time.Millisecond):
+			c.logger.Warn("plugin failed to exit gracefully")
 		}
 	}
 
@@ -460,6 +472,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Goroutine to mark exit status
 		go func(pid int) {
+			// ensure the context is cancelled when we're done
+			defer ctxCancel()
 			// Wait for the process to die
 			pidWait(pid)
 
@@ -473,9 +487,6 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 			// Close the logging channel since that doesn't work on reattach
 			close(c.doneLogging)
-
-			// Cancel the context
-			ctxCancel()
 		}(p.Pid)
 
 		// Set the address and process
@@ -565,6 +576,9 @@ func (c *Client) Start() (addr net.Addr, err error) {
 		defer stderr_w.Close()
 		defer stdout_w.Close()
 
+		// ensure the context is cancelled when we're done
+		defer ctxCancel()
+
 		// Wait for the command to end.
 		err := cmd.Wait()
 
@@ -583,9 +597,6 @@ func (c *Client) Start() (addr net.Addr, err error) {
 
 		// Mark that we exited
 		close(exitCh)
-
-		// Cancel the context, marking that we exited
-		ctxCancel()
 
 		// Set that we exited, which takes a lock
 		c.l.Lock()

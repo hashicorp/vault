@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Plugin System"
+sidebar_title: "Plugins"
 sidebar_current: "docs-internals-plugins"
 description: |-
   Learn about Vault's plugin system.
@@ -73,7 +74,7 @@ An example plugin submission looks like:
 
 ```
 $ vault write sys/plugins/catalog/myplugin-database-plugin \
-    sha_256=<expected SHA256 Hex value of the plugin binary> \
+    sha256=<expected SHA256 Hex value of the plugin binary> \
     command="myplugin"
 Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
 ```

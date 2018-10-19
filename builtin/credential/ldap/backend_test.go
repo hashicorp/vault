@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -31,6 +32,92 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	}
 
 	return b, config.StorageView
+}
+
+func TestLdapAuthBackend_Listing(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	// Create group "testgroup"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/testgroup",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create group "nested/testgroup"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/nested/testgroup",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create user "testuser"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create user "nested/testuser"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/nested/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// List users
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected := []string{"testuser", "nested/testuser"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed users; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
+
+	// List groups
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected = []string{"testgroup", "nested/testgroup"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed groups; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
 }
 
 func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Oracle - Database - Secrets Engines"
+sidebar_title: "Oracle"
 sidebar_current: "docs-secrets-databases-oracle"
 description: |-
   Oracle is one of the supported plugins for the database secrets engine. This
@@ -49,7 +50,7 @@ you will need to enable ipc_lock capabilities for the plugin binary.
 
     ```text
     $ vault write sys/plugins/catalog/oracle-database-plugin \
-        sha_256="..." \
+        sha256="..." \
         command=vault-plugin-database-oracle
     ```
 

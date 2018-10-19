@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -13,6 +14,77 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestIdentityStore_CaseInsensitiveEntityName(t *testing.T) {
+	ctx := namespace.RootContext(nil)
+	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
+
+	testEntityName := "testEntityName"
+
+	// Create an entity with case sensitive name
+	resp, err := i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": testEntityName,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityID := resp.Data["id"].(string)
+
+	// Lookup the entity by ID and check that name returned is case sensitive
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/id/" + entityID,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+	entityName := resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Lookup the entity by case sensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/" + testEntityName,
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	entityName = resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Lookup the entity by case insensitive name
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name/" + strings.ToLower(testEntityName),
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	entityName = resp.Data["name"].(string)
+	if entityName != testEntityName {
+		t.Fatalf("bad entity name; expected: %q, actual: %q", testEntityName, entityName)
+	}
+
+	// Ensure that there is only one entity
+	resp, err = i.HandleRequest(ctx, &logical.Request{
+		Path:      "entity/name",
+		Operation: logical.ListOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("bad length of entities; expected: 1, actual: %d", len(resp.Data["keys"].([]string)))
+	}
+}
 
 func TestIdentityStore_EntityByName(t *testing.T) {
 	ctx := namespace.RootContext(nil)

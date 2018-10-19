@@ -397,6 +397,15 @@ func (s *AuditableService) MarshalJSON() ([]byte, error) {
 
 // Binding: Associates `members` with a `role`.
 type Binding struct {
+	// Condition: Unimplemented. The condition that is associated with this
+	// binding.
+	// NOTE: an unsatisfied condition will not allow user access via
+	// current
+	// binding. Different bindings, including their conditions, are
+	// examined
+	// independently.
+	Condition *Expr `json:"condition,omitempty"`
+
 	// Members: Specifies the identities requesting access for a Cloud
 	// Platform resource.
 	// `members` can have the following values:
@@ -433,12 +442,10 @@ type Binding struct {
 	Members []string `json:"members,omitempty"`
 
 	// Role: Role that is assigned to `members`.
-	// For example, `roles/viewer`, `roles/editor`, or
-	// `roles/owner`.
-	// Required
+	// For example, `roles/viewer`, `roles/editor`, or `roles/owner`.
 	Role string `json:"role,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "Members") to
+	// ForceSendFields is a list of field names (e.g. "Condition") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -446,7 +453,7 @@ type Binding struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "Members") to include in
+	// NullFields is a list of field names (e.g. "Condition") to include in
 	// API requests with the JSON null value. By default, fields with empty
 	// values are omitted from API requests. However, any field with an
 	// empty value appearing in NullFields will be sent to the server as
@@ -473,6 +480,11 @@ type BindingDelta struct {
 	//   "ADD" - Addition of a Binding.
 	//   "REMOVE" - Removal of a Binding.
 	Action string `json:"action,omitempty"`
+
+	// Condition: Unimplemented. The condition that is associated with this
+	// binding.
+	// This field is logged only for Cloud Audit Logging.
+	Condition *Expr `json:"condition,omitempty"`
 
 	// Member: A single identity requesting access for a Cloud Platform
 	// resource.
@@ -648,6 +660,308 @@ type Empty struct {
 	// ServerResponse contains the HTTP response code and headers from the
 	// server.
 	googleapi.ServerResponse `json:"-"`
+}
+
+// Expr: Represents an expression text. Example:
+//
+//     title: "User account presence"
+//     description: "Determines whether the request has a user account"
+//     expression: "size(request.user) > 0"
+type Expr struct {
+	// Description: An optional description of the expression. This is a
+	// longer text which
+	// describes the expression, e.g. when hovered over it in a UI.
+	Description string `json:"description,omitempty"`
+
+	// Expression: Textual representation of an expression in
+	// Common Expression Language syntax.
+	//
+	// The application context of the containing message determines
+	// which
+	// well-known feature set of CEL is supported.
+	Expression string `json:"expression,omitempty"`
+
+	// Location: An optional string indicating the location of the
+	// expression for error
+	// reporting, e.g. a file name and a position in the file.
+	Location string `json:"location,omitempty"`
+
+	// Title: An optional title for the expression, i.e. a short string
+	// describing
+	// its purpose. This can be used e.g. in UIs which allow to enter
+	// the
+	// expression.
+	Title string `json:"title,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Description") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Description") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *Expr) MarshalJSON() ([]byte, error) {
+	type NoMethod Expr
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// LintPolicyRequest: The request to lint a Cloud IAM policy object.
+// LintPolicy is currently
+// functional only for `lint_object` of type `condition`.
+type LintPolicyRequest struct {
+	// Binding: Binding object to be linted. The functionality of linting a
+	// binding is
+	// not yet implemented and if this field is set, it returns
+	// NOT_IMPLEMENTED
+	// error.
+	Binding *Binding `json:"binding,omitempty"`
+
+	// Condition: google.iam.v1.Binding.condition object to be linted.
+	Condition *Expr `json:"condition,omitempty"`
+
+	// Context: `context` contains additional *permission-controlled* data
+	// that any
+	// lint unit may depend on, in form of `{key: value}` pairs. Currently,
+	// this
+	// field is non-operational and it will not be used during the lint
+	// operation.
+	Context googleapi.RawMessage `json:"context,omitempty"`
+
+	// FullResourceName: The full resource name of the policy this lint
+	// request is about.
+	//
+	// The name follows the Google Cloud Platform (GCP) resource format.
+	// For example, a GCP project with ID `my-project` will be
+	// named
+	// `//cloudresourcemanager.googleapis.com/projects/my-project`.
+	//
+	// Th
+	// e resource name is not used to read the policy instance from the
+	// Cloud
+	// IAM database. The candidate policy for lint has to be provided in the
+	// same
+	// request object.
+	FullResourceName string `json:"fullResourceName,omitempty"`
+
+	// Policy: Policy object to be linted. The functionality of linting a
+	// policy is not
+	// yet implemented and if this field is set, it returns
+	// NOT_IMPLEMENTED
+	// error.
+	Policy *Policy `json:"policy,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Binding") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Binding") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LintPolicyRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod LintPolicyRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// LintPolicyResponse: The response of a lint operation. An empty
+// response indicates
+// the operation was able to fully execute and no lint issue was found.
+type LintPolicyResponse struct {
+	// LintResults: List of lint results sorted by a composite <severity,
+	// binding_ordinal> key,
+	// descending order of severity and ascending order of
+	// binding_ordinal.
+	// There is no certain order among the same keys.
+	//
+	// For cross-binding results (only if the input object to lint
+	// is
+	// instance of google.iam.v1.Policy), there will be
+	// a
+	// google.iam.admin.v1.LintResult for each of the involved bindings,
+	// and the associated debug_message may enumerate the other
+	// involved
+	// binding ordinal number(s).
+	LintResults []*LintResult `json:"lintResults,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "LintResults") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "LintResults") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LintPolicyResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod LintPolicyResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// LintResult: Structured response of a single validation unit.
+type LintResult struct {
+	// BindingOrdinal: 0-based index ordinality of the binding in the input
+	// object associated
+	// with this result.
+	// This field is populated only if the input object to lint is of
+	// type
+	// google.iam.v1.Policy, which can comprise more than one binding.
+	// It is set to -1 if the result is not associated with any
+	// particular
+	// binding and only targets the policy as a whole, such as results
+	// about
+	// policy size violations.
+	BindingOrdinal int64 `json:"bindingOrdinal,omitempty"`
+
+	// DebugMessage: Human readable debug message associated with the issue.
+	DebugMessage string `json:"debugMessage,omitempty"`
+
+	// FieldName: The name of the field for which this lint result is
+	// about.
+	//
+	// For nested messages, `field_name` consists of names of the embedded
+	// fields
+	// separated by period character. The top-level qualifier is the input
+	// object
+	// to lint in the request. For instance, if the lint request is on
+	// a
+	// google.iam.v1.Policy and this lint result is about a
+	// condition
+	// expression of one of the input policy bindings, the field would
+	// be
+	// populated as `policy.bindings.condition.expression`.
+	//
+	// This field does not identify the ordinality of the repetitive fields
+	// (for
+	// instance bindings in a policy).
+	FieldName string `json:"fieldName,omitempty"`
+
+	// Level: The validation unit level.
+	//
+	// Possible values:
+	//   "LEVEL_UNSPECIFIED" - Level is unspecified.
+	//   "POLICY" - A validation unit which operates on a policy. It is
+	// executed only if the
+	// input object to lint is of type google.iam.v1.Policy.
+	//   "BINDING" - A validation unit which operates on an individual
+	// binding. It is executed
+	// in both cases where the input object to lint is of
+	// type
+	// google.iam.v1.Policy or google.iam.v1.Binding.
+	//   "CONDITION" - A validation unit which operates on an individual
+	// condition within a
+	// binding. It is executed in all three cases where the input object
+	// to
+	// lint is of type google.iam.v1.Policy,
+	// google.iam.v1.Binding or
+	// google.iam.v1.Binding.condition.
+	Level string `json:"level,omitempty"`
+
+	// LocationOffset: 0-based character position of problematic construct
+	// within the object
+	// identified by `field_name`. Currently, this is populated only for
+	// condition
+	// expression.
+	LocationOffset int64 `json:"locationOffset,omitempty"`
+
+	// Severity: The validation unit severity.
+	//
+	// Possible values:
+	//   "SEVERITY_UNSPECIFIED" - Severity is unspecified.
+	//   "ERROR" - A validation unit returns an error only for critical
+	// issues. If an
+	// attempt is made to set the problematic policy without rectifying
+	// the
+	// critical issue, it causes the `setPolicy` operation to fail.
+	//   "WARNING" - Any issue which is severe enough but does not cause an
+	// error.
+	// For example, suspicious constructs in the input object will
+	// not
+	// necessarily fail `setPolicy`, but there is a high likelihood that
+	// they
+	// won't behave as expected during policy evaluation in
+	// `checkPolicy`.
+	// This includes the following common scenarios:
+	//
+	// - Unsatisfiable condition: Expired timestamp in date/time
+	// condition.
+	// - Ineffective condition: Condition on a <member, role> pair which is
+	//   granted unconditionally in another binding of the same policy.
+	//   "NOTICE" - Reserved for the issues that are not severe as
+	// `ERROR`/`WARNING`, but
+	// need special handling. For instance, messages about skipped
+	// validation
+	// units are issued as `NOTICE`.
+	//   "INFO" - Any informative statement which is not severe enough to
+	// raise
+	// `ERROR`/`WARNING`/`NOTICE`, like auto-correction recommendations on
+	// the
+	// input content. Note that current version of the linter does not
+	// utilize
+	// `INFO`.
+	//   "DEPRECATED" - Deprecated severity level.
+	Severity string `json:"severity,omitempty"`
+
+	// ValidationUnitName: The validation unit name, for
+	// instance
+	// “lintValidationUnits/ConditionComplexityCheck”.
+	ValidationUnitName string `json:"validationUnitName,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "BindingOrdinal") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "BindingOrdinal") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LintResult) MarshalJSON() ([]byte, error) {
+	type NoMethod LintResult
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
 // ListRolesResponse: The response containing the roles defined under a
@@ -1226,12 +1540,19 @@ type Role struct {
 	// roles.
 	Name string `json:"name,omitempty"`
 
-	// Stage: The current launch stage of the role.
+	// Stage: The current launch stage of the role. If the `ALPHA` launch
+	// stage has been
+	// selected for a role, the `stage` field will not be included in
+	// the
+	// returned definition for the role.
 	//
 	// Possible values:
-	//   "ALPHA" - The user has indicated this role is currently in an alpha
-	// phase.
-	//   "BETA" - The user has indicated this role is currently in a beta
+	//   "ALPHA" - The user has indicated this role is currently in an Alpha
+	// phase. If this
+	// launch stage is selected, the `stage` field will not be included
+	// when
+	// requesting the definition for a given role.
+	//   "BETA" - The user has indicated this role is currently in a Beta
 	// phase.
 	//   "GA" - The user has indicated this role is generally available.
 	//   "DEPRECATED" - The user has indicated this role is being
@@ -1239,7 +1560,7 @@ type Role struct {
 	//   "DISABLED" - This role is disabled and will not contribute
 	// permissions to any members
 	// it is granted to in policies.
-	//   "EAP" - The user has indicated this role is currently in an eap
+	//   "EAP" - The user has indicated this role is currently in an EAP
 	// phase.
 	Stage string `json:"stage,omitempty"`
 
@@ -1301,15 +1622,17 @@ func (s *Role) MarshalJSON() ([]byte, error) {
 // the
 // `unique_id` of the service account.
 type ServiceAccount struct {
-	// DisplayName: Optional. A user-specified description of the service
-	// account.  Must be
-	// fewer than 100 UTF-8 bytes.
+	// DisplayName: Optional. A user-specified name for the service
+	// account.
+	// Must be less than or equal to 100 UTF-8 bytes.
 	DisplayName string `json:"displayName,omitempty"`
 
 	// Email: @OutputOnly The email address of the service account.
 	Email string `json:"email,omitempty"`
 
-	// Etag: Used to perform a consistent read-modify-write.
+	// Etag: Optional. Note: `etag` is an inoperable legacy field that is
+	// only returned
+	// for backwards compatibility.
 	Etag string `json:"etag,omitempty"`
 
 	// Name: The resource name of the service account in the following
@@ -1383,11 +1706,16 @@ func (s *ServiceAccount) MarshalJSON() ([]byte, error) {
 // key-pairs,
 // and Google retains ONLY the public key.
 //
-// System-managed key-pairs are managed automatically by Google, and
-// rotated
-// daily without user intervention.  The private key never leaves
-// Google's
-// servers to maximize security.
+// System-managed keys are automatically rotated by Google, and are used
+// for
+// signing for a maximum of two weeks. The rotation process is
+// probabilistic,
+// and usage of the new key will gradually ramp up and down over the
+// key's
+// lifetime. We recommend caching the public key set for a service
+// account for
+// no more than 24 hours to ensure you have access to the latest
+// keys.
 //
 // Public keys for all service accounts are also published at the
 // OAuth2
@@ -1742,6 +2070,157 @@ func (s *UndeleteRoleRequest) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// method id "iam.iamPolicies.lintPolicy":
+
+type IamPoliciesLintPolicyCall struct {
+	s                 *Service
+	lintpolicyrequest *LintPolicyRequest
+	urlParams_        gensupport.URLParams
+	ctx_              context.Context
+	header_           http.Header
+}
+
+// LintPolicy: Lints a Cloud IAM policy object or its sub fields.
+// Currently supports
+// google.iam.v1.Policy, google.iam.v1.Binding
+// and
+// google.iam.v1.Binding.condition.
+//
+// Each lint operation consists of multiple lint validation
+// units.
+// Validation units have the following properties:
+//
+// - Each unit inspects the input object in regard to a particular
+//   linting aspect and issues a google.iam.admin.v1.LintResult
+//   disclosing the result.
+// - Domain of discourse of each unit can be either
+//   google.iam.v1.Policy, google.iam.v1.Binding, or
+//   google.iam.v1.Binding.condition depending on the purpose of the
+//   validation.
+// - A unit may require additional data (like the list of all possible
+//   enumerable values of a particular attribute used in the policy
+// instance)
+//   which shall be provided by the caller. Refer to the comments of
+//   google.iam.admin.v1.LintPolicyRequest.context for more
+// details.
+//
+// The set of applicable validation units is determined by the Cloud
+// IAM
+// server and is not configurable.
+//
+// Regardless of any lint issues or their severities, successful calls
+// to
+// `lintPolicy` return an HTTP 200 OK status code.
+func (r *IamPoliciesService) LintPolicy(lintpolicyrequest *LintPolicyRequest) *IamPoliciesLintPolicyCall {
+	c := &IamPoliciesLintPolicyCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.lintpolicyrequest = lintpolicyrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *IamPoliciesLintPolicyCall) Fields(s ...googleapi.Field) *IamPoliciesLintPolicyCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *IamPoliciesLintPolicyCall) Context(ctx context.Context) *IamPoliciesLintPolicyCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *IamPoliciesLintPolicyCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *IamPoliciesLintPolicyCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.lintpolicyrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/iamPolicies:lintPolicy")
+	urls += "?" + c.urlParams_.Encode()
+	req, _ := http.NewRequest("POST", urls, body)
+	req.Header = reqHeaders
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "iam.iamPolicies.lintPolicy" call.
+// Exactly one of *LintPolicyResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *LintPolicyResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *IamPoliciesLintPolicyCall) Do(opts ...googleapi.CallOption) (*LintPolicyResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &LintPolicyResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lints a Cloud IAM policy object or its sub fields. Currently supports\ngoogle.iam.v1.Policy, google.iam.v1.Binding and\ngoogle.iam.v1.Binding.condition.\n\nEach lint operation consists of multiple lint validation units.\nValidation units have the following properties:\n\n- Each unit inspects the input object in regard to a particular\n  linting aspect and issues a google.iam.admin.v1.LintResult\n  disclosing the result.\n- Domain of discourse of each unit can be either\n  google.iam.v1.Policy, google.iam.v1.Binding, or\n  google.iam.v1.Binding.condition depending on the purpose of the\n  validation.\n- A unit may require additional data (like the list of all possible\n  enumerable values of a particular attribute used in the policy instance)\n  which shall be provided by the caller. Refer to the comments of\n  google.iam.admin.v1.LintPolicyRequest.context for more details.\n\nThe set of applicable validation units is determined by the Cloud IAM\nserver and is not configurable.\n\nRegardless of any lint issues or their severities, successful calls to\n`lintPolicy` return an HTTP 200 OK status code.",
+	//   "flatPath": "v1/iamPolicies:lintPolicy",
+	//   "httpMethod": "POST",
+	//   "id": "iam.iamPolicies.lintPolicy",
+	//   "parameterOrder": [],
+	//   "parameters": {},
+	//   "path": "v1/iamPolicies:lintPolicy",
+	//   "request": {
+	//     "$ref": "LintPolicyRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "LintPolicyResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
+	// }
+
+}
+
 // method id "iam.iamPolicies.queryAuditableServices":
 
 type IamPoliciesQueryAuditableServicesCall struct {
@@ -1799,6 +2278,7 @@ func (c *IamPoliciesQueryAuditableServicesCall) doRequest(alt string) (*http.Res
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/iamPolicies:queryAuditableServices")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -1921,6 +2401,7 @@ func (c *OrganizationsRolesCreateCall) doRequest(alt string) (*http.Response, er
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+parent}/roles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -2067,6 +2548,7 @@ func (c *OrganizationsRolesDeleteCall) doRequest(alt string) (*http.Response, er
 	reqHeaders.Set("User-Agent", c.s.userAgent())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("DELETE", urls, body)
@@ -2212,6 +2694,7 @@ func (c *OrganizationsRolesGetCall) doRequest(alt string) (*http.Response, error
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -2383,6 +2866,7 @@ func (c *OrganizationsRolesListCall) doRequest(alt string) (*http.Response, erro
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+parent}/roles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -2568,6 +3052,7 @@ func (c *OrganizationsRolesPatchCall) doRequest(alt string) (*http.Response, err
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("PATCH", urls, body)
@@ -2709,6 +3194,7 @@ func (c *OrganizationsRolesUndeleteCall) doRequest(alt string) (*http.Response, 
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}:undelete")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -2845,6 +3331,7 @@ func (c *PermissionsQueryTestablePermissionsCall) doRequest(alt string) (*http.R
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/permissions:queryTestablePermissions")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -2988,6 +3475,7 @@ func (c *ProjectsRolesCreateCall) doRequest(alt string) (*http.Response, error) 
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+parent}/roles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -3134,6 +3622,7 @@ func (c *ProjectsRolesDeleteCall) doRequest(alt string) (*http.Response, error) 
 	reqHeaders.Set("User-Agent", c.s.userAgent())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("DELETE", urls, body)
@@ -3279,6 +3768,7 @@ func (c *ProjectsRolesGetCall) doRequest(alt string) (*http.Response, error) {
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -3450,6 +3940,7 @@ func (c *ProjectsRolesListCall) doRequest(alt string) (*http.Response, error) {
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+parent}/roles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -3635,6 +4126,7 @@ func (c *ProjectsRolesPatchCall) doRequest(alt string) (*http.Response, error) {
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("PATCH", urls, body)
@@ -3776,6 +4268,7 @@ func (c *ProjectsRolesUndeleteCall) doRequest(alt string) (*http.Response, error
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}:undelete")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -3912,6 +4405,7 @@ func (c *ProjectsServiceAccountsCreateCall) doRequest(alt string) (*http.Respons
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}/serviceAccounts")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -4040,6 +4534,7 @@ func (c *ProjectsServiceAccountsDeleteCall) doRequest(alt string) (*http.Respons
 	reqHeaders.Set("User-Agent", c.s.userAgent())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("DELETE", urls, body)
@@ -4179,6 +4674,7 @@ func (c *ProjectsServiceAccountsGetCall) doRequest(alt string) (*http.Response, 
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -4306,6 +4802,7 @@ func (c *ProjectsServiceAccountsGetIamPolicyCall) doRequest(alt string) (*http.R
 	reqHeaders.Set("User-Agent", c.s.userAgent())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+resource}:getIamPolicy")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -4465,6 +4962,7 @@ func (c *ProjectsServiceAccountsListCall) doRequest(alt string) (*http.Response,
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}/serviceAccounts")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -4631,6 +5129,7 @@ func (c *ProjectsServiceAccountsSetIamPolicyCall) doRequest(alt string) (*http.R
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+resource}:setIamPolicy")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -4767,6 +5266,7 @@ func (c *ProjectsServiceAccountsSignBlobCall) doRequest(alt string) (*http.Respo
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}:signBlob")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -4909,6 +5409,7 @@ func (c *ProjectsServiceAccountsSignJwtCall) doRequest(alt string) (*http.Respon
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}:signJwt")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -5046,6 +5547,7 @@ func (c *ProjectsServiceAccountsTestIamPermissionsCall) doRequest(alt string) (*
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+resource}:testIamPermissions")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -5185,6 +5687,7 @@ func (c *ProjectsServiceAccountsUpdateCall) doRequest(alt string) (*http.Respons
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("PUT", urls, body)
@@ -5321,6 +5824,7 @@ func (c *ProjectsServiceAccountsKeysCreateCall) doRequest(alt string) (*http.Res
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}/keys")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)
@@ -5449,6 +5953,7 @@ func (c *ProjectsServiceAccountsKeysDeleteCall) doRequest(alt string) (*http.Res
 	reqHeaders.Set("User-Agent", c.s.userAgent())
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("DELETE", urls, body)
@@ -5602,6 +6107,7 @@ func (c *ProjectsServiceAccountsKeysGetCall) doRequest(alt string) (*http.Respon
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -5765,6 +6271,7 @@ func (c *ProjectsServiceAccountsKeysListCall) doRequest(alt string) (*http.Respo
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}/keys")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -5915,6 +6422,7 @@ func (c *RolesGetCall) doRequest(alt string) (*http.Response, error) {
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/{+name}")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -6095,6 +6603,7 @@ func (c *RolesListCall) doRequest(alt string) (*http.Response, error) {
 	}
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/roles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("GET", urls, body)
@@ -6268,6 +6777,7 @@ func (c *RolesQueryGrantableRolesCall) doRequest(alt string) (*http.Response, er
 	}
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
 	urls := googleapi.ResolveRelative(c.s.BasePath, "v1/roles:queryGrantableRoles")
 	urls += "?" + c.urlParams_.Encode()
 	req, _ := http.NewRequest("POST", urls, body)

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Tokens"
+sidebar_title: "Tokens"
 sidebar_current: "docs-concepts-tokens"
 description: |-
   Tokens are a core auth method in Vault. Concepts and important features.
@@ -28,6 +29,10 @@ to a token is a set of one or more attached
 holder is allowed to do within Vault. Other mapped information includes
 metadata that can be viewed and is added to the audit log, creation time, last
 renewal time, and more.
+
+~> Note that external to Vault, tokens are to be considered opaque values
+by users and as such, their structure is both currently undocumented and
+subject to change.
 
 Read on for a deeper dive into token concepts.
 

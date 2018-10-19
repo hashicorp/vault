@@ -10,6 +10,7 @@ const DEFAULTS = {
   errors: [],
   id: null,
   replicationMode: null,
+  force: false,
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {

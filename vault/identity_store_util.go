@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -19,24 +20,57 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+var (
+	errDuplicateIdentityName = errors.New("duplicate identity name")
+)
+
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
-	var err error
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
 		return nil
 	}
 
-	err = c.identityStore.loadEntities(ctx)
+	loadFunc := func(context.Context) error {
+		err := c.identityStore.loadEntities(ctx)
+		if err != nil {
+			return err
+		}
+		return c.identityStore.loadGroups(ctx)
+	}
+
+	// Load everything when memdb is set to operate on lower cased names
+	err := loadFunc(ctx)
+	switch {
+	case err == nil:
+		// If it succeeds, all is well
+		return nil
+	case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+		return err
+	}
+
+	c.identityStore.logger.Warn("enabling case sensitive identity names")
+
+	// Set identity store to operate on case sensitive identity names
+	c.identityStore.disableLowerCasedNames = true
+
+	// Swap the memdb instance by the one which operates on case sensitive
+	// names, hence obviating the need to unload anything that's already
+	// loaded.
+	err = c.identityStore.resetDB(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = c.identityStore.loadGroups(ctx)
-	if err != nil {
-		return err
-	}
+	// Attempt to load identity artifacts once more after memdb is reset to
+	// accept case sensitive names
+	return loadFunc(ctx)
+}
 
-	return nil
+func (i *IdentityStore) sanitizeName(name string) string {
+	if i.disableLowerCasedNames {
+		return name
+	}
+	return strings.ToLower(name)
 }
 
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
@@ -64,6 +98,18 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			}
 			if group == nil {
 				continue
+			}
+
+			// Ensure that there are no groups with duplicate names
+			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+			if err != nil {
+				return err
+			}
+			if groupByName != nil {
+				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
+				if !i.disableLowerCasedNames {
+					return errDuplicateIdentityName
+				}
 			}
 
 			if i.logger.IsDebug() {
@@ -187,6 +233,18 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					continue
 				}
 
+				// Ensure that there are no entities with duplicate names
+				entityByName, err := i.MemDBEntityByName(ctx, entity.Name, false)
+				if err != nil {
+					return nil
+				}
+				if entityByName != nil {
+					i.logger.Warn(errDuplicateIdentityName.Error(), "entity_name", entity.Name, "conflicting_entity_name", entityByName.Name, "action", "merge the duplicate entities into one")
+					if !i.disableLowerCasedNames {
+						return errDuplicateIdentityName
+					}
+				}
+
 				// Only update MemDB and don't hit the storage again
 				err = i.upsertEntity(ctx, entity, nil, false)
 				if err != nil {
@@ -223,7 +281,9 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		return fmt.Errorf("entity is nil")
 	}
 
-	for _, alias := range entity.Aliases {
+	aliasFactors := make([]string, len(entity.Aliases))
+
+	for index, alias := range entity.Aliases {
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactors(alias.MountAccessor, alias.Name, false, false)
 		if err != nil {
@@ -244,11 +304,20 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			return nil
 		}
 
+		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
+			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
+			if !i.disableLowerCasedNames {
+				return errDuplicateIdentityName
+			}
+		}
+
 		// Insert or update alias in MemDB using the transaction created above
 		err = i.MemDBUpsertAliasInTxn(txn, alias, false)
 		if err != nil {
 			return err
 		}
+
+		aliasFactors[index] = i.sanitizeName(alias.Name) + alias.MountAccessor
 	}
 
 	// If previous entity is set, update it in MemDB and persist it
@@ -583,10 +652,10 @@ func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBEntityByNameInTxn(txn, ctx, entityName, clone)
+	return i.MemDBEntityByNameInTxn(ctx, txn, entityName, clone)
 }
 
-func (i *IdentityStore) MemDBEntityByNameInTxn(txn *memdb.Txn, ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntityByNameInTxn(ctx context.Context, txn *memdb.Txn, entityName string, clone bool) (*identity.Entity, error) {
 	if entityName == "" {
 		return nil, fmt.Errorf("missing entity name")
 	}
@@ -931,6 +1000,43 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	defer txn.Abort()
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
+
+	// For those group member IDs that are removed from the list, remove current
+	// group ID as their respective ParentGroupID.
+
+	// Get the current MemberGroups IDs for this group
+	var currentMemberGroupIDs []string
+	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	if err != nil {
+		return err
+	}
+	for _, currentMemberGroup := range currentMemberGroups {
+		currentMemberGroupIDs = append(currentMemberGroupIDs, currentMemberGroup.ID)
+	}
+
+	// Update parent group IDs in the removed members
+	for _, currentMemberGroupID := range currentMemberGroupIDs {
+		if strutil.StrListContains(memberGroupIDs, currentMemberGroupID) {
+			continue
+		}
+
+		currentMemberGroup, err := i.MemDBGroupByID(currentMemberGroupID, true)
+		if err != nil {
+			return err
+		}
+		if currentMemberGroup == nil {
+			return fmt.Errorf("invalid member group ID %q", currentMemberGroupID)
+		}
+
+		// Remove group ID from the parent group IDs
+		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
+
+		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	// After the group lock is held, make membership updates to all the
 	// relevant groups
 	for _, memberGroupID := range memberGroupIDs {
@@ -1035,14 +1141,7 @@ func (i *IdentityStore) deleteAliasesInEntityInTxn(txn *memdb.Txn, entity *ident
 	// Remove identity indices from aliases table for those that needs to
 	// be removed
 	for _, alias := range removeList {
-		aliasToBeRemoved, err := i.MemDBAliasByIDInTxn(txn, alias.ID, false, false)
-		if err != nil {
-			return err
-		}
-		if aliasToBeRemoved == nil {
-			return fmt.Errorf("alias was not indexed")
-		}
-		err = i.MemDBDeleteAliasByIDInTxn(txn, aliasToBeRemoved.ID, false)
+		err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
 		if err != nil {
 			return err
 		}
@@ -1162,6 +1261,19 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 	// Increment the modify index of the group
 	group.ModifyIndex++
 
+	// Clear the old alias from memdb
+	groupClone, err := i.MemDBGroupByID(group.ID, true)
+	if err != nil {
+		return err
+	}
+	if groupClone != nil && groupClone.Alias != nil {
+		err = i.MemDBDeleteAliasByIDInTxn(txn, groupClone.Alias.ID, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the new alias to memdb
 	if group.Alias != nil {
 		err = i.MemDBUpsertAliasInTxn(txn, group.Alias, true)
 		if err != nil {

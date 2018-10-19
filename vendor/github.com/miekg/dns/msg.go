@@ -302,6 +302,12 @@ func packDomainName(s string, msg []byte, off int, compression map[string]int, c
 	}
 	// If we did compression and we find something add the pointer here
 	if pointer != -1 {
+		// Clear the msg buffer after the pointer location, otherwise
+		// packDataNsec writes the wrong data to msg.
+		tainted := msg[nameoffset:off]
+		for i := range tainted {
+			tainted[i] = 0
+		}
 		// We have two bytes (14 bits) to put the pointer in
 		// if msg == nil, we will never do compression
 		binary.BigEndian.PutUint16(msg[nameoffset:], uint16(pointer^0xC000))
@@ -367,12 +373,10 @@ Loop:
 						var buf [3]byte
 						bufs := strconv.AppendInt(buf[:0], int64(b), 10)
 						s = append(s, '\\')
-						for i := 0; i < 3-len(bufs); i++ {
+						for i := len(bufs); i < 3; i++ {
 							s = append(s, '0')
 						}
-						for _, r := range bufs {
-							s = append(s, r)
-						}
+						s = append(s, bufs...)
 						// presentation-format \DDD escapes add 3 extra bytes
 						maxLen += 3
 					} else {
@@ -512,7 +516,7 @@ func unpackTxt(msg []byte, off0 int) (ss []string, off int, err error) {
 	off = off0
 	var s string
 	for off < len(msg) && err == nil {
-		s, off, err = unpackTxtString(msg, off)
+		s, off, err = unpackString(msg, off)
 		if err == nil {
 			ss = append(ss, s)
 		}
@@ -520,43 +524,14 @@ func unpackTxt(msg []byte, off0 int) (ss []string, off int, err error) {
 	return
 }
 
-func unpackTxtString(msg []byte, offset int) (string, int, error) {
-	if offset+1 > len(msg) {
-		return "", offset, &Error{err: "overflow unpacking txt"}
-	}
-	l := int(msg[offset])
-	if offset+l+1 > len(msg) {
-		return "", offset, &Error{err: "overflow unpacking txt"}
-	}
-	s := make([]byte, 0, l)
-	for _, b := range msg[offset+1 : offset+1+l] {
-		switch b {
-		case '"', '\\':
-			s = append(s, '\\', b)
-		default:
-			if b < 32 || b > 127 { // unprintable
-				var buf [3]byte
-				bufs := strconv.AppendInt(buf[:0], int64(b), 10)
-				s = append(s, '\\')
-				for i := 0; i < 3-len(bufs); i++ {
-					s = append(s, '0')
-				}
-				for _, r := range bufs {
-					s = append(s, r)
-				}
-			} else {
-				s = append(s, b)
-			}
-		}
-	}
-	offset += 1 + l
-	return string(s), offset, nil
-}
-
 // Helpers for dealing with escaped bytes
 func isDigit(b byte) bool { return b >= '0' && b <= '9' }
 
 func dddToByte(s []byte) byte {
+	return byte((s[0]-'0')*100 + (s[1]-'0')*10 + (s[2] - '0'))
+}
+
+func dddStringToByte(s string) byte {
 	return byte((s[0]-'0')*100 + (s[1]-'0')*10 + (s[2] - '0'))
 }
 
@@ -808,15 +783,15 @@ func (dns *Msg) Unpack(msg []byte) (err error) {
 	}
 
 	dns.Id = dh.Id
-	dns.Response = (dh.Bits & _QR) != 0
+	dns.Response = dh.Bits&_QR != 0
 	dns.Opcode = int(dh.Bits>>11) & 0xF
-	dns.Authoritative = (dh.Bits & _AA) != 0
-	dns.Truncated = (dh.Bits & _TC) != 0
-	dns.RecursionDesired = (dh.Bits & _RD) != 0
-	dns.RecursionAvailable = (dh.Bits & _RA) != 0
-	dns.Zero = (dh.Bits & _Z) != 0
-	dns.AuthenticatedData = (dh.Bits & _AD) != 0
-	dns.CheckingDisabled = (dh.Bits & _CD) != 0
+	dns.Authoritative = dh.Bits&_AA != 0
+	dns.Truncated = dh.Bits&_TC != 0
+	dns.RecursionDesired = dh.Bits&_RD != 0
+	dns.RecursionAvailable = dh.Bits&_RA != 0
+	dns.Zero = dh.Bits&_Z != 0
+	dns.AuthenticatedData = dh.Bits&_AD != 0
+	dns.CheckingDisabled = dh.Bits&_CD != 0
 	dns.Rcode = int(dh.Bits & 0xF)
 
 	// If we are at the end of the message we should return *just* the

@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -106,7 +107,11 @@ func (i *InmemStore) Set(key []byte, val []byte) error {
 func (i *InmemStore) Get(key []byte) ([]byte, error) {
 	i.l.RLock()
 	defer i.l.RUnlock()
-	return i.kv[string(key)], nil
+	val := i.kv[string(key)]
+	if val == nil {
+		return nil, errors.New("not found")
+	}
+	return val, nil
 }
 
 // SetUint64 implements the StableStore interface.

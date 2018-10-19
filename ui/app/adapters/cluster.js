@@ -9,7 +9,17 @@ import DS from 'ember-data';
 
 const { AdapterError } = DS;
 
-const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
+const ENDPOINTS = [
+  'health',
+  'seal-status',
+  'tokens',
+  'token',
+  'seal',
+  'unseal',
+  'init',
+  'capabilities-self',
+  'license',
+];
 
 const REPLICATION_ENDPOINTS = {
   reindex: 'reindex',
@@ -28,6 +38,7 @@ export default ApplicationAdapter.extend({
   shouldBackgroundReloadRecord() {
     return true;
   },
+
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
@@ -58,13 +69,19 @@ export default ApplicationAdapter.extend({
 
   health() {
     return this.ajax(this.urlFor('health'), 'GET', {
-      data: { standbycode: 200, sealedcode: 200, uninitcode: 200, drsecondarycode: 200 },
+      data: {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
       unauthenticated: true,
     });
   },
 
   features() {
-    return this.ajax(`${this.buildURL()}/license/features`, 'GET', {
+    return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
   },

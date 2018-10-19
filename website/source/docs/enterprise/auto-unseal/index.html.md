@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Auto Unseal"
+sidebar_title: "Auto Unseal"
 sidebar_current: "docs-vault-enterprise-auto-unseal"
 description: |-
   Vault Enterprise supports automatic unsealing via cloud technologies like KMS.

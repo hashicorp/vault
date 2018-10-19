@@ -35,13 +35,15 @@ export default Controller.extend({
       modelMethod
         .call(config)
         .then(() => {
-          this.transitionToRoute(...redirectArgs).followRedirects().then(() => {
-            flash.success(
-              `The performance mount filter config for the secondary ${id} was successfully ${isDelete
-                ? 'deleted'
-                : 'saved'}.`
-            );
-          });
+          this.transitionToRoute(...redirectArgs)
+            .followRedirects()
+            .then(() => {
+              flash.success(
+                `The performance mount filter config for the secondary ${id} was successfully ${
+                  isDelete ? 'deleted' : 'saved'
+                }.`
+              );
+            });
         })
         .catch(e => {
           const errString = e.errors.join('.');

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/blake2b"
@@ -98,45 +99,26 @@ func FilterTerminalAllocs(allocs []*Allocation) ([]*Allocation, map[string]*Allo
 // The netIdx can optionally be provided if its already been computed.
 // If the netIdx is provided, it is assumed that the client has already
 // ensured there are no collisions.
-func AllocsFit(node *Node, allocs []*Allocation, netIdx *NetworkIndex) (bool, string, *Resources, error) {
+func AllocsFit(node *Node, allocs []*Allocation, netIdx *NetworkIndex) (bool, string, *ComparableResources, error) {
 	// Compute the utilization from zero
-	used := new(Resources)
+	used := new(ComparableResources)
 
 	// Add the reserved resources of the node
-	if node.Reserved != nil {
-		if err := used.Add(node.Reserved); err != nil {
-			return false, "", nil, err
-		}
-	}
+	used.Add(node.ComparableReservedResources())
 
 	// For each alloc, add the resources
 	for _, alloc := range allocs {
-		if alloc.Resources != nil {
-			if err := used.Add(alloc.Resources); err != nil {
-				return false, "", nil, err
-			}
-		} else if alloc.TaskResources != nil {
-
-			// Adding the shared resource asks for the allocation to the used
-			// resources
-			if err := used.Add(alloc.SharedResources); err != nil {
-				return false, "", nil, err
-			}
-			// Allocations within the plan have the combined resources stripped
-			// to save space, so sum up the individual task resources.
-			for _, taskResource := range alloc.TaskResources {
-				if err := used.Add(taskResource); err != nil {
-					return false, "", nil, err
-				}
-			}
-		} else {
-			return false, "", nil, fmt.Errorf("allocation %q has no resources set", alloc.ID)
+		// Do not consider the resource impact of terminal allocations
+		if alloc.TerminalStatus() {
+			continue
 		}
+
+		used.Add(alloc.ComparableResources())
 	}
 
 	// Check that the node resources are a super set of those
 	// that are being allocated
-	if superset, dimension := node.Resources.Superset(used); !superset {
+	if superset, dimension := node.ComparableResources().Superset(used); !superset {
 		return false, dimension, used, nil
 	}
 
@@ -161,20 +143,22 @@ func AllocsFit(node *Node, allocs []*Allocation, netIdx *NetworkIndex) (bool, st
 // ScoreFit is used to score the fit based on the Google work published here:
 // http://www.columbia.edu/~cs2035/courses/ieor4405.S13/datacenter_scheduling.ppt
 // This is equivalent to their BestFit v3
-func ScoreFit(node *Node, util *Resources) float64 {
+func ScoreFit(node *Node, util *ComparableResources) float64 {
+	// COMPAT(0.11): Remove in 0.11
+	reserved := node.ComparableReservedResources()
+	res := node.ComparableResources()
+
 	// Determine the node availability
-	nodeCpu := float64(node.Resources.CPU)
-	if node.Reserved != nil {
-		nodeCpu -= float64(node.Reserved.CPU)
-	}
-	nodeMem := float64(node.Resources.MemoryMB)
-	if node.Reserved != nil {
-		nodeMem -= float64(node.Reserved.MemoryMB)
+	nodeCpu := float64(res.Flattened.Cpu.CpuShares)
+	nodeMem := float64(res.Flattened.Memory.MemoryMB)
+	if reserved != nil {
+		nodeCpu -= float64(reserved.Flattened.Cpu.CpuShares)
+		nodeMem -= float64(reserved.Flattened.Memory.MemoryMB)
 	}
 
 	// Compute the free percentage
-	freePctCpu := 1 - (float64(util.CPU) / nodeCpu)
-	freePctRam := 1 - (float64(util.MemoryMB) / nodeMem)
+	freePctCpu := 1 - (float64(util.Flattened.Cpu.CpuShares) / nodeCpu)
+	freePctRam := 1 - (float64(util.Flattened.Memory.MemoryMB) / nodeMem)
 
 	// Total will be "maximized" the smaller the value is.
 	// At 100% utilization, the total is 2, while at 0% util it is 20.
@@ -202,6 +186,58 @@ func CopySliceConstraints(s []*Constraint) []*Constraint {
 	}
 
 	c := make([]*Constraint, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceAffinities(s []*Affinity) []*Affinity {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*Affinity, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceSpreads(s []*Spread) []*Spread {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*Spread, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceSpreadTarget(s []*SpreadTarget) []*SpreadTarget {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*SpreadTarget, l)
+	for i, v := range s {
+		c[i] = v.Copy()
+	}
+	return c
+}
+
+func CopySliceNodeScoreMeta(s []*NodeScoreMeta) []*NodeScoreMeta {
+	l := len(s)
+	if l == 0 {
+		return nil
+	}
+
+	c := make([]*NodeScoreMeta, l)
 	for i, v := range s {
 		c[i] = v.Copy()
 	}
@@ -320,4 +356,68 @@ func CompareMigrateToken(allocID, nodeSecretID, otherMigrateToken string) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare(h.Sum(nil), otherBytes) == 1
+}
+
+// ParsePortRanges parses the passed port range string and returns a list of the
+// ports. The specification is a comma separated list of either port numbers or
+// port ranges. A port number is a single integer and a port range is two
+// integers separated by a hyphen. As an example the following spec would
+// convert to: ParsePortRanges("10,12-14,16") -> []uint64{10, 12, 13, 14, 16}
+func ParsePortRanges(spec string) ([]uint64, error) {
+	parts := strings.Split(spec, ",")
+
+	// Hot path the empty case
+	if len(parts) == 1 && parts[0] == "" {
+		return nil, nil
+	}
+
+	ports := make(map[uint64]struct{})
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		rangeParts := strings.Split(part, "-")
+		l := len(rangeParts)
+		switch l {
+		case 1:
+			if val := rangeParts[0]; val == "" {
+				return nil, fmt.Errorf("can't specify empty port")
+			} else {
+				port, err := strconv.ParseUint(val, 10, 0)
+				if err != nil {
+					return nil, err
+				}
+				ports[port] = struct{}{}
+			}
+		case 2:
+			// We are parsing a range
+			start, err := strconv.ParseUint(rangeParts[0], 10, 0)
+			if err != nil {
+				return nil, err
+			}
+
+			end, err := strconv.ParseUint(rangeParts[1], 10, 0)
+			if err != nil {
+				return nil, err
+			}
+
+			if end < start {
+				return nil, fmt.Errorf("invalid range: starting value (%v) less than ending (%v) value", end, start)
+			}
+
+			for i := start; i <= end; i++ {
+				ports[i] = struct{}{}
+			}
+		default:
+			return nil, fmt.Errorf("can only parse single port numbers or port ranges (ex. 80,100-120,150)")
+		}
+	}
+
+	var results []uint64
+	for port := range ports {
+		results = append(results, port)
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i] < results[j]
+	})
+	return results, nil
 }
