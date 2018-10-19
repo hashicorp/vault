@@ -106,9 +106,9 @@
 
 /guides/getting-started/index.html              https://learn.hashicorp.com/vault
 
-/guides/operations/index.html                   https://learn.hashicorp.com/vault/vault/?track=operations#operations
-/guides/operations/reference-architecture.html  https://learn.hashicorp.com/vault/vault/operations/ops-reference-architecture
-/guides/operations/deployment-guide.html        https://learn.hashicorp.com/vault/vault/operations/ops-deployment-guide
+/guides/operations/index.html                   https://learn.hashicorp.com/vault/?track=operations#operations
+/guides/operations/reference-architecture.html  https://learn.hashicorp.com/vault/operations/ops-reference-architecture
+/guides/operations/deployment-guide.html        https://learn.hashicorp.com/vault/operations/ops-deployment-guide
 /guides/operations/vault-ha-consul.html         https://learn.hashicorp.com/vault/operations/ops-vault-ha-consul
 /guides/operations/production.html              https://learn.hashicorp.com/vault/operations/production-hardening
 /guides/operations/generate-root.html           https://learn.hashicorp.com/vault/operations/ops-generate-root
