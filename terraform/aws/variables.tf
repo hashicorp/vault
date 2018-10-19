@@ -57,3 +57,10 @@ variable "subnets" {
 variable "vpc-id" {
     description = "VPC ID"
 }
+
+variable "source-networks" {
+    type = "list"
+    #not secure by default 
+    default = ["0.0.0.0/0"]
+    description = "List of source networks from which to allow access"
+}

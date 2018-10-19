@@ -29,11 +29,13 @@ resource "aws_autoscaling_group" "vault" {
 }
 
 resource "aws_launch_configuration" "vault" {
-    image_id = "${var.ami}"
+    #image_id = "${var.ami}"
+    image_id = "${data.aws_ami.latest_ubuntu_image.id}"
     instance_type = "${var.instance_type}"
     key_name = "${var.key-name}"
     security_groups = ["${aws_security_group.vault.id}"]
     user_data = "${template_file.install.rendered}"
+
 }
 
 // Security group for Vault allows SSH and HTTP access (via "tcp" in
@@ -50,7 +52,7 @@ resource "aws_security_group_rule" "vault-ssh" {
     from_port = 22
     to_port = 22
     protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.source-networks}"]
 }
 
 // This rule allows Vault HTTP API access to individual nodes, since each will
@@ -118,7 +120,7 @@ resource "aws_security_group_rule" "vault-elb-http" {
     from_port = 80
     to_port = 80
     protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.source-networks}"]
 }
 
 resource "aws_security_group_rule" "vault-elb-https" {
@@ -127,7 +129,7 @@ resource "aws_security_group_rule" "vault-elb-https" {
     from_port = 443
     to_port = 443
     protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.source-networks}"]
 }
 
 resource "aws_security_group_rule" "vault-elb-egress" {
@@ -137,4 +139,28 @@ resource "aws_security_group_rule" "vault-elb-egress" {
     to_port = 0
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+}
+
+
+
+
+
+
+
+
+
+
+# automatic lookup based on   #https://aws.amazon.com/amazon-linux-ami/
+# aws ec2 describe-images --owners 099720109477 --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-????????' 'Name=state,Values=available' --output json | jq -r '.Images | sort_by(.CreationDate) | last(.[]).ImageId'
+
+data "aws_ami" "latest_ubuntu_image" {
+  most_recent = true
+
+  owners = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
+  }
+
 }
