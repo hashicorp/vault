@@ -39,7 +39,8 @@ export default Component.extend({
   fetchListCapability: task(function*() {
     try {
       if (this.listCapability) {
-        this.listCapability.unloadRecord();
+        yield this.listCapability.reload();
+        return;
       }
       let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
       this.set('listCapability', capability);
