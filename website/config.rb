@@ -1,3 +1,4 @@
+set :product_name, "Vault"
 set :base_url, "https://www.vaultproject.io/"
 
 # Middleware for rendering preact components

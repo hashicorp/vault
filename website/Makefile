@@ -1,7 +1,7 @@
-configure_cache:
+configure-cache:
 	mkdir -p tmp/cache
 
-build: configure_cache
+build: configure-cache
 	@echo "==> Starting build in Docker..."
 	@docker run \
 		--interactive \
@@ -13,7 +13,7 @@ build: configure_cache
 		netlify/build \
 		build sh bootstrap.sh && middleman build --verbose
 
-website: configure_cache
+website: configure-cache
 	@echo "==> Starting website in Docker..."
 	@docker run \
 		--interactive \
@@ -27,4 +27,4 @@ website: configure_cache
 		netlify/build \
 		build sh bootstrap.sh && middleman
 
-.PHONY: build website
+.PHONY: configure-cache build website

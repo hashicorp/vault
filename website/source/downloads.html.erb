@@ -6,9 +6,7 @@ description: |-
 ---
 
 <hashi-product-downloader
-  product="Vault"
+  product="<%= config[:product_name] %>"
   version="<%= config[:latest_version] %>"
-  date="2018-08-30"
-  build="58406"
   downloads="<%= encode(config[:product_versions]) %>"
 ></hashi-product-downloader>
