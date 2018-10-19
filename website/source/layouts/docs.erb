@@ -3,7 +3,7 @@
 <% wrap_layout :inner do %>
   <% content_for :sidebar do %>
     <div class="nav docs-nav">
-      <hashi-docs-sidebar
+      <hashi-docs-sidenav
         category='docs'
         current_page='<%= current_page.path %>'
         data="<%= encode(get_sidebar_data('docs')) %>"
@@ -348,7 +348,7 @@
             ]
           }
         ]) %>")
-      ></hashi-docs-sidebar>
+      ></hashi-docs-sidenav>
     </div>
   <% end %>
 
