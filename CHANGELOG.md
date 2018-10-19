@@ -17,6 +17,7 @@ IMPROVEMENTS:
    packet [GH-5465]
  * ui: Allow viewing and updating Vault license via the UI
  * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and visibility is toggleable
 
 BUG FIXES:
 
