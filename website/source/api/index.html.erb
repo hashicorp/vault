@@ -6,12 +6,9 @@ description: |-
 
 <% @meganav_title = 'API Docs' %>
 
-<hashi-product-subnav _data="<%= encode({
-  current_path: current_page.path,
-  dark: false,
+<hashi-product-subnav project_site="true" current_path="<%= current_page.path %>" _data="<%= encode({
   products: dato.enterprise_products.map(&:to_hash),
-  subnav: dato.vault_product_page.subnav.to_hash,
-  project_site: true
+  subnav: dato.vault_product_page.subnav.to_hash
 }) %>"></hashi-product-subnav>
 
 <div class='g-section-block'>
