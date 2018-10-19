@@ -8,6 +8,8 @@ FEATURES:
 
  * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
    remove older unused key versions [GH-5388]
+ * Web UI support for KV Version 2. Browse, delete, undelete and destroy 
+   individual secret versions in the UI. [GH-5547], [GH-5563]
 
 IMPROVEMENTS:
 
