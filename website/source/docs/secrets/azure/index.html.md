@@ -57,7 +57,7 @@ management tool.
 1. Configure a role. A role may be set up with either an existing service principal, or
 a set of Azure roles that will be assigned to a dynamically created service principal.
 
-    To configure a role called "my-role" with an existing service principal:
+To configure a role called "my-role" with an existing service principal:
 
     ```text
     $ vault write azure/roles/my-role application_object_id=<existing_app_obj_id> ttl=1h
@@ -76,8 +76,8 @@ a set of Azure roles that will be assigned to a dynamically created service prin
     EOF
     ```
 
-    Roles may also have their own TTL configuration that is separate from the mount's
-    TTL. For more information on roles see the [roles](#roles) section below.
+Roles may also have their own TTL configuration that is separate from the mount's
+TTL. For more information on roles see the [roles](#roles) section below.
 
 
 ## Usage
@@ -185,7 +185,7 @@ can create new passwords for this service principal. Any changes to the service 
 permissions affect all clients. Furthermore, Azure does not provide any logging with
 regard to _which_ credential was used for an operation.
 
-An important limitation when using an existing service prinicpal is that Azure limits the
+An important limitation when using an existing service princicpal is that Azure limits the
 number of passwords for a single Application. This limit is based on Application object
 size and isn't firmly specified, but in practice hundreds of passwords can be issued per
 Application. An error will be returned if the object size is reached. This limit can be
