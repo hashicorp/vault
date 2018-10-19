@@ -158,10 +158,10 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.4.0.tgz#68eb0048eccd3ce17231a93517fb91b29e2c40a8"
   integrity sha512-UXc3JhHMuhDIlm++fe2N4vwUXHvthzXoqaGkLPWS/T7g7COlzzj/EIjLw7hoSnu4Wb3T0uQXHP6hkRu5NbRZNA==
 
-"@hashicorp/hashi-product-subnav@^0.4.3":
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.4.3.tgz#9ffa0992df3440c18cadac7f1cb8f43287563b41"
-  integrity sha512-V3tTZYwreWtxPxdCmeJ0KVrvgI5Mq3T2SkslmVtGUyq/O1UGjqCYnBe7iA8XIBux2nhJzFDH5YITNTEbEOAvnw==
+"@hashicorp/hashi-product-subnav@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.5.0.tgz#0d012f7d496bff4b8204fcd42e498f3fb803fdc1"
+  integrity sha512-x7JvbHA04J9Hg6QZlEV3TqlEN3gPTTPIEXRbKAqdL53RR/3V9pfjW5iI+yhrCUH44QndJ7UclbRrKvVhdIrjOw==
 
 "@hashicorp/hashi-section-header@2.0.2":
   version "2.0.2"

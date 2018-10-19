@@ -7,7 +7,7 @@ const verticalTextBlockList = require('@hashicorp/hashi-vertical-text-block-list
 const sectionHeader = require('@hashicorp/hashi-section-header')
 const content = require('@hashicorp/hashi-content')
 const productDownloader = require('@hashicorp/hashi-product-downloader')
-const docsSidebar = require('@hashicorp/hashi-docs-sidenav')
+const docsSidenav = require('@hashicorp/hashi-docs-sidenav')
 const hero = require('@hashicorp/hashi-hero')
 const callouts = require('@hashicorp/hashi-callouts')
 const splitCta = require('@hashicorp/hashi-split-cta')
@@ -18,7 +18,7 @@ module.exports = {
   'hashi-footer': footer,
   'hashi-nav': nav,
   'hashi-button': button,
-  'hashi-docs-sidebar': docsSidebar,
+  'hashi-docs-sidenav': docsSidenav,
   'hashi-mega-nav': megaNav,
   'hashi-product-subnav': productSubnav,
   'hashi-content': content,
