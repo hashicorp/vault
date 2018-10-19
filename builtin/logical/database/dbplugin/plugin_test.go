@@ -127,6 +127,7 @@ func TestPlugin_NetRPC_Main(t *testing.T) {
 		return
 	}
 
+	os.Unsetenv(pluginutil.PluginVaultVersionEnv)
 	p := &mockPlugin{
 		users: make(map[string][]string),
 	}
