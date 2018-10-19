@@ -1,9 +1,8 @@
-import { or } from '@ember/object/computed';
 import { isBlank, isNone } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
-import { alias } from '@ember/object/computed';
+import { alias, or } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
@@ -126,49 +125,6 @@ export default Component.extend(FocusOnInsertMixin, {
     'mode'
   ),
   canEditV2Secret: alias('v2UpdatePath.canUpdate'),
-
-  deleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/delete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
-  destroyVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/destroy/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
-  undeleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let backend = context.get('model.engine.id');
-      let id = context.model.id;
-      return {
-        id: `${backend}/undelete/${id}`,
-      };
-    },
-    'model.id'
-  ),
-  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
-
-  isFetchingVersionCapabilities: or(
-    'deleteVersionPath.isPending',
-    'destroyVersionPath.isPending',
-    'undeleteVersionPath.isPending'
-  ),
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
@@ -297,11 +253,6 @@ export default Component.extend(FocusOnInsertMixin, {
       this.model.destroyRecord().then(() => {
         this.transitionToRoute(LIST_ROOT_ROUTE);
       });
-    },
-
-    deleteVersion(deleteType = 'destroy') {
-      let id = this.modelForData.id;
-      return this.store.adapterFor('secret-v2-version').v2DeleteOperation(this.store, id, deleteType);
     },
 
     refresh() {

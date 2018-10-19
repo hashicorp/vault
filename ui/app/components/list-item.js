@@ -7,7 +7,7 @@ export default Component.extend({
   tagName: '',
   linkParams: null,
   componentName: null,
-  hasMenu: false,
+  hasMenu: true,
 
   callMethod: task(function*(method, model, successMessage, failureMessage, successCallback = () => {}) {
     let flash = this.get('flashMessages');
