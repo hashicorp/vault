@@ -103,6 +103,12 @@
 			"revisionTime": "2018-10-15T17:46:20Z"
 		},
 		{
+			"checksumSHA1": "3Dn5zSdAcOuPVXEy5egbIsfFeC4=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
+			"revision": "fbe7db0e3f9793ba3e5704efbab84f51436c136e",
+			"revisionTime": "2018-07-03T19:15:42Z"
+		},
+		{
 			"checksumSHA1": "E7n1e1+L/fY7TVayjtwOXaMilD4=",
 			"path": "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization",
 			"revision": "ef9744da754d0cf00d0cfeae7d1a83f2245a4b1c",
@@ -341,6 +347,12 @@
 			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk/utils",
 			"revision": "c5825d35a94a5a25d936ebe6bed5779255d02cf4",
 			"revisionTime": "2018-10-12T12:19:43Z"
+		},
+		{
+			"checksumSHA1": "NY8Yw4CiYHhx1XjUiBhT/8gXDiE=",
+			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/kms",
+			"revision": "9669db6328e053fefc47bfe8ddf2e82625444fab",
+			"revisionTime": "2018-09-30T08:30:48Z"
 		},
 		{
 			"checksumSHA1": "vT5hncrHvGakCmawRJI3JgtTf4s=",
@@ -655,7 +667,19 @@
 			"revisionTime": "2018-10-15T21:27:28Z"
 		},
 		{
-			"checksumSHA1": "yDbIw+lVcsmjyom0xI+8khZNy6o=",
+			"checksumSHA1": "ac/mCyWnYF9Br3WPYQcAOYGxCFc=",
+			"path": "github.com/aws/aws-sdk-go/service/kms",
+			"revision": "6e42625fcba9345ab67b42b6744284e8f7e3e79d",
+			"revisionTime": "2018-10-15T21:27:28Z"
+		},
+		{
+			"checksumSHA1": "OjnnN9JobHmJLZvIBM0du3bNLmk=",
+			"path": "github.com/aws/aws-sdk-go/service/kms/kmsiface",
+			"revision": "23e3775971f2213a1969886eb9931ffd834f438c",
+			"revisionTime": "2018-07-06T22:54:19Z"
+		},
+		{
+			"checksumSHA1": "JgKzClDzo4V5Wh9cEk7h2dHtAZE=",
 			"path": "github.com/aws/aws-sdk-go/service/s3",
 			"revision": "6e42625fcba9345ab67b42b6744284e8f7e3e79d",
 			"revisionTime": "2018-10-15T21:27:28Z"
@@ -2743,7 +2767,13 @@
 			"revisionTime": "2018-04-12T16:56:04Z"
 		},
 		{
-			"checksumSHA1": "gmT0tI5vdUnvc9Nase6RV0q+lMM=",
+			"checksumSHA1": "T7gPI6SPao+8FJ5NGL6EgNFK9iw=",
+			"path": "google.golang.org/api/cloudkms/v1",
+			"revision": "cc9bd73d51b4c5610e35bcb01f15368185cfaab3",
+			"revisionTime": "2018-10-16T15:55:58Z"
+		},
+		{
+			"checksumSHA1": "QkzppExyctFz029dvXzKzh6UHgU=",
 			"path": "google.golang.org/api/compute/v1",
 			"revision": "625cd1887957946515db468ce519bb71fa31fc7f",
 			"revisionTime": "2018-10-12T22:54:34Z"

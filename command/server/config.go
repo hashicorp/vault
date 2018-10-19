@@ -735,6 +735,7 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 	// Valid parameter for the Seal types
 	switch key {
 	case "pkcs11":
+	case "alicloudkms":
 	case "awskms":
 	case "gcpckms":
 	case "azurekeyvault":
