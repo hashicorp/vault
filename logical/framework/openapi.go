@@ -204,9 +204,15 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 						}
 					}
 				}
+
+				// a nil pointer when empty is needed for omitempty to work
+				var c *openapi.Content
+				if len(content) > 0 {
+					c = &content
+				}
 				op.Responses[code] = &openapi.Response{
 					Description: description,
-					Content:     &content,
+					Content:     c,
 				}
 			}
 
