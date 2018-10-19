@@ -497,9 +497,12 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	wg.Wait()
 
 	m.restoreModeLock.Lock()
-	m.restoreLoaded = sync.Map{}
-	m.restoreLocks = nil
 	atomic.StoreInt32(m.restoreMode, 0)
+	m.restoreLoaded.Range(func(k, v interface{}) bool {
+		m.restoreLoaded.Delete(k)
+		return true
+	})
+	m.restoreLocks = nil
 	m.restoreModeLock.Unlock()
 
 	m.logger.Info("lease restore complete")
