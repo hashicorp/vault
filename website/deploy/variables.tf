@@ -4,7 +4,7 @@ variable "name" {
 }
 
 variable "github_repo" {
-  default = "hashicorp/packer"
+  default = "hashicorp/vault"
   description = "GitHub repository of the provider in 'org/name' format."
 }
 
