@@ -1,5 +1,3 @@
-import { set } from '@ember/object';
-import { hash, resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
