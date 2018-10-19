@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TCP - Listeners - Configuration"
+sidebar_title: "TCP"
 sidebar_current: "docs-configuration-listener-tcp"
 description: |-
   The TCP listener configures Vault to listen on the specified TCP address and

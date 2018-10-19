@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AppRole - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-approle"
+sidebar_title: "AppRole"
+sidebar_current: "api-http-auth-approle"
 description: |-
   This is the API documentation for the Vault AppRole auth method.
 ---

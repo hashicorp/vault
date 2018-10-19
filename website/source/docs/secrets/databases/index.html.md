@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Database - Secrets Engines"
+sidebar_title: "Databases"
 sidebar_current: "docs-secrets-databases"
 description: |-
   The database secrets engine generates database credentials dynamically based

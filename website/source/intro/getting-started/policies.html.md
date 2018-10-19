@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Policies - Getting Started"
+sidebar_title: "Policies"
 sidebar_current: "gettingstarted-policies"
 description: |-
   Policies in Vault control what a user can access.

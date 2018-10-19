@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth tune - Command"
+sidebar_title: "tune"
 sidebar_current: "docs-commands-auth-tune"
 description: |-
   The "auth tune" command tunes the configuration options for the auth method at

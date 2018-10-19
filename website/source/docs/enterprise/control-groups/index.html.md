@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Control Groups"
+sidebar_title: "Control Groups"
 sidebar_current: "docs-vault-enterprise-control-groups"
 description: |-
   Vault Enterprise has support for Control Group Authorization.
