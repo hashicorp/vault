@@ -982,7 +982,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("")
 		c.UI.Warn("You may need to set the following environment variable:")
 		c.UI.Warn("")
-		c.UI.Warn(fmt.Sprintf("    $ %s VAULT_ADDR=%s%s%s",
+		c.UI.Warn(fmt.Sprintf("    %s VAULT_ADDR=%s%s%s",
 			export, quote, "http://"+config.Listeners[0].Config["address"].(string), quote))
 
 		// Unseal key is not returned if stored shares is supported
