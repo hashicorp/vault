@@ -13,31 +13,19 @@ activate :hashicorp do |h|
   h.datocms_api_key = '78d2968c99a076419fbb'
 end
 
-# ready do
-#   dato.tap do |dato|
-#     sitemap.resources.each do |page|
-#       if page.path.match(/\.html$/)
-#         if page.metadata[:options][:layout] && ['docs', 'guides', 'api', 'intro'].include?(page.metadata[:options][:layout])
-#           # get the page category from the url
-#           match = page.path.match(/^(.*?)\//)
-#           # proxy the page route
-#           proxy "#{page.path}", "/content", {
-#             layout: page.metadata[:options][:layout],
-#             locals: page.metadata[:page].merge({
-#               content: render(page),
-#               sidebar_data: get_sidebar_data(match ? match[1] : nil)
-#             })
-#           }, ignore: true
-#         end
-#       end
-#     end
-#   end
-# end
-
 # Netlify redirects/headers
 proxy '_redirects', 'netlify-redirects', ignore: true
 
 helpers do
+  # get correct analytics id
+  def segmentId()
+    if (ENV['ENV'] == 'production')
+      'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
+    else
+      '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'
+    end
+  end
+
   # Formats and filters a category of docs for the sidebar component
   def get_sidebar_data(category)
     sitemap.resources.select { |resource|
@@ -138,43 +126,4 @@ helpers do
 
     return classes.join(" ")
   end
-end
-
-# custom version of middleman's render that renders only a file's contents
-# without front matter or layouts
-def render(page)
-  full_path = page.file_descriptor[:full_path]
-  relative_path = page.file_descriptor[:relative_path]
-  content = File.read(full_path).to_s
-  locals = {}
-  options = {}
-
-  data = @app.extensions[:front_matter].data(relative_path.to_s)
-  frontmatter = data[0]
-  content = data[1]
-
-  context = @app.template_context_class.new(@app, locals, options)
-  _render_with_all_renderers(relative_path.to_s, locals, context, options)
-end
-
-# pirated from middleman source, its protected there sadly
-def _render_with_all_renderers(path, locs, context, opts, &block)
-  # Keep rendering template until we've used up all extensions. This
-  # handles cases like `style.css.sass.erb`
-  content = nil
-
-  while ::Middleman::Util.tilt_class(path)
-    begin
-      opts[:template_body] = content if content
-
-      content_renderer = ::Middleman::FileRenderer.new(@app, path)
-      content = content_renderer.render(locs, opts, context, &block)
-
-      path = path.sub(/\.[^.]*\z/, '')
-    rescue LocalJumpError
-      raise "Tried to render a layout (calls yield) at #{path} like it was a template. Non-default layouts need to be in #{@app.config[:source]}/#{@app.config[:layouts_dir]}."
-    end
-  end
-
-  content
 end
