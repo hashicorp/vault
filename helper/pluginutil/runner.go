@@ -143,7 +143,7 @@ type APIClientMeta struct {
 	flagInsecure   bool
 }
 
-// FlagSet returns the a flag set for configuring the TLS connection
+// FlagSet returns the flag set for configuring the TLS connection
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 

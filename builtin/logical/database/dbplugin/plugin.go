@@ -120,7 +120,7 @@ type DatabasePlugin struct {
 	*GRPCDatabasePlugin
 }
 
-// GRPCBackendPlugin is the plugin.Plugin implementation that only supports GRPC
+// GRPCDatabasePlugin is the plugin.Plugin implementation that only supports GRPC
 // transport
 type GRPCDatabasePlugin struct {
 	Impl Database
