@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/rotate - HTTP API"
-sidebar_current: "docs-http-system-rotate"
+sidebar_title: "<tt>/sys/rotate</tt>"
+sidebar_current: "api-http-system-rotate"
 description: |-
   The `/sys/rotate` endpoint is used to rotate the encryption key.
 ---

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Plugin System"
+sidebar_title: "Plugins"
 sidebar_current: "docs-internals-plugins"
 description: |-
   Learn about Vault's plugin system.

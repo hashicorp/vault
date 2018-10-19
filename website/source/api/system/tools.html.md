@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/tools - HTTP API"
-sidebar_current: "docs-http-system-tools"
+sidebar_title: "<tt>/sys/tools</tt>"
+sidebar_current: "api-http-system-tools"
 description: |-
   This is the API documentation for a general set of crypto  tools.
 ---

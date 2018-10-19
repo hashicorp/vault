@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "TOTP - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-totp"
+sidebar_title: "TOTP"
+sidebar_current: "api-http-secret-totp"
 description: |-
   This is the API documentation for the Vault TOTP secrets engine.
 ---

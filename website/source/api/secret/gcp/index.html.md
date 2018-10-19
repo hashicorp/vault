@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Google Cloud - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-gcp"
+sidebar_title: "Google Cloud"
+sidebar_current: "api-http-secret-gcp"
 description: |-
   This is the API documentation for the Vault Google Cloud secrets engine.
 ---

@@ -154,8 +154,6 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		TTL:                  b.System().DefaultLeaseTTL(),
-		MaxTTL:               b.System().MaxLeaseTTL(),
 		AllowLocalhost:       true,
 		AllowAnyName:         true,
 		AllowIPSANs:          true,
@@ -184,10 +182,6 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 			*entry.GenerateLease = *role.GenerateLease
 		}
 		entry.NoStore = role.NoStore
-	}
-
-	if entry.MaxTTL > 0 && entry.TTL > entry.MaxTTL {
-		return logical.ErrorResponse(fmt.Sprintf("requested ttl of %s is greater than max ttl of %s", entry.TTL, entry.MaxTTL)), nil
 	}
 
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
@@ -244,6 +238,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	respData := map[string]interface{}{
+		"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 		"serial_number": cb.SerialNumber,
 	}
 

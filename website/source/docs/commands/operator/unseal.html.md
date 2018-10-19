@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator unseal - Command"
+sidebar_title: "unseal"
 sidebar_current: "docs-commands-operator-unseal"
 description: |-
   The "operator unseal" allows the user to provide a portion of the master key

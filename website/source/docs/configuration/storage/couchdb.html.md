@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "CouchDB - Storage Backends - Configuration"
+sidebar_title: "CouchDB"
 sidebar_current: "docs-configuration-storage-couchdb"
 description: |-
   The CouchDB storage backend is used to persist Vault's data in a CouchDB

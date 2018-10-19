@@ -261,7 +261,7 @@ then login.
 1. Toggle **Upload file**, and click **Choose a file** to select the
    `user-tmpl.hcl` file you wrote at [Step 1](#step1).
 
-    ![Create Policy](/assets/images/vault-ctrl-grp-2.png)
+    ![Create Policy](/img/vault-ctrl-grp-2.png)
 
     This loads the policy and sets the **Name** to `user-tmpl`.
 
@@ -276,7 +276,7 @@ Let's create an entity, **`bob_smith`** with a user **`bob`** as its entity
 alias. Also, create a group, **`education`** and add the **`bob_smith`** entity
 as its group member.
 
-![Entity & Group](/assets/images/vault-acl-templating.png)
+![Entity & Group](/img/vault-acl-templating.png)
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups. Refer to the [Identity - Entities and
@@ -332,7 +332,7 @@ following command to create a new user, **`bob`**.
     ```plaintext
     $ vault write auth/userpass/users/bob password="training"
     ```
-    ![Create Policy](/assets/images/vault-ctrl-grp-3.png)
+    ![Create Policy](/img/vault-ctrl-grp-3.png)
 
 1. Click the icon (**`>_`**) again to hide the shell.
 
@@ -355,7 +355,7 @@ following command to create a new user, **`bob`**.
 **Policies** fields. Under **Metadata**, enter **`region`** as a key and
 **`us-west`** as the key value. Enter the `bob_smith` entity ID in the **Member
 Entity IDs** field.
-    ![Group](/assets/images/vault-acl-templating-2.png)
+    ![Group](/img/vault-acl-templating-2.png)
 
 1. Click **Create**.
 
@@ -570,7 +570,7 @@ version.
 1. Click **Enable Engine**.
 
 1. Now, sign out as the current user so that you can log in as `bob`. ![Sign
-off](/assets/images/vault-acl-templating-3.png)
+off](/img/vault-acl-templating-3.png)
 
 1. In the Vault sign in page, select **Username** and then enter **`bob`** in
 the **Username** field, and **`training`** in the **Password** field.

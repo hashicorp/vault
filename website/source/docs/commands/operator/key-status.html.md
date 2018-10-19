@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator key-status - Command"
+sidebar_title: "key-status"
 sidebar_current: "docs-commands-operator-key-status"
 description: |-
   The "operator key-status" provides information about the active encryption

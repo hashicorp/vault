@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Audit Devices"
+sidebar_title: "Audit Devices"
 sidebar_current: "docs-audit"
 description: |-
   Audit devices are mountable devices that log requests and responses in Vault.

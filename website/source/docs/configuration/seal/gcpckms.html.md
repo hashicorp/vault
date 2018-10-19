@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "GCP Cloud KMS - Seals - Configuration"
+sidebar_title: "GCP Cloud KMS <sup>ENT</sup>"
 sidebar_current: "docs-configuration-seal-gcpckms"
 description: |-
   The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal wrapping

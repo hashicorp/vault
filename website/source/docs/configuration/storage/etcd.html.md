@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Etcd - Storage Backends - Configuration"
+sidebar_title: "Etcd"
 sidebar_current: "docs-configuration-storage-etcd"
 description: |-
   The Etcd storage backend is used to persist Vault's data in Etcd. It supports

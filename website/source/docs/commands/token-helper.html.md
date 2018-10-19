@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Token Helpers"
+sidebar_title: "Token Helpers"
 sidebar_current: "docs-commands-token-helper"
 description: |-
   The Vault CLI supports external token helpers that make retrieving, setting and erasing tokens simpler to use.

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Architecture"
+sidebar_title: "Architecture"
 sidebar_current: "docs-internals-architecture"
 description: |-
   Learn about the internal architecture of Vault.
@@ -84,7 +85,7 @@ clarify what is being discussed:
 
 A very high level overview of Vault looks like this:
 
-[![Architecture Overview](/assets/images/layers.png)](/assets/images/layers.png)
+[![Architecture Overview](/img/layers.png)](/img/layers.png)
 
 Let's begin to break down this picture. There is a clear separation of
 components that are inside or outside of the security barrier. Only the storage
@@ -105,7 +106,7 @@ algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing) to split the
 master key into 5 shares, any 3 of which are required to reconstruct the master
 key.
 
-[![Vault Shamir Secret Sharing Algorithm](/assets/images/vault-shamir-secret-sharing.svg)](/assets/images/vault-shamir-secret-sharing.svg)
+[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
 
 The number of shares and the minimum threshold required can both be specified.
 Shamir's technique can be disabled, and the master key used directly for
