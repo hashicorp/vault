@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Cassandra - Storage Backends - Configuration"
+sidebar_title: "Cassandra"
 sidebar_current: "docs-configuration-storage-cassandra"
 description: |-
   The Cassandra storage backend is used to persist Vault's data in an Apache

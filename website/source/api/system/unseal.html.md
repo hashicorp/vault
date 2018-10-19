@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/unseal - HTTP API"
-sidebar_current: "docs-http-system-unseal"
+sidebar_title: "<tt>/sys/unseal</tt>"
+sidebar_current: "api-http-system-unseal"
 description: |-
   The `/sys/unseal` endpoint is used to unseal the Vault.
 ---

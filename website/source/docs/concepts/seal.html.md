@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Seal/Unseal"
+sidebar_title: "Seal/Unseal"
 sidebar_current: "docs-concepts-seal"
 description: |-
   A Vault must be unsealed before it can access its data. Likewise, it can be sealed to lock it down.

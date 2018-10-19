@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MSSQL - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-mssql"
+sidebar_title: "MSSQL <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-mssql"
 description: |-
   This is the API documentation for the Vault MSSQL secrets engine.
 ---

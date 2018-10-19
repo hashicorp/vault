@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "RADIUS - Auth Methods"
+sidebar_title: "RADIUS"
 sidebar_current: "docs-auth-radius"
 description: |-
   The "radius" auth method allows users to authenticate with Vault using an

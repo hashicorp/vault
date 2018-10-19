@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent"
+sidebar_title: "Vault Agent"
 sidebar_current: "docs-agent"
 description: |-
   Vault Agent is a client-side daemon that can be used to perform some Vault

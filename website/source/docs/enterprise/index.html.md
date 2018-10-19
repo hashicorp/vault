@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise"
+sidebar_title: "Vault Enterprise"
 sidebar_current: "docs-vault-enterprise"
 description: |-
   Vault Enterprise features a number of capabilities beyond the open

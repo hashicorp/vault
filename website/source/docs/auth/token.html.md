@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Token - Auth Methods"
+sidebar_title: "Tokens"
 sidebar_current: "docs-auth-token"
 description: |-
   The token store auth method is used to authenticate using tokens.

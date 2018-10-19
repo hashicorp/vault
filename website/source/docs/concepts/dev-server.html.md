@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Dev Server Mode"
+sidebar_title: "'Dev' Server"
 sidebar_current: "docs-concepts-devserver"
 description: |-
   The dev server in Vault can be used for development or to experiment with Vault.

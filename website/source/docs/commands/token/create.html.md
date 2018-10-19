@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token create - Command"
+sidebar_title: "create"
 sidebar_current: "docs-commands-token-create"
 description: |-
   The "token create" command creates a new token that can be used for

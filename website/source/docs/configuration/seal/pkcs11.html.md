@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PKCS11 - Seals - Configuration"
+sidebar_title: "HSM PKCS11 <sup>ENT</sup>"
 sidebar_current: "docs-configuration-seal-pkcs11"
 description: |-
   The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal

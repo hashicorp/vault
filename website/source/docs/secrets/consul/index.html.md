@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Consul - Secrets Engines"
+sidebar_title: "Consul"
 sidebar_current: "docs-secrets-consul"
 description: |-
   The Consul secrets engine for Vault generates tokens for Consul dynamically.

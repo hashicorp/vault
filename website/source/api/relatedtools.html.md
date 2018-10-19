@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Related Tools"
-sidebar_current: "docs-http-related"
+sidebar_title: "Related Tools"
+sidebar_current: "api-http-related"
 description: |-
   Short list of third-party tools that work with or are related to Vault.
 ---
