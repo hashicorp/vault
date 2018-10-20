@@ -226,6 +226,10 @@ updated with the new attributes.
   on the role, then this default TTL will be used. Valid only when
   `credential_type` is one of `assumed_role` or `federation_token`.
 
+- `max_sts_ttl` `(string)` - The max allowed TTL for STS credentials (credentials
+  TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
+  `assumed_role` or `federation_token`.
+
 Legacy parameters:
 
 These parameters are supported for backwards compatibility only. They cannot be

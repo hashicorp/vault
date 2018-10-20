@@ -67,6 +67,11 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 			},
 
+			"max_sts_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
+			},
+
 			"arn": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
@@ -220,6 +225,23 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse(fmt.Sprintf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
 		}
 		roleEntry.DefaultSTSTTL = time.Duration(defaultSTSTTLRaw.(int)) * time.Second
+	}
+
+	if maxSTSTTLRaw, ok := d.GetOk("max_sts_ttl"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with max_sts_ttl"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(roleEntry.CredentialTypes, federationTokenCred) {
+			return logical.ErrorResponse(fmt.Sprintf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred)), nil
+		}
+
+		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
+	}
+
+	if roleEntry.MaxSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > 0 &&
+		roleEntry.DefaultSTSTTL > roleEntry.MaxSTSTTL {
+		return logical.ErrorResponse(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`), nil
 	}
 
 	if legacyRole != "" {
@@ -402,6 +424,7 @@ type awsRoleEntry struct {
 	ProhibitFlexibleCredPath bool          `json:"prohibit_flexible_cred_path,omitempty"` // Disallow accessing STS credentials via the creds path and vice verse
 	Version                  int           `json:"version"`                               // Version number of the role format
 	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
+	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -411,6 +434,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"role_arns":        r.RoleArns,
 		"policy_document":  r.PolicyDocument,
 		"default_sts_ttl":  int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":      int64(r.MaxSTSTTL.Seconds()),
 	}
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData
