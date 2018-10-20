@@ -60,8 +60,8 @@ variable "vpc-id" {
 
 variable "source-networks" {
     type = "list"
-    #not secure by default 
-    #default = ["0.0.0.0/0"]
-    default = ["108.92.149.99/32"]
+    #not secure by default, get your IP from checkip.amazonaws.com and set to something like:
+    #default = ["108.92.149.99/32","34.222.225.77/32","18.237.144.183/32"]
+    default = ["0.0.0.0/0"]
     description = "List of source networks from which to allow access"
 }

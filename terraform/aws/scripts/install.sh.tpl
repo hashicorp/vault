@@ -30,15 +30,15 @@ cat <<EOF >/tmp/vault.service
 Description=vault service
 Requires=network-online.target
 After=network-online.target
-ConditionFileNotEmpty=/etc/vault/config.json
+ConditionFileNotEmpty=/usr/local/etc/vault-config.json
  
 [Service]
 EnvironmentFile=-/etc/sysconfig/vault
 Environment=GOMAXPROCS=2
 Restart=on-failure
-ExecStart=/usr/bin/vault server -config=/usr/local/etc/vault-config.json
-StandardOutput=/logs/vault/output.log
-StandardError=/logs/vault/error.log
+ExecStart=/usr/local/bin/vault server -config=/usr/local/etc/vault-config.json
+StandardOutput=/var/log/vault/output.log
+StandardError=/var/log/vault/error.log
 LimitMEMLOCK=infinity
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGTERM

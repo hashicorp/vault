@@ -19,8 +19,10 @@ resource "aws_autoscaling_group" "vault" {
     health_check_grace_period = 15
     health_check_type = "EC2"
     vpc_zone_identifier = ["${split(",", var.subnets)}"]
-    load_balancers = ["${aws_elb.vault.id}"]
-
+    /*
+    load_balancers = ["${aws_lb.vault.id}"]
+    */
+    
     tag {
         key = "Name"
         value = "vault"
@@ -44,6 +46,10 @@ resource "aws_security_group" "vault" {
     name = "vault"
     description = "Vault servers"
     vpc_id = "${var.vpc-id}"
+    
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group_rule" "vault-ssh" {
@@ -53,6 +59,10 @@ resource "aws_security_group_rule" "vault-ssh" {
     to_port = 22
     protocol = "tcp"
     cidr_blocks = ["${var.source-networks}"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 // This rule allows Vault HTTP API access to individual nodes, since each will
@@ -75,37 +85,103 @@ resource "aws_security_group_rule" "vault-egress" {
     cidr_blocks = ["0.0.0.0/0"]
 }
 
-// Launch the ELB that is serving Vault. This has proper health checks
-// to only serve healthy, unsealed Vaults.
-resource "aws_elb" "vault" {
-    name = "vault"
-    connection_draining = true
-    connection_draining_timeout = 400
-    internal = true
-    subnets = ["${split(",", var.subnets)}"]
-    security_groups = ["${aws_security_group.elb.id}"]
 
-    listener {
-        instance_port = 8200
-        instance_protocol = "tcp"
-        lb_port = 80
-        lb_protocol = "tcp"
-    }
+resource "aws_lb" "vault" {
+  name               = "vault-lb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = ["${aws_security_group.elb.id}"]
+  subnets            = ["${split(",", var.subnets)}"]
 
-    listener {
-        instance_port = 8200
-        instance_protocol = "tcp"
-        lb_port = 443
-        lb_protocol = "tcp"
-    }
+  enable_deletion_protection = true
+/*
+  access_logs {
+    bucket  = "${aws_s3_bucket.lb_logs.bucket}"
+    prefix  = "test-lb"
+    enabled = true
+  }
 
-    health_check {
-        healthy_threshold = 2
-        unhealthy_threshold = 3
-        timeout = 5
-        target = "${var.elb-health-check}"
-        interval = 15
-    }
+  tags {
+    Environment = "production"
+  }
+*/
+}
+
+resource "aws_lb_target_group" "vault-lb-tgt-group" {
+  name     = "vault-lb-tgt"
+  port     = 8200
+  protocol = "HTTP"
+  vpc_id = "${var.vpc-id}"
+}
+
+resource "aws_lb_listener" "vault-http" {
+  load_balancer_arn = "${aws_lb.vault.arn}"
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = "${aws_lb_target_group.vault-lb-tgt-group.arn}"
+  }
+}
+
+resource "aws_lb_listener" "vault-https" {
+  load_balancer_arn = "${aws_lb.vault.arn}"
+  port              = "443"
+  protocol          = "HTTPS"
+  
+  ssl_policy        = "ELBSecurityPolicy-2015-05"
+  certificate_arn   = "${aws_iam_server_certificate.vault_cert.arn}"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = "${aws_lb_target_group.vault-lb-tgt-group.arn}"
+  }
+}
+
+# Create a new ALB Target Group attachment
+resource "aws_autoscaling_attachment" "asg_attachment_bar" {
+  autoscaling_group_name = "${aws_autoscaling_group.vault.id}"
+  alb_target_group_arn   = "${aws_lb_target_group.vault-lb-tgt-group.arn}"
+}
+
+#https://www.terraform.io/docs/providers/tls/r/self_signed_cert.html
+resource "tls_private_key" "example" {
+  algorithm   = "ECDSA"
+  ecdsa_curve = "P384"
+}
+
+# run vault cmd with -tls-skip-verify flag for now
+resource "tls_self_signed_cert" "example" {
+  key_algorithm   = "${tls_private_key.example.algorithm}"
+  private_key_pem = "${tls_private_key.example.private_key_pem}"
+
+  subject {
+    common_name  = "testvault"
+    organization = "BAD Examples, Inc"
+  }
+
+  validity_period_hours = 6
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth"
+  ]
+  
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+resource "aws_iam_server_certificate" "vault_cert" {
+  name      = "vault-cert"
+  certificate_body = "${tls_self_signed_cert.example.cert_pem}"
+  private_key      = "${tls_private_key.example.private_key_pem}"
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "elb" {
