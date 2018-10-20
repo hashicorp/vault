@@ -62,7 +62,8 @@ type Path struct {
 	// Operations is the set of operations supported and the associated OperationsHandler.
 	//
 	// If both Create and Update operations are present, documentation and examples from
-	// the Update definition will be used.
+	// the Update definition will be used. Similarly if both Read and List are present,
+	// Read will be used for documentation.
 	Operations map[logical.Operation]OperationHandler
 
 	// Callbacks are the set of callbacks that are called for a given

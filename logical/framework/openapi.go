@@ -93,6 +93,11 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 				}
 			}
 
+			// If both List and Read are defined, only process Read.
+			if opType == logical.ListOperation && operations[logical.ReadOperation] != nil {
+				continue
+			}
+
 			op := openapi.NewOperation()
 
 			op.Summary = props.Summary
@@ -123,7 +128,7 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 			}
 
 			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation {
+			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
 				op.Parameters = append(op.Parameters, openapi.Parameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
@@ -163,12 +168,14 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 				}
 
 				// Set the final request body. Only JSON request data is supported.
-				op.RequestBody = &openapi.RequestBody{
-					Content: &openapi.Content{
-						"application/json": &openapi.MediaTypeObject{
-							Schema: s,
+				if len(s.Properties) > 0 || s.Example != nil {
+					op.RequestBody = &openapi.RequestBody{
+						Content: &openapi.Content{
+							"application/json": &openapi.MediaTypeObject{
+								Schema: s,
+							},
 						},
-					},
+					}
 				}
 			}
 
