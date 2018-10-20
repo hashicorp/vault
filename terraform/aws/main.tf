@@ -63,7 +63,7 @@ resource "aws_security_group_rule" "vault-http-api" {
     from_port = 8200
     to_port = 8200
     protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    source_security_group_id = "${aws_security_group.elb.id}"
 }
 
 resource "aws_security_group_rule" "vault-egress" {
@@ -140,14 +140,6 @@ resource "aws_security_group_rule" "vault-elb-egress" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
 }
-
-
-
-
-
-
-
-
 
 
 # automatic lookup based on   #https://aws.amazon.com/amazon-linux-ami/

@@ -22,32 +22,36 @@ EOF
 sudo mv /tmp/vault-config /usr/local/etc/vault-config.json
 
 # Setup the init script
-cat <<EOF >/tmp/upstart
-description "Vault server"
+cat <<EOF >/tmp/vault.service
+#https://devopscube.com/setup-hashicorp-vault-beginners-guide/
+#https://www.hashicorp.com/resources/hashicorp-vault-administrative-guide
 
-start on runlevel [2345]
-stop on runlevel [!2345]
-
-respawn
-
-script
-  if [ -f "/etc/service/vault" ]; then
-    . /etc/service/vault
-  fi
-
-  # Make sure to use all our CPUs, because Vault can block a scheduler thread
-  export GOMAXPROCS=`nproc`
-
-  exec /usr/local/bin/vault server \
-    -config="/usr/local/etc/vault-config.json" \
-    \$${VAULT_FLAGS} \
-    >>/var/log/vault.log 2>&1
-end script
+[Unit]
+Description=vault service
+Requires=network-online.target
+After=network-online.target
+ConditionFileNotEmpty=/etc/vault/config.json
+ 
+[Service]
+EnvironmentFile=-/etc/sysconfig/vault
+Environment=GOMAXPROCS=2
+Restart=on-failure
+ExecStart=/usr/bin/vault server -config=/usr/local/etc/vault-config.json
+StandardOutput=/logs/vault/output.log
+StandardError=/logs/vault/error.log
+LimitMEMLOCK=infinity
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+ 
+[Install]
+WantedBy=multi-user.target
 EOF
-sudo mv /tmp/upstart /etc/init/vault.conf
+sudo mv /tmp/vault.service /etc/systemd/system/vault.service
+sudo chmod 0644 /etc/systemd/system/vault.service
 
 # Extra install steps (if any)
 ${extra-install}
 
 # Start Vault
-sudo start vault
+sudo systemctl enable vault.service
+sudo systemctl start vault

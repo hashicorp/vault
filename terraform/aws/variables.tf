@@ -61,6 +61,7 @@ variable "vpc-id" {
 variable "source-networks" {
     type = "list"
     #not secure by default 
-    default = ["0.0.0.0/0"]
+    #default = ["0.0.0.0/0"]
+    default = ["108.92.149.99/32"]
     description = "List of source networks from which to allow access"
 }
