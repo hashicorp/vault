@@ -15,6 +15,7 @@ IMPROVEMENTS:
 
  * identity: Identity names will now be handled case insensitively by default.
    This includes names of entities, aliases and groups [GH-5404]
+ * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS credentials [GH-5500]
  * secret/azure: Credentials can now be generated against an existing service principal.
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
