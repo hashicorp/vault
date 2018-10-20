@@ -140,7 +140,7 @@ export default Route.extend(UnloadModelRoute, {
     },
 
     willTransition(transition) {
-      let model = this.controller.model;
+      let { mode, model } = this.controller;
       let version = model.get('selectedVersion');
       let changed = model.changedAttributes();
       let changedKeys = Object.keys(changed);
@@ -148,8 +148,8 @@ export default Route.extend(UnloadModelRoute, {
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
       if (
-        (changedKeys.length && changedKeys[0] !== 'backend') ||
-        (version && Object.keys(version.changedAttributes()).length)
+        (mode !== 'show' && (changedKeys.length && changedKeys[0] !== 'backend')) ||
+        (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
       ) {
         if (
           window.confirm(

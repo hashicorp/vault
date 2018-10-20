@@ -13,12 +13,15 @@ FEATURES:
 
  * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
    remove older unused key versions [GH-5388]
+ * Web UI support for KV Version 2. Browse, delete, undelete and destroy 
+   individual secret versions in the UI. [GH-5547], [GH-5563]
 
 IMPROVEMENTS:
 
  * auth/token: New tokens are salted using SHA2-256 HMAC instead of SHA1 hash
  * identity: Identity names will now be handled case insensitively by default.
    This includes names of entities, aliases and groups [GH-5404]
+ * secret/azure: Credentials can now be generated against an existing service principal.
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated

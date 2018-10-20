@@ -116,7 +116,7 @@ func (c *client) createSP(
 	}
 
 	resultRaw, err := retry(ctx, func() (interface{}, bool, error) {
-		now := time.Now()
+		now := time.Now().UTC()
 		result, err := c.provider.CreateServicePrincipal(ctx, graphrbac.ServicePrincipalCreateParameters{
 			AppID:          app.AppID,
 			AccountEnabled: to.BoolPtr(true),
@@ -141,6 +141,91 @@ func (c *client) createSP(
 	result := resultRaw.(graphrbac.ServicePrincipal)
 
 	return &result, password, err
+}
+
+// addAppPassword adds a new password to an App's credentials list.
+func (c *client) addAppPassword(ctx context.Context, appObjID string, duration time.Duration) (string, string, error) {
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Key IDs are not secret, and they're a convenient way for an operator to identify Vault-generated
+	// passwords. These must be UUIDs, so the three leading bytes will be used as an indicator.
+	keyID = "ffffff" + keyID[6:]
+
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", "", err
+	}
+
+	now := time.Now().UTC()
+	cred := graphrbac.PasswordCredential{
+		StartDate: &date.Time{Time: now},
+		EndDate:   &date.Time{Time: now.Add(duration)},
+		KeyID:     to.StringPtr(keyID),
+		Value:     to.StringPtr(password),
+	}
+
+	// Load current credentials
+	resp, err := c.provider.ListApplicationPasswordCredentials(ctx, appObjID)
+	if err != nil {
+		return "", "", errwrap.Wrapf("error fetching credentials: {{err}}", err)
+	}
+	curCreds := *resp.Value
+
+	// Add and save credentials
+	curCreds = append(curCreds, cred)
+
+	if _, err := c.provider.UpdateApplicationPasswordCredentials(ctx, appObjID,
+		graphrbac.PasswordCredentialsUpdateParameters{
+			Value: &curCreds,
+		},
+	); err != nil {
+		if strings.Contains(err.Error(), "size of the object has exceeded its limit") {
+			err = errors.New("maximum number of Application passwords reached")
+		}
+		return "", "", errwrap.Wrapf("error updating credentials: {{err}}", err)
+	}
+
+	return keyID, password, nil
+}
+
+// deleteAppPassword removes a password, if present, from an App's credentials list.
+func (c *client) deleteAppPassword(ctx context.Context, appObjID, keyID string) error {
+	// Load current credentials
+	resp, err := c.provider.ListApplicationPasswordCredentials(ctx, appObjID)
+	if err != nil {
+		return errwrap.Wrapf("error fetching credentials: {{err}}", err)
+	}
+	curCreds := *resp.Value
+
+	// Remove credential
+	found := false
+	for i := range curCreds {
+		if to.String(curCreds[i].KeyID) == keyID {
+			curCreds[i] = curCreds[len(curCreds)-1]
+			curCreds = curCreds[:len(curCreds)-1]
+			found = true
+			break
+		}
+	}
+
+	// KeyID is not present, so nothing to do
+	if !found {
+		return nil
+	}
+
+	// Save new credentials list
+	if _, err := c.provider.UpdateApplicationPasswordCredentials(ctx, appObjID,
+		graphrbac.PasswordCredentialsUpdateParameters{
+			Value: &curCreds,
+		},
+	); err != nil {
+		return errwrap.Wrapf("error updating credentials: {{err}}", err)
+	}
+
+	return nil
 }
 
 // deleteApp deletes an Azure application.

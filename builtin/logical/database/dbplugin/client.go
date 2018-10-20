@@ -32,12 +32,21 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
 func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
-	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
-		"database": new(DatabasePlugin),
+	// pluginSets is the map of plugins we can dispense.
+	pluginSets := map[int]plugin.PluginSet{
+		// Version 3 supports both protocols
+		3: plugin.PluginSet{
+			"database": &DatabasePlugin{
+				GRPCDatabasePlugin: new(GRPCDatabasePlugin),
+			},
+		},
+		// Version 4 only supports gRPC
+		4: plugin.PluginSet{
+			"database": new(GRPCDatabasePlugin),
+		},
 	}
 
-	client, err := pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
+	client, err := pluginRunner.Run(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +70,7 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	case *gRPCClient:
 		db = raw.(*gRPCClient)
 	case *databasePluginRPCClient:
-		logger.Warn("plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
+		logger.Warn("plugin is using deprecated netRPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
 		db = raw.(*databasePluginRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")

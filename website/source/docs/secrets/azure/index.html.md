@@ -185,7 +185,7 @@ can create new passwords for this service principal. Any changes to the service 
 permissions affect all clients. Furthermore, Azure does not provide any logging with
 regard to _which_ credential was used for an operation.
 
-An important limitation when using an existing service princicpal is that Azure limits the
+An important limitation when using an existing service principal is that Azure limits the
 number of passwords for a single Application. This limit is based on Application object
 size and isn't firmly specified, but in practice hundreds of passwords can be issued per
 Application. An error will be returned if the object size is reached. This limit can be
