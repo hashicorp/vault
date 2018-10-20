@@ -19,10 +19,7 @@ resource "aws_autoscaling_group" "vault" {
     health_check_grace_period = 15
     health_check_type = "EC2"
     vpc_zone_identifier = ["${split(",", var.subnets)}"]
-    /*
-    load_balancers = ["${aws_lb.vault.id}"]
-    */
-    
+
     tag {
         key = "Name"
         value = "vault"
@@ -93,18 +90,8 @@ resource "aws_lb" "vault" {
   security_groups    = ["${aws_security_group.elb.id}"]
   subnets            = ["${split(",", var.subnets)}"]
 
-  enable_deletion_protection = true
-/*
-  access_logs {
-    bucket  = "${aws_s3_bucket.lb_logs.bucket}"
-    prefix  = "test-lb"
-    enabled = true
-  }
+  enable_deletion_protection = false
 
-  tags {
-    Environment = "production"
-  }
-*/
 }
 
 resource "aws_lb_target_group" "vault-lb-tgt-group" {
@@ -220,7 +207,6 @@ resource "aws_security_group_rule" "vault-elb-egress" {
 
 # automatic lookup based on   #https://aws.amazon.com/amazon-linux-ami/
 # aws ec2 describe-images --owners 099720109477 --filters 'Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-????????' 'Name=state,Values=available' --output json | jq -r '.Images | sort_by(.CreationDate) | last(.[]).ImageId'
-
 data "aws_ami" "latest_ubuntu_image" {
   most_recent = true
 
@@ -230,5 +216,4 @@ data "aws_ami" "latest_ubuntu_image" {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
   }
-
 }
