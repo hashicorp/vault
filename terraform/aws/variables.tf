@@ -58,9 +58,8 @@ variable "vpc-id" {
     description = "VPC ID"
 }
 
-#Note: not secure by default, highly recommended to override.
 variable "source-networks" {
     type = "list"
     default = ["0.0.0.0/0"]
-    description = "List of source networks from which to allow access"
+    description = "List of source networks from which to allow access Note: not secure by default, highly recommended to override."
 }
