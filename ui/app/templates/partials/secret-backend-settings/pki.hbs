@@ -1,5 +1,5 @@
 <div class="box is-bottomless is-fullwidth is-paddingless">
-  <nav class="tabs sub-nav">
+  <nav class="tabs">
     <ul>
       {{#each (array 'cert' 'urls' 'crl' 'tidy') as |section|}}
         {{#link-to 'vault.cluster.settings.configure-secret-backend.section' section tagName="li" activeClass="is-active"}}

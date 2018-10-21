@@ -24,13 +24,13 @@
 .ui-wizard {
   z-index: 300;
   padding: $size-5;
-  width: 300px;
+  width: $drawer-width;
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
   position: fixed;
   right: $size-8;
   bottom: $size-8;
-  top: calc(3.5rem + #{$size-8});
+  top: calc(#{$header-height} + #{$size-8});
   overflow: auto;
 
   p {
@@ -101,7 +101,7 @@
   padding-bottom: $size-11;
   position: fixed;
   right: $size-8;
-  top: calc(3.5rem + #{$size-8});
+  top: calc(#{$header-height} + #{$size-8});
 
   @include until($tablet) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
@@ -121,6 +121,7 @@
   }
 
   .wizard-header {
+    border-bottom: 0;
     margin: 0 0 $size-10;
     padding-top: 0;
   }
@@ -142,7 +143,7 @@
   margin: $size-8 0 0;
   padding: 0 $size-8;
   border-top: solid 1px $white;
-  border-image: $dark-vault-gradient 1;
+  border-image: linear-gradient(to right, $vault-gray-dark, $vault-gray) 1;
   border-width: 1px 0 0;
   button {
     font-size: $size-7;

@@ -26,7 +26,13 @@
 }
 
 .ember-basic-dropdown-content--left.tool-tip {
-  margin: 8px 0 0 -11px;
+  margin: 8px 0 0 -2px;
+
+  &::before,
+  &::after {
+    right: auto;
+    left: $spacing-s;
+  }
 }
 .ember-basic-dropdown-content--right.tool-tip {
   margin: 8px -11px;
