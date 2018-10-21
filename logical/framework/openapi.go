@@ -180,10 +180,12 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 			}
 
 			// Set default responses.
-			if opType == logical.DeleteOperation {
-				op.Responses[204] = openapi.StdRespNoContent
-			} else {
-				op.Responses[200] = openapi.StdRespOK
+			if len(props.Responses) == 0 {
+				if opType == logical.DeleteOperation {
+					op.Responses[204] = openapi.StdRespNoContent
+				} else {
+					op.Responses[200] = openapi.StdRespOK
+				}
 			}
 
 			// Add any defined response details.
