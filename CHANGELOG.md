@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.11.4 (Unreleased)
 
 CHANGES:
 
@@ -13,21 +13,28 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * core: Add last WAL in leader/health output for easier debugging [GH-5523]
  * identity: Identity names will now be handled case insensitively by default.
    This includes names of entities, aliases and groups [GH-5404]
- * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS credentials [GH-5500]
+ * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS
+   credentials [GH-5500]
  * secret/azure: Credentials can now be generated against an existing service principal.
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
    packet [GH-5465]
+ * secret/ssh: Allow usage of JSON arrays when setting zero addresses [GH-5528]
  * ui: Allow viewing and updating Vault license via the UI
  * ui: Onboarding will now display your progress through the chosen tutorials
- * ui: Dynamic secret backends obfuscate sensitive data by default and visibility is toggleable
+ * ui: Dynamic secret backends obfuscate sensitive data by default and
+   visibility is toggleable
 
 BUG FIXES:
 
  * agent: Fix potential hang during agent shutdown [GH-5026]
+ * auth/ldap: Fix listing of users/groups that contain slashes [GH-5537]
+ * command/migration: Don't copy HA locks [GH-5503]
+ * core: Fix memory leak during some expiration calls [GH-5505]
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * identity: Remove lookup check during alias removal from entity [GH-5524]
