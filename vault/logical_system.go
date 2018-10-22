@@ -2938,11 +2938,11 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
-	doc := openapi.NewDocument().Map()
+	doc := openapi.NewDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount := range resp.Data[group].(map[string]interface{}) {
-			backend := b.Core.router.MatchingBackend(ctx, mount)
+			backend := b.Core.router.MatchingBackend(ctx, mountPrefix+mount)
 
 			if backend == nil {
 				continue
@@ -2957,22 +2957,48 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				return err
 			}
 
-			// Normalize response into map[string]interface{}
-			var backendDoc map[string]interface{}
+			var backendDoc *openapi.Document
 
+			// Normalize response type, which will be different if received
+			// from and external plugin.
 			switch v := resp.Data["openapi"].(type) {
 			case *openapi.Document:
-				backendDoc = v.Map()
-			case map[string]interface{}:
 				backendDoc = v
+			case map[string]interface{}:
+				backendDoc = new(openapi.Document)
+				if err := mapstructure.Decode(v, backendDoc); err != nil {
+					return err
+				}
 			default:
 				continue
 			}
 
+			// Prepare to add tags to default builtins that are
+			// type "unknown" and won't already be tagged.
+			var tag string
+			switch mountPrefix + mount {
+			case "cubbyhole/":
+				tag = "secrets"
+			case "sys/":
+				tag = "system"
+			case "auth/token/":
+				tag = "auth"
+			}
+
 			// Merge backend paths with existing document
-			for path, obj := range backendDoc["paths"].(map[string]interface{}) {
+			for path, obj := range backendDoc.Paths {
 				path := strings.TrimPrefix(path, "/")
-				doc["paths"].(map[string]interface{})["/"+mountPrefix+mount+path] = obj
+
+				// Add tags to all of the operations if necessary
+				if tag != "" {
+					for _, op := range []*openapi.Operation{obj.Get, obj.Post, obj.Delete} {
+						if op != nil && len(op.Tags) == 0 {
+							op.Tags = []string{tag}
+						}
+					}
+				}
+
+				doc.Paths["/"+mountPrefix+mount+path] = obj
 			}
 		}
 		return nil

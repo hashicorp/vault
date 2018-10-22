@@ -134,7 +134,7 @@ type OperationProperties struct {
 	// Responses provides a list of response description for a given response
 	// code. The most relevant response should be first in the list, as it will
 	// be shown in documentation that only allows a single example.
-	Responses map[int][]Response
+	Responses map[string][]Response
 
 	// Unpublished indicates that this operation should not appear in public
 	// documentation or help text. The operation may still have documentation
@@ -164,7 +164,7 @@ type PathOperation struct {
 	Summary     string
 	Description string
 	Examples    []RequestExample
-	Responses   map[int][]Response
+	Responses   map[string][]Response
 	Unpublished bool
 	Deprecated  bool
 }
@@ -235,7 +235,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			rootPaths = sp.Root
 		}
 
-		documentPath(p, rootPaths, doc)
+		documentPath(p, rootPaths, b.BackendType, doc)
 
 		return logical.HelpResponse(help, nil, doc), nil
 	}

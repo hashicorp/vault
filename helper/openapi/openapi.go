@@ -3,7 +3,6 @@
 package openapi
 
 import (
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -22,8 +21,8 @@ type Info struct {
 
 type PathItem struct {
 	Description string `json:"description,omitempty"`
-	Sudo        bool   `json:"x-vault-sudo,omitempty"`
-	Create      bool   `json:"x-vault-create,omitempty"`
+	Sudo        bool   `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Create      bool   `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
 
 	Get    *Operation `json:"get,omitempty"`
 	Post   *Operation `json:"post,omitempty"`
@@ -31,12 +30,13 @@ type PathItem struct {
 }
 
 type Operation struct {
-	Summary     string            `json:"summary,omitempty"`
-	Description string            `json:"description,omitempty"`
-	Parameters  []Parameter       `json:"parameters,omitempty"`
-	RequestBody *RequestBody      `json:"requestBody,omitempty"`
-	Responses   map[int]*Response `json:"responses"`
-	Deprecated  bool              `json:"deprecated,omitempty"`
+	Summary     string               `json:"summary,omitempty"`
+	Description string               `json:"description,omitempty"`
+	Parameters  []Parameter          `json:"parameters,omitempty"`
+	Tags        []string             `json:"tags,omitempty"`
+	RequestBody *RequestBody         `json:"requestBody,omitempty"`
+	Responses   map[string]*Response `json:"responses"`
+	Deprecated  bool                 `json:"deprecated,omitempty"`
 }
 
 type Parameter struct {
@@ -96,21 +96,6 @@ func NewDocument() *Document {
 
 func NewOperation() *Operation {
 	return &Operation{
-		Responses: make(map[int]*Response),
+		Responses: make(map[string]*Response),
 	}
-}
-
-// Map converts the document to a map[string]interface{}.
-// This is primarily useful when combinings documents that may have been
-// serialized and deserialized, such as through the plugin interface.
-func (d *Document) Map() map[string]interface{} {
-	var out map[string]interface{}
-
-	if enc, err := jsonutil.EncodeJSON(d); err == nil {
-		if err := jsonutil.DecodeJSON(enc, &out); err == nil {
-			return out
-		}
-	}
-
-	return nil
 }
