@@ -258,9 +258,9 @@ curl \
 #### gcloud Example
 
 ```text
-gcloud beta iam service-accounts sign-jwt credentials.json - \
-  --iam-account=service-account@my-project.iam.gserviceaccount.com \
-  --project=my-project
+$ gcloud beta iam service-accounts sign-jwt credentials.json - \
+    --iam-account=service-account@my-project.iam.gserviceaccount.com \
+    --project=my-project
 ```
 
 #### Golang Example
