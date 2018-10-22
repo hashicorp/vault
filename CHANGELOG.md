@@ -14,6 +14,10 @@ IMPROVEMENTS:
 
 ## 0.11.4 (Unreleased)
 
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
 FEATURES:
 
  * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
@@ -43,7 +47,6 @@ BUG FIXES:
 
  * agent: Fix potential hang during agent shutdown [GH-5026]
  * auth/ldap: Fix listing of users/groups that contain slashes [GH-5537]
- * command/migration: Don't copy HA locks [GH-5503]
  * core: Fix memory leak during some expiration calls [GH-5505]
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
