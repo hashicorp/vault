@@ -389,9 +389,12 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.CreateOperation: nil,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.CreateOperation: &framework.PathOperation{
+					Summary: "Unseal the Vault.",
+				},
 			},
+
 			HelpSynopsis:    strings.TrimSpace(sysHelp["unseal"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["unseal"][1]),
 		},
