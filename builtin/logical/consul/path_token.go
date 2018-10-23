@@ -63,7 +63,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	writeOpts = writeOpts.WithContext(ctx)
 	var s *logical.Response
 	// Create an ACLEntry for Consul pre 1.4
-	if result.Policy != "" {
+	if (result.Policy != "" && result.TokenType == "client") || (result.Policy == "" && result.TokenType == "management") {
 		token, _, err := c.ACL().Create(&api.ACLEntry{
 			Name:  tokenName,
 			Type:  result.TokenType,
@@ -84,7 +84,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	//Create an ACLToken for Consul 1.4 and above
-	if len(result.Policies) > 0 {
+	if len(result.Policies) > 0 && result.Policy == "" && result.TokenType != "management" {
 		var policyLink = []*api.ACLTokenPolicyLink{}
 		for _, policyName := range result.Policies {
 			policyLink = append(policyLink, &api.ACLTokenPolicyLink{
