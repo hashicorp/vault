@@ -122,6 +122,7 @@
   title: "Plugin Backends"
   docs:
     - docs/plugin/index.html
+    - docs/plugin/partnerships.html
 -
   title: "Vault Enterprise"
   docs:
