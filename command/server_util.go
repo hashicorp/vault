@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/pkg/errors"
 )
 
@@ -26,23 +27,23 @@ func adjustCoreForSealMigration(ctx context.Context, core *vault.Core, coreConfi
 		// If the existing seal is not Shamir, we're going to Shamir, which
 		// means we require them setting "disabled" to true in their
 		// configuration as a sanity check.
-		if (config.Seal == nil || !config.Seal.Disabled) && existBarrierSealConfig.Type != seal.Shamir {
+		if (config.Seal == nil || !config.Seal.Disabled) && existBarrierSealConfig.Type != vaultseal.Shamir {
 			return errors.New(`Seal migration requires specifying "disabled" as "true" in the "seal" block of Vault's configuration file"`)
 		}
 
 		// Conversely, if they are going from Shamir to auto, we want to
 		// ensure disabled is *not* set
-		if existBarrierSealConfig.Type == seal.Shamir && config.Seal != nil && config.Seal.Disabled {
+		if existBarrierSealConfig.Type == vaultseal.Shamir && config.Seal != nil && config.Seal.Disabled {
 			coreConfig.Logger.Warn(`when not migrating, Vault's config should not specify "disabled" as "true" in the "seal" block of Vault's configuration file`)
 			return nil
 		}
 
-		if existBarrierSealConfig.Type != seal.shamir && existRecoverySealConfig == nil {
+		if existBarrierSealConfig.Type != vaultseal.Shamir && existRecoverySealConfig == nil {
 			return errors.New(`Recovery seal configuration not found for existing seal`)
 		}
 
 		switch existBarrierSealConfig.Type {
-		case seal.Shamir:
+		case vaultseal.Shamir:
 			// The value reflected in config is what we're going to
 			existSeal = vault.NewDefaultSeal()
 			existSeal.SetCore(core)
