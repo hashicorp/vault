@@ -10,9 +10,9 @@ CHANGES:
 
 IMPROVEMENTS:
 
- * auth/token: New tokens are salted using SHA2-256 HMAC instead of SHA1 hash
+ * auth/token: New tokens are indexed in storage HMAC-SHA256 instead of SHA1
 
-## 0.11.4 (Unreleased)
+## 0.11.4 (October 23rd, 2018)
 
 CHANGES:
 
