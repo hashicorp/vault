@@ -29,13 +29,13 @@ func TestPluginListCommand_Run(t *testing.T) {
 	}{
 		{
 			"too_many_args",
-			[]string{"foo"},
+			[]string{"database", "foo"},
 			"Too many arguments",
 			1,
 		},
 		{
 			"lists",
-			nil,
+			[]string{"database"},
 			"Plugins",
 			0,
 		},
@@ -78,7 +78,7 @@ func TestPluginListCommand_Run(t *testing.T) {
 		ui, cmd := testPluginListCommand(t)
 		cmd.client = client
 
-		code := cmd.Run([]string{})
+		code := cmd.Run([]string{"database"})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}

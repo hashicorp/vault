@@ -101,7 +101,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepUser(t, "web2", "password", "foo"),
@@ -125,7 +125,7 @@ func TestBackend_userCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -148,7 +148,7 @@ func TestBackend_userCreateOperation(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testUserCreateOperation(t, "web", "password", "foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
@@ -169,7 +169,7 @@ func TestBackend_passwordUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -194,7 +194,7 @@ func TestBackend_policiesUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -209,8 +209,9 @@ func TestBackend_policiesUpdate(t *testing.T) {
 
 func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "users/" + user + "/password",
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "users/" + user + "/password",
 		Data: map[string]interface{}{
 			"password": password,
 		},
@@ -219,8 +220,9 @@ func testUpdatePassword(t *testing.T, user, password string) logicaltest.TestSte
 
 func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "users/" + user + "/policies",
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "users/" + user + "/policies",
 		Data: map[string]interface{}{
 			"policies": policies,
 		},
@@ -229,8 +231,9 @@ func testUpdatePolicies(t *testing.T, user, policies string) logicaltest.TestSte
 
 func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.ListOperation,
-		Path:      "users",
+		IsAuthBackendRequest: true,
+		Operation:            logical.ListOperation,
+		Path:                 "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
 				return fmt.Errorf("got error response: %#v", *resp)
@@ -247,8 +250,9 @@ func testAccStepList(t *testing.T, users []string) logicaltest.TestStep {
 
 func testAccStepLogin(t *testing.T, user string, pass string, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "login/" + user,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login/" + user,
 		Data: map[string]interface{}{
 			"password": pass,
 		},
@@ -262,8 +266,9 @@ func testAccStepLogin(t *testing.T, user string, pass string, policies []string)
 func testUserCreateOperation(
 	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.CreateOperation,
-		Path:      "users/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.CreateOperation,
+		Path:                 "users/" + name,
 		Data: map[string]interface{}{
 			"password": password,
 			"policies": policies,
@@ -274,8 +279,9 @@ func testUserCreateOperation(
 func testAccStepUser(
 	t *testing.T, name string, password string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "users/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "users/" + name,
 		Data: map[string]interface{}{
 			"password": password,
 			"policies": policies,
@@ -285,15 +291,17 @@ func testAccStepUser(
 
 func testAccStepDeleteUser(t *testing.T, n string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.DeleteOperation,
-		Path:      "users/" + n,
+		IsAuthBackendRequest: true,
+		Operation:            logical.DeleteOperation,
+		Path:                 "users/" + n,
 	}
 }
 
 func testAccStepReadUser(t *testing.T, name string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      "users/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.ReadOperation,
+		Path:                 "users/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				if policies == "" {

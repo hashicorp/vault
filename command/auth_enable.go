@@ -26,7 +26,6 @@ type AuthEnableCommand struct {
 	flagAuditNonHMACResponseKeys  []string
 	flagListingVisibility         string
 	flagPassthroughRequestHeaders []string
-	flagPluginName                string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
@@ -52,10 +51,6 @@ Usage: vault auth enable [options] TYPE
   Enable the LDAP auth method at auth-prod/:
 
       $ vault auth enable -path=auth-prod ldap
-
-  Enable a custom auth plugin (after it's registered in the plugin registry):
-
-      $ vault auth enable -path=my-auth -plugin-name=my-auth-plugin plugin
 
 ` + c.Flags().Help()
 
@@ -131,14 +126,6 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 			"will be sent to the backend",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "plugin-name",
-		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
-		Usage: "Name of the auth method plugin. This plugin name must already " +
-			"exist in the Vault server's plugin catalog.",
-	})
-
 	f.StringMapVar(&StringMapVar{
 		Name:       "options",
 		Target:     &c.flagOptions,
@@ -210,11 +197,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	// or use the plugin name if it's a plugin backend
 	authPath := c.flagPath
 	if authPath == "" {
-		if authType == "plugin" {
-			authPath = c.flagPluginName
-		} else {
-			authPath = authType
-		}
+		authPath = authType
 	}
 
 	// Append a trailing slash to indicate it's a path in output
@@ -235,7 +218,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
-			PluginName:      c.flagPluginName,
 		},
 		Options: c.flagOptions,
 	}
@@ -264,11 +246,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		return 2
 	}
 
-	authThing := authType + " auth method"
-	if authType == "plugin" {
-		authThing = c.flagPluginName + " plugin"
-	}
-
-	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
+	c.UI.Output(fmt.Sprintf("Success! Enabled %s auth method at: %s", authType, authPath))
 	return 0
 }

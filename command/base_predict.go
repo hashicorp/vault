@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -329,17 +330,23 @@ func (p *Predict) auths() []string {
 }
 
 // plugins returns a sorted list of the plugins in the catalog.
+// It's used for autocomplete, at which point the plugin type
+// won't yet be known.
 func (p *Predict) plugins() []string {
 	client := p.Client()
 	if client == nil {
 		return nil
 	}
 
-	result, err := client.Sys().ListPlugins(nil)
-	if err != nil {
-		return nil
+	var plugins []string
+	for _, pluginType := range consts.PluginTypes {
+		result, err := client.Sys().ListPlugins(&api.ListPluginsInput{Type: pluginType})
+		if err != nil {
+			return nil
+		}
+		plugins = append(plugins, result.Names...)
 	}
-	plugins := result.Names
+
 	sort.Strings(plugins)
 	return plugins
 }

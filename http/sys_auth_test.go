@@ -31,7 +31,6 @@ func TestSysAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -44,7 +43,6 @@ func TestSysAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -97,7 +95,6 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -109,7 +106,6 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -122,7 +118,6 @@ func TestSysEnableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -134,7 +129,6 @@ func TestSysEnableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -188,7 +182,6 @@ func TestSysDisableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 				},
 				"description": "token based credentials",
 				"type":        "token",
@@ -201,7 +194,6 @@ func TestSysDisableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 			},
 			"description": "token based credentials",
 			"type":        "token",

@@ -476,40 +476,44 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 
 	stepCreate := logicaltest.TestStep{
-		Operation: logical.CreateOperation,
-		Path:      "config/client",
-		Data:      data,
+		IsAuthBackendRequest: true,
+		Operation:            logical.CreateOperation,
+		Path:                 "config/client",
+		Data:                 data,
 	}
 
 	stepUpdate := logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config/client",
-		Data:      data,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "config/client",
+		Data:                 data,
 	}
 
 	data3 := map[string]interface{}{"access_key": "",
 		"secret_key": "mCtSM8ZUEQ3mOFVZYPBQkf2sO6F/W7a5TVzrl3Oj",
 	}
 	stepInvalidAccessKey := logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config/client",
-		Data:      data3,
-		ErrorOk:   true,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "config/client",
+		Data:                 data3,
+		ErrorOk:              true,
 	}
 
 	data4 := map[string]interface{}{"access_key": "accesskey",
 		"secret_key": "",
 	}
 	stepInvalidSecretKey := logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config/client",
-		Data:      data4,
-		ErrorOk:   true,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "config/client",
+		Data:                 data4,
+		ErrorOk:              true,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		Backend:        b,
+		AcceptanceTest:    false,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			stepCreate,
 			stepInvalidAccessKey,

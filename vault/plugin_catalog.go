@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -28,16 +27,18 @@ var (
 // to be registered to the catalog before they can be used in backends. Builtin
 // plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
-	catalogView *BarrierView
-	directory   string
+	builtinRegistry BuiltinRegistry
+	catalogView     *BarrierView
+	directory       string
 
 	lock sync.RWMutex
 }
 
 func (c *Core) setupPluginCatalog() error {
 	c.pluginCatalog = &PluginCatalog{
-		catalogView: NewBarrierView(c.barrier, pluginCatalogPath),
-		directory:   c.pluginDirectory,
+		builtinRegistry: c.builtinRegistry,
+		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
+		directory:       c.pluginDirectory,
 	}
 
 	if c.logger.IsInfo() {
@@ -50,7 +51,7 @@ func (c *Core) setupPluginCatalog() error {
 // Get retrieves a plugin with the specified name from the catalog. It first
 // looks for external plugins with this name and then looks for builtin plugins.
 // It returns a PluginRunner or an error if no plugin was found.
-func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -74,9 +75,10 @@ func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.Plugi
 		}
 	}
 	// Look for builtin plugins
-	if factory, ok := builtinplugins.Get(name); ok {
+	if factory, ok := c.builtinRegistry.Get(name, pluginType); ok {
 		return &pluginutil.PluginRunner{
 			Name:           name,
+			Type:           pluginType,
 			Builtin:        true,
 			BuiltinFactory: factory,
 		}, nil
@@ -87,7 +89,7 @@ func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.Plugi
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, env []string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -120,6 +122,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []st
 
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
+		Type:    pluginType,
 		Command: command,
 		Args:    args,
 		Env:     env,
@@ -153,7 +156,7 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string) error {
 
 // List returns a list of all the known plugin names. If an external and builtin
 // plugin share the same name, only one instance of the name will be returned.
-func (c *PluginCatalog) List(ctx context.Context) ([]string, error) {
+func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) ([]string, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -163,14 +166,17 @@ func (c *PluginCatalog) List(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	// Get the keys for builtin plugins
-	builtinKeys := builtinplugins.Keys()
+	// Get the builtin plugins.
+	builtinKeys := c.builtinRegistry.Keys(pluginType)
 
-	// Use a map to unique the two lists
+	// Use a map to unique the two lists.
 	mapKeys := make(map[string]bool)
 
 	for _, plugin := range keys {
-		mapKeys[plugin] = true
+		// Only list user-added plugins if they're of the given type.
+		if _, err := c.Get(ctx, plugin, pluginType); err == nil {
+			mapKeys[plugin] = true
+		}
 	}
 
 	for _, plugin := range builtinKeys {

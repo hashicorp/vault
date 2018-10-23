@@ -33,15 +33,18 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
+	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/mitchellh/go-testing-interface"
 
 	physInmem "github.com/hashicorp/vault/physical/inmem"
@@ -113,17 +116,19 @@ func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	conf := &CoreConfig{
-		Seal:      testSeal,
-		EnableUI:  false,
-		EnableRaw: enableRaw,
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
 
 func TestCoreUI(t testing.T, enableUI bool) *Core {
 	conf := &CoreConfig{
-		EnableUI:  enableUI,
-		EnableRaw: true,
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -176,6 +181,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		b := new(framework.Backend)
 		b.Setup(ctx, config)
+		b.BackendType = logical.TypeCredential
 		return b, nil
 	}
 	noopBackends["http"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
@@ -207,6 +213,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	return conf
@@ -348,7 +355,7 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
-func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string, env []string, tempDir string) {
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -410,7 +417,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string, env []string
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, fileName, args, env, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, pluginType, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +645,7 @@ func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) erro
 }
 
 func (n *rawHTTP) Type() logical.BackendType {
-	return logical.TypeUnknown
+	return logical.TypeLogical
 }
 
 func GenerateRandBytes(length int) ([]byte, error) {
@@ -1176,6 +1183,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		DisableMlock:       true,
 		EnableUI:           true,
 		EnableRaw:          true,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1191,6 +1199,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSealWrap = base.DisableSealWrap
 		coreConfig.DevLicenseDuration = base.DevLicenseDuration
 		coreConfig.DisableCache = base.DisableCache
+		if base.BuiltinRegistry != nil {
+			coreConfig.BuiltinRegistry = base.BuiltinRegistry
+		}
 
 		if !coreConfig.DisableMlock {
 			base.DisableMlock = false
@@ -1471,4 +1482,57 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
 
 	return &testCluster
+}
+
+func NewMockBuiltinRegistry() *mockBuiltinRegistry {
+	return &mockBuiltinRegistry{
+		forTesting: map[string]consts.PluginType{
+			"mysql-database-plugin":      consts.PluginTypeDatabase,
+			"postgresql-database-plugin": consts.PluginTypeDatabase,
+		},
+	}
+}
+
+type mockBuiltinRegistry struct {
+	forTesting map[string]consts.PluginType
+}
+
+func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
+	testPluginType, ok := m.forTesting[name]
+	if !ok {
+		return nil, false
+	}
+	if pluginType != testPluginType {
+		return nil, false
+	}
+	if name == "postgresql-database-plugin" {
+		return dbPostgres.New, true
+	}
+	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+}
+
+// Keys only supports getting a realistic list of the keys for database plugins.
+func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
+	if pluginType != consts.PluginTypeDatabase {
+		return []string{}
+	}
+	/*
+		This is a hard-coded reproduction of the db plugin keys in helper/builtinplugins/registry.go.
+		The registry isn't directly used because it causes import cycles.
+	*/
+	return []string{
+		"mysql-database-plugin",
+		"mysql-aurora-database-plugin",
+		"mysql-rds-database-plugin",
+		"mysql-legacy-database-plugin",
+		"postgresql-database-plugin",
+		"mssql-database-plugin",
+		"cassandra-database-plugin",
+		"mongodb-database-plugin",
+		"hana-database-plugin",
+	}
+}
+
+func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	return false
 }

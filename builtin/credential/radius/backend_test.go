@@ -112,7 +112,7 @@ func TestBackend_Config(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
 		// PreCheck:       func() { testAccPreCheck(t) },
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, configDataBasic, false),
 			testConfigWrite(t, configDataMissingRequired, true),
@@ -135,7 +135,7 @@ func TestBackend_users(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testStepUpdateUser(t, "web", "foo"),
 			testStepUpdateUser(t, "web2", "foo"),
@@ -210,9 +210,9 @@ func TestBackend_acceptance(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend:        b,
-		PreCheck:       testAccPreCheck(t, host, port),
-		AcceptanceTest: true,
+		CredentialBackend: b,
+		PreCheck:          testAccPreCheck(t, host, port),
+		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
 			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),
@@ -255,24 +255,27 @@ func testAccPreCheck(t *testing.T, host string, port int) func() {
 
 func testConfigWrite(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Data:      d,
-		ErrorOk:   expectError,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "config",
+		Data:                 d,
+		ErrorOk:              expectError,
 	}
 }
 
 func testAccStepDeleteUser(t *testing.T, n string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.DeleteOperation,
-		Path:      "users/" + n,
+		IsAuthBackendRequest: true,
+		Operation:            logical.DeleteOperation,
+		Path:                 "users/" + n,
 	}
 }
 
 func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.ListOperation,
-		Path:      "users",
+		IsAuthBackendRequest: true,
+		Operation:            logical.ListOperation,
+		Path:                 "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
 				return fmt.Errorf("got error response: %#v", *resp)
@@ -289,8 +292,9 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 func testStepUpdateUser(
 	t *testing.T, name string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "users/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "users/" + name,
 		Data: map[string]interface{}{
 			"policies": policies,
 		},
@@ -299,21 +303,23 @@ func testStepUpdateUser(
 
 func testAccUserLogin(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.UpdateOperation,
-		Path:            "login/" + user,
-		Data:            data,
-		ErrorOk:         expectError,
-		Unauthenticated: true,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login/" + user,
+		Data:                 data,
+		ErrorOk:              expectError,
+		Unauthenticated:      true,
 	}
 }
 
 func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface{}, policies []string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.UpdateOperation,
-		Path:            "login/" + user,
-		Data:            data,
-		ErrorOk:         expectError,
-		Unauthenticated: true,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login/" + user,
+		Data:                 data,
+		ErrorOk:              expectError,
+		Unauthenticated:      true,
 		//Check:           logicaltest.TestCheckAuth(policies),
 		Check: func(resp *logical.Response) error {
 			res := logicaltest.TestCheckAuth(policies)(resp)

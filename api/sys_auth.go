@@ -82,7 +82,6 @@ type EnableAuthOptions struct {
 	Description string            `json:"description"`
 	Config      AuthConfigInput   `json:"config"`
 	Local       bool              `json:"local"`
-	PluginName  string            `json:"plugin_name,omitempty"`
 	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	Options     map[string]string `json:"options" mapstructure:"options"`
 }
@@ -90,7 +89,6 @@ type EnableAuthOptions struct {
 type AuthConfigInput struct {
 	DefaultLeaseTTL           string   `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               string   `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
@@ -110,7 +108,6 @@ type AuthMount struct {
 type AuthConfigOutput struct {
 	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`

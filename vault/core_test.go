@@ -628,8 +628,9 @@ func TestCore_HandleRequest_NoClientToken(t *testing.T) {
 
 func TestCore_HandleRequest_ConnOnLogin(t *testing.T) {
 	noop := &NoopBackend{
-		Login:    []string{"login"},
-		Response: &logical.Response{},
+		Login:       []string{"login"},
+		Response:    &logical.Response{},
+		BackendType: logical.TypeCredential,
 	}
 	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -671,6 +672,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 				DisplayName: "armon",
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -912,6 +914,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 				},
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -1771,6 +1774,7 @@ func TestCore_HandleRequest_Login_InternalData(t *testing.T) {
 				},
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 
 	c, _, root := TestCoreUnsealed(t)
@@ -1859,6 +1863,7 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 				Policies: []string{"foo", "bar"},
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -2009,6 +2014,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 				Policies: []string{"root"},
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 
 	c, _, root := TestCoreUnsealed(t)

@@ -151,8 +151,8 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -178,8 +178,8 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -208,7 +208,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -249,7 +249,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -290,7 +290,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -331,7 +331,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -1986,8 +1986,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber:          big.NewInt(1234),
-		IsCA:                  false,
+		SerialNumber: big.NewInt(1234),
+		IsCA:         false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2017,8 +2017,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber:          big.NewInt(2345),
-		IsCA:                  true,
+		SerialNumber: big.NewInt(2345),
+		IsCA:         true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2600,7 +2600,7 @@ func setCerts() {
 		SerialNumber:          big.NewInt(mathrand.Int63()),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA:                  true,
+		IsCA: true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {

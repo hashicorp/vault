@@ -1930,6 +1930,7 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 				},
 			},
 		},
+		BackendType: logical.TypeLogical,
 	}
 
 	err := be.Setup(namespace.TestContext(), conf)

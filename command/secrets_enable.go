@@ -27,7 +27,6 @@ type SecretsEnableCommand struct {
 	flagListingVisibility         string
 	flagPassthroughRequestHeaders []string
 	flagForceNoCache              bool
-	flagPluginName                string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
@@ -60,10 +59,6 @@ Usage: vault secrets enable [options] TYPE
   Enable the database secrets engine with an explicit maximum TTL of 30m:
 
       $ vault secrets enable -max-lease-ttl=30m database
-
-  Enable a custom plugin (after it is registered in the plugin registry):
-
-      $ vault secrets enable -path=my-secrets -plugin-name=my-plugin plugin
 
   For a full list of secrets engines and examples, please see the documentation.
 
@@ -148,14 +143,6 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 			"This does not affect caching of the underlying encrypted data storage.",
 	})
 
-	f.StringVar(&StringVar{
-		Name:       "plugin-name",
-		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
-		Usage: "Name of the secrets engine plugin. This plugin name must already " +
-			"exist in Vault's plugin catalog.",
-	})
-
 	f.StringMapVar(&StringMapVar{
 		Name:       "options",
 		Target:     &c.flagOptions,
@@ -228,11 +215,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 	// or use the plugin name if it's a plugin backend
 	mountPath := c.flagPath
 	if mountPath == "" {
-		if engineType == "plugin" {
-			mountPath = c.flagPluginName
-		} else {
-			mountPath = engineType
-		}
+		mountPath = engineType
 	}
 
 	if c.flagVersion > 0 {
@@ -255,7 +238,6 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
 			ForceNoCache:    c.flagForceNoCache,
-			PluginName:      c.flagPluginName,
 		},
 		Options: c.flagOptions,
 	}
@@ -284,11 +266,6 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		return 2
 	}
 
-	thing := engineType + " secrets engine"
-	if engineType == "plugin" {
-		thing = c.flagPluginName + " plugin"
-	}
-
-	c.UI.Output(fmt.Sprintf("Success! Enabled the %s at: %s", thing, mountPath))
+	c.UI.Output(fmt.Sprintf("Success! Enabled the %s secrets engine at: %s", engineType, mountPath))
 	return 0
 }

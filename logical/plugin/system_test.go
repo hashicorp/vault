@@ -150,7 +150,7 @@ func TestSystem_lookupPlugin(t *testing.T) {
 
 	testSystemView := &SystemViewClient{client: client}
 
-	if _, err := testSystemView.LookupPlugin(context.Background(), "foo"); err == nil {
+	if _, err := testSystemView.LookupPlugin(context.Background(), "foo", consts.PluginTypeDatabase); err == nil {
 		t.Fatal("LookPlugin(): expected error on due to unsupported call from plugin")
 	}
 }

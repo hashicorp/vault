@@ -270,12 +270,16 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 func (b *SystemBackend) pluginsCatalogPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "plugins/catalog/(?P<name>.+)",
+		Pattern: "plugins/catalog/(?P<type>auth|database|secret)/(?P<name>.+)",
 
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
+			},
+			"type": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
 			},
 			"sha256": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -336,9 +340,14 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 
 func (b *SystemBackend) pluginsCatalogListPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "plugins/catalog/?$",
+		Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
 
-		Fields: map[string]*framework.FieldSchema{},
+		Fields: map[string]*framework.FieldSchema{
+			"type": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
+			},
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.handlePluginCatalogList,
@@ -461,7 +470,7 @@ func (b *SystemBackend) internalUIPaths() []*framework.Path {
 				logical.ReadOperation: b.pathInternalUIResultantACL,
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal -ui-resultant-acl"][1]),
 		},
 	}
 }
@@ -803,10 +812,6 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
 				},
-				"plugin_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
-				},
 				"options": &framework.FieldSchema{
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
@@ -1050,10 +1055,6 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
-				},
-				"plugin_name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
 				},
 				"options": &framework.FieldSchema{
 					Type:        framework.TypeKVPairs,

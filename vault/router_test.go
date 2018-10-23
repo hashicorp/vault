@@ -29,6 +29,7 @@ type NoopBackend struct {
 	Invalidations   []string
 	DefaultLeaseTTL time.Duration
 	MaxLeaseTTL     time.Duration
+	BackendType     logical.BackendType
 }
 
 func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -104,7 +105,10 @@ func (n *NoopBackend) Initialize(ctx context.Context) error {
 }
 
 func (n *NoopBackend) Type() logical.BackendType {
-	return logical.TypeLogical
+	if n.BackendType == logical.TypeUnknown {
+		return logical.TypeLogical
+	}
+	return n.BackendType
 }
 
 func TestRouter_Mount(t *testing.T) {

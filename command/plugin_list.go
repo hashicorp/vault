@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -23,14 +24,15 @@ func (c *PluginListCommand) Synopsis() string {
 
 func (c *PluginListCommand) Help() string {
 	helpText := `
-Usage: vault plugin list [options]
+Usage: vault plugin list [options] TYPE
 
   Lists available plugins registered in the catalog. This does not list whether
-  plugins are in use, but rather just their availability.
+  plugins are in use, but rather just their availability. The last argument of
+  type takes "auth", "database", or "secret".
 
-  List all available plugins in the catalog:
+  List all available database plugins in the catalog:
 
-      $ vault plugin list
+      $ vault plugin list database
 
 ` + c.Flags().Help()
 
@@ -58,9 +60,19 @@ func (c *PluginListCommand) Run(args []string) int {
 	}
 
 	args = f.Args()
-	if len(args) > 0 {
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
+	switch {
+	case len(args) < 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
+	case len(args) > 1:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[0]))
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
+		return 2
 	}
 
 	client, err := c.Client()
@@ -69,7 +81,9 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 2
 	}
 
-	resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{})
+	resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+		Type: pluginType,
+	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing available plugins: %s", err))
 		return 2

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
@@ -32,9 +33,9 @@ type Database interface {
 
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
-func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
+func PluginFactory(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName)
+	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
 	if err != nil {
 		return nil, err
 	}

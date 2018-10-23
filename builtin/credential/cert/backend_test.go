@@ -220,7 +220,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Sign the intermediate CSR using /pki
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
-		"csr":                   intermediateCSR,
+		"csr": intermediateCSR,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -840,7 +840,7 @@ func TestBackend_CertWrites(t *testing.T) {
 	}
 
 	tc := logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "aaa", ca1, "foo", allowed{}, false),
 			testAccStepCert(t, "bbb", ca2, "foo", allowed{}, false),
@@ -863,7 +863,7 @@ func TestBackend_basic_CA(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -898,7 +898,7 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
@@ -923,7 +923,7 @@ func TestBackend_basic_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -948,7 +948,7 @@ func TestBackend_common_name_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -977,7 +977,7 @@ func TestBackend_ext_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{ext: "2.1.1.1:A UTF8String Extension"}, false),
 			testAccStepLogin(t, connState),
@@ -1032,7 +1032,7 @@ func TestBackend_dns_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLogin(t, connState),
@@ -1063,7 +1063,7 @@ func TestBackend_email_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "valid@example.com"}, false),
 			testAccStepLogin(t, connState),
@@ -1094,7 +1094,7 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering"}, false),
 			testAccStepLogin(t, connState),
@@ -1123,7 +1123,7 @@ func TestBackend_uri_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{uris: "spiffe://example.com/*"}, false),
 			testAccStepLogin(t, connState),
@@ -1151,7 +1151,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "1unconstrained", ca, "foo", allowed{}, false),
 			testAccStepCert(t, "2matching", ca, "foo", allowed{names: "*.example.com,whatever"}, false),
@@ -1172,7 +1172,7 @@ func TestBackend_untrusted(t *testing.T) {
 		t.Fatalf("error testing connection state: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepLoginInvalid(t, connState),
 		},
@@ -1307,9 +1307,10 @@ func TestBackend_invalidCIDR(t *testing.T) {
 
 func testAccStepAddCRL(t *testing.T, crl []byte, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "crls/test",
-		ConnState: &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "crls/test",
+		ConnState:            &connState,
 		Data: map[string]interface{}{
 			"crl": crl,
 		},
@@ -1318,9 +1319,10 @@ func testAccStepAddCRL(t *testing.T, crl []byte, connState tls.ConnectionState) 
 
 func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.ReadOperation,
-		Path:      "crls/test",
-		ConnState: &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.ReadOperation,
+		Path:                 "crls/test",
+		ConnState:            &connState,
 		Check: func(resp *logical.Response) error {
 			crlInfo := CRLInfo{}
 			err := mapstructure.Decode(resp.Data, &crlInfo)
@@ -1340,9 +1342,10 @@ func testAccStepReadCRL(t *testing.T, connState tls.ConnectionState) logicaltest
 
 func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.DeleteOperation,
-		Path:      "crls/test",
-		ConnState: &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.DeleteOperation,
+		Path:                 "crls/test",
+		ConnState:            &connState,
 	}
 }
 
@@ -1352,10 +1355,11 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 
 func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.UpdateOperation,
-		Path:            "login",
-		Unauthenticated: true,
-		ConnState:       &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login",
+		Unauthenticated:      true,
+		ConnState:            &connState,
 		Check: func(resp *logical.Response) error {
 			if resp.Auth.TTL != 1000*time.Second {
 				t.Fatalf("bad lease length: %#v", resp.Auth)
@@ -1376,10 +1380,11 @@ func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certN
 
 func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.UpdateOperation,
-		Path:            "login",
-		Unauthenticated: true,
-		ConnState:       &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login",
+		Unauthenticated:      true,
+		ConnState:            &connState,
 		Check: func(resp *logical.Response) error {
 			if resp.Auth.TTL != 1000*time.Second {
 				t.Fatalf("bad lease length: %#v", resp.Auth)
@@ -1397,10 +1402,11 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 
 func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation:       logical.UpdateOperation,
-		Path:            "login",
-		Unauthenticated: true,
-		ConnState:       &connState,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "login",
+		Unauthenticated:      true,
+		ConnState:            &connState,
 		Check: func(resp *logical.Response) error {
 			if resp.Auth != nil {
 				return fmt.Errorf("should not be authorized: %#v", resp)
@@ -1418,8 +1424,9 @@ func testAccStepListCerts(
 	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
 		logicaltest.TestStep{
-			Operation: logical.ListOperation,
-			Path:      "certs",
+			IsAuthBackendRequest: true,
+			Operation:            logical.ListOperation,
+			Path:                 "certs",
 			Check: func(resp *logical.Response) error {
 				if resp == nil {
 					return fmt.Errorf("nil response")
@@ -1437,8 +1444,9 @@ func testAccStepListCerts(
 				return nil
 			},
 		}, logicaltest.TestStep{
-			Operation: logical.ListOperation,
-			Path:      "certs/",
+			IsAuthBackendRequest: true,
+			Operation:            logical.ListOperation,
+			Path:                 "certs/",
 			Check: func(resp *logical.Response) error {
 				if resp == nil {
 					return fmt.Errorf("nil response")
@@ -1473,9 +1481,10 @@ type allowed struct {
 func testAccStepCert(
 	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "certs/" + name,
-		ErrorOk:   expectError,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "certs/" + name,
+		ErrorOk:              expectError,
 		Data: map[string]interface{}{
 			"certificate":                  string(cert),
 			"policies":                     policies,
@@ -1501,8 +1510,9 @@ func testAccStepCert(
 func testAccStepCertLease(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "certs/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,
@@ -1515,8 +1525,9 @@ func testAccStepCertLease(
 func testAccStepCertTTL(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "certs/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,
@@ -1529,8 +1540,9 @@ func testAccStepCertTTL(
 func testAccStepCertMaxTTL(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "certs/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,
@@ -1544,8 +1556,9 @@ func testAccStepCertMaxTTL(
 func testAccStepCertNoLease(
 	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      "certs/" + name,
+		IsAuthBackendRequest: true,
+		Operation:            logical.UpdateOperation,
+		Path:                 "certs/" + name,
 		Data: map[string]interface{}{
 			"certificate":  string(cert),
 			"policies":     policies,

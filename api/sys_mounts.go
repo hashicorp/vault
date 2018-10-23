@@ -134,7 +134,6 @@ type MountInput struct {
 	Config      MountConfigInput  `json:"config"`
 	Options     map[string]string `json:"options"`
 	Local       bool              `json:"local"`
-	PluginName  string            `json:"plugin_name,omitempty"`
 	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 }
 
@@ -144,7 +143,6 @@ type MountConfigInput struct {
 	Description               *string           `json:"description,omitempty" mapstructure:"description"`
 	MaxLeaseTTL               string            `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool              `json:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string            `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string          `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
@@ -165,7 +163,6 @@ type MountConfigOutput struct {
 	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool     `json:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string   `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`

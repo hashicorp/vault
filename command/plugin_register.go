@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -26,14 +27,15 @@ func (c *PluginRegisterCommand) Synopsis() string {
 
 func (c *PluginRegisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin register [options] NAME
+Usage: vault plugin register [options] NAME TYPE
 
   Registers a new plugin in the catalog. The plugin binary must exist in Vault's
-  configured plugin directory.
+  configured plugin directory. The last argument of type takes "auth", "database",
+  or "secret".
 
   Register the plugin named my-custom-plugin:
 
-      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin
+      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin auth
 
   Register a plugin with custom arguments:
 
@@ -96,10 +98,10 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 
 	args = f.Args()
 	switch {
-	case len(args) < 1:
+	case len(args) < 2:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	case len(args) > 1:
+	case len(args) > 2:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1
 	case c.flagSHA256 == "":
@@ -114,6 +116,11 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	}
 
 	pluginName := strings.TrimSpace(args[0])
+	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[1]))
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
 
 	command := c.flagCommand
 	if command == "" {
@@ -122,6 +129,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    pluginName,
+		Type:    pluginType,
 		Args:    c.flagArgs,
 		Command: command,
 		SHA256:  c.flagSHA256,
