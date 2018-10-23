@@ -38,7 +38,7 @@ The Vault integration development process is described into the steps below. By 
 * Release: Vault integration released</li>
 * Support: Ongoing maintenance and support of the integration by the vendor.</li>
 
-### 1. Engage<
+### 1. Engage
 Please begin by completing Vault Integration Program webform to tell us about your company and the Vault integration you’re interested in.
 
 ### 2. Enable
@@ -62,7 +62,6 @@ Here are links to resources, documentation, examples and best practices to guide
 * [Audit device documentation](https://www.vaultproject.io/docs/audit/index.html)
 
 **HSM Integration**
-
 * [HSM documentation](https://www.vaultproject.io/docs/enterprise/hsm/index.html)
 * [Configuration information](https://www.vaultproject.io/docs/configuration/seal/pkcs11.html)
 
