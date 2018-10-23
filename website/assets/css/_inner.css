@@ -27,9 +27,12 @@
   }
 
   /* TODO: this should be applied in global styles, temporary override here */
-  & pre code,
-  & code,
-  & pre {
+  & pre,
+  & code {
     font-size: 0.875em;
+  }
+
+  & pre code {
+    font-size: 1em;
   }
 }
