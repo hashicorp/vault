@@ -1,9 +1,10 @@
 ---
-layout: "guides"
-page_title: "Partnerships - Vault Integration Program"
-sidebar_current: "guides-partnerships"
+layout: "docs"
+page_title: "Custom Plugin Backends"
+sidebar_title: "Vault Integration Program"
+sidebar_current: "docs-plugin"
 description: |-
-  Guide to partnership integrations and creating plugins for Vault.
+  How to partner with HashiCorp for creating integrations with Vault.
 ---
 
 # Vault Integration Program
