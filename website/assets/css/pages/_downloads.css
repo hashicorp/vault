@@ -1,3 +1,9 @@
+#download-vault {
+  & .content-wrap {
+    margin-bottom: 160px;
+  }
+}
+
 #beta1-1-0 {
   margin-bottom: 40px;
 
