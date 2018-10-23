@@ -67,6 +67,7 @@ func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.F
 	}
 
 	tokenRaw, ok := req.Secret.InternalData["token"]
+	version, ok := req.Secret.InternalData["version"]
 	if !ok {
 		// We return nil here because this is a pre-0.5.3 problem and there is
 		// nothing we can do about it. We already can't revoke the lease
@@ -75,9 +76,18 @@ func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.F
 		return nil, nil
 	}
 
-	_, err := c.ACL().Destroy(tokenRaw.(string), nil)
-	if err != nil {
-		return nil, err
+	if version == "1.3" || version == nil {
+		_, err := c.ACL().Destroy(tokenRaw.(string), nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if version == "1.4" {
+		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

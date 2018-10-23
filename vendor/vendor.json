@@ -1095,10 +1095,10 @@
 			"revisionTime": "2016-01-25T11:53:50Z"
 		},
 		{
-			"checksumSHA1": "PJDKLws64a9Lb00kp9qgyhAD81s=",
+			"checksumSHA1": "pMikh4ir9TYnYGY5C68RetWhAnY=",
 			"path": "github.com/hashicorp/consul/api",
-			"revision": "34e95314827d336e4893aa23ee651b67d320c3ee",
-			"revisionTime": "2018-10-11T20:31:27Z"
+			"revision": "87a2b2020d802cd08e0dbdf53fa7db40ea47d399",
+			"revisionTime": "2018-10-19T20:37:47Z"
 		},
 		{
 			"checksumSHA1": "L/RlKwIgOVgm516yOHXfT4HcGAk=",

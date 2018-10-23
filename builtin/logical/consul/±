@@ -113,15 +113,14 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
 	policies := d.Get("policies").([]string)
-	if len(policies) == 0 {
-		switch tokenType {
-		case "client":
-		case "management":
-		default:
-			return logical.ErrorResponse(
-				"token_type must be \"client\" or \"management\""), nil
-		}
-	}
+  if policy != "" {
+	  switch tokenType {
+	    case "client":
+	    case "management":
+	    default:
+		   return logical.ErrorResponse(
+			  "token_type must be \"client\" or \"management\""), nil
+	  }
 
 	if policy != "" && len(policies) > 0 {
 		return logical.ErrorResponse(
@@ -132,18 +131,16 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 
 	var policyRaw []byte
 	var err error
-	if len(policies) == 0 {
-		if tokenType != "management" {
-			if policy == "" {
-				return logical.ErrorResponse(
-					"policy cannot be empty when not using management tokens"), nil
-			}
+	if tokenType != "management" {
+		if policy == "" {
+			return logical.ErrorResponse(
+				"policy cannot be empty when not using management tokens"), nil
 		}
-	}
-	policyRaw, err = base64.StdEncoding.DecodeString(d.Get("policy").(string))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Error decoding policy base64: %s", err)), nil
+		policyRaw, err = base64.StdEncoding.DecodeString(d.Get("policy").(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error decoding policy base64: %s", err)), nil
+		}
 	}
 
 	var lease time.Duration

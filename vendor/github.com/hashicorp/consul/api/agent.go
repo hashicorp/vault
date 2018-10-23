@@ -314,6 +314,24 @@ func (a *Agent) Self() (map[string]map[string]interface{}, error) {
 	return out, nil
 }
 
+// Host is used to retrieve information about the host the
+// agent is running on such as CPU, memory, and disk. Requires
+// a operator:read ACL token.
+func (a *Agent) Host() (map[string]interface{}, error) {
+	r := a.c.newRequest("GET", "/v1/agent/host")
+	_, resp, err := requireOK(a.c.doRequest(r))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var out map[string]interface{}
+	if err := decodeBody(resp, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Metrics is used to query the agent we are speaking to for
 // its current internal metric data
 func (a *Agent) Metrics() (*MetricsInfo, error) {
