@@ -72,7 +72,6 @@ Here are links to resources, documentation, examples and best practices to guide
 <p><strong>General Vault Plugin Development:</strong></p>
 <ul>
 <li><a href="https://www.vaultproject.io/docs/internals/plugins.html">Plugins documentation</a></li>
-<li><a href="https://www.vaultproject.io/guides/operations/plugin-backends.html">Guide to building Vault plugin backends</a></li>
 <li><a href="https://github.com/hashicorp/vault">Vault's source code</a></li>
 </ul>
 
