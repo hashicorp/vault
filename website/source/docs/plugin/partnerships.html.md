@@ -8,11 +8,9 @@ description: |-
 ---
 
 # Vault Integration Program
-
- The Vault Integration Program (VIP) enables vendors to build integrations with HashiCorp Vault that are officially tested and approved by HashiCorp. The program is intended to be largely self-service, with links to code samples, documentation and clearly defined integration steps.
+The Vault Integration Program (VIP) enables vendors to build integrations with HashiCorp Vault that are officially tested and approved by HashiCorp. The program is intended to be largely self-service, with links to code samples, documentation and clearly defined integration steps.
 
 ## Types of Vault Integrations
-
 By leveraging Vault's plugin system, vendors are able to build extensible secrets, authentication, and audit plugins to extend Vault's functionality. These integrations can be done with the OSS (open-source) version of Vault. Hardware Security Module (HSM) integrations need to be tested against Vault Enterprise since the HSM functionality is only supported in the Vault Enterprise version.
 
 **Authentication Methods**: Auth methods are the components in Vault that perform authentication and are responsible for assigning identity and a set of policies to a user.
