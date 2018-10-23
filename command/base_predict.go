@@ -338,13 +338,23 @@ func (p *Predict) plugins() []string {
 		return nil
 	}
 
-	var plugins []string
+	// Initially place plugin names into a map to de-dupe them.
+	pluginNames := make(map[string]bool)
 	for _, pluginType := range consts.PluginTypes {
 		result, err := client.Sys().ListPlugins(&api.ListPluginsInput{Type: pluginType})
 		if err != nil {
 			return nil
 		}
-		plugins = append(plugins, result.Names...)
+		for _, name := range result.Names {
+			pluginNames[name] = true
+		}
+	}
+
+	plugins := make([]string, len(pluginNames))
+	i := 0
+	for pluginName := range pluginNames {
+		plugins[i] = pluginName
+		i++
 	}
 
 	sort.Strings(plugins)

@@ -1273,7 +1273,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	cores := []*Core{}
 	coreConfigs := []*CoreConfig{}
 	for i := 0; i < numCores; i++ {
-		localConfig := coreConfig.Clone()
+		localConfig := *coreConfig
 		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
 		if localConfig.ClusterAddr != "" {
 			localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
@@ -1290,12 +1290,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
 
-		c, err := NewCore(localConfig)
+		c, err := NewCore(&localConfig)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		cores = append(cores, c)
-		coreConfigs = append(coreConfigs, localConfig)
+		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
 			handlers[i] = opts.HandlerFunc(&HandlerProperties{
 				Core:               c,
