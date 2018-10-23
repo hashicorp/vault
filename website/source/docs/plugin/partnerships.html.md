@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Custom Plugin Backends"
+page_title: "Vault Integration Program"
 sidebar_title: "Vault Integration Program"
 sidebar_current: "docs-plugin"
 description: |-
