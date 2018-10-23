@@ -33,7 +33,8 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 	dockertest.BindDockerToLocalhost = "yep"
 
 	testImagePull.Do(func() {
-		dockertest.Pull(dockertest.ConsulImageName)
+		//dockertest.Pull(dockertest.ConsulImageName)
+		dockertest.Pull("consul:1.3.0")
 	})
 
 	try := 0
