@@ -123,7 +123,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 		}
 	}
 
-	if policy != "" && len(policies) == 0 {
+	if (policy == "" && tokenType != "management") && len(policies) == 0 {
 		return logical.ErrorResponse(
 			"Use either a policy document, or a list of policies, depending on your Consul version"), nil
 	}
