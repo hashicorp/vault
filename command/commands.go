@@ -10,6 +10,7 @@ import (
 	alicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	azure "github.com/hashicorp/vault-plugin-secrets-azure"
 	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	gcpkms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
@@ -131,6 +132,7 @@ var (
 		"consul":     consul.Factory,
 		"database":   database.Factory,
 		"gcp":        gcp.Factory,
+		"gcpkms":     gcpkms.Factory,
 		"kv":         kv.Factory,
 		"mongodb":    mongodb.Factory,
 		"mssql":      mssql.Factory,
