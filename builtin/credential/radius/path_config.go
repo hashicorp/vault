@@ -50,7 +50,7 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "RADIUS NAS Identifier field (optional)",
-				},
+			},
 		},
 
 		ExistenceCheck: b.configExistenceCheck,
