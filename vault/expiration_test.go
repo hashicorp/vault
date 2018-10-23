@@ -180,6 +180,7 @@ func TestExpiration_Tidy(t *testing.T) {
 			Path:        "invalid/lease/" + fmt.Sprintf("%d", i+1),
 			ClientToken: "invalidtoken",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "invalidtoken", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -396,6 +397,7 @@ func TestExpiration_Restore(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobar",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -452,6 +454,7 @@ func TestExpiration_Register(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -539,7 +542,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 	}
 	resp, err := exp.RenewToken(namespace.TestContext(), &logical.Request{}, te, 0)
-	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease not found or lease is not renewable")) {
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease is not renewable")) {
 		t.Fatalf("bad: err:%v resp:%#v", err, resp)
 	}
 	if resp == nil {
@@ -578,6 +581,7 @@ func TestExpiration_Revoke(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -624,6 +628,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -687,6 +692,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobar",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -755,6 +761,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobarbaz",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobarbaz", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -843,6 +850,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobarbaz",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobarbaz", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -1145,6 +1153,7 @@ func TestExpiration_Renew(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1215,6 +1224,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1265,6 +1275,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1407,7 +1418,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err := exp.persistEntry(namespace.TestContext(), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
-	if err := exp.createIndexByToken(namespace.TestContext(), le); err != nil {
+	if err := exp.createIndexByToken(namespace.TestContext(), le, le.ClientToken); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
 	exp.updatePending(le, le.Secret.LeaseTotal())
@@ -1802,6 +1813,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 
 	resp, err := core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
@@ -1850,6 +1862,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 
 	resp, err := core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {

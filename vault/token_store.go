@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	sockaddr "github.com/hashicorp/go-sockaddr"
@@ -31,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/logical/plugin/pb"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -182,6 +185,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 				"bound_cidrs": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+				},
+
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "service",
+					Description: "The type of token to generate, service or batch",
 				},
 			},
 
@@ -473,6 +482,8 @@ type TokenStore struct {
 
 	core *Core
 
+	batchTokenEncryptor BarrierEncryptor
+
 	baseBarrierView     *BarrierView
 	idBarrierView       *BarrierView
 	accessorBarrierView *BarrierView
@@ -515,6 +526,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 	t := &TokenStore{
 		activeContext:         ctx,
 		core:                  core,
+		batchTokenEncryptor:   core.barrier,
 		baseBarrierView:       view,
 		idBarrierView:         view.SubView(idPrefix),
 		accessorBarrierView:   view.SubView(accessorPrefix),
@@ -630,6 +642,9 @@ type tsRoleEntry struct {
 
 	// The set of CIDRs that tokens generated using this role will be bound to
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// The type of token this role should issue
+	TokenType logical.TokenType `json:"token_type" mapstructure:"token_type"`
 }
 
 type accessorEntry struct {
@@ -657,11 +672,16 @@ func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 		return "", err
 	}
 
-	if ns.ID != namespace.RootNamespaceID {
-		return "h" + s.GetHMAC(id), nil
+	// For tokens of older format and belonging to the root namespace, use SHA1
+	// hash for salting.
+	if ns.ID == namespace.RootNamespaceID && !strings.Contains(id, ".") {
+		return s.SaltID(id), nil
 	}
 
-	return s.SaltID(id), nil
+	// For all other tokens, use SHA2-256 HMAC for salting. This includes
+	// tokens of older format, but belonging to a namespace other than the root
+	// namespace.
+	return "h" + s.GetHMAC(id), nil
 }
 
 // rootToken is used to generate a new token with root privileges and no parent
@@ -673,6 +693,7 @@ func (ts *TokenStore) rootToken(ctx context.Context) (*logical.TokenEntry, error
 		DisplayName:  "root",
 		CreationTime: time.Now().Unix(),
 		NamespaceID:  namespace.RootNamespaceID,
+		Type:         logical.TokenTypeService,
 	}
 	if err := ts.create(ctx, te); err != nil {
 		return nil, err
@@ -771,14 +792,6 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 // a newly generated ID if not provided.
 func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) error {
 	defer metrics.MeasureSince([]string{"token", "create"}, time.Now())
-	// Generate an ID if necessary
-	if entry.ID == "" {
-		var err error
-		entry.ID, err = base62.Random(TokenLength, true)
-		if err != nil {
-			return err
-		}
-	}
 
 	tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, ts.core)
 	if err != nil {
@@ -788,30 +801,112 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		return namespace.ErrNoNamespace
 	}
 
-	if tokenNS.ID != namespace.RootNamespaceID {
-		entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
-		if entry.CubbyholeID == "" {
-			cubbyholeID, err := base62.Random(TokenLength, true)
+	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
+
+	switch entry.Type {
+	case logical.TokenTypeDefault, logical.TokenTypeService:
+		// In case it was default, force to service
+		entry.Type = logical.TokenTypeService
+
+		// Generate an ID if necessary
+		userSelectedID := true
+		if entry.ID == "" {
+			userSelectedID = false
+			var err error
+			entry.ID, err = base62.Random(TokenLength, true)
 			if err != nil {
 				return err
 			}
-			entry.CubbyholeID = cubbyholeID
 		}
+
+		if userSelectedID && strings.HasPrefix(entry.ID, "s.") {
+			return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+		}
+
+		if !userSelectedID {
+			entry.ID = fmt.Sprintf("s.%s", entry.ID)
+		}
+
+		// Attach namespace ID for tokens that are not belonging to the root
+		// namespace
+		if tokenNS.ID != namespace.RootNamespaceID {
+			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
+			if entry.CubbyholeID == "" {
+				cubbyholeID, err := base62.Random(TokenLength, true)
+				if err != nil {
+					return err
+				}
+				entry.CubbyholeID = cubbyholeID
+			}
+		}
+
+		// If the user didn't specifically pick the ID, e.g. because they were
+		// sudo/root, check for collision; otherwise trust the process
+		if userSelectedID {
+			exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
+			if exist != nil {
+				return fmt.Errorf("cannot create a token with a duplicate ID")
+			}
+		}
+
+		err = ts.createAccessor(ctx, entry)
+		if err != nil {
+			return err
+		}
+
+		return ts.storeCommon(ctx, entry, true)
+
+	case logical.TokenTypeBatch:
+		// Ensure fields we don't support/care about are nilled, proto marshal,
+		// encrypt, skip persistence
+		entry.ID = ""
+		pEntry := &pb.TokenEntry{
+			Parent:       entry.Parent,
+			Policies:     entry.Policies,
+			Path:         entry.Path,
+			Meta:         entry.Meta,
+			DisplayName:  entry.DisplayName,
+			CreationTime: entry.CreationTime,
+			TTL:          int64(entry.TTL),
+			Role:         entry.Role,
+			EntityID:     entry.EntityID,
+			NamespaceID:  entry.NamespaceID,
+			Type:         uint32(entry.Type),
+		}
+
+		boundCIDRs := make([]string, len(entry.BoundCIDRs))
+		for i, cidr := range entry.BoundCIDRs {
+			boundCIDRs[i] = cidr.String()
+		}
+		pEntry.BoundCIDRs = boundCIDRs
+
+		mEntry, err := proto.Marshal(pEntry)
+		if err != nil {
+			return err
+		}
+
+		eEntry, err := ts.batchTokenEncryptor.Encrypt(ctx, "", mEntry)
+		if err != nil {
+			return err
+		}
+
+		bEntry := base64.RawURLEncoding.EncodeToString(eEntry)
+		entry.ID = fmt.Sprintf("b.%s", bEntry)
+
+		if tokenNS.ID != namespace.RootNamespaceID {
+			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
+		}
+
+		return nil
+
+	default:
+		return fmt.Errorf("cannot create a token of type %d", entry.Type)
 	}
 
-	exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
-	if exist != nil {
-		return fmt.Errorf("cannot create a token with a duplicate ID")
-	}
-
-	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
-
-	err = ts.createAccessor(ctx, entry)
-	if err != nil {
-		return err
-	}
-
-	return ts.storeCommon(ctx, entry, true)
+	return errors.New("unreachable code")
 }
 
 // Store is used to store an updated token entry without writing the
@@ -975,6 +1070,11 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
 
+	// If it starts with "b." it's a batch token
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
+		return ts.lookupBatchToken(ctx, id)
+	}
+
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -982,8 +1082,8 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	return ts.lookupInternal(ctx, id, false, false)
 }
 
-// lookupTainted is used to find a token that may or maynot be tainted given its
-// ID. It acquires a read lock, then calls lookupInternal.
+// lookupTainted is used to find a token that may or may not be tainted given
+// its ID. It acquires a read lock, then calls lookupInternal.
 func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
 	if id == "" {
@@ -997,6 +1097,48 @@ func (ts *TokenStore) lookupTainted(ctx context.Context, id string) (*logical.To
 	return ts.lookupInternal(ctx, id, false, true)
 }
 
+func (ts *TokenStore) lookupBatchToken(ctx context.Context, id string) (*logical.TokenEntry, error) {
+	// Strip the b. from the front and namespace ID from the back
+	bEntry, _ := namespace.SplitIDFromString(id[2:])
+
+	eEntry, err := base64.RawURLEncoding.DecodeString(bEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	mEntry, err := ts.batchTokenEncryptor.Decrypt(ctx, "", eEntry)
+	if err != nil {
+		return nil, nil
+	}
+
+	pEntry := new(pb.TokenEntry)
+	if err := proto.Unmarshal(mEntry, pEntry); err != nil {
+		return nil, err
+	}
+
+	te, err := pb.ProtoTokenEntryToLogicalTokenEntry(pEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	if time.Now().After(time.Unix(te.CreationTime, 0).Add(te.TTL)) {
+		return nil, nil
+	}
+
+	if te.Parent != "" {
+		pte, err := ts.Lookup(ctx, te.Parent)
+		if err != nil {
+			return nil, err
+		}
+		if pte == nil {
+			return nil, nil
+		}
+	}
+
+	te.ID = id
+	return te, nil
+}
+
 // lookupInternal is used to find a token given its (possibly salted) ID. If
 // tainted is true, entries that are in some revocation state (currently,
 // indicated by num uses < 0), the entry will be returned anyways
@@ -1004,6 +1146,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to find namespace in context: {{err}}", err)
+	}
+
+	// If it starts with "b." it's a batch token
+	if len(id) > 2 && strings.HasPrefix(id, "b.") {
+		return ts.lookupBatchToken(ctx, id)
 	}
 
 	var raw *logical.StorageEntry
@@ -1061,6 +1208,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 
 	if entry.NamespaceID == "" {
 		entry.NamespaceID = namespace.RootNamespaceID
+	}
+
+	// This will be the upgrade case
+	if entry.Type == logical.TokenTypeDefault {
+		entry.Type = logical.TokenTypeService
 	}
 
 	persistNeeded := false
@@ -1488,6 +1640,15 @@ func (ts *TokenStore) revokeTreeInternal(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (c *Core) IsBatchTokenCreationRequest(ctx context.Context, path string) (bool, error) {
+	name := strings.TrimPrefix(path, "auth/token/create/")
+	roleEntry, err := c.tokenStore.tokenStoreRole(ctx, name)
+	if err != nil {
+		return false, err
+	}
+	return roleEntry.TokenType == logical.TokenTypeBatch, nil
 }
 
 // handleCreateAgainstRole handles the auth/token/create path for a role
@@ -1924,6 +2085,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if parent == nil {
 		return logical.ErrorResponse("parent token lookup failed: no parent found"), logical.ErrInvalidRequest
 	}
+	if parent.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot create more tokens"), nil
+	}
 
 	// A token with a restricted number of uses cannot create a new token
 	// otherwise it could escape the restriction count.
@@ -1949,6 +2113,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		DisplayName     string `mapstructure:"display_name"`
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
+		Type            string `mapstructure:"type"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -1982,6 +2147,56 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	renewable := true
+	if data.Renewable != nil {
+		renewable = *data.Renewable
+	}
+
+	tokenType := logical.TokenTypeService
+	tokenTypeStr := data.Type
+	if role != nil {
+		switch role.TokenType {
+		case logical.TokenTypeDefault, logical.TokenTypeService:
+			tokenTypeStr = logical.TokenTypeService.String()
+		case logical.TokenTypeBatch:
+			tokenTypeStr = logical.TokenTypeBatch.String()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("role being used for token creation contains invalid token type %q", role.TokenType.String())), nil
+		}
+	}
+	switch tokenTypeStr {
+	case "", "service":
+	case "batch":
+		var badReason string
+		switch {
+		case data.ExplicitMaxTTL != "":
+			dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
+			if err != nil {
+				return logical.ErrorResponse(`"explicit_max_ttl" value could not be parsed`), nil
+			}
+			if dur != 0 {
+				badReason = "explicit_max_ttl"
+			}
+		case data.NumUses != 0:
+			badReason = "num_uses"
+		case data.Period != "":
+			dur, err := parseutil.ParseDurationSecond(data.Period)
+			if err != nil {
+				return logical.ErrorResponse(`"period" value could not be parsed`), nil
+			}
+			if dur != 0 {
+				badReason = "period"
+			}
+		}
+		if badReason != "" {
+			return logical.ErrorResponse(fmt.Sprintf("batch tokens cannot have %q set", badReason)), nil
+		}
+		tokenType = logical.TokenTypeBatch
+		renewable = false
+	default:
+		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
+	}
+
 	// Verify the number of uses is positive
 	if data.NumUses < 0 {
 		return logical.ErrorResponse("number of uses cannot be negative"),
@@ -2002,11 +2217,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses:      data.NumUses,
 		CreationTime: time.Now().Unix(),
 		NamespaceID:  ns.ID,
-	}
-
-	renewable := true
-	if data.Renewable != nil {
-		renewable = *data.Renewable
+		Type:         tokenType,
 	}
 
 	// If the role is not nil, we add the role name as part of the token's
@@ -2169,10 +2380,17 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	// Prevent attempts to create a root token without an actual root token as parent.
-	// This is to thwart privilege escalation by tokens having 'sudo' privileges.
-	if strutil.StrListContains(data.Policies, "root") && !strutil.StrListContains(parent.Policies, "root") {
-		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
+	if strutil.StrListContains(te.Policies, "root") {
+		// Prevent attempts to create a root token without an actual root token as parent.
+		// This is to thwart privilege escalation by tokens having 'sudo' privileges.
+		if !strutil.StrListContains(parent.Policies, "root") {
+			return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
+		}
+
+		if te.Type == logical.TokenTypeBatch {
+			// Batch tokens cannot be revoked so we should never have root batch tokens
+			return logical.ErrorResponse("batch tokens cannot be root tokens"), nil
+		}
 	}
 
 	//
@@ -2208,7 +2426,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// At this point, it is clear whether the token is going to be an orphan or
 	// not. If the token is not going to be an orphan, inherit the parent's
-	// entity identifier into the child token.
+	// entity identifier into the child token. We must also verify that, if
+	// it's not an orphan, the parent isn't a batch token.
 	if te.Parent != "" {
 		te.EntityID = parent.EntityID
 	}
@@ -2269,8 +2488,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = dur
 	}
 
-	// Set the lesser period/explicit max TTL if defined both in arguments and in role
-	if role != nil {
+	// Set the lesser period/explicit max TTL if defined both in arguments and
+	// in role. Batch tokens will error out if not set via role, but here we
+	// need to explicitly check
+	if role != nil && te.Type != logical.TokenTypeBatch {
 		if role.ExplicitMaxTTL != 0 {
 			switch {
 			case explicitMaxTTLToUse == 0:
@@ -2324,6 +2545,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.BoundCIDRs = nil
 	}
 
+	if te.ID != "" {
+		resp.AddWarning("Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups.")
+	}
+
 	// Create the token
 	if err := ts.create(ctx, &te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -2345,6 +2570,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		Period:         periodToUse,
 		ExplicitMaxTTL: explicitMaxTTLToUse,
 		CreationPath:   te.Path,
+		TokenType:      te.Type,
 	}
 
 	for _, p := range te.Policies {
@@ -2364,34 +2590,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	te, err := ts.Lookup(ctx, req.ClientToken)
-	if err != nil {
-		return nil, err
-	}
-	if te == nil {
-		return nil, nil
-	}
-
-	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-	if err != nil {
-		return nil, err
-	}
-	if tokenNS == nil {
-		return nil, namespace.ErrNoNamespace
-	}
-
-	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
-	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ts.expiration.Revoke(revokeCtx, leaseID)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return ts.revokeCommon(ctx, req, data, req.ClientToken)
 }
 
 // handleRevokeTree handles the auth/token/revoke/id path for revocation of tokens
@@ -2408,12 +2607,30 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		urltoken = true
 	}
 
+	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
+		return resp, err
+	}
+
+	if urltoken {
+		resp := &logical.Response{}
+		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+		return resp, nil
+	}
+
+	return nil, nil
+}
+
+func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if te == nil {
 		return nil, nil
+	}
+
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be revoked"), nil
 	}
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
@@ -2433,12 +2650,6 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 	err = ts.expiration.Revoke(revokeCtx, leaseID)
 	if err != nil {
 		return nil, err
-	}
-
-	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
 	}
 
 	return nil, nil
@@ -2475,6 +2686,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	}
 	if te == nil {
 		return logical.ErrorResponse("token to revoke not found"), logical.ErrInvalidRequest
+	}
+
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be revoked"), nil
 	}
 
 	// Revoke and orphan
@@ -2545,6 +2760,7 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
 			"entity_id":        out.EntityID,
+			"type":             out.Type.String(),
 		},
 	}
 
@@ -2645,8 +2861,14 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("token not found"), logical.ErrInvalidRequest
 	}
 
+	var resp *logical.Response
+
+	if te.Type == logical.TokenTypeBatch {
+		return logical.ErrorResponse("batch tokens cannot be renewed"), nil
+	}
+
 	// Renew the token and its children
-	resp, err := ts.expiration.RenewToken(ctx, req, te, increment)
+	resp, err = ts.expiration.RenewToken(ctx, req, te, increment)
 
 	if urltoken {
 		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
@@ -2761,6 +2983,7 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"orphan":              role.Orphan,
 			"path_suffix":         role.PathSuffix,
 			"renewable":           role.Renewable,
+			"token_type":          role.TokenType.String(),
 		},
 	}
 
@@ -2896,6 +3119,38 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
 	} else if req.Operation == logical.CreateOperation {
 		entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+	}
+
+	tokenType := entry.TokenType
+	tokenTypeRaw, ok := data.GetOk("token_type")
+	if ok {
+		tokenTypeStr := tokenTypeRaw.(string)
+		switch tokenTypeStr {
+		case "", "service":
+			tokenType = logical.TokenTypeService
+		case "batch":
+			tokenType = logical.TokenTypeBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenTypeStr)), nil
+		}
+	} else if req.Operation == logical.CreateOperation {
+		tokenType = logical.TokenTypeService
+	}
+	entry.TokenType = tokenType
+
+	if entry.TokenType == logical.TokenTypeBatch {
+		if !entry.Orphan {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate non-orphan tokens"), nil
+		}
+		if entry.Period != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
+		}
+		if entry.Renewable {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate renewable tokens"), nil
+		}
+		if entry.ExplicitMaxTTL != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with an explicit max TTL"), nil
+		}
 	}
 
 	ns, err := namespace.FromContext(ctx)

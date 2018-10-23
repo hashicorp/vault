@@ -54,7 +54,7 @@ import (
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
-const migrationLock = "core/migration"
+const storageMigrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -465,7 +465,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Prevent server startup if migration is active
-	if c.migrationActive(backend) {
+	if c.storageMigrationActive(backend) {
 		return 1
 	}
 
@@ -901,8 +901,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		Core: core,
 	}))
 
-	err = core.UnsealWithStoredKeys(context.Background())
-	if err != nil {
+	// Before unsealing with stored keys, setup seal migration if needed
+	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
 			return 1
@@ -1786,13 +1791,13 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 	return os.Remove(pidPath)
 }
 
-// migrationActive checks and warns against in-progress storage migrations.
+// storageMigrationActive checks and warns against in-progress storage migrations.
 // This function will block until storage is available.
-func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
+func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 	first := true
 
 	for {
-		migrationStatus, err := CheckMigration(backend)
+		migrationStatus, err := CheckStorageMigration(backend)
 		if err == nil {
 			if migrationStatus != nil {
 				startTime := migrationStatus.Start.Format(time.RFC3339)
@@ -1805,12 +1810,12 @@ func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
 		}
 		if first {
 			first = false
-			c.UI.Warn("\nWARNING! Unable to read migration status.")
+			c.UI.Warn("\nWARNING! Unable to read storage migration status.")
 
 			// unexpected state, so stop buffering log messages
 			c.logGate.Flush()
 		}
-		c.logger.Warn("migration check error", "error", err.Error())
+		c.logger.Warn("storage migration check error", "error", err.Error())
 
 		select {
 		case <-time.After(2 * time.Second):
@@ -1821,12 +1826,12 @@ func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
 	return false
 }
 
-type MigrationStatus struct {
+type StorageMigrationStatus struct {
 	Start time.Time `json:"start"`
 }
 
-func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
-	entry, err := b.Get(context.Background(), migrationLock)
+func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) {
+	entry, err := b.Get(context.Background(), storageMigrationLock)
 
 	if err != nil {
 		return nil, err
@@ -1836,7 +1841,7 @@ func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
 		return nil, nil
 	}
 
-	var status MigrationStatus
+	var status StorageMigrationStatus
 	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
 		return nil, err
 	}
@@ -1844,12 +1849,12 @@ func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
 	return &status, nil
 }
 
-func SetMigration(b physical.Backend, active bool) error {
+func SetStorageMigration(b physical.Backend, active bool) error {
 	if !active {
-		return b.Delete(context.Background(), migrationLock)
+		return b.Delete(context.Background(), storageMigrationLock)
 	}
 
-	status := MigrationStatus{
+	status := StorageMigrationStatus{
 		Start: time.Now(),
 	}
 
@@ -1859,7 +1864,7 @@ func SetMigration(b physical.Backend, active bool) error {
 	}
 
 	entry := &physical.Entry{
-		Key:   migrationLock,
+		Key:   storageMigrationLock,
 		Value: enc,
 	}
 

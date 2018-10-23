@@ -10,7 +10,12 @@
         @tagName="button"
         @class="button is-transparent namespace-picker-trigger has-current-color"
         >
-        {{yield}} {{#if namespaceDisplay}}<span class="namespace-name">{{namespaceDisplay}}</span>{{/if}}
+        {{yield}}
+        {{#if namespaceDisplay}}
+          <span class="namespace-name">{{namespaceDisplay}}</span>
+        {{else}}
+          <span class="namespace-name is-hidden-tablet">/ (Root)</span>
+        {{/if}}
         <ICon
           @glyph="chevron-down"
           @size=8
@@ -69,4 +74,5 @@
       </D.content>
     </BasicDropdown>
   </div>
+  <div class="navbar-separator"></div>
 {{/if}}

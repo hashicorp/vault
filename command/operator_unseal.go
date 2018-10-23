@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -17,7 +18,8 @@ var _ cli.CommandAutocomplete = (*OperatorUnsealCommand)(nil)
 type OperatorUnsealCommand struct {
 	*BaseCommand
 
-	flagReset bool
+	flagReset   bool
+	flagMigrate bool
 
 	testOutput io.Writer // for tests
 }
@@ -62,6 +64,16 @@ func (c *OperatorUnsealCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictNothing,
 		Usage:      "Discard any previously entered keys to the unseal process.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:       "migrate",
+		Aliases:    []string{},
+		Target:     &c.flagMigrate,
+		Default:    false,
+		EnvVar:     "",
+		Completion: complete.PredictNothing,
+		Usage:      "Indicate that this share is provided with the intent that it is part of a seal migration process.",
 	})
 
 	return set
@@ -135,7 +147,10 @@ func (c *OperatorUnsealCommand) Run(args []string) int {
 		unsealKey = strings.TrimSpace(value)
 	}
 
-	status, err := client.Sys().Unseal(unsealKey)
+	status, err := client.Sys().UnsealWithOptions(&api.UnsealOpts{
+		Key:     unsealKey,
+		Migrate: c.flagMigrate,
+	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error unsealing: %s", err))
 		return 2

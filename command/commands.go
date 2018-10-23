@@ -75,6 +75,8 @@ const (
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
 	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
+	// flagNameTokenType is the flag name used to force a specific token type
+	flagNameTokenType = "token-type"
 )
 
 var (
@@ -150,7 +152,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in Vault 0.12.",
+			"instead. This command will be removed in Vault 1.1.",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")

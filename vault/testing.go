@@ -262,7 +262,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 }
 
 func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(context.Background(), key)
+	return core.UnsealWithRecoveryKeys(key)
 }
 
 // TestCoreUnsealed returns a pure in-memory core that is already
@@ -891,6 +891,7 @@ type TestListener struct {
 
 type TestClusterCore struct {
 	*Core
+	CoreConfig        *CoreConfig
 	Client            *api.Client
 	Handler           http.Handler
 	Listeners         []*TestListener
@@ -1270,34 +1271,43 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	cores := []*Core{}
+	coreConfigs := []*CoreConfig{}
 	for i := 0; i < numCores; i++ {
-		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
-		if coreConfig.ClusterAddr != "" {
-			coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
+		localConfig := coreConfig.Clone()
+		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
+		if localConfig.ClusterAddr != "" {
+			localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
 		}
 
 		// if opts.SealFunc is provided, use that to generate a seal for the config instead
 		if opts != nil && opts.SealFunc != nil {
-			coreConfig.Seal = opts.SealFunc()
+			localConfig.Seal = opts.SealFunc()
 		}
 
 		if opts != nil && opts.Logger != nil {
-			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
-		coreConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
 
-		c, err := NewCore(coreConfig)
+		c, err := NewCore(localConfig)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		cores = append(cores, c)
+		coreConfigs = append(coreConfigs, localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
 			handlers[i] = opts.HandlerFunc(&HandlerProperties{
 				Core:               c,
 				MaxRequestDuration: DefaultMaxRequestDuration,
 			})
 			servers[i].Handler = handlers[i]
+		}
+
+		// Set this in case the Seal was manually set before the core was
+		// created
+		if localConfig.Seal != nil {
+			localConfig.Seal.SetCore(c)
 		}
 	}
 
@@ -1315,8 +1325,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		return ret
 	}
 
-	if numCores > 1 {
-		for i := 1; i < numCores; i++ {
+	for i := 0; i < numCores; i++ {
+		if coreConfigs[i].ClusterAddr != "" {
 			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
 			cores[i].SetClusterHandler(handlers[i])
 		}
@@ -1455,6 +1465,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		tcc := &TestClusterCore{
 			Core:            cores[i],
+			CoreConfig:      coreConfigs[i],
 			ServerKey:       certInfoSlice[i].key,
 			ServerKeyPEM:    certInfoSlice[i].keyPEM,
 			ServerCert:      certInfoSlice[i].cert,

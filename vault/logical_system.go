@@ -616,6 +616,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		entryConfig["passthrough_request_headers"] = rawVal.([]string)
 	}
+	if entry.Table == credentialTableType {
+		entryConfig["token_type"] = entry.Config.TokenType.String()
+	}
 
 	info["config"] = entryConfig
 
@@ -951,6 +954,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		},
 	}
 
+	if mountEntry.Table == credentialTableType {
+		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
+	}
+
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		resp.Data["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1189,6 +1196,44 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of listing_visibility successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("token_type"); ok {
+		if !strings.HasPrefix(path, "auth/") {
+			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
+		}
+		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
+		}
+
+		tokenType := logical.TokenTypeDefaultService
+		ttString := rawVal.(string)
+
+		switch ttString {
+		case "", "default-service":
+		case "default-batch":
+			tokenType = logical.TokenTypeDefaultBatch
+		case "service":
+			tokenType = logical.TokenTypeService
+		case "batch":
+			tokenType = logical.TokenTypeBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid value for 'token_type'")), logical.ErrInvalidRequest
+		}
+
+		oldVal := mountEntry.Config.TokenType
+		mountEntry.Config.TokenType = tokenType
+
+		// Update the mount table
+		if err := b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local); err != nil {
+			mountEntry.Config.TokenType = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of token_type successful", "path", path, "token_type", ttString)
 		}
 	}
 
@@ -1467,36 +1512,10 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := map[string]interface{}{
-			"type":        entry.Type,
-			"description": entry.Description,
-			"accessor":    entry.Accessor,
-			"local":       entry.Local,
-			"seal_wrap":   entry.SealWrap,
-			"options":     entry.Options,
-		}
-		entryConfig := map[string]interface{}{
-			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-		}
-		// Even though empty value is valid for ListingVisibility, we can ignore
-		// this case during mount since there's nothing to unset/hide.
-		if len(entry.Config.ListingVisibility) > 0 {
-			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-			entryConfig["passthrough_request_headers"] = rawVal.([]string)
-		}
-
-		info["config"] = entryConfig
+		info := mountInfo(entry)
 		resp.Data[entry.Path] = info
 	}
+
 	return resp, nil
 }
 
@@ -1565,6 +1584,20 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
+	}
+
+	switch apiConfig.TokenType {
+	case "", "default-service":
+		config.TokenType = logical.TokenTypeDefaultService
+	case "default-batch":
+		config.TokenType = logical.TokenTypeDefaultBatch
+	case "service":
+		config.TokenType = logical.TokenTypeService
+	case "batch":
+		config.TokenType = logical.TokenTypeBatch
+	default:
+		return logical.ErrorResponse(fmt.Sprintf(
+			"invalid value for 'token_type'")), logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
@@ -3567,6 +3600,10 @@ This path responds to the following HTTP methods.
 	},
 	"passthrough_request_headers": {
 		"A list of headers to whitelist and pass from the request to the backend.",
+		"",
+	},
+	"token_type": {
+		"The type of token to issue (service or batch).",
 		"",
 	},
 	"raw": {

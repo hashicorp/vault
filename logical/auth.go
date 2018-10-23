@@ -89,6 +89,9 @@ type Auth struct {
 	// change the perceived path of the lease, even though they don't change
 	// the request path itself.
 	CreationPath string `json:"creation_path"`
+
+	// TokenType is the type of token being requested
+	TokenType TokenType `json:"token_type"`
 }
 
 func (a *Auth) GoString() string {

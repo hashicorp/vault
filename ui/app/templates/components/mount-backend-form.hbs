@@ -3,7 +3,7 @@
     <h1 class="title is-3" data-test-mount-form-header=true>
       {{#if showConfig}}
         {{#with (find-by 'type' mountModel.type mountTypes) as |typeInfo|}}
-          <ICon @size=28 @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}} />
+          <ICon @size=24 @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}} @class="has-text-grey-light" />
           {{#if (eq mountType "auth")}}
             Enable {{typeInfo.displayName}} authentication method
           {{else}}
@@ -39,11 +39,11 @@
         {{#each (filter-by "category" category mountTypes) as |type|}}
           <label
             for={{type.type}}
-            class="box-radio {{if (eq mountModel.type type.type) "is-selected" }}"
+            class="box-radio{{if (eq mountModel.type type.type) " is-selected"}}"
             data-test-mount-type-radio
             data-test-mount-type={{type.type}}
           >
-            <ICon @size=36 @excludeIconClass={{true}} @glyph={{concat "enable/" (or type.glyph type.type)}} />
+            <ICon @size=36 @excludeIconClass={{true}} @glyph={{concat "enable/" (or type.glyph type.type)}} @class="has-text-grey-light" />
             {{type.displayName}}
             <RadioButton
               @value={{type.type}}

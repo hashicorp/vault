@@ -132,9 +132,9 @@ type MountInput struct {
 	Type        string            `json:"type"`
 	Description string            `json:"description"`
 	Config      MountConfigInput  `json:"config"`
-	Options     map[string]string `json:"options"`
 	Local       bool              `json:"local"`
 	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
+	Options     map[string]string `json:"options"`
 }
 
 type MountConfigInput struct {
@@ -147,6 +147,7 @@ type MountConfigInput struct {
 	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
 }
 
 type MountOutput struct {
@@ -167,4 +168,5 @@ type MountConfigOutput struct {
 	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
 }

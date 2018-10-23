@@ -36,6 +36,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			LeaseDuration:    int(input.Auth.TTL.Seconds()),
 			Renewable:        input.Auth.Renewable,
 			EntityID:         input.Auth.EntityID,
+			TokenType:        input.Auth.TokenType.String(),
 		}
 	}
 
@@ -68,6 +69,12 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
+		switch input.Auth.TokenType {
+		case "service":
+			logicalResp.Auth.TokenType = TokenTypeService
+		case "batch":
+			logicalResp.Auth.TokenType = TokenTypeBatch
+		}
 	}
 
 	return logicalResp
@@ -94,6 +101,7 @@ type HTTPAuth struct {
 	LeaseDuration    int               `json:"lease_duration"`
 	Renewable        bool              `json:"renewable"`
 	EntityID         string            `json:"entity_id"`
+	TokenType        string            `json:"token_type"`
 }
 
 type HTTPWrapInfo struct {

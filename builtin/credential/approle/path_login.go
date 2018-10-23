@@ -304,6 +304,15 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 		BoundCIDRs: tokenBoundCIDRs,
 	}
 
+	switch role.TokenType {
+	case "default":
+		auth.TokenType = logical.TokenTypeDefault
+	case "batch":
+		auth.TokenType = logical.TokenTypeBatch
+	case "service":
+		auth.TokenType = logical.TokenTypeService
+	}
+
 	return &logical.Response{
 		Auth: auth,
 	}, nil

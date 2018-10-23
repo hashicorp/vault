@@ -32,6 +32,7 @@ import (
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
 	logicalAzure "github.com/hashicorp/vault-plugin-secrets-azure"
 	logicalGcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
+	logicalGcpKms "github.com/hashicorp/vault-plugin-secrets-gcpkms"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
@@ -93,6 +94,7 @@ func newRegistry() *registry {
 			"cassandra":  logicalCass.Factory,
 			"consul":     logicalConsul.Factory,
 			"gcp":        logicalGcp.Factory,
+			"gcpkms":     logicalGcpKms.Factory,
 			"kv":         logicalKv.Factory,
 			"mongodb":    logicalMongo.Factory,
 			"mssql":      logicalMssql.Factory,

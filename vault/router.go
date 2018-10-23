@@ -468,9 +468,9 @@ func (r *Router) Route(ctx context.Context, req *logical.Request) (*logical.Resp
 }
 
 // RouteExistenceCheck is used to route a given existence check request
-func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
-	_, ok, exists, err := r.routeCommon(ctx, req, true)
-	return ok, exists, err
+func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) (*logical.Response, bool, bool, error) {
+	resp, ok, exists, err := r.routeCommon(ctx, req, true)
+	return resp, ok, exists, err
 }
 
 func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
@@ -547,12 +547,18 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			return nil, false, false, nil
 		}
 
-		if req.TokenEntry() == nil {
+		te := req.TokenEntry()
+
+		if te == nil {
 			return nil, false, false, fmt.Errorf("nil token entry")
 		}
 
-		switch req.TokenEntry().NamespaceID {
-		case namespace.RootNamespaceID:
+		if te.Type != logical.TokenTypeService {
+			return logical.ErrorResponse(`cubbyhole operations are only supported by "service" type tokens`), false, false, nil
+		}
+
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, "s."):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)
@@ -562,10 +568,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 			req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
 
 		default:
-			if req.TokenEntry().CubbyholeID == "" {
+			if te.CubbyholeID == "" {
 				return nil, false, false, fmt.Errorf("empty cubbyhole id")
 			}
-			req.ClientToken = req.TokenEntry().CubbyholeID
+			req.ClientToken = te.CubbyholeID
 		}
 
 	default:
@@ -644,25 +650,45 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(ctx, req)
-		// When a token gets renewed, the request hits this path and reaches
-		// token store. Token store delegates the renewal to the expiration
-		// manager. Expiration manager in-turn creates a different logical
-		// request and forwards the request to the auth backend that had
-		// initially authenticated the login request. The forwarding to auth
-		// backend will make this code path hit for the second time for the
-		// same renewal request. The accessors in the Alias structs should be
-		// of the auth backend and not of the token store. Therefore, avoiding
-		// the overwriting of accessors by having a check for path prefix
-		// having "renew". This gets applied for "renew" and "renew-self"
-		// requests.
 		if resp != nil &&
-			resp.Auth != nil &&
-			!strings.HasPrefix(req.Path, "renew") {
-			if resp.Auth.Alias != nil {
-				resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+			resp.Auth != nil {
+			// When a token gets renewed, the request hits this path and
+			// reaches token store. Token store delegates the renewal to the
+			// expiration manager. Expiration manager in-turn creates a
+			// different logical request and forwards the request to the auth
+			// backend that had initially authenticated the login request. The
+			// forwarding to auth backend will make this code path hit for the
+			// second time for the same renewal request. The accessors in the
+			// Alias structs should be of the auth backend and not of the token
+			// store. Therefore, avoiding the overwriting of accessors by
+			// having a check for path prefix having "renew". This gets applied
+			// for "renew" and "renew-self" requests.
+			if !strings.HasPrefix(req.Path, "renew") {
+				if resp.Auth.Alias != nil {
+					resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
+				}
+				for _, alias := range resp.Auth.GroupAliases {
+					alias.MountAccessor = re.mountEntry.Accessor
+				}
 			}
-			for _, alias := range resp.Auth.GroupAliases {
-				alias.MountAccessor = re.mountEntry.Accessor
+
+			switch re.mountEntry.Type {
+			case "token", "ns_token":
+				// Nothing; we respect what the token store is telling us and
+				// we don't allow tuning
+			default:
+				switch re.mountEntry.Config.TokenType {
+				case logical.TokenTypeService, logical.TokenTypeBatch:
+					resp.Auth.TokenType = re.mountEntry.Config.TokenType
+				case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
+					if resp.Auth.TokenType == logical.TokenTypeDefault {
+						resp.Auth.TokenType = logical.TokenTypeService
+					}
+				case logical.TokenTypeDefaultBatch:
+					if resp.Auth.TokenType == logical.TokenTypeDefault {
+						resp.Auth.TokenType = logical.TokenTypeBatch
+					}
+				}
 			}
 		}
 

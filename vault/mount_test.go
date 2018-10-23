@@ -295,6 +295,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 		Path:        "test/foo",
 		ClientToken: root,
 	}
+	r.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err := c.HandleRequest(namespace.TestContext(), r)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -415,6 +416,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 		Path:        "test/foo",
 		ClientToken: root,
 	}
+	r.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err := c.HandleRequest(namespace.TestContext(), r)
 	if err != nil {
 		t.Fatalf("err: %v", err)

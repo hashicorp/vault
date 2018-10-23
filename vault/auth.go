@@ -653,6 +653,10 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		if entry.Type == "token" {
 			c.tokenStore = backend.(*TokenStore)
 
+			// At some point when this isn't beta we may persist this but for
+			// now always set it on mount
+			entry.Config.TokenType = logical.TokenTypeDefaultService
+
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {

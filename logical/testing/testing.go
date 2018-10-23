@@ -258,6 +258,20 @@ func Test(tt TestT, c TestCase) {
 		}
 	}
 
+	tokenInfo, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		tt.Fatal("error looking up token: ", err)
+		return
+	}
+	var tokenPolicies []string
+	if tokenPoliciesRaw, ok := tokenInfo.Data["policies"]; ok {
+		if tokenPoliciesSliceRaw, ok := tokenPoliciesRaw.([]interface{}); ok {
+			for _, p := range tokenPoliciesSliceRaw {
+				tokenPolicies = append(tokenPolicies, p.(string))
+			}
+		}
+	}
+
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
@@ -273,6 +287,12 @@ func Test(tt TestT, c TestCase) {
 		}
 		if !s.Unauthenticated {
 			req.ClientToken = client.Token()
+			req.SetTokenEntry(&logical.TokenEntry{
+				ID:          req.ClientToken,
+				NamespaceID: namespace.RootNamespaceID,
+				Policies:    tokenPolicies,
+				DisplayName: tokenInfo.Data["display_name"].(string),
+			})
 		}
 		if s.RemoteAddr != "" {
 			req.Connection = &logical.Connection{RemoteAddr: s.RemoteAddr}
