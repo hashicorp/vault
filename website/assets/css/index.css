@@ -29,6 +29,7 @@
 @import 'pages/_docs';
 @import 'pages/_section_block';
 @import 'pages/_home';
+@import 'pages/_downloads.css';
 
 h5 {
   font-weight: 600;

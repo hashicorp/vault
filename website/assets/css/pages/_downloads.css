@@ -1,0 +1,7 @@
+#beta1-1-0 {
+  margin-bottom: 40px;
+
+  & p:last-child {
+    margin: 0px;
+  }
+}
