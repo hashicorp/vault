@@ -1083,6 +1083,12 @@
 			"revisionTime": "2018-10-05T18:17:28Z"
 		},
 		{
+			"checksumSHA1": "bZ3wD6e7vC8U/8VjfVT4gyEh4xg=",
+			"path": "github.com/golang/protobuf/ptypes/wrappers",
+			"revision": "d7fc20193620986259ffb1f9b9da752114ee14a4",
+			"revisionTime": "2018-10-22T20:23:25Z"
+		},
+		{
 			"checksumSHA1": "h1d2lPZf6j2dW/mIqVnd1RdykDo=",
 			"path": "github.com/golang/snappy",
 			"revision": "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
@@ -3011,6 +3017,12 @@
 			"path": "google.golang.org/genproto/googleapis/spanner/v1",
 			"revision": "af9cb2a35e7f169ec875002c1829c9b315cddc04",
 			"revisionTime": "2018-10-04T00:54:41Z"
+		},
+		{
+			"checksumSHA1": "JgbNbiFxBjhAtIyO2MFzbhQ75Hs=",
+			"path": "google.golang.org/genproto/protobuf/field_mask",
+			"revision": "94acd270e44e65579b9ee3cdab25034d33fed608",
+			"revisionTime": "2018-10-16T17:01:14Z"
 		},
 		{
 			"checksumSHA1": "5cU6eHFzsIKIyj/oKC28aVBEyMs=",
