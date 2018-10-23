@@ -226,6 +226,10 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 	return nil
 }
 
+func (d *autoSeal) SetCachedBarrierConfig(config *SealConfig) {
+	d.barrierConfig.Store(config)
+}
+
 func (d *autoSeal) RecoveryType() string {
 	return RecoveryTypeShamir
 }
@@ -338,6 +342,10 @@ func (d *autoSeal) SetRecoveryConfig(ctx context.Context, conf *SealConfig) erro
 	d.recoveryConfig.Store(conf.Clone())
 
 	return nil
+}
+
+func (d *autoSeal) SetCachedRecoveryConfig(config *SealConfig) {
+	d.recoveryConfig.Store(config)
 }
 
 func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {

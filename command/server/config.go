@@ -135,8 +135,9 @@ func (b *Storage) GoString() string {
 
 // Seal contains Seal configuration for the server
 type Seal struct {
-	Type   string
-	Config map[string]string
+	Type     string
+	Disabled bool
+	Config   map[string]string
 }
 
 func (h *Seal) GoString() string {
@@ -748,9 +749,20 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
+	var disabled bool
+	var err error
+	if v, ok := m["disabled"]; ok {
+		disabled, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+		}
+		delete(m, "disabled")
+	}
+
 	result.Seal = &Seal{
-		Type:   strings.ToLower(key),
-		Config: m,
+		Type:     strings.ToLower(key),
+		Disabled: disabled,
+		Config:   m,
 	}
 
 	return nil

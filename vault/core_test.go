@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
@@ -722,11 +723,12 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 		TTL:          time.Hour * 24,
 		CreationTime: te.CreationTime,
 		NamespaceID:  namespace.RootNamespaceID,
+		CubbyholeID:  te.CubbyholeID,
 		Type:         logical.TokenTypeService,
 	}
 
-	if !reflect.DeepEqual(te, expect) {
-		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	if diff := deep.Equal(te, expect); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Check that we have a lease with default duration
@@ -1025,10 +1027,11 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 		CreationTime: te.CreationTime,
 		TTL:          time.Hour * 24 * 32,
 		NamespaceID:  namespace.RootNamespaceID,
+		CubbyholeID:  te.CubbyholeID,
 		Type:         logical.TokenTypeService,
 	}
-	if !reflect.DeepEqual(te, expect) {
-		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	if diff := deep.Equal(te, expect); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Check that we have a lease with default duration
@@ -1072,10 +1075,11 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 		CreationTime: te.CreationTime,
 		TTL:          time.Hour * 24 * 32,
 		NamespaceID:  namespace.RootNamespaceID,
+		CubbyholeID:  te.CubbyholeID,
 		Type:         logical.TokenTypeService,
 	}
-	if !reflect.DeepEqual(te, expect) {
-		t.Fatalf("Bad: %#v expect: %#v", te, expect)
+	if diff := deep.Equal(te, expect); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

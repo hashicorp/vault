@@ -264,7 +264,7 @@ func generateData() map[string][]byte {
 	}
 
 	// Add special keys that should be excluded from migration
-	result[migrationLock] = []byte{}
+	result[storageMigrationLock] = []byte{}
 	result[vault.CoreLockPath] = []byte{}
 
 	return result
@@ -292,7 +292,7 @@ func compareStoredData(s physical.Backend, ref map[string][]byte, start string) 
 			return err
 		}
 
-		if k == migrationLock || k == vault.CoreLockPath {
+		if k == storageMigrationLock || k == vault.CoreLockPath {
 			if entry == nil {
 				continue
 			}
