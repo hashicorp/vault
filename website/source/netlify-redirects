@@ -166,10 +166,11 @@
 /intro/what-is-vault/index.html /docs/what-is-vault
 
 # Intro getting started content -> Learn
+/intro/getting-started/ https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/index.html https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/dev-server.html https://learn.hashicorp.com/vault/getting-started/dev-server
 /intro/getting-started/first-secret.html https://learn.hashicorp.com/vault/getting-started/first-secret
-/intro/getting-started/secrets-engine.html https://learn.hashicorp.com/vault/getting-started/secrets-engine
+/intro/getting-started/secrets-engines.html https://learn.hashicorp.com/vault/getting-started/secrets-engines
 /intro/getting-started/dynamic-secrets.html https://learn.hashicorp.com/vault/getting-started/dynamic-secrets
 /intro/getting-started/help.html https://learn.hashicorp.com/vault/getting-started/help
 /intro/getting-started/authentication.html https://learn.hashicorp.com/vault/getting-started/authentication
