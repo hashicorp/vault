@@ -70,8 +70,8 @@ type Config struct {
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
 
-	DisableIndexing bool        `hcl:"-"`
-	DisableIndexing interface{} `hcl:"disable_indexing"`
+	DisableIndexing    bool        `hcl:"-"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -460,8 +460,8 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
-	if result.DisableIndexing != nil {
-		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexing); err != nil {
+	if result.DisableIndexingRaw != nil {
+		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
 			return nil, err
 		}
 	}
