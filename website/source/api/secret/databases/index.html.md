@@ -171,7 +171,7 @@ with the configuration stored in the barrier.
 
 ### Parameters
 
-- `name` `(string: <required>)` – Specifies the name of the connection to delete.
+- `name` `(string: <required>)` – Specifies the name of the connection to reset.
   This is specified as part of the URL.
 
 ### Sample Request

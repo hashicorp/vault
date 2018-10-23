@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/dimchansky/utfbom"
 	"golang.org/x/crypto/pkcs12"
 )
@@ -165,6 +166,35 @@ func NewAuthorizerFromFileWithResource(resource string) (autorest.Authorizer, er
 	}
 
 	return autorest.NewBearerAuthorizer(spToken), nil
+}
+
+// NewAuthorizerFromCLI creates an Authorizer configured from Azure CLI 2.0 for local development scenarios.
+func NewAuthorizerFromCLI() (autorest.Authorizer, error) {
+	settings, err := getAuthenticationSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	if settings.resource == "" {
+		settings.resource = settings.environment.ResourceManagerEndpoint
+	}
+
+	return NewAuthorizerFromCLIWithResource(settings.resource)
+}
+
+// NewAuthorizerFromCLIWithResource creates an Authorizer configured from Azure CLI 2.0 for local development scenarios.
+func NewAuthorizerFromCLIWithResource(resource string) (autorest.Authorizer, error) {
+	token, err := cli.GetTokenFromCLI(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	adalToken, err := token.ToADALToken()
+	if err != nil {
+		return nil, err
+	}
+
+	return autorest.NewBearerAuthorizer(&adalToken), nil
 }
 
 func getAuthFile() (*file, error) {

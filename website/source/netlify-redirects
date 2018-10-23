@@ -164,3 +164,4 @@
 /intro/vs/keywhiz.html /docs/vs/keywhiz
 /intro/vs/kms.html /docs/vs/kms
 /intro/what-is-vault/index.html /docs/what-is-vault
+/intro/getting-started/install.html https://learn.hashicorp.com/vault/getting-started/install

@@ -1081,7 +1081,7 @@
       }
     }
   },
-  "revision": "20180920",
+  "revision": "20181005",
   "rootUrl": "https://iam.googleapis.com/",
   "schemas": {
     "AuditConfig": {
@@ -1737,7 +1737,7 @@
       "id": "ServiceAccount",
       "properties": {
         "displayName": {
-          "description": "Optional. A user-specified description of the service account.  Must be\nfewer than 100 UTF-8 bytes.",
+          "description": "Optional. A user-specified name for the service account.\nMust be less than or equal to 100 UTF-8 bytes.",
           "type": "string"
         },
         "email": {
@@ -1745,7 +1745,7 @@
           "type": "string"
         },
         "etag": {
-          "description": "Used to perform a consistent read-modify-write.",
+          "description": "Optional. Note: `etag` is an inoperable legacy field that is only returned\nfor backwards compatibility.",
           "format": "byte",
           "type": "string"
         },

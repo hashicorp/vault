@@ -12,6 +12,7 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.route('license');
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -90,6 +91,10 @@ Router.map(function() {
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
+
+          // kv v2 versions
+          this.route('versions-root', { path: '/versions/' });
+          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });

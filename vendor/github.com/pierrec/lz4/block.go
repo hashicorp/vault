@@ -286,7 +286,7 @@ func CompressBlockHC(src, dst []byte, depth int) (di int, err error) {
 			for ml < sn-si && src[next+ml] == src[si+ml] {
 				ml++
 			}
-			if ml+1 < minMatch || ml <= mLen {
+			if ml < minMatch || ml <= mLen {
 				// Match too small (<minMath) or smaller than the current match.
 				continue
 			}

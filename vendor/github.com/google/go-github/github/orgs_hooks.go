@@ -49,7 +49,7 @@ func (s *OrganizationsService) GetHook(ctx context.Context, org string, id int64
 }
 
 // CreateHook creates a Hook for the specified org.
-// Name and Config are required fields.
+// Config is a required field.
 //
 // Note that only a subset of the hook fields are used and hook must
 // not be nil.
@@ -59,7 +59,6 @@ func (s *OrganizationsService) CreateHook(ctx context.Context, org string, hook 
 	u := fmt.Sprintf("orgs/%v/hooks", org)
 
 	hookReq := &createHookRequest{
-		Name:   hook.Name,
 		Events: hook.Events,
 		Active: hook.Active,
 		Config: hook.Config,

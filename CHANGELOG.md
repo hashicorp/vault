@@ -1,3 +1,49 @@
+## 0.11.4 (October 23rd, 2018)
+
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+
+FEATURES:
+
+ * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions [GH-5388]
+ * Web UI support for KV Version 2. Browse, delete, undelete and destroy 
+   individual secret versions in the UI. [GH-5547], [GH-5563]
+
+IMPROVEMENTS:
+
+ * core: Add last WAL in leader/health output for easier debugging [GH-5523]
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
+ * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS
+   credentials [GH-5500]
+ * secret/azure: Credentials can now be generated against an existing service principal.
+ * secret/database: Allow Cassandra user to be non-superuser so long as it has
+   role creation permissions [GH-5402]
+ * secret/radius: Allow setting the NAS Identifier value in the generated
+   packet [GH-5465]
+ * secret/ssh: Allow usage of JSON arrays when setting zero addresses [GH-5528]
+ * ui: Allow viewing and updating Vault license via the UI
+ * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and
+   visibility is toggleable
+
+BUG FIXES:
+
+ * agent: Fix potential hang during agent shutdown [GH-5026]
+ * auth/ldap: Fix listing of users/groups that contain slashes [GH-5537]
+ * core: Fix memory leak during some expiration calls [GH-5505]
+ * core: Fix generate-root operations requiring empty `otp` to be provided
+   instead of an empty body [GH-5495]
+ * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
+ * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
+   generated certificates to be set to the Unix epoch if the role value was not
+   set, instead of using the default of 30 seconds [GH-5481]
+ * storage/mysql: Use `varbinary` instead of `varchar` when creating HA tables
+   [GH-5529]
+
 ## 0.11.3 (October 8th, 2018)
 
 SECURITY:
@@ -8,6 +54,7 @@ SECURITY:
 
 IMPROVEMENTS:
 
+ * auth/ldap: Listing of users and groups return absolute paths [GH-5537]
  * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
 
 BUG FIXES:
@@ -26,6 +73,9 @@ CHANGES:
    instead of a `400`.
  * `passthrough_request_headers` will now deny certain headers from being
    provided to backends based on a global denylist.
+ * Token Format: Tokens are now represented as a base62 value; tokens in
+   namespaces will have the namespace identifier appended. (This appeared in
+   Enterprise in 0.11.0, but is only in OSS in 0.11.2.)
 
 FEATURES:
 
@@ -174,6 +224,8 @@ DEPRECATIONS/CHANGES:
    role's configuration has changed in backwards-incompatible ways. Anything
    that depended on reading role data from the AWS secret engine will break
    until it is updated to work with the new format.
+ * Token Format (Enterprise): Tokens are now represented as a base62 value;
+   tokens in namespaces will have the namespace identifier appended.
 
 FEATURES:
 

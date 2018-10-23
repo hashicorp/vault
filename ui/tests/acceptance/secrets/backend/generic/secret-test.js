@@ -38,12 +38,6 @@ module('Acceptance | secrets/generic/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(kvPath, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `${path}/${kvPath}`,
-      'calls capabilites with the correct path'
-    );
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -64,12 +58,6 @@ module('Acceptance | secrets/generic/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(kvPath, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `${path}/data/${kvPath}`,
-      'calls capabilites with the correct path'
-    );
     await listPage.visitRoot({ backend: path });
     assert.equal(listPage.secrets.length, 2, 'lists two secrets in the backend');
   });

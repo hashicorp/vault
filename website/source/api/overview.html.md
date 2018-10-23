@@ -35,7 +35,8 @@ to have to do both depending on user settings.
 
 Once Vault is unsealed, almost every other operation requires a _client token_.
 A user may have a client token sent to them.  The client token must be sent as
-the `X-Vault-Token` HTTP header.
+either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
+the `Bearer <token>` scheme.
 
 Otherwise, a client token can be retrieved via [authentication
 backends](/docs/auth/index.html).
@@ -47,7 +48,7 @@ method.
 
 Responses from auth login methods that generate an authentication token are
 sent back to the client via JSON. The resulting token should be saved on the
-client or passed via the `X-Vault-Token` header for future requests.
+client or passed via the `X-Vault-Token` or `Authorization` header for future requests.
 
 ## Namespaces
 

@@ -21,14 +21,14 @@
           </h1>
         </p.levelLeft>
       </PageHeader>
-      <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
+      <BlockError>
         {{#if model.message}}
           <p>{{model.message}}</p>
         {{/if}}
         {{#each model.errors as |error|}}
           <p>{{error}}</p>
         {{/each}}
-      </div>
+      </BlockError>
     {{/if}}
   </div>
 </section>

@@ -446,6 +446,8 @@ type Node struct {
 	Attributes            map[string]string
 	Resources             *Resources
 	Reserved              *Resources
+	NodeResources         *NodeResources
+	ReservedResources     *NodeReservedResources
 	Links                 map[string]string
 	Meta                  map[string]string
 	NodeClass             string
@@ -459,6 +461,48 @@ type Node struct {
 	Drivers               map[string]*DriverInfo
 	CreateIndex           uint64
 	ModifyIndex           uint64
+}
+
+type NodeResources struct {
+	Cpu      NodeCpuResources
+	Memory   NodeMemoryResources
+	Disk     NodeDiskResources
+	Networks []*NetworkResource
+}
+
+type NodeCpuResources struct {
+	TotalShares uint64
+}
+
+type NodeMemoryResources struct {
+	MemoryMB uint64
+}
+
+type NodeDiskResources struct {
+	DiskMB uint64
+}
+
+type NodeReservedResources struct {
+	Cpu      NodeReservedCpuResources
+	Memory   NodeReservedMemoryResources
+	Disk     NodeReservedDiskResources
+	Networks NodeReservedNetworkResources
+}
+
+type NodeReservedCpuResources struct {
+	TotalShares uint64
+}
+
+type NodeReservedMemoryResources struct {
+	MemoryMB uint64
+}
+
+type NodeReservedDiskResources struct {
+	DiskMB uint64
+}
+
+type NodeReservedNetworkResources struct {
+	ReservedHostPorts string
 }
 
 // DrainStrategy describes a Node's drain behavior.

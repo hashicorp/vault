@@ -573,7 +573,7 @@ This time, it should return the values you just created.
 #### API call using cURL
 
 You can now pass the `client_token` returned in [Step 4](#step4) in the
-**`X-Vault-Token`** header.
+**`X-Vault-Token`** or **`Authorization`** header.
 
 **Example:**
 

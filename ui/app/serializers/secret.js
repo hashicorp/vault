@@ -19,7 +19,7 @@ export default ApplicationSerializer.extend({
         if (!fullSecretPath) {
           fullSecretPath = '\u0020';
         }
-        return { id: fullSecretPath };
+        return { id: fullSecretPath, backend: payload.backend };
       });
     }
     let path = this.get('secretDataPath');

@@ -35,7 +35,7 @@ var _ Transactional = (*TransactionalErrorInjector)(nil)
 // NewErrorInjector returns a wrapped physical backend to inject error
 func NewErrorInjector(b Backend, errorPercent int, logger log.Logger) *ErrorInjector {
 	if errorPercent < 0 || errorPercent > 100 {
-		errorPercent = DefaultJitterPercent
+		errorPercent = DefaultErrorPercent
 	}
 	logger.Info("creating error injector")
 

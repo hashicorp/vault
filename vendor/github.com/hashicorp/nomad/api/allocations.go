@@ -77,6 +77,7 @@ type Allocation struct {
 	TaskGroup          string
 	Resources          *Resources
 	TaskResources      map[string]*Resources
+	AllocatedResources *AllocatedResources
 	Services           map[string]string
 	Metrics            *AllocationMetric
 	DesiredStatus      string
@@ -156,6 +157,29 @@ type AllocDeploymentStatus struct {
 	Timestamp   time.Time
 	Canary      bool
 	ModifyIndex uint64
+}
+
+type AllocatedResources struct {
+	Tasks  map[string]*AllocatedTaskResources
+	Shared AllocatedSharedResources
+}
+
+type AllocatedTaskResources struct {
+	Cpu      AllocatedCpuResources
+	Memory   AllocatedMemoryResources
+	Networks []*NetworkResource
+}
+
+type AllocatedSharedResources struct {
+	DiskMB uint64
+}
+
+type AllocatedCpuResources struct {
+	CpuShares uint64
+}
+
+type AllocatedMemoryResources struct {
+	MemoryMB uint64
 }
 
 // AllocIndexSort reverse sorts allocs by CreateIndex.

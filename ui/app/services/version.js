@@ -51,7 +51,9 @@ export default Service.extend({
     if (this.get('version')) {
       return;
     }
-    let response = yield this.get('store').adapterFor('cluster').health();
+    let response = yield this.get('store')
+      .adapterFor('cluster')
+      .health();
     this.setVersion(response);
     return;
   }),
@@ -61,7 +63,9 @@ export default Service.extend({
       return;
     }
     try {
-      let response = yield this.get('store').adapterFor('cluster').features();
+      let response = yield this.get('store')
+        .adapterFor('cluster')
+        .features();
       this.setFeatures(response);
       return;
     } catch (err) {

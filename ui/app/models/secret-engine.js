@@ -1,7 +1,6 @@
 import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
-
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
@@ -39,6 +38,10 @@ export default DS.Model.extend({
       modelType = 'secret-v2';
     }
     return modelType;
+  }),
+
+  isV2KV: computed('modelTypeForKV', function() {
+    return this.modelTypeForKV === 'secret-v2';
   }),
 
   formFields: computed('engineType', function() {

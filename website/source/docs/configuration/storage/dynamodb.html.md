@@ -34,7 +34,7 @@ storage "dynamodb" {
 For more information about the read/write capacity of DynamoDB tables, please
 see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 
-## `dynamodb` Parameters
+## DynamoDB Parameters
 
 - `endpoint` `(string: "")` – Specifies an alternative, AWS compatible, DynamoDB
   endpoint. This can also be provided via the environment variable
@@ -57,7 +57,8 @@ see the [official AWS DynamoDB documentation][dynamodb-rw-capacity].
 - `table` `(string: "vault-dynamodb-backend")` – Specifies the name of the
   DynamoDB table in which to store Vault data. If the specified table does not
   yet exist, it will be created during initialization. This can also be
-  provided via the environment variable `AWS_DYNAMODB_TABLE`.
+  provided via the environment variable `AWS_DYNAMODB_TABLE`. See the 
+  information on the table schema below.
 
 - `write_capacity` `(int: 5)` – Specifies the maximum number of writes performed
   per second on the table. This can also be provided via the environment
@@ -78,7 +79,74 @@ cause Vault to attempt to retrieve credentials from the AWS metadata service.
 - `session_token` `(string: "")` – Specifies the AWS session token. This can
   also be provided via the environment variable `AWS_SESSION_TOKEN`.
 
-## `dynamodb` Examples
+## Required AWS Permissions
+
+The governing policy for the IAM user or EC2 instance profile that Vault uses
+to access DynamoDB must contain the following permissions for Vault to perform
+the required operations on the DynamoDB table:
+
+```javascript
+  "Statement": [
+    {
+      "Action": [ 
+        "dynamodb:DescribeLimits",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:DescribeReserveCapacityOfferings",
+        "dynamodb:DescribeReserveCapacity",
+        "dynamodb:ListTables",
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteItem",
+        "dynamodb:GetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:PutItem",
+        "dynamodb:Query",
+        "dynamodb:UpdateItem",
+        "dynamodb:Scan",
+        "dynamodb:DescribeTable"
+      ],
+      "Effect": "Allow",
+      "Resource": [ "arn:aws:dynamodb:us-east-1:... dynamodb table ARN" ]
+    },
+```
+
+## Table Schema
+
+If you are going to create the DynamoDB table prior to the execution and
+initialization of Vault, you will need to create a table with these attributes:
+
+* Primary partition key: "Path", a string
+* Primary sort key: "Key", a string
+
+You might create the table via Terraform, with a configuration similar to this:
+
+```
+resource "aws_dynamodb_table" "dynamodb-table" {
+  name           = "${var.dynamoTable}"
+  read_capacity  = 1
+  write_capacity = 1
+	hash_key       = "Path"
+	range_key      = "Key"
+	attribute [
+		{
+			name = "Path"
+			type = "S"
+		},
+		{
+			name = "Key"
+			type = "S"
+		}
+	]
+  tags {
+    Name        = "vault-dynamodb-table"
+    Environment = "prod"
+  }
+}
+```
+
+## DynamoDB Examples of Vault Configuration
 
 ### Custom Table and Read-Write Capacity
 

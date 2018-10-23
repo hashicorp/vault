@@ -25,4 +25,5 @@ type LeaderResponse struct {
 	LeaderClusterAddress     string `json:"leader_cluster_address"`
 	PerfStandby              bool   `json:"performance_standby"`
 	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64 `json:"last_wal"`
 }

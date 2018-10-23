@@ -1,4 +1,4 @@
-<WizardContent @headerText="Vault Web UI" @glyph="tour">
+<WizardContent @headerText="Vault Web UI" @glyph="tour" @selectProgress={{selectProgress}}>
   <h2 class="title is-6">
     Choosing where to go
   </h2>
@@ -36,6 +36,11 @@
     </div>
     {{/if}}
     {{/each}}
-    <button type="submit" class="button is-primary">Start</button>
+    <span class="selection-summary">
+      <button type="submit" class="button is-primary">Start</button>
+      {{#if selectedFeatures}}
+        <span class="time-estimate"><ICon @glyph="stopwatch" @class="has-text-grey auto-width is-paddingless is-flex-column"/>About {{estimatedTime}} minutes</span>
+      {{/if}}
+    </span>
   </form>
 </WizardContent>

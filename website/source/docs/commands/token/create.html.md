@@ -97,9 +97,10 @@ flags](/docs/commands/index.html) included on all commands.
   value requires sudo permissions.
 
 - `-period` `(duration: "")` - If specified, every renewal will use the given
-  period. Periodic tokens do not expire (unless `-explicit-max-ttl` is also
-  provided). Setting this value requires sudo permissions. This is specified as
-  a numeric string with suffix like "30s" or "5m".
+  period. Periodic tokens do not expire as long as they are actively being
+  renewed (unless `-explicit-max-ttl` is also provided). Setting this value 
+  requires sudo permissions. This is specified as a numeric string with suffix 
+  like "30s" or "5m".
 
 - `-policy` `(string: "")` - Name of a policy to associate with this token. This
   can be specified multiple times to attach multiple policies.

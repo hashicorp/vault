@@ -26,11 +26,8 @@ export default Route.extend({
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);
-      if (this.get('wizard.currentMachine') === 'tools') {
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          params.selectedAction.toUpperCase()
-        );
+      if (this.wizard.currentMachine === 'tools') {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
       }
       this.controller.setProperties(params);
       return true;

@@ -42,6 +42,7 @@ $ curl \
     "X-Vault-AWS-IAM-Server-ID",
     "X-Vault-No-Request-Forwarding",
     "X-Vault-Token",
+    "Authorization",
     "X-Vault-Wrap-Format",
     "X-Vault-Wrap-TTL",
   ]

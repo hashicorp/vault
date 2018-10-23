@@ -3140,14 +3140,6 @@ func (h *Hook) GetID() int64 {
 	return *h.ID
 }
 
-// GetName returns the Name field if it's non-nil, zero value otherwise.
-func (h *Hook) GetName() string {
-	if h == nil || h.Name == nil {
-		return ""
-	}
-	return *h.Name
-}
-
 // GetUpdatedAt returns the UpdatedAt field if it's non-nil, zero value otherwise.
 func (h *Hook) GetUpdatedAt() time.Time {
 	if h == nil || h.UpdatedAt == nil {
@@ -9962,6 +9954,14 @@ func (r *RepositoryTag) GetZipballURL() string {
 		return ""
 	}
 	return *r.ZipballURL
+}
+
+// GetAction returns the Action field if it's non-nil, zero value otherwise.
+func (r *RepositoryVulnerabilityAlertEvent) GetAction() string {
+	if r == nil || r.Action == nil {
+		return ""
+	}
+	return *r.Action
 }
 
 // GetForkRepos returns the ForkRepos field if it's non-nil, zero value otherwise.

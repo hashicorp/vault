@@ -14582,22 +14582,22 @@ func (s *NamedPort) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// Network: Represents a Network resource. Read Networks and Firewalls
-// for more information. (== resource_for v1.networks ==) (==
-// resource_for beta.networks ==)
+// Network: Represents a Network resource. Read Virtual Private Cloud
+// (VPC) Network Overview for more information. (== resource_for
+// v1.networks ==) (== resource_for beta.networks ==)
 type Network struct {
 	// IPv4Range: The range of internal addresses that are legal on this
 	// network. This range is a CIDR specification, for example:
 	// 192.168.0.0/16. Provided by the client when the network is created.
 	IPv4Range string `json:"IPv4Range,omitempty"`
 
-	// AutoCreateSubnetworks: When set to true, the network is created in
-	// "auto subnet mode". When set to false, the network is in "custom
-	// subnet mode".
+	// AutoCreateSubnetworks: When set to true, the VPC network is created
+	// in "auto" mode. When set to false, the VPC network is created in
+	// "custom" mode.
 	//
-	// In "auto subnet mode", a newly created network is assigned the
-	// default CIDR of 10.128.0.0/9 and it automatically creates one
-	// subnetwork per region.
+	// An auto mode VPC network starts with one subnet per region. Each
+	// subnet has a predetermined range as described in Auto mode VPC
+	// network IP ranges.
 	AutoCreateSubnetworks bool `json:"autoCreateSubnetworks,omitempty"`
 
 	// CreationTimestamp: [Output Only] Creation timestamp in RFC3339 text
@@ -14608,9 +14608,8 @@ type Network struct {
 	// property when you create the resource.
 	Description string `json:"description,omitempty"`
 
-	// GatewayIPv4: A gateway address for default routing to other networks.
-	// This value is read only and is selected by the Google Compute Engine,
-	// typically as the first usable address in the IPv4Range.
+	// GatewayIPv4: [Output Only] The gateway address for default routing
+	// out of the network. This value is read only and is selected by GCP.
 	GatewayIPv4 string `json:"gatewayIPv4,omitempty"`
 
 	// Id: [Output Only] The unique identifier for the resource. This
@@ -14642,7 +14641,7 @@ type Network struct {
 	SelfLink string `json:"selfLink,omitempty"`
 
 	// Subnetworks: [Output Only] Server-defined fully-qualified URLs for
-	// all subnetworks in this network.
+	// all subnetworks in this VPC network.
 	Subnetworks []string `json:"subnetworks,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -14982,9 +14981,9 @@ func (s *NetworkPeering) MarshalJSON() ([]byte, error) {
 type NetworkRoutingConfig struct {
 	// RoutingMode: The network-wide routing mode to use. If set to
 	// REGIONAL, this network's cloud routers will only advertise routes
-	// with subnetworks of this network in the same region as the router. If
-	// set to GLOBAL, this network's cloud routers will advertise routes
-	// with all subnetworks of this network, across regions.
+	// with subnets of this network in the same region as the router. If set
+	// to GLOBAL, this network's cloud routers will advertise routes with
+	// all subnets of this network, across regions.
 	//
 	// Possible values:
 	//   "GLOBAL"

@@ -68,6 +68,18 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	default:
 		ttl = int64(d.Get("ttl").(int))
 	}
+
+	var maxTTL int64
+	if role.MaxSTSTTL > 0 {
+		maxTTL = int64(role.MaxSTSTTL.Seconds())
+	} else {
+		maxTTL = int64(b.System().MaxLeaseTTL().Seconds())
+	}
+
+	if ttl > maxTTL {
+		ttl = maxTTL
+	}
+
 	roleArn := d.Get("role_arn").(string)
 
 	var credentialType string
