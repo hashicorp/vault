@@ -20,12 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mitchellh/cli"
-	testing "github.com/mitchellh/go-testing-interface"
-	"github.com/posener/complete"
-
-	"google.golang.org/grpc/grpclog"
-
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
@@ -48,10 +42,17 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
+	"github.com/mitchellh/cli"
+	testing "github.com/mitchellh/go-testing-interface"
+	"github.com/posener/complete"
+	"google.golang.org/grpc/grpclog"
 )
 
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
+
+// Enable memory profiling by setting build tag 'memprofiler'
+var memProfilerEnabled = false
 
 const migrationLock = "core/migration"
 
@@ -421,6 +422,10 @@ func (c *ServerCommand) Run(args []string) int {
 		logger: namedGRPCLogFaker,
 		log:    os.Getenv("VAULT_GRPC_LOGGING") != "",
 	})
+
+	if memProfilerEnabled {
+		c.startMemProfiler()
+	}
 
 	// Ensure that a backend is provided
 	if config.Storage == nil {
