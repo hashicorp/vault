@@ -392,8 +392,6 @@ type Core struct {
 	// perf standby
 	disablePerfStandby bool
 
-	disableIndexing bool
-
 	licensingStopCh chan struct{}
 
 	// Stores loggers so we can reset the level
@@ -567,7 +565,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		keepHALockOnStepDown:             new(uint32),
 		replicationFailure:               new(uint32),
 		disablePerfStandby:               true,
-		disableIndexing:                  conf.DisableIndexing,
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 	}
