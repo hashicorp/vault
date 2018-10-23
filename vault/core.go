@@ -465,6 +465,7 @@ type CoreConfig struct {
 	DevLicenseDuration time.Duration
 
 	DisablePerformanceStandby bool
+	DisableIndexing           bool
 
 	AllLoggers []log.Logger
 }
@@ -497,6 +498,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		LicensingConfig:           c.LicensingConfig,
 		DevLicenseDuration:        c.DevLicenseDuration,
 		DisablePerformanceStandby: c.DisablePerformanceStandby,
+		DisableIndexing:           c.DisableIndexing,
 		AllLoggers:                c.AllLoggers,
 	}
 }
