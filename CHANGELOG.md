@@ -21,6 +21,8 @@ FEATURES:
  * Batch Tokens: Batch tokens trade off some features of service tokens for no
    storage overhead, and in most cases can be used across performance
    replication clusters.
+ * Replication Speed Improvements: We've worked hard to speed up a lot of
+   operations when using Vault Enterprise Replicaiton.
  * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
    pattern to keys stored within GCP Cloud KMS.
 
