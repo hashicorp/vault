@@ -50,8 +50,8 @@
       }
     }
 
-    & > * + .btn-container,
-    & > .g-container > * + .btn-container {
+    & > * + .button-container,
+    & > .g-container > * + .button-container {
       margin-top: 40px;
 
       @media (max-width: 767px) {
