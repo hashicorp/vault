@@ -528,6 +528,7 @@ func (c *ServerCommand) Run(args []string) int {
 		EnableRaw:                 config.EnableRawEndpoint,
 		DisableSealWrap:           config.DisableSealWrap,
 		DisablePerformanceStandby: config.DisablePerformanceStandby,
+		DisableIndexing:           config.DisableIndexing,
 		AllLoggers:                allLoggers,
 	}
 	if c.flagDev {
