@@ -69,6 +69,9 @@ type Config struct {
 
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+
+	DisableIndexing    bool        `hcl:"-"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -135,8 +138,9 @@ func (b *Storage) GoString() string {
 
 // Seal contains Seal configuration for the server
 type Seal struct {
-	Type   string
-	Config map[string]string
+	Type     string
+	Disabled bool
+	Config   map[string]string
 }
 
 func (h *Seal) GoString() string {
@@ -346,6 +350,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableSealWrap = c2.DisableSealWrap
 	}
 
+	result.DisableIndexing = c.DisableIndexing
+	if c2.DisableIndexing {
+		result.DisableIndexing = c2.DisableIndexing
+	}
+
 	return result
 }
 
@@ -447,6 +456,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	if result.DisableSealWrapRaw != nil {
 		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableIndexingRaw != nil {
+		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -735,6 +750,7 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 	// Valid parameter for the Seal types
 	switch key {
 	case "pkcs11":
+	case "alicloudkms":
 	case "awskms":
 	case "gcpckms":
 	case "azurekeyvault":
@@ -747,9 +763,20 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
+	var disabled bool
+	var err error
+	if v, ok := m["disabled"]; ok {
+		disabled, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+		}
+		delete(m, "disabled")
+	}
+
 	result.Seal = &Seal{
-		Type:   strings.ToLower(key),
-		Config: m,
+		Type:     strings.ToLower(key),
+		Disabled: disabled,
+		Config:   m,
 	}
 
 	return nil

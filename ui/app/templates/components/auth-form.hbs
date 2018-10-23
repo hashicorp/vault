@@ -4,7 +4,7 @@
       {{partial 'svg/vault-loading'}}
     </div>
   {{/if}}
-  <nav class="tabs sub-nav is-marginless">
+  <nav class="tabs is-marginless">
     <ul>
       {{#each methodsToShow as |method|}}
         {{#with (or method.path method.type) as |methodKey|}}

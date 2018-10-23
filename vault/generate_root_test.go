@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
@@ -44,13 +45,13 @@ func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte
 		t.Fatalf("err: %v", err)
 	}
 
-	otpBytes, err := GenerateRandBytes(16)
+	otp, err := base62.Random(26, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Start a root generation
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
+	err = c.GenerateRootInit(otp, "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -87,12 +88,12 @@ func TestCore_GenerateRoot_Init(t *testing.T) {
 }
 
 func testCore_GenerateRoot_Init_Common(t *testing.T, c *Core) {
-	otpBytes, err := GenerateRandBytes(16)
+	otp, err := base62.Random(26, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
+	err = c.GenerateRootInit(otp, "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -112,12 +113,12 @@ func TestCore_GenerateRoot_InvalidMasterNonce(t *testing.T) {
 }
 
 func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys [][]byte) {
-	otpBytes, err := GenerateRandBytes(16)
+	otp, err := base62.Random(26, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.GenerateRootInit(base64.StdEncoding.EncodeToString(otpBytes), "", GenerateStandardRootTokenStrategy)
+	err = c.GenerateRootInit(otp, "", GenerateStandardRootTokenStrategy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -152,16 +153,15 @@ func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 }
 
 func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byte) {
-	otpBytes, err := GenerateRandBytes(16)
+	otp, err := base62.Random(26, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	otp := base64.StdEncoding.EncodeToString(otpBytes)
 	// Start a root generation
 	err = c.GenerateRootInit(otp, "", GenerateStandardRootTokenStrategy)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatal(err)
 	}
 
 	// Fetch new config with generated nonce
@@ -208,7 +208,7 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 		t.Fatalf("bad: %v", conf)
 	}
 
-	tokenBytes, err := base64.StdEncoding.DecodeString(encodedToken)
+	tokenBytes, err := base64.RawStdEncoding.DecodeString(encodedToken)
 	if err != nil {
 		t.Fatal(err)
 	}

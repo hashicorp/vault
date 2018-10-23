@@ -30,6 +30,7 @@ type AuthEnableCommand struct {
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
+	flagTokenType                 string
 	flagVersion                   int
 }
 
@@ -162,6 +163,12 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Enable seal wrapping of critical values in the secrets engine.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:   flagNameTokenType,
+		Target: &c.flagTokenType,
+		Usage:  "Sets a forced token type for the mount.",
+	})
+
 	f.IntVar(&IntVar{
 		Name:    "version",
 		Target:  &c.flagVersion,
@@ -256,6 +263,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
 			authOpts.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameTokenType {
+			authOpts.Config.TokenType = c.flagTokenType
 		}
 	})
 

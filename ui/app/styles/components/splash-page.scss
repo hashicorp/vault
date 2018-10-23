@@ -1,13 +1,19 @@
-a.splash-page-logo {
-  color: $white;
-  svg {
-    transform: scale(.5);
-    transform-origin: left;
-    fill: $white;
+.navbar-brand .splash-page-logo {
+  padding: $spacing-xs $spacing-s $spacing-xs $spacing-l;
+
+  @include from($mobile) {
+    padding-left: $spacing-xs;
   }
-}
-a.splash-page-logo.is-active {
-  background: transparent;
+
+  svg {
+    fill: $white;
+    height: 24px;
+    width: 72px;
+
+    @include from($mobile) {
+      margin-left: $spacing-xs;
+    }
+  }
 }
 
 .splash-page-container {

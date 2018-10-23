@@ -29,7 +29,6 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
-        this.route('control-groups');
       });
       this.route('unseal');
       this.route('tools', function() {
@@ -66,6 +65,7 @@ Router.map(function() {
           });
         });
         this.route('control-groups');
+        this.route('control-groups-configure', { path: '/control-groups/configure' });
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
         this.route('namespaces', function() {
           this.route('index', { path: '/' });
