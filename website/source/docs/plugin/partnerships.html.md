@@ -26,15 +26,15 @@ By leveraging Vault's plugin system, vendors are able to build extensible secret
 **Storage Backend**: A storage backend is a durable storage location where Vault stores its information.
 
 ## Development Process
-The Vault integration development process is described into the steps below. By following these steps, Vault integrations can be developed alongside HashiCorp to ensure new integrations are reviewed, certified and released as quickly as possible.</p>
+The Vault integration development process is described into the steps below. By following these steps, Vault integrations can be developed alongside HashiCorp to ensure new integrations are reviewed, certified and released as quickly as possible.
 
 
-* Engage: Initial contact between vendor and HashiCorp</li>
-* Enable: Documentation, code samples and best practices for developing the integration</li>
-* Develop and Test: Integration development and testing by vendor</li>
-* Review/Certification: HashiCorp code review and certification of integration</li>
-* Release: Vault integration released</li>
-* Support: Ongoing maintenance and support of the integration by the vendor.</li>
+* Engage: Initial contact between vendor and HashiCorp
+* Enable: Documentation, code samples and best practices for developing the integration
+* Develop and Test: Integration development and testing by vendor
+* Review/Certification: HashiCorp code review and certification of integration
+* Release: Vault integration released
+* Support: Ongoing maintenance and support of the integration by the vendor.
 
 ### 1. Engage
 Please begin by completing Vault Integration Program webform to tell us about your company and the Vault integration you’re interested in.
