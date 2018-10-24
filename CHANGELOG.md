@@ -1,3 +1,8 @@
+## Next
+
+BUG FIXES:
+  * cli: Fix panic that could occur if parameters were not provided. [GH-5603]
+
 ## 1.0.0-beta1 (October 23rd, 2018)
 
 NOTE:
