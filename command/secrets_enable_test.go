@@ -203,9 +203,8 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		// Removing one from logical list since the database plugin is a virtual backend
-		if len(backends)-1 != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets)) {
-			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))-1, len(backends))
+		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+2 {
+			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+2, len(backends))
 		}
 
 		for _, b := range backends {
