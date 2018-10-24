@@ -113,7 +113,7 @@ func TestOpenAPI_RootPath(t *testing.T) {
 		path := Path{
 			Pattern: test.pattern,
 		}
-		documentPath(&path, test.rootPaths, doc)
+		documentPath(&path, test.rootPaths, logical.TypeLogical, doc)
 		result := test.root
 		if doc.Paths["/"+test.pattern].Sudo != result {
 			t.Fatalf("Test %d: Expected %v got %v", i, test.root, result)
@@ -174,6 +174,7 @@ func TestOpenAPIPaths(t *testing.T) {
     "/simple": {
       "description": "Synopsis",
       "get": {
+	    "tags": ["secrets"],
         "summary": "My Summary",
         "description": "My Description",
         "responses": {
@@ -194,7 +195,7 @@ func testPath(t *testing.T, path *Path, expectedJSON string) {
 	t.Helper()
 
 	doc := openapi.NewDocument()
-	documentPath(path, []string{}, doc)
+	documentPath(path, []string{}, logical.TypeLogical, doc)
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -230,6 +231,7 @@ var expectedJSON = map[string]string{
       "description": "Synopsis",
       "get": {
         "summary": "Synopsis",
+	    "tags": ["secrets"],
         "parameters": [
           {
             "name": "id",
@@ -249,6 +251,7 @@ var expectedJSON = map[string]string{
       },
       "post": {
         "summary": "Synopsis",
+	    "tags": ["secrets"],
         "parameters": [
           {
             "name": "id",

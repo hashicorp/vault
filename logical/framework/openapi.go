@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -14,13 +15,13 @@ import (
 
 // Regex for handling optional and named parameters in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
-var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // capture required named parameters
-var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // capture optional named parameters in ungreedy (?U) fashion
-var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // capture alternation elements
-var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // capture OpenAPI-format named parameters {example}
-var cleanCharsRe = regexp.MustCompile("[()^$?]")         // regex characters that will be stripped during cleaning
-var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // path suffix patterns that will be stripped during cleaning
-var wsRe = regexp.MustCompile(`\s+`)                     // match whitespace, to be compressed during cleaning
+var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // Capture required parameters, e.g. "(?P<name>regex)"
+var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // Capture optional path elements in ungreedy (?U) fashion, e.g. "(leases/)?renew"
+var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+var cleanCharsRe = regexp.MustCompile("[()^$?]")         // Set of regex characters that will be stripped during cleaning
+var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // Path suffix patterns that will be stripped during cleaning
+var wsRe = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *openapi.Document) error {
@@ -32,7 +33,7 @@ func documentPaths(backend *Backend, doc *openapi.Document) error {
 	}
 
 	for _, p := range backend.Paths {
-		if err := documentPath(p, sudoPaths, doc); err != nil {
+		if err := documentPath(p, sudoPaths, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -41,7 +42,7 @@ func documentPaths(backend *Backend, doc *openapi.Document) error {
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
+func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, doc *openapi.Document) error {
 
 	// Convert optional parameters into distinct patterns to be process independently.
 	paths := expandPattern(p.Pattern)
@@ -138,6 +139,11 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 				})
 			}
 
+			// Sort parameters for a stable output
+			sort.Slice(op.Parameters, func(i, j int) bool {
+				return strings.ToLower(op.Parameters[i].Name) < strings.ToLower(op.Parameters[j].Name)
+			})
+
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
 				s := &openapi.Schema{
@@ -179,12 +185,23 @@ func documentPath(p *Path, sudoPaths []string, doc *openapi.Document) error {
 				}
 			}
 
+			// Add tags based on backend type
+			var tags []string
+			switch backendType {
+			case logical.TypeLogical:
+				tags = []string{"secrets"}
+			case logical.TypeCredential:
+				tags = []string{"auth"}
+			}
+
+			op.Tags = append(op.Tags, tags...)
+
 			// Set default responses.
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
-					op.Responses[204] = openapi.StdRespNoContent
+					op.Responses["204"] = openapi.StdRespNoContent
 				} else {
-					op.Responses[200] = openapi.StdRespOK
+					op.Responses["200"] = openapi.StdRespOK
 				}
 			}
 
