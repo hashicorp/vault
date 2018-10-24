@@ -1,6 +1,7 @@
 {
   "name": "middleman-spike-assets",
-  "description": "simple config to use postcss and webpack for asset processing",
+  "description":
+    "simple config to use postcss and webpack for asset processing",
   "version": "0.0.0",
   "author": "Jeff Escalante",
   "main": "app.js",
@@ -8,10 +9,10 @@
     "8fold-marked": "^0.3.8",
     "@hashicorp-tmp/consent-manager": "^0.0.5",
     "@hashicorp/hashi-alert": "^1.1.0",
-    "@hashicorp/hashi-button": "1.0.4",
-    "@hashicorp/hashi-callouts": "^2.0.2",
-    "@hashicorp/hashi-content": "^0.0.4",
-    "@hashicorp/hashi-docs-sidenav": "^0.1.0",
+    "@hashicorp/hashi-button": "1.0.5",
+    "@hashicorp/hashi-callouts": "^2.0.4",
+    "@hashicorp/hashi-content": "^0.0.7",
+    "@hashicorp/hashi-docs-sidenav": "^0.1.1",
     "@hashicorp/hashi-docs-sitemap": "^0.1.0",
     "@hashicorp/hashi-footer": "1.0.5",
     "@hashicorp/hashi-ga-form-fields": "1.0.2",

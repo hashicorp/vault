@@ -78,20 +78,20 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-alert/-/hashi-alert-1.1.0.tgz#3a7b3f466ee9a863fe13ce9abd0bbcdcf415500c"
   integrity sha512-jaYFcGvF8RWZhvK/b/XuwjQCV4TO3r+CBB9KVrRK91VvDwzT5Rk27utCyaoxkdw8InDD7/jfAOBOouuPVH2JLg==
 
-"@hashicorp/hashi-button@1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-button/-/hashi-button-1.0.4.tgz#0000b88dd2a9b3edd3d392819303152eb94e6382"
-  integrity sha512-e3LA023nCbCfP8KPbev7YlaNPZp9Cy3Ug79SO2eis7W9tJ2d+cWMV3UTEH48LMRTQMJ0c1m+cENBEJPl4zgBZQ==
+"@hashicorp/hashi-button@1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-button/-/hashi-button-1.0.5.tgz#661e7512ce9ee9c8f9aed146e83052a276173287"
+  integrity sha512-YckCovigw626sFKqa70dJdxoAvo8skcax588lHoRiAGRL/gz4GLQqEs7BM50J+8lDCgLEGvNZk8pEw95CEDNaA==
 
-"@hashicorp/hashi-callouts@^2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-callouts/-/hashi-callouts-2.0.2.tgz#7e633dd6d97045143ccd7ca4f5aa7df2936b6a47"
-  integrity sha512-RSTIjz2RWsshQrzM1kHN2dqWEcd1Iv1RTZ0rlj/Qdueamq9nUwHnjQ8vBvF3UC845KwcUrGySCW62+THt4S4vQ==
+"@hashicorp/hashi-callouts@^2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-callouts/-/hashi-callouts-2.0.4.tgz#ebb1470138d0184687c8507a8a2092b6c7eafc4b"
+  integrity sha512-Pe70k2z93h3lClmkdtx/d/1U9tCO356oiv1TfPMGJhRMhncrqxnuOoFsvdNCICdgTRgR9feZKp8AGYDvuXcDXg==
 
-"@hashicorp/hashi-content@^0.0.4":
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.4.tgz#33a3526e94eef83fde2cfd2770f45fbe2edb51cc"
-  integrity sha512-aZQF47Vew1QBb+sBhHxZjwLRsfH0auR5o3x8/iSGyWXNr1Jke5JD3SQRQG8xMu1tcztTxSiebij/a1wN1AWseg==
+"@hashicorp/hashi-content@^0.0.7":
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-content/-/hashi-content-0.0.7.tgz#2171994c95ebd186d9ad1ca9dfe3c9afcbebc541"
+  integrity sha512-m8yH4ehm5dIM88s6Ti3G1MnUHn9JQZdZsYxYn/zsIDEVHnAzi3hBzi5vmszl4pOXeLWdWGqIMNGzZ7uzyKKx4w==
 
 "@hashicorp/hashi-docs-sidenav@^0.1.0":
   version "0.1.0"
@@ -118,10 +118,10 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-global-styles/-/hashi-global-styles-1.0.8.tgz#5b0ecb1a50a2c3eec3acd7e413092cdcb52ba1d3"
   integrity sha512-UClXKVALpVxcmDGB3DVTLdyDIxoo1Vz8B+drv3+hX/TwDPKBZxn4Rz3lW4bcP05g/zJ/udmVAr7ilMFOiCjk7Q==
 
-"@hashicorp/hashi-hero@^2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-hero/-/hashi-hero-2.1.2.tgz#3ceb4b415d25f66e369bd6329acf581d5810b419"
-  integrity sha512-5zKWysspca+aTr75hZqIazL1lq5UliHsZDYm2rCdoOq8cqWlQKjvV3In3HQYzt9OUCJ6jOBQWmHmpnho3BIL4w==
+"@hashicorp/hashi-hero@^2.1.4":
+  version "2.1.4"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-hero/-/hashi-hero-2.1.4.tgz#baa9e56a4c337647bf1d0f79ba4b7c1ec1f8f1fc"
+  integrity sha512-p9RY4l28p0/n5lr9T8BGp3bhXOrW8EXBrrmB/fYsdmMyfMd4RwztV7vhbktskI4fl5kR2p8dCdKIAciURcnzKQ==
 
 "@hashicorp/hashi-image@1.0.3":
   version "1.0.3"
@@ -138,30 +138,30 @@
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-logo-grid/-/hashi-logo-grid-2.2.0.tgz#e1b911660af3ff510f0addc8433713cacb780d7e"
   integrity sha512-NY5wqjbh5nrm26NFdS0VkS1yrWCtXoP9b976EvBc4CeqNqEsYWDFgkF3tI02NIpjKNnW9xHlk9RpvP0R6zy1cg==
 
-"@hashicorp/hashi-mega-nav@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-mega-nav/-/hashi-mega-nav-1.0.0.tgz#6c509a66e89a032ed6b9ceb1898506eb29fb3914"
-  integrity sha512-KaCOFRkTHwIwqjeO9atNd0NuYNN8GpIX68WYKFC9hcg8WdfZBfLxf9v/Sg2vcBZJYP+xZnOKZEOkUvR17XA96Q==
+"@hashicorp/hashi-mega-nav@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-mega-nav/-/hashi-mega-nav-1.0.3.tgz#62ebd500094b730479abd352db574eb38d251322"
+  integrity sha512-nAqSChgZ+0TvVuaxRoQtrLoLSn0YV/9+Ddlk9IaHjyhIeMXXSO0JRLxH+ik1Lx7UX2OlyD0hYHmZ5pkF6Xt3pw==
 
-"@hashicorp/hashi-nav@1.0.5":
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-nav/-/hashi-nav-1.0.5.tgz#876355a2a10b4b22d324e8cc858f24d6895cbcb9"
-  integrity sha512-Vx5XDp++227ahzUibOms7TOuflhkDgx/TaP+PstLU3Ah8K/6MuuNBPIOgH+HncAXjU9yZmoF8TDC+7gPr4g/Ww==
+"@hashicorp/hashi-nav@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-nav/-/hashi-nav-1.1.0.tgz#1d4130ba70d1798ccdfc89888833c07ed45ab50e"
+  integrity sha512-4uSrM+ZdpOiuLr73U4G66UrdA+pr8p5VCxZGNsSRWdHuaWzhVGb8Mtsbgqm/AzxyZnHtcN5xtf9+oDaKtLIioA==
 
 "@hashicorp/hashi-newsletter-signup-form@1.0.4":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@hashicorp/hashi-newsletter-signup-form/-/hashi-newsletter-signup-form-1.0.4.tgz#a9a9df40d2d68954cad95f871a2dfc169ccd9a3b"
   integrity sha512-4W7GiEocIA7YffKkh31FU5NMvZWBXfNOyuZ+3/tYNT0gSM8W5JzIYYqnu63cjqOuXIFUUrCDGQLRndYaKmzSMw==
 
-"@hashicorp/hashi-product-downloader@^0.4.0":
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.4.0.tgz#68eb0048eccd3ce17231a93517fb91b29e2c40a8"
-  integrity sha512-UXc3JhHMuhDIlm++fe2N4vwUXHvthzXoqaGkLPWS/T7g7COlzzj/EIjLw7hoSnu4Wb3T0uQXHP6hkRu5NbRZNA==
+"@hashicorp/hashi-product-downloader@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-downloader/-/hashi-product-downloader-0.5.1.tgz#32536b84803156b3e627f00b56394e5c190782a7"
+  integrity sha512-3EdcrmHouMe8nZ9LzFSEj/aRkNbYFvc/Ov1pqB37oSCpFs/lJT+eAjtFhtGqgsNGzNkp6ZOe+oZlHhXSMBIgOw==
 
-"@hashicorp/hashi-product-subnav@^0.5.0":
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.5.0.tgz#0d012f7d496bff4b8204fcd42e498f3fb803fdc1"
-  integrity sha512-x7JvbHA04J9Hg6QZlEV3TqlEN3gPTTPIEXRbKAqdL53RR/3V9pfjW5iI+yhrCUH44QndJ7UclbRrKvVhdIrjOw==
+"@hashicorp/hashi-product-subnav@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@hashicorp/hashi-product-subnav/-/hashi-product-subnav-0.5.1.tgz#fd79c10bd40cdc649caff75748a763e5a3d452c9"
+  integrity sha512-jupxDk90T4Rg865A16jjgKYdGHKJYOAh8vsY/0i0xXHg1ED923OGTM/iwCyO6KYLNza0Q1/z7M1Cwu8P0xVfMg==
 
 "@hashicorp/hashi-section-header@2.0.2":
   version "2.0.2"

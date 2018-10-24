@@ -22,7 +22,6 @@
 @import '@hashicorp/hashi-docs-sitemap/dist/style.css';
 
 /* to be removed pending new components */
-@import '_alerts';
 @import '_inner';
 @import '_secondary-nav';
 
