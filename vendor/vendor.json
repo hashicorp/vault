@@ -1473,10 +1473,10 @@
 			"revisionTime": "2018-10-03T22:47:18Z"
 		},
 		{
-			"checksumSHA1": "Zll08//LoV7ZR+GIZybAjkflkfQ=",
+			"checksumSHA1": "f7Ul8JZy98iiDLRN5j9/6jbq9jc=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
-			"revision": "3dfddbec9f0648b7fc688c649580e6a1e110e61a",
-			"revisionTime": "2018-10-17T18:44:37Z"
+			"revision": "824f07d5c72f72bb6d983c07d8fba2ab72bd45b8",
+			"revisionTime": "2018-10-24T21:21:15Z"
 		},
 		{
 			"checksumSHA1": "tFP1EEyVlomSSx46NHDZWGPzUz0=",
