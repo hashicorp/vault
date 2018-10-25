@@ -84,7 +84,7 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 			required := true
 
 			// Header parameters are part of the Parameters group but with
-			// a dedicated "header" location and are not required.
+			// a dedicated "header" location, a header parameter is not required.
 			if field.Type == TypeHeader {
 				location = "header"
 				required = false
