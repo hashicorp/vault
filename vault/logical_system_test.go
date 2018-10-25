@@ -15,12 +15,16 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -2425,5 +2429,98 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.TestContext(), req)
 	if err != logical.ErrPermissionDenied {
 		t.Fatal("expected permission denied error")
+	}
+}
+
+func TestSystemBackend_OpenAPI(t *testing.T) {
+	_, b, rootToken := testCoreSystemBackend(t)
+	var oapi map[string]interface{}
+
+	// Ensure no paths are reported if there is no token
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	body := resp.Data["http_raw_body"].([]byte)
+	err = jsonutil.DecodeJSON(body, &oapi)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	exp := map[string]interface{}{
+		"openapi": openapi.OpenAPIVersion,
+		"info": map[string]interface{}{
+			"title":   "HashiCorp Vault API",
+			"version": version.GetVersion().Version,
+		},
+		"paths": map[string]interface{}{},
+	}
+
+	if diff := deep.Equal(oapi, exp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Check that default paths are present with a root token
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+	req.ClientToken = rootToken
+	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	body = resp.Data["http_raw_body"].([]byte)
+	err = jsonutil.DecodeJSON(body, &oapi)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	doc := new(openapi.Document)
+	if err := mapstructure.Decode(oapi, &doc); err != nil {
+		t.Fatal(err)
+	}
+
+	pathSamples := []struct {
+		path string
+		tag  string
+	}{
+		{"/auth/token/lookup", "auth"},
+		{"/cubbyhole/.*", "secrets"}, // TODO update after sys docs update
+		{"/identity/group/id", "secrets"},
+		{"/secret/.*", "secrets"}, // TODO update after sys docs update
+		{"/sys/policy", "system"},
+	}
+
+	for _, path := range pathSamples {
+		if doc.Paths[path.path] == nil {
+			t.Fatalf("didn't find expected path '%s'.", path)
+		}
+		tag := doc.Paths[path.path].Get.Tags[0]
+		if tag != path.tag {
+			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+		}
+	}
+
+	// Simple sanity check of response size (which is much larger than most
+	// Vault responses), mainly to catch mass omission of expected path data.
+	minLen := 120000
+	if len(body) < minLen {
+		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	}
+
+	// Test path-help response
+	req = logical.TestRequest(t, logical.HelpOperation, "rotate")
+	req.ClientToken = rootToken
+	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doc = resp.Data["openapi"].(*openapi.Document)
+	if len(doc.Paths) != 1 {
+		t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
+	}
+
+	if doc.Paths["/rotate"] == nil {
+		t.Fatalf("expected to find path '/rotate'")
 	}
 }
