@@ -6,7 +6,7 @@ use ReshapeMiddleware, component_file: "assets/reshape.js"
 
 activate :hashicorp do |h|
   h.name         = "vault"
-  h.version      = "0.11.3"
+  h.version      = "0.11.4"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
   h.releases_enabled = true
@@ -19,7 +19,7 @@ proxy '_redirects', 'netlify-redirects', ignore: true
 helpers do
   # get correct analytics id
   def segmentId()
-    if (ENV['ENV'] == 'production')
+    if (ENV['ENV'] == 'tmp-production')
       'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
     else
       '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'

@@ -422,9 +422,16 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-			if !perfStandbyAlwaysForwardPaths.HasPath(path) {
+			switch {
+			case !perfStandbyAlwaysForwardPaths.HasPath(path):
 				handler.ServeHTTP(w, r)
 				return
+			case strings.HasPrefix(path, "auth/token/create/"):
+				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), path)
+				if err == nil && isBatch {
+					handler.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 

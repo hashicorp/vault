@@ -56,7 +56,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	// Save the original for comparison later
 	origBytes := make([]byte, len(entry.Value))
 	copy(origBytes, entry.Value)
-	se := &physical.SealWrapEntry{
+	se := &physical.EncryptedBlobInfo{
 		Ciphertext: entry.Value,
 	}
 	seb, err := proto.Marshal(se)

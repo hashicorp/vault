@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -447,7 +448,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	rootCheckFunc(t, resp)
 
 	// Create a non-root token
-	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
 	nonRootCheckFunc := func(t *testing.T, resp *logical.Response) {
 		expected1 := []string{"create", "sudo", "update"}
@@ -549,7 +550,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 	req = logical.TestRequest(t, logical.UpdateOperation, endpoint)
 	if endpoint == "capabilities-self" {
 		req.ClientToken = "tokenid"
@@ -605,7 +606,7 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"test"})
 
 	te, err = core.tokenStore.Lookup(namespace.TestContext(), "tokenid")
 	if err != nil {
@@ -696,6 +697,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -742,6 +744,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -790,6 +793,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Generate multiple leases
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -800,6 +804,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -839,6 +844,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -886,6 +892,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -922,6 +929,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -976,7 +984,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	if resp2.Data == nil {
 		t.Fatal("nil data")
 	}
-	if resp.Secret.TTL != 180*time.Second {
+	if resp.Secret.TTL != time.Second*180 {
 		t.Fatalf("bad lease duration: %v", resp.Secret.TTL)
 	}
 }
@@ -990,7 +998,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "lease not found or lease is not renewable" {
+	if resp.Data["error"] != "lease not found" {
 		t.Fatalf("bad: %v", resp)
 	}
 
@@ -1001,7 +1009,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "lease not found or lease is not renewable" {
+	if resp.Data["error"] != "lease not found" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1015,7 +1023,7 @@ func TestSystemBackend_renew_invalidID_origUrl(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "lease not found or lease is not renewable" {
+	if resp.Data["error"] != "lease not found" {
 		t.Fatalf("bad: %v", resp)
 	}
 
@@ -1026,7 +1034,7 @@ func TestSystemBackend_renew_invalidID_origUrl(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "lease not found or lease is not renewable" {
+	if resp.Data["error"] != "lease not found" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -1050,6 +1058,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1074,13 +1083,14 @@ func TestSystemBackend_revoke(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp3.Data["error"] != "lease not found or lease is not renewable" {
-		t.Fatalf("bad: %v", resp)
+	if resp3.Data["error"] != "lease not found" {
+		t.Fatalf("bad: %v", *resp3)
 	}
 
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1103,6 +1113,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1192,6 +1203,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1216,8 +1228,8 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp3.Data["error"] != "lease not found or lease is not renewable" {
-		t.Fatalf("bad: %v", resp)
+	if resp3.Data["error"] != "lease not found" {
+		t.Fatalf("bad: %v", *resp3)
 	}
 }
 
@@ -1240,6 +1252,7 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 	resp, err = core.HandleRequest(namespace.TestContext(), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1264,8 +1277,8 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp3.Data["error"] != "lease not found or lease is not renewable" {
-		t.Fatalf("bad: %v", resp)
+	if resp3.Data["error"] != "lease not found" {
+		t.Fatalf("bad: %#v", *resp3)
 	}
 }
 
@@ -1415,14 +1428,16 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
 				"plugin_name":       "",
+				"force_no_cache":    false,
+				"token_type":        "default-service",
 			},
 			"local":     false,
 			"seal_wrap": false,
 			"options":   map[string]string(nil),
 		},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -1466,7 +1481,9 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(2100),
 				"max_lease_ttl":     int64(2700),
+				"force_no_cache":    false,
 				"plugin_name":       "",
+				"token_type":        "default-service",
 			},
 			"local":     true,
 			"seal_wrap": true,
@@ -1480,14 +1497,16 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
 				"plugin_name":       "",
+				"force_no_cache":    false,
+				"token_type":        "default-service",
 			},
 			"local":     false,
 			"seal_wrap": false,
 			"options":   map[string]string(nil),
 		},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -2300,6 +2319,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     int64(0),
 					"force_no_cache":    false,
 					"plugin_name":       "",
+					"token_type":        "default-service",
 				},
 				"type":        "token",
 				"description": "token based credentials",
@@ -2309,8 +2329,8 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 			},
 		},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v \n\n expect: %#v", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Mount-tune an auth mount
@@ -2391,7 +2411,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	testMakeTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
 
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv")
 	req.ClientToken = "tokenid"

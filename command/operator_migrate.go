@@ -149,7 +149,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	}
 
 	if c.flagReset {
-		if err := SetMigration(from, false); err != nil {
+		if err := SetStorageMigration(from, false); err != nil {
 			return errwrap.Wrapf("error reseting migration lock: {{err}}", err)
 		}
 		return nil
@@ -160,7 +160,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
 	}
 
-	migrationStatus, err := CheckMigration(from)
+	migrationStatus, err := CheckStorageMigration(from)
 	if err != nil {
 		return errors.New("error checking migration status")
 	}
@@ -169,11 +169,11 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetMigration(from, true); err != nil {
+	if err := SetStorageMigration(from, true); err != nil {
 		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
 	}
 
-	defer SetMigration(from, false)
+	defer SetStorageMigration(from, false)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -197,7 +197,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 // migrateAll copies all keys in lexicographic order.
 func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.Backend, to physical.Backend) error {
 	return dfsScan(ctx, from, func(ctx context.Context, path string) error {
-		if path < c.flagStart || path == migrationLock || path == vault.CoreLockPath {
+		if path < c.flagStart || path == storageMigrationLock || path == vault.CoreLockPath {
 			return nil
 		}
 

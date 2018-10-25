@@ -20,18 +20,25 @@
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          {{i-con glyph="folder" size=14 class="has-text-grey-light"}}
+          <ToolTip @horizontalPosition="left" as |T|>
+            <T.trigger>
+              <ICon @glyph={{concat "enable/" (or method.type "auth")}} @size=24 @class="has-text-grey-light"/>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{method.methodType}}
+              </div>
+            </T.content>
+          </ToolTip>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
             {{method.path}}
           </span>
           <br />
-          <span class="tag">
-            {{#if (eq method.methodType 'plugin')}}
+          {{#if (eq method.methodType 'plugin')}}
+            <span class="tag">
               {{method.methodType}}: {{method.config.plugin_name}}
-            {{else}}
-              {{method.methodType}}
-            {{/if}}
-          </span>
+            </span>
+          {{/if}}
           <code class="has-text-grey is-size-8">
             {{method.accessor}}
           </code>
