@@ -673,7 +673,7 @@ expired and are past a certain buffer period beyond their expiration time.
 To remove revoked certificate and clean the CRL.
 
 ```plaintext
-$ vault write pki_int/tidy tidy_cert_store=true tidy_revocation_list=true
+$ vault write pki_int/tidy tidy_cert_store=true tidy_revoked_certs=true
 ```
 
 #### API call using cURL
@@ -686,7 +686,7 @@ the CRL.
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"tidy_cert_store": true, "tidy_revocation_list": true}' \
+       --data '{"tidy_cert_store": true, "tidy_revoked_certs": true}' \
        https://127.0.0.1:8200/v1/pki_int/tidy
 ```
 
