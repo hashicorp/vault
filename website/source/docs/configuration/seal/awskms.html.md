@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS KMS - Seals - Configuration"
-sidebar_title: "AWS KMS <sup>ENT</sup>"
+sidebar_title: "AWS KMS <sup>1.0 BETA</sup>"
 sidebar_current: "docs-configuration-seal-awskms"
 description: |-
   The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping
@@ -11,7 +11,7 @@ description: |-
 # `awskms` Seal
 
 The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
-Vault Enterprise's AWS KMS seal is activated by one of the following:
+The AWS KMS seal is activated by one of the following:
 
 * The presence of a `seal "awskms"` block in Vault's configuration file
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `awskms`. If
