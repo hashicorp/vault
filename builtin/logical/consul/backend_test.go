@@ -29,8 +29,8 @@ func prepareTestContainerNewACL(t *testing.T) (cleanup func(), retAddress string
 	}
 
 	dockerOptions := &dockertest.RunOptions{
-		Repository: "ncorrare/consul",
-		Tag:        "v1.4.0-rc1",
+		Repository: "consul",
+		Tag:        "1.4.0-rc1",
 		Cmd:        []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", `acl { enabled = true default_policy = "deny" }`},
 		Env:        []string{"CONSUL_BIND_INTERFACE=eth0"},
 	}
