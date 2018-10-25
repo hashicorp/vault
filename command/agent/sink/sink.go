@@ -100,29 +100,30 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 				*latestToken = token
 
-				for _, s := range sinks {
-					sinkFunc := func(currSink *SinkConfig, currToken string) func() error {
-						return func() error {
-							if currToken != *latestToken {
-								return nil
-							}
-							var err error
-
-							if currSink.WrapTTL != 0 {
-								if currToken, err = s.wrapToken(ss.client, currSink.WrapTTL, currToken); err != nil {
-									return err
-								}
-							}
-
-							if s.DHType != "" {
-								if currToken, err = s.encryptToken(currToken); err != nil {
-									return err
-								}
-							}
-
-							return currSink.WriteToken(currToken)
+				sinkFunc := func(currSink *SinkConfig, currToken string) func() error {
+					return func() error {
+						if currToken != *latestToken {
+							return nil
 						}
+						var err error
+
+						if currSink.WrapTTL != 0 {
+							if currToken, err = currSink.wrapToken(ss.client, currSink.WrapTTL, currToken); err != nil {
+								return err
+							}
+						}
+
+						if currSink.DHType != "" {
+							if currToken, err = currSink.encryptToken(currToken); err != nil {
+								return err
+							}
+						}
+
+						return currSink.WriteToken(currToken)
 					}
+				}
+
+				for _, s := range sinks {
 					atomic.AddInt32(ss.remaining, 1)
 					sinkCh <- sinkFunc(s, token)
 				}
