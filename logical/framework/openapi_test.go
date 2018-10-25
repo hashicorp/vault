@@ -2,14 +2,18 @@ package framework
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 func TestOpenAPI_ExpandPattern(t *testing.T) {
@@ -129,7 +133,7 @@ func TestOpenAPIPaths(t *testing.T) {
 			Fields: map[string]*FieldSchema{
 				"id": &FieldSchema{
 					Type:        TypeString,
-					Description: "My id param",
+					Description: "My id parameter",
 				},
 				"token": &FieldSchema{
 					Type:        TypeString,
@@ -146,48 +150,71 @@ func TestOpenAPIPaths(t *testing.T) {
 			HelpDescription: "Description",
 		}
 
-		testPath(t, p, expectedJSON["Legacy callbacks"])
+		testPath(t, p, expected("legacy"))
 	})
 
-	t.Run("Simple (new)", func(t *testing.T) {
+	t.Run("Simple", func(t *testing.T) {
 		p := &Path{
-			Pattern: "simple",
-
+			Pattern: "foo/" + GenericNameRegex("id"),
+			Fields: map[string]*FieldSchema{
+				"id": {
+					Type:        TypeString,
+					Description: "id path parameter",
+				},
+			},
 			HelpSynopsis:    "Synopsis",
 			HelpDescription: "Description",
 			Operations: map[logical.Operation]OperationHandler{
 				logical.ReadOperation: &PathOperation{
-					Callback:    nil,
 					Summary:     "My Summary",
 					Description: "My Description",
+				},
+				logical.UpdateOperation: &PathOperation{
+					Summary:     "Update Summary",
+					Description: "Update Description",
+				},
+				logical.CreateOperation: &PathOperation{
+					Summary:     "Create Summary",
+					Description: "Create Description",
+				},
+				logical.ListOperation: &PathOperation{
+					Summary:     "List Summary",
+					Description: "List Description",
+				},
+				logical.DeleteOperation: &PathOperation{
+					Summary:     "This shouldn't show up",
+					Unpublished: true,
 				},
 			},
 		}
 
-		expectedJSON := `{
-  "openapi": "3.0.2",
-  "info": {
-    "title": "HashiCorp Vault API",
-    "version": "0.11.3"
-  },
-  "paths": {
-    "/simple": {
-      "description": "Synopsis",
-      "get": {
-	    "tags": ["secrets"],
-        "summary": "My Summary",
-        "description": "My Description",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    }
-  }
-}
-`
-		testPath(t, p, expectedJSON)
+		testPath(t, p, expected("simple"))
+	})
+
+	t.Run("Responses", func(t *testing.T) {
+		p := &Path{
+			Pattern:         "foo",
+			HelpSynopsis:    "Synopsis",
+			HelpDescription: "Description",
+			Operations: map[logical.Operation]OperationHandler{
+				logical.ReadOperation: &PathOperation{
+					Summary:     "My Summary",
+					Description: "My Description",
+					Responses: map[string][]Response{
+						"202": {{
+							Description: "Amazing",
+							Example: &logical.Response{
+								Data: map[string]interface{}{
+									"amount": 42,
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+
+		testPath(t, p, expected("responses"))
 	})
 }
 
@@ -213,79 +240,18 @@ func testPath(t *testing.T, path *Path, expectedJSON string) {
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
-		// fmt.Println(string(docJSON)) // uncomment to debug generated JSON, which can be lengthy
+		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON
 		t.Fatal(diff)
 	}
 }
 
-var expectedJSON = map[string]string{
-	"Legacy callbacks": `
-{
-  "openapi": "3.0.2",
-  "info": {
-    "title": "HashiCorp Vault API",
-    "version": "0.11.3"
-  },
-  "paths": {
-    "/lookup/{id}": {
-      "description": "Synopsis",
-      "get": {
-        "summary": "Synopsis",
-	    "tags": ["secrets"],
-        "parameters": [
-          {
-            "name": "id",
-            "description": "My id param",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "summary": "Synopsis",
-	    "tags": ["secrets"],
-        "parameters": [
-          {
-            "name": "id",
-            "description": "My id param",
-            "in": "path",
-            "schema": {
-              "type": "string"
-            },
-            "required": true
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "My token"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    }
-  }
-}
-`,
+func expected(name string) string {
+	data, err := ioutil.ReadFile(filepath.Join("testdata", name+".json"))
+	if err != nil {
+		panic(err)
+	}
+
+	content := strings.Replace(string(data), "<vault_version>", version.GetVersion().Version, 1)
+
+	return content
 }

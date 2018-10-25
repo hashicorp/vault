@@ -75,7 +75,37 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 			}
 		}
 
+		// Process path and header parameters, which are common to all operations.
+		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
+
+		for name, field := range pathFields {
+			location := "path"
+			required := true
+
+			// Header parameters are part of the Parameters group but with
+			// a dedicated "header" location and are not required.
+			if field.Type == TypeHeader {
+				location = "header"
+				required = false
+			}
+
+			t := convertType(field.Type)
+			p := openapi.Parameter{
+				Name:        name,
+				Description: cleanString(field.Description),
+				In:          location,
+				Schema:      &openapi.Schema{Type: t.baseType},
+				Required:    required,
+				Deprecated:  field.Deprecated,
+			}
+			pi.Parameters = append(pi.Parameters, p)
+		}
+
+		// Sort parameters for a stable output
+		sort.Slice(pi.Parameters, func(i, j int) bool {
+			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
+		})
 
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
@@ -104,45 +134,6 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 			op.Summary = props.Summary
 			op.Description = props.Description
 			op.Deprecated = props.Deprecated
-
-			for name, field := range pathFields {
-				location := "path"
-				required := true
-
-				// Header parameters are part of the Parameters group but with
-				// a dedicated "header" location and are not required.
-				if field.Type == TypeHeader {
-					location = "header"
-					required = false
-				}
-
-				t := convertType(field.Type)
-				p := openapi.Parameter{
-					Name:        name,
-					Description: cleanString(field.Description),
-					In:          location,
-					Schema:      &openapi.Schema{Type: t.baseType},
-					Required:    required,
-					Deprecated:  field.Deprecated,
-				}
-				op.Parameters = append(op.Parameters, p)
-			}
-
-			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
-				op.Parameters = append(op.Parameters, openapi.Parameter{
-					Name:        "list",
-					Description: "Return a list if `true`",
-					In:          "query",
-					Schema:      &openapi.Schema{Type: "string"},
-					Required:    true,
-				})
-			}
-
-			// Sort parameters for a stable output
-			sort.Slice(op.Parameters, func(i, j int) bool {
-				return strings.ToLower(op.Parameters[i].Name) < strings.ToLower(op.Parameters[j].Name)
-			})
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
@@ -183,6 +174,16 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 						},
 					}
 				}
+			}
+
+			// LIST is represented as GET with a `list` query parameter
+			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
+				op.Parameters = append(op.Parameters, openapi.Parameter{
+					Name:        "list",
+					Description: "Return a list if `true`",
+					In:          "query",
+					Schema:      &openapi.Schema{Type: "string"},
+				})
 			}
 
 			// Add tags based on backend type

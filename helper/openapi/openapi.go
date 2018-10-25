@@ -20,9 +20,10 @@ type Info struct {
 }
 
 type PathItem struct {
-	Description string `json:"description,omitempty"`
-	Sudo        bool   `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Create      bool   `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
+	Description string      `json:"description,omitempty"`
+	Parameters  []Parameter `json:"parameters,omitempty"`
+	Sudo        bool        `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Create      bool        `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
 
 	Get    *Operation `json:"get,omitempty"`
 	Post   *Operation `json:"post,omitempty"`
@@ -32,8 +33,8 @@ type PathItem struct {
 type Operation struct {
 	Summary     string               `json:"summary,omitempty"`
 	Description string               `json:"description,omitempty"`
-	Parameters  []Parameter          `json:"parameters,omitempty"`
 	Tags        []string             `json:"tags,omitempty"`
+	Parameters  []Parameter          `json:"parameters,omitempty"`
 	RequestBody *RequestBody         `json:"requestBody,omitempty"`
 	Responses   map[string]*Response `json:"responses"`
 	Deprecated  bool                 `json:"deprecated,omitempty"`
@@ -44,7 +45,7 @@ type Parameter struct {
 	Description string  `json:"description,omitempty"`
 	In          string  `json:"in"`
 	Schema      *Schema `json:"schema,omitempty"`
-	Required    bool    `json:"required"`
+	Required    bool    `json:"required,omitempty"`
 	Deprecated  bool    `json:"deprecated,omitempty"`
 }
 

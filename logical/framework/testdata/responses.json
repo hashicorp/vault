@@ -1,0 +1,34 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "version": "<vault_version>"
+  },
+  "paths": {
+    "/foo": {
+      "description": "Synopsis",
+      "get": {
+        "tags": ["secrets"],
+        "summary": "My Summary",
+        "description": "My Description",
+        "responses": {
+          "202": {
+            "description": "Amazing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "data": {
+                      "amount": 42
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
