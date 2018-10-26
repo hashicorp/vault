@@ -101,7 +101,7 @@ required threshold of unseal keys are entered, the unseal keys will be migrated 
 recovery keys.
 
 ```
-$ vault unseal -migrate
+$ vault operator unseal -migrate
 ```
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
