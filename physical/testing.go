@@ -336,7 +336,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 		t.Fatalf("stop lock 2: %v", err)
 	}
 	if leaderCh2 != nil {
-		t.Errorf("should not have gotten leaderCh: %v", leaderCh)
+		t.Errorf("should not have gotten leaderCh: %v", leaderCh2)
 	}
 
 	// Release the first lock
@@ -352,7 +352,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 	}
 
 	// Check the value
-	held, val, err = lock.Value()
+	held, val, err = lock2.Value()
 	if err != nil {
 		t.Fatalf("value: %v", err)
 	}
@@ -360,7 +360,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 		t.Errorf("should still be held")
 	}
 	if val != "baz" {
-		t.Errorf("expected value baz: %v", err)
+		t.Errorf("expected: baz, got: %v", val)
 	}
 
 	// Cleanup

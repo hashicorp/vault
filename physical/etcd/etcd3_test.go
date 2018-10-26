@@ -18,21 +18,22 @@ func TestEtcd3Backend(t *testing.T) {
 	}
 
 	logger := logging.NewVaultLogger(log.Debug)
-
-	b, err := NewEtcdBackend(map[string]string{
+	config := map[string]string{
 		"path":     fmt.Sprintf("/vault-%d", time.Now().Unix()),
 		"etcd_api": "3",
-	}, logger)
+	}
+
+	b, err := NewEtcdBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	b2, err := NewEtcdBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
-
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("etcd3 does not implement HABackend")
-	}
-	physical.ExerciseHABackend(t, ha, ha)
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }

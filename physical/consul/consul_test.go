@@ -558,22 +558,24 @@ func TestConsulHABackend(t *testing.T) {
 	}()
 
 	logger := logging.NewVaultLogger(log.Debug)
-
-	b, err := NewConsulBackend(map[string]string{
+	config := map[string]string{
 		"address":      conf.Address,
 		"path":         randPath,
 		"max_parallel": "-1",
 		"token":        conf.Token,
-	}, logger)
+	}
+
+	b, err := NewConsulBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("consul does not implement HABackend")
+	b2, err := NewConsulBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	physical.ExerciseHABackend(t, ha, ha)
+
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 
 	detect, ok := b.(physical.RedirectDetect)
 	if !ok {

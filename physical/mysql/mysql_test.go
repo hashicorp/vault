@@ -78,16 +78,16 @@ func TestMySQLHABackend(t *testing.T) {
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
-
-	b, err := NewMySQLBackend(map[string]string{
+	config := map[string]string{
 		"address":    address,
 		"database":   database,
 		"table":      table,
 		"username":   username,
 		"password":   password,
 		"ha_enabled": "true",
-	}, logger)
+	}
 
+	b, err := NewMySQLBackend(config, logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -100,9 +100,10 @@ func TestMySQLHABackend(t *testing.T) {
 		}
 	}()
 
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("MySQL does not implement HABackend")
+	b2, err := NewMySQLBackend(config, logger)
+	if err != nil {
+		t.Fatalf("Failed to create new backend: %v", err)
 	}
-	physical.ExerciseHABackend(t, ha, ha)
+
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }

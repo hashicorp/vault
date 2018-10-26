@@ -147,24 +147,27 @@ func TestDynamoDBHABackend(t *testing.T) {
 	}()
 
 	logger := logging.NewVaultLogger(log.Debug)
-	b, err := NewDynamoDBBackend(map[string]string{
+	config := map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,
 		"table":         table,
 		"region":        region,
 		"endpoint":      endpoint,
-	}, logger)
+	}
+
+	b, err := NewDynamoDBBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("dynamodb does not implement HABackend")
+	b2, err := NewDynamoDBBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	physical.ExerciseHABackend(t, ha, ha)
-	testDynamoDBLockTTL(t, ha)
+
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
+	testDynamoDBLockTTL(t, b.(physical.HABackend))
 }
 
 // Similar to testHABackend, but using internal implementation details to
