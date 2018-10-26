@@ -35,6 +35,21 @@ seal "gcpckms" {
 }
 ```
 
+## Setting the Google Compute Instance Scope
+If you wish to use auto-unseal without having a credentials file on the instance, you can set the cloudkms scope on your instance.  Here is an example command:
+
+```
+gcloud beta compute instances set-scopes myinstance --zone us-east1-b --scopes=https://www.googleapis.com/auth/cloudkms
+```
+
+If you're using Terraform to configure your instance, your service account block may look something like this:
+
+```
+  service_account {
+    scopes = ["userinfo-email", "compute-rw", "storage-rw","https://www.googleapis.com/auth/cloudkms"]
+  }
+```
+
 ## `gcpckms` Parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
