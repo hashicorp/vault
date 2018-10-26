@@ -46,7 +46,7 @@ If you're using Terraform to configure your instance, your service account block
 
 ```
   service_account {
-    scopes = ["userinfo-email", "compute-rw", "storage-rw","https://www.googleapis.com/auth/cloudkms"]
+    scopes = ["userinfo-email", "compute-ro", "storage-ro","https://www.googleapis.com/auth/cloudkms"]
   }
 ```
 
