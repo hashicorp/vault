@@ -6,6 +6,10 @@
   padding-left: 2.5rem;
 }
 
+.masked-input.allow-copy .masked-value {
+  padding-left: 3rem;
+}
+
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
@@ -35,7 +39,7 @@
   height: auto;
   top: $size-6/4;
   bottom: $size-6/4;
-  left: 1px;
+  left: 0.5rem;
   line-height: 1rem;
   min-width: 0;
   max-height: 2rem;
@@ -57,11 +61,31 @@
   }
 }
 
+.allow-copy .masked-input-toggle {
+  left: 1.5rem;
+}
+
 .masked-input.display-only .masked-input-toggle {
   top: 0;
   font-size: 0.5rem;
   height: 1rem;
   padding-left: 0;
+}
+
+.copy-button {
+  background: transparent;
+  position: absolute;
+  height: auto;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  min-width: 16px;
+  max-height: 2rem;
+  padding: 0;
+  z-index: 100;
+  border: 0;
+  box-shadow: none;
+  color: $grey-light;
 }
 
 .masked-input .input:focus + .masked-input-toggle {
