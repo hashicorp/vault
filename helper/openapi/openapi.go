@@ -20,10 +20,11 @@ type Info struct {
 }
 
 type PathItem struct {
-	Description string      `json:"description,omitempty"`
-	Parameters  []Parameter `json:"parameters,omitempty"`
-	Sudo        bool        `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Create      bool        `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
+	Description     string      `json:"description,omitempty"`
+	Parameters      []Parameter `json:"parameters,omitempty"`
+	Sudo            bool        `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Unauthenticated bool        `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
+	Create          bool        `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
 
 	Get    *Operation `json:"get,omitempty"`
 	Post   *Operation `json:"post,omitempty"`

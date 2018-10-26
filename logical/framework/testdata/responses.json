@@ -7,6 +7,16 @@
   "paths": {
     "/foo": {
       "description": "Synopsis",
+      "x-vault-unauthenticated": true,
+      "delete": {
+        "tags": ["secrets"],
+        "summary": "Delete stuff",
+        "responses": {
+          "204": {
+            "description": "empty body"
+          }
+        }
+      },
       "get": {
         "tags": ["secrets"],
         "summary": "My Summary",

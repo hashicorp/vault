@@ -25,15 +25,8 @@ var wsRe = regexp.MustCompile(`\s+`)                     // Match whitespace, to
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *openapi.Document) error {
-	var sudoPaths []string
-
-	sp := backend.SpecialPaths()
-	if sp != nil {
-		sudoPaths = sp.Root
-	}
-
 	for _, p := range backend.Paths {
-		if err := documentPath(p, sudoPaths, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -42,7 +35,14 @@ func documentPaths(backend *Backend, doc *openapi.Document) error {
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, doc *openapi.Document) error {
+func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.BackendType, doc *openapi.Document) error {
+	var sudoPaths []string
+	var unauthPaths []string
+
+	if specialPaths != nil {
+		sudoPaths = specialPaths.Root
+		unauthPaths = specialPaths.Unauthenticated
+	}
 
 	// Convert optional parameters into distinct patterns to be process independently.
 	paths := expandPattern(p.Pattern)
@@ -53,14 +53,8 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 			Description: cleanString(p.HelpSynopsis),
 		}
 
-		// Test for exact or prefix match of root paths.
-		for _, root := range sudoPaths {
-			if root == path ||
-				(strings.HasSuffix(root, "*") && strings.HasPrefix(path, root[0:len(root)-1])) {
-				pi.Sudo = true
-				break
-			}
-		}
+		pi.Sudo = specialPathMatch(path, sudoPaths)
+		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -257,6 +251,17 @@ func documentPath(p *Path, sudoPaths []string, backendType logical.BackendType, 
 	}
 
 	return nil
+}
+
+func specialPathMatch(path string, specialPaths []string) bool {
+	// Test for exact or prefix match of special paths.
+	for _, sp := range specialPaths {
+		if sp == path ||
+			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
+			return true
+		}
+	}
+	return false
 }
 
 // expandPattern expands a regex pattern by generating permutations of any optional parameters

@@ -227,15 +227,8 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 		}
 
 		// Build OpenAPI response for this path
-		var rootPaths []string
 		doc := openapi.NewDocument()
-
-		sp := b.SpecialPaths()
-		if sp != nil {
-			rootPaths = sp.Root
-		}
-
-		documentPath(p, rootPaths, b.BackendType, doc)
+		documentPath(p, b.SpecialPaths(), b.BackendType, doc)
 
 		return logical.HelpResponse(help, nil, doc), nil
 	}

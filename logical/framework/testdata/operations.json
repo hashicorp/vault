@@ -8,6 +8,7 @@
     "/foo/{id}": {
       "description": "Synopsis",
       "x-vault-create": true,
+      "x-vault-sudo": true,
       "parameters": [
         {
           "name": "id",
@@ -17,6 +18,14 @@
             "type": "string"
           },
           "required": true
+        },
+        {
+          "name": "x-abc-token",
+          "description": "a header value",
+          "in": "header",
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "get": {
@@ -43,6 +52,24 @@
         "tags": ["secrets"],
         "summary": "Update Summary",
         "description": "Update Description",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "description": "the names",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"

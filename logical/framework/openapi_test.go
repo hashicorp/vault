@@ -98,34 +98,48 @@ func TestOpenAPI_SplitFields(t *testing.T) {
 	}
 }
 
-func TestOpenAPI_RootPath(t *testing.T) {
+func TestOpenAPI_SpecialPaths(t *testing.T) {
 	tests := []struct {
-		pattern   string
-		rootPaths []string
-		root      bool
+		pattern     string
+		rootPaths   []string
+		root        bool
+		unauthPaths []string
+		unauth      bool
 	}{
-		{"foo", []string{}, false},
-		{"foo", []string{"foo"}, true},
-		{"foo/bar", []string{"foo"}, false},
-		{"foo/bar", []string{"foo/*"}, true},
-		{"foo/", []string{"foo/*"}, true},
-		{"foo", []string{"foo*"}, true},
-		{"foo/bar", []string{"a", "b", "foo/*"}, true},
+		{"foo", []string{}, false, []string{"foo"}, true},
+		{"foo", []string{"foo"}, true, []string{"bar"}, false},
+		{"foo/bar", []string{"foo"}, false, []string{"foo/*"}, true},
+		{"foo/bar", []string{"foo/*"}, true, []string{"foo"}, false},
+		{"foo/", []string{"foo/*"}, true, []string{"a", "b", "foo/"}, true},
+		{"foo", []string{"foo*"}, true, []string{"a", "fo*"}, true},
+		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
 	}
 	for i, test := range tests {
 		doc := openapi.NewDocument()
 		path := Path{
 			Pattern: test.pattern,
 		}
-		documentPath(&path, test.rootPaths, logical.TypeLogical, doc)
+		sp := &logical.Paths{
+			Root:            test.rootPaths,
+			Unauthenticated: test.unauthPaths,
+		}
+		documentPath(&path, sp, logical.TypeLogical, doc)
 		result := test.root
 		if doc.Paths["/"+test.pattern].Sudo != result {
-			t.Fatalf("Test %d: Expected %v got %v", i, test.root, result)
+			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
+		}
+		result = test.unauth
+		if doc.Paths["/"+test.pattern].Unauthenticated != result {
+			t.Fatalf("Test (unauth) %d: Expected %v got %v", i, test.unauth, result)
 		}
 	}
 }
 
 func TestOpenAPIPaths(t *testing.T) {
+	origDepth := deep.MaxDepth
+	defer func() { deep.MaxDepth = origDepth }()
+	deep.MaxDepth = 20
+
 	t.Run("Legacy callbacks", func(t *testing.T) {
 		p := &Path{
 			Pattern: "lookup/" + GenericNameRegex("id"),
@@ -150,16 +164,28 @@ func TestOpenAPIPaths(t *testing.T) {
 			HelpDescription: "Description",
 		}
 
-		testPath(t, p, expected("legacy"))
+		sp := &logical.Paths{
+			Root:            []string{},
+			Unauthenticated: []string{},
+		}
+		testPath(t, p, sp, expected("legacy"))
 	})
 
-	t.Run("Simple", func(t *testing.T) {
+	t.Run("Operations", func(t *testing.T) {
 		p := &Path{
 			Pattern: "foo/" + GenericNameRegex("id"),
 			Fields: map[string]*FieldSchema{
 				"id": {
 					Type:        TypeString,
 					Description: "id path parameter",
+				},
+				"names": {
+					Type:        TypeCommaStringSlice,
+					Description: "the names",
+				},
+				"x-abc-token": {
+					Type:        TypeHeader,
+					Description: "a header value",
 				},
 			},
 			HelpSynopsis:    "Synopsis",
@@ -188,7 +214,10 @@ func TestOpenAPIPaths(t *testing.T) {
 			},
 		}
 
-		testPath(t, p, expected("simple"))
+		sp := &logical.Paths{
+			Root: []string{"foo*"},
+		}
+		testPath(t, p, sp, expected("operations"))
 	})
 
 	t.Run("Responses", func(t *testing.T) {
@@ -211,18 +240,25 @@ func TestOpenAPIPaths(t *testing.T) {
 						}},
 					},
 				},
+				logical.DeleteOperation: &PathOperation{
+					Summary: "Delete stuff",
+				},
 			},
 		}
 
-		testPath(t, p, expected("responses"))
+		sp := &logical.Paths{
+			Unauthenticated: []string{"x", "y", "foo"},
+		}
+
+		testPath(t, p, sp, expected("responses"))
 	})
 }
 
-func testPath(t *testing.T, path *Path, expectedJSON string) {
+func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
 	doc := openapi.NewDocument()
-	documentPath(path, []string{}, logical.TypeLogical, doc)
+	documentPath(path, sp, logical.TypeLogical, doc)
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
