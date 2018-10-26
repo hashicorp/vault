@@ -101,7 +101,7 @@ required threshold of unseal keys are entered, the unseal keys will be migrated 
 recovery keys.
 
 ```
-$ vault unseal -migrate autoseal
+$ vault unseal -migrate
 ```
 
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
@@ -111,7 +111,3 @@ but will not unseal Vault.  When you bring up your server back up, run the unsea
 with the `-migrate` flag and use the Recovery Keys to perform the migration.  All unseal 
 commands must specify the `-migrate` flag.  Once the required threshold of recovery keys
 are entered, the recovery keys will be migrated to be used as unseal keys.
-
-```
-$ vault unseal -migrate shamir
-```
