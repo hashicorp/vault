@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Vault Integration Program"
 sidebar_title: "Vault Integration Program"
-sidebar_current: "docs-plugin"
+sidebar_current: "docs-plugin-partnerships"
 description: |-
   How to partner with HashiCorp for creating integrations with Vault.
 ---
