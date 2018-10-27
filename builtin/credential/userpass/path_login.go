@@ -65,7 +65,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	user, userError := b.user(ctx, req.Storage, username)
 
 	var userPassword []byte
-	var err error
 	var legacyPassword bool
 	// If there was an error or it's nil, we fake a password for the bcrypt
 	// check so as not to have a timing leak. Specifics of the underlying
