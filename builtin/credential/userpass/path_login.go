@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -80,12 +79,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			userPassword = user.PasswordHash
 		}
 	} else {
-		userPassword, err = uuid.GenerateRandomBytes(16)
-		if err != nil {
-			// This is still acceptable as bcrypt will still make sure it takes
-			// a long time, it's just nicer to be random if possible
-			userPassword = []byte("dummy")
-		}
+		// This is still acceptable as bcrypt will still make sure it takes
+		// a long time, it's just nicer to be random if possible
+		userPassword = []byte("dummy")
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,
