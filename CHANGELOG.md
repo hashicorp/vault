@@ -1,4 +1,10 @@
-## Next
+## 1.0.0-beta2 (Unreleased)
+
+CHANGES:
+
+ * Agent no longer automatically reauthenticates when new credentials are
+   detected. It's not strictly necessary and in some cases was causing
+   reauthentication much more often than intended.
 
 BUG FIXES:
 
