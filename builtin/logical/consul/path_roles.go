@@ -132,7 +132,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 
 	var policyRaw []byte
 	var err error
-	if len(policies) == 0 || policies == nil {
+	if len(policies) == 0 {
 		if tokenType != "management" && policy == "" {
 			return logical.ErrorResponse(
 				"policy cannot be empty when not using management tokens"), nil
