@@ -9,7 +9,7 @@
 -
   description: "Foundational concepts critical to understanding how Vault operates."
   link: "/docs/concepts"
-  title: "Basic Concepts"
+  title: "Concepts"
 -
   description: "Managing Vault via its Command Line Interface (CLI)."
   link: "/docs/commands"

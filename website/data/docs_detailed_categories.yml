@@ -15,7 +15,7 @@
     - docs/internals/replication.html
     - docs/internals/plugins.html
 -
-  title: "Basic Concepts"
+  title: "Concepts"
   docs:
     - docs/concepts/index.html
     - docs/concepts/dev-server.html
