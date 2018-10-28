@@ -41,6 +41,7 @@ more information about setting up the database secrets engine.
         password="Password!"
         ssl_cert="path/to/ssl/cert"
         ssl_key="path/to/ssl/key"
+        ssl_ca="path/to/ssl/ca"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

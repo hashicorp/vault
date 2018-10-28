@@ -33,6 +33,7 @@ type mongoDBConnectionProducer struct {
 	Password      string `json:"password" structs:"password" mapstructure:"password"`
 	SSLCert      string `json:"ssl_cert" structs:"ssl_cert" mapstructure:"ssl_cert"`
 	SSLKey      string `json:"ssl_key" structs:"ssl_key" mapstructure:"ssl_key"`
+	SSLCA      string `json:"ssl_ca" structs:"ssl_ca" mapstructure:"ssl_ca"`
 
 	Initialized bool
 	RawConfig   map[string]interface{}
@@ -123,7 +124,7 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 		c.session.Close()
 	}
 
-	dialInfo, err := parseMongoURL(c.ConnectionURL, c.SSLCert, c.SSLKey)
+	dialInfo, err := parseMongoURL(c.ConnectionURL, c.SSLCert, c.SSLKey, c.SSLCA)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func parseMongoURL(rawURL string, sslCert string, sslKey string) (*mgo.DialInfo, error) {
+func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -204,6 +205,7 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string) (*mgo.DialInfo,
 				return nil, errors.New("bad value for ssl: " + value)
 			}
 			if ssl {
+				fmt.Printf("%s", sslCA)
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 					tlsConfig := &tls.Config{}
 					if sslCert != "" && sslKey != "" {
@@ -215,6 +217,16 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string) (*mgo.DialInfo,
 						if err != nil {
 							return nil, errors.New("could not read file: " + sslKey)
 						}
+						caPEM, err := ioutil.ReadFile(sslCA);
+						if err != nil {
+							return nil, errors.New("could not read file: " + sslCA)
+						}
+						fmt.Printf("%b", caPEM)
+						caCerts := x509.NewCertPool()
+						ok := caCerts.AppendCertsFromPEM([]byte(caPEM))
+						if !ok {
+							return nil, errors.New("failed to parse root certificate " + sslCA)
+						}
 						clientCert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
 						clientCert.Leaf, err = x509.ParseCertificate(clientCert.Certificate[0])
 						if err != nil {
@@ -222,7 +234,8 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string) (*mgo.DialInfo,
 						}
 						tlsConfig = &tls.Config{
 							Certificates: []tls.Certificate{clientCert},
-							InsecureSkipVerify: true,
+							RootCAs: caCerts,
+							InsecureSkipVerify: false,
 						}
 					}
 					return tls.Dial("tcp", addr.String(), tlsConfig)
