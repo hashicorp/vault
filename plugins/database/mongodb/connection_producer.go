@@ -207,7 +207,7 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (
 			if ssl {
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 					tlsConfig := &tls.Config{}
-					if sslCert != "" && sslKey != "" {
+					if sslCert != "" && sslKey != "" && sslCA != "" {
 						clientCertPEM, err := ioutil.ReadFile(sslCert);
 						if err != nil {
 							return nil, errors.New("could not read file: " + sslCert)

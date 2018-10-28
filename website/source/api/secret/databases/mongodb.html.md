@@ -26,16 +26,19 @@ has a number of parameters to further configure a connection.
 ### Parameters
 
 - `connection_url` `(string: <required>)` – Specifies the MongoDB standard
-  connection string (URI).   This field can be templated and supports passing the 
-  username and password parameters in the following format {{field_name}}.  A 
+  connection string (URI).   This field can be templated and supports passing the
+  username and password parameters in the following format {{field_name}}.  A
   templated connection URL is required when using root credential rotation.
 - `write_concern` `(string: "")` - Specifies the MongoDB [write
   concern][mongodb-write-concern]. This is set for the entirety of the session,
   maintained for the lifecycle of the plugin process. Must be a serialized JSON
   object, or a base64-encoded serialized JSON object. The JSON payload values
   map to the values in the [Safe][mgo-safe] struct from the mgo driver.
-- `username` `(string: "")` - The root credential username used in the connection URL. 
-- `password` `(string: "")` - The root credential password used in the connection URL. 
+- `username` `(string: "")` - The root credential username used in the connection URL.
+- `password` `(string: "")` - The root credential password used in the connection URL.
+- `ssl_cert` `(string: "")` - Path to a PEM-encoded client certificate.
+- `ssl_key` `(string: "")` - Path to the private key of the client certificate.
+- `ssl_ca` `(string: "")` - Path to a PEM-encoded CA certificate to verify the server against.
 
 ### Sample Payload
 
@@ -46,7 +49,10 @@ has a number of parameters to further configure a connection.
   "connection_url": "mongodb://{{username}}:{{password}}@mongodb.acme.com:27017/admin?ssl=true",
   "write_concern": "{ \"wmode\": \"majority\", \"wtimeout\": 5000 }",
   "username": "admin",
-  "password": "Password!"
+  "password": "Password!",
+  "ssl_cert": "/path/to/ssl/cert",
+  "ssl_key": "/path/to/ssl/key",
+  "ssl_ca": "/path/to/ssl/ca"
 }
 ```
 
