@@ -205,7 +205,6 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (
 				return nil, errors.New("bad value for ssl: " + value)
 			}
 			if ssl {
-				fmt.Printf("%s", sslCA)
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 					tlsConfig := &tls.Config{}
 					if sslCert != "" && sslKey != "" {
@@ -221,7 +220,6 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (
 						if err != nil {
 							return nil, errors.New("could not read file: " + sslCA)
 						}
-						fmt.Printf("%b", caPEM)
 						caCerts := x509.NewCertPool()
 						ok := caCerts.AppendCertsFromPEM([]byte(caPEM))
 						if !ok {
