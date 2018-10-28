@@ -3,6 +3,8 @@ package mongodb
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -29,6 +31,8 @@ type mongoDBConnectionProducer struct {
 	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
 	Username      string `json:"username" structs:"username" mapstructure:"username"`
 	Password      string `json:"password" structs:"password" mapstructure:"password"`
+	SSLCert      string `json:"ssl_cert" structs:"ssl_cert" mapstructure:"ssl_cert"`
+	SSLKey      string `json:"ssl_key" structs:"ssl_key" mapstructure:"ssl_key"`
 
 	Initialized bool
 	RawConfig   map[string]interface{}
@@ -119,7 +123,7 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 		c.session.Close()
 	}
 
-	dialInfo, err := parseMongoURL(c.ConnectionURL)
+	dialInfo, err := parseMongoURL(c.ConnectionURL, c.SSLCert, c.SSLKey)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +157,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+func parseMongoURL(rawURL string, sslCert string, sslKey string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -201,7 +205,27 @@ func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 			}
 			if ssl {
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-					return tls.Dial("tcp", addr.String(), &tls.Config{})
+					tlsConfig := &tls.Config{}
+					if sslCert != "" && sslKey != "" {
+						clientCertPEM, err := ioutil.ReadFile(sslCert);
+						if err != nil {
+							return nil, errors.New("could not read file: " + sslCert)
+						}
+						clientKeyPEM, err := ioutil.ReadFile(sslKey);
+						if err != nil {
+							return nil, errors.New("could not read file: " + sslKey)
+						}
+						clientCert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
+						clientCert.Leaf, err = x509.ParseCertificate(clientCert.Certificate[0])
+						if err != nil {
+							return nil, errors.New("failed parsing ssl options")
+						}
+						tlsConfig = &tls.Config{
+							Certificates: []tls.Certificate{clientCert},
+							InsecureSkipVerify: true,
+						}
+					}
+					return tls.Dial("tcp", addr.String(), tlsConfig)
 				}
 			}
 		case "connect":
