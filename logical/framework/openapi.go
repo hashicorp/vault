@@ -215,11 +215,17 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 							mediaType = "application/json"
 						}
 
+						// create a version of the response that will not emit null items
+						cr, err := cleanResponse(resp.Example)
+						if err != nil {
+							return err
+						}
+
 						// Only one example per media type is allowed, so first one wins
 						if _, ok := content[mediaType]; !ok {
 							content[mediaType] = &openapi.MediaTypeObject{
 								Schema: &openapi.Schema{
-									Example: cleanResponse(resp.Example),
+									Example: cr,
 								},
 							}
 						}
@@ -269,9 +275,19 @@ func specialPathMatch(path string, specialPaths []string) bool {
 func expandPattern(pattern string) []string {
 	var paths []string
 
-	// This construct is added by GenericNameRegex and is much easier to remove now
-	// than to compensate for in the other regexes.
-	pattern = strings.Replace(pattern, `\w(([\w-.]+)?\w)?`, "", -1)
+	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
+	// detect and remove it now than to compensate for in the other regexes.
+	//
+	// example: (?P<foo>\\w(([\\w-.]+)?\\w)?) -> (?P<foo>)
+	base := GenericNameRegex("")
+	start := strings.Index(base, ">")
+	end := strings.LastIndex(base, ")")
+	regexToRemove := ""
+	if start != -1 && end != -1 && end > start {
+		regexToRemove = base[start+1 : end]
+	}
+
+	pattern = strings.Replace(pattern, regexToRemove, "", -1)
 
 	// Initialize paths with the original pattern or the halves of an
 	// alternation, which is also present in some patterns.
@@ -286,10 +302,18 @@ func expandPattern(pattern string) []string {
 	// groups, but we probably don't want to deal with the exponential increase beyond that anyway.
 	for i := 0; i < len(paths); i++ {
 		p := paths[i]
+
+		// match is a 2-element slice that will have a start and end index
+		// for the left-most match of a regex of form: (lease/)?
 		match := optRe.FindStringIndex(p)
+
 		if match != nil {
-			paths[i] = p[0:match[0]] + p[match[0]+1:match[1]-2] + p[match[1]:]
-			paths = append(paths, p[0:match[0]]+p[match[1]:])
+			// create a path that includes the optional element but without
+			// parenthesis or the '?' character.
+			paths[i] = p[:match[0]] + p[match[0]+1:match[1]-2] + p[match[1]:]
+
+			// create a path that excludes the optional element.
+			paths = append(paths, p[:match[0]]+p[match[1]:])
 			i--
 		}
 	}
@@ -402,12 +426,12 @@ type cleanedResponse struct {
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
 }
 
-func cleanResponse(resp *logical.Response) *cleanedResponse {
+func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
 	var r cleanedResponse
 
-	if mapstructure.Decode(resp, &r) != nil {
-		return nil
+	if err := mapstructure.Decode(resp, &r); err != nil {
+		return nil, err
 	}
 
-	return &r
+	return &r, nil
 }

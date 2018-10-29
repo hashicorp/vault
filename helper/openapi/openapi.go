@@ -6,7 +6,24 @@ import (
 	"github.com/hashicorp/vault/version"
 )
 
-const OpenAPIVersion = "3.0.2"
+const Version = "3.0.2"
+
+// NewDocument returns an empty OpenAPI document.
+func NewDocument() *Document {
+	return &Document{
+		OpenAPIVersion: Version,
+		Info: Info{
+			Title:       "HashiCorp Vault API",
+			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+			Version:     version.GetVersion().Version,
+			License: License{
+				Name: "Mozilla Public License 2.0",
+				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
+			},
+		},
+		Paths: make(map[string]*PathItem),
+	}
+}
 
 type Document struct {
 	OpenAPIVersion string               `json:"openapi"`
@@ -36,6 +53,13 @@ type PathItem struct {
 	Get    *Operation `json:"get,omitempty"`
 	Post   *Operation `json:"post,omitempty"`
 	Delete *Operation `json:"delete,omitempty"`
+}
+
+// NewOperation creates an empty OpenAPI Operations object.
+func NewOperation() *Operation {
+	return &Operation{
+		Responses: make(map[string]*Response),
+	}
 }
 
 type Operation struct {
@@ -90,26 +114,4 @@ var StdRespOK = &Response{
 
 var StdRespNoContent = &Response{
 	Description: "empty body",
-}
-
-func NewDocument() *Document {
-	return &Document{
-		OpenAPIVersion: OpenAPIVersion,
-		Info: Info{
-			Title:       "HashiCorp Vault API",
-			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			Version:     version.GetVersion().Version,
-			License: License{
-				Name: "Mozilla Public License 2.0",
-				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
-			},
-		},
-		Paths: make(map[string]*PathItem),
-	}
-}
-
-func NewOperation() *Operation {
-	return &Operation{
-		Responses: make(map[string]*Response),
-	}
 }

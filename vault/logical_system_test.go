@@ -2449,10 +2449,15 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	exp := map[string]interface{}{
-		"openapi": openapi.OpenAPIVersion,
+		"openapi": openapi.Version,
 		"info": map[string]interface{}{
-			"title":   "HashiCorp Vault API",
-			"version": version.GetVersion().Version,
+			"title":       "HashiCorp Vault API",
+			"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+			"version":     version.GetVersion().Version,
+			"license": map[string]interface{}{
+				"name": "Mozilla Public License 2.0",
+				"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+			},
 		},
 		"paths": map[string]interface{}{},
 	}

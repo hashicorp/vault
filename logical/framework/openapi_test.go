@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -15,6 +16,136 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/version"
 )
+
+/*
+
+var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // Capture required parameters, e.g. "(?P<name>regex)"
+var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // Capture optional path elements in ungreedy (?U) fashion, e.g. "(leases/)?renew"
+var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+var cleanCharsRe = regexp.MustCompile("[()^$?]")         // Set of regex characters that will be stripped during cleaning
+var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // Path suffix patterns that will be stripped during cleaning
+var wsRe = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
+*/
+
+func TestOpenAPI_Regex(t *testing.T) {
+	t.Run("Required", func(t *testing.T) {
+		tests := []struct {
+			input    string
+			captures []string
+		}{
+			{`/foo/bar/(?P<val>.*)`, []string{"val"}},
+			{`/foo/bar/` + GenericNameRegex("val"), []string{"val"}},
+			{`/foo/bar/` + GenericNameRegex("first") + "/b/" + GenericNameRegex("second"), []string{"first", "second"}},
+			{`/foo/bar`, []string{}},
+		}
+
+		for _, test := range tests {
+			result := reqdRe.FindAllStringSubmatch(test.input, -1)
+			if len(result) != len(test.captures) {
+				t.Fatalf("Capture error (%s): expected %d matches, actual: %d", test.input, len(test.captures), len(result))
+			}
+
+			for i := 0; i < len(result); i++ {
+				if result[i][1] != test.captures[i] {
+					t.Fatalf("Capture error (%s): expected %s, actual: %s", test.input, test.captures[i], result[i][1])
+				}
+			}
+		}
+	})
+	t.Run("Optional", func(t *testing.T) {
+		input := "foo/(maybe/)?bar"
+		expStart := len("foo/")
+		expEnd := len(input) - len("bar")
+
+		match := optRe.FindStringIndex(input)
+		if diff := deep.Equal(match, []int{expStart, expEnd}); diff != nil {
+			t.Fatal(diff)
+		}
+
+		input = "/foo/maybe/bar"
+		match = optRe.FindStringIndex(input)
+		if match != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, match)
+		}
+	})
+	t.Run("Alternation", func(t *testing.T) {
+		input := `(raw/?$|raw/(?P<path>.+))`
+
+		matches := altRe.FindAllStringSubmatch(input, -1)
+		exp1 := "raw/?$"
+		exp2 := "raw/(?P<path>.+)"
+		if matches[0][1] != exp1 || matches[0][2] != exp2 {
+			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches[0][1:])
+		}
+
+		input = `/foo/bar/` + GenericNameRegex("val")
+
+		matches = altRe.FindAllStringSubmatch(input, -1)
+		if matches != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
+		}
+	})
+	t.Run("Path fields", func(t *testing.T) {
+		input := `/foo/bar/{inner}/baz/{outer}`
+
+		matches := pathFieldsRe.FindAllStringSubmatch(input, -1)
+
+		exp1 := "inner"
+		exp2 := "outer"
+		if matches[0][1] != exp1 || matches[1][1] != exp2 {
+			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches)
+		}
+
+		input = `/foo/bar/inner/baz/outer`
+		matches = pathFieldsRe.FindAllStringSubmatch(input, -1)
+
+		if matches != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
+		}
+	})
+	t.Run("Filtering", func(t *testing.T) {
+		tests := []struct {
+			input  string
+			regex  *regexp.Regexp
+			output string
+		}{
+			{
+				input:  `ab?cde^fg(hi?j$k`,
+				regex:  cleanCharsRe,
+				output: "abcdefghijk",
+			},
+			{
+				input:  `abcde/?`,
+				regex:  cleanSuffixRe,
+				output: "abcde",
+			},
+			{
+				input:  `abcde/?$`,
+				regex:  cleanSuffixRe,
+				output: "abcde",
+			},
+			{
+				input:  `abcde`,
+				regex:  wsRe,
+				output: "abcde",
+			},
+			{
+				input:  `  a         b    cd   e   `,
+				regex:  wsRe,
+				output: "abcde",
+			},
+		}
+
+		for _, test := range tests {
+			result := test.regex.ReplaceAllString(test.input, "")
+			if result != test.output {
+				t.Fatalf("Clean Regex error (%s). Expected %s, got %s", test.input, test.output, result)
+			}
+		}
+
+	})
+}
 
 func TestOpenAPI_ExpandPattern(t *testing.T) {
 	tests := []struct {
@@ -35,7 +166,7 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 			"renew",
 			"renew/{url_lease_id}",
 		}},
-		{`config/ui/headers/(?P<header>\w(([\w-.]+)?\w)?)`, []string{"config/ui/headers/{header}"}},
+		{`config/ui/headers/` + GenericNameRegex("header"), []string{"config/ui/headers/{header}"}},
 		{`leases/lookup/(?P<prefix>.+?)?`, []string{
 			"leases/lookup/",
 			"leases/lookup/{prefix}",
