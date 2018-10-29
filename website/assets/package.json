@@ -1,7 +1,6 @@
 {
   "name": "middleman-spike-assets",
-  "description":
-    "simple config to use postcss and webpack for asset processing",
+  "description": "simple config to use postcss and webpack for asset processing",
   "version": "0.0.0",
   "author": "Jeff Escalante",
   "main": "app.js",
