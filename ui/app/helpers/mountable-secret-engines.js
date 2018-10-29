@@ -8,6 +8,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'cloud',
   },
   {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
+    category: 'cloud',
+  },
+  {
     displayName: 'AWS',
     value: 'aws',
     type: 'aws',
