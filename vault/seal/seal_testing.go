@@ -3,12 +3,21 @@ package seal
 import (
 	"context"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 )
 
-type TestSeal struct{}
+type TestSeal struct {
+	logger log.Logger
+}
 
 var _ Access = (*TestSeal)(nil)
+
+func NewTestSeal(logger log.Logger) *TestSeal {
+	return &TestSeal{
+		logger: logger,
+	}
+}
 
 func (s *TestSeal) Init(_ context.Context) error {
 	return nil

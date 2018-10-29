@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator - Command"
-sidebar_title: "operator"
+sidebar_title: "<code>operator</code>"
 sidebar_current: "docs-commands-operator"
 description: |-
   The "operator" command groups subcommands for operators interacting with

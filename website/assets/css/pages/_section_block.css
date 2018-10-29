@@ -62,10 +62,12 @@
 
   & .button-container {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    margin: auto -8px -16px;
 
-    & > a + a {
-      margin-left: 16px;
+    & > * {
+      margin: auto 8px 16px;
     }
   }
 

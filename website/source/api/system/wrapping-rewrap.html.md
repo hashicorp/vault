@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/wrapping/rewrap - HTTP API"
-sidebar_title: "<tt>/sys/wrapping/rewrap</tt>"
+sidebar_title: "<code>/sys/wrapping/rewrap</code>"
 sidebar_current: "api-http-system-wrapping-rewrap"
 description: |-
   The `/sys/wrapping/rewrap` endpoint can be used to rotate a wrapping token and refresh its TTL.

@@ -318,8 +318,7 @@ within that replication set must use an HSM as well.
   secret sharing method), the clusters within that replication set can be mixed,
   such that some may use an HSM, others may use Shamir.
 
-For sake of this discussion, the [cloud
-auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
+For sake of this discussion, the cloud auto-unseal feature is treated as an
 HSM.
 
 ## Additional References

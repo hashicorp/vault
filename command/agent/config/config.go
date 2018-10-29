@@ -27,6 +27,10 @@ type Config struct {
 type AutoAuth struct {
 	Method *Method `hcl:"-"`
 	Sinks  []*Sink `hcl:"sinks"`
+
+	// NOTE: This is unsupported outside of testing and may disappear at any
+	// time.
+	EnableReauthOnNewCredentials bool `hcl:"enable_reauth_on_new_credentials"`
 }
 
 type Method struct {

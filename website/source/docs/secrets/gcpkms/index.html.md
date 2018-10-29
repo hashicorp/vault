@@ -73,9 +73,8 @@ following sections describe the different ways in which keys can be managed.
 ### Symmetric Encryption/Decryption
 
 This section describes using a Cloud KMS key for symmetric
-encryption/decryption. This is probably the most common and familiar type of
-encryption. Google Cloud manages the key ring which is used to encrypt and
-decrypt data.
+encryption/decryption. This is one of the most common types of encryption.
+Google Cloud manages the key ring which is used to encrypt and decrypt data.
 
 <table>
   <thead>
@@ -153,11 +152,12 @@ version on Google Cloud KMS and set that version as the active key.
     As the message says, rotation is not immediate. Depending on a number of
     factors, the propagation of the new key can take quite some time. If you
     have a need to immediately encrypt data with this new key, query the API to
-    wait for the key to become the primary.
+    wait for the key to become the primary. Alternatively, you can specify the
+    `key_version` parameter to lock to the exact key for use with encryption.
 
 1. Re-encrypt already-encrypted ciphertext to be encrypted with a new version of
 the crypto key. Vault will decrypt the value using the appropriate key in the
-keyring and then encrypted the resulting plaintext with the newest key in the
+keyring and then encrypt the resulting plaintext with the newest key in the
 keyring.
 
     ```text
@@ -169,8 +169,8 @@ keyring.
     ```
 
     This process **does not** reveal the plaintext data. As such, a Vault policy
-    could grant almost an untrusted process the ability to re-encrypt ciphertext
-    data, since the process would not be able to get access to the plaintext data.
+    could grant an untrusted process the ability to re-encrypt ciphertext data,
+    since the process would not be able to get access to the plaintext data.
 
 1. Trim old key versions by deleting Cloud KMS crypto key versions that are
 older than the `min_version` allowed on the key.
@@ -199,9 +199,9 @@ older than the `min_version` allowed on the key.
 
 This section describes using a Cloud KMS key for asymmetric decryption. In this
 model Google Cloud manages the key ring and exposes the public key via an API
-endpoint. The public key encrypts data offline to produce ciphertext. When the
-plaintext is desired, the user submits the ciphertext to Cloud KMS which
-decrypts the value using the corresponding public key.
+endpoint. The public key is used to encrypt data offline and produce ciphertext.
+When the plaintext is desired, the user submits the ciphertext to Cloud KMS
+which decrypts the value using the corresponding private key.
 
 <table>
   <thead>
@@ -232,10 +232,10 @@ decrypts the value using the corresponding public key.
 1. Retrieve the public key from Cloud KMS:
 
     ```text
-    $ gcloud alpha kms keys versions get-public-key [CRYPTO_KEY_VERSION] \
-        --location [LOCATION] \
-        --keyring [KEY_RING] \
-        --key [KEY] \
+    $ gcloud alpha kms keys versions get-public-key <crypto-key-version> \
+        --location <location> \
+        --keyring <key-ring> \
+        --key <key> \
         --output-file ~/mykey.pub
     ```
 
@@ -270,7 +270,7 @@ language's built-ins as well.
 This section describes using a Cloud KMS key for asymmetric signing. In this
 model Google Cloud manages the key ring and exposes the public key via an API
 endpoint. A message or digest is signed with the corresponding private key, and
-can be verified using the public key.
+can be verified by anyone with the corresponding public key.
 
 <table>
   <thead>
@@ -328,6 +328,10 @@ corresponds to they key type:
     valid    true
     ```
 
+    Note: it is also possible to verify this signature without Vault. Download
+    the public key from Cloud KMS, and use a tool like OpenSSL or your
+    programming language primitives to verify the signature.
+
 
 ## Authentication
 
@@ -374,6 +378,9 @@ locations.keyRings.cryptoKeys.cryptoKeyVersions.get
 locations.keyRings.cryptoKeys.cryptoKeyVersions.create
 locations.keyRings.cryptoKeys.cryptoKeyVersions.patch
 locations.keyRings.cryptoKeys.cryptoKeyVersions.destroy
+locations.keyRings.cryptoKeys.cryptoKeyVersions.asymmetricDecrypt
+locations.keyRings.cryptoKeys.cryptoKeyVersions.asymmetricSign
+locations.keyRings.cryptoKeys.cryptoKeyVersions.getPublicKey
 ```
 
 For simplicity, you can use this role instead:
@@ -388,6 +395,12 @@ only need the following permissions:
 
 ```text
 roles/cloudkms.cryptoKeyEncrypterDecrypter
+```
+
+To sign and verify, you only need the following permissions:
+
+```text
+roles/cloudkms.signerVerifier
 ```
 
 For more information, please see the [Google Cloud KMS IAM documentation][kms-iam]

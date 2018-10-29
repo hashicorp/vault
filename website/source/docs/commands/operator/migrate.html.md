@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator migrate - Command"
-sidebar_title: "migrate"
+sidebar_title: "<code>migrate</code>"
 sidebar_current: "docs-commands-operator-migrate"
 description: |-
   The "operator migrate" command copies data between storage backends to facilitate
