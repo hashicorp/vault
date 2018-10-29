@@ -7,13 +7,14 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 var (
 	ConfigureSeal func(*server.Config, *[]string, *map[string]string, log.Logger, vault.Seal) (vault.Seal, error) = configureSeal
 )
 
-func configureSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (seal vault.Seal, err error) {
+func configureSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (outseal vault.Seal, err error) {
 	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
 		if config.Seal == nil {
 			config.Seal = &server.Seal{
@@ -21,19 +22,19 @@ func configureSeal(config *server.Config, infoKeys *[]string, info *map[string]s
 			}
 		}
 		switch config.Seal.Type {
-		case "alicloudkms":
+		case seal.AliCloudKMS:
 			return configureAliCloudKMSSeal(config, infoKeys, info, logger, inseal)
 
-		case "awskms":
+		case seal.AWSKMS:
 			return configureAWSKMSSeal(config, infoKeys, info, logger, inseal)
 
-		case "gcpckms":
+		case seal.GCPCKMS:
 			return configureGCPCKMSSeal(config, infoKeys, info, logger, inseal)
 
-		case "azurekeyvault":
+		case seal.AzureKeyVault:
 			return configureAzureKeyVaultSeal(config, infoKeys, info, logger, inseal)
 
-		case "pkcs11":
+		case seal.PKCS11:
 			return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
 
 		default:
