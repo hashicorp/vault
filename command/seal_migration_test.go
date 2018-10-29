@@ -108,7 +108,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		newSeal := vault.NewAutoSeal(&seal.TestSeal{})
+		newSeal := vault.NewAutoSeal(seal.NeweTestSeal(logger))
 		newSeal.SetCore(core)
 		autoSeal = newSeal
 		if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, newSeal, &server.Config{
