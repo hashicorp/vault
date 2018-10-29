@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets - Command"
-sidebar_title: "secrets"
+sidebar_title: "<code>secrets</code>"
 sidebar_current: "docs-commands-secrets"
 description: |-
   The "secrets" command groups subcommands for interacting with Vault's secrets

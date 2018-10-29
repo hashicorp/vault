@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets enable - Command"
-sidebar_title: "enable"
+sidebar_title: "<code>enable</code>"
 sidebar_current: "docs-commands-secrets-enable"
 description: |-
   The "secrets enable" command enables an secrets engine at a given path. If an

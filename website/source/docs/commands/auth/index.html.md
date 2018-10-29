@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth - Command"
-sidebar_title: "auth"
+sidebar_title: "<code>auth</code>"
 sidebar_current: "docs-commands-auth"
 description: |-
   The "auth" command groups subcommands for interacting with Vault's auth
