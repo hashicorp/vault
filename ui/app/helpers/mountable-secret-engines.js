@@ -44,6 +44,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'cloud',
   },
   {
+    displayName: 'Google Cloud KMS',
+    value: 'gcpkms',
+    type: 'gcpkms',
+    category: 'cloud',
+  },
+  {
     displayName: 'KV',
     value: 'kv',
     type: 'kv',
