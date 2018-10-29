@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/policy - HTTP API"
-sidebar_title: "<tt>/sys/policy</tt>"
+sidebar_title: "<code>/sys/policy</code>"
 sidebar_current: "api-http-system-policy"
 description: |-
   The `/sys/policy` endpoint is used to manage ACL policies in Vault.

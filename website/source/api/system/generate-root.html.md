@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/generate-root - HTTP API"
-sidebar_title: "<tt>/sys/generate-root</tt>"
+sidebar_title: "<code>/sys/generate-root</code>"
 sidebar_current: "api-http-system-generate-root"
 description: |-
   The `/sys/generate-root/` endpoints are used to create a new root key for
