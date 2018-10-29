@@ -1,0 +1,81 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "version": "<vault_version>"
+  },
+  "paths": {
+    "/foo/{id}": {
+      "description": "Synopsis",
+      "x-vault-create": true,
+      "x-vault-sudo": true,
+      "parameters": [
+        {
+          "name": "id",
+          "description": "id path parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "x-abc-token",
+          "description": "a header value",
+          "in": "header",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": ["secrets"],
+        "summary": "My Summary",
+        "description": "My Description",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "list",
+            "description": "Return a list if `true`",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": ["secrets"],
+        "summary": "Update Summary",
+        "description": "Update Description",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "description": "the names",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

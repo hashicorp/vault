@@ -2990,7 +2990,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			// type "unknown" and won't already be tagged.
 			var tag string
 			switch mountPrefix + mount {
-			case "cubbyhole/":
+			case "cubbyhole/", "secret/":
 				tag = "secrets"
 			case "sys/":
 				tag = "system"

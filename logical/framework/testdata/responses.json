@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "version": "<vault_version>"
+  },
+  "paths": {
+    "/foo": {
+      "description": "Synopsis",
+      "x-vault-unauthenticated": true,
+      "delete": {
+        "tags": ["secrets"],
+        "summary": "Delete stuff",
+        "responses": {
+          "204": {
+            "description": "empty body"
+          }
+        }
+      },
+      "get": {
+        "tags": ["secrets"],
+        "summary": "My Summary",
+        "description": "My Description",
+        "responses": {
+          "202": {
+            "description": "Amazing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "data": {
+                      "amount": 42
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
