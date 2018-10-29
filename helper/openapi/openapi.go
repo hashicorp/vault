@@ -15,8 +15,15 @@ type Document struct {
 }
 
 type Info struct {
-	Title   string `json:"title"`
-	Version string `json:"version"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Version     string  `json:"version"`
+	License     License `json:"license"`
+}
+
+type License struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 type PathItem struct {
@@ -89,8 +96,13 @@ func NewDocument() *Document {
 	return &Document{
 		OpenAPIVersion: OpenAPIVersion,
 		Info: Info{
-			Title:   "HashiCorp Vault API",
-			Version: version.GetVersion().Version,
+			Title:       "HashiCorp Vault API",
+			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+			Version:     version.GetVersion().Version,
+			License: License{
+				Name: "Mozilla Public License 2.0",
+				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
+			},
 		},
 		Paths: make(map[string]*PathItem),
 	}
