@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Sys) ListPolicies() ([]string, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/policy")
+	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -28,7 +28,7 @@ func (c *Sys) ListPolicies() ([]string, error) {
 	}
 
 	var result []string
-	err = mapstructure.Decode(secret.Data["policies"], &result)
+	err = mapstructure.Decode(secret.Data["keys"], &result)
 	if err != nil {
 		return nil, err
 	}
@@ -69,10 +69,10 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 
 func (c *Sys) PutPolicy(name, rules string) error {
 	body := map[string]string{
-		"rules": rules,
+		"policy": rules,
 	}
 
-	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/policy/%s", name))
+	r := c.c.NewRequest("PUT", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 	if err := r.SetJSONBody(body); err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *Sys) PutPolicy(name, rules string) error {
 }
 
 func (c *Sys) DeletePolicy(name string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policy/%s", name))
+	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/policies/acl/%s", name))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
