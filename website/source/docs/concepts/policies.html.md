@@ -571,10 +571,10 @@ $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
   --data '{"policy":"path \"...\" {...} "}' \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
-In both examples, the name of the policy is "my-policy". You can think of this
+In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
@@ -603,7 +603,7 @@ $ curl \
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
 ```sh
-$ vault delete sys/policy/my-policy
+$ vault delete sys/policy/policy-name
 ```
 
 or via the API:
@@ -612,7 +612,7 @@ or via the API:
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
 This is an idempotent operation. Vault will not return an error when deleting a
