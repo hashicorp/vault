@@ -15,7 +15,7 @@
     - docs/internals/replication.html
     - docs/internals/plugins.html
 -
-  title: "Basic Concepts"
+  title: "Concepts"
   docs:
     - docs/concepts/index.html
     - docs/concepts/dev-server.html
@@ -127,7 +127,6 @@
   title: "Vault Enterprise"
   docs:
     - docs/enterprise/replication/index.html
-    - docs/enterprise/auto-unseal/index.html
     - docs/enterprise/hsm/index.html
     - docs/enterprise/sealwrap/index.html
     - docs/enterprise/namespaces/index.html

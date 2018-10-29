@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "AliCloud KMS - Seals - Configuration"
-sidebar_title: "AliCloud KMS <sup>ENT</sup>"
+sidebar_title: "AliCloud KMS <sup>1.0 BETA</sup>"
 sidebar_current: "docs-configuration-seal-alicloudkms"
 description: |-
   The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping
@@ -11,7 +11,7 @@ description: |-
 # `alicloudkms` Seal
 
 The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping mechanism.
-Vault Enterprise's AliCloud KMS seal is activated by one of the following:
+The AliCloud KMS seal is activated by one of the following:
 
 * The presence of a `seal "alicloudkms"` block in Vault's configuration file.
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `alicloudkms`. If

@@ -747,17 +747,6 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	// Valid parameter for the Seal types
-	switch key {
-	case "pkcs11":
-	case "alicloudkms":
-	case "awskms":
-	case "gcpckms":
-	case "azurekeyvault":
-	default:
-		return fmt.Errorf("invalid seal type %q", key)
-	}
-
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))

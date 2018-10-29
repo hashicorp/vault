@@ -150,7 +150,15 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 		return te.Meta, nil
 
 	case "type":
-		return te.Type.String(), nil
+		teType := te.Type
+		switch teType {
+		case TokenTypeBatch, TokenTypeService:
+		case TokenTypeDefault:
+			teType = TokenTypeService
+		default:
+			return "unknown", nil
+		}
+		return teType.String(), nil
 	}
 
 	return nil, nil

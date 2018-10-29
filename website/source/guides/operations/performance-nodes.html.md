@@ -20,13 +20,14 @@ _standby_ nodes and simply forward requests to the _active_ node.
 
 ![HA Architecture](/img/vault-ha-consul-3.png)
 
-If you are running **_Vault Enterprise_ 0.11** or later, those standby nodes can
-handle most read-only requests. For example, performance standbys can handle
-encryption/decryption of data using [transit](/docs/secrets/transit/index.html)
-keys, GET requests of key/value secrets and other requests that do not change
-underlying storage. This can provide considerable improvements in throughput for
-traffic of this type, resulting in aggregate performance increase linearly
-correlated to the number of performance standby nodes deployed in a cluster.
+If you are running **_Vault Enterprise_ 0.11** or later with the Consul storage 
+backend, those standby nodes can handle most read-only requests. For example, 
+performance standbys can handle encryption/decryption of data using 
+[transit](/docs/secrets/transit/index.html) keys, GET requests of key/value 
+secrets and other requests that do not change underlying storage. This can 
+provide considerable improvements in throughput for traffic of this type, 
+resulting in aggregate performance increase linearly correlated to the number 
+of performance standby nodes deployed in a cluster.
 
 
 ## Reference Materials
