@@ -38,7 +38,7 @@
   z-index: 100;
   border: 0;
   box-shadow: none;
-  color: $blue;
+  color: $grey-light;
   padding-left: 0;
   padding-right: 0;
 
@@ -53,15 +53,15 @@
     box-shadow: none;
   }
 }
-.button.copy-button {
+
+.masked-input.masked .masked-value {
   color: $grey-light;
+}
+
+.masked-input:not(.masked) .masked-input-toggle {
+  color: $blue;
 }
 
 .masked-input .input:focus + .masked-input-toggle {
   background: rgba($white, 0.95);
-}
-
-.masked-input.masked .masked-value,
-.masked-input.masked .masked-input-toggle {
-  color: $grey-light;
 }
