@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -36,6 +37,67 @@ func generateCode(key string, period uint, digits otplib.Digits, algorithm otpli
 	})
 
 	return totpToken, err
+}
+
+func TestBackend_KeyName(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		Name    string
+		KeyName string
+		Fail    bool
+	}{
+		{
+			"without @",
+			"sample",
+			false,
+		},
+		{
+			"with @ in the beginning",
+			"@sample.com",
+			true,
+		},
+		{
+			"with @ in the end",
+			"sample.com@",
+			true,
+		},
+		{
+			"with @ in between",
+			"sample@sample.com",
+			false,
+		},
+		{
+			"with multiple @",
+			"sample@sample@@sample.com",
+			false,
+		},
+	}
+	var resp *logical.Response
+	for _, tc := range tests {
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path:      "keys/" + tc.KeyName,
+			Operation: logical.UpdateOperation,
+			Storage:   config.StorageView,
+			Data: map[string]interface{}{
+				"generate":     true,
+				"account_name": "vault",
+				"issuer":       "hashicorp",
+			},
+		})
+		if tc.Fail {
+			if err == nil {
+				t.Fatalf("expected an error for test %q", tc.Name)
+			}
+		} else if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: test name: %q\nresp: %#v\nerr: %v", tc.Name, resp, err)
+		}
+	}
 }
 
 func TestBackend_readCredentialsDefaultValues(t *testing.T) {
