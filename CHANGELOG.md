@@ -6,6 +6,11 @@ CHANGES:
    detected. It's not strictly necessary and in some cases was causing
    reauthentication much more often than intended.
 
+FEATURES:
+
+ * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
+   credentials when having Agent automatically authenticate to Vault.
+
 BUG FIXES:
 
  * auth/userpass: Fix minor timing issue that could leak the presence of a
