@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -21,6 +22,11 @@ import (
 )
 
 func TestAppRoleEndToEnd(t *testing.T) {
+	testAppRoleEndToEnd(t, false)
+	testAppRoleEndToEnd(t, true)
+}
+
+func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool) {
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
@@ -52,55 +58,65 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("auth/approle/role/role1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
-		"period":         "300",
+		"token_ttl":      "3s",
+		"token_max_ttl":  "10s",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	vaultResult, err := client.Logical().Write("auth/approle/role/role1/secret-id", nil)
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	secretID := vaultResult.Data["secret_id"].(string)
+	secretID1 := resp.Data["secret_id"].(string)
 
-	vaultResult, err = client.Logical().Read("auth/approle/role/role1/role-id")
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
-	roleID := vaultResult.Data["role_id"].(string)
+	roleID1 := resp.Data["role_id"].(string)
+
+	_, err = client.Logical().Write("auth/approle/role/test2", map[string]interface{}{
+		"bind_secret_id": "true",
+		"token_ttl":      "3s",
+		"token_max_ttl":  "10s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.Logical().Write("auth/approle/role/test2/secret-id", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secretID2 := resp.Data["secret_id"].(string)
+
+	resp, err = client.Logical().Read("auth/approle/role/test2/role-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	roleID2 := resp.Data["role_id"].(string)
 
 	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
 	role := rolef.Name()
-	defer rolef.Close()
+	rolef.Close() // WriteFile doesn't need it open
 	defer os.Remove(role)
-
-	t.Logf("input role_id_path: %s", role)
-	if err := ioutil.WriteFile(role, []byte(roleID), 0600); err != nil {
-		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test role-id", "path", role)
-	}
+	t.Logf("input role_id_file_path: %s", role)
 
 	secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
 	secret := secretf.Name()
-	defer secretf.Close()
+	secretf.Close()
 	defer os.Remove(secret)
-
-	t.Logf("input secret_id_path: %s", secret)
-	if err := ioutil.WriteFile(secret, []byte(secretID), 0600); err != nil {
-		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test secret-id", "path", secret)
-	}
+	t.Logf("input secret_id_file_path: %s", secret)
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
@@ -119,13 +135,18 @@ func TestAppRoleEndToEnd(t *testing.T) {
 	})
 	defer timer.Stop()
 
+	conf := map[string]interface{}{
+		"role_id_file_path":   role,
+		"secret_id_file_path": secret,
+	}
+	if !removeSecretIDFile {
+		conf["remove_secret_id_file_after_reading"] = removeSecretIDFile
+	}
+
 	am, err := agentapprole.NewApproleAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.approle"),
 		MountPath: "auth/approle",
-		Config: map[string]interface{}{
-			"role_id_path":   role,
-			"secret_id_path": secret,
-		},
+		Config:    conf,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -173,14 +194,103 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
-	token, err := client.Logical().Write("auth/approle/login", map[string]interface{}{
-		"role_id":   roleID,
-		"secret_id": secretID,
-	})
-	if err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
 		t.Fatal(err)
+	} else {
+		logger.Trace("wrote test role 1", "path", role)
 	}
-	if token.Auth.ClientToken == "" {
-		t.Fatalf("expected a successful login")
+
+	if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
+		t.Fatal(err)
+	} else {
+		logger.Trace("wrote test secret 1", "path", secret)
+	}
+
+	checkToken := func() string {
+		timeout := time.Now().Add(5 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatal("did not find a written token after timeout")
+			}
+			val, err := ioutil.ReadFile(out)
+			if err == nil {
+				os.Remove(out)
+				if len(val) == 0 {
+					t.Fatal("written token was empty")
+				}
+
+				_, err = os.Stat(secret)
+				switch {
+				case removeSecretIDFile && err == nil:
+					t.Fatal("secret file exists but was supposed to be removed")
+				case !removeSecretIDFile && err != nil:
+					t.Fatal("secret ID file does not exist but was not supposed to be removed")
+				}
+
+				client.SetToken(string(val))
+				secret, err := client.Auth().Token().LookupSelf()
+				if err != nil {
+					t.Fatal(err)
+				}
+				return secret.Data["entity_id"].(string)
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	origEntity := checkToken()
+
+	// Make sure it gets renewed
+	timeout := time.Now().Add(4 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ttl, err := secret.Data["ttl"].(json.Number).Int64()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ttl > 3 {
+			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+		}
+	}
+
+	// Write new values
+	if err := ioutil.WriteFile(role, []byte(roleID2), 0600); err != nil {
+		t.Fatal(err)
+	} else {
+		logger.Trace("wrote test role 2", "path", role)
+	}
+
+	if err := ioutil.WriteFile(secret, []byte(secretID2), 0600); err != nil {
+		t.Fatal(err)
+	} else {
+		logger.Trace("wrote test secret 2", "path", secret)
+	}
+
+	newEntity := checkToken()
+	if newEntity == origEntity {
+		t.Fatal("found same entity")
+	}
+
+	timeout = time.Now().Add(4 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			break
+		}
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ttl, err := secret.Data["ttl"].(json.Number).Int64()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ttl > 3 {
+			t.Fatalf("unexpected ttl: %v", secret.Data["ttl"])
+		}
 	}
 }
