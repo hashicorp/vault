@@ -13,10 +13,10 @@ description: |-
 
 ## Supported MFA types.
 
-* [TOTP](/api/system/mfa-totp.html)
+* [TOTP](/api/system/mfa/totp.html)
 
-* [Okta](/api/system/mfa-okta.html)
+* [Okta](/api/system/mfa/okta.html)
 
-* [Duo](/api/system/mfa-duo.html)
+* [Duo](/api/system/mfa/duo.html)
 
-* [PingID](/api/system/mfa-pingid.html)
+* [PingID](/api/system/mfa/pingid.html)
