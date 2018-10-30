@@ -323,9 +323,10 @@ func (c *AgentCommand) Run(args []string) int {
 	})
 
 	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger:  c.logger.Named("auth.handler"),
-		Client:  c.client,
-		WrapTTL: config.AutoAuth.Method.WrapTTL,
+		Logger:                       c.logger.Named("auth.handler"),
+		Client:                       c.client,
+		WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 	})
 
 	// Start things running

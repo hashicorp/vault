@@ -461,17 +461,23 @@ for more details.
 
 ~> **NOTE**: This only affects access tokens. There is no change to the `service_account_key` secret type
 
-Previous versions of this secrets engine (Vault <= 0.11.1) created a lease for each access token secret.
-We have removed them after discovering that these tokens, specifically Google OAuth2 tokens for IAM service
-accounts, are non-revocable and have a static 60 minute lifetime. To match the current limitations of
-the GCP APIs, the secrets engine will no longer allow for revocation or manage the token TTL -
-more specifically, **the access_token response will no longer include `lease_id` or other lease information**.
-This change does not reflect any change to the actual underlying OAuth tokens or GCP service accounts.
+Previous versions of this secrets engine (Vault <= 0.11.1) created a lease for
+each access token secret. We have removed them after discovering that these
+tokens, specifically Google OAuth2 tokens for IAM service accounts, are
+non-revocable and have a static 60 minute lifetime. To match the current
+limitations of the GCP APIs, the secrets engine will no longer allow for
+revocation or manage the token TTL - more specifically, **the access_token
+response will no longer include `lease_id` or other lease information**. This
+change does not reflect any change to the actual underlying OAuth tokens or GCP
+service accounts.
 
 To upgrade:
-* Remove references from `lease_id`, `lease_duration` or other `lease_*` attributes when
-  reading responses for the access tokens secrets endpoint (i.e. from `gcp/token/$roleset`).
-  See the [documentation for access tokens](#access-tokens) to see the new format for the response.
-* Be aware of leftover leases from previous versions. While these old leases will still be revocable,
-  they will not actually invalidate their associated access token, and that token will still be useable
-  for up to one hour.
+
+- Remove references from `lease_id`, `lease_duration` or other `lease_*`
+  attributes when reading responses for the access tokens secrets endpoint (i.e.
+  from `gcp/token/$roleset`). See the [documentation for access
+  tokens](#access-tokens) to see the new format for the response.
+
+- Be aware of leftover leases from previous versions. While these old leases
+  will still be revocable, they will not actually invalidate their associated
+  access token, and that token will still be useable for up to one hour.

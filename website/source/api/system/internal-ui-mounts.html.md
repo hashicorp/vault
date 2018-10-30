@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/internal/ui/mounts - HTTP API"
-sidebar_title: "<tt>/sys/internal/ui/mounts</tt>"
+sidebar_title: "<code>/sys/internal/ui/mounts</code>"
 sidebar_current: "api-http-system-internal-ui-mounts"
 description: |-
   The `/sys/internal/ui/mounts` endpoint is used to manage mount listing visibility.

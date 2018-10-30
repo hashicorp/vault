@@ -1566,11 +1566,10 @@ func (i *IdentityStore) collectGroupsReverseDFS(group *identity.Group, visited m
 		if parentGroup == nil {
 			continue
 		}
-		pGroups, err := i.collectGroupsReverseDFS(parentGroup, visited, groups)
+		groups, err = i.collectGroupsReverseDFS(parentGroup, visited, groups)
 		if err != nil {
 			return nil, fmt.Errorf("failed to collect group at parent group ID %q", parentGroup.ID)
 		}
-		groups = append(groups, pGroups...)
 	}
 
 	return groups, nil

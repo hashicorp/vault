@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/unseal - HTTP API"
-sidebar_title: "<tt>/sys/unseal</tt>"
+sidebar_title: "<code>/sys/unseal</code>"
 sidebar_current: "api-http-system-unseal"
 description: |-
   The `/sys/unseal` endpoint is used to unseal the Vault.
@@ -33,9 +33,9 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 - `reset` `(bool: false)` – Specifies if previously-provided unseal keys are
   discarded and the unseal process is reset.
 
-- `migrate` `(string: "")` - Available in 1.0 Beta - Used to migrate the seal
+- `migrate` `(bool: false)` - Available in 1.0 Beta - Used to migrate the seal
   from shamir to autoseal or autoseal to shamir.  Must be provided on all unseal
-  key calls.  Valid values are "shamir" and "autoseal".
+  key calls.
 
 ### Sample Payload
 

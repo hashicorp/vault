@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/namespaces - HTTP API"
-sidebar_title: "<tt>/sys/namespaces</tt>"
+sidebar_title: "<code>/sys/namespaces</code>"
 sidebar_current: "api-http-system-namespaces"
 description: |-
   The `/sys/namespaces` endpoint is used manage namespaces in Vault.
