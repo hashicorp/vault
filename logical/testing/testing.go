@@ -64,8 +64,6 @@ type TestCase struct {
 
 // TestStep is a single step within a TestCase.
 type TestStep struct {
-	IsAuthBackendRequest bool
-
 	// Operation is the operation to execute
 	Operation logical.Operation
 
@@ -247,7 +245,10 @@ func Test(tt TestT, c TestCase) {
 		}
 	}
 
+	isAuthBackend := false
 	if c.CredentialBackend != nil || c.CredentialFactory != nil {
+		isAuthBackend = true
+
 		// Enable the test auth method
 		opts := &api.EnableAuthOptions{
 			Type: "test",
@@ -314,7 +315,7 @@ func Test(tt TestT, c TestCase) {
 		// Make sure to prefix the path with where we mounted the thing
 		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
-		if s.IsAuthBackendRequest {
+		if isAuthBackend {
 			// Prepend the path with "auth"
 			req.Path = "auth/" + req.Path
 		}

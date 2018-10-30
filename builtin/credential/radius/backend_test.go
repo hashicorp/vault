@@ -255,27 +255,24 @@ func testAccPreCheck(t *testing.T, host string, port int) func() {
 
 func testConfigWrite(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "config",
-		Data:                 d,
-		ErrorOk:              expectError,
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data:      d,
+		ErrorOk:   expectError,
 	}
 }
 
 func testAccStepDeleteUser(t *testing.T, n string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.DeleteOperation,
-		Path:                 "users/" + n,
+		Operation: logical.DeleteOperation,
+		Path:      "users/" + n,
 	}
 }
 
 func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.ListOperation,
-		Path:                 "users",
+		Operation: logical.ListOperation,
+		Path:      "users",
 		Check: func(resp *logical.Response) error {
 			if resp.IsError() {
 				return fmt.Errorf("got error response: %#v", *resp)
@@ -292,9 +289,8 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 func testStepUpdateUser(
 	t *testing.T, name string, policies string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "users/" + name,
+		Operation: logical.UpdateOperation,
+		Path:      "users/" + name,
 		Data: map[string]interface{}{
 			"policies": policies,
 		},
@@ -303,23 +299,21 @@ func testStepUpdateUser(
 
 func testAccUserLogin(t *testing.T, user string, data map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login/" + user,
-		Data:                 data,
-		ErrorOk:              expectError,
-		Unauthenticated:      true,
+		Operation:       logical.UpdateOperation,
+		Path:            "login/" + user,
+		Data:            data,
+		ErrorOk:         expectError,
+		Unauthenticated: true,
 	}
 }
 
 func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface{}, policies []string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login/" + user,
-		Data:                 data,
-		ErrorOk:              expectError,
-		Unauthenticated:      true,
+		Operation:       logical.UpdateOperation,
+		Path:            "login/" + user,
+		Data:            data,
+		ErrorOk:         expectError,
+		Unauthenticated: true,
 		//Check:           logicaltest.TestCheckAuth(policies),
 		Check: func(resp *logical.Response) error {
 			res := logicaltest.TestCheckAuth(policies)(resp)

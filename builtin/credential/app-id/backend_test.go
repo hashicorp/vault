@@ -93,9 +93,8 @@ func TestBackend_displayName(t *testing.T) {
 
 func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "map/app-id/foo",
+		Operation: logical.UpdateOperation,
+		Path:      "map/app-id/foo",
 		Data: map[string]interface{}{
 			"value": "foo,bar",
 		},
@@ -104,9 +103,8 @@ func testAccStepMapAppId(t *testing.T) logicaltest.TestStep {
 
 func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "map/app-id/foo",
+		Operation: logical.UpdateOperation,
+		Path:      "map/app-id/foo",
 		Data: map[string]interface{}{
 			"display_name": "tubbin",
 			"value":        "foo,bar",
@@ -116,9 +114,8 @@ func testAccStepMapAppIdDisplayName(t *testing.T) logicaltest.TestStep {
 
 func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "map/user-id/42",
+		Operation: logical.UpdateOperation,
+		Path:      "map/user-id/42",
 		Data: map[string]interface{}{
 			"value": "foo",
 		},
@@ -127,17 +124,15 @@ func testAccStepMapUserId(t *testing.T) logicaltest.TestStep {
 
 func testAccStepDeleteUserId(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.DeleteOperation,
-		Path:                 "map/user-id/42",
+		Operation: logical.DeleteOperation,
+		Path:      "map/user-id/42",
 	}
 }
 
 func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "map/user-id/42",
+		Operation: logical.UpdateOperation,
+		Path:      "map/user-id/42",
 		Data: map[string]interface{}{
 			"value":      "foo",
 			"cidr_block": cidr,
@@ -153,9 +148,8 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 		return nil
 	}
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login",
+		Operation: logical.UpdateOperation,
+		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
 			"user_id": "42",
@@ -178,9 +172,8 @@ func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep 
 		return nil
 	}
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login/foo",
+		Operation: logical.UpdateOperation,
+		Path:      "login/foo",
 		Data: map[string]interface{}{
 			"user_id": "42",
 		},
@@ -201,9 +194,8 @@ func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 	}
 
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login",
+		Operation: logical.UpdateOperation,
+		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
 			"user_id": "42",
@@ -218,9 +210,8 @@ func testAccLoginCidr(t *testing.T, ip string, err bool) logicaltest.TestStep {
 
 func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login",
+		Operation: logical.UpdateOperation,
+		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
 			"user_id": "48",
@@ -234,9 +225,8 @@ func testAccLoginInvalid(t *testing.T) logicaltest.TestStep {
 
 func testAccLoginDeleted(t *testing.T) logicaltest.TestStep {
 	return logicaltest.TestStep{
-		IsAuthBackendRequest: true,
-		Operation:            logical.UpdateOperation,
-		Path:                 "login",
+		Operation: logical.UpdateOperation,
+		Path:      "login",
 		Data: map[string]interface{}{
 			"app_id":  "foo",
 			"user_id": "42",
