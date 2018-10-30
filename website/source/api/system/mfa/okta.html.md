@@ -1,19 +1,19 @@
 ---
 layout: "api"
-page_title: "/sys/mfa/method/duo - HTTP API"
-sidebar_title: "<tt>/sys/mfa/method/duo</tt>"
-sidebar_current: "api-http-system-mfa-duo"
+page_title: "/sys/mfa/method/okta - HTTP API"
+sidebar_title: "<code>/sys/mfa/method/okta</code>"
+sidebar_current: "api-http-system-mfa-okta"
 description: |-
-  The '/sys/mfa/method/duo' endpoint focuses on managing Duo MFA behaviors in Vault Enterprise.
+  The '/sys/mfa/method/okta' endpoint focuses on managing Okta MFA behaviors in Vault Enterprise.
 ---
 
-## Configure Duo MFA Method
+## Configure Okta MFA Method
 
-This endpoint defines a MFA method of type Duo.
+This endpoint defines a MFA method of type Okta.
 
 | Method   | Path                           | Produces               |
 | :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/mfa/method/duo/:name`   | `204 (empty body)`     |
+| `POST`   | `/sys/mfa/method/okta/:name`   | `204 (empty body)`     |
 
 ### Parameters
 
@@ -27,22 +27,21 @@ This endpoint defines a MFA method of type Duo.
   - alias.metadata.`<key>`: The value of the Alias's metadata parameter
   - entity.metadata.`<key>`: The value of the Entity's metadata parameter
 
-- `secret_key` `(string)` - Secret key for Duo.
+- `org_name` `(string)` - Name of the organization to be used in the Okta API.
 
-- `integration_key` `(string)` - Integration key for Duo.
+- `api_token` `(string)` - Okta API key.
 
-- `api_hostname` `(string)` - API hostname for Duo.
+- `base_url` `(string)` -  If set, will be used as the base domain for API requests.  Examples are okta.com, oktapreview.com, and okta-emea.com.
 
-- `push_info` `(string)` - Push information for Duo.
+- `primary_email` `(bool: false)` -  If set, the username will only match the primary email for the account.
 
 ### Sample Payload
 
 ```json
 {
   "mount_accessor": "auth_userpass_1793464a",
-  "secret_key": "BIACEUEAXI20BNWTEYXT",
-  "integration_key":"8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-  "api_hostname":"api-2b5c39f5.duosecurity.com"
+  "org_name": "dev-262778",
+  "api_token": "0081u7KrReNkzmABZJAP2oDyIXccveqx9vIOEyCZDC"
 }
 ```
 
@@ -53,17 +52,17 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/okta/my_okta
 ```
 
-## Read Duo MFA Method
+## Read Okta MFA Method
 
-This endpoint queries the MFA configuration of Duo type for a given method
+This endpoint queries the MFA configuration of Okta type for a given method
 name.
 
 | Method   | Path                           | Produces                 |
 | :------- | :----------------------------- | :----------------------- |
-| `GET`    | `/sys/mfa/method/duo/:name`   | `200 application/json`   |
+| `GET`    | `/sys/mfa/method/okta/:name`   | `200 application/json`   |
 
 ### Parameters
 
@@ -75,7 +74,7 @@ name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/okta/my_okta
 
 ```
 
@@ -84,25 +83,24 @@ $ curl \
 ```json
 {
         "data": {
-                "api_hostname": "api-2b5c39f5.duosecurity.com",
-                "id": "0ad21b78-e9bb-64fa-88b8-1e38db217bde",
-                "integration_key": "BIACEUEAXI20BNWTEYXT",
+                "api_token": "0081u7KrReNkzmABZJAP2oDyIXccveqx9vIOEyCZDC",
+                "id": "e39f08a1-a42d-143d-5b87-15c61d89c15a",
                 "mount_accessor": "auth_userpass_1793464a",
-                "name": "my_duo",
-                "pushinfo": "",
-                "secret_key": "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz",
-                "type": "duo",
+                "name": "my_okta",
+                "org_name": "dev-262778",
+                "production": true,
+                "type": "okta",
                 "username_format": ""
         }
 }
 ```
-## Delete Duo MFA Method
+## Delete Okta MFA Method
 
-This endpoint deletes a Duo MFA method.
+This endpoint deletes a Okta MFA method.
 
 | Method   | Path                           | Produces                 |
 | :------- | :----------------------------- | :----------------------- |
-| `DELETE` | `/sys/mfa/method/duo/:name`   | `204 (empty body)`       |
+| `DELETE` | `/sys/mfa/method/okta/:name`   | `204 (empty body)`       |
 
 
 ### Parameters
@@ -115,6 +113,6 @@ This endpoint deletes a Duo MFA method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/mfa/method/duo/my_duo
+    http://127.0.0.1:8200/v1/sys/mfa/method/okta/my_okta
 
 ```

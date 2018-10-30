@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/health - HTTP API"
-sidebar_title: "<tt>/sys/health</tt>"
+sidebar_title: "<code>/sys/health</code>"
 sidebar_current: "api-http-system-health"
 description: |-
   The `/sys/health` endpoint is used to check the health status of Vault.

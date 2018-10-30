@@ -5,6 +5,16 @@ CHANGES:
  * Agent no longer automatically reauthenticates when new credentials are
    detected. It's not strictly necessary and in some cases was causing
    reauthentication much more often than intended.
+ * HSM Regenerate Key Support Removed: Vault no longer supports destroying and
+   regenerating encryption keys on an HSM; it only supports creating them.
+   Although this has never been a source of a customer incident, it is simply a
+   code path that is pretty trivial to activate, especially by mistyping
+   `regenerate_key` instead of `generate_key`.
+
+FEATURES:
+
+ * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
+   credentials when having Agent automatically authenticate to Vault.
 
 BUG FIXES:
 
