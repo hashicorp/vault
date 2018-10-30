@@ -107,6 +107,7 @@ ProtectHome=read-only
 PrivateTmp=yes
 PrivateDevices=yes
 SecureBits=keep-caps
+AmbientCapabilities=CAP_IPC_LOCK
 Capabilities=CAP_IPC_LOCK+ep
 CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
 NoNewPrivileges=yes
@@ -136,9 +137,9 @@ The following parameters are set for the `[Service]` stanza:
 
 - [`User`, `Group`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#User=) - Run vault as the vault user
 - [`ProtectSystem`, `ProtectHome`, `PrivateTmp`, `PrivateDevices`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Sandboxing) - Sandboxing settings to improve the security of the host by restricting vault privileges and access
-- [`SecureBits`, `Capabilities`, `CapabilityBoundingSet`](http://man7.org/linux/man-pages/man7/capabilities.7.html) - Configure the capabilities of the vault process
+- [`SecureBits`, `Capabilities`, `CapabilityBoundingSet`, `AmbientCapabilities`](http://man7.org/linux/man-pages/man7/capabilities.7.html) - Configure the capabilities of the vault process
 - [`NoNewPrivileges`](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#NoNewPrivileges=) - Prevent vault and any child process from gaining new privileges
-- [`ExecStart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStart=) - Start vault with the `server` argument and path to the configuration file  
+- [`ExecStart`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStart=) - Start vault with the `server` argument and path to the configuration file
 - [`ExecReload`](https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecReload=) - Send vault a HUP signal to trigger a configuration reload in vault
 - [`KillMode`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillMode=) - Treat vault as a single process
 - [`KillSignal`](https://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillSignal=) - Send SIGINT signal when shutting down vault
