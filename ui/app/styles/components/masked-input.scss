@@ -1,13 +1,6 @@
 .masked-input {
-  position: relative;
-}
-
-.masked-input .masked-value {
-  padding-left: 2.5rem;
-}
-
-.masked-input.allow-copy .masked-value {
-  padding-left: 3rem;
+  display: flex;
+  align-items: center;
 }
 
 // we want to style the boxes the same everywhere so they
@@ -15,11 +8,13 @@
 .masked-input.masked .masked-value {
   font-size: 9px;
   font-family: $family-primary;
-}
-
-.masked-input.masked .masked-value {
   line-height: 2.5;
 }
+
+.masked-input .masked-value {
+  order: 1;
+}
+
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
@@ -31,23 +26,21 @@
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
+  padding-left: $spacing-s;
 }
 
-.masked-input-toggle {
+.button.masked-input-toggle,
+.button.copy-button {
   background: transparent;
-  position: absolute;
   height: auto;
-  top: $size-6/4;
-  bottom: $size-6/4;
-  left: 1px;
   line-height: 1rem;
-  min-width: 0;
-  max-height: 2rem;
-  padding: 0 $size-8;
+  min-width: $spacing-l;
   z-index: 100;
   border: 0;
   box-shadow: none;
   color: $blue;
+  padding-left: 0;
+  padding-right: 0;
 
   &:active,
   &.is-active,
@@ -60,31 +53,7 @@
     box-shadow: none;
   }
 }
-
-.allow-copy .masked-input-toggle {
-  left: 1.5rem;
-}
-
-.masked-input.display-only .masked-input-toggle {
-  top: 0;
-  font-size: 0.5rem;
-  height: 1rem;
-  padding-left: 0;
-}
-
-.copy-button {
-  background: transparent;
-  position: absolute;
-  height: auto;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  min-width: 16px;
-  max-height: 2rem;
-  padding: 0;
-  z-index: 100;
-  border: 0;
-  box-shadow: none;
+.button.copy-button {
   color: $grey-light;
 }
 
