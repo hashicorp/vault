@@ -70,9 +70,11 @@ export default Route.extend({
           return model;
         })
         .catch(err => {
+          // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
           } else {
+            // else we're throwing and dealing with this in the error action
             throw err;
           }
         }),
@@ -153,9 +155,9 @@ export default Route.extend({
       if (hasModel && error.httpStatus === 404) {
         this.set('has404', true);
         transition.abort();
-      } else {
-        return true;
+        return false;
       }
+      return true;
     },
 
     willTransition(transition) {
