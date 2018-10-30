@@ -17,6 +17,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
+	"github.com/hashicorp/vault/command/agent/auth/approle"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
@@ -296,6 +297,8 @@ func (c *AgentCommand) Run(args []string) int {
 		method, err = jwt.NewJWTAuthMethod(authConfig)
 	case "kubernetes":
 		method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
+	case "approle":
+		method, err = approle.NewApproleAuthMethod(authConfig)
 	default:
 		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 		return 1
