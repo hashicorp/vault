@@ -11,13 +11,14 @@
   line-height: 2.5;
 }
 
-.masked-input .masked-value {
+.masked-input.display-only .masked-value {
   order: 1;
 }
 
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
+  border-radius: $radius 0 0 $radius;
 }
 
 //override bulma's pre styling
@@ -31,26 +32,55 @@
 
 .button.masked-input-toggle,
 .button.copy-button {
-  background: transparent;
-  height: auto;
-  line-height: 1rem;
-  min-width: $spacing-l;
-  z-index: 100;
-  border: 0;
-  box-shadow: none;
-  color: $grey-light;
-  padding-left: 0;
-  padding-right: 0;
+  // background: transparent;
+  // height: auto;
+  // line-height: 1rem;
+  min-width: $spacing-xl;
+  border-left: 0;
+  border-radius: 0 $radius $radius 0;
+  // z-index: 100;
+  // border: 0;
+  // box-shadow: none;
+  color: $grey;
+  // padding-left: 0;
+  // padding-right: 0;
+  //
+  // &:active,
+  // &.is-active,
+  // &:focus,
+  // &.is-focused,
+  // &:hover,
+  // &:focus:not(:active) {
+  //   color: $blue;
+  //   border: 0;
+  //   box-shadow: none;
+  // }
+}
 
-  &:active,
-  &.is-active,
-  &:focus,
-  &.is-focused,
-  &:hover,
-  &:focus:not(:active) {
-    color: $blue;
+.display-only {
+  .button.masked-input-toggle,
+  .button.copy-button {
+    background: transparent;
+    height: auto;
+    line-height: 1rem;
+    min-width: $spacing-l;
+    z-index: 100;
     border: 0;
     box-shadow: none;
+    color: $grey-light;
+    padding-left: 0;
+    padding-right: 0;
+
+    &:active,
+    &.is-active,
+    &:focus,
+    &.is-focused,
+    &:hover,
+    &:focus:not(:active) {
+      color: $blue;
+      border: 0;
+      box-shadow: none;
+    }
   }
 }
 
