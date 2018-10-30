@@ -41,8 +41,8 @@ more information about setting up the database secrets engine.
         password="Password!"
     ```
 
-1. Configure a role that maps a name in Vault to an SQL statement to execute to
-create the database credential:
+1. Configure a role that maps a name in Vault to a MongoDB command that executes and
+creates the database credential:
 
     ```text
     $ vault write database/roles/my-role \
