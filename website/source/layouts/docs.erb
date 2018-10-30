@@ -183,11 +183,11 @@
                       'jwt',
                       'kubernetes'
                     ]
+                  }, {
+                    category: 'sinks',
+                    content: ['file']
                   }
                 ]
-              }, {
-                category: 'sinks',
-                content: ['file']
               }
             ]
           },
@@ -324,7 +324,6 @@
             category: 'enterprise',
             content: [
               { category: 'replication' },
-              { category: 'auto-unseal' },
               {
                 category: 'hsm',
                 content: ['behavior', 'security']

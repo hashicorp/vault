@@ -19,7 +19,7 @@ proxy '_redirects', 'netlify-redirects', ignore: true
 helpers do
   # get correct analytics id
   def segmentId()
-    if (ENV['ENV'] == 'production')
+    if (ENV['ENV'] == 'tmp-production')
       'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
     else
       '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'

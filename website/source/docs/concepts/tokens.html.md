@@ -239,7 +239,7 @@ and more. The are correspondingly heavyweight to create and track.
 
 ### Batch Tokens
 
-Batch tokens are are encrypted blobs that carry enough information for them to
+Batch tokens are encrypted blobs that carry enough information for them to
 be used for Vault actions, but they require no storage on disk to track them.
 As a result they are extremely lightweight and scalable, but lack most of the
 flexibility and features of service tokens.

@@ -1,3 +1,20 @@
+## 1.0.0-beta2 (Unreleased)
+
+CHANGES:
+
+ * Agent no longer automatically reauthenticates when new credentials are
+   detected. It's not strictly necessary and in some cases was causing
+   reauthentication much more often than intended.
+
+BUG FIXES:
+
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * cli: Fix panic that could occur if parameters were not provided. [GH-5603]
+ * secrets/azure: Fix valid roles being rejected for duplicate ids despite
+    having distinct scopes.
+    [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+
 ## 1.0.0-beta1 (October 23rd, 2018)
 
 NOTE:
@@ -22,7 +39,7 @@ FEATURES:
    storage overhead, and in most cases can be used across performance
    replication clusters.
  * Replication Speed Improvements: We've worked hard to speed up a lot of
-   operations when using Vault Enterprise Replicaiton.
+   operations when using Vault Enterprise Replication.
  * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
    pattern to keys stored within GCP Cloud KMS.
 
