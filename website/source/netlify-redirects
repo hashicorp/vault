@@ -10,6 +10,7 @@
 /docs/config/index.html /docs/configuration
 /docs/configuration/storage/google-cloud.html  /docs/configuration/storage/google-cloud-storage
 /docs/configuration/storage/spanner.html /docs/configuration/storage/google-cloud-spanner
+/docs/enterprise/auto-unseal/index.html /docs/concepts/seal.html
 /docs/enterprise/hsm/configuration.html  /docs/configuration/seal/pkcs11
 /docs/enterprise/ui/index.html  /docs/configuration/ui
 /docs/guides/generate-root.html /guides/operations/generate-root

@@ -47,6 +47,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -96,6 +97,7 @@ type ServerCommand struct {
 	flagDevThreeNode     bool
 	flagDevFourCluster   bool
 	flagDevTransactional bool
+	flagDevAutoSeal      bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
 }
@@ -248,6 +250,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "dev-auto-seal",
+		Target:  &c.flagDevAutoSeal,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "dev-skip-init",
 		Target:  &c.flagDevSkipInit,
 		Default: false,
@@ -346,7 +355,7 @@ func (c *ServerCommand) Run(args []string) int {
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal {
 		c.flagDev = true
 	}
 
@@ -473,7 +482,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := "shamir"
+	sealType := vaultseal.Shamir
 	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
 		if config.Seal == nil {
 			sealType = os.Getenv("VAULT_SEAL_TYPE")
@@ -482,14 +491,21 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	sealLogger := c.logger.Named(sealType)
-	allLoggers = append(allLoggers, sealLogger)
-	seal, sealConfigError := serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-	if sealConfigError != nil {
-		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing Seal configuration: %s", sealConfigError))
-			return 1
+	var seal vault.Seal
+	var sealConfigError error
+	if c.flagDevAutoSeal {
+		sealLogger := c.logger.Named(vaultseal.Test)
+		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+	} else {
+		sealLogger := c.logger.Named(sealType)
+		allLoggers = append(allLoggers, sealLogger)
+		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+		if sealConfigError != nil {
+			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+				c.UI.Error(fmt.Sprintf(
+					"Error parsing Seal configuration: %s", sealConfigError))
+				return 1
+			}
 		}
 	}
 
@@ -1007,7 +1023,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"The recovery key and root token are displayed below in case you want " +
 					"to seal/unseal the Vault or re-authenticate."))
 			c.UI.Warn("")
-			c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+			c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
 		}
 
 		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))

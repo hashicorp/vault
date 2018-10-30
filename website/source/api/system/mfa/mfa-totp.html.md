@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/sys/mfa/method/totp - HTTP API"
-sidebar_title: "<tt>/sys/mfa/method/totp</tt>"
+sidebar_title: "<code>/sys/mfa/method/totp</code>"
 sidebar_current: "api-http-system-mfa-totp"
 description: |-
   The '/sys/mfa/method/totp' endpoint focuses on managing TOTP MFA behaviors in Vault Enterprise.

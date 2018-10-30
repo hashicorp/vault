@@ -62,9 +62,42 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	}
 
 	// Get the user and validate auth
-	user, err := b.user(ctx, req.Storage, username)
-	if err != nil {
-		return nil, err
+	user, userError := b.user(ctx, req.Storage, username)
+
+	var userPassword []byte
+	var legacyPassword bool
+	// If there was an error or it's nil, we fake a password for the bcrypt
+	// check so as not to have a timing leak. Specifics of the underlying
+	// storage still leaks a bit but generally much more in the noise compared
+	// to bcrypt.
+	if user != nil && userError == nil {
+		if user.PasswordHash == nil {
+			userPassword = []byte(user.Password)
+			legacyPassword = true
+		} else {
+			userPassword = user.PasswordHash
+		}
+	} else {
+		// This is still acceptable as bcrypt will still make sure it takes
+		// a long time, it's just nicer to be random if possible
+		userPassword = []byte("dummy")
+	}
+
+	// Check for a password match. Check for a hash collision for Vault 0.2+,
+	// but handle the older legacy passwords with a constant time comparison.
+	passwordBytes := []byte(password)
+	if !legacyPassword {
+		if err := bcrypt.CompareHashAndPassword(userPassword, passwordBytes); err != nil {
+			return logical.ErrorResponse("invalid username or password"), nil
+		}
+	} else {
+		if subtle.ConstantTimeCompare(userPassword, passwordBytes) != 1 {
+			return logical.ErrorResponse("invalid username or password"), nil
+		}
+	}
+
+	if userError != nil {
+		return nil, userError
 	}
 	if user == nil {
 		return logical.ErrorResponse("invalid username or password"), nil
@@ -73,19 +106,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	// Check for a CIDR match.
 	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, user.BoundCIDRs) {
 		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
-	}
-
-	// Check for a password match. Check for a hash collision for Vault 0.2+,
-	// but handle the older legacy passwords with a constant time comparison.
-	passwordBytes := []byte(password)
-	if user.PasswordHash != nil {
-		if err := bcrypt.CompareHashAndPassword(user.PasswordHash, passwordBytes); err != nil {
-			return logical.ErrorResponse("invalid username or password"), nil
-		}
-	} else {
-		if subtle.ConstantTimeCompare([]byte(user.Password), passwordBytes) != 1 {
-			return logical.ErrorResponse("invalid username or password"), nil
-		}
 	}
 
 	return &logical.Response{

@@ -170,7 +170,7 @@ This endpoint deletes an entity and all its associated aliases.
 | :--------- | :-------------------------- | :----------------------|
 | `DELETE`   | `/identity/entity/id/:id`   | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `id` `(string: <required>)` – Identifier of the entity.
 
@@ -327,7 +327,7 @@ entity name.
 | :--------- | :------------------------------ | :----------------------|
 | `DELETE`   | `/identity/entity/name/:name`   | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `name` `(string: <required>)` – Name of the entity.
 
