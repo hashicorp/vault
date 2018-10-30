@@ -61,7 +61,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return `cert/${key}`;
   },
   onEnter: function(val) {
-    let { filter, baseKey, mode } = this;
+    let { baseKey, mode } = this;
     let extraParams = this.get('extraNavParams');
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
