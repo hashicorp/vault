@@ -48,7 +48,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the consul client
-	c, userErr, intErr := client(ctx, req.Storage)
+	c, userErr, intErr := b.client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -61,9 +61,10 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	writeOpts := &api.WriteOptions{}
 	writeOpts = writeOpts.WithContext(ctx)
-	var s *logical.Response
+
 	// Create an ACLEntry for Consul pre 1.4
-	if (result.Policy != "" && result.TokenType == "client") || (result.Policy == "" && result.TokenType == "management") {
+	if (result.Policy != "" && result.TokenType == "client") ||
+		(result.Policy == "" && result.TokenType == "management") {
 		token, _, err := c.ACL().Create(&api.ACLEntry{
 			Name:  tokenName,
 			Type:  result.TokenType,
@@ -73,42 +74,40 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 			return logical.ErrorResponse(err.Error()), nil
 		}
 		// Use the helper to create the secret
-		s = b.Secret(SecretTokenType).Response(map[string]interface{}{
+		s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 			"token": token,
 		}, map[string]interface{}{
-			"token":   token,
-			"role":    role,
-			"version": "1.3",
+			"token": token,
+			"role":  role,
 		})
 		s.Secret.TTL = result.Lease
+		return s, nil
 	}
 
 	//Create an ACLToken for Consul 1.4 and above
-	if len(result.Policies) > 0 && result.Policy == "" && result.TokenType != "management" {
-		var policyLink = []*api.ACLTokenPolicyLink{}
-		for _, policyName := range result.Policies {
-			policyLink = append(policyLink, &api.ACLTokenPolicyLink{
-				Name: policyName,
-			})
-		}
-		token, _, err := c.ACL().TokenCreate(&api.ACLToken{
-			Description: tokenName,
-			Policies:    policyLink,
-		}, writeOpts)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
-		}
-		// Use the helper to create the secret
-		s = b.Secret(SecretTokenType).Response(map[string]interface{}{
-			"token":    token.SecretID,
-			"accessor": token.AccessorID,
-		}, map[string]interface{}{
-			"token":   token.AccessorID,
-			"role":    role,
-			"version": "1.4",
+	var policyLink = []*api.ACLTokenPolicyLink{}
+	for _, policyName := range result.Policies {
+		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
+			Name: policyName,
 		})
-		s.Secret.TTL = result.Lease
 	}
+	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
+		Description: tokenName,
+		Policies:    policyLink,
+	}, writeOpts)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	// Use the helper to create the secret
+	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
+		"token":    token.SecretID,
+		"accessor": token.AccessorID,
+	}, map[string]interface{}{
+		"token":   token.AccessorID,
+		"role":    role,
+		"version": "1.4",
+	})
+	s.Secret.TTL = result.Lease
 
 	return s, nil
 }

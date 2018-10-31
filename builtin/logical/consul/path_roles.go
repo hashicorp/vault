@@ -112,7 +112,9 @@ func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.Field
 func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
+	name := d.Get("name").(string)
 	policies := d.Get("policies").([]string)
+
 	if len(policies) == 0 {
 		switch tokenType {
 		case "client":
@@ -121,24 +123,14 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 			return logical.ErrorResponse(
 				"token_type must be \"client\" or \"management\""), nil
 		}
-	}
 
-	if (policy == "" && tokenType != "management") && len(policies) == 0 {
-		return logical.ErrorResponse(
-			"Use either a policy document, or a list of policies, depending on your Consul version"), nil
-	}
-
-	name := d.Get("name").(string)
-
-	var policyRaw []byte
-	var err error
-	if len(policies) == 0 {
-		if tokenType != "management" && policy == "" {
+		if policy == "" && tokenType != "management" {
 			return logical.ErrorResponse(
-				"policy cannot be empty when not using management tokens"), nil
+				"Use either a policy document, or a list of policies, depending on your Consul version"), nil
 		}
 	}
-	policyRaw, err = base64.StdEncoding.DecodeString(d.Get("policy").(string))
+
+	policyRaw, err := base64.StdEncoding.DecodeString(d.Get("policy").(string))
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error decoding policy base64: %s", err)), nil

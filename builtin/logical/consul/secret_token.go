@@ -24,14 +24,14 @@ func secretToken(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretTokenRenew,
-		Revoke: secretTokenRevoke,
+		Revoke: b.secretTokenRevoke,
 	}
 }
 
 func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
 	roleRaw, ok := req.Secret.InternalData["role"]
-	if !ok || roleRaw == nil {
+	if !ok {
 		return resp, nil
 	}
 
@@ -56,8 +56,8 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	return resp, nil
 }
 
-func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, userErr, intErr := client(ctx, req.Storage)
+func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	c, userErr, intErr := b.client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -67,7 +67,6 @@ func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.F
 	}
 
 	tokenRaw, ok := req.Secret.InternalData["token"]
-	version, ok := req.Secret.InternalData["version"]
 	if !ok {
 		// We return nil here because this is a pre-0.5.3 problem and there is
 		// nothing we can do about it. We already can't revoke the lease
@@ -76,18 +75,26 @@ func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.F
 		return nil, nil
 	}
 
-	if version == "1.3" || version == nil {
+	var version string
+	versionRaw, ok := req.Secret.InternalData["version"]
+	if ok {
+		version = versionRaw.(string)
+	}
+
+	switch version {
+	case "":
+		// Pre 1.4 tokens
 		_, err := c.ACL().Destroy(tokenRaw.(string), nil)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	if version == "1.4" {
+	case "1.4":
 		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("Invalid version string in data: %s", version)
 	}
 
 	return nil, nil
