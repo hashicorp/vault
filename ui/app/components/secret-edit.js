@@ -290,6 +290,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (noErrors) {
         try {
           this.secretData.fromJSONString(val);
+          set(this.modelForData, 'secretData', this.secretData.toJSON());
         } catch (e) {
           this.set('error', e.message);
         }
