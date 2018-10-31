@@ -3,6 +3,11 @@
   align-items: center;
 }
 
+.masked-input.masked.display-only,
+.masked-input:not(.masked) {
+  align-items: start;
+}
+
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
