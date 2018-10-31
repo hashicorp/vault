@@ -37,6 +37,16 @@ dev-ui: prep
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
+# *-mem variants will enable memory profiling which will write snapshots of heap usage
+# to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
+# Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
+dev-mem: BUILD_TAGS+=memprofiler
+dev-mem: dev
+dev-ui-mem: BUILD_TAGS+=memprofiler
+dev-ui-mem: dev-ui
+dev-dynamic-mem: BUILD_TAGS+=memprofiler
+dev-dynamic-mem: dev-dynamic
+
 testtravis: BUILD_TAGS+=travis
 testtravis: test
 
