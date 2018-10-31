@@ -72,10 +72,6 @@ updated attributes.
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
 
-- `lease` `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
-  provided, the default Vault lease is used.
-
 - `policy` `(string: <required>)` – Specifies the base64 encoded ACL policy. The
   ACL format can be found in the [Consul ACL
   documentation](https://www.consul.io/docs/internals/acl.html). This is
@@ -83,6 +79,14 @@ updated attributes.
 
 - `token_type` `(string: "client")` - Specifies the type of token to create when
   using this role. Valid values are `"client"` or `"management"`.
+
+- `ttl` `(duration: "")` – Specifies the TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault TTL is used.
+
+- `max_ttl` `(duration: "")` – Specifies the max TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault Max TTL is used.
 
 ### Sample Payload
 

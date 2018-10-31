@@ -52,7 +52,8 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
-	resp.Secret.TTL = result.Lease
+	resp.Secret.TTL = result.TTL
+	resp.Secret.MaxTTL = result.MaxTTL
 	return resp, nil
 }
 

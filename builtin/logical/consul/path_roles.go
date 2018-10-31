@@ -50,9 +50,19 @@ the "policy" parameter is not required.
 Defaults to 'client'.`,
 			},
 
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "TTL for the Consul token created from the role.",
+			},
+
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Description: "Max TTL for the Consul token created from the role.",
+			},
+
 			"lease": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "Lease time of the role.",
+				Description: "Deprecated, use ttl.",
 			},
 		},
 
@@ -97,6 +107,7 @@ func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.Field
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"lease":      int64(result.Lease.Seconds()),
+			"ttl":        int64(result.Lease.Seconds()),
 			"token_type": result.TokenType,
 		},
 	}
@@ -118,35 +129,46 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 	if len(policies) == 0 {
 		switch tokenType {
 		case "client":
+			if policy == "" {
+				return logical.ErrorResponse(
+					"Use either a policy document, or a list of policies, depending on your Consul version"), nil
+			}
 		case "management":
 		default:
 			return logical.ErrorResponse(
 				"token_type must be \"client\" or \"management\""), nil
 		}
-
-		if policy == "" && tokenType != "management" {
-			return logical.ErrorResponse(
-				"Use either a policy document, or a list of policies, depending on your Consul version"), nil
-		}
 	}
 
-	policyRaw, err := base64.StdEncoding.DecodeString(d.Get("policy").(string))
+	policyRaw, err := base64.StdEncoding.DecodeString(policy)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error decoding policy base64: %s", err)), nil
 	}
 
-	var lease time.Duration
-	leaseParamRaw, ok := d.GetOk("lease")
+	var ttl time.Duration
+	ttlRaw, ok := d.GetOk("ttl")
 	if ok {
-		lease = time.Second * time.Duration(leaseParamRaw.(int))
+		ttl = time.Second * time.Duration(ttlRaw.(int))
+	} else {
+		leaseParamRaw, ok := d.GetOk("lease")
+		if ok {
+			ttl = time.Second * time.Duration(leaseParamRaw.(int))
+		}
+	}
+
+	var maxTTL time.Duration
+	maxTTLRaw, ok := d.GetOk("max_ttl")
+	if ok {
+		maxTTL = time.Second * time.Duration(maxTTLRaw.(int))
 	}
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
 		Policy:    string(policyRaw),
 		Policies:  policies,
-		Lease:     lease,
 		TokenType: tokenType,
+		TTL:       ttl,
+		MaxTTL:    maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -170,6 +192,7 @@ func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.Fie
 type roleConfig struct {
 	Policy    string        `json:"policy"`
 	Policies  []string      `json:"policies"`
-	Lease     time.Duration `json:"lease"`
+	TTL       time.Duration `json:"lease"`
+	MaxTTL    time.Duration `json:"max_ttl"`
 	TokenType string        `json:"token_type"`
 }

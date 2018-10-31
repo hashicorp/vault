@@ -80,7 +80,8 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 			"token": token,
 			"role":  role,
 		})
-		s.Secret.TTL = result.Lease
+		s.Secret.TTL = result.TTL
+		s.Secret.MaxTTL = result.MaxTTL
 		return s, nil
 	}
 
@@ -107,7 +108,8 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		"role":    role,
 		"version": "1.4",
 	})
-	s.Secret.TTL = result.Lease
+	s.Secret.TTL = result.TTL
+	s.Secret.MaxTTL = result.MaxTTL
 
 	return s, nil
 }
