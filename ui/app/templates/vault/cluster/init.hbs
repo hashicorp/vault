@@ -31,32 +31,35 @@
           </p>
         </div>
         <div
-          class="message is-list is-highlight has-copy-button"
-          tabindex="-1"
+          class="message is-list is-highlight"
         >
-          <HoverCopyButton
-            @alwaysShow=true
-            @copyValue={{keyData.root_token}}
-          />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Initial Root Token
             </h4>
-            <code class="is-word-break">{{keyData.root_token}}</code>
+            <MaskedInput
+              @class="is-highlight has-label"
+              @displayOnly={{true}}
+              @value={{keyData.root_token}}
+              @allowCopy={{true}}
+            />
           </div>
         </div>
         {{#each (or keyData.recovery_keys_base64 keyData.recovery_keys keyData.keys_base64 keyData.keys) as |key index|}}
           <div
             data-test-key-box
-            class="message is-list has-copy-button"
-            tabindex="-1"
+            class="message is-list"
           >
-            <HoverCopyButton @copyValue={{key}} />
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
                 Key {{add index 1}}
               </h4>
-              <code class="is-word-break">{{key}}</code>
+              <MaskedInput
+                @class="has-label"
+                @displayOnly={{true}}
+                @value={{key}}
+                @allowCopy={{true}}
+              />
             </div>
           </div>
         {{/each}}
@@ -129,15 +132,15 @@
               Key Shares
             </label>
             <div class="control">
-              {{input 
-                data-test-key-shares="true" 
-                class="input" 
-                autocomplete="off" 
-                name="key-shares" 
+              {{input
+                data-test-key-shares="true"
+                class="input"
+                autocomplete="off"
+                name="key-shares"
                 type="number"
-                step="1" 
-                min="1" 
-                pattern="[0-9]*" 
+                step="1"
+                min="1"
+                pattern="[0-9]*"
                 value=secret_shares
               }}
             </div>
@@ -153,10 +156,10 @@
               Key Threshold
             </label>
             <div class="control">
-              {{input 
-                data-test-key-threshold="true" 
-                class="input" autocomplete="off" 
-                name="key-threshold" 
+              {{input
+                data-test-key-threshold="true"
+                class="input" autocomplete="off"
+                name="key-threshold"
                 type="number"
                 step="1"
                 min="1"
