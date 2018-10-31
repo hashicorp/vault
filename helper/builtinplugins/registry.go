@@ -52,6 +52,10 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
+// BuiltinFactory is the func signature that should be returned by
+// the plugin's New() func.
+type BuiltinFactory func() (interface{}, error)
+
 func newRegistry() *registry {
 	return &registry{
 		credentialBackends: map[string]logical.Factory{
@@ -71,7 +75,7 @@ func newRegistry() *registry {
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,
 		},
-		databasePlugins: map[string]func() (interface{}, error){
+		databasePlugins: map[string]BuiltinFactory{
 			// These four plugins all use the same mysql implementation but with
 			// different username settings passed by the constructor.
 			"mysql-database-plugin":        dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen),
@@ -110,7 +114,7 @@ func newRegistry() *registry {
 
 type registry struct {
 	credentialBackends map[string]logical.Factory
-	databasePlugins    map[string]func() (interface{}, error)
+	databasePlugins    map[string]BuiltinFactory
 	logicalBackends    map[string]logical.Factory
 }
 
