@@ -21,19 +21,19 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"oidc_discovery_url": &framework.FieldSchema{
+			"oidc_discovery_url": {
 				Type:        framework.TypeString,
 				Description: `OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwt_validation_pubkeys".`,
 			},
-			"oidc_discovery_ca_pem": &framework.FieldSchema{
+			"oidc_discovery_ca_pem": {
 				Type:        framework.TypeString,
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC Discovery URL. If not set, system certificates are used.",
 			},
-			"jwt_validation_pubkeys": &framework.FieldSchema{
+			"jwt_validation_pubkeys": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
 			},
-			"bound_issuer": &framework.FieldSchema{
+			"bound_issuer": {
 				Type:        framework.TypeString,
 				Description: "The value against which to match the 'iss' claim in a JWT. Optional.",
 			},
