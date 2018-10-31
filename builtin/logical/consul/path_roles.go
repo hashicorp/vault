@@ -144,7 +144,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
 		Policy:    string(policyRaw),
-		Policies:  []string(policies),
+		Policies:  policies,
 		Lease:     lease,
 		TokenType: tokenType,
 	})
