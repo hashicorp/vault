@@ -1,8 +1,10 @@
 .notification {
-  padding: 1rem 2.5rem 1rem 1.5rem;
+  padding: $spacing-m $spacing-m $spacing-m $spacing-s;
+
   .title {
     font-weight: $weight-bold;
   }
+
   &.has-border {
     border: 1px solid currentColor;
     border-left-width: 10px;

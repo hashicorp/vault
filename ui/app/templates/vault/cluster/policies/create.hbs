@@ -14,7 +14,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{ action "savePolicy" model on="submit"}}>
+<form class="" {{ action "savePolicy" model on="submit"}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     {{message-error model=model}}
     <NamespaceReminder @mode="create" @noun="policy" />

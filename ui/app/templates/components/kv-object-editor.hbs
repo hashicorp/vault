@@ -51,7 +51,10 @@
   </div>
 {{/each}}
 {{#if kvHasDuplicateKeys}}
-  {{#message-in-page type="warning" class="is-marginless" data-test-duplicate-error-warnings=true}}
-    More than one key shares the same name. Please be sure to have unique key names or some data may be lost when saving.
-  {{/message-in-page}}
+  <AlertBanner
+    @type="warning"
+    @message="More than one key shares the same name. Please be sure to have unique key names or some data may be lost when saving."
+    @class="is-marginless"
+    data-test-duplicate-error-warnings
+  />
 {{/if}}

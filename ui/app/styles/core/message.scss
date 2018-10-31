@@ -1,38 +1,72 @@
 .message {
-  &.is-list {
-    margin: $size-10 0;
+  margin-bottom: $spacing-s;
+  padding: $spacing-m $spacing-m $spacing-m $spacing-s;
+  position: relative;
+
+  .close-button {
+    position: absolute;
+    right: 1rem;
+    top: $size-10;
   }
 
-  &.is-warning {
-    .message-body {
-      color: $yellow-darkest;
-      padding: 0.75rem 1.25rem;
+  .message-icon {
+    margin-right: $spacing-xs;
+  }
+
+  .message-title {
+    font-size: 16px;
+    font-weight: $font-weight-bold;
+  }
+
+  .message-body {
+    border: 0;
+    margin-top: $spacing-xxs;
+  }
+
+  p {
+    font-size: $size-8;
+    border: 0;
+    padding: 0;
+  }
+
+  .message-actions {
+    margin-top: $spacing-xs;
+
+    a,
+    a:not(.button):not(.file-delete-button):not(.tag) {
+      color: $blue;
+      font-weight: $font-weight-semibold;
+      text-decoration: none;
+    }
+
+    > * + * {
+      margin-left: $spacing-xs;
     }
   }
 
   &.is-highlight {
-    background: $yellow-lightest;
-    .message-body {
-      border: none;
-      box-shadow: 0 0 0 1px $yellow;
-      color: $yellow-darkest;
+    background: $yellow-010;
+    border: 1px solid $yellow-100;
+
+    .message-icon {
+      color: $yellow-500;
     }
-    .has-text-highlight,
-    .close-button {
-      color: $yellow;
-    }
-    .title,
-    code {
-      background: none;
-      color: inherit;
-    }
-    .content .button {
-      border-color: $yellow;
-      color: $yellow-darkest;
+
+    .message-title {
+      color: $orange-700;
     }
   }
 
-  .content {
-    margin-bottom: 0;
+  &.is-danger {
+    background: $red-010;
+    border: 1px solid $red-050;
+
+    .message-icon {
+      color: $red-500;
+    }
+
+    .message-title {
+      color: $red-700;
+    }
   }
 }
