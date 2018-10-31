@@ -24,6 +24,7 @@ type approleMethod struct {
 	cachedRoleID                   string
 	cachedSecretID                 string
 	removeSecretIDFileAfterReading bool
+	secretIDResponseWrappingPath   string
 }
 
 func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -73,6 +74,17 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
 	}
 
+	secretIDResponseWrappingPathRaw, ok := conf.Config["secret_id_response_wrapping_path"]
+	if ok {
+		a.secretIDResponseWrappingPath, ok = secretIDResponseWrappingPathRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'secret_id_response_wrapping_path' config value to string")
+		}
+		if a.secretIDResponseWrappingPath == "" {
+			return nil, errors.New("'secret_id_response_wrapping_path' value is empty")
+		}
+	}
+
 	return a, nil
 }
 
@@ -108,7 +120,58 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 			}
 			a.logger.Warn("secret ID file exists but read empty value, re-using cached value")
 		} else {
-			a.cachedSecretID = strings.TrimSpace(string(secretID))
+			stringSecretID := strings.TrimSpace(string(secretID))
+			if a.secretIDResponseWrappingPath != "" {
+				clonedClient, err := client.Clone()
+				if err != nil {
+					return "", nil, errwrap.Wrapf("error cloning client to unwrap secret ID: {{err}}", err)
+				}
+				clonedClient.SetToken(stringSecretID)
+				// Validate the creation path
+				resp, err := clonedClient.Logical().Read("sys/wrapping/lookup")
+				if err != nil {
+					return "", nil, errwrap.Wrapf("error looking up wrapped secret ID: {{err}}", err)
+				}
+				if resp == nil {
+					return "", nil, errors.New("response nil when looking up wrapped secret ID")
+				}
+				if resp.Data == nil {
+					return "", nil, errors.New("data in repsonse nil when looking up wrapped secret ID")
+				}
+				creationPathRaw, ok := resp.Data["creation_path"]
+				if !ok {
+					return "", nil, errors.New("creation_path in repsonse nil when looking up wrapped secret ID")
+				}
+				creationPath, ok := creationPathRaw.(string)
+				if !ok {
+					return "", nil, errors.New("creation_path in repsonse could not be parsed as string when looking up wrapped secret ID")
+				}
+				if creationPath != a.secretIDResponseWrappingPath {
+					a.logger.Error("SECURITY: unable to validate wrapping token creation path", "expected", a.secretIDResponseWrappingPath, "found", creationPath)
+					return "", nil, errors.New("unable to validate wrapping token creation path")
+				}
+				// Now get the secret ID
+				resp, err = clonedClient.Logical().Unwrap("")
+				if err != nil {
+					return "", nil, errwrap.Wrapf("error unwrapping secret ID: {{err}}", err)
+				}
+				if resp == nil {
+					return "", nil, errors.New("response nil when unwrapping secret ID")
+				}
+				if resp.Data == nil {
+					return "", nil, errors.New("data in repsonse nil when unwrapping secret ID")
+				}
+				secretIDRaw, ok := resp.Data["secret_id"]
+				if !ok {
+					return "", nil, errors.New("secret_id in repsonse nil when unwrapping secret ID")
+				}
+				secretID, ok := secretIDRaw.(string)
+				if !ok {
+					return "", nil, errors.New("secret_id in repsonse could not be parsed as string when unwrapping secret ID")
+				}
+				stringSecretID = secretID
+			}
+			a.cachedSecretID = stringSecretID
 			if a.removeSecretIDFileAfterReading {
 				if err := os.Remove(a.secretIDFilePath); err != nil {
 					a.logger.Error("error removing secret ID file after reading", "error", err)
