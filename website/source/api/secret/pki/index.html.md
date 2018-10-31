@@ -1545,10 +1545,9 @@ expiration time.
 - `tidy_cert_store` `(bool: false)` Specifies whether to tidy up the certificate
   store.
 
-- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
-  certificates, even if their duration has not yet passed, removing them both
-  from the CRL and from storage. The CRL will be rotated if this causes any
-  values to be removed.
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked and
+  expired certificates, removing them both from the CRL and from storage. The
+  CRL will be rotated if this causes any values to be removed.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to
