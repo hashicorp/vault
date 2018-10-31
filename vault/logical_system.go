@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -2938,7 +2937,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
-	doc := openapi.NewDocument()
+	doc := framework.NewOASDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount := range resp.Data[group].(map[string]interface{}) {
@@ -2957,15 +2956,15 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				return err
 			}
 
-			var backendDoc *openapi.Document
+			var backendDoc *framework.OASDocument
 
 			// Normalize response type, which will be different if received
 			// from and external plugin.
 			switch v := resp.Data["openapi"].(type) {
-			case *openapi.Document:
+			case *framework.OASDocument:
 				backendDoc = v
 			case map[string]interface{}:
-				backendDoc = new(openapi.Document)
+				backendDoc = new(framework.OASDocument)
 				if err := mapstructure.Decode(v, backendDoc); err != nil {
 					return err
 				}
@@ -2991,7 +2990,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*openapi.Operation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
 						if op != nil && len(op.Tags) == 0 {
 							op.Tags = []string{tag}
 						}

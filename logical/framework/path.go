@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/license"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -227,7 +226,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 		}
 
 		// Build OpenAPI response for this path
-		doc := openapi.NewDocument()
+		doc := NewOASDocument()
 		documentPath(p, b.SpecialPaths(), b.BackendType, doc)
 
 		return logical.HelpResponse(help, nil, doc), nil

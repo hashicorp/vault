@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/version"
 )
@@ -246,7 +245,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
 	}
 	for i, test := range tests {
-		doc := openapi.NewDocument()
+		doc := NewOASDocument()
 		path := Path{
 			Pattern: test.pattern,
 		}
@@ -388,7 +387,7 @@ func TestOpenAPIPaths(t *testing.T) {
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
-	doc := openapi.NewDocument()
+	doc := NewOASDocument()
 	documentPath(path, sp, logical.TypeLogical, doc)
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")

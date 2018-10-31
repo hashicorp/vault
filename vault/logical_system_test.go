@@ -21,9 +21,9 @@ import (
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
@@ -2449,7 +2449,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	exp := map[string]interface{}{
-		"openapi": openapi.Version,
+		"openapi": framework.OASVersion,
 		"info": map[string]interface{}{
 			"title":       "HashiCorp Vault API",
 			"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
@@ -2479,7 +2479,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	doc := new(openapi.Document)
+	doc := new(framework.OASDocument)
 	if err := mapstructure.Decode(oapi, &doc); err != nil {
 		t.Fatal(err)
 	}
@@ -2507,7 +2507,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	// Simple sanity check of response size (which is much larger than most
 	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 120000
+	minLen := 70000
 	if len(body) < minLen {
 		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
 	}
@@ -2520,7 +2520,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	doc = resp.Data["openapi"].(*openapi.Document)
+	doc = resp.Data["openapi"].(*framework.OASDocument)
 	if len(doc.Paths) != 1 {
 		t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
 	}
