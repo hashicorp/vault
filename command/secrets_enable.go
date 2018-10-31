@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -155,7 +156,7 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
+		Completion: c.PredictVaultPlugins(consts.PluginTypeSecrets, consts.PluginTypeDatabase),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
 	})
@@ -240,7 +241,6 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		} else {
 			mountPath = engineType
 		}
-		mountPath = engineType
 	}
 
 	if c.flagVersion > 0 {

@@ -12,6 +12,7 @@ import (
 	"hash"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -132,6 +133,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListByTypePath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
@@ -241,7 +243,7 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
 		return nil, err
@@ -251,7 +253,27 @@ func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logica
 	if err != nil {
 		return nil, err
 	}
+	sort.Strings(plugins)
+	return logical.ListResponse(plugins), nil
+}
 
+func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var plugins []string
+	pluginsAdded := make(map[string]bool)
+	for _, pluginType := range consts.PluginTypes {
+		names, err := b.Core.pluginCatalog.List(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, name := range names {
+			if _, found := pluginsAdded[name]; !found {
+				plugins = append(plugins, name)
+				pluginsAdded[name] = true
+			}
+		}
+	}
+	sort.Strings(plugins)
 	return logical.ListResponse(plugins), nil
 }
 
@@ -3509,8 +3531,16 @@ This path responds to the following HTTP methods.
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
+	"plugin-catalog-list-all": {
+		"Lists all the plugins known to Vault",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of names of configured plugins.
+		`,
+	},
 	"plugin-catalog": {
-		"Configures the plugins known to vault",
+		"Configures the plugins known to Vault",
 		`
 This path responds to the following HTTP methods.
 		LIST /

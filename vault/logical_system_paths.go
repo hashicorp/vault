@@ -338,7 +338,7 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	}
 }
 
-func (b *SystemBackend) pluginsCatalogListPath() *framework.Path {
+func (b *SystemBackend) pluginsCatalogListByTypePath() *framework.Path {
 	return &framework.Path{
 		Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
 
@@ -350,11 +350,24 @@ func (b *SystemBackend) pluginsCatalogListPath() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.handlePluginCatalogList,
+			logical.ListOperation: b.handlePluginCatalogTypedList,
 		},
 
 		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsCatalogListPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/catalog/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.handlePluginCatalogUntypedList,
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-list-all"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog-list-all"][1]),
 	}
 }
 

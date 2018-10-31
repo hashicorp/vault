@@ -23,7 +23,13 @@ type ListPluginsResponse struct {
 // ListPlugins lists all plugins in the catalog and returns their names as a
 // list of strings.
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
-	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
+	path := ""
+	if i.Type == consts.PluginTypeUnknown {
+		path = "/v1/sys/plugins/catalog"
+	} else {
+		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
+	}
+
 	req := c.c.NewRequest("LIST", path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())

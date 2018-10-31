@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -139,7 +140,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
+		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
@@ -229,7 +230,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		} else {
 			authPath = authType
 		}
-		authPath = authType
 	}
 
 	// Append a trailing slash to indicate it's a path in output

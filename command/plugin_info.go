@@ -43,7 +43,7 @@ func (c *PluginInfoCommand) Flags() *FlagSets {
 }
 
 func (c *PluginInfoCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins()
+	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
 }
 
 func (c *PluginInfoCommand) AutocompleteFlags() complete.Flags {
