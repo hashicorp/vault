@@ -20,6 +20,15 @@ description: "Vault secures, stores, and tightly controls access to tokens, pass
     <hashi-callouts _data="<%= encode(page.use_cases_callouts[0]) %>"></hashi-callouts>
   </section>
 
+  <section class='g-container'>
+    <hashi-section-header
+      headline="<%= page.documentation_headline.headline %>"
+      description="<%= page.documentation_headline.description %>"
+    ></hashi-section-header>
+
+    <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
+  </section>
+
   <section class='gray'>
     <div class='g-container'>
       <hashi-section-header
@@ -38,15 +47,6 @@ description: "Vault secures, stores, and tightly controls access to tokens, pass
         <% end %>
       </div>
     </div>
-  </section>
-
-  <section class='g-container'>
-    <hashi-section-header
-      headline="<%= page.documentation_headline.headline %>"
-      description="<%= page.documentation_headline.description %>"
-    ></hashi-section-header>
-
-    <hashi-linked-text-summary-list _data="<%= encode(data.docs_basic_categories) %>"></hashi-linked-text-summary-list>
   </section>
 
   <section class='no-pad'>
