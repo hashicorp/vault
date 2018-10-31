@@ -3011,9 +3011,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
-	// This endpoint is more likely to be inspected directly by humans,
-	// so indent the JSON output to make it more readable.
-	buf, err := json.MarshalIndent(doc, "", "  ")
+	buf, err := json.Marshal(doc)
 	if err != nil {
 		return nil, err
 	}
