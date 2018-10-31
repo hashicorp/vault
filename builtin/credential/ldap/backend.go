@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -117,10 +118,33 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// the BindDN should be the one to search, not the user logging in.
 	if cfg.BindDN != "" && cfg.BindPassword != "" {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+			// DUO's LDAP proxy requires MFA during the bind operation, and
+			// its default and most secure setting automatically closes the
+			// connection when doing a new bind after a previous bind that
+			// required MFA. In order to make vault work properly with DUO's
+			// LDAP proxy and any other LDAP server that may have similar
+			// behavior, if our rebinding operation fails, we try again once
+			// with a fresh connection. For additional information, see the
+			// following issues:
+			// https://github.com/hashicorp/vault/pull/5658
+			// https://github.com/go-ldap/ldap/issues/192
 			if b.Logger().IsDebug() {
-				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
+				b.Logger().Debug("error while attempting to re-bind with the BindDN User; trying with new connection", "error", err)
 			}
-			return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+			c, err = ldapClient.DialLDAP(cfg)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if c == nil {
+				return nil, nil, nil, errors.New("invalid connection returned from LDAP dial")
+			}
+			defer c.Close()
+			if err = c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+				if b.Logger().IsDebug() {
+					b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
+				}
+				return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+			}
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("re-bound to original binddn")
