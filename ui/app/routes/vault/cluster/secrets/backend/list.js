@@ -111,6 +111,11 @@ export default Route.extend({
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.get('has404');
+    // only clear store cache if this is a new model
+    if (secret !== controller.get('baseKey.id')) {
+      this.store.clearAllDatasets();
+    }
+
     controller.set('hasModel', true);
     controller.setProperties({
       model,
