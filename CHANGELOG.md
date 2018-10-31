@@ -15,6 +15,7 @@ FEATURES:
 
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
    credentials when having Agent automatically authenticate to Vault.
+ * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth 
 
 IMPROVEMENTS:
 
