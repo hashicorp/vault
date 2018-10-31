@@ -27,22 +27,22 @@ func (c *PluginRegisterCommand) Synopsis() string {
 
 func (c *PluginRegisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin register [options] NAME TYPE
+Usage: vault plugin register [options] TYPE NAME
 
   Registers a new plugin in the catalog. The plugin binary must exist in Vault's
-  configured plugin directory. The last argument of type takes "auth", "database",
+  configured plugin directory. The argument of type takes "auth", "database",
   or "secret".
 
   Register the plugin named my-custom-plugin:
 
-      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin auth
+      $ vault plugin register -sha256=d3f0a8b... auth my-custom-plugin
 
   Register a plugin with custom arguments:
 
       $ vault plugin register \
           -sha256=d3f0a8b... \
           -args=--with-glibc,--with-cgo \
-          my-custom-plugin
+          auth my-custom-plugin
 
 ` + c.Flags().Help()
 
@@ -115,12 +115,12 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginName := strings.TrimSpace(args[0])
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[1]))
+	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[0]))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
+	pluginName := strings.TrimSpace(args[1])
 
 	command := c.flagCommand
 	if command == "" {

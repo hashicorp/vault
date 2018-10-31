@@ -36,7 +36,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		},
 		{
 			"no_plugin_exist",
-			[]string{"not-a-real-plugin-like-ever", consts.PluginTypeCredential.String()},
+			[]string{consts.PluginTypeCredential.String(), "not-a-real-plugin-like-ever"},
 			"Error reading plugin",
 			2,
 		},
@@ -86,7 +86,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			pluginName, consts.PluginTypeCredential.String(),
+			consts.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -118,7 +118,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 
 		code := cmd.Run([]string{
 			"-field", "builtin",
-			pluginName, consts.PluginTypeCredential.String(),
+			consts.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -140,7 +140,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"my-plugin", consts.PluginTypeCredential.String(),
+			consts.PluginTypeCredential.String(), "my-plugin",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

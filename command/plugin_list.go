@@ -30,6 +30,10 @@ Usage: vault plugin list [options] TYPE
   plugins are in use, but rather just their availability. The last argument of
   type takes "auth", "database", or "secret".
 
+  List all available plugins in the catalog:
+
+      $ vault plugin list
+
   List all available database plugins in the catalog:
 
       $ vault plugin list database
@@ -69,10 +73,15 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 1
 	}
 
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[0]))
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
-		return 2
+	pluginTypeStr := strings.TrimSpace(args[0])
+	pluginType := consts.PluginTypeUnknown
+	if pluginTypeStr != "" {
+		var err error
+		pluginType, err = consts.ParsePluginType(pluginTypeStr)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
+			return 2
+		}
 	}
 
 	client, err := c.Client()

@@ -43,7 +43,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		},
 		{
 			"not_a_plugin",
-			[]string{"nope_definitely_never_a_plugin_nope", consts.PluginTypeCredential.String()},
+			[]string{consts.PluginTypeCredential.String(), "nope_definitely_never_a_plugin_nope"},
 			"",
 			2,
 		},
@@ -91,7 +91,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 
 		code := cmd.Run([]string{
 			"-sha256", sha256Sum,
-			pluginName, consts.PluginTypeCredential.String(),
+			consts.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -132,7 +132,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 
 		code := cmd.Run([]string{
 			"-sha256", "abcd1234",
-			"my-plugin", consts.PluginTypeCredential.String(),
+			consts.PluginTypeCredential.String(), "my-plugin",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

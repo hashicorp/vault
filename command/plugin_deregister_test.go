@@ -43,7 +43,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		},
 		{
 			"not_a_plugin",
-			[]string{"nope_definitely_never_a_plugin_nope", consts.PluginTypeCredential.String()},
+			[]string{consts.PluginTypeCredential.String(), "nope_definitely_never_a_plugin_nope"},
 			"",
 			0,
 		},
@@ -98,8 +98,8 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		code := cmd.Run([]string{
-			pluginName,
 			consts.PluginTypeCredential.String(),
+			pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -139,8 +139,8 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"my-plugin",
 			consts.PluginTypeCredential.String(),
+			"my-plugin",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

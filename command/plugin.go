@@ -31,11 +31,11 @@ Usage: vault plugin <subcommand> [options] [args]
 
   Register a new plugin to the catalog as a particular type:
 
-      $ vault plugin register -sha256=d3f0a8b... my-custom-plugin auth
+      $ vault plugin register -sha256=d3f0a8b... auth my-custom-plugin
 
   Get information about a plugin in the catalog listed under a particular type:
 
-      $ vault plugin info my-custom-plugin auth
+      $ vault plugin info auth my-custom-plugin
 
   Please see the individual subcommand help for detailed usage information.
 `

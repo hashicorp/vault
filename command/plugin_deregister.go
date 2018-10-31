@@ -23,15 +23,15 @@ func (c *PluginDeregisterCommand) Synopsis() string {
 
 func (c *PluginDeregisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin deregister [options] NAME TYPE
+Usage: vault plugin deregister [options] TYPE NAME
 
   Deregister an existing plugin in the catalog. If the plugin does not exist,
-  no action is taken (the command is idempotent). The last argument of type
+  no action is taken (the command is idempotent). The argument of type
   takes "auth", "database", or "secret".
 
   Deregister the plugin named my-custom-plugin:
 
-      $ vault plugin deregister my-custom-plugin auth
+      $ vault plugin deregister auth my-custom-plugin
 
 ` + c.Flags().Help()
 
@@ -74,12 +74,12 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginName := strings.TrimSpace(args[0])
-	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[1]))
+	pluginType, err := consts.ParsePluginType(strings.TrimSpace(args[0]))
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
+	pluginName := strings.TrimSpace(args[1])
 
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
 		Name: pluginName,
