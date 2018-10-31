@@ -8,6 +8,7 @@ import Service, { inject as service } from '@ember/service';
 import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { task, timeout } from 'ember-concurrency';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -218,7 +219,7 @@ export default Service.extend({
     const tokenName = this.get('currentTokenName');
     let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
-    if (!tokenName || !data) {
+    if (!tokenName || !data || !expirationCalcTS) {
       return null;
     }
     const { ttl, renewable } = data;
@@ -245,11 +246,20 @@ export default Service.extend({
     );
   },
 
-  shouldRenew: computed(function() {
+  checkShouldRenew: task(function*() {
+    while (true) {
+      yield timeout(5000);
+      if (this.shouldRenew()) {
+        yield this.renew();
+      }
+    }
+  }).on('init'),
+
+  shouldRenew() {
     const now = this.now();
     const lastFetch = this.get('lastFetch');
     const renewTime = this.get('renewAfterEpoch');
-    if (this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
+    if (!this.currentTokenName || this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
       return false;
     }
     if (lastFetch && now - lastFetch >= IDLE_TIMEOUT_MS) {
@@ -260,10 +270,15 @@ export default Service.extend({
       return true;
     }
     return false;
-  }).volatile(),
+  },
 
   setLastFetch(timestamp) {
     this.set('lastFetch', timestamp);
+    // if expiration was allowed we want to go ahead and renew here
+    if (this.allowExpiration) {
+      this.renew();
+    }
+    this.set('allowExpiration', false);
   },
 
   getTokensFromStorage(filterFn) {
