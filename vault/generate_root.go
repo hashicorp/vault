@@ -121,7 +121,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	var fingerprint string
 	switch {
 	case len(otp) > 0:
-		if len(otp) != TokenLength {
+		if len(otp) != TokenLength+2 {
 			return fmt.Errorf("OTP string is wrong length")
 		}
 

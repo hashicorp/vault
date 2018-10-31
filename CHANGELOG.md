@@ -1,15 +1,78 @@
-## 0.11.4 (Unreleased)
+## 1.0.0-beta2 (Unreleased)
 
 CHANGES:
 
- * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+ * Agent no longer automatically reauthenticates when new credentials are
+   detected. It's not strictly necessary and in some cases was causing
+   reauthentication much more often than intended.
+ * HSM Regenerate Key Support Removed: Vault no longer supports destroying and
+   regenerating encryption keys on an HSM; it only supports creating them.
+   Although this has never been a source of a customer incident, it is simply a
+   code path that is pretty trivial to activate, especially by mistyping
+   `regenerate_key` instead of `generate_key`.
+
+FEATURES:
+
+ * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
+   credentials when having Agent automatically authenticate to Vault.
+
+BUG FIXES:
+
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * cli: Fix panic that could occur if parameters were not provided. [GH-5603]
+ * secrets/azure: Fix valid roles being rejected for duplicate ids despite
+    having distinct scopes.
+    [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+
+## 1.0.0-beta1 (October 23rd, 2018)
+
+NOTE:
+
+  A few items didn't make it into beta1; this entry will be updated for beta2
+  and the final release.
+
+CHANGES:
+
+ * core: Tokens are now prefixed by a designation to indicate what type of
+   token they are. Service tokens start with `s.` and batch tokens start with
+   `b.`. Existing tokens will still work (they are all of service type and will
+   be considered as such). Prefixing allows us to be more efficient when
+   consuming a token, which keeps the critical path of requests faster.
+
+FEATURES:
+
+ * **Auto-Unseal in Open Source**: Cloud-based auto-unseal is migrating from
+   Enterprise to Open Source. We've created a migrator to allow migrating
+   between Shamir seals and auto unseal methods.
+ * Batch Tokens: Batch tokens trade off some features of service tokens for no
+   storage overhead, and in most cases can be used across performance
+   replication clusters.
+ * Replication Speed Improvements: We've worked hard to speed up a lot of
+   operations when using Vault Enterprise Replication.
+ * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
+   pattern to keys stored within GCP Cloud KMS.
+
+IMPROVEMENTS:
+
+ * auth/token: New tokens are indexed in storage HMAC-SHA256 instead of SHA1
+
+## 0.11.4 (October 23rd, 2018)
+
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503].
+   We've categorized this as a change, but generally this can be considered
+   just a bug fix, and no action is needed.
 
 FEATURES:
 
  * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
-   remove older unused key versions [GH-5388]
+   remove older unused key versions.
  * Web UI support for KV Version 2. Browse, delete, undelete and destroy 
-   individual secret versions in the UI. [GH-5547], [GH-5563]
+   individual secret versions in the UI.
+ * Azure Existing Service Principal Support: Credentials can now be generated
+   against an existing service principal.
 
 IMPROVEMENTS:
 
@@ -18,12 +81,13 @@ IMPROVEMENTS:
    This includes names of entities, aliases and groups [GH-5404]
  * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS
    credentials [GH-5500]
- * secret/azure: Credentials can now be generated against an existing service principal.
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
    packet [GH-5465]
  * secret/ssh: Allow usage of JSON arrays when setting zero addresses [GH-5528]
+ * secret/transit: Allow trimming unused keys [GH-5388]
+ * ui: Support KVv2 [GH-5547], [GH-5563]
  * ui: Allow viewing and updating Vault license via the UI
  * ui: Onboarding will now display your progress through the chosen tutorials
  * ui: Dynamic secret backends obfuscate sensitive data by default and

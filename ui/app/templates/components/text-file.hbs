@@ -57,7 +57,7 @@
           </span>
           {{#if file.fileName}}
             <button type="button" class="file-delete-button" {{action 'clearFile'}} data-test-text-clear=true>
-              {{i-con glyph="close-circled-border" size=16}}
+              <ICon @glyph="close-circled-outline" @size=16 />
             </button>
           {{/if}}
         </label>

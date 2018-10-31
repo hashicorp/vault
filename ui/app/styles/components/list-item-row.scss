@@ -4,6 +4,10 @@
   @extend .is-marginless;
   padding-left: 0;
   padding-right: 0;
+
+  .ember-basic-dropdown-trigger {
+    display: inline-block;
+  }
 }
 
 a.list-item-row,

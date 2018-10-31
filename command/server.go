@@ -41,6 +41,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -51,10 +52,9 @@ import (
 var _ cli.Command = (*ServerCommand)(nil)
 var _ cli.CommandAutocomplete = (*ServerCommand)(nil)
 
-// Enable memory profiling by setting build tag 'memprofiler'
 var memProfilerEnabled = false
 
-const migrationLock = "core/migration"
+const storageMigrationLock = "core/migration"
 
 type ServerCommand struct {
 	*BaseCommand
@@ -97,6 +97,7 @@ type ServerCommand struct {
 	flagDevThreeNode     bool
 	flagDevFourCluster   bool
 	flagDevTransactional bool
+	flagDevAutoSeal      bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
 }
@@ -249,6 +250,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "dev-auto-seal",
+		Target:  &c.flagDevAutoSeal,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "dev-skip-init",
 		Target:  &c.flagDevSkipInit,
 		Default: false,
@@ -347,7 +355,7 @@ func (c *ServerCommand) Run(args []string) int {
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal {
 		c.flagDev = true
 	}
 
@@ -469,7 +477,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Prevent server startup if migration is active
-	if c.migrationActive(backend) {
+	if c.storageMigrationActive(backend) {
 		return 1
 	}
 
@@ -478,7 +486,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := "shamir"
+	sealType := vaultseal.Shamir
 	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
 		if config.Seal == nil {
 			sealType = os.Getenv("VAULT_SEAL_TYPE")
@@ -487,14 +495,21 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	sealLogger := c.logger.Named(sealType)
-	allLoggers = append(allLoggers, sealLogger)
-	seal, sealConfigError := serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-	if sealConfigError != nil {
-		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing Seal configuration: %s", sealConfigError))
-			return 1
+	var seal vault.Seal
+	var sealConfigError error
+	if c.flagDevAutoSeal {
+		sealLogger := c.logger.Named(vaultseal.Test)
+		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+	} else {
+		sealLogger := c.logger.Named(sealType)
+		allLoggers = append(allLoggers, sealLogger)
+		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+		if sealConfigError != nil {
+			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+				c.UI.Error(fmt.Sprintf(
+					"Error parsing Seal configuration: %s", sealConfigError))
+				return 1
+			}
 		}
 	}
 
@@ -533,6 +548,7 @@ func (c *ServerCommand) Run(args []string) int {
 		EnableRaw:                 config.EnableRawEndpoint,
 		DisableSealWrap:           config.DisableSealWrap,
 		DisablePerformanceStandby: config.DisablePerformanceStandby,
+		DisableIndexing:           config.DisableIndexing,
 		AllLoggers:                allLoggers,
 	}
 	if c.flagDev {
@@ -904,8 +920,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		Core: core,
 	}))
 
-	err = core.UnsealWithStoredKeys(context.Background())
-	if err != nil {
+	// Before unsealing with stored keys, setup seal migration if needed
+	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+
+	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
 		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
 			return 1
@@ -1006,7 +1027,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"The recovery key and root token are displayed below in case you want " +
 					"to seal/unseal the Vault or re-authenticate."))
 			c.UI.Warn("")
-			c.UI.Warn(fmt.Sprintf("Unseal Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
+			c.UI.Warn(fmt.Sprintf("Recovery Key: %s", base64.StdEncoding.EncodeToString(init.RecoveryShares[0])))
 		}
 
 		c.UI.Warn(fmt.Sprintf("Root Token: %s", init.RootToken))
@@ -1789,13 +1810,13 @@ func (c *ServerCommand) removePidFile(pidPath string) error {
 	return os.Remove(pidPath)
 }
 
-// migrationActive checks and warns against in-progress storage migrations.
+// storageMigrationActive checks and warns against in-progress storage migrations.
 // This function will block until storage is available.
-func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
+func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 	first := true
 
 	for {
-		migrationStatus, err := CheckMigration(backend)
+		migrationStatus, err := CheckStorageMigration(backend)
 		if err == nil {
 			if migrationStatus != nil {
 				startTime := migrationStatus.Start.Format(time.RFC3339)
@@ -1808,12 +1829,12 @@ func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
 		}
 		if first {
 			first = false
-			c.UI.Warn("\nWARNING! Unable to read migration status.")
+			c.UI.Warn("\nWARNING! Unable to read storage migration status.")
 
 			// unexpected state, so stop buffering log messages
 			c.logGate.Flush()
 		}
-		c.logger.Warn("migration check error", "error", err.Error())
+		c.logger.Warn("storage migration check error", "error", err.Error())
 
 		select {
 		case <-time.After(2 * time.Second):
@@ -1824,12 +1845,12 @@ func (c *ServerCommand) migrationActive(backend physical.Backend) bool {
 	return false
 }
 
-type MigrationStatus struct {
+type StorageMigrationStatus struct {
 	Start time.Time `json:"start"`
 }
 
-func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
-	entry, err := b.Get(context.Background(), migrationLock)
+func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) {
+	entry, err := b.Get(context.Background(), storageMigrationLock)
 
 	if err != nil {
 		return nil, err
@@ -1839,7 +1860,7 @@ func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
 		return nil, nil
 	}
 
-	var status MigrationStatus
+	var status StorageMigrationStatus
 	if err := jsonutil.DecodeJSON(entry.Value, &status); err != nil {
 		return nil, err
 	}
@@ -1847,12 +1868,12 @@ func CheckMigration(b physical.Backend) (*MigrationStatus, error) {
 	return &status, nil
 }
 
-func SetMigration(b physical.Backend, active bool) error {
+func SetStorageMigration(b physical.Backend, active bool) error {
 	if !active {
-		return b.Delete(context.Background(), migrationLock)
+		return b.Delete(context.Background(), storageMigrationLock)
 	}
 
-	status := MigrationStatus{
+	status := StorageMigrationStatus{
 		Start: time.Now(),
 	}
 
@@ -1862,7 +1883,7 @@ func SetMigration(b physical.Backend, active bool) error {
 	}
 
 	entry := &physical.Entry{
-		Key:   migrationLock,
+		Key:   storageMigrationLock,
 		Value: enc,
 	}
 

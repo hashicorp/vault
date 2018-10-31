@@ -93,7 +93,7 @@ testImports:
   version: 8c6a1d79a44d2742da3660540d1fd43f4ddcfc8c
   subpackages:
   - zk
-- name: github.com/sirupsen/logrus
+- name: github.com/Sirupsen/logrus
   version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
 - name: github.com/streadway/amqp
   version: 2e25825abdbd7752ff08b270d313b93519a0a232

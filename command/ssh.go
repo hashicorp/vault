@@ -294,7 +294,7 @@ func (c *SSHCommand) Run(args []string) int {
 			"WARNING: No -role specified. Use -role to tell Vault which ssh role " +
 				"to use for authentication. In the future, you will need to tell " +
 				"Vault which role to use. For now, Vault will attempt to guess based " +
-				"on the API response. This will be removed in the Vault 0.12."))
+				"on the API response. This will be removed in the Vault 1.1."))
 
 		role, err := c.defaultRole(c.flagMountPoint, ip)
 		if err != nil {
@@ -321,7 +321,7 @@ func (c *SSHCommand) Run(args []string) int {
 				"on the API response. This guess involves creating a temporary " +
 				"credential, reading its type, and then revoking it. To reduce the " +
 				"number of API calls and surface area, specify -mode directly. This " +
-				"will be removed in Vault 0.12."))
+				"will be removed in Vault 1.1."))
 		secret, cred, err := c.generateCredential(username, ip)
 		if err != nil {
 			// This is _very_ hacky, but is the only sane backwards-compatible way

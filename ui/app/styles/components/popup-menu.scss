@@ -7,11 +7,11 @@
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
-    width: 175px;
+    width: 200px;
   }
 
   &.is-wide > .box {
-    width: 300px;
+    width: $drawer-width;
   }
 
   .confirm-action span .button {
@@ -24,7 +24,8 @@
     padding: $size-11 0;
 
     button.link,
-    a {
+    a,
+    .menu-item {
       background: transparent;
       box-shadow: none;
       border: none;
@@ -59,17 +60,30 @@
           color: $white;
         }
       }
+
+      &.disabled {
+        opacity: 0.5;
+        
+        &:hover {
+          background: transparent;
+          cursor: default;
+        }
+      }
+    }
+
+    small code {
+      margin-left: $spacing-xs;
     }
   }
 
   .menu-label {
     color: $grey-dark;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
+    font-size: $size-9;
+    font-weight: $font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 $size-11;
-    text-transform: none;
+    padding: $size-10 $size-8 0;
+    text-transform: uppercase;
   }
 
   .menu-content {
@@ -77,8 +91,8 @@
   }
 
   hr {
-    background-color: $grey-light;
-    margin: $size-11 0;
+    background-color: $ui-gray-200;
+    margin: 0;
   }
 }
 
@@ -99,6 +113,12 @@
 
 .status-menu-content {
   margin-top: 8px;
+
+  .box {
+    @include until($mobile) {
+      width: $drawer-width - ($spacing-xs * 2);
+    }
+  }
 }
 
 .ember-basic-dropdown-content {

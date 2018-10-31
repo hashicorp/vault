@@ -28,7 +28,7 @@ instance that can utilize an encryption key from [AWS Key Management Services
 
 ## Reference Material
 
-- [Vault Enterprise Auto Unseal](/docs/enterprise/auto-unseal/index.html)
+- [Vault Auto Unseal](/docs/configuration/seal/index.html)
 - [Configuration: `awskms` Seal](/docs/configuration/seal/awskms.html)
 
 

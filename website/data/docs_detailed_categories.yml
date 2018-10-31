@@ -15,7 +15,7 @@
     - docs/internals/replication.html
     - docs/internals/plugins.html
 -
-  title: "Basic Concepts"
+  title: "Concepts"
   docs:
     - docs/concepts/index.html
     - docs/concepts/dev-server.html
@@ -77,6 +77,7 @@
     - docs/secrets/cubbyhole/index.html
     - docs/secrets/databases/index.html
     - docs/secrets/gcp/index.html
+    - docs/secrets/gcpkms/index.html
     - docs/secrets/kv/index.html
     - docs/secrets/identity/index.html
     - docs/secrets/nomad/index.html
@@ -121,11 +122,11 @@
   title: "Plugin Backends"
   docs:
     - docs/plugin/index.html
+    - docs/plugin/partnerships.html
 -
   title: "Vault Enterprise"
   docs:
     - docs/enterprise/replication/index.html
-    - docs/enterprise/auto-unseal/index.html
     - docs/enterprise/hsm/index.html
     - docs/enterprise/sealwrap/index.html
     - docs/enterprise/namespaces/index.html

@@ -5,13 +5,32 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/xor"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/go-testing-interface"
+	testing "github.com/mitchellh/go-testing-interface"
 )
+
+type ReplicatedTestClusters struct {
+	PerfPrimaryCluster     *vault.TestCluster
+	PerfSecondaryCluster   *vault.TestCluster
+	PerfPrimaryDRCluster   *vault.TestCluster
+	PerfSecondaryDRCluster *vault.TestCluster
+}
+
+func (r *ReplicatedTestClusters) Cleanup() {
+	r.PerfPrimaryCluster.Cleanup()
+	r.PerfSecondaryCluster.Cleanup()
+	r.PerfPrimaryDRCluster.Cleanup()
+	r.PerfSecondaryDRCluster.Cleanup()
+}
 
 // Generates a root token on the target cluster.
 func GenerateRoot(t testing.T, cluster *vault.TestCluster, drToken bool) string {
@@ -127,6 +146,65 @@ func WaitForReplicationState(t testing.T, c *vault.Core, state consts.Replicatio
 	}
 }
 
+func GetClusterAndCore(t testing.T, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+	inm, err := inmem.NewTransactionalInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	coreConfig := &vault.CoreConfig{
+		Physical:   inm,
+		HAPhysical: inmha.(physical.HABackend),
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      logger,
+	})
+	cluster.Start()
+
+	cores := cluster.Cores
+	core := cores[0]
+
+	vault.TestWaitActive(t, core.Core)
+
+	return cluster, core
+}
+
+func GetFourReplicatedClusters(t testing.T) *ReplicatedTestClusters {
+	ret := &ReplicatedTestClusters{}
+
+	logger := log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+	})
+	// Set this lower so that state populates quickly to standby nodes
+	vault.HeartbeatInterval = 2 * time.Second
+
+	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"))
+
+	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"))
+
+	ret.PerfPrimaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri-dr"))
+
+	ret.PerfSecondaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec-dr"))
+
+	SetupFourClusterReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster, ret.PerfPrimaryDRCluster, ret.PerfSecondaryDRCluster)
+
+	// Wait until poison pills have been read
+	time.Sleep(45 * time.Second)
+	EnsureCoresUnsealed(t, ret.PerfPrimaryCluster)
+	EnsureCoresUnsealed(t, ret.PerfSecondaryCluster)
+	EnsureCoresUnsealed(t, ret.PerfPrimaryDRCluster)
+	EnsureCoresUnsealed(t, ret.PerfSecondaryDRCluster)
+
+	return ret
+}
+
 func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDRSecondary, perfSecondaryDRSecondary *vault.TestCluster) {
 	// Enable dr primary
 	_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
@@ -137,7 +215,7 @@ func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDR
 	WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationDRPrimary)
 
 	// Enable performance primary
-	_, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/enable", nil)
+	_, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/enable", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +245,7 @@ func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDR
 	EnsureCoresUnsealed(t, perfDRSecondary)
 
 	// get performance token
-	secret, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/secondary-token", map[string]interface{}{
+	secret, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/secondary-token", map[string]interface{}{
 		"id": "1",
 	})
 	if err != nil {
@@ -177,7 +255,7 @@ func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDR
 	token = secret.WrapInfo.Token
 
 	// enable performace secondary
-	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/secondary/enable", map[string]interface{}{
+	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
 		"token":   token,
 		"ca_file": perfPrimary.CACertPEMFile,
 	})
