@@ -94,8 +94,20 @@ func TestBackend_KeyName(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected an error for test %q", tc.Name)
 			}
+			continue
 		} else if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: test name: %q\nresp: %#v\nerr: %v", tc.Name, resp, err)
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path:      "code/" + tc.KeyName,
+			Operation: logical.ReadOperation,
+			Storage:   config.StorageView,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: test name: %q\nresp: %#v\nerr: %v", tc.Name, resp, err)
+		}
+		if resp.Data["code"].(string) == "" {
+			t.Fatalf("failed to generate code for test %q", tc.Name)
 		}
 	}
 }
