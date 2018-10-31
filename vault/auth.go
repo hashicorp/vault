@@ -152,7 +152,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	// Check for the correct backend type
 	backendType := backend.Type()
-	if backendType != logical.TypeCredential && entry.Type != "token" {
+	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
 
@@ -616,7 +616,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		{
 			// Check for the correct backend type
 			backendType := backend.Type()
-			if backendType != logical.TypeCredential && entry.Type != "token" {
+			if backendType != logical.TypeCredential {
 				return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 			}
 

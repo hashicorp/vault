@@ -561,6 +561,7 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 				salt.DefaultLocation,
 			},
 		},
+		BackendType: logical.TypeCredential,
 	}
 
 	t.Backend.Paths = append(t.Backend.Paths, t.paths()...)
