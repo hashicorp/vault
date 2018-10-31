@@ -12,7 +12,7 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-create": true,
+      "x-vault-create-supported": true,
       "x-vault-sudo": true,
       "parameters": [
         {

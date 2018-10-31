@@ -56,7 +56,7 @@ type oasPathItem struct {
 	Parameters      []oasParameter `json:"parameters,omitempty"`
 	Sudo            bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
 	Unauthenticated bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	Create          bool           `json:"x-vault-create,omitempty" mapstructure:"x-vault-create"`
+	CreateSupported bool           `json:"x-vault-create-supported,omitempty" mapstructure:"x-vault-create-supported"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -90,9 +90,8 @@ type oasParameter struct {
 }
 
 type oasRequestBody struct {
-	Description string      `json:"description,omitempty"`
-	Required    bool        `json:"required,omitempty"`
-	Content     *oasContent `json:"content,omitempty"`
+	Description string     `json:"description,omitempty"`
+	Content     oasContent `json:"content,omitempty"`
 }
 
 type oasContent map[string]*oasMediaTypeObject
@@ -112,8 +111,8 @@ type oasSchema struct {
 }
 
 type oasResponse struct {
-	Description string      `json:"description"`
-	Content     *oasContent `json:"content,omitempty"`
+	Description string     `json:"description"`
+	Content     oasContent `json:"content,omitempty"`
 }
 
 var oasStdRespOK = &oasResponse{
@@ -221,7 +220,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			}
 
 			if opType == logical.CreateOperation {
-				pi.Create = true
+				pi.CreateSupported = true
 
 				// If both Create and Update are defined, only process Update.
 				if operations[logical.UpdateOperation] != nil {
@@ -266,13 +265,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				// If examples were given, use the first one as the sample
 				// of this schema.
 				if len(props.Examples) > 0 {
-					s.Example = props.Examples[0].Value
+					s.Example = props.Examples[0].Data
 				}
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
 					op.RequestBody = &oasRequestBody{
-						Content: &oasContent{
+						Content: oasContent{
 							"application/json": &oasMediaTypeObject{
 								Schema: s,
 							},
@@ -343,14 +342,9 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					}
 				}
 
-				// a nil pointer when empty is needed for omitempty to work
-				var c *oasContent
-				if len(content) > 0 {
-					c = &content
-				}
 				op.Responses[code] = &oasResponse{
 					Description: description,
-					Content:     c,
+					Content:     content,
 				}
 			}
 
@@ -463,8 +457,11 @@ func convertType(t FieldType) schemaType {
 	ret := schemaType{}
 
 	switch t {
-	case TypeString, TypeNameString, TypeLowerCaseString, TypeHeader:
+	case TypeString, TypeNameString, TypeHeader:
 		ret.baseType = "string"
+	case TypeLowerCaseString:
+		ret.baseType = "string"
+		ret.format = "lowercase"
 	case TypeInt:
 		ret.baseType = "number"
 	case TypeDurationSecond:
@@ -478,7 +475,10 @@ func convertType(t FieldType) schemaType {
 	case TypeKVPairs:
 		ret.baseType = "object"
 		ret.format = "kvpairs"
-	case TypeSlice, TypeStringSlice, TypeCommaStringSlice:
+	case TypeSlice:
+		ret.baseType = "array"
+		ret.items = "object"
+	case TypeStringSlice, TypeCommaStringSlice:
 		ret.baseType = "array"
 		ret.items = "string"
 	case TypeCommaIntSlice:

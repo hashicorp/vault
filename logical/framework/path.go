@@ -147,7 +147,7 @@ type OperationProperties struct {
 // RequestExample is example of request data.
 type RequestExample struct {
 	Description string                 // optional description of the request
-	Value       map[string]interface{} // map version of sample JSON
+	Data        map[string]interface{} // map version of sample JSON request data
 }
 
 // Response describes and optional demonstrations an operation response.
