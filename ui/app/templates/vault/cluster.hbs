@@ -72,7 +72,7 @@
           <ICon @glyph="chevron-down" @aria-hidden="true" @size=8 @class="has-text-white is-status-chevron" />
         </button>
       </div>
-      <div class="navbar-item nav-user-button">
+      <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}">
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
       {{console/ui-panel isFullscreen=consoleFullscreen}}
@@ -113,24 +113,11 @@
   <UiWizard>
     <section class="section">
       <div class="container is-widescreen">
-        {{component
-          (if
-            (or
-              (is-after (now interval=1000) auth.tokenExpirationDate)
-              (and activeClusterName auth.currentToken)
-            )
-            'token-expire-warning'
-            null
-          )
-        }}
-        {{#unless (and
-            activeClusterName
-            auth.currentToken
-            (is-after (now interval=1000) auth.tokenExpirationDate)
-          )
-        }}
+        {{#if (is-after (now interval=1000) auth.tokenExpirationDate) }}
+          <TokenExpireWarning />
+        {{else}}
           {{outlet}}
-        {{/unless}}
+        {{/if}}
       </div>
     </section>
   </UiWizard>
