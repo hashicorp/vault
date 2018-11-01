@@ -101,6 +101,9 @@ enabled while creating or updating a role.
 - `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
+- `token_type` `(string: "")` - The type of token that should be generated via
+  this role. Can be `service`, `batch`, or `default` to use the mount's default
+  (which unless changed will be `service` tokens).
 
 ### Sample Payload
 
