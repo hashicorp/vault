@@ -148,7 +148,10 @@ type OperationProperties struct {
 type RequestExample struct {
 	Description string                 // optional description of the request
 	Data        map[string]interface{} // map version of sample JSON request data
-	Response    *Response              // (optional) example response data
+
+	// Optional example response to the sample request. This approach is considered
+	// provisional for now, and this field may be changed or removed.
+	Response *Response
 }
 
 // Response describes and optional demonstrations an operation response.
