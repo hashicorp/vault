@@ -20,7 +20,7 @@ func pathListRoles(b *backend) *framework.Path {
 	}
 }
 
-func pathRoles() *framework.Path {
+func (b *backend) pathRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -62,14 +62,14 @@ Defaults to 'client'.`,
 
 			"lease": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: "Deprecated, use ttl.",
+				Description: "DEPRECATED: Use ttl.",
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathRolesRead,
-			logical.UpdateOperation: pathRolesWrite,
-			logical.DeleteOperation: pathRolesDelete,
+			logical.ReadOperation:   b.pathRolesRead,
+			logical.UpdateOperation: b.pathRolesWrite,
+			logical.DeleteOperation: b.pathRolesDelete,
 		},
 	}
 }
@@ -83,7 +83,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 	return logical.ListResponse(entries), nil
 }
 
-func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	entry, err := req.Storage.Get(ctx, "policy/"+name)
@@ -106,8 +106,9 @@ func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.Field
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      int64(result.Lease.Seconds()),
-			"ttl":        int64(result.Lease.Seconds()),
+			"lease":      int64(result.TTL.Seconds()),
+			"ttl":        int64(result.TTL.Seconds()),
+			"max_ttl":    int64(result.MaxTTL.Seconds()),
 			"token_type": result.TokenType,
 		},
 	}
@@ -120,7 +121,7 @@ func pathRolesRead(ctx context.Context, req *logical.Request, d *framework.Field
 	return resp, nil
 }
 
-func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
 	name := d.Get("name").(string)
@@ -181,7 +182,7 @@ func pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.Fiel
 	return nil, nil
 }
 
-func pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	if err := req.Storage.Delete(ctx, "policy/"+name); err != nil {
 		return nil, err

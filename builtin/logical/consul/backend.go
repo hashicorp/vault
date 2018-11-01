@@ -27,7 +27,7 @@ func Backend() *backend {
 		Paths: []*framework.Path{
 			pathConfigAccess(&b),
 			pathListRoles(&b),
-			pathRoles(),
+			pathRoles(&b),
 			pathToken(&b),
 		},
 
