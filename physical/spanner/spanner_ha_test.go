@@ -38,20 +38,23 @@ func TestHABackend(t *testing.T) {
 	testCleanup(t, client, haTable)
 	defer testCleanup(t, client, haTable)
 
-	backend, err := NewBackend(map[string]string{
+	logger := logging.NewVaultLogger(log.Debug)
+	config := map[string]string{
 		"database":   database,
 		"table":      table,
 		"ha_table":   haTable,
 		"ha_enabled": "true",
-	}, logging.NewVaultLogger(log.Debug))
+	}
+
+	b, err := NewBackend(config, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ha, ok := backend.(physical.HABackend)
-	if !ok {
-		t.Fatalf("does not implement")
+	b2, err := NewBackend(config, logger)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	physical.ExerciseHABackend(t, ha, ha)
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }
