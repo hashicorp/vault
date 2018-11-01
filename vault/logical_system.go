@@ -253,7 +253,6 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(plugins)
 	return logical.ListResponse(plugins), nil
 }
 

@@ -75,6 +75,9 @@ func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
 				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
 			}
+			if entry.Type != pluginType {
+				return nil, nil
+			}
 
 			// prepend the plugin directory to the command
 			entry.Command = filepath.Join(c.directory, entry.Command)
@@ -188,10 +191,11 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	mapKeys := make(map[string]bool)
 
 	pluginTypePrefix := pluginType.String() + "-"
+
 	for _, plugin := range keys {
 
 		// Only list user-added plugins if they're of the given type.
-		if _, err := c.Get(ctx, plugin, pluginType); err == nil {
+		if entry, err := c.Get(ctx, plugin, pluginType); err == nil && entry != nil {
 
 			// Some keys will be prepended with the plugin type, but other ones won't.
 			// Users don't expect to see the plugin type, so we need to strip that here.
