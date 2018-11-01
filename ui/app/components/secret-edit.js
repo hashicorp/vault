@@ -59,6 +59,7 @@ export default Component.extend(FocusOnInsertMixin, {
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
     this.set('codemirrorString', data.toJSONString());
+
     if (data.isAdvanced()) {
       this.set('preferAdvancedEdit', true);
     }
@@ -71,6 +72,7 @@ export default Component.extend(FocusOnInsertMixin, {
     if (this.mode === 'edit') {
       this.send('addRow');
     }
+    
   },
 
   waitForKeyUp: task(function*() {
@@ -84,6 +86,15 @@ export default Component.extend(FocusOnInsertMixin, {
 
   partialName: computed('mode', function() {
     return `partials/secret-form-${this.mode}`;
+  }),
+
+  wrappedSecret: computed('model.secretData', function() {
+    this.store
+      .adapterFor('tools')
+      .toolAction('wrap', this.secretDataAsJSON, { wrapTTL: 1800 })
+      .then(resp => {
+        this.set('wrappedSecret', resp.wrap_info.token);
+      });
   }),
 
   updatePath: maybeQueryRecord(
