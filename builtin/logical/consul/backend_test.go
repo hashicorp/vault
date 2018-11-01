@@ -184,7 +184,7 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.3.0")
+				testBackendRenewRevoke(t, "1.4.0-rc1")
 			})
 
 			testBackendRenewRevoke14(t, "1.4.0-rc1")
@@ -456,7 +456,7 @@ func TestBackend_Basic(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.3.0")
+				testBackendRenewRevoke(t, "1.4.0-rc1")
 			})
 
 			testBackendBasic(t, "1.4.0-rc1")
