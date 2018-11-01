@@ -8,19 +8,40 @@
 
 {{#if unwrap_data}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <div class="field">
-      <label class="is-label">
-        Unwrapped data
-      </label>
-      <div class="control">
-        {{json-editor
-          value=(stringify unwrap_data)
-          options=(hash
-            readOnly=true
-          )
-        }}
+    <nav class="tabs">
+      <ul>
+        <li class="{{if (eq unwrapActiveTab "data") "is-active"}}">
+          <a href="#" {{action "updateUnwrapTab" "data"}} class="link link-plain has-text-weight-semibold {{if (eq unwrapActiveTab "data") "is-active"}}">Data</a>
+        </li>
+        <li class="{{if (eq unwrapActiveTab "details") "is-active"}}">
+          <a href="#" {{action "updateUnwrapTab" "details"}} class="link link-plain has-text-weight-semibold {{if (eq unwrapActiveTab "details") "is-active"}}">Wrap Details</a>
+        </li>
+      </ul>
+    </nav>
+    {{#if (eq unwrapActiveTab "data")}}
+      <div class="field">
+        <div class="control">
+          {{json-editor
+            value=(stringify unwrap_data)
+            options=(hash
+              readOnly=true
+            )
+          }}
+        </div>
       </div>
-    </div>
+    {{else}}
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        {{#each-in details as |key detail|}}
+          {{#info-table-row label=key value=key}}
+            {{#if detail}}
+              {{detail}}
+            {{else}}
+              <ICon @size=28 @glyph="false" />
+            {{/if}}
+          {{/info-table-row}}
+        {{/each-in}}
+      </div>
+    {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
