@@ -29,6 +29,7 @@ BUG FIXES:
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
