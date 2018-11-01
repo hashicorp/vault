@@ -33,7 +33,7 @@ module('Integration | Component | license info', function(hooks) {
     assert.equal(component.warning, LICENSE_WARNING_TEXT, 'it renders warning text including time left');
     assert.equal(component.hasSaveButton, true, 'it renders the save button');
     assert.equal(component.hasTextInput, true, 'it renders text input for new license');
-    assert.equal(component.featureRows.length, 12, 'it renders 12 features');
+    assert.equal(component.featureRows.length, 9, 'it renders 9 features');
     assert.equal(component.featureRows[0].featureName, 'HSM', 'it renders HSM feature');
     assert.equal(component.featureRows[0].featureStatus, 'Active', 'it renders Active for HSM feature');
     assert.equal(
@@ -56,7 +56,7 @@ module('Integration | Component | license info', function(hooks) {
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
     );
-    assert.equal(component.featureRows.length, 12, 'it renders 12 features');
+    assert.equal(component.featureRows.length, 9, 'it renders 9 features');
     let activeFeatures = component.featureRows.filter(f => f.featureStatus === 'Active');
     assert.equal(activeFeatures.length, 2);
   });
