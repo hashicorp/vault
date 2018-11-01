@@ -108,7 +108,7 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 
 	core := cluster.Cores[0]
 
-	// Replace the plugin with a credential backend
+	// Add a credential backend with the same name
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "TestBackend_PluginMainCredentials", []string{}, "")
 
 	// Make a request to lazy load the now-credential plugin
@@ -116,8 +116,8 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
 	req.ClientToken = core.Client.Token()
 	_, err := core.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatalf("expected error due to mismatch on error type: %s", err)
+	if err != nil {
+		t.Fatalf("adding a same-named plugin of a different type should be no problem: %s", err)
 	}
 
 	// Sleep a bit before cleanup is called
@@ -204,33 +204,33 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 func TestSystemBackend_Plugin_continueOnError(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeLogical, true)
+			testPlugin_continueOnError(t, logical.TypeLogical, true, consts.PluginTypeSecrets)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeLogical, false)
+			testPlugin_continueOnError(t, logical.TypeLogical, false, consts.PluginTypeSecrets)
 		})
 	})
 
 	t.Run("auth", func(t *testing.T) {
 		t.Run("sha256_mismatch", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeCredential, true)
+			testPlugin_continueOnError(t, logical.TypeCredential, true, consts.PluginTypeCredential)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
-			testPlugin_continueOnError(t, logical.TypeCredential, false)
+			testPlugin_continueOnError(t, logical.TypeCredential, false, consts.PluginTypeCredential)
 		})
 	})
 }
 
-func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatch bool) {
+func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatch bool, pluginType consts.PluginType) {
 	cluster := testSystemBackendMock(t, 1, 1, btype)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 
 	// Get the registered plugin
-	req := logical.TestRequest(t, logical.ReadOperation, "sys/plugins/catalog/database/mock-plugin")
+	req := logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("sys/plugins/catalog/%s/mock-plugin", pluginType))
 	req.ClientToken = core.Client.Token()
 	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp == nil || (resp != nil && resp.IsError()) {
@@ -553,7 +553,7 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeUnknown, "TestBackend_PluginMainEnv", env, tempDir)
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestBackend_PluginMainEnv", env, tempDir)
 	options := map[string]interface{}{
 		"type": "mock-plugin",
 	}

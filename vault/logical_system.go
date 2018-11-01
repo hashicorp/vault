@@ -373,8 +373,11 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	err := b.Core.pluginCatalog.Delete(ctx, pluginName)
+	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
+		return nil, err
+	}
+	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType); err != nil {
 		return nil, err
 	}
 

@@ -95,8 +95,8 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cores := cluster.Cores
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeUnknown, "TestPlugin_GRPC_Main", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin-netRPC", consts.PluginTypeUnknown, "TestPlugin_NetRPC_Main", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "TestPlugin_GRPC_Main", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin-netRPC", consts.PluginTypeDatabase, "TestPlugin_NetRPC_Main", []string{}, "")
 
 	return cluster, sys
 }

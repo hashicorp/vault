@@ -80,7 +80,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin")
+	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
@@ -163,6 +163,7 @@ func TestPluginCatalog_List(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	// plugins has a test-added plugin called "aaaaaaa" that is not built in
 	if len(plugins) != len(builtinKeys)+1 {
 		t.Fatalf("unexpected length of plugin list, expected %d, got %d", len(builtinKeys)+1, len(plugins))
 	}

@@ -58,9 +58,17 @@ func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		out, err := c.catalogView.Get(ctx, name)
+		out, err := c.catalogView.Get(ctx, pluginType.String()+"-"+name)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+		}
+		if out == nil {
+			// Also look for external plugins under what their name would have been if they
+			// were registered before plugin types existed.
+			out, err = c.catalogView.Get(ctx, name)
+			if err != nil {
+				return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
+			}
 		}
 		if out != nil {
 			entry := new(pluginutil.PluginRunner)
@@ -136,7 +144,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	}
 
 	logicalEntry := logical.StorageEntry{
-		Key:   name,
+		Key:   pluginType.String() + "-" + name,
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
@@ -147,11 +155,18 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins
 // can not be deleted.
-func (c *PluginCatalog) Delete(ctx context.Context, name string) error {
+func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType consts.PluginType) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.catalogView.Delete(ctx, name)
+	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
+	pluginKey := pluginType.String() + "-" + name
+	out, err := c.catalogView.Get(ctx, pluginKey)
+	if err != nil || out == nil {
+		pluginKey = name
+	}
+
+	return c.catalogView.Delete(ctx, pluginKey)
 }
 
 // List returns a list of all the known plugin names. If an external and builtin
@@ -172,9 +187,18 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	// Use a map to unique the two lists.
 	mapKeys := make(map[string]bool)
 
+	pluginTypePrefix := pluginType.String() + "-"
 	for _, plugin := range keys {
+
 		// Only list user-added plugins if they're of the given type.
 		if _, err := c.Get(ctx, plugin, pluginType); err == nil {
+
+			// Some keys will be prepended with the plugin type, but other ones won't.
+			// Users don't expect to see the plugin type, so we need to strip that here.
+			idx := strings.Index(plugin, pluginTypePrefix)
+			if idx == 0 {
+				plugin = plugin[len(pluginTypePrefix):]
+			}
 			mapKeys[plugin] = true
 		}
 	}
