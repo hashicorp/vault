@@ -106,6 +106,7 @@ type oasSchema struct {
 	Properties  map[string]*oasSchema `json:"properties,omitempty"`
 	Items       *oasSchema            `json:"items,omitempty"`
 	Format      string                `json:"format,omitempty"`
+	Pattern     string                `json:"pattern,omitempty"`
 	Example     interface{}           `json:"example,omitempty"`
 	Deprecated  bool                  `json:"deprecated,omitempty"`
 }
@@ -203,9 +204,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				Name:        name,
 				Description: cleanString(field.Description),
 				In:          location,
-				Schema:      &oasSchema{Type: t.baseType},
-				Required:    required,
-				Deprecated:  field.Deprecated,
+				Schema: &oasSchema{
+					Type:    t.baseType,
+					Pattern: t.pattern,
+				},
+				Required:   required,
+				Deprecated: field.Deprecated,
 			}
 			pi.Parameters = append(pi.Parameters, p)
 		}
@@ -256,6 +260,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						Type:        openapiField.baseType,
 						Description: cleanString(field.Description),
 						Format:      openapiField.format,
+						Pattern:     openapiField.pattern,
 						Deprecated:  field.Deprecated,
 					}
 					if openapiField.baseType == "array" {
@@ -453,6 +458,7 @@ type schemaType struct {
 	baseType string
 	items    string
 	format   string
+	pattern  string
 }
 
 // convertType translates a FieldType into an OpenAPI type.
@@ -461,8 +467,11 @@ func convertType(t FieldType) schemaType {
 	ret := schemaType{}
 
 	switch t {
-	case TypeString, TypeNameString, TypeHeader:
+	case TypeString, TypeHeader:
 		ret.baseType = "string"
+	case TypeNameString:
+		ret.baseType = "string"
+		ret.pattern = `\w([\w-.]*\w)?`
 	case TypeLowerCaseString:
 		ret.baseType = "string"
 		ret.format = "lowercase"

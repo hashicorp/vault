@@ -302,9 +302,13 @@ func TestOpenAPIPaths(t *testing.T) {
 					Type:        TypeString,
 					Description: "id path parameter",
 				},
-				"names": {
+				"flavors": {
 					Type:        TypeCommaStringSlice,
-					Description: "the names",
+					Description: "the flavors",
+				},
+				"name": {
+					Type:        TypeNameString,
+					Description: "the name",
 				},
 				"x-abc-token": {
 					Type:        TypeHeader,
@@ -399,7 +403,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
-		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON
+		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
 	}
 }

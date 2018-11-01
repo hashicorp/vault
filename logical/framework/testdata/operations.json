@@ -63,12 +63,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "names": {
+                  "flavors": {
                     "type": "array",
-                    "description": "the names",
+                    "description": "the flavors",
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "the name",
+                    "pattern": "\\w([\\w-.]*\\w)?"
                   }
                 }
               }
