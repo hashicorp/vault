@@ -16,17 +16,6 @@ import (
 	"github.com/hashicorp/vault/version"
 )
 
-/*
-
-var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // Capture required parameters, e.g. "(?P<name>regex)"
-var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // Capture optional path elements in ungreedy (?U) fashion, e.g. "(leases/)?renew"
-var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-var cleanCharsRe = regexp.MustCompile("[()^$?]")         // Set of regex characters that will be stripped during cleaning
-var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // Path suffix patterns that will be stripped during cleaning
-var wsRe = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
-*/
-
 func TestOpenAPI_Regex(t *testing.T) {
 	t.Run("Required", func(t *testing.T) {
 		tests := []struct {
@@ -186,6 +175,10 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		}},
 		{"accessors/$", []string{
 			"accessors/",
+		}},
+		{"verify/" + GenericNameRegex("name") + OptionalParamRegex("urlalgorithm"), []string{
+			"verify/{name}",
+			"verify/{name}/{urlalgorithm}",
 		}},
 	}
 

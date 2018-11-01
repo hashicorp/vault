@@ -125,8 +125,12 @@ var oasStdRespNoContent = &oasResponse{
 
 // Regex for handling optional and named parameters in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
+
+// Capture optional path elements in ungreedy (?U) fashion
+// Both "(leases/)?renew" and "(/(?P<name>.+))?" formats are detected
+var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
+
 var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // Capture required parameters, e.g. "(?P<name>regex)"
-var optRe = regexp.MustCompile(`(?U)\(.*\)\?`)           // Capture optional path elements in ungreedy (?U) fashion, e.g. "(leases/)?renew"
 var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
 var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
 var cleanCharsRe = regexp.MustCompile("[()^$?]")         // Set of regex characters that will be stripped during cleaning
