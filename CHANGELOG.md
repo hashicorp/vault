@@ -30,6 +30,7 @@ BUG FIXES:
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
  * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
+ * agent: Fix issue when specifying two file sinks [GH-5610]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
