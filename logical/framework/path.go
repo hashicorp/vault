@@ -133,7 +133,7 @@ type OperationProperties struct {
 	// Responses provides a list of response description for a given response
 	// code. The most relevant response should be first in the list, as it will
 	// be shown in documentation that only allows a single example.
-	Responses map[string][]Response
+	Responses map[int][]Response
 
 	// Unpublished indicates that this operation should not appear in public
 	// documentation or help text. The operation may still have documentation
@@ -167,7 +167,7 @@ type PathOperation struct {
 	Summary     string
 	Description string
 	Examples    []RequestExample
-	Responses   map[string][]Response
+	Responses   map[int][]Response
 	Unpublished bool
 	Deprecated  bool
 }
@@ -231,7 +231,9 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 
 		// Build OpenAPI response for this path
 		doc := NewOASDocument()
-		documentPath(p, b.SpecialPaths(), b.BackendType, doc)
+		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+			b.Logger().Warn("error generating OpenAPI", "error", err)
+		}
 
 		return logical.HelpResponse(help, nil, doc), nil
 	}

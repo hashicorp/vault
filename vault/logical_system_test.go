@@ -2479,8 +2479,9 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	doc := new(framework.OASDocument)
-	if err := mapstructure.Decode(oapi, &doc); err != nil {
+
+	doc, err := framework.NewOASDocumentFromMap(oapi)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -2490,7 +2491,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 	}{
 		{"/auth/token/lookup", "auth"},
 		{"/cubbyhole/.*", "secrets"}, // TODO update after sys docs update
-		{"/identity/group/id", "secrets"},
+		{"/identity/group/id", "identity"},
 		{"/secret/.*", "secrets"}, // TODO update after sys docs update
 		{"/sys/policy", "system"},
 	}

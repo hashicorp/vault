@@ -377,7 +377,9 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	documentPaths(b, doc)
+	if err := documentPaths(b, doc); err != nil {
+		b.Logger().Warn("error generating OpenAPI", "error", err)
+	}
 
 	return logical.HelpResponse(help, nil, doc), nil
 }

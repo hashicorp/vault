@@ -258,7 +258,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 	}
 }
 
-func TestOpenAPIPaths(t *testing.T) {
+func TestOpenAPI_Paths(t *testing.T) {
 	origDepth := deep.MaxDepth
 	defer func() { deep.MaxDepth = origDepth }()
 	deep.MaxDepth = 20
@@ -356,8 +356,8 @@ func TestOpenAPIPaths(t *testing.T) {
 				logical.ReadOperation: &PathOperation{
 					Summary:     "My Summary",
 					Description: "My Description",
-					Responses: map[string][]Response{
-						"202": {{
+					Responses: map[int][]Response{
+						202: {{
 							Description: "Amazing",
 							Example: &logical.Response{
 								Data: map[string]interface{}{
@@ -379,6 +379,54 @@ func TestOpenAPIPaths(t *testing.T) {
 
 		testPath(t, p, sp, expected("responses"))
 	})
+}
+
+func TestOpenAPI_CustomDecoder(t *testing.T) {
+	p := &Path{
+		Pattern:      "foo",
+		HelpSynopsis: "Synopsis",
+		Operations: map[logical.Operation]OperationHandler{
+			logical.ReadOperation: &PathOperation{
+				Summary: "My Summary",
+				Responses: map[int][]Response{
+					100: {{
+						Description: "OK",
+						Example:     &logical.Response{},
+					}},
+					200: {{
+						Description: "Good",
+						Example:     &logical.Response{},
+					}},
+					599: {{
+						Description: "Bad",
+						Example:     &logical.Response{},
+					}},
+				},
+			},
+		},
+	}
+
+	docOrig := NewOASDocument()
+	documentPath(p, nil, logical.TypeLogical, docOrig)
+
+	docJSON, err := json.Marshal(docOrig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var intermediate map[string]interface{}
+	if err := jsonutil.DecodeJSON(docJSON, &intermediate); err != nil {
+		t.Fatal(err)
+	}
+
+	docNew, err := NewOASDocumentFromMap(intermediate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(docOrig, docNew); diff != nil {
+		t.Fatal(diff)
+	}
 }
 
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {

@@ -2959,13 +2959,13 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			var backendDoc *framework.OASDocument
 
 			// Normalize response type, which will be different if received
-			// from and external plugin.
+			// from an external plugin.
 			switch v := resp.Data["openapi"].(type) {
 			case *framework.OASDocument:
 				backendDoc = v
 			case map[string]interface{}:
-				backendDoc = new(framework.OASDocument)
-				if err := mapstructure.Decode(v, backendDoc); err != nil {
+				backendDoc, err = framework.NewOASDocumentFromMap(v)
+				if err != nil {
 					return err
 				}
 			default:

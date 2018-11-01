@@ -2,8 +2,10 @@ package framework
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -33,8 +35,52 @@ func NewOASDocument() *OASDocument {
 	}
 }
 
+// NewOASDocumentFromMap builds an OASDocument from an existing map version of a document.
+// If a document has been decoded from JSON or received from a plugin, it will be as a map[string]interface{}
+// and needs special handling beyond the default mapstructure decoding.
+func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
+
+	// The Responses map uses integer keys (the response code), but once translated into JSON
+	// (e.g. during the plugin transport) these become strings. mapstructure will not coerce these back
+	// to integers without a custom decode hook.
+	decodeHook := func(src reflect.Type, tgt reflect.Type, inputRaw interface{}) (interface{}, error) {
+
+		// Only alter data if:
+		//  1. going from string to int
+		//  2. string represent an int in status code range (100-599)
+		if src.Kind() == reflect.String && tgt.Kind() == reflect.Int {
+			if input, ok := inputRaw.(string); ok {
+				if intval, err := strconv.Atoi(input); err == nil {
+					if intval >= 100 && intval < 600 {
+						return intval, nil
+					}
+				}
+			}
+		}
+		return inputRaw, nil
+	}
+
+	doc := new(OASDocument)
+
+	config := &mapstructure.DecoderConfig{
+		DecodeHook: decodeHook,
+		Result:     doc,
+	}
+
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		return nil, err
+	}
+
+	return doc, nil
+}
+
 type OASDocument struct {
-	Version string                  `json:"openapi"`
+	Version string                  `json:"openapi" mapstructure:"openapi"`
 	Info    oasInfo                 `json:"info"`
 	Paths   map[string]*oasPathItem `json:"paths"`
 }
@@ -66,18 +112,18 @@ type oasPathItem struct {
 // NewOASOperation creates an empty OpenAPI Operations object.
 func NewOASOperation() *OASOperation {
 	return &OASOperation{
-		Responses: make(map[string]*oasResponse),
+		Responses: make(map[int]*oasResponse),
 	}
 }
 
 type OASOperation struct {
-	Summary     string                  `json:"summary,omitempty"`
-	Description string                  `json:"description,omitempty"`
-	Tags        []string                `json:"tags,omitempty"`
-	Parameters  []oasParameter          `json:"parameters,omitempty"`
-	RequestBody *oasRequestBody         `json:"requestBody,omitempty"`
-	Responses   map[string]*oasResponse `json:"responses"`
-	Deprecated  bool                    `json:"deprecated,omitempty"`
+	Summary     string               `json:"summary,omitempty"`
+	Description string               `json:"description,omitempty"`
+	Tags        []string             `json:"tags,omitempty"`
+	Parameters  []oasParameter       `json:"parameters,omitempty"`
+	RequestBody *oasRequestBody      `json:"requestBody,omitempty"`
+	Responses   map[int]*oasResponse `json:"responses"`
+	Deprecated  bool                 `json:"deprecated,omitempty"`
 }
 
 type oasParameter struct {
@@ -313,9 +359,9 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			// Set default responses.
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
-					op.Responses["204"] = oasStdRespNoContent
+					op.Responses[204] = oasStdRespNoContent
 				} else {
-					op.Responses["200"] = oasStdRespOK
+					op.Responses[200] = oasStdRespOK
 				}
 			}
 
