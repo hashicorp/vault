@@ -22,8 +22,13 @@ import (
 )
 
 func TestAppRoleEndToEnd(t *testing.T) {
-	testAppRoleEndToEnd(t, false)
-	testAppRoleEndToEnd(t, true)
+	t.Run("preserve_secret_id_file", func(t *testing.T) {
+		testAppRoleEndToEnd(t, false)
+	})
+
+	t.Run("remove_secret_id_file", func(t *testing.T) {
+		testAppRoleEndToEnd(t, true)
+	})
 }
 
 func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool) {
@@ -207,7 +212,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool) {
 	}
 
 	checkToken := func() string {
-		timeout := time.Now().Add(5 * time.Second)
+		timeout := time.Now().Add(10 * time.Second)
 		for {
 			if time.Now().After(timeout) {
 				t.Fatal("did not find a written token after timeout")
