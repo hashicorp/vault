@@ -41,6 +41,12 @@ for 'client' tokens. Required for Consul pre-1.4`,
 for Consul 1.4 or above`,
 			},
 
+			"local": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Indicates that the token should not be replicated globally 
+and instead be local to the current datacenter.  Available in Consul 1.4 and above.`,
+			},
+
 			"token_type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "client",
@@ -110,6 +116,7 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 			"ttl":        int64(result.TTL.Seconds()),
 			"max_ttl":    int64(result.MaxTTL.Seconds()),
 			"token_type": result.TokenType,
+			"local":      result.Local,
 		},
 	}
 	if result.Policy != "" {
@@ -126,6 +133,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 	policy := d.Get("policy").(string)
 	name := d.Get("name").(string)
 	policies := d.Get("policies").([]string)
+	local := d.Get("local").(bool)
 
 	if len(policies) == 0 {
 		switch tokenType {
@@ -170,6 +178,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		TokenType: tokenType,
 		TTL:       ttl,
 		MaxTTL:    maxTTL,
+		Local:     local,
 	})
 	if err != nil {
 		return nil, err
@@ -196,4 +205,5 @@ type roleConfig struct {
 	TTL       time.Duration `json:"lease"`
 	MaxTTL    time.Duration `json:"max_ttl"`
 	TokenType string        `json:"token_type"`
+	Local     bool          `json:"local"`
 }

@@ -72,13 +72,20 @@ updated attributes.
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
 
-- `policy` `(string: <required>)` – Specifies the base64 encoded ACL policy. The
+- `token_type` `(string: "client")` - Specifies the type of token to create when
+  using this role. Valid values are `"client"` or `"management"`.
+
+- `policy` `(string: <policy or policies>)` – Specifies the base64 encoded ACL policy. The
   ACL format can be found in the [Consul ACL
   documentation](https://www.consul.io/docs/internals/acl.html). This is
   required unless the `token_type` is `management`.
 
-- `token_type` `(string: "client")` - Specifies the type of token to create when
-  using this role. Valid values are `"client"` or `"management"`.
+- `policies` `(list: <policy or policies>)` – The list of policies to assign to the generated
+  token.  This is only available in Consul 1.4 and greater.
+
+- `local` `(bool: false)` - Indicates that the token should not be replicated 
+  globally and instead be local to the current datacenter.  Only available in Consul
+  1.4 and greater.
 
 - `ttl` `(duration: "")` – Specifies the TTL for this role. This is provided
   as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not

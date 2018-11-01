@@ -406,6 +406,134 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	}
 }
 
+func TestBackend_LocalToken(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, connURL, connToken := prepareTestContainer(t, "1.4.0-rc1")
+	defer cleanup()
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   connToken,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Path = "roles/test"
+	req.Data = map[string]interface{}{
+		"policies": []string{"test"},
+		"ttl":      "6h",
+		"local":    false,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Path = "roles/test_local"
+	req.Data = map[string]interface{}{
+		"policies": []string{"test"},
+		"ttl":      "6h",
+		"local":    true,
+	}
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	var d struct {
+		Token    string `mapstructure:"token"`
+		Accessor string `mapstructure:"accessor"`
+		Local    bool   `mapstructure:"local"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
+
+	if d.Local {
+		t.Fatalf("requested global token, got local one")
+	}
+
+	// Build a client and verify that the credentials work
+	consulapiConfig := consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = connData["address"].(string)
+	consulapiConfig.Token = d.Token
+	client, err := consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Verifying that the generated token works...")
+	_, err = client.Catalog(), nil
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test_local"
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
+
+	if !d.Local {
+		t.Fatalf("requested local token, got global one")
+	}
+
+	// Build a client and verify that the credentials work
+	consulapiConfig = consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = connData["address"].(string)
+	consulapiConfig.Token = d.Token
+	client, err = consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("Verifying that the generated token works...")
+	_, err = client.Catalog(), nil
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_Management(t *testing.T) {
 	t.Run("management", func(t *testing.T) {
 		t.Parallel()

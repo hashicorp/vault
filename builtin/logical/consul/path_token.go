@@ -73,6 +73,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+
 		// Use the helper to create the secret
 		s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 			"token": token,
@@ -95,14 +96,17 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
 		Policies:    policyLink,
+		Local:       result.Local,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
+
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 		"token":    token.SecretID,
 		"accessor": token.AccessorID,
+		"local":    token.Local,
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
