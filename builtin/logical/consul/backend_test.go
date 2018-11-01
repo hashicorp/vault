@@ -445,6 +445,50 @@ func testBackendManagement(t *testing.T, version string) {
 	})
 }
 
+func TestBackend_Basic(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+		t.Run("pre-1.4.0", func(t *testing.T) {
+			t.Parallel()
+			testBackendBasic(t, "1.3.0")
+		})
+		t.Run("1.4.0-rc", func(t *testing.T) {
+			t.Parallel()
+			t.Run("legacy", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke(t, "1.3.0")
+			})
+
+			testBackendBasic(t, "1.4.0-rc1")
+		})
+	})
+}
+
+func testBackendBasic(t *testing.T, version string) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, connURL, connToken := prepareTestContainer(t, version)
+	defer cleanup()
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   connToken,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, connData),
+			testAccStepWritePolicy(t, "test", testPolicy, ""),
+			testAccStepReadToken(t, "test", connData),
+		},
+	})
+}
+
 func TestBackend_crud(t *testing.T) {
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
