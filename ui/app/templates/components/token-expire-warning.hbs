@@ -4,7 +4,7 @@
       Your auth token expired on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.
     </p>
   </div>
-  <button type="button" class="button" {{action "reauthenticate"}}>
+  {{#link-to "vault.cluster.logout" class="button"}}
     Reauthenticate
-  </button>
+  {{/link-to}}
 </MessageInPage>
