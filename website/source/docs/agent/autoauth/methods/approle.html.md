@@ -29,3 +29,10 @@ cached.
 * `remove_secret_id_file_after_reading` `(bool: optional, defaults to true)` -
   This can be set to `false` to disable the default behavior of removing the
   secret ID file after it's been read.
+
+* `secret_id_response_wrapping_path` `(string: optional)` - If set, the value
+  at `secret_id_file_path` will be expected to be a [Response-Wrapping
+  Token](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+  containing the output of the secret ID retrieval endpoint for the role (e.g.
+  `auth/approle/role/webservers/secret-id`) and the creation path for the
+  response-wrapping token must match the value set here.

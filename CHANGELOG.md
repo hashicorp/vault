@@ -15,6 +15,11 @@ FEATURES:
 
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
    credentials when having Agent automatically authenticate to Vault.
+ * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth 
+
+IMPROVEMENTS:
+
+ * secret/totp: Allow @ character to be part of key name [GH-5652]
 
 BUG FIXES:
 
@@ -24,6 +29,8 @@ BUG FIXES:
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
+ * agent: Fix issue when specifying two file sinks [GH-5610]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 

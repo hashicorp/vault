@@ -14,7 +14,7 @@ import (
 
 func pathCode(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "code/" + framework.GenericNameRegex("name"),
+		Pattern: "code/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

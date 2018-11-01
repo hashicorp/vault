@@ -15,5 +15,7 @@ func TestInmemHA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Use the same inmem backend to acquire the same set of locks
 	physical.ExerciseHABackend(t, inm.(physical.HABackend), inm.(physical.HABackend))
 }

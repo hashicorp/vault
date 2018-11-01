@@ -11,7 +11,10 @@ You will need the following things properly installed on your computer.
 * [Yarn](https://yarnpkg.com/en/)
 * [Git](https://git-scm.com/)
 * [Ember CLI](https://ember-cli.com/)
+* [Husky*](https://github.com/typicode/husky)
+* [lint-staged*](https://www.npmjs.com/package/lint-staged)
 
+*You will need to install Husky and lint-staged locally by running `npm install husky lint-staged`. However please note these dependencies cannot be added to the `package.json` to ensure that husky doesn't run on commits unrelated to the Vault UI.
 
 ## Running / Development
 To get all of the JavaScript dependencies installed, run this in the `ui` directory:

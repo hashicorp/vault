@@ -9,8 +9,6 @@ const FEATURES = [
   'DR Replication',
   'MFA',
   'Sentinel',
-  'AWS KMS Autounseal',
-  'GCP CKMS Autounseal',
   'Seal Wrapping',
   'Control Groups',
   'Namespaces',
