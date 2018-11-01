@@ -1,3 +1,4 @@
+import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import $ from 'jquery';
@@ -9,17 +10,16 @@ import getStorage from '../lib/token-storage';
 import ENV from 'vault/config/environment';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
-
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '🗝';
-const IDLE_TIMEOUT_MS = 3 * 60e3;
 const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   namespace: service(),
+  IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   init() {
     this._super(...arguments);
@@ -248,13 +248,15 @@ export default Service.extend({
 
   checkShouldRenew: task(function*() {
     while (true) {
+      if (Ember.testing) {
+        return;
+      }
       yield timeout(5000);
       if (this.shouldRenew()) {
         yield this.renew();
       }
     }
   }).on('init'),
-
   shouldRenew() {
     const now = this.now();
     const lastFetch = this.get('lastFetch');
@@ -262,7 +264,7 @@ export default Service.extend({
     if (!this.currentTokenName || this.get('tokenExpired') || this.get('allowExpiration') || !renewTime) {
       return false;
     }
-    if (lastFetch && now - lastFetch >= IDLE_TIMEOUT_MS) {
+    if (lastFetch && now - lastFetch >= this.IDLE_TIMEOUT) {
       this.set('allowExpiration', true);
       return false;
     }

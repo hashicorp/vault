@@ -6,20 +6,20 @@
 
     <nav class="menu">
       <ul class="menu-list">
-          {{#if (or canExpire)}}
-            <li class="action">
-            <MessageInPage @type="warning" @messageClass="is-marginless">
+        {{#if canExpire}}
+          <li class="action">
+            <MessageInPage @type="warning">
               <div class="content">
                 <p>
                   We've stopped auto-renewing your token due to inactivity.
                   It will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
-                   on
+                  on
                   {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}
                 </p>
               </div>
             </MessageInPage>
-            </li>
-          {{/if}}
+          </li>
+        {{/if}}
 
         {{#if (is-before (now interval=1000) auth.tokenExpirationDate)}}
           {{#if auth.authData.renewable}}

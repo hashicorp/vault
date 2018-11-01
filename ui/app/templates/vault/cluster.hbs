@@ -72,7 +72,7 @@
           <ICon @glyph="chevron-down" @aria-hidden="true" @size=8 @class="has-text-white is-status-chevron" />
         </button>
       </div>
-      <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}">
+      <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
       {{console/ui-panel isFullscreen=consoleFullscreen}}
