@@ -12,7 +12,7 @@
       {{/link-to}}
     {{/if}}
     {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) class="button has-icon-right is-ghost is-compact" data-test-entity-create-link=true}}
-      Create {{identityType}}
+      Add {{identityType}}
       {{i-con glyph="chevron-right" size=11}}
     {{/link-to}}
   </p.levelRight>
@@ -33,10 +33,12 @@
     </ul>
   </nav>
 </div>
-<div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-  <div class="level">
-    <div class="level-left">
-      {{identity/lookup-input type=identityType}}
+{{#if model.meta.total}}
+  <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
+    <div class="level">
+      <div class="level-left">
+        {{identity/lookup-input type=identityType}}
+      </div>
     </div>
   </div>
-</div>
+{{/if}}

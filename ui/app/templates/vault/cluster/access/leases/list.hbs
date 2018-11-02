@@ -115,25 +115,19 @@
     </div>
   {{/each}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            {{#if (eq baseKey.id '')}}
-              There are currently no leases.
-            {{else}}
-              {{#if filterIsFolder}}
-                {{#if (eq filter baseKey.id)}}
-                  There are no leases under <code>{{filter}}</code>.
-                {{else}}
-                  We couldn't find a prefix matching <code>{{filter}}</code>.
-                {{/if}}
-              {{/if}}
-            {{/if}}
-          </p>
-        </div>
-      </div>
+  <div class="empty-state">
+    <div class="empty-state-title">
+      {{#if (eq baseKey.id '')}}
+        There are currently no leases.
+      {{else}}
+        {{#if filterIsFolder}}
+          {{#if (eq filter baseKey.id)}}
+            There are no leases under <code>{{filter}}</code>.
+          {{else}}
+            We couldn't find a prefix matching <code>{{filter}}</code>.
+          {{/if}}
+        {{/if}}
+      {{/if}}
     </div>
   </div>
 {{/if}}

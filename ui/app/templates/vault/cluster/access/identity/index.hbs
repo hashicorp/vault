@@ -106,23 +106,22 @@
       </div>
     {{/linked-block}}
   {{/each}}
+  {{#if (gt model.meta.lastPage 1) }}
+    {{list-pagination
+      page=model.meta.currentPage
+      lastPage=model.meta.lastPage
+      link="vault.cluster.access.identity.index"
+    }}
+  {{/if}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There are currently no {{pluralize identityType}}.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-{{/if}}
-{{#if (gt model.meta.lastPage 1) }}
-  {{list-pagination
-    page=model.meta.currentPage
-    lastPage=model.meta.lastPage
-    link="vault.cluster.access.identity.index"
-  }}
+  <EmptyState
+    @title="No {{pluralize identityType}} yet"
+    @message="A list of {{pluralize identityType}} in this namespace will be listed here. Add your first {{identityType}} to get started.">
+    {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) tagName="button" class="link"}}
+      Add {{identityType}}
+    {{/link-to}}
+    <DocLink @href="https://learn.hashicorp.com/vault/identity-access-management/iam-identity">
+      Learn More
+    </DocLink>
+  </EmptyState>
 {{/if}}
