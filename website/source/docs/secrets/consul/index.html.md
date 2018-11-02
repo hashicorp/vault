@@ -28,7 +28,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1. Acquire a [management token][consul-mgmt-token] from Consul, using the
+2. In Consul versions below 1.4, acquire a [management token][consul-mgmt-token] from Consul, using the
 `acl_master_token` from your Consul configuration file or another management
 token:
 
@@ -48,8 +48,20 @@ token:
       "ID": "7652ba4c-0f6e-8e75-5724-5e083d72cfe4"
     }
     ```
+For Consul 1.4 and above, use the command line to generate a token with the appropiate policy:
 
-1. Configure Vault to connect and authenticate to Consul:
+   ```sh
+   $ CONSUL_HTTP_TOKEN=d54fe46a-1f57-a589-3583-6b78e334b03b consul acl token create -policy-name=global-management
+   AccessorID:   865dc5e9-e585-3180-7b49-4ddc0fc45135
+   SecretID:     ef35f0f1-885b-0cab-573c-7c91b65a7a7e
+   Description:
+   Local:        false
+   Create Time:  2018-10-22 17:40:24.128188 -0700 PDT
+   Policies:
+       00000000-0000-0000-0000-000000000001 - global-management
+   ```
+
+3. Configure Vault to connect and authenticate to Consul:
 
     ```text
     $ vault write consul/config/access \
@@ -58,16 +70,22 @@ token:
     Success! Data written to: consul/config/access
     ```
 
-1. Configure a role that maps a name in Vault to a Consul ACL policy.
-When users generate credentials, they are generated against this role:
+4. Configure a role that maps a name in Vault to a Consul ACL policy. Depending on your Consul version, 
+you will either provide a policy document and a token_type, or a set of policies.
+When users generate credentials, they are generated against this role. For Consul versions below 1.4:
 
     ```text
     $ vault write consul/roles/my-role policy=$(base64 <<< 'key "" { policy = "read" }')
     Success! Data written to: consul/roles/my-role
     ```
+The policy must be base64-encoded. The policy language is [documented by Consul](https://www.consul.io/docs/internals/acl.html).
 
-    The policy must be base64-encoded. The policy language is [documented by
-    Consul](https://www.consul.io/docs/internals/acl.html).
+For Consul versions 1.4 and above, [generate a policy in Consul](https://www.consul.io/docs/guides/acl.html), and procede to link it 
+to the role:
+    ```text
+    $ vault write consul/roles/my-role policies=readonly
+    Success! Data written to: consul/roles/my-role
+    ```
 
 ## Usage
 
@@ -87,6 +105,18 @@ lease_renewable    true
 token              642783bf-1540-526f-d4de-fe1ac1aed6f0
 ```
 
+When using Consul 1.4, the response will include the accessor for the token
+
+```text
+$ vault read consul/creds/my-role
+Key                Value
+---                -----
+lease_id           consul/creds/my-role/7miMPnYaBCaVWDS9clNE0Nv3
+lease_duration     768h
+lease_renewable    true
+accessor           6d5a0348-dffe-e87b-4266-2bec03800abb
+token              bc7a42c0-9c59-23b4-8a09-7173c474dc42
+```
 ## API
 
 The Consul secrets engine has a full HTTP API. Please see the

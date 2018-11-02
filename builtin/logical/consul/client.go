@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func client(ctx context.Context, s logical.Storage) (*api.Client, error, error) {
-	conf, userErr, intErr := readConfigAccess(ctx, s)
+func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error, error) {
+	conf, userErr, intErr := b.readConfigAccess(ctx, s)
 	if intErr != nil {
 		return nil, nil, intErr
 	}

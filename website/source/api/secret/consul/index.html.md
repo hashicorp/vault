@@ -67,22 +67,33 @@ updated attributes.
 | :------- | :--------------------------- | :--------------------- |
 | `POST`   | `/consul/roles/:name`        | `204 (empty body)`     |
 
-### Parameters
+### Parameters for Consul version below 1.4
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
 
-- `lease` `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
-  provided, the default Vault lease is used.
+- `token_type` `(string: "client")` - Specifies the type of token to create when
+  using this role. Valid values are `"client"` or `"management"`.
 
-- `policy` `(string: <required>)` – Specifies the base64 encoded ACL policy. The
+- `policy` `(string: <policy or policies>)` – Specifies the base64 encoded ACL policy. The
   ACL format can be found in the [Consul ACL
   documentation](https://www.consul.io/docs/internals/acl.html). This is
   required unless the `token_type` is `management`.
 
-- `token_type` `(string: "client")` - Specifies the type of token to create when
-  using this role. Valid values are `"client"` or `"management"`.
+- `policies` `(list: <policy or policies>)` – The list of policies to assign to the generated
+  token.  This is only available in Consul 1.4 and greater.
+
+- `local` `(bool: false)` - Indicates that the token should not be replicated 
+  globally and instead be local to the current datacenter.  Only available in Consul
+  1.4 and greater.
+
+- `ttl` `(duration: "")` – Specifies the TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault TTL is used.
+
+- `max_ttl` `(duration: "")` – Specifies the max TTL for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
+  provided, the default Vault Max TTL is used.
 
 ### Sample Payload
 
@@ -110,6 +121,32 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --data @payload.json \
     http://127.0.0.1:8200/v1/consul/roles/example-role
+```
+
+### Parameters for Consul versions 1.4 and above
+
+- `lease` `(string: "")` – Specifies the lease for this role. This is provided
+  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
+  provided, the default Vault lease is used.
+
+- `policies` `(string: <required>)` – Comma separated list of policies to be applied
+  to the tokens.
+
+### Sample payload
+```json
+{
+  "policies": "global-management"
+}
+```
+
+### Sample request
+
+```sh
+curl \
+→     --request POST \
+→     --header "X-Vault-Token: ..."\
+→     --data @payload.json \
+→     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
 ## Read Role

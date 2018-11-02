@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathConfigAccess() *framework.Path {
+func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
@@ -35,13 +35,13 @@ func pathConfigAccess() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   pathConfigAccessRead,
-			logical.UpdateOperation: pathConfigAccessWrite,
+			logical.ReadOperation:   b.pathConfigAccessRead,
+			logical.UpdateOperation: b.pathConfigAccessWrite,
 		},
 	}
 }
 
-func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error, error) {
+func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConfig, error, error) {
 	entry, err := storage.Get(ctx, "config/access")
 	if err != nil {
 		return nil, nil, err
@@ -58,8 +58,8 @@ func readConfigAccess(ctx context.Context, storage logical.Storage) (*accessConf
 	return conf, nil, nil
 }
 
-func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	conf, userErr, intErr := readConfigAccess(ctx, req.Storage)
+func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	conf, userErr, intErr := b.readConfigAccess(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -78,7 +78,7 @@ func pathConfigAccessRead(ctx context.Context, req *logical.Request, data *frame
 	}, nil
 }
 
-func pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/access", accessConfig{
 		Address: data.Get("address").(string),
 		Scheme:  data.Get("scheme").(string),

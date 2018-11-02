@@ -24,14 +24,14 @@ func secretToken(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretTokenRenew,
-		Revoke: secretTokenRevoke,
+		Revoke: b.secretTokenRevoke,
 	}
 }
 
 func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
 	roleRaw, ok := req.Secret.InternalData["role"]
-	if !ok || roleRaw == nil {
+	if !ok {
 		return resp, nil
 	}
 
@@ -52,12 +52,13 @@ func (b *backend) secretTokenRenew(ctx context.Context, req *logical.Request, d 
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
-	resp.Secret.TTL = result.Lease
+	resp.Secret.TTL = result.TTL
+	resp.Secret.MaxTTL = result.MaxTTL
 	return resp, nil
 }
 
-func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, userErr, intErr := client(ctx, req.Storage)
+func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	c, userErr, intErr := b.client(ctx, req.Storage)
 	if intErr != nil {
 		return nil, intErr
 	}
@@ -75,9 +76,26 @@ func secretTokenRevoke(ctx context.Context, req *logical.Request, d *framework.F
 		return nil, nil
 	}
 
-	_, err := c.ACL().Destroy(tokenRaw.(string), nil)
-	if err != nil {
-		return nil, err
+	var version string
+	versionRaw, ok := req.Secret.InternalData["version"]
+	if ok {
+		version = versionRaw.(string)
+	}
+
+	switch version {
+	case "":
+		// Pre 1.4 tokens
+		_, err := c.ACL().Destroy(tokenRaw.(string), nil)
+		if err != nil {
+			return nil, err
+		}
+	case tokenPolicyType:
+		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("Invalid version string in data: %s", version)
 	}
 
 	return nil, nil
