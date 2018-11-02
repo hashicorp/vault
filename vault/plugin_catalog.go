@@ -58,7 +58,7 @@ func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		out, err := c.catalogView.Get(ctx, pluginType.String()+"-"+name)
+		out, err := c.catalogView.Get(ctx, pluginType.String()+"/"+name)
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
 		}
@@ -147,7 +147,7 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	}
 
 	logicalEntry := logical.StorageEntry{
-		Key:   pluginType.String() + "-" + name,
+		Key:   pluginType.String() + "/" + name,
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
@@ -163,7 +163,7 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 	defer c.lock.Unlock()
 
 	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
-	pluginKey := pluginType.String() + "-" + name
+	pluginKey := pluginType.String() + "/" + name
 	out, err := c.catalogView.Get(ctx, pluginKey)
 	if err != nil || out == nil {
 		pluginKey = name
@@ -190,7 +190,7 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	// Use a map to unique the two lists.
 	mapKeys := make(map[string]bool)
 
-	pluginTypePrefix := pluginType.String() + "-"
+	pluginTypePrefix := pluginType.String() + "/"
 
 	for _, plugin := range keys {
 
