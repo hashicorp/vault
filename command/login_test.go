@@ -79,7 +79,7 @@ func TestLoginCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(storedToken), vault.TokenLength; l != exp {
+		if l, exp := len(storedToken), vault.TokenLength+2; l != exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
 		}
 	})
@@ -206,7 +206,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Verify only the token was printed
 		token := ui.OutputWriter.String()
-		if l, exp := len(token), vault.TokenLength; l != exp {
+		if l, exp := len(token), vault.TokenLength+2; l != exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, token)
 		}
 

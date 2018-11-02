@@ -78,7 +78,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()
@@ -102,7 +102,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()

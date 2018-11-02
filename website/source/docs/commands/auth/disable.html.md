@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "auth disable - Command"
+sidebar_title: "<code>disable</code>"
 sidebar_current: "docs-commands-auth-disable"
 description: |-
   The "auth disable" command disables an auth method at a given path, if one

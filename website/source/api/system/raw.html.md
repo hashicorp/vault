@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/raw - HTTP API"
-sidebar_current: "docs-http-system-raw"
+sidebar_title: "<code>/sys/raw</code>"
+sidebar_current: "api-http-system-raw"
 description: |-
   The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 ---

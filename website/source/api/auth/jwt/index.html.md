@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "JWT - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-jwt"
+sidebar_title: "JWT"
+sidebar_current: "api-http-auth-jwt"
 description: |-
   This is the API documentation for the Vault JWT authentication
   method plugin.
@@ -109,7 +110,7 @@ entities attempting to login. At least one of the bound values must be set.
   using this role, in seconds.
 - `period` `(int: <optional>)` - If set, indicates that the token generated
   using this role should never expire, but instead always use the value set
-  here as the TTL for every renewal. 
+  here as the TTL for every renewal.
 - `num_uses` `(int: <optional>)` - If set, puts a use-count limitation on the
   issued token.
 - `bound_subject` `(string: <optional>)` - If set, requires that the `sub`
@@ -121,6 +122,13 @@ entities attempting to login. At least one of the bound values must be set.
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim
   value must be a list of strings.
+- `groups_claim_delimiter_pattern` `(string: optional)` - A pattern of
+  delimiters used to allow the `groups_claim` to live outside of the top-level
+  JWT structure. For instance, a `groups_claim` of `meta/user.name/groups` with
+  this field set to `//` will expect nested structures named `meta`,
+  `user.name`, and `groups`. If this field was set to `/./` the groups
+  information would expect to be via nested structures of `meta`, `user`,
+  `name`, and `groups`.
 
 ### Sample Payload
 

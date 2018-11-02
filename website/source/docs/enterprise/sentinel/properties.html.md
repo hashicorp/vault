@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Sentinel Properties"
+sidebar_title: "Properties"
 sidebar_current: "docs-vault-enterprise-sentinel-properties"
 description: |-
   An overview of how Sentinel interacts with Vault Enterprise.
@@ -62,6 +63,7 @@ request, e.g. when logging in.
 | `period_seconds`           | `int`                    | If the token has a period, the duration of the period in seconds                                                                   |
 | `policies`                 | `list (string)`          | Policies directly attached to the token                                                                                            |
 | `role`                     | `string`                 | If created via a token role, the role that created the token                                                                       |
+| `type`                     | `string`                 | The type of token, currently will be either `batch` or `service` |
 
 ## Identity Properties
 

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Storage Backends - Configuration"
+sidebar_title: "<code>storage</code>"
 sidebar_current: "docs-configuration-storage"
 description: |-
   The storage stanza configures the storage backend, which represents the

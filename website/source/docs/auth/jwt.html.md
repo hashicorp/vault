@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "JWT - Auth Methods"
+sidebar_title: "JWT"
 sidebar_current: "docs-auth-jwt"
 description: |-
   The JWT auth method allows authentication using JWTs, with support for OIDC Discovery for key fetching
@@ -69,7 +70,7 @@ management tool.
     ```
 
 1. Use the `/config` endpoint to configure Vault with local keys or an OIDC Discovery URL. For the
-list of available configuration options, please see the API documentation.
+list of available configuration options, please see the [API documentation](/api/auth/jwt/index.html).
 
     ```text
     $ vault write auth/jwt/config \

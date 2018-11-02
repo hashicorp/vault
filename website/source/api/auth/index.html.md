@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth"
+sidebar_title: "Auth Methods"
+sidebar_current: "api-http-auth"
 description: |-
   Each auth method publishes its own set of API paths and methods.
   These endpoints are documented in this section.

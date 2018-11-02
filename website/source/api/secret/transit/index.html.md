@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Transit - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-transit"
+sidebar_title: "Transit"
+sidebar_current: "api-http-secret-transit"
 description: |-
   This is the API documentation for the Vault Transit secrets engine.
 ---

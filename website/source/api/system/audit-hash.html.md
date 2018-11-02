@@ -1,7 +1,8 @@
 ---
 layout: "api"
-page_title: /sys/audit-hash - HTTP API"
-sidebar_current: "docs-http-system-audit-hash"
+page_title: "/sys/audit-hash - HTTP API"
+sidebar_title: "<code>/sys/audit-hash</code>"
+sidebar_current: "api-http-system-audit-hash"
 description: |-
   The `/sys/audit-hash` endpoint is used to hash data using an audit device's
   hash function and salt.
@@ -25,9 +26,9 @@ any binary data returned from an API call (such as a DER-format certificate) is
 base64-encoded by the Vault server in the response. As a result such information
 should also be base64-encoded to supply into the `input` parameter.
 
-| Method   | Path                    | Produces               |
-| :------- | :---------------------- | :--------------------- |
-| `POST`   | `/sys/audit-hash/:path` | `204 (empty body)`     |
+| Method | Path                    | Produces           |
+| :----- | :---------------------- | :----------------- |
+| `POST` | `/sys/audit-hash/:path` | `204 (empty body)` |
 
 ### Parameters
 

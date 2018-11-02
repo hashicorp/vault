@@ -163,8 +163,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleInput: function(event) {
-      var filter = event.target.value;
+    handleInput: function(filter) {
       this.get('filterDidChange')(filter);
       debounce(this, 'filterUpdated', filter, 200);
     },
@@ -173,14 +172,15 @@ export default Component.extend(FocusOnInsertMixin, {
       this.get('filterFocusDidChange')(isFocused);
     },
 
-    handleKeyPress: function(val, event) {
+    handleKeyPress: function(event) {
       if (event.keyCode === keys.TAB) {
         this.onTab(event);
       }
     },
 
-    handleKeyUp: function(val, event) {
+    handleKeyUp: function(event) {
       var keyCode = event.keyCode;
+      let val = event.target.value;
       if (keyCode === keys.ENTER) {
         this.onEnter(val);
       }

@@ -110,39 +110,26 @@ func TestFoundationDBBackend(t *testing.T) {
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
-	b, err := NewFDBBackend(map[string]string{
+	config := map[string]string{
 		"path":         topDir,
 		"api_version":  "510",
 		"cluster_file": clusterFile,
-	}, logger)
+	}
 
+	b, err := NewFDBBackend(config, logger)
+	if err != nil {
+		t.Fatalf("foundationdb: failed to create new backend: %s", err)
+	}
+
+	b2, err := NewFDBBackend(config, logger)
 	if err != nil {
 		t.Fatalf("foundationdb: failed to create new backend: %s", err)
 	}
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
-
 	physical.ExerciseTransactionalBackend(t, b)
-
-	ha1, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("foundationdb does not implement HABackend")
-	}
-
-	b2, err := NewFDBBackend(map[string]string{
-		"path":         topDir,
-		"api_version":  "510",
-		"cluster_file": clusterFile,
-	}, logger)
-
-	if err != nil {
-		t.Fatalf("foundationdb: failed to create new backend for HA test: %s", err)
-	}
-
-	ha2 := b2.(physical.HABackend)
-
-	physical.ExerciseHABackend(t, ha1, ha2)
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }
 
 func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), string) {

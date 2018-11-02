@@ -52,20 +52,21 @@ func TestEtcdBackend(t *testing.T) {
 	// Generate new etcd backend. The etcd address is read from ETCD_ADDR. No
 	// need to provide it explicitly.
 	logger := logging.NewVaultLogger(log.Debug)
-
-	b, err := NewEtcdBackend(map[string]string{
+	config := map[string]string{
 		"path": randPath,
-	}, logger)
+	}
+
+	b, err := NewEtcdBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	b2, err := NewEtcdBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
-
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("etcd does not implement HABackend")
-	}
-	physical.ExerciseHABackend(t, ha, ha)
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 }

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Consul - Storage Backends - Configuration"
+sidebar_title: "Consul"
 sidebar_current: "docs-configuration-storage-consul"
 description: |-
   The Consul storage backend is used to persist Vault's data in Consul's

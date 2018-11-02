@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/auth - HTTP API"
-sidebar_current: "docs-http-system-auth"
+sidebar_title: "<code>/sys/auth</code>"
+sidebar_current: "api-http-system-auth"
 description: |-
   The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---
@@ -226,6 +227,18 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.
+
+- `token_type` `(string: "")` – Specifies the type of tokens that should be
+  returned by the mount. The following values are available:
+
+  - `default-service`: Unless the auth method requests a different type, issue
+    service tokens
+  - `default-batch`: Unless the auth method requests a different type, issue
+    batch tokens
+  - `service`: Override any auth method preference and always issue service
+    tokens from this mount
+  - `batch`: Override any auth method preference and always issue batch tokens
+    from this mount
 
 ### Sample Payload
 

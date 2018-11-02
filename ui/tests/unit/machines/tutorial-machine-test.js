@@ -119,6 +119,7 @@ module('Unit | Machine | tutorial-machine', function() {
         },
         actions: [
           'showTutorialWhenAuthenticated',
+          'clearFeatureData',
           { type: 'render', level: 'tutorial', component: 'wizard/tutorial-active' },
           { type: 'render', level: 'feature', component: 'wizard/features-selection' },
         ],

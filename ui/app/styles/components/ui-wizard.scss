@@ -24,13 +24,13 @@
 .ui-wizard {
   z-index: 300;
   padding: $size-5;
-  width: 300px;
+  width: $drawer-width;
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
   position: fixed;
   right: $size-8;
   bottom: $size-8;
-  top: calc(3.5rem + #{$size-8});
+  top: calc(#{$header-height} + #{$size-8});
   overflow: auto;
 
   p {
@@ -67,7 +67,7 @@
 
 .wizard-header {
   border-bottom: $light-border;
-  padding: $size-8 $size-4 $size-8 2rem;
+  padding: 0 $size-4 $size-8 2rem;
   margin: $size-4 0;
   position: relative;
 
@@ -79,7 +79,7 @@
   .title .icon {
     left: 0;
     position: absolute;
-    top: 0.7rem;
+    top: 0;
   }
 }
 
@@ -101,7 +101,7 @@
   padding-bottom: $size-11;
   position: fixed;
   right: $size-8;
-  top: calc(3.5rem + #{$size-8});
+  top: calc(#{$header-height} + #{$size-8});
 
   @include until($tablet) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
@@ -121,6 +121,7 @@
   }
 
   .wizard-header {
+    border-bottom: 0;
     margin: 0 0 $size-10;
     padding-top: 0;
   }
@@ -142,7 +143,7 @@
   margin: $size-8 0 0;
   padding: 0 $size-8;
   border-top: solid 1px $white;
-  border-image: $dark-vault-gradient 1;
+  border-image: linear-gradient(to right, $vault-gray-dark, $vault-gray) 1;
   border-width: 1px 0 0;
   button {
     font-size: $size-7;
@@ -172,4 +173,92 @@
 
 .wizard-instructions {
   margin: $size-4 0;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.time-estimate {
+  align-items: center;
+  color: $grey;
+  display: flex;
+  font-size: 12px;
+}
+
+.progress-container {
+  align-items: center;
+  background: $white;
+  bottom: 0;
+  height: $wizard-progress-bar-height;
+  display: flex;
+  left: 0;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  width: 100%;
+}
+
+.progress-bar {
+  background: $ui-gray-100;
+  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  display: flex;
+  height: $wizard-progress-bar-height;
+  position: relative;
+  width: 100%;
+}
+
+.feature-progress-container {
+  align-items: center;
+  flex: 1 0 auto;
+  padding: 0 ($wizard-progress-check-size / 4);
+  position: relative;
+}
+
+.feature-progress {
+  background: $green;
+  border-radius: $wizard-progress-bar-height;
+  height: $wizard-progress-bar-height;
+}
+
+.feature-check {
+  height: $wizard-progress-check-size;
+  left: $wizard-progress-check-size / 2;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: $wizard-progress-check-size;
+  z-index: 10;
+}
+
+.feature-progress-container .feature-check {
+  left: 100%;
+}
+
+.feature-progress-container:first-child {
+  padding-left: 0;
+
+  .progress-bar,
+  .feature-progress {
+    border-radius: $wizard-progress-bar-height 0 0 $wizard-progress-bar-height;
+  }
+}
+
+.feature-progress-container:first-child:last-child {
+  .progress-bar,
+  .feature-progress {
+    border-radius: $wizard-progress-bar-height;
+  }
+}
+
+.incomplete-check svg {
+  fill: $ui-gray-200;
+}
+
+.completed-check svg {
+  fill: $green;
 }

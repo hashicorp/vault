@@ -1016,6 +1016,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
 				},
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["token_type"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{

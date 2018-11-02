@@ -546,6 +546,10 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
 // clone.
+//
+// Also, only the client's config is currently copied; this means items not in
+// the api.Config struct, such as policy override and wrapping function
+// behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()

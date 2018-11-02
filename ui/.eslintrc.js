@@ -7,14 +7,15 @@ module.exports = {
       experimentalObjectRestSpread: true,
     },
   },
-  plugins: ['ember'],
-  extends: ['eslint:recommended', 'plugin:ember/recommended'],
+  plugins: ['ember', 'prettier'],
+  extends: ['eslint:recommended', 'plugin:ember/recommended', 'prettier'],
   env: {
     browser: true,
     es6: true,
   },
   rules: {
     'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    'prettier/prettier': 'error',
   },
   globals: {
     TextEncoderLite: true,

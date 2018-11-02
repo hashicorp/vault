@@ -17,6 +17,12 @@ func GenericNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>\\w(([\\w-.]+)?\\w)?)", name)
 }
 
+// GenericNameWithAtRegex returns a generic regex that allows alphanumeric
+// characters along with -, . and @.
+func GenericNameWithAtRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>\\w(([\\w-.@]+)?\\w)?)", name)
+}
+
 // Helper which returns a regex string for optionally accepting the a field
 // from the API URL
 func OptionalParamRegex(name string) string {

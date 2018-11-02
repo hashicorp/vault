@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Custom - Database - Secrets Engines"
+sidebar_title: "Custom"
 sidebar_current: "docs-secrets-databases-custom"
 description: |-
   The database secrets engine allows new functionality to be added through a
