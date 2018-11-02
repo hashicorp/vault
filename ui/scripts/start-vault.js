@@ -42,7 +42,10 @@ readline
     if (root && unseal) {
       fs.writeFile(
         path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
-        `export default ${JSON.stringify({ unseal: unseal, root: root }, null, 2)}`
+        `
+        /* eslint-ignore */
+        export default ${JSON.stringify({ unseal: unseal, root: root }, null, 2)}
+        `
       );
 
       console.log('VAULT SERVER READY');

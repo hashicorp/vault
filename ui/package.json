@@ -17,7 +17,7 @@
     "test": "node scripts/start-vault.js & ember test",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
     "test-oss": "yarn run test -f='!enterprise'",
-    "fmt-js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib,mirage}/**/*.js'",
+    "fmt-js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib}/**/*.js'",
     "fmt-styles": "prettier --write app/styles/**/*.*",
     "fmt": "yarn run fmt-js && yarn run fmt-styles"
   },
@@ -65,7 +65,6 @@
     "ember-cli-htmlbars": "^3.0.0",
     "ember-cli-htmlbars-inline-precompile": "^1.0.3",
     "ember-cli-inject-live-reload": "^1.8.2",
-    "ember-cli-mirage": "^0.4.1",
     "ember-cli-moment-shim": "^3.7.1",
     "ember-cli-page-object": "1.15.0-beta.3",
     "ember-cli-pretender": "^1.0.1",

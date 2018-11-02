@@ -2,12 +2,12 @@ import { later, run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
+import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
 import mountBackendForm from '../../pages/components/mount-backend-form';
 
-import { startMirage } from 'vault/initializers/ember-cli-mirage';
 import sinon from 'sinon';
 
 const component = create(mountBackendForm);
@@ -18,7 +18,7 @@ module('Integration | Component | mount backend form', function(hooks) {
   hooks.beforeEach(function() {
     component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
-    this.server = startMirage();
+    this.server = apiStub({ usePassthrough: true });
   });
 
   hooks.afterEach(function() {
