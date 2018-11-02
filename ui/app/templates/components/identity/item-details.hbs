@@ -4,7 +4,7 @@
       @type="warning"
       @title="Attention"
       @message="This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
-      yieldWithoutColumn
+      @yieldWithoutColumn={{true}}
       data-test-disabled-warning>
       {{#if model.canEdit}}
         {{#link-to 'vault.cluster.access.identity.show' invokeAction=(action 'enable' model) data-test-enable=true}}

@@ -88,7 +88,7 @@
         <div class="message is-{{flash.type}}">
           <div class="columns is-mobile is-variable is-1">
             <div class="column is-narrow message-icon">
-              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass="true" />
+              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass={{true}} />
             </div>
             <div class="column">
               <button type="button" class="close-button" {{action close}}>
