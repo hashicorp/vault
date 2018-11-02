@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -377,8 +376,10 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 	}
 
 	// Build OpenAPI response for the entire backend
-	doc := openapi.NewDocument()
-	documentPaths(b, doc)
+	doc := NewOASDocument()
+	if err := documentPaths(b, doc); err != nil {
+		b.Logger().Warn("error generating OpenAPI", "error", err)
+	}
 
 	return logical.HelpResponse(help, nil, doc), nil
 }

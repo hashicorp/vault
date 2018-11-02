@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/license"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -16,6 +15,12 @@ import (
 // that are identified by the given name in the backends
 func GenericNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>\\w(([\\w-.]+)?\\w)?)", name)
+}
+
+// GenericNameWithAtRegex returns a generic regex that allows alphanumeric
+// characters along with -, . and @.
+func GenericNameWithAtRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>\\w(([\\w-.@]+)?\\w)?)", name)
 }
 
 // Helper which returns a regex string for optionally accepting the a field
@@ -134,7 +139,7 @@ type OperationProperties struct {
 	// Responses provides a list of response description for a given response
 	// code. The most relevant response should be first in the list, as it will
 	// be shown in documentation that only allows a single example.
-	Responses map[string][]Response
+	Responses map[int][]Response
 
 	// Unpublished indicates that this operation should not appear in public
 	// documentation or help text. The operation may still have documentation
@@ -148,7 +153,11 @@ type OperationProperties struct {
 // RequestExample is example of request data.
 type RequestExample struct {
 	Description string                 // optional description of the request
-	Value       map[string]interface{} // map version of sample JSON
+	Data        map[string]interface{} // map version of sample JSON request data
+
+	// Optional example response to the sample request. This approach is considered
+	// provisional for now, and this field may be changed or removed.
+	Response *Response
 }
 
 // Response describes and optional demonstrations an operation response.
@@ -164,7 +173,7 @@ type PathOperation struct {
 	Summary     string
 	Description string
 	Examples    []RequestExample
-	Responses   map[string][]Response
+	Responses   map[int][]Response
 	Unpublished bool
 	Deprecated  bool
 }
@@ -227,8 +236,10 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 		}
 
 		// Build OpenAPI response for this path
-		doc := openapi.NewDocument()
-		documentPath(p, b.SpecialPaths(), b.BackendType, doc)
+		doc := NewOASDocument()
+		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+			b.Logger().Warn("error generating OpenAPI", "error", err)
+		}
 
 		return logical.HelpResponse(help, nil, doc), nil
 	}

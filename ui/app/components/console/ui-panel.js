@@ -20,7 +20,7 @@ export default Component.extend({
   controlGroup: service(),
   store: service(),
 
-  classNames: 'console-ui-panel-scroller',
+  classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
   inputValue: null,
@@ -114,6 +114,9 @@ export default Component.extend({
   },
 
   actions: {
+    closeConsole() {
+      this.set('console.isOpen', false);
+    },
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
     },

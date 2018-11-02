@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/seal - HTTP API"
-sidebar_current: "docs-http-system-seal/"
+sidebar_title: "<code>/sys/seal</code>"
+sidebar_current: "api-http-system-seal/"
 description: |-
   The `/sys/seal` endpoint seals the Vault.
 ---

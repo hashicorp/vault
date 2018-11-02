@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -616,6 +615,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		entryConfig["passthrough_request_headers"] = rawVal.([]string)
 	}
+	if entry.Table == credentialTableType {
+		entryConfig["token_type"] = entry.Config.TokenType.String()
+	}
 
 	info["config"] = entryConfig
 
@@ -966,6 +968,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		},
 	}
 
+	if mountEntry.Table == credentialTableType {
+		resp.Data["token_type"] = mountEntry.Config.TokenType.String()
+	}
+
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		resp.Data["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1204,6 +1210,44 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of listing_visibility successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("token_type"); ok {
+		if !strings.HasPrefix(path, "auth/") {
+			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
+		}
+		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
+		}
+
+		tokenType := logical.TokenTypeDefaultService
+		ttString := rawVal.(string)
+
+		switch ttString {
+		case "", "default-service":
+		case "default-batch":
+			tokenType = logical.TokenTypeDefaultBatch
+		case "service":
+			tokenType = logical.TokenTypeService
+		case "batch":
+			tokenType = logical.TokenTypeBatch
+		default:
+			return logical.ErrorResponse(fmt.Sprintf(
+				"invalid value for 'token_type'")), logical.ErrInvalidRequest
+		}
+
+		oldVal := mountEntry.Config.TokenType
+		mountEntry.Config.TokenType = tokenType
+
+		// Update the mount table
+		if err := b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local); err != nil {
+			mountEntry.Config.TokenType = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of token_type successful", "path", path, "token_type", ttString)
 		}
 	}
 
@@ -1482,37 +1526,10 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := map[string]interface{}{
-			"type":        entry.Type,
-			"description": entry.Description,
-			"accessor":    entry.Accessor,
-			"local":       entry.Local,
-			"seal_wrap":   entry.SealWrap,
-			"options":     entry.Options,
-		}
-		entryConfig := map[string]interface{}{
-			"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-			"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-			"plugin_name":       entry.Config.PluginName,
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-			entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_response_keys"); ok {
-			entryConfig["audit_non_hmac_response_keys"] = rawVal.([]string)
-		}
-		// Even though empty value is valid for ListingVisibility, we can ignore
-		// this case during mount since there's nothing to unset/hide.
-		if len(entry.Config.ListingVisibility) > 0 {
-			entryConfig["listing_visibility"] = entry.Config.ListingVisibility
-		}
-		if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
-			entryConfig["passthrough_request_headers"] = rawVal.([]string)
-		}
-
-		info["config"] = entryConfig
+		info := mountInfo(entry)
 		resp.Data[entry.Path] = info
 	}
+
 	return resp, nil
 }
 
@@ -1582,6 +1599,20 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
+	}
+
+	switch apiConfig.TokenType {
+	case "", "default-service":
+		config.TokenType = logical.TokenTypeDefaultService
+	case "default-batch":
+		config.TokenType = logical.TokenTypeDefaultBatch
+	case "service":
+		config.TokenType = logical.TokenTypeService
+	case "batch":
+		config.TokenType = logical.TokenTypeBatch
+	default:
+		return logical.ErrorResponse(fmt.Sprintf(
+			"invalid value for 'token_type'")), logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
@@ -2951,7 +2982,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
-	doc := openapi.NewDocument()
+	doc := framework.NewOASDocument()
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount := range resp.Data[group].(map[string]interface{}) {
@@ -2970,16 +3001,16 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				return err
 			}
 
-			var backendDoc *openapi.Document
+			var backendDoc *framework.OASDocument
 
 			// Normalize response type, which will be different if received
-			// from and external plugin.
+			// from an external plugin.
 			switch v := resp.Data["openapi"].(type) {
-			case *openapi.Document:
+			case *framework.OASDocument:
 				backendDoc = v
 			case map[string]interface{}:
-				backendDoc = new(openapi.Document)
-				if err := mapstructure.Decode(v, backendDoc); err != nil {
+				backendDoc, err = framework.NewOASDocumentFromMap(v)
+				if err != nil {
 					return err
 				}
 			default:
@@ -2996,6 +3027,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				tag = "system"
 			case "auth/token/":
 				tag = "auth"
+			case "identity/":
+				tag = "identity"
 			}
 
 			// Merge backend paths with existing document
@@ -3004,8 +3037,11 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*openapi.Operation{obj.Get, obj.Post, obj.Delete} {
-						if op != nil && len(op.Tags) == 0 {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+						// TODO: a special override for identity is used used here because the backend
+						// is currently categorized as "secret", which will likely change. Also of interest
+						// is removing all tag handling here and providing the mount information to OpenAPI.
+						if op != nil && (len(op.Tags) == 0 || tag == "identity") {
 							op.Tags = []string{tag}
 						}
 					}
@@ -3024,9 +3060,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
-	// This endpoint is more likely to be inspected directly by humans,
-	// so indent the JSON output to make it more readable.
-	buf, err := json.MarshalIndent(doc, "", "  ")
+	buf, err := json.Marshal(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -3695,6 +3729,10 @@ This path responds to the following HTTP methods.
 	},
 	"passthrough_request_headers": {
 		"A list of headers to whitelist and pass from the request to the backend.",
+		"",
+	},
+	"token_type": {
+		"The type of token to issue (service or batch).",
 		"",
 	},
 	"raw": {

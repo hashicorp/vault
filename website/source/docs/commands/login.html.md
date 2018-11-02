@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "login - Command"
+sidebar_title: "<code>login</code>"
 sidebar_current: "docs-commands-login"
 description: |-
   The "login" command authenticates users or machines to Vault using the

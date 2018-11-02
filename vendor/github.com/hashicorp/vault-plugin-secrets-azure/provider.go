@@ -23,6 +23,12 @@ type AzureProvider interface {
 type ApplicationsClient interface {
 	CreateApplication(ctx context.Context, parameters graphrbac.ApplicationCreateParameters) (graphrbac.Application, error)
 	DeleteApplication(ctx context.Context, applicationObjectID string) (autorest.Response, error)
+	GetApplication(ctx context.Context, applicationObjectID string) (graphrbac.Application, error)
+	UpdateApplicationPasswordCredentials(
+		ctx context.Context,
+		applicationObjectID string,
+		parameters graphrbac.PasswordCredentialsUpdateParameters) (result autorest.Response, err error)
+	ListApplicationPasswordCredentials(ctx context.Context, applicationObjectID string) (result graphrbac.PasswordCredentialListResult, err error)
 }
 
 type ServicePrincipalsClient interface {
@@ -133,10 +139,22 @@ func (p *provider) CreateApplication(ctx context.Context, parameters graphrbac.A
 	return p.appClient.Create(ctx, parameters)
 }
 
+func (p *provider) GetApplication(ctx context.Context, applicationObjectID string) (graphrbac.Application, error) {
+	return p.appClient.Get(ctx, applicationObjectID)
+}
+
 // DeleteApplication deletes an Azure application object.
 // This will in turn remove the service principal (but not the role assignments).
 func (p *provider) DeleteApplication(ctx context.Context, applicationObjectID string) (autorest.Response, error) {
 	return p.appClient.Delete(ctx, applicationObjectID)
+}
+
+func (p *provider) UpdateApplicationPasswordCredentials(ctx context.Context, applicationObjectID string, parameters graphrbac.PasswordCredentialsUpdateParameters) (result autorest.Response, err error) {
+	return p.appClient.UpdatePasswordCredentials(ctx, applicationObjectID, parameters)
+}
+
+func (p *provider) ListApplicationPasswordCredentials(ctx context.Context, applicationObjectID string) (result graphrbac.PasswordCredentialListResult, err error) {
+	return p.appClient.ListPasswordCredentials(ctx, applicationObjectID)
 }
 
 // CreateServicePrincipal creates a new Azure service principal.

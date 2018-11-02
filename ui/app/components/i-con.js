@@ -22,6 +22,15 @@ const GLYPHS_WITH_SVG_TAG = [
   'control-lock',
   'edition-enterprise',
   'edition-oss',
+  'check-plain',
+  'check-circle-fill',
+  'cancel-square-outline',
+  'status-indicator',
+  'person',
+  'console',
+  'checkmark-circled-outline',
+  'close-circled-outline',
+  'neutral-circled-outline',
 ];
 
 export default Component.extend({

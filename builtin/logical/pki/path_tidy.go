@@ -32,9 +32,8 @@ the certificate store`,
 			"tidy_revoked_certs": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
-certificates, even if their duration has not yet passed, removing
-them both from the CRL and from storage. The CRL will be rotated
-if this causes any values to be removed.`,
+and expired certificates, removing them both from the CRL and from storage. The
+CRL will be rotated if this causes any values to be removed.`,
 			},
 
 			"safety_buffer": &framework.FieldSchema{

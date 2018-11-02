@@ -26,6 +26,7 @@ type TokenCreateCommand struct {
 	flagNoDefaultPolicy bool
 	flagUseLimit        int
 	flagRole            string
+	flagType            string
 	flagMetadata        map[string]string
 	flagPolicies        []string
 
@@ -153,6 +154,13 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 			"must have permission for \"auth/token/create/<role>\".",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "type",
+		Target:  &c.flagType,
+		Default: "service",
+		Usage:   `The type of token to create. Can be "service" or "batch".`,
+	})
+
 	f.StringMapVar(&StringMapVar{
 		Name:       "metadata",
 		Target:     &c.flagMetadata,
@@ -213,6 +221,10 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		}
 	}
 
+	if c.flagType == "batch" {
+		c.flagRenewable = false
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -231,6 +243,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		Renewable:       &c.flagRenewable,
 		ExplicitMaxTTL:  c.flagExplicitMaxTTL.String(),
 		Period:          c.flagPeriod.String(),
+		Type:            c.flagType,
 	}
 
 	var secret *api.Secret

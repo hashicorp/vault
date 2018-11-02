@@ -27,13 +27,17 @@ export default AuthConfig.extend({
     label: 'NAS Port',
   }),
 
+  nasIdentifier: attr('string', {
+    label: 'NAS Identifier',
+  }),
+
   fieldGroups: computed(function() {
     const groups = [
       {
         default: ['host', 'secret'],
       },
       {
-        'RADIUS Options': ['port', 'nasPort', 'dialTimeout', 'unregisteredUserPolicies'],
+        'RADIUS Options': ['port', 'nasPort', 'nasIdentifier', 'dialTimeout', 'unregisteredUserPolicies'],
       },
     ];
     return fieldToAttrs(this, groups);

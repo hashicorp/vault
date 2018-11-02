@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "File - Audit Devices"
+sidebar_title: "File"
 sidebar_current: "docs-audit-file"
 description: |-
   The "file" audit device writes audit logs to a file.

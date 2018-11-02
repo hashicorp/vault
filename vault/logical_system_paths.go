@@ -151,12 +151,12 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Returns the health status of Vault.",
-					Responses: map[string][]framework.Response{
-						"200": {{Description: "initialized, unsealed, and active"}},
-						"429": {{Description: "unsealed and standby"}},
-						"472": {{Description: "data recovery mode replication secondary and active"}},
-						"501": {{Description: "not initialized"}},
-						"503": {{Description: "sealed"}},
+					Responses: map[int][]framework.Response{
+						200: {{Description: "initialized, unsealed, and active"}},
+						429: {{Description: "unsealed and standby"}},
+						472: {{Description: "data recovery mode replication secondary and active"}},
+						501: {{Description: "not initialized"}},
+						503: {{Description: "sealed"}},
 					},
 				},
 			},
@@ -221,8 +221,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.CreateOperation: &framework.PathOperation{
 					Summary:     "Cause the node to give up active status.",
 					Description: "This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.",
-					Responses: map[string][]framework.Response{
-						"204": {{Description: "empty body"}},
+					Responses: map[int][]framework.Response{
+						204: {{Description: "empty body"}},
 					},
 				},
 			},
@@ -1401,6 +1401,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"passthrough_request_headers": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+				},
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
 			},
 

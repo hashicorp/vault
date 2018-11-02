@@ -2,7 +2,12 @@
   "openapi": "3.0.2",
   "info": {
     "title": "HashiCorp Vault API",
-    "version": "<vault_version>"
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
   },
   "paths": {
     "/lookup/{id}": {

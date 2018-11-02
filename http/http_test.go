@@ -105,6 +105,7 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 }
 
 func testResponseStatus(t *testing.T, resp *http.Response, code int) {
+	t.Helper()
 	if resp.StatusCode != code {
 		body := new(bytes.Buffer)
 		io.Copy(body, resp.Body)

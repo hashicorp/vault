@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "GCP Cloud KMS - Seals - Configuration"
+sidebar_title: "GCP Cloud KMS <sup>1.0 BETA</sup>"
 sidebar_current: "docs-configuration-seal-gcpckms"
 description: |-
   The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal wrapping
@@ -10,8 +11,7 @@ description: |-
 # `gcpckms` Seal
 
 The GCP Cloud KMS seal configures Vault to use GCP Cloud KMS as the seal
-wrapping mechanism. Vault Enterprise's GCP Cloud KMS seal is activated by one of
-the following:
+wrapping mechanism. The GCP Cloud KMS seal is activated by one of the following:
 
 * The presence of a `seal "gcpckms"` block in Vault's configuration file.
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `gcpckms`.

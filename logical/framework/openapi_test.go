@@ -5,16 +5,135 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/version"
 )
+
+func TestOpenAPI_Regex(t *testing.T) {
+	t.Run("Required", func(t *testing.T) {
+		tests := []struct {
+			input    string
+			captures []string
+		}{
+			{`/foo/bar/(?P<val>.*)`, []string{"val"}},
+			{`/foo/bar/` + GenericNameRegex("val"), []string{"val"}},
+			{`/foo/bar/` + GenericNameRegex("first") + "/b/" + GenericNameRegex("second"), []string{"first", "second"}},
+			{`/foo/bar`, []string{}},
+		}
+
+		for _, test := range tests {
+			result := reqdRe.FindAllStringSubmatch(test.input, -1)
+			if len(result) != len(test.captures) {
+				t.Fatalf("Capture error (%s): expected %d matches, actual: %d", test.input, len(test.captures), len(result))
+			}
+
+			for i := 0; i < len(result); i++ {
+				if result[i][1] != test.captures[i] {
+					t.Fatalf("Capture error (%s): expected %s, actual: %s", test.input, test.captures[i], result[i][1])
+				}
+			}
+		}
+	})
+	t.Run("Optional", func(t *testing.T) {
+		input := "foo/(maybe/)?bar"
+		expStart := len("foo/")
+		expEnd := len(input) - len("bar")
+
+		match := optRe.FindStringIndex(input)
+		if diff := deep.Equal(match, []int{expStart, expEnd}); diff != nil {
+			t.Fatal(diff)
+		}
+
+		input = "/foo/maybe/bar"
+		match = optRe.FindStringIndex(input)
+		if match != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, match)
+		}
+	})
+	t.Run("Alternation", func(t *testing.T) {
+		input := `(raw/?$|raw/(?P<path>.+))`
+
+		matches := altRe.FindAllStringSubmatch(input, -1)
+		exp1 := "raw/?$"
+		exp2 := "raw/(?P<path>.+)"
+		if matches[0][1] != exp1 || matches[0][2] != exp2 {
+			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches[0][1:])
+		}
+
+		input = `/foo/bar/` + GenericNameRegex("val")
+
+		matches = altRe.FindAllStringSubmatch(input, -1)
+		if matches != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
+		}
+	})
+	t.Run("Path fields", func(t *testing.T) {
+		input := `/foo/bar/{inner}/baz/{outer}`
+
+		matches := pathFieldsRe.FindAllStringSubmatch(input, -1)
+
+		exp1 := "inner"
+		exp2 := "outer"
+		if matches[0][1] != exp1 || matches[1][1] != exp2 {
+			t.Fatalf("Capture error. Expected %s and %s, got %v", exp1, exp2, matches)
+		}
+
+		input = `/foo/bar/inner/baz/outer`
+		matches = pathFieldsRe.FindAllStringSubmatch(input, -1)
+
+		if matches != nil {
+			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
+		}
+	})
+	t.Run("Filtering", func(t *testing.T) {
+		tests := []struct {
+			input  string
+			regex  *regexp.Regexp
+			output string
+		}{
+			{
+				input:  `ab?cde^fg(hi?j$k`,
+				regex:  cleanCharsRe,
+				output: "abcdefghijk",
+			},
+			{
+				input:  `abcde/?`,
+				regex:  cleanSuffixRe,
+				output: "abcde",
+			},
+			{
+				input:  `abcde/?$`,
+				regex:  cleanSuffixRe,
+				output: "abcde",
+			},
+			{
+				input:  `abcde`,
+				regex:  wsRe,
+				output: "abcde",
+			},
+			{
+				input:  `  a         b    cd   e   `,
+				regex:  wsRe,
+				output: "abcde",
+			},
+		}
+
+		for _, test := range tests {
+			result := test.regex.ReplaceAllString(test.input, "")
+			if result != test.output {
+				t.Fatalf("Clean Regex error (%s). Expected %s, got %s", test.input, test.output, result)
+			}
+		}
+
+	})
+}
 
 func TestOpenAPI_ExpandPattern(t *testing.T) {
 	tests := []struct {
@@ -35,7 +154,7 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 			"renew",
 			"renew/{url_lease_id}",
 		}},
-		{`config/ui/headers/(?P<header>\w(([\w-.]+)?\w)?)`, []string{"config/ui/headers/{header}"}},
+		{`config/ui/headers/` + GenericNameRegex("header"), []string{"config/ui/headers/{header}"}},
 		{`leases/lookup/(?P<prefix>.+?)?`, []string{
 			"leases/lookup/",
 			"leases/lookup/{prefix}",
@@ -56,6 +175,10 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		}},
 		{"accessors/$", []string{
 			"accessors/",
+		}},
+		{"verify/" + GenericNameRegex("name") + OptionalParamRegex("urlalgorithm"), []string{
+			"verify/{name}",
+			"verify/{name}/{urlalgorithm}",
 		}},
 	}
 
@@ -115,7 +238,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
 	}
 	for i, test := range tests {
-		doc := openapi.NewDocument()
+		doc := NewOASDocument()
 		path := Path{
 			Pattern: test.pattern,
 		}
@@ -135,7 +258,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 	}
 }
 
-func TestOpenAPIPaths(t *testing.T) {
+func TestOpenAPI_Paths(t *testing.T) {
 	origDepth := deep.MaxDepth
 	defer func() { deep.MaxDepth = origDepth }()
 	deep.MaxDepth = 20
@@ -179,9 +302,13 @@ func TestOpenAPIPaths(t *testing.T) {
 					Type:        TypeString,
 					Description: "id path parameter",
 				},
-				"names": {
+				"flavors": {
 					Type:        TypeCommaStringSlice,
-					Description: "the names",
+					Description: "the flavors",
+				},
+				"name": {
+					Type:        TypeNameString,
+					Description: "the name",
 				},
 				"x-abc-token": {
 					Type:        TypeHeader,
@@ -229,8 +356,8 @@ func TestOpenAPIPaths(t *testing.T) {
 				logical.ReadOperation: &PathOperation{
 					Summary:     "My Summary",
 					Description: "My Description",
-					Responses: map[string][]Response{
-						"202": {{
+					Responses: map[int][]Response{
+						202: {{
 							Description: "Amazing",
 							Example: &logical.Response{
 								Data: map[string]interface{}{
@@ -254,10 +381,58 @@ func TestOpenAPIPaths(t *testing.T) {
 	})
 }
 
+func TestOpenAPI_CustomDecoder(t *testing.T) {
+	p := &Path{
+		Pattern:      "foo",
+		HelpSynopsis: "Synopsis",
+		Operations: map[logical.Operation]OperationHandler{
+			logical.ReadOperation: &PathOperation{
+				Summary: "My Summary",
+				Responses: map[int][]Response{
+					100: {{
+						Description: "OK",
+						Example:     &logical.Response{},
+					}},
+					200: {{
+						Description: "Good",
+						Example:     &logical.Response{},
+					}},
+					599: {{
+						Description: "Bad",
+						Example:     &logical.Response{},
+					}},
+				},
+			},
+		},
+	}
+
+	docOrig := NewOASDocument()
+	documentPath(p, nil, logical.TypeLogical, docOrig)
+
+	docJSON, err := json.Marshal(docOrig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var intermediate map[string]interface{}
+	if err := jsonutil.DecodeJSON(docJSON, &intermediate); err != nil {
+		t.Fatal(err)
+	}
+
+	docNew, err := NewOASDocumentFromMap(intermediate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(docOrig, docNew); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
-	doc := openapi.NewDocument()
+	doc := NewOASDocument()
 	documentPath(path, sp, logical.TypeLogical, doc)
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
@@ -276,7 +451,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
-		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON
+		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
 	}
 }

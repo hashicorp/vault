@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "secrets list - Command"
+sidebar_title: "<code>list</code>"
 sidebar_current: "docs-commands-secrets-list"
 description: |-
   The "secrets list" command lists the enabled secrets engines on the Vault

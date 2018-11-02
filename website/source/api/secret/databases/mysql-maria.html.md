@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MySQL/MariaDB - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-mysql-maria"
+sidebar_title: "MySQL/MariaDB"
+sidebar_current: "api-http-secret-databases-mysql-maria"
 description: |-
   The MySQL/MariaDB plugin for Vault's database secrets engine generates database credentials to access MySQL and MariaDB servers.
 ---

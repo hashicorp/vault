@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Duo MFA - MFA Support - Vault Enterprise"
+sidebar_title: "Duo MFA"
 sidebar_current: "docs-vault-enterprise-mfa-duo"
 description: |-
   Vault Enterprise supports Duo MFA type.

@@ -19,6 +19,9 @@ $border: $grey-light;
 
 $hr-margin: 1rem 0;
 
+$mobile: 769px;
+$header-height: 4rem;
+
 //typography
 $family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
   "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
@@ -45,6 +48,7 @@ $input-focus-background-color: $white;
 $input-border-color: $grey;
 
 $radius: 2px;
+$radius-large: 4px;
 
 //box
 $box-radius: 0;
@@ -81,6 +85,13 @@ $menu-item-active-background-color: transparent;
 $box-link-shadow: 0 0 0 1px $ui-gray-200;
 $box-link-hover-shadow: 0 0 0 1px $grey-light;
 
+// Nav
+$drawer-width: 300px;
+
 // animations
 $speed: 150ms;
 $speed-slow: $speed * 2;
+
+// Wizard
+$wizard-progress-bar-height: 6px;
+$wizard-progress-check-size: 16px;

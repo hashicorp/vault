@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "path-help - Command"
+sidebar_title: "<code>path-help</code>"
 sidebar_current: "docs-commands-path-help"
 description: |-
   The "path-help" command retrieves API help for paths. All endpoints in Vault

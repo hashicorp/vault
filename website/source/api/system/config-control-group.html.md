@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/config/control-group - HTTP API"
-sidebar_current: "docs-http-system-config-control-group"
+sidebar_title: "<code>/sys/config/control-group</code>"
+sidebar_current: "api-http-system-config-control-group"
 description: |-
   The '/sys/config/control-group' endpoint configures control groups.
 ---

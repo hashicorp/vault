@@ -652,6 +652,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"policy_document":  value,
 				"credential_types": []string{iamUserCred, federationTokenCred},
 				"default_sts_ttl":  int64(0),
+				"max_sts_ttl":      int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -749,6 +750,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"credential_types": []string{iamUserCred},
 		"role_arns":        []string(nil),
 		"default_sts_ttl":  int64(0),
+		"max_sts_ttl":      int64(0),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -828,6 +830,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 		"default_sts_ttl": minAwsAssumeRoleDuration,
+		"max_sts_ttl":     minAwsAssumeRoleDuration,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -883,6 +886,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"policy_document":  "",
 				"credential_types": []string{iamUserCred},
 				"default_sts_ttl":  int64(0),
+				"max_sts_ttl":      int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

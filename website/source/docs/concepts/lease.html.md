@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Lease, Renew, and Revoke"
+sidebar_title: "Lease, Renew, and Revoke"
 sidebar_current: "docs-concepts-lease"
 description: |-
   Vault provides a lease with every secret. When this lease is expired, Vault will revoke that secret.
@@ -8,12 +9,12 @@ description: |-
 
 # Lease, Renew, and Revoke
 
-With every dynamic secret and authentication token, Vault creates a _lease_:
-metadata containing information such as a time duration, renewability, and
-more. Vault promises that the data will be valid for the given duration, or
-Time To Live (TTL). Once the lease is expired, Vault can automatically revoke
-the data, and the consumer of the secret can no longer be certain that it is
-valid.
+With every dynamic secret and `service` type authentication token, Vault
+creates a _lease_: metadata containing information such as a time duration,
+renewability, and more. Vault promises that the data will be valid for the
+given duration, or Time To Live (TTL). Once the lease is expired, Vault can
+automatically revoke the data, and the consumer of the secret can no longer be
+certain that it is valid.
 
 The benefit should be clear: consumers of secrets need to check in with
 Vault routinely to either renew the lease (if allowed) or request a
@@ -35,7 +36,8 @@ or automatically by Vault. When a lease is expired, Vault will automatically
 revoke that lease.
 
 **Note**: The [Key/Value Backend](/docs/secrets/kv/index.html) which stores
-arbitrary secrets does not issue leases.
+arbitrary secrets does not issue leases although it will sometimes return a
+lease duration; see the documentation for more information.
 
 ## Lease IDs
 
@@ -60,14 +62,6 @@ so often.
 
 As a result, the return value of renewals should be carefully inspected to
 determine what the new lease is.
-
-**Note**: Prior to version 0.3, Vault documentation and help text did not
-distinguish sufficiently between a _lease_ and a _lease duration_.  Starting
-with version 0.3, Vault will start migrating to the term _ttl_ to describe
-lease durations, at least for user-facing text. As _lease duration_ is still a
-legitimate (but more verbose) description, there are currently no plans to
-change the JSON key used in responses, in order to retain
-backwards-compatibility.
 
 ## Prefix-based Revocation
 

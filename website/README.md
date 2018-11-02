@@ -12,7 +12,7 @@ like any normal GitHub project, and we'll merge it in.
 
 ## Running the Site Locally
 
-Running the site locally is simple. Clone this repo and run `make website`.
+Running the site locally is simple. Clone this repo and run `make website`. If it is your first time running the site, the build will take a little longer as it needs to download a docker image and a bunch of dependencies, so maybe go grab a coffee. On subsequent runs, it will be much faster as dependencies are cached.
 
 Then open up `http://localhost:4567`. Note that some URLs you may need to append
 ".html" to make them work (in the navigation).

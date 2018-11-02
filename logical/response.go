@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/hashicorp/vault/helper/openapi"
 	"github.com/hashicorp/vault/helper/wrapping"
 )
 
@@ -90,7 +89,7 @@ func (r *Response) Error() error {
 }
 
 // HelpResponse is used to format a help response
-func HelpResponse(text string, seeAlso []string, oapiDoc *openapi.Document) *Response {
+func HelpResponse(text string, seeAlso []string, oapiDoc interface{}) *Response {
 	return &Response{
 		Data: map[string]interface{}{
 			"help":     text,

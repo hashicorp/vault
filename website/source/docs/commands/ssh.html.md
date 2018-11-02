@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "ssh - Command"
+sidebar_title: "<code>ssh</code>"
 sidebar_current: "docs-commands-ssh"
 description: |-
   The "ssh" command establishes an SSH connection with the target machine using

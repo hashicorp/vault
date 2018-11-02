@@ -1,5 +1,6 @@
 // Start with Structure & Bulma variables as a foundation
 @import "./utils/colors";
+@import "./utils/spacing";
 @import "bulma/sass/utilities/initial-variables";
 
 // Override variables where appropriate
@@ -32,12 +33,10 @@
 @import "./core/progress";
 @import "./core/switch";
 @import "./core/tables";
-@import "./core/tabs";
 @import "./core/tags";
 @import "./core/title";
 
 // bulma additions
-@import "./core/gradients";
 @import "./core/layout";
 @import "./core/lists";
 
@@ -71,11 +70,12 @@
 @import "./components/popup-menu";
 @import "./components/radial-progress";
 @import "./components/role-item";
+@import "./components/secret-control-bar";
 @import "./components/shamir-progress";
 @import "./components/sidebar";
 @import "./components/splash-page";
 @import "./components/status-menu";
-@import "./components/sub-nav";
+@import "./components/tabs";
 @import "./components/token-expire-warning";
 @import "./components/tool-tip";
 @import "./components/unseal-warning";

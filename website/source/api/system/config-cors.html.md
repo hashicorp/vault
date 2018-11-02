@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/config/cors - HTTP API"
-sidebar_current: "docs-http-system-config-cors"
+sidebar_title: "<code>/sys/config/cors</code>"
+sidebar_current: "api-http-system-config-cors"
 description: |-
   The '/sys/config/cors' endpoint configures how the Vault server responds to cross-origin requests.
 ---

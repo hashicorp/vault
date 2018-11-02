@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Entity - HTTP API"
-sidebar_current: "docs-http-secret-identity-entity"
+sidebar_title: "Entity"
+sidebar_current: "api-http-secret-identity-entity"
 description: |-
   This is the API documentation for managing entities in the identity store.
 ---
@@ -169,7 +170,7 @@ This endpoint deletes an entity and all its associated aliases.
 | :--------- | :-------------------------- | :----------------------|
 | `DELETE`   | `/identity/entity/id/:id`   | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `id` `(string: <required>)` – Identifier of the entity.
 
@@ -326,7 +327,7 @@ entity name.
 | :--------- | :------------------------------ | :----------------------|
 | `DELETE`   | `/identity/entity/name/:name`   | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `name` `(string: <required>)` – Name of the entity.
 

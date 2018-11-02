@@ -2,12 +2,17 @@
   "openapi": "3.0.2",
   "info": {
     "title": "HashiCorp Vault API",
-    "version": "<vault_version>"
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
   },
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-create": true,
+      "x-vault-create-supported": true,
       "x-vault-sudo": true,
       "parameters": [
         {
@@ -58,12 +63,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "names": {
+                  "flavors": {
                     "type": "array",
-                    "description": "the names",
+                    "description": "the flavors",
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "the name",
+                    "pattern": "\\w([\\w-.]*\\w)?"
                   }
                 }
               }

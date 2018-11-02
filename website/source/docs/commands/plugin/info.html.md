@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin info - Command"
+sidebar_title: "<code>info</code>"
 sidebar_current: "docs-commands-plugin-info"
 description: |-
   The "plugin info" command displays information about a plugin in the catalog.

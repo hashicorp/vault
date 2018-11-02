@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-secret-aws"
 description: |-
   This is the API documentation for the Vault AWS secrets engine.
 ---
@@ -224,6 +225,10 @@ updated with the new attributes.
   specified when STS credentials are requested, and a default TTL is specified
   on the role, then this default TTL will be used. Valid only when
   `credential_type` is one of `assumed_role` or `federation_token`.
+
+- `max_sts_ttl` `(string)` - The max allowed TTL for STS credentials (credentials
+  TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
+  `assumed_role` or `federation_token`.
 
 Legacy parameters:
 

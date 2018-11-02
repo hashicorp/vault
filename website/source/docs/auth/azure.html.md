@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Auth Methods"
+sidebar_title: "Azure"
 sidebar_current: "docs-auth-azure"
 description: |-
   The azure auth method plugin allows automated authentication of Azure Active

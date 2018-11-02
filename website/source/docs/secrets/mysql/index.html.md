@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MySQL - Secrets Engines"
+sidebar_title: "MySQL <sup>DEPRECATED</sup>"
 sidebar_current: "docs-secrets-mysql"
 description: |-
   The MySQL secrets engine for Vault generates database credentials to access MySQL.

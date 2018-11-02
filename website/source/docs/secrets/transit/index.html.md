@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Transit - Secrets Engines"
+sidebar_title: "Transit"
 sidebar_current: "docs-secrets-transit"
 description: |-
   The transit secrets engine for Vault encrypts/decrypts data in-transit. It doesn't store any secrets.
