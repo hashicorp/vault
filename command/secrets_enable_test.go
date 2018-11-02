@@ -203,10 +203,10 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		// backends are found by walking the directory, which includes the kv and database backends,
-		// however, the plugins registry omits those two
-		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+2 {
-			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+2, len(backends))
+		// backends are found by walking the directory, which includes the database backend,
+		// however, the plugins registry omits that one
+		if len(backends) != len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1 {
+			t.Fatalf("expected %d logical backends, got %d", len(builtinplugins.Registry.Keys(consts.PluginTypeSecrets))+1, len(backends))
 		}
 
 		for _, b := range backends {

@@ -339,6 +339,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"hana-database-plugin",
 				"jwt",
 				"kubernetes",
+				"kv",
 				"ldap",
 				"mongodb",
 				"mongodb-database-plugin",

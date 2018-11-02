@@ -35,7 +35,6 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
@@ -94,7 +93,6 @@ var (
 	logicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
 		"database": logicalDb.Factory,
-		"kv":       logicalKv.Factory,
 	}
 
 	physicalBackends = map[string]physical.Factory{

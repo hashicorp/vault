@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -626,7 +627,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	var err error
-	var ok bool
 
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
@@ -656,13 +656,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	conf.ReloadFuncs = &c.reloadFuncs
 
 	// Setup the backends
-	logicalBackends := make(map[string]logical.Factory)
+	logicalBackends := map[string]logical.Factory{
+		// Automatically mount kv
+		"kv": kv.Factory,
+	}
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
-	}
-	_, ok = logicalBackends["kv"]
-	if !ok {
-		logicalBackends["kv"] = PassthroughBackendFactory
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
