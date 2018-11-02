@@ -61,8 +61,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return `cert/${key}`;
   },
   onEnter: function(val) {
-    let baseKey = this.get('baseKey');
-    let mode = this.get('mode');
+    let { baseKey, mode } = this;
     let extraParams = this.get('extraNavParams');
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
@@ -78,7 +77,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
-            initialKey: val.replace(this.keyForNav(baseKey), ''),
+            initialKey: val,
           },
         });
       } else {
