@@ -1,0 +1,31 @@
+<div data-test-flash-message=true>
+  <div class="columns is-mobile is-variable is-1">
+    <div class="column is-narrow message-icon">
+      <ICon
+        @glyph="{{alertType.glyph}}"
+        @class="{{alertType.glyphClass}}"
+        @size="20"
+        @excludeIconClass="true"
+      />
+    </div>
+    {{#if yieldWithoutColumn}}
+      {{yield}}
+    {{else}}
+      <div class="column">
+        <div class="message-title">
+          {{or title alertType.text}}
+        </div>
+        {{#if message}}
+          <p class="message-body">
+            {{message}}
+          </p>
+        {{/if}}
+        {{#if hasBlock}}
+          <p class="message-actions">
+            {{yield}}
+          </p>
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+</div>

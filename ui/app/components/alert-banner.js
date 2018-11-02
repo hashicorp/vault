@@ -17,6 +17,4 @@ export default Component.extend({
   alertType: computed('type', function() {
     return messageTypes([this.get('type')]);
   }),
-
-  messageClass: 'message-body',
 });

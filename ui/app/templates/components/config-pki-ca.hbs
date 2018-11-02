@@ -32,9 +32,11 @@
     <form {{action "saveCA" on="submit"}} data-test-generate-root-cert="true">
       <NamespaceReminder @mode="save" @noun="PKI change" />
       {{#if model.uploadPemBundle}}
-        {{#message-in-page type="warning" data-test-warning=true}}
-          <em>If you have already set a certificate and key, they will be overridden with the successful saving of a new <code>PEM bundle</code>.</em>
-        {{/message-in-page}}
+        <AlertBanner
+          @type="warning"
+          @message="If you have already set a certificate and key, they will be overridden with the successful saving of a new PEM bundle."
+          data-test-warning
+        />
       {{/if}}
       {{partial "partials/form-field-groups-loop"}}
       <div class="field is-grouped is-grouped-split box is-fullwidth is-bottomless">
@@ -67,9 +69,11 @@
   {{/if}}
 {{else if signIntermediate}}
   {{#if (or model.certificate)}}
-    {{#message-in-page data-test-warning type="warning"}}
-      If using this for an Intermediate CA in Vault, copy the certificate below and write it to the PKI mount being used as an intermediate using the `Set signed Intermediate` endpoint.
-    {{/message-in-page}}
+    <AlertBanner
+      @type="warning"
+      @message="If using this for an Intermediate CA in Vault, copy the certificate below and write it to the PKI mount being used as an intermediate using the `Set signed Intermediate` endpoint."
+      data-test-warning
+    />
     {{#each model.attrs as |attr|}}
       {{info-table-row data-test-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
     {{/each}}

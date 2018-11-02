@@ -906,8 +906,6 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	default:
 		return fmt.Errorf("cannot create a token of type %d", entry.Type)
 	}
-
-	return errors.New("unreachable code")
 }
 
 // Store is used to store an updated token entry without writing the
