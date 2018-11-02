@@ -32,13 +32,13 @@ func pathRoles(b *backend) *framework.Path {
 			"policy": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Policy document, base64 encoded. Required
-for 'client' tokens. Required for Consul pre-1.4`,
+for 'client' tokens. Required for Consul pre-1.4.`,
 			},
 
 			"policies": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
-				Description: `List of policies attached to the token. Required
-for Consul 1.4 or above`,
+				Description: `List of policies to attach to the token. Required
+for Consul 1.4 or above.`,
 			},
 
 			"local": &framework.FieldSchema{

@@ -11,6 +11,10 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	tokenPolicyType = "token"
+)
+
 func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("role"),
@@ -110,7 +114,7 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
-		"version": "1.4",
+		"version": tokenPolicyType,
 	})
 	s.Secret.TTL = result.TTL
 	s.Secret.MaxTTL = result.MaxTTL

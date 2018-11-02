@@ -89,7 +89,7 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, err
 		}
-	case "1.4":
+	case tokenPolicyType:
 		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
 		if err != nil {
 			return nil, err
