@@ -89,8 +89,12 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 			credConfig.AccessKeyID = accessKey
 		}
 
-		if accessSecret, ok := config["access_secret"]; ok {
-			credConfig.AccessKeySecret = accessSecret
+		if secretKey, ok := config["secret_key"]; ok {
+			credConfig.AccessKeySecret = secretKey
+		} else {
+			if accessSecret, ok := config["access_secret"]; ok {
+				credConfig.AccessKeySecret = accessSecret
+			}
 		}
 
 		credentialChain := []providers.Provider{
