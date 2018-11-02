@@ -85,15 +85,26 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <h5 class="title is-5 has-text-{{if (eq flash.type 'warning') 'dark-yellow' flash.type}}">
-          {{get (message-types flash.type) "text"}}
-        </h5>
-        <span data-test-flash-message-body=true>
-          {{flash.message}}
-        </span>
-        <button type="button" class="delete" {{action close}}>
-          {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
-        </button>
+        <div class="message is-{{flash.type}}">
+          <div class="columns is-mobile is-variable is-1">
+            <div class="column is-narrow message-icon">
+              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass="true" />
+            </div>
+            <div class="column">
+              <button type="button" class="close-button" {{action close}}>
+                {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
+              </button>
+              <div class="message-title">
+                {{get (message-types flash.type) "text"}}
+              </div>
+              {{#if flash.message}}
+                <p class="message-body">
+                  {{flash.message}}
+                </p>
+              {{/if}}
+            </div>
+          </div>
+        </div>
       {{/if}}
     {{/flash-message}}
   {{/each}}
