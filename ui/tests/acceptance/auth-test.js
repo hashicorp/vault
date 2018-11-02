@@ -28,6 +28,7 @@ module('Acceptance | auth', function(hooks) {
   hooks.afterEach(function() {
     this.clock.restore();
     this.server.shutdown();
+    return logout.visit();
   });
 
   test('auth query params', async function(assert) {
