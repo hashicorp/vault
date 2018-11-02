@@ -4,12 +4,11 @@
       @type="warning"
       @title="Attention"
       @message="This {{model.identityType}} is disabled. All associated tokens cannot be used, but are not revoked."
-      @yieldWithoutColumn={{true}}
       data-test-disabled-warning>
       {{#if model.canEdit}}
-        {{#link-to 'vault.cluster.access.identity.show' invokeAction=(action 'enable' model) data-test-enable=true}}
+        <button onclick={{action 'enable' model}} type="button" class="link" data-test-enable=true>
           Enable
-        {{/link-to}}
+        </button>
       {{/if}}
     </AlertBanner>
   {{/if}}
