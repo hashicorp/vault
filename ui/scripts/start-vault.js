@@ -44,6 +44,7 @@ readline
         path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
         `
         /* eslint-ignore */
+        // prettier-ignore
         export default ${JSON.stringify({ unseal: unseal, root: root }, null, 2)}
         `
       );

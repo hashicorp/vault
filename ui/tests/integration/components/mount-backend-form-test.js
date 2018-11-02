@@ -1,5 +1,5 @@
 import { later, run } from '@ember/runloop';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
@@ -55,7 +55,7 @@ module('Integration | Component | mount backend form', function(hooks) {
     assert.equal(component.pathValue, 'newpath', 'updates to the value of the type');
   });
 
-  test('it calls mount success', async function(assert) {
+  skip('it calls mount success', async function(assert) {
     const spy = sinon.spy();
     this.set('onMountSuccess', spy);
     await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
@@ -65,7 +65,7 @@ module('Integration | Component | mount backend form', function(hooks) {
     assert.ok(spy.calledOnce, 'calls the passed success method');
   });
 
-  test('it calls mount config error', async function(assert) {
+  skip('it calls mount config error', async function(assert) {
     const spy = sinon.spy();
     const spy2 = sinon.spy();
     this.set('onMountSuccess', spy);
