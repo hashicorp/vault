@@ -94,7 +94,6 @@ var (
 		systemMountType,
 		"token",
 		identityMountType,
-		pluginMountType,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -224,6 +223,7 @@ type MountConfig struct {
 	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
@@ -1123,12 +1123,15 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
-	conf["plugin_name"] = t
-	if t == "database" || (c.builtinRegistry != nil && c.builtinRegistry.Contains(t, consts.PluginTypeDatabase)) {
-		conf["plugin_type"] = consts.PluginTypeDatabase.String()
-	} else {
-		conf["plugin_type"] = consts.PluginTypeSecrets.String()
+
+	switch {
+	case entry.Type == "plugin":
+		conf["plugin_name"] = entry.Config.PluginNameDeprecated
+	default:
+		conf["plugin_name"] = t
 	}
+
+	conf["plugin_type"] = consts.PluginTypeSecrets.String()
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)

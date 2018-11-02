@@ -717,7 +717,14 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
-	conf["plugin_name"] = t
+
+	switch {
+	case entry.Type == "plugin":
+		conf["plugin_name"] = entry.Config.PluginNameDeprecated
+	default:
+		conf["plugin_name"] = t
+	}
+
 	conf["plugin_type"] = consts.PluginTypeCredential.String()
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
