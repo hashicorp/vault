@@ -2,7 +2,7 @@
   {{#each displayErrors as |error|}}
     <AlertBanner
       @type="danger"
-      @message="{{error}}"
+      @message={{error}}
       data-test-error
     />
   {{/each}}

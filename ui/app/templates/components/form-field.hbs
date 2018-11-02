@@ -125,9 +125,10 @@
       />
       {{#if attr.options.validationAttr}}
         {{#if (and (get model valuePath) (not (get model attr.options.validationAttr)))}}
-          <p class="has-text-danger">
-            {{attr.options.invalidMessage}}
-          </p>
+          <AlertInline
+            @type="danger"
+            @message={{attr.options.invalidMessage}}
+          />
         {{/if}}
       {{/if}}
     {{/if}}

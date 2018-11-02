@@ -96,3 +96,18 @@
     }
   }
 }
+
+.message-inline {
+  display: flex;
+  margin: -$spacing-xs 0 $spacing-l;
+
+  .icon {
+    flex: 0;
+    margin: 0 $spacing-xxs 0 0;
+    min-width: fit-content;
+  }
+
+  .p {
+    margin: 0;
+  }
+}

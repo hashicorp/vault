@@ -31,10 +31,10 @@
       The cluster will no longer be able to connect to the primary.
     {{/if}}
   </p>
-  <p>
-    <em class="has-text-danger">Caution</em>: re-enabling this node as a primary or secondary will
-    change its cluster ID.
-  </p>
+  <AlertInline
+    @type="danger"
+    @message="Caution: re-enabling this node as a primary or secondary will change its cluster ID."
+  />
   <p>
     In the secondary case this means a wipe of the
     underlying storage when connected to a primary, and in the primary case,

@@ -5,8 +5,8 @@
     {{#if (gt model.credentialTypes.length 1)}}
       <AlertBanner
         @type="warning"
-        @message="This role has more than one <code>credential_type</code>, currently: <code>{{join ', ' model.credentialTypes}}</code>.
-        Multiple credential types is deprecated and you must choose one in order to save this role."
+        @message="This role has more than one credential_type, currently: {{join ', ' model.credentialTypes}}.
+          Multiple credential types is deprecated and you must choose one in order to save this role."
       />
     {{/if}}
     {{#each (if (eq mode 'edit') (drop 1 model.fields) model.fields) as |attr|}}
