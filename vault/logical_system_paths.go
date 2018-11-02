@@ -111,7 +111,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Read the configuration and progress of the current root generation attempt.",
 				},
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Initializes a new root generation attempt.",
 					Description: "Only a single root generation attempt can take place at a time. One (and only one) of otp or pgp_key are required.",
 				},
@@ -194,7 +194,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Returns the initialization status of Vault.",
 				},
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Initialize a new Vault.",
 					Description: "The Vault must not have been previously initialized. The recovery options, as well as the stored shares option, are only available when using Vault HSM.",
 				},
@@ -218,7 +218,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Pattern: "step-down$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Cause the node to give up active status.",
 					Description: "This endpoint forces the node to give up active status. If the node does not have active status, this endpoint does nothing. Note that the node will sleep for ten seconds before attempting to grab the active lock again, but if no standby nodes grab the active lock in the interim, the same node may become the active node again.",
 					Responses: map[int][]framework.Response{
@@ -262,7 +262,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Summary: "Reads the configuration and progress of the current rekey attempt.",
 				},
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary:     "Initializes a new rekey attempt.",
 					Description: "Only a single rekey attempt can take place at a time, and changing the parameters of a rekey requires canceling and starting a new rekey, which will also provide a new nonce.",
 				},
@@ -320,7 +320,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Enter a single master key share to progress the rekey of the Vault.",
 				},
 			},
@@ -347,7 +347,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 					Summary:     "Cancel any in-progress rekey verification operation.",
 					Description: "This clears any progress made and resets the nonce. Unlike a `DELETE` against `sys/rekey/init`, this only resets the current verification operation, not the entire rekey atttempt.",
 				},
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Enter a single new key share to progress the rekey verification operation.",
 				},
 			},
@@ -368,7 +368,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 		{
 			Pattern: "seal$",
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Seal the Vault.",
 				},
 			},
@@ -390,7 +390,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.CreateOperation: &framework.PathOperation{
+				logical.UpdateOperation: &framework.PathOperation{
 					Summary: "Unseal the Vault.",
 				},
 			},
