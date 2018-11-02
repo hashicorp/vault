@@ -6,7 +6,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { create } from 'ember-cli-page-object';
 import license from '../../pages/components/license-info';
-import allFeatures from 'vault/helpers/all-features';
+import { allFeatures } from 'vault/helpers/all-features';
 
 const FEATURES = allFeatures();
 
