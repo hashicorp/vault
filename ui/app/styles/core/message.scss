@@ -1,21 +1,34 @@
 .message {
+  background: $blue-010;
+  border: 1px solid $blue-100;
   margin-bottom: $spacing-s;
-  padding: $spacing-m $spacing-m $spacing-m $spacing-s;
+  padding: $spacing-s $spacing-m $spacing-m $spacing-s;
   position: relative;
 
-  .close-button {
-    position: absolute;
-    right: 1rem;
-    top: $size-10;
-  }
-
   .message-icon {
+    color: $blue;
     margin-right: $spacing-xs;
   }
 
+  .close-button {
+    background: transparent;
+    border: 0;
+    color: $grey;
+    cursor: pointer;
+    position: absolute;
+    right: $spacing-s;
+    top: $spacing-m;
+  }
+
   .message-title {
+    color: $blue-500;
     font-size: 16px;
     font-weight: $font-weight-bold;
+    line-height: 1.25;
+  }
+
+  .close-button + .message-title {
+    padding-right: $spacing-m;
   }
 
   .message-body {
@@ -54,6 +67,19 @@
 
     .message-title {
       color: $orange-700;
+    }
+  }
+
+  &.is-success {
+    background: $green-010;
+    border: 1px solid $green-100;
+
+    .message-icon {
+      color: $green-500;
+    }
+
+    .message-title {
+      color: $green-700;
     }
   }
 
