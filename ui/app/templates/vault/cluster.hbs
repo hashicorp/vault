@@ -85,7 +85,7 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <div class="message is-{{flash.type}}">
+        <div class="message {{get (message-types flash.type) "class"}}">
           <div class="columns is-mobile is-variable is-1">
             <div class="column is-narrow message-icon">
               <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass={{true}} />
