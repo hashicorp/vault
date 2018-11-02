@@ -75,7 +75,7 @@ func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
 				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
 			}
-			if entry.Type != pluginType {
+			if entry.Type != pluginType && entry.Type != consts.PluginTypeUnknown {
 				return nil, nil
 			}
 
