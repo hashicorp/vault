@@ -7,8 +7,12 @@ export default Component.extend({
   items: null,
   itemNoun: 'item',
 
+  emptyTitle: computed('itemNoun', function() {
+    let items = pluralize(this.get('itemNoun'));
+    return `No ${items} yet`;
+  }),
   emptyMessage: computed('itemNoun', function() {
     let items = pluralize(this.get('itemNoun'));
-    return `There are currently no ${items}`;
-  }),
+    return `Your ${items} will be listed here. Add your first ${this.get('itemNoun')} to get started.`;
+  })
 });
