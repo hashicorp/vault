@@ -1,10 +1,8 @@
-<MessageInPage @type="danger">
-  <div class="content">
-    <p>
-      Your auth token expired on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.
-    </p>
-  </div>
-  {{#link-to "vault.cluster.logout" class="button"}}
+<AlertBanner
+  @type="danger"
+  @message="Your auth token expired on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate."
+>
+  {{#link-to "vault.cluster.logout" class="button link"}}
     Reauthenticate
   {{/link-to}}
-</MessageInPage>
+</AlertBanner>
