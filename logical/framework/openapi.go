@@ -22,16 +22,16 @@ const OASVersion = "3.0.2"
 func NewOASDocument() *OASDocument {
 	return &OASDocument{
 		Version: OASVersion,
-		Info: oasInfo{
+		Info: OASInfo{
 			Title:       "HashiCorp Vault API",
 			Description: "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
 			Version:     version.GetVersion().Version,
-			License: oasLicense{
+			License: OASLicense{
 				Name: "Mozilla Public License 2.0",
 				URL:  "https://www.mozilla.org/en-US/MPL/2.0",
 			},
 		},
-		Paths: make(map[string]*oasPathItem),
+		Paths: make(map[string]*OASPathItem),
 	}
 }
 
@@ -81,25 +81,25 @@ func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
 
 type OASDocument struct {
 	Version string                  `json:"openapi" mapstructure:"openapi"`
-	Info    oasInfo                 `json:"info"`
-	Paths   map[string]*oasPathItem `json:"paths"`
+	Info    OASInfo                 `json:"info"`
+	Paths   map[string]*OASPathItem `json:"paths"`
 }
 
-type oasInfo struct {
+type OASInfo struct {
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Version     string     `json:"version"`
-	License     oasLicense `json:"license"`
+	License     OASLicense `json:"license"`
 }
 
-type oasLicense struct {
+type OASLicense struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
 
-type oasPathItem struct {
+type OASPathItem struct {
 	Description     string         `json:"description,omitempty"`
-	Parameters      []oasParameter `json:"parameters,omitempty"`
+	Parameters      []OASParameter `json:"parameters,omitempty"`
 	Sudo            bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
 	Unauthenticated bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
 	CreateSupported bool           `json:"x-vault-create-supported,omitempty" mapstructure:"x-vault-create-supported"`
@@ -112,7 +112,7 @@ type oasPathItem struct {
 // NewOASOperation creates an empty OpenAPI Operations object.
 func NewOASOperation() *OASOperation {
 	return &OASOperation{
-		Responses: make(map[int]*oasResponse),
+		Responses: make(map[int]*OASResponse),
 	}
 }
 
@@ -120,53 +120,53 @@ type OASOperation struct {
 	Summary     string               `json:"summary,omitempty"`
 	Description string               `json:"description,omitempty"`
 	Tags        []string             `json:"tags,omitempty"`
-	Parameters  []oasParameter       `json:"parameters,omitempty"`
-	RequestBody *oasRequestBody      `json:"requestBody,omitempty"`
-	Responses   map[int]*oasResponse `json:"responses"`
+	Parameters  []OASParameter       `json:"parameters,omitempty"`
+	RequestBody *OASRequestBody      `json:"requestBody,omitempty"`
+	Responses   map[int]*OASResponse `json:"responses"`
 	Deprecated  bool                 `json:"deprecated,omitempty"`
 }
 
-type oasParameter struct {
+type OASParameter struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description,omitempty"`
 	In          string     `json:"in"`
-	Schema      *oasSchema `json:"schema,omitempty"`
+	Schema      *OASSchema `json:"schema,omitempty"`
 	Required    bool       `json:"required,omitempty"`
 	Deprecated  bool       `json:"deprecated,omitempty"`
 }
 
-type oasRequestBody struct {
+type OASRequestBody struct {
 	Description string     `json:"description,omitempty"`
-	Content     oasContent `json:"content,omitempty"`
+	Content     OASContent `json:"content,omitempty"`
 }
 
-type oasContent map[string]*oasMediaTypeObject
+type OASContent map[string]*OASMediaTypeObject
 
-type oasMediaTypeObject struct {
-	Schema *oasSchema `json:"schema,omitempty"`
+type OASMediaTypeObject struct {
+	Schema *OASSchema `json:"schema,omitempty"`
 }
 
-type oasSchema struct {
+type OASSchema struct {
 	Type        string                `json:"type,omitempty"`
 	Description string                `json:"description,omitempty"`
-	Properties  map[string]*oasSchema `json:"properties,omitempty"`
-	Items       *oasSchema            `json:"items,omitempty"`
+	Properties  map[string]*OASSchema `json:"properties,omitempty"`
+	Items       *OASSchema            `json:"items,omitempty"`
 	Format      string                `json:"format,omitempty"`
 	Pattern     string                `json:"pattern,omitempty"`
 	Example     interface{}           `json:"example,omitempty"`
 	Deprecated  bool                  `json:"deprecated,omitempty"`
 }
 
-type oasResponse struct {
+type OASResponse struct {
 	Description string     `json:"description"`
-	Content     oasContent `json:"content,omitempty"`
+	Content     OASContent `json:"content,omitempty"`
 }
 
-var oasStdRespOK = &oasResponse{
+var OASStdRespOK = &OASResponse{
 	Description: "OK",
 }
 
-var oasStdRespNoContent = &oasResponse{
+var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
 
@@ -210,7 +210,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 	for _, path := range paths {
 		// Construct a top level PathItem which will be populated as the path is processed.
-		pi := oasPathItem{
+		pi := OASPathItem{
 			Description: cleanString(p.HelpSynopsis),
 		}
 
@@ -246,11 +246,11 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			}
 
 			t := convertType(field.Type)
-			p := oasParameter{
+			p := OASParameter{
 				Name:        name,
 				Description: cleanString(field.Description),
 				In:          location,
-				Schema: &oasSchema{
+				Schema: &OASSchema{
 					Type:    t.baseType,
 					Pattern: t.pattern,
 				},
@@ -295,14 +295,14 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 			// Add any fields not present in the path as body parameters for POST.
 			if opType == logical.CreateOperation || opType == logical.UpdateOperation {
-				s := &oasSchema{
+				s := &OASSchema{
 					Type:       "object",
-					Properties: make(map[string]*oasSchema),
+					Properties: make(map[string]*OASSchema),
 				}
 
 				for name, field := range bodyFields {
 					openapiField := convertType(field.Type)
-					p := oasSchema{
+					p := OASSchema{
 						Type:        openapiField.baseType,
 						Description: cleanString(field.Description),
 						Format:      openapiField.format,
@@ -310,7 +310,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						Deprecated:  field.Deprecated,
 					}
 					if openapiField.baseType == "array" {
-						p.Items = &oasSchema{
+						p.Items = &OASSchema{
 							Type: openapiField.items,
 						}
 					}
@@ -325,9 +325,9 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
-					op.RequestBody = &oasRequestBody{
-						Content: oasContent{
-							"application/json": &oasMediaTypeObject{
+					op.RequestBody = &OASRequestBody{
+						Content: OASContent{
+							"application/json": &OASMediaTypeObject{
 								Schema: s,
 							},
 						},
@@ -337,11 +337,11 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 			// LIST is represented as GET with a `list` query parameter
 			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
-				op.Parameters = append(op.Parameters, oasParameter{
+				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
 					In:          "query",
-					Schema:      &oasSchema{Type: "string"},
+					Schema:      &OASSchema{Type: "string"},
 				})
 			}
 
@@ -359,16 +359,16 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			// Set default responses.
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
-					op.Responses[204] = oasStdRespNoContent
+					op.Responses[204] = OASStdRespNoContent
 				} else {
-					op.Responses[200] = oasStdRespOK
+					op.Responses[200] = OASStdRespOK
 				}
 			}
 
 			// Add any defined response details.
 			for code, responses := range props.Responses {
 				var description string
-				content := make(oasContent)
+				content := make(OASContent)
 
 				for i, resp := range responses {
 					if i == 0 {
@@ -388,8 +388,8 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 						// Only one example per media type is allowed, so first one wins
 						if _, ok := content[mediaType]; !ok {
-							content[mediaType] = &oasMediaTypeObject{
-								Schema: &oasSchema{
+							content[mediaType] = &OASMediaTypeObject{
+								Schema: &OASSchema{
 									Example: cr,
 								},
 							}
@@ -397,7 +397,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					}
 				}
 
-				op.Responses[code] = &oasResponse{
+				op.Responses[code] = &OASResponse{
 					Description: description,
 					Content:     content,
 				}
