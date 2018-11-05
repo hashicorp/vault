@@ -239,10 +239,9 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleWrappedClick() {
       if (this.isV2) {
-        const { path } = this.model.versions.objectAt(this.model.currentVersion - 1);
         this.store
           .adapterFor('secret-v2-version')
-          .queryRecord(this.model.backend, path, this.model.currentVersion, { wrapTTL: 1800 })
+          .queryRecord(this.modelForData.id, { wrapTTL: 1800 })
           .then(resp => {
             clipboard.writeText(resp.wrap_info.token);
             this.flashMessages.success('Wrapped Token Copied!');
@@ -250,7 +249,7 @@ export default Component.extend(FocusOnInsertMixin, {
       } else {
         this.store
           .adapterFor('secret')
-          .queryRecord(null, null, { backend: this.model.backend, id: this.model.id, wrapTTL: 1800 })
+          .queryRecord(null, null, { backend: this.model.backend, id: this.modelForData.id, wrapTTL: 1800 })
           .then(resp => {
             clipboard.writeText(resp.wrap_info.token);
             this.flashMessages.success('Wrapped Token Copied!');

@@ -19,7 +19,8 @@ export default ApplicationAdapter.extend({
     return this._url(backend, path) + `?version=${version}`;
   },
 
-  urlForQueryRecord(backend, path, version) {
+  urlForQueryRecord(id) {
+    let [backend, path, version] = JSON.parse(id);
     return this._url(backend, path) + `?version=${version}`;
   },
 
@@ -34,8 +35,8 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  queryRecord(backend, path, version, options) {
-    return this.ajax(this.urlForQueryRecord(backend, path, version), 'GET', options).then(resp => {
+  queryRecord(id, options) {
+    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then(resp => {
       if (options.wrapTTL) {
         return resp;
       }
