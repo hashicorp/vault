@@ -19,7 +19,6 @@
     "@hashicorp/hashi-hero": "^2.1.9",
     "@hashicorp/hashi-image": "1.0.5",
     "@hashicorp/hashi-linked-text-summary-list": "^0.1.4",
-    "@hashicorp/hashi-logo-grid": "2.2.2",
     "@hashicorp/hashi-mega-nav": "^1.0.6",
     "@hashicorp/hashi-nav": "1.1.1",
     "@hashicorp/hashi-newsletter-signup-form": "1.1.1",
