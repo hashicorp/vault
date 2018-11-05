@@ -20,6 +20,7 @@ FEATURES:
 IMPROVEMENTS:
 
  * secret/totp: Allow @ character to be part of key name [GH-5652]
+ * secret/consul: Add support for new policy based tokens in Consul 1.4 RC [GH-5586]
  * ui: Improve the token auto-renew warning, and automatically begin renewal
    when a user becomes active again [GH-5662]
  * ui: The unbundled UI page now has some styling [GH-5665]
