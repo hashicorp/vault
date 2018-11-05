@@ -14,7 +14,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/license"
@@ -202,15 +201,22 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		raw[k] = v
 	}
 
-	// Look up the callback for this operation
+	// Look up the callback for this operation, preferring the
+	// path.Operations definition if present.
 	var callback OperationFunc
-	var ok bool
-	if path.Callbacks != nil {
-		callback, ok = path.Callbacks[req.Operation]
+
+	if path.Operations != nil {
+		if op, ok := path.Operations[req.Operation]; ok {
+			callback = op.Handler()
+		}
+	} else {
+		callback = path.Callbacks[req.Operation]
 	}
+	ok := callback != nil
+
 	if !ok {
 		if req.Operation == logical.HelpOperation {
-			callback = path.helpCallback()
+			callback = path.helpCallback(b)
 			ok = true
 		}
 	}
@@ -229,7 +235,6 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
-	// Call the callback with the request and the data
 	return callback(ctx, req, &fd)
 }
 
@@ -370,7 +375,13 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
-	return logical.HelpResponse(help, nil), nil
+	// Build OpenAPI response for the entire backend
+	doc := NewOASDocument()
+	if err := documentPaths(b, doc); err != nil {
+		b.Logger().Warn("error generating OpenAPI", "error", err)
+	}
+
+	return logical.HelpResponse(help, nil, doc), nil
 }
 
 func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -492,6 +503,8 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
+	Required    bool
+	Deprecated  bool
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
