@@ -62,7 +62,6 @@ export default Component.extend(FocusOnInsertMixin, {
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
     this.set('codemirrorString', data.toJSONString());
-    this.updateWrappedSecret();
     if (data.isAdvanced()) {
       this.set('preferAdvancedEdit', true);
     }
@@ -161,15 +160,6 @@ export default Component.extend(FocusOnInsertMixin, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
-  updateWrappedSecret() {
-    this.store
-      .adapterFor('tools')
-      .toolAction('wrap', this.secretDataAsJSON, { wrapTTL: 1800 })
-      .then(resp => {
-        this.set('wrappedSecret', resp.wrap_info.token);
-      });
-  },
-
   transitionToRoute() {
     this.router.transitionTo(...arguments);
   },
@@ -221,7 +211,6 @@ export default Component.extend(FocusOnInsertMixin, {
     if (this.wizard.featureState === 'secret') {
       this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
     }
-    this.updateWrappedSecret();
     callback(key);
   },
 
