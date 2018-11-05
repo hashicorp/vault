@@ -160,12 +160,22 @@ export default Component.extend(FocusOnInsertMixin, {
   }),
 
   updateWrappedSecret() {
-    this.store
-      .adapterFor('tools')
-      .toolAction('wrap', this.secretDataAsJSON, { wrapTTL: 1800 })
-      .then(resp => {
-        this.set('wrappedSecret', resp.wrap_info.token);
-      });
+    if (this.isV2) {
+      const { path } = this.model.versions.objectAt(this.model.currentVersion - 1);
+      this.store
+        .adapterFor('secret-v2-version')
+        .queryRecord(this.model.backend, path, this.model.currentVersion, { wrapTTL: 1800 })
+        .then(resp => {
+          this.set('wrappedSecret', resp.wrap_info.token);
+        });
+    } else {
+      this.store
+        .adapterFor('secret')
+        .queryRecord(null, null, { backend: this.model.backend, id: this.model.id, wrapTTL: 1800 })
+        .then(resp => {
+          this.set('wrappedSecret', resp.wrap_info.token);
+        });
+    }
   },
 
   transitionToRoute() {
