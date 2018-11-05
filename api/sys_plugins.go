@@ -17,20 +17,36 @@ type ListPluginsInput struct {
 // ListPluginsResponse is the response from the ListPlugins call.
 type ListPluginsResponse struct {
 	// Names is the list of names of the plugins.
-	Names []string `json:"names"`
+	NamesByType map[consts.PluginType][]string `json:"names"`
+}
+
+type listResult struct {
+	Data struct {
+		Keys []string `json:"keys"`
+	} `json:"data"`
+}
+
+type readResult struct {
+	Data map[string]interface{} `json:"data"`
 }
 
 // ListPlugins lists all plugins in the catalog and returns their names as a
 // list of strings.
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	path := ""
+	method := ""
+	var result interface{}
 	if i.Type == consts.PluginTypeUnknown {
 		path = "/v1/sys/plugins/catalog"
+		method = "GET"
+		result = &readResult{}
 	} else {
 		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
+		method = "LIST"
+		result = &listResult{}
 	}
 
-	req := c.c.NewRequest("LIST", path)
+	req := c.c.NewRequest(method, path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -40,16 +56,41 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	var result struct {
-		Data struct {
-			Keys []string `json:"keys"`
-		} `json:"data"`
-	}
 	if err := resp.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
 
-	return &ListPluginsResponse{Names: result.Data.Keys}, nil
+	namesByType := make(map[consts.PluginType][]string)
+	if i.Type == consts.PluginTypeUnknown {
+		r, ok := result.(*readResult)
+		if !ok {
+			return nil, fmt.Errorf("unable to cast result %s as a readResult", result)
+		}
+		for pluginTypeStr, nameIfc := range r.Data {
+			pluginTp, err := consts.ParsePluginType(pluginTypeStr)
+			if err != nil {
+				return nil, err
+			}
+			nameIfcs, ok := nameIfc.([]interface{})
+			if !ok {
+				return nil, fmt.Errorf("unable to cast names %s as an array of strings", nameIfc)
+			}
+			for _, nameIfc := range nameIfcs {
+				name, ok := nameIfc.(string)
+				if !ok {
+
+				}
+				namesByType[pluginTp] = append(namesByType[pluginTp], name)
+			}
+		}
+	} else {
+		r, ok := result.(*listResult)
+		if !ok {
+			return nil, fmt.Errorf("unable to cast result %s as a listResult", result)
+		}
+		namesByType[i.Type] = r.Data.Keys
+	}
+	return &ListPluginsResponse{NamesByType: namesByType}, nil
 }
 
 // GetPluginInput is used as input to the GetPlugin function.

@@ -98,15 +98,24 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginNames := resp.Names
-	sort.Strings(pluginNames)
+	var names []string
+	namesAdded := make(map[string]bool)
+	for _, names := range resp.NamesByType {
+		for _, name := range names {
+			if ok := namesAdded[name]; !ok {
+				names = append(names, name)
+				namesAdded[name] = true
+			}
+		}
+	}
+	sort.Strings(names)
 
 	switch Format(c.UI) {
 	case "table":
-		list := append([]string{"Plugins"}, pluginNames...)
+		list := append([]string{"Plugins"}, names...)
 		c.UI.Output(tableOutput(list, nil))
 		return 0
 	default:
-		return OutputData(c.UI, pluginNames)
+		return OutputData(c.UI, names)
 	}
 }

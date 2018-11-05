@@ -119,13 +119,15 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		found := false
-		for _, p := range resp.Names {
-			if p == pluginName {
-				found = true
+		for _, plugins := range resp.NamesByType {
+			for _, p := range plugins {
+				if p == pluginName {
+					found = true
+				}
 			}
 		}
 		if found {
-			t.Errorf("expected %q to not be in %q", pluginName, resp.Names)
+			t.Errorf("expected %q to not be in %q", pluginName, resp.NamesByType)
 		}
 	})
 

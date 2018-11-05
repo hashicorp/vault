@@ -257,23 +257,20 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 }
 
 func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	var plugins []string
-	pluginsAdded := make(map[string]bool)
+	pluginsByType := make(map[string]interface{})
 	for _, pluginType := range consts.PluginTypes {
-		names, err := b.Core.pluginCatalog.List(ctx, pluginType)
+		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
 		if err != nil {
 			return nil, err
 		}
-
-		for _, name := range names {
-			if _, found := pluginsAdded[name]; !found {
-				plugins = append(plugins, name)
-				pluginsAdded[name] = true
-			}
+		if len(plugins) > 0 {
+			sort.Strings(plugins)
+			pluginsByType[pluginType.String()] = plugins
 		}
 	}
-	sort.Strings(plugins)
-	return logical.ListResponse(plugins), nil
+	return &logical.Response{
+		Data: pluginsByType,
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
