@@ -144,9 +144,5 @@ export default Component.extend(DEFAULTS, {
         data: val,
       });
     },
-
-    updateUnwrapTab(tab) {
-      this.set('unwrapActiveTab', tab);
-    },
   },
 });

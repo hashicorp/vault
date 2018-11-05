@@ -47,7 +47,6 @@ export default Component.extend(FocusOnInsertMixin, {
   error: null,
 
   codemirrorString: null,
-  wrappedSecret: null,
 
   hasLintError: false,
   isV2: false,
