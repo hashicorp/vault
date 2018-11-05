@@ -5,7 +5,7 @@ const extendRule = require('postcss-extend-rule')
 
 module.exports = {
   ignore: ['yarn.lock', '**/_*'],
-  entry: { 'js/main': './js/index.js' },
+  entry: { 'js/main': './js/index.js', 'js/analytics.js': './js/analytics.js' },
   postcss: cssStandards({
     appendPlugins: [extendRule()]
   }),
