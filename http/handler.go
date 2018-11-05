@@ -123,6 +123,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
@@ -182,7 +183,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 			}
 			r = newR
 
-		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/":
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
