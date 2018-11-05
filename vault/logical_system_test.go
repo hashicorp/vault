@@ -2457,7 +2457,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	// Ensure no paths are reported if there is no token
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.TestContext(), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2488,7 +2488,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 	// Check that default paths are present with a root token
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
 	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2535,7 +2535,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 	// Test path-help response
 	req = logical.TestRequest(t, logical.HelpOperation, "rotate")
 	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.TestContext(), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
