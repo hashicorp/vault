@@ -20,6 +20,8 @@ FEATURES:
 IMPROVEMENTS:
 
  * secret/totp: Allow @ character to be part of key name [GH-5652]
+ * ui: Improve the token auto-renew warning, and automatically begin renewal
+   when a user becomes active again [GH-5662]
 
 BUG FIXES:
 
