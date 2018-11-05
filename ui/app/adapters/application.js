@@ -51,10 +51,7 @@ export default DS.RESTAdapter.extend({
     this.addHeaders(url, options);
     const isPolling = POLLING_URLS.some(str => url.includes(str));
     if (!isPolling) {
-      this.get('auth').setLastFetch(Date.now());
-    }
-    if (this.get('auth.shouldRenew')) {
-      this.get('auth').renew();
+      this.auth.setLastFetch(Date.now());
     }
     options.timeout = 60000;
     return options;

@@ -75,14 +75,6 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 	return ns, nil
 }
 
-func TestContext() context.Context {
-	return ContextWithNamespace(context.Background(), TestNamespace())
-}
-
-func TestNamespace() *Namespace {
-	return RootNamespace
-}
-
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the
 // provided string
 func Canonicalize(nsPath string) string {

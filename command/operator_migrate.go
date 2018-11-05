@@ -184,6 +184,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	select {
 	case err := <-doneCh:
+		cancelFunc()
 		return err
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Migration shutdown triggered\n")
@@ -191,7 +192,6 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 		<-doneCh
 		return errAbort
 	}
-	return nil
 }
 
 // migrateAll copies all keys in lexicographic order.

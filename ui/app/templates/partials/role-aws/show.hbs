@@ -1,9 +1,10 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#if (gt model.credentialTypes.length 1)}}
-    {{#message-in-page type="warning"}}
-      This role has more than one <code>credential_type</code>, currently: <code>{{join ', ' model.credentialTypes}}</code>.
-      When you next edit this role, you will have to choose a single credential type.
-    {{/message-in-page}}
+    <AlertBanner
+      @type="warning"
+      @message="This role has more than one credential_type, currently: {{join ', ' model.credentialTypes}}.
+        When you next edit this role, you will have to choose a single credential type."
+    />
   {{/if}}
   {{#each model.fields as |attr|}}
     {{#if (eq attr.name "policyDocument")}}

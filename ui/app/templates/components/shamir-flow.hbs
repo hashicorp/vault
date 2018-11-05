@@ -149,15 +149,19 @@
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-    <div class="box is-shadowless no-padding-bottom is-marginless">
-      {{message-error errors=errors}}
-      {{#if hasBlock}}
-        {{yield}}
-      {{else}}
-        <p>{{formText}}</p>
-      {{/if}}
-    </div>
     <div class="box is-marginless is-shadowless">
+      {{#if errors}}
+        <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
+          {{message-error errors=errors}}
+        </div>
+      {{/if}}
+      <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
+        {{#if hasBlock}}
+          {{yield}}
+        {{else if formText}}
+          {{formText}}
+        {{/if}}
+      </div>
       <div class="field">
         <label for="key" class="is-label">
           Master Key Portion

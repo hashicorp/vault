@@ -99,7 +99,7 @@ func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 
 	// Store the seal configuration.
 	pe := &physical.Entry{
-		Key:   storedBarrierKeysPath,
+		Key:   StoredBarrierKeysPath,
 		Value: value,
 	}
 
@@ -113,7 +113,7 @@ func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
-	pe, err := d.core.physical.Get(ctx, storedBarrierKeysPath)
+	pe, err := d.core.physical.Get(ctx, StoredBarrierKeysPath)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to fetch stored keys: {{err}}", err)
 	}

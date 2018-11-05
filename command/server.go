@@ -1842,7 +1842,6 @@ func (c *ServerCommand) storageMigrationActive(backend physical.Backend) bool {
 			return true
 		}
 	}
-	return false
 }
 
 type StorageMigrationStatus struct {

@@ -17,7 +17,7 @@ import (
 
 func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	// Enable GitHub auth and initialize
-	ctx := namespace.TestContext()
+	ctx := namespace.RootContext(nil)
 	is, ghAccessor, core := testIdentityStoreWithGithubAuth(ctx, t)
 	alias := &logical.Alias{
 		MountType:     "github",
@@ -322,7 +322,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		Description: "github auth",
 	}
 
-	err = c.enableCredential(namespace.TestContext(), meGH)
+	err = c.enableCredential(namespace.RootContext(nil), meGH)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +391,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		t.Fatal("still sealed")
 	}
 
-	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.TestContext(), &logical.Alias{
+	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
 		MountAccessor: meGH.Accessor,
 		MountType:     "github",
 		Name:          "githubuser",
