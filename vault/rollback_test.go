@@ -27,7 +27,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		&MountEntry{
 			Path:        "foo",
 			NamespaceID: namespace.RootNamespaceID,
-			namespace:   namespace.TestNamespace(),
+			namespace:   namespace.RootNamespace,
 		},
 	}
 	meUUID, err := uuid.GenerateUUID()
@@ -35,7 +35,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		t.Fatal(err)
 	}
 
-	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.TestNamespace()}, view); err != nil {
+	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -90,7 +90,7 @@ func TestRollbackManager_Join(t *testing.T) {
 	errCh := make(chan error, 3)
 	go func() {
 		defer wg.Done()
-		err := m.Rollback(namespace.TestContext(), "foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}
@@ -98,7 +98,7 @@ func TestRollbackManager_Join(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := m.Rollback(namespace.TestContext(), "foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}
@@ -106,7 +106,7 @@ func TestRollbackManager_Join(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := m.Rollback(namespace.TestContext(), "foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}

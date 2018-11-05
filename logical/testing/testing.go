@@ -270,7 +270,7 @@ func Test(tt TestT, c TestCase) {
 		req.Path = fmt.Sprintf("%s/%s", prefix, req.Path)
 
 		// Make the request
-		resp, err := core.HandleRequest(namespace.TestContext(), req)
+		resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 		if resp != nil && resp.Secret != nil {
 			// Revoke this secret later
 			revoke = append(revoke, &logical.Request{
@@ -324,7 +324,7 @@ func Test(tt TestT, c TestCase) {
 			logger.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
 		}
 		req.ClientToken = client.Token()
-		resp, err := core.HandleRequest(namespace.TestContext(), req)
+		resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil && resp.IsError() {
 			err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 		}
@@ -341,7 +341,7 @@ func Test(tt TestT, c TestCase) {
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()
-	resp, err := core.HandleRequest(namespace.TestContext(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil && resp.IsError() {
 		err = fmt.Errorf("erroneous response:\n\n%#v", resp)
 	}

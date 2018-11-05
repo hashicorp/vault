@@ -159,7 +159,7 @@ func testACLRoot(t *testing.T, ns *namespace.Namespace) {
 	// Create the root policy ACL. Always create on root namespace regardless of
 	// which namespace to ACL check on.
 	policy := []*Policy{&Policy{Name: "root"}}
-	acl, err := NewACL(namespace.TestContext(), policy)
+	acl, err := NewACL(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -598,7 +598,7 @@ func TestACL_CreationRace(t *testing.T) {
 				if time.Now().After(stopTime) {
 					return
 				}
-				_, err := NewACL(namespace.TestContext(), []*Policy{policy})
+				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
 				if err != nil {
 					t.Fatalf("err: %v", err)
 				}
