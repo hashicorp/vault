@@ -44,6 +44,7 @@
     "broccoli-sri-hash": "meirish/broccoli-sri-hash#rooturl",
     "bulma": "^0.5.2",
     "bulma-switch": "^0.0.1",
+    "clipboard-polyfill": "^2.7.0",
     "codemirror": "5.15.2",
     "columnify": "^1.5.4",
     "cool-checkboxes-for-bulma.io": "^1.1.0",

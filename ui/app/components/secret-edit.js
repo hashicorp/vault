@@ -8,6 +8,7 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
+import * as clipboard from 'clipboard-polyfill';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -17,6 +18,7 @@ export default Component.extend(FocusOnInsertMixin, {
   wizard: service(),
   router: service(),
   store: service(),
+  flashMessages: service(),
 
   // a key model
   key: null,
@@ -60,7 +62,6 @@ export default Component.extend(FocusOnInsertMixin, {
     const data = KVObject.create({ content: [] }).fromJSON(secrets);
     this.set('secretData', data);
     this.set('codemirrorString', data.toJSONString());
-    this.updateWrappedSecret();
     if (data.isAdvanced()) {
       this.set('preferAdvancedEdit', true);
     }
@@ -159,25 +160,6 @@ export default Component.extend(FocusOnInsertMixin, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
-  updateWrappedSecret() {
-    if (this.isV2) {
-      const { path } = this.model.versions.objectAt(this.model.currentVersion - 1);
-      this.store
-        .adapterFor('secret-v2-version')
-        .queryRecord(this.model.backend, path, this.model.currentVersion, { wrapTTL: 1800 })
-        .then(resp => {
-          this.set('wrappedSecret', resp.wrap_info.token);
-        });
-    } else {
-      this.store
-        .adapterFor('secret')
-        .queryRecord(null, null, { backend: this.model.backend, id: this.model.id, wrapTTL: 1800 })
-        .then(resp => {
-          this.set('wrappedSecret', resp.wrap_info.token);
-        });
-    }
-  },
-
   transitionToRoute() {
     this.router.transitionTo(...arguments);
   },
@@ -229,7 +211,6 @@ export default Component.extend(FocusOnInsertMixin, {
     if (this.wizard.featureState === 'secret') {
       this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
     }
-    this.updateWrappedSecret();
     callback(key);
   },
 
@@ -255,6 +236,27 @@ export default Component.extend(FocusOnInsertMixin, {
     handleChange() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
       set(this.modelForData, 'secretData', this.secretData.toJSON());
+    },
+
+    handleWrappedClick() {
+      if (this.isV2) {
+        const { path } = this.model.versions.objectAt(this.model.currentVersion - 1);
+        this.store
+          .adapterFor('secret-v2-version')
+          .queryRecord(this.model.backend, path, this.model.currentVersion, { wrapTTL: 1800 })
+          .then(resp => {
+            clipboard.writeText(resp.wrap_info.token);
+            this.flashMessages.success('Wrapped Token Copied!');
+          });
+      } else {
+        this.store
+          .adapterFor('secret')
+          .queryRecord(null, null, { backend: this.model.backend, id: this.model.id, wrapTTL: 1800 })
+          .then(resp => {
+            clipboard.writeText(resp.wrap_info.token);
+            this.flashMessages.success('Wrapped Token Copied!');
+          });
+      }
     },
 
     createOrUpdateKey(type, event) {
