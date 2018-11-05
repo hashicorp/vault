@@ -122,6 +122,7 @@
 /guides/operations/multi-tenant.html            https://learn.hashicorp.com/vault/operations/namespaces
 /guides/operations/autounseal-aws-kms.html      https://learn.hashicorp.com/vault/operations/ops-autounseal-aws-kms
 /guides/operations/seal-wrap.html               https://learn.hashicorp.com/vault/operations/ops-seal-wrap
+/guides/operations/monitoring.html              https://learn.hashicorp.com/vault/operations/monitoring
 
 # Identity
 /guides/identity/index.html                     https://learn.hashicorp.com/vault?track=identity-access-management#identity-access-management
