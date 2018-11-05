@@ -155,16 +155,13 @@
           {{message-error errors=errors}}
         </div>
       {{/if}}
-      {{#if hasBlock}}
-        <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
+      <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
+        {{#if hasBlock}}
           {{yield}}
-        </div>
-      {{/if}}
-      {{#if formText}}
-        <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
+        {{else if formText}}
           {{formText}}
-        </div>
-      {{/if}}
+        {{/if}}
+      </div>
       <div class="field">
         <label for="key" class="is-label">
           Master Key Portion
