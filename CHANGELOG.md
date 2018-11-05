@@ -31,6 +31,7 @@ BUG FIXES:
  * auth/userpass: Fix minor timing issue that could leak the presence of a
    username [GH-5614]
  * cli: Fix panic that could occur if parameters were not provided. [GH-5603]
+ * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
