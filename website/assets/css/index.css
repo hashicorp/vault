@@ -2,7 +2,6 @@
 @import '@hashicorp/hashi-global-styles/style';
 
 /* NPM Preact Components */
-@import '@hashicorp/hashi-logo-grid/dist/style.css';
 @import '@hashicorp/hashi-footer/dist/style.css';
 @import '@hashicorp/hashi-nav/dist/style.css';
 @import '@hashicorp/hashi-newsletter-signup-form/dist/style.css';
