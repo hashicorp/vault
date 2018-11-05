@@ -22,6 +22,8 @@ IMPROVEMENTS:
  * secret/totp: Allow @ character to be part of key name [GH-5652]
  * ui: Improve the token auto-renew warning, and automatically begin renewal
    when a user becomes active again [GH-5662]
+ * ui: The unbundled UI page now has some styling [GH-5665]
+ * ui: Improved banner and popup design [GH-5672]
 
 BUG FIXES:
 
@@ -33,6 +35,8 @@ BUG FIXES:
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
  * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
  * agent: Fix issue when specifying two file sinks [GH-5610]
+ * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
+   the revoke button in the UI [GH-5647]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
