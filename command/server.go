@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
@@ -89,6 +90,7 @@ type ServerCommand struct {
 	flagDevListenAddr  string
 
 	flagDevPluginDir     string
+	flagDevPluginType    string
 	flagDevPluginInit    bool
 	flagDevHA            bool
 	flagDevLatency       int
@@ -968,7 +970,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		var plugins []string
-		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit && c.flagDevPluginType != "" {
+
+			pluginType, err := consts.ParsePluginType(c.flagDevPluginType)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error parsing plugin type: %s", err))
+				return 1
+			}
+
 			f, err := os.Open(c.flagDevPluginDir)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
@@ -984,7 +993,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
-				if err := c.addPlugin(path, init.RootToken, core); err != nil {
+				if err := c.addPlugin(path, pluginType, init.RootToken, core); err != nil {
 					c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
 					return 1
 				}
@@ -1526,7 +1535,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 }
 
 // addPlugin adds any plugins to the catalog
-func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
+func (c *ServerCommand) addPlugin(path string, pluginType consts.PluginType, token string, core *vault.Core) error {
 	// Get the sha256 of the file at the given path.
 	pluginSum := func(p string) (string, error) {
 		hasher := sha256.New()
@@ -1555,7 +1564,7 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
-		Path:        "sys/plugins/catalog/" + name,
+		Path:        fmt.Sprintf("sys/plugins/catalog/%s/%s", pluginType.String(), name),
 		Data: map[string]interface{}{
 			"sha256":  sha256sum,
 			"command": name,
