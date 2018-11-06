@@ -177,12 +177,14 @@ var OASStdRespNoContent = &OASResponse{
 // Both "(leases/)?renew" and "(/(?P<name>.+))?" formats are detected
 var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
 
-var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`) // Capture required parameters, e.g. "(?P<name>regex)"
-var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)         // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)         // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-var cleanCharsRe = regexp.MustCompile("[()^$?]")         // Set of regex characters that will be stripped during cleaning
-var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)        // Path suffix patterns that will be stripped during cleaning
-var wsRe = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
+var reqdRe = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)             // Capture required parameters, e.g. "(?P<name>regex)"
+var altRe = regexp.MustCompile(`\((.*)\|(.*)\)`)                     // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+var pathFieldsRe = regexp.MustCompile(`{(\w+)}`)                     // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+var cleanCharsRe = regexp.MustCompile("[()^$?]")                     // Set of regex characters that will be stripped during cleaning
+var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)                    // Path suffix patterns that will be stripped during cleaning
+var wsRe = regexp.MustCompile(`\s+`)                                 // Match whitespace, to be compressed during cleaning
+var altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
+var altFieldsRe = regexp.MustCompile(`\w+(\|\w+)+`)                  // Match an options set, e.g. "a|b|c"
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *OASDocument) error {
@@ -446,8 +448,12 @@ func expandPattern(pattern string) []string {
 	if start != -1 && end != -1 && end > start {
 		regexToRemove = base[start+1 : end]
 	}
-
 	pattern = strings.Replace(pattern, regexToRemove, "", -1)
+
+	// Simplify named fields that have limited options, e.g. (?P<foo>a|b|c) -> (<P<foo>.+)
+	pattern = altFieldsGroupRe.ReplaceAllStringFunc(pattern, func(s string) string {
+		return altFieldsRe.ReplaceAllString(s, ".+")
+	})
 
 	// Initialize paths with the original pattern or the halves of an
 	// alternation, which is also present in some patterns.
