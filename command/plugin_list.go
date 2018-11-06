@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -24,7 +23,7 @@ func (c *PluginListCommand) Synopsis() string {
 
 func (c *PluginListCommand) Help() string {
 	helpText := `
-Usage: vault plugin list [options] TYPE
+Usage: vault plugin list [options] [TYPE]
 
   Lists available plugins registered in the catalog. This does not list whether
   plugins are in use, but rather just their availability. The last argument of
@@ -65,22 +64,21 @@ func (c *PluginListCommand) Run(args []string) int {
 
 	args = f.Args()
 	switch {
-	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
-		return 1
 	case len(args) > 1:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0 or 1, got %d)", len(args)))
 		return 1
 	}
 
-	pluginTypeStr := strings.TrimSpace(args[0])
 	pluginType := consts.PluginTypeUnknown
-	if pluginTypeStr != "" {
-		var err error
-		pluginType, err = consts.ParsePluginType(pluginTypeStr)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
-			return 2
+	if len(args) > 0 {
+		pluginTypeStr := strings.TrimSpace(args[0])
+		if pluginTypeStr != "" {
+			var err error
+			pluginType, err = consts.ParsePluginType(pluginTypeStr)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
+				return 2
+			}
 		}
 	}
 
@@ -98,24 +96,13 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 2
 	}
 
-	var names []string
-	namesAdded := make(map[string]bool)
-	for _, names := range resp.NamesByType {
-		for _, name := range names {
-			if ok := namesAdded[name]; !ok {
-				names = append(names, name)
-				namesAdded[name] = true
-			}
-		}
-	}
-	sort.Strings(names)
+	return OutputData(c.UI, formatListPluginsResponse(resp))
+}
 
-	switch Format(c.UI) {
-	case "table":
-		list := append([]string{"Plugins"}, names...)
-		c.UI.Output(tableOutput(list, nil))
-		return 0
-	default:
-		return OutputData(c.UI, names)
+func formatListPluginsResponse(resp *api.ListPluginsResponse) map[string]interface{} {
+	res := make(map[string]interface{})
+	for k, v := range resp.NamesByType {
+		res[k.String()] = v
 	}
+	return res
 }

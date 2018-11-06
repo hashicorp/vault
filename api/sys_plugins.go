@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/mitchellh/mapstructure"
 )
 
 // ListPluginsInput is used as input to the ListPlugins function.
@@ -16,18 +18,8 @@ type ListPluginsInput struct {
 
 // ListPluginsResponse is the response from the ListPlugins call.
 type ListPluginsResponse struct {
-	// Names is the list of names of the plugins.
+	// Types is the list of plugins by type.
 	NamesByType map[consts.PluginType][]string `json:"names"`
-}
-
-type listResult struct {
-	Data struct {
-		Keys []string `json:"keys"`
-	} `json:"data"`
-}
-
-type readResult struct {
-	Data map[string]interface{} `json:"data"`
 }
 
 // ListPlugins lists all plugins in the catalog and returns their names as a
@@ -35,15 +27,12 @@ type readResult struct {
 func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	path := ""
 	method := ""
-	var result interface{}
 	if i.Type == consts.PluginTypeUnknown {
 		path = "/v1/sys/plugins/catalog"
 		method = "GET"
-		result = &readResult{}
 	} else {
 		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
 		method = "LIST"
-		result = &listResult{}
 	}
 
 	req := c.c.NewRequest(method, path)
@@ -56,41 +45,48 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 	defer resp.Body.Close()
 
-	if err := resp.DecodeJSON(&result); err != nil {
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
 		return nil, err
 	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
 
-	namesByType := make(map[consts.PluginType][]string)
+	result := &ListPluginsResponse{
+		NamesByType: make(map[consts.PluginType][]string),
+	}
 	if i.Type == consts.PluginTypeUnknown {
-		r, ok := result.(*readResult)
-		if !ok {
-			return nil, fmt.Errorf("unable to cast result %s as a readResult", result)
-		}
-		for pluginTypeStr, nameIfc := range r.Data {
-			pluginTp, err := consts.ParsePluginType(pluginTypeStr)
+		for pluginTypeStr, pluginsRaw := range secret.Data {
+			pluginType, err := consts.ParsePluginType(pluginTypeStr)
 			if err != nil {
 				return nil, err
 			}
-			nameIfcs, ok := nameIfc.([]interface{})
+
+			pluginsIfc, ok := pluginsRaw.([]interface{})
 			if !ok {
-				return nil, fmt.Errorf("unable to cast names %s as an array of strings", nameIfc)
+				return nil, fmt.Errorf("unable to parse plugins for %q type", pluginTypeStr)
 			}
-			for _, nameIfc := range nameIfcs {
+
+			plugins := make([]string, len(pluginsIfc))
+			for i, nameIfc := range pluginsIfc {
 				name, ok := nameIfc.(string)
 				if !ok {
 
 				}
-				namesByType[pluginTp] = append(namesByType[pluginTp], name)
+				plugins[i] = name
 			}
+			result.NamesByType[pluginType] = plugins
 		}
 	} else {
-		r, ok := result.(*listResult)
-		if !ok {
-			return nil, fmt.Errorf("unable to cast result %s as a listResult", result)
+		var respKeys []string
+		if err := mapstructure.Decode(secret.Data["keys"], &respKeys); err != nil {
+			return nil, err
 		}
-		namesByType[i.Type] = r.Data.Keys
+		result.NamesByType[i.Type] = respKeys
 	}
-	return &ListPluginsResponse{NamesByType: namesByType}, nil
+
+	return result, nil
 }
 
 // GetPluginInput is used as input to the GetPlugin function.

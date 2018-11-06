@@ -99,10 +99,10 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	args = f.Args()
 	switch {
 	case len(args) < 2:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", len(args)))
 		return 1
 	case len(args) > 2:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", len(args)))
 		return 1
 	case c.flagSHA256 == "":
 		c.UI.Error("SHA256 is required for all plugins, please provide -sha256")
