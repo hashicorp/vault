@@ -74,6 +74,18 @@ func TestOpenAPI_Regex(t *testing.T) {
 			t.Fatalf("Expected nil match (%s), got %+v", input, matches)
 		}
 	})
+	t.Run("Alternation Fields", func(t *testing.T) {
+		input := `/foo/bar/(?P<type>auth|database|secret)/(?P<blah>a|b)`
+
+		act := altFieldsGroupRe.ReplaceAllStringFunc(input, func(s string) string {
+			return altFieldsRe.ReplaceAllString(s, ".+")
+		})
+
+		exp := "/foo/bar/(?P<type>.+)/(?P<blah>.+)"
+		if act != exp {
+			t.Fatalf("Replace error. Expected %s, got %v", exp, act)
+		}
+	})
 	t.Run("Path fields", func(t *testing.T) {
 		input := `/foo/bar/{inner}/baz/{outer}`
 
@@ -179,6 +191,12 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		{"verify/" + GenericNameRegex("name") + OptionalParamRegex("urlalgorithm"), []string{
 			"verify/{name}",
 			"verify/{name}/{urlalgorithm}",
+		}},
+		{"^plugins/catalog/(?P<type>auth|database|secret)/(?P<name>.+)$", []string{
+			"plugins/catalog/{type}/{name}",
+		}},
+		{"^plugins/catalog/(?P<type>auth|database|secret)/?$", []string{
+			"plugins/catalog/{type}",
 		}},
 	}
 
