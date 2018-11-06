@@ -41,6 +41,9 @@ BUG FIXES:
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
+   for all other operations for backwards compatibility
+   [vault-plugin-secrets-kv#GH-19]
  * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
  * agent: Fix issue when specifying two file sinks [GH-5610]
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
