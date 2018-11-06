@@ -138,7 +138,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 				case logical.TypeLogical:
 					pluginType = consts.PluginTypeSecrets
 				default:
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: unkown plugin type %s", pluginName, client.Type()))
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: unknown plugin type %s", pluginName, client.Type()))
 					client.Cleanup(ctx)
 					continue
 				}
