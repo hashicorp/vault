@@ -9,7 +9,7 @@ var PluginTypes = []PluginType{
 	PluginTypeSecrets,
 }
 
-type PluginType int
+type PluginType uint32
 
 // This is a list of PluginTypes used by Vault.
 // If we need to add any in the future, it would
