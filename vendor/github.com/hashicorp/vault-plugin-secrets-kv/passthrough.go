@@ -192,6 +192,9 @@ func (b *PassthroughBackend) GeneratesLeases() bool {
 func (b *PassthroughBackend) handleWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
 
 		// Check that some fields are given
 		if len(req.Data) == 0 {
