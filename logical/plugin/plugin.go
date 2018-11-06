@@ -86,7 +86,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		}
 	} else {
 		// create a backendPluginClient instance
-		backend, err = newPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode)
+		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +95,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		3: plugin.PluginSet{

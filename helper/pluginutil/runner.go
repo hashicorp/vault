@@ -75,7 +75,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	cmd.Env = append(cmd.Env, env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if wrapper.MlockEnabled() {
+	if wrapper != nil && wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))

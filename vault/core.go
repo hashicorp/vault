@@ -1383,7 +1383,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.setupPluginCatalog(); err != nil {
+	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
 	if err := c.loadMounts(ctx); err != nil {
