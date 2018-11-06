@@ -109,8 +109,14 @@ For example, enable the "foo" auth method will make it accessible at
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the auth method is a local only. Local
+- `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
+
+  ~> ** Warning:** Remember, policies when using replication secondaries are
+  validated by the local cluster. An administrator that can set up a local auth
+  method mount can assign policies to tokens that are valid on the replication
+  primary if a request is forwarded. Never give untrusted administrators the
+  ability to assign policies or configure authentication methods.
 
 ### Sample Payload
 
