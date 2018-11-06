@@ -98,10 +98,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		{
 			Pattern: "generate-root(/attempt)?$",
 			Fields: map[string]*framework.FieldSchema{
-				"otp": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "Specifies a base64-encoded 16-byte value.",
-				},
 				"pgp_key": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Specifies a base64-encoded PGP public key.",
@@ -167,7 +163,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"pgp_keys": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Specifies an array of PGP public keys used to encrypt the output unseal keys. Ordering is preserved. The keys must be base64-encoded from their original binary representation. The size of this array must be the same as secret_shares.",
+					Description: "Specifies an array of PGP public keys used to encrypt the output unseal keys. Ordering is preserved. The keys must be base64-encoded from their original binary representation. The size of this array must be the same as `secret_shares`.",
 				},
 				"root_token_pgp_key": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -179,15 +175,23 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				"secret_threshold": &framework.FieldSchema{
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
+					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
 				},
 				"stored_shares": &framework.FieldSchema{
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares that should be encrypted by the HSM and stored for auto-unsealing. Currently must be the same as secret_shares.",
+					Description: "Specifies the number of shares that should be encrypted by the HSM and stored for auto-unsealing. Currently must be the same as `secret_shares`.",
+				},
+				"recovery_shares": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: "Specifies the number of shares to split the recovery key into.",
+				},
+				"recovery_threshold": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: " Specifies the number of shares required to reconstruct the recovery key. This must be less than or equal to `recovery_shares`.",
 				},
 				"recovery_pgp_keys": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Specifies an array of PGP public keys used to encrypt the output recovery keys. Ordering is preserved. The keys must be base64-encoded from their original binary representation. The size of this array must be the same as recovery_shares.",
+					Description: "Specifies an array of PGP public keys used to encrypt the output recovery keys. Ordering is preserved. The keys must be base64-encoded from their original binary representation. The size of this array must be the same as `recovery_shares`.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -493,11 +497,6 @@ func (b *SystemBackend) auditPaths() []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handleAuditedHeaderUpdate,
-				logical.DeleteOperation: b.handleAuditedHeaderDelete,
-				logical.ReadOperation:   b.handleAuditedHeaderRead,
-			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleAuditedHeaderUpdate,
