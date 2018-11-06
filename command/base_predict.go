@@ -353,7 +353,7 @@ func (p *Predict) plugins(pluginTypes ...consts.PluginType) []string {
 		if err != nil {
 			return nil
 		}
-		for _, names := range result.NamesByType {
+		for _, names := range result.PluginsByType {
 			for _, name := range names {
 				if _, ok := pluginsAdded[name]; !ok {
 					plugins = append(plugins, name)
