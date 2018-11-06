@@ -113,8 +113,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 
 				err = c.catalogView.Delete(ctx, pluginName)
 				if err != nil {
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-					continue
+					logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
 				}
 
 				logger.Info("upgraded plugin type", "plugin", pluginName, "type", "database")
@@ -155,8 +154,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 				}
 				err = c.catalogView.Delete(ctx, pluginName)
 				if err != nil {
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-					continue
+					logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
 				}
 
 				logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
