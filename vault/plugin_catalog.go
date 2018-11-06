@@ -35,7 +35,6 @@ type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
 	catalogView     *BarrierView
 	directory       string
-	logger          log.Logger
 
 	lock sync.RWMutex
 }
@@ -45,7 +44,6 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		builtinRegistry: c.builtinRegistry,
 		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:       c.pluginDirectory,
-		logger:          c.logger,
 	}
 
 	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
@@ -63,7 +61,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner, logger log.Logger) (consts.PluginType, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	{
 		// Attempt to run as database plugin
 		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
@@ -141,7 +139,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, err := c.getPluginTypeFromUnknown(ctx, plugin, logger)
+		pluginType, err := c.getPluginTypeFromUnknown(ctx, plugin)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
@@ -269,7 +267,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 			Builtin: false,
 		}
 
-		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp, c.logger)
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
 		if err != nil || pluginType == consts.PluginTypeUnknown {
 			return errors.New("unable to determine plugin type")
 		}
