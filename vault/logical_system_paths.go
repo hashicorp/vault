@@ -483,7 +483,7 @@ func (b *SystemBackend) internalUIPaths() []*framework.Path {
 				logical.ReadOperation: b.pathInternalUIResultantACL,
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["internal -ui-resultant-acl"][1]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
 	}
 }
