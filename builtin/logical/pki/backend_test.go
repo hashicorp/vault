@@ -982,7 +982,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			cert := parsedCertBundle.Certificate
 
 			actualDiff := time.Now().Sub(cert.NotBefore)
-			certRoleDiff := role.NotBeforeDuration - actualDiff
+			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
 			// These times get truncated, so give a 1 second buffer on each side
 			if certRoleDiff > -1*time.Second && certRoleDiff < 1*time.Second {
 				return nil

@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Partnerships - Vault Integration Program"
+page_title: "Vault Integration Program"
 sidebar_current: "docs-partnerships"
 description: |-
   Guide to partnership integrations and creating plugins for Vault.
@@ -18,7 +18,7 @@ By leveraging Vault's plugin system, vendors are able to build extensible secret
 
 **Vault Secrets Engine**: Secrets engines are components which store, generate, or encrypt data. Secrets engines are incredibly flexible, so it is easiest to think about them in terms of their function. Secrets engines are provided some set of data, they take some action on that data, and they return a result.
 
-**Audit Devices**: Audit devices are the components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors. (no plugin interface - built into Vault Core. Leave it there - no reqs yet but expect some soon)
+**Audit Devices**: Audit devices are the components in Vault that keep a detailed log of all requests and response to Vault. Because every operation with Vault is an API request/response, the audit log contains every authenticated interaction with Vault, including errors.
 
 **Hardware Security Module (HSM)**: HSM support is a feature of Vault Enterprise that takes advantage of HSMs to provide Master Key Wrapping, Automatic Unsealing and Seal Wrapping via the PKCS#11 protocol ver. 2.2+.
 
@@ -85,7 +85,7 @@ The only knowledge necessary to write a plugin is basic command-line skills and 
 
 ### 4. Review
 
-HashiCorp will review and certify your Vault integration. Please send the Vault logs and other relevant logs for verification at: [vault-integration-dev@hashicorp.com](mailto:vault-integration-dev@hashicorp.com). For Auth, Secret and Storage plugins, submit a GitHub pull request (PR) against the Vault project (https://github.com/hashicorp/vault). Where applicable, the vendor will need to provide HashiCorp with a test account.
+HashiCorp will review and certify your Vault integration. Please send the Vault logs and other relevant logs for verification at: [vault-integration-dev@hashicorp.com](mailto:vault-integration-dev@hashicorp.com). For Auth, Secret and Storage plugins, submit a GitHub pull request (PR) against the [Vault project](https://github.com/hashicorp/vault). Where applicable, the vendor will need to provide HashiCorp with a test account.
 
 ### 5. Release
 

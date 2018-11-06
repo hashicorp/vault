@@ -39,6 +39,7 @@ BUG FIXES:
  * agent: Fix issue when specifying two file sinks [GH-5610]
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
    the revoke button in the UI [GH-5647]
+ * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
