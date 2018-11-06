@@ -101,6 +101,8 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			// Attempt to run as database plugin
 			client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
 			if err == nil {
+				// Close the client and cleanup the plugin process
+				client.Close()
 				err = c.setInternal(ctx, pluginName, consts.PluginTypeDatabase, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 				if err != nil {
 					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
@@ -114,7 +116,6 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 				}
 
 				logger.Info("upgraded plugin type", "plugin", pluginName, "type", "database")
-				client.Close()
 				continue
 			}
 		}
@@ -126,6 +127,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 				err := client.Setup(ctx, &logical.BackendConfig{})
 				if err != nil {
 					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					client.Cleanup(ctx)
 					continue
 				}
 
@@ -137,9 +139,12 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 					pluginType = consts.PluginTypeSecrets
 				default:
 					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: unkown plugin type %s", pluginName, client.Type()))
+					client.Cleanup(ctx)
 					continue
 				}
 
+				// Close the client and cleanup the plugin process
+				client.Cleanup(ctx)
 				err = c.setInternal(ctx, pluginName, pluginType, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
 				if err != nil {
 					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
@@ -153,7 +158,6 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 				}
 
 				logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
-				client.Cleanup(ctx)
 				continue
 			}
 		}
