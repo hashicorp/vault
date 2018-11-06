@@ -46,6 +46,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		directory:       c.pluginDirectory,
 	}
 
+	// Run upgrade if untyped plugins exist
 	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
 	if err != nil {
 		c.logger.Error("error while upgrading plugin storage", "error", err)
