@@ -85,12 +85,14 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 	for _, pluginName := range plugins {
 		pluginRaw, err := c.catalogView.Get(ctx, pluginName)
 		if err != nil {
-			return err
+			retErr = multierror.Append(errwrap.Wrapf("failed to load plugin entry: {{err}}", err))
+			continue
 		}
 
 		plugin := new(pluginutil.PluginRunner)
 		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
-			return errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
+			retErr = multierror.Append(errwrap.Wrapf("failed to decode plugin entry: {{err}}", err))
+			continue
 		}
 
 		// prepend the plugin directory to the command
