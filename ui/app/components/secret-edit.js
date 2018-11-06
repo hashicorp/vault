@@ -8,7 +8,6 @@ import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
-import * as clipboard from 'clipboard-polyfill';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -32,6 +31,10 @@ export default Component.extend(FocusOnInsertMixin, {
   mode: null,
 
   secretData: null,
+
+  wrappedData: null,
+  isWrapping: false,
+  showWrapButton: true,
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -237,24 +240,49 @@ export default Component.extend(FocusOnInsertMixin, {
       set(this.modelForData, 'secretData', this.secretData.toJSON());
     },
 
-    handleWrappedClick() {
+    handleWrapClick() {
+      this.set('isWrapping', true);
       if (this.isV2) {
         this.store
           .adapterFor('secret-v2-version')
           .queryRecord(this.modelForData.id, { wrapTTL: 1800 })
           .then(resp => {
-            clipboard.writeText(resp.wrap_info.token);
-            this.flashMessages.success('Wrapped Token Copied!');
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+            this.set('showWrapButton', false);
+            this.set('isWrapping', false);
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
           });
       } else {
         this.store
           .adapterFor('secret')
           .queryRecord(null, null, { backend: this.model.backend, id: this.modelForData.id, wrapTTL: 1800 })
           .then(resp => {
-            clipboard.writeText(resp.wrap_info.token);
-            this.flashMessages.success('Wrapped Token Copied!');
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+            this.set('showWrapButton', false);
+            this.set('isWrapping', false);
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
           });
       }
+    },
+
+    handleCopySuccess() {
+      this.flashMessages.success('Copied Wrapped Data!');
+      this.set('showWrapButton', true);
+    },
+
+    handleCopyError() {
+      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.toggleProperty('showWrapButton', true);
+    },
+
+    hideWrappedData() {
+      this.set('showWrapButton', true);
     },
 
     createOrUpdateKey(type, event) {
