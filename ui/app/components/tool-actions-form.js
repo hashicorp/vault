@@ -80,9 +80,9 @@ export default Component.extend(DEFAULTS, {
     if (secret && action === 'unwrap') {
       let details = {
         'Request ID': resp.request_id,
-        'Lease ID': resp.lease_id,
-        Renewable: resp.renewable,
-        'Lease Duration': resp.lease_duration,
+        'Lease ID': resp.lease_id || 'None',
+        Renewable: resp.renewable ? 'Yes' : 'No',
+        'Lease Duration': resp.lease_duration || 'None',
       };
       props = assign({}, props, { unwrap_data: secret }, { details: details });
     }

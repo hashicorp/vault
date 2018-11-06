@@ -33,10 +33,13 @@
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
         {{#each-in details as |key detail|}}
           {{#info-table-row label=key value=key}}
-            {{#if detail}}
-              {{detail}}
+            {{#if (or (eq detail "No") (eq detail "None"))}}
+              <ICon  @class=has-text-grey @size="16" @glyph="cancel-square-outline" /> {{detail}}
             {{else}}
-              <ICon @size="28" @glyph="false" />
+              {{#if (eq detail "Yes") }}
+                <ICon @class="has-text-success" @size="16" @glyph="checkmark-circled-outline" />
+              {{/if}}
+              {{detail}}
             {{/if}}
           {{/info-table-row}}
         {{/each-in}}
