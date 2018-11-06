@@ -12,6 +12,10 @@
   padding-top: $spacing-s;
 }
 
+.has-padding {
+  padding: $size-10 $size-8;
+}
+
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
