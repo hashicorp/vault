@@ -1,4 +1,4 @@
-package plugin_test
+package plugin
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -19,14 +18,14 @@ import (
 )
 
 func TestBackend_impl(t *testing.T) {
-	var _ logical.Backend = &plugin.PluginBackend{}
+	var _ logical.Backend = &backend{}
 }
 
 func TestBackend(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := plugin.Backend(context.Background(), config)
+	_, err := Backend(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +35,7 @@ func TestBackend_Factory(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := plugin.Factory(context.Background(), config)
+	_, err := Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}

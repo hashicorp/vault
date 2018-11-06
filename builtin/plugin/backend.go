@@ -39,7 +39,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
 func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	var b PluginBackend
+	var b backend
 
 	name := conf.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(conf.Config["plugin_type"])
@@ -77,8 +77,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return &b, nil
 }
 
-// PluginBackend is a thin wrapper around plugin.BackendPluginClient
-type PluginBackend struct {
+// backend is a thin wrapper around plugin.BackendPluginClient
+type backend struct {
 	logical.Backend
 	sync.RWMutex
 
@@ -91,13 +91,13 @@ type PluginBackend struct {
 	loaded bool
 }
 
-func (b *PluginBackend) reloadBackend(ctx context.Context) error {
+func (b *backend) reloadBackend(ctx context.Context) error {
 	b.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
 	return b.startBackend(ctx)
 }
 
 // startBackend starts a plugin backend
-func (b *PluginBackend) startBackend(ctx context.Context) error {
+func (b *backend) startBackend(ctx context.Context) error {
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -138,7 +138,7 @@ func (b *PluginBackend) startBackend(ctx context.Context) error {
 }
 
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	b.RLock()
 	canary := b.canary
 
@@ -189,7 +189,7 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 }
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
-func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
+func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
 	b.RLock()
 	canary := b.canary
 
