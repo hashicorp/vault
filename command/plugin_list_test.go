@@ -29,13 +29,13 @@ func TestPluginListCommand_Run(t *testing.T) {
 	}{
 		{
 			"too_many_args",
-			[]string{"database", "foo"},
+			[]string{"foo", "fizz"},
 			"Too many arguments",
 			1,
 		},
 		{
 			"lists",
-			[]string{"database"},
+			nil,
 			"Plugins",
 			0,
 		},

@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -96,13 +97,27 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 2
 	}
 
-	return OutputData(c.UI, formatListPluginsResponse(resp))
-}
-
-func formatListPluginsResponse(resp *api.ListPluginsResponse) map[string]interface{} {
-	res := make(map[string]interface{})
-	for k, v := range resp.PluginsByType {
-		res[k.String()] = v
+	switch Format(c.UI) {
+	case "table":
+		var flattenedNames []string
+		namesAdded := make(map[string]bool)
+		for _, names := range resp.PluginsByType {
+			for _, name := range names {
+				if ok := namesAdded[name]; !ok {
+					flattenedNames = append(flattenedNames, name)
+					namesAdded[name] = true
+				}
+			}
+			sort.Strings(flattenedNames)
+		}
+		list := append([]string{"Plugins"}, flattenedNames...)
+		c.UI.Output(tableOutput(list, nil))
+		return 0
+	default:
+		res := make(map[string]interface{})
+		for k, v := range resp.PluginsByType {
+			res[k.String()] = v
+		}
+		return OutputData(c.UI, res)
 	}
-	return res
 }
