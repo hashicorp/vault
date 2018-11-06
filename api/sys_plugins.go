@@ -18,8 +18,8 @@ type ListPluginsInput struct {
 
 // ListPluginsResponse is the response from the ListPlugins call.
 type ListPluginsResponse struct {
-	// Types is the list of plugins by type.
-	NamesByType map[consts.PluginType][]string `json:"names"`
+	// PluginsByType is the list of plugins by type.
+	PluginsByType map[consts.PluginType][]string `json:"types"`
 }
 
 // ListPlugins lists all plugins in the catalog and returns their names as a
@@ -54,7 +54,7 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 
 	result := &ListPluginsResponse{
-		NamesByType: make(map[consts.PluginType][]string),
+		PluginsByType: make(map[consts.PluginType][]string),
 	}
 	if i.Type == consts.PluginTypeUnknown {
 		for pluginTypeStr, pluginsRaw := range secret.Data {
@@ -76,14 +76,14 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 				}
 				plugins[i] = name
 			}
-			result.NamesByType[pluginType] = plugins
+			result.PluginsByType[pluginType] = plugins
 		}
 	} else {
 		var respKeys []string
 		if err := mapstructure.Decode(secret.Data["keys"], &respKeys); err != nil {
 			return nil, err
 		}
-		result.NamesByType[i.Type] = respKeys
+		result.PluginsByType[i.Type] = respKeys
 	}
 
 	return result, nil

@@ -101,7 +101,7 @@ func (c *PluginListCommand) Run(args []string) int {
 
 func formatListPluginsResponse(resp *api.ListPluginsResponse) map[string]interface{} {
 	res := make(map[string]interface{})
-	for k, v := range resp.NamesByType {
+	for k, v := range resp.PluginsByType {
 		res[k.String()] = v
 	}
 	return res
