@@ -1647,7 +1647,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		// option taking precedence.
 		switch {
 		case apiConfig.PluginNameDeprecated != "":
-			config.PluginNameDeprecated = apiConfig.PluginNameDeprecated
+			logicalType = apiConfig.PluginNameDeprecated
 		case pluginName != "":
 			config.PluginNameDeprecated = pluginName
 		default:
