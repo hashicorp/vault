@@ -765,7 +765,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		case apiConfig.PluginNameDeprecated != "":
 			logicalType = apiConfig.PluginNameDeprecated
 		case pluginName != "":
-			config.PluginNameDeprecated = pluginName
+			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
 					"plugin_name must be provided for plugin backend"),
