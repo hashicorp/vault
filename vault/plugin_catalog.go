@@ -46,6 +46,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		directory:       c.pluginDirectory,
 	}
 
+	// Run upgrade if untyped plugins exist
 	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
 	if err != nil {
 		c.logger.Error("error while upgrading plugin storage", "error", err)
@@ -58,6 +59,46 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	return nil
 }
 
+// getPluginTypeFromUnknown will attempt to run the plugin to determine the
+// type. It will first attempt to run as a database plugin then a backend
+// plugin. Both of these will be run in metadata mode.
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+	{
+		// Attempt to run as database plugin
+		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+		if err == nil {
+			// Close the client and cleanup the plugin process
+			client.Close()
+			return consts.PluginTypeDatabase, nil
+		}
+	}
+
+	{
+		// Attempt to run as backend plugin
+		client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+		if err == nil {
+			err := client.Setup(ctx, &logical.BackendConfig{})
+			if err != nil {
+				return consts.PluginTypeUnknown, err
+			}
+
+			backendType := client.Type()
+			client.Cleanup(ctx)
+
+			switch backendType {
+			case logical.TypeCredential:
+				return consts.PluginTypeCredential, nil
+			case logical.TypeLogical:
+				return consts.PluginTypeSecrets, nil
+			}
+		}
+	}
+
+	return consts.PluginTypeUnknown, nil
+}
+
+// UpdatePlugins will loop over all the plugins of unknown type and attempt to
+// upgrade them to typed plugins
 func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -99,70 +140,29 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		{
-			// Attempt to run as database plugin
-			client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-			if err == nil {
-				// Close the client and cleanup the plugin process
-				client.Close()
-				err = c.setInternal(ctx, pluginName, consts.PluginTypeDatabase, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
-				if err != nil {
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-					continue
-				}
-
-				err = c.catalogView.Delete(ctx, pluginName)
-				if err != nil {
-					logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
-				}
-
-				logger.Info("upgraded plugin type", "plugin", pluginName, "type", "database")
-				continue
-			}
+		pluginType, err := c.getPluginTypeFromUnknown(ctx, plugin)
+		if err != nil {
+			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+			continue
+		}
+		if pluginType == consts.PluginTypeUnknown {
+			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+			continue
 		}
 
-		{
-			// Attempt to run as backend plugin
-			client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
-			if err == nil {
-				err := client.Setup(ctx, &logical.BackendConfig{})
-				if err != nil {
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-					client.Cleanup(ctx)
-					continue
-				}
-
-				var pluginType consts.PluginType
-				switch client.Type() {
-				case logical.TypeCredential:
-					pluginType = consts.PluginTypeCredential
-				case logical.TypeLogical:
-					pluginType = consts.PluginTypeSecrets
-				default:
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: unknown plugin type %s", pluginName, client.Type()))
-					client.Cleanup(ctx)
-					continue
-				}
-
-				// Close the client and cleanup the plugin process
-				client.Cleanup(ctx)
-				err = c.setInternal(ctx, pluginName, pluginType, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
-				if err != nil {
-					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
-					continue
-
-				}
-				err = c.catalogView.Delete(ctx, pluginName)
-				if err != nil {
-					logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
-				}
-
-				logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
-				continue
-			}
+		// Upgrade the storage
+		err = c.setInternal(ctx, pluginName, pluginType, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		if err != nil {
+			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+			continue
 		}
 
-		retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+		err = c.catalogView.Delete(ctx, pluginName)
+		if err != nil {
+			logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
+		}
+
+		logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
 	}
 
 	return retErr
@@ -255,6 +255,25 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return errors.New("can not execute files outside of configured plugin directory")
 	}
 
+	// If the plugin type is unknown, we want to attempt to determine the type
+	if pluginType == consts.PluginTypeUnknown {
+		// entryTmp should only be used for the below type check, it uses the
+		// full command instead of the relative command.
+		entryTmp := &pluginutil.PluginRunner{
+			Name:    name,
+			Command: commandFull,
+			Args:    args,
+			Env:     env,
+			Sha256:  sha256,
+			Builtin: false,
+		}
+
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
+		if err != nil || pluginType == consts.PluginTypeUnknown {
+			return errors.New("unable to determine plugin type")
+		}
+	}
+
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
 		Type:    pluginType,
@@ -270,16 +289,8 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
 	}
 
-	// If the plugin type is unknown, we want to keep it as a top-level key so
-	// UpdatePlugins will later sort it.
-	key := name
-	if pluginType != consts.PluginTypeUnknown {
-		// Prepend the plugin's name with its type to avoid overwriting plugins
-		// with the same name but different types.
-		key = pluginType.String() + "/" + key
-	}
 	logicalEntry := logical.StorageEntry{
-		Key:   key,
+		Key:   pluginType.String() + "/" + name,
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
