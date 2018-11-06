@@ -13,7 +13,7 @@ export default Component.extend({
       return messageTypes([this.get('type')]).glyphClass;
     }
 
-    return
+    return;
   }),
 
   alertType: computed('type', function() {

@@ -18,6 +18,8 @@ export default Component.extend({
 
   isRenewing: or('fakeRenew', 'auth.isRenewing'),
 
+  canExpire: computed.alias('auth.allowExpiration'),
+
   isOSS: computed.alias('version.isOSS'),
 
   actions: {

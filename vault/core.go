@@ -959,6 +959,11 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 				return nil, errwrap.Wrapf("error rekeying barrier during migration: {{err}}", err)
 			}
 
+			if err := c.barrier.Delete(ctx, StoredBarrierKeysPath); err != nil {
+				// Don't actually exit here as successful deletion isn't critical
+				c.logger.Error("error deleting stored barrier keys after migration; continuing anyways", "error", err)
+			}
+
 			masterKey = recoveryKey
 		}
 

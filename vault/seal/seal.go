@@ -14,6 +14,10 @@ const (
 	GCPCKMS       = "gcpckms"
 	AzureKeyVault = "azurekeyvault"
 	Test          = "test-auto"
+
+	// HSMAutoDeprecated is a deprecated seal type prior to 0.9.0.
+	// It is still referenced in certain code paths for upgrade purporses
+	HSMAutoDeprecated = "hsm-auto"
 )
 
 // Access is the embedded implemention of autoSeal that contains logic

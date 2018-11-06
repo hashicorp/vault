@@ -150,7 +150,7 @@ func TestPlugin_Init(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	dbRaw, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin", sys, log.NewNullLogger())
+	dbRaw, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -174,7 +174,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -214,7 +214,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -248,7 +248,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -290,7 +290,7 @@ func TestPlugin_NetRPC_Init(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	dbRaw, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin-netRPC", sys, log.NewNullLogger())
+	dbRaw, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -314,7 +314,7 @@ func TestPlugin_NetRPC_CreateUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin-netRPC", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -354,7 +354,7 @@ func TestPlugin_NetRPC_RenewUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin-netRPC", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -388,7 +388,7 @@ func TestPlugin_NetRPC_RevokeUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.TestContext(), "test-plugin-netRPC", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

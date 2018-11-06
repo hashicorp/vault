@@ -21,7 +21,7 @@ func adjustCoreForSealMigration(ctx context.Context, core *vault.Core, coreConfi
 	}
 	var existSeal vault.Seal
 	var newSeal vault.Seal
-	if existBarrierSealConfig != nil &&
+	if existBarrierSealConfig != nil && existBarrierSealConfig.Type != vaultseal.HSMAutoDeprecated &&
 		(existBarrierSealConfig.Type != seal.BarrierType() ||
 			config.Seal != nil && config.Seal.Disabled) {
 		// If the existing seal is not Shamir, we're going to Shamir, which

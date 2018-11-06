@@ -342,8 +342,8 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
-		ID:                     "testaliasid",
-		Name:                   "testaliasname",
+		ID:   "testaliasid",
+		Name: "testaliasname",
 		MergedFromCanonicalIDs: []string{"entityid1"},
 	}
 
@@ -544,7 +544,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	}
 
 	// Identity store will be mounted by now, just fetch it from router
-	identitystore := c.router.MatchingBackend(namespace.TestContext(), "identity/")
+	identitystore := c.router.MatchingBackend(namespace.RootContext(nil), "identity/")
 	if identitystore == nil {
 		t.Fatalf("failed to fetch identity store from router")
 	}

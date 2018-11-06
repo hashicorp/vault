@@ -216,6 +216,19 @@
   }
 }
 
+.nav-user-button .icon {
+  position: relative;
+}
+.nav-user-button.may-expire .icon:first-of-type::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: $yellow;
+}
 .navbar-drawer-scroll {
   overflow: auto;
   height: 100%;

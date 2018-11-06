@@ -123,6 +123,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
@@ -182,7 +183,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, 
 			}
 			r = newR
 
-		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/":
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
 			respondError(w, http.StatusNotFound, nil)
 			cancelFunc()
@@ -352,12 +353,67 @@ func handleUIStub() http.Handler {
 	stubHTML := `
 	<!DOCTYPE html>
 	<html>
-	<p>Vault UI is not available in this binary. To get Vault UI do one of the following:</p>
+	<style>
+	body {
+	color: #1F2124;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+	}
+
+	.wrapper {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 500px;
+	}
+
+	.content ul {
+	line-height: 1.5;
+	}
+
+	a {
+	color: #1563ff;
+	text-decoration: none;
+	}
+
+	.header {
+	display: flex;
+	color: #6a7786;
+	align-items: center;
+	}
+
+	.header svg {
+	padding-right: 12px;
+	}
+
+	.alert {
+	transform: scale(0.07);
+	fill: #6a7786;
+	}
+
+	h1 {
+	font-weight: 500;
+	}
+
+	p {
+	margin-top: 0px;
+	}
+	</style>
+	<div class="wrapper">
+	<div class="content">
+	<div class="header">
+	<svg width="36px" height="36px" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+	<path class="alert" d="M476.7 422.2L270.1 72.7c-2.9-5-8.3-8.7-14.1-8.7-5.9 0-11.3 3.7-14.1 8.7L35.3 422.2c-2.8 5-4.8 13-1.9 17.9 2.9 4.9 8.2 7.9 14 7.9h417.1c5.8 0 11.1-3 14-7.9 3-4.9 1-13-1.8-17.9zM288 400h-64v-48h64v48zm0-80h-64V176h64v144z"/>
+	</svg>
+	<h1>Vault UI is not available in this binary.</h1>
+	</div>
+	<p>To get Vault UI do one of the following:</p>
 	<ul>
 	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
 	<li>Run <code>make release</code> to create your own release binaries.
 	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
 	</ul>
+	</div>
+	</div>
 	</html>
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

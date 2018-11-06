@@ -194,12 +194,12 @@ func pathInvalid(b *versionedKVBackend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
 			Pattern: ".*",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: handler,
-				logical.CreateOperation: handler,
-				logical.ReadOperation:   handler,
-				logical.DeleteOperation: handler,
-				logical.ListOperation:   handler,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{Callback: handler, Unpublished: true},
+				logical.CreateOperation: &framework.PathOperation{Callback: handler, Unpublished: true},
+				logical.ReadOperation:   &framework.PathOperation{Callback: handler, Unpublished: true},
+				logical.DeleteOperation: &framework.PathOperation{Callback: handler, Unpublished: true},
+				logical.ListOperation:   &framework.PathOperation{Callback: handler, Unpublished: true},
 			},
 
 			HelpDescription: pathInvalidHelp,
