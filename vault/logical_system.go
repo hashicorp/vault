@@ -697,6 +697,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
 	options := data.Get("options").(map[string]string)
 
@@ -756,6 +757,19 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse(
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
+	case "plugin":
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginNameDeprecated
+		// option taking precedence.
+		switch {
+		case apiConfig.PluginNameDeprecated != "":
+			config.PluginNameDeprecated = apiConfig.PluginNameDeprecated
+		case pluginName != "":
+			config.PluginNameDeprecated = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	switch logicalType {
@@ -1553,6 +1567,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	path = sanitizeMountPath(path)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
 	sealWrap := data.Get("seal_wrap").(bool)
 	options := data.Get("options").(map[string]string)
 
@@ -1626,6 +1641,19 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
+	case "plugin":
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginNameDeprecated
+		// option taking precedence.
+		switch {
+		case apiConfig.PluginNameDeprecated != "":
+			config.PluginNameDeprecated = apiConfig.PluginNameDeprecated
+		case pluginName != "":
+			config.PluginNameDeprecated = pluginName
+		default:
+			return logical.ErrorResponse(
+					"plugin_name must be provided for plugin backend"),
+				logical.ErrInvalidRequest
+		}
 	}
 
 	if options != nil && options["version"] != "" {

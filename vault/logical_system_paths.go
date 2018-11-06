@@ -825,6 +825,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
 				},
+				"plugin_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
+				},
 				"options": &framework.FieldSchema{
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
@@ -1072,6 +1076,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+				},
+				"plugin_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["mount_plugin_name"][0]),
 				},
 				"options": &framework.FieldSchema{
 					Type:        framework.TypeKVPairs,
