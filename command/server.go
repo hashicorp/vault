@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
@@ -90,7 +89,6 @@ type ServerCommand struct {
 	flagDevListenAddr  string
 
 	flagDevPluginDir     string
-	flagDevPluginType    string
 	flagDevPluginInit    bool
 	flagDevHA            bool
 	flagDevLatency       int
@@ -210,14 +208,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default:    "",
 		Completion: complete.PredictDirs("*"),
 		Hidden:     true,
-	})
-
-	// Valid values include "auth", "secret", and "database".
-	f.StringVar(&StringVar{
-		Name:    "dev-plugin-type",
-		Target:  &c.flagDevPluginType,
-		Default: "",
-		Hidden:  true,
 	})
 
 	f.BoolVar(&BoolVar{
@@ -978,13 +968,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		var plugins []string
-		if c.flagDevPluginDir != "" && c.flagDevPluginInit && c.flagDevPluginType != "" {
-
-			pluginType, err := consts.ParsePluginType(c.flagDevPluginType)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error parsing plugin type: %s", err))
-				return 1
-			}
+		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
 
 			f, err := os.Open(c.flagDevPluginDir)
 			if err != nil {
@@ -1001,7 +985,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
-				if err := c.addPlugin(path, pluginType, init.RootToken, core); err != nil {
+				if err := c.addPlugin(path, init.RootToken, core); err != nil {
 					c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
 					return 1
 				}
@@ -1543,7 +1527,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 }
 
 // addPlugin adds any plugins to the catalog
-func (c *ServerCommand) addPlugin(path string, pluginType consts.PluginType, token string, core *vault.Core) error {
+func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 	// Get the sha256 of the file at the given path.
 	pluginSum := func(p string) (string, error) {
 		hasher := sha256.New()
@@ -1572,7 +1556,7 @@ func (c *ServerCommand) addPlugin(path string, pluginType consts.PluginType, tok
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
-		Path:        fmt.Sprintf("sys/plugins/catalog/%s/%s", pluginType.String(), name),
+		Path:        fmt.Sprintf("sys/plugins/catalog/%s", name),
 		Data: map[string]interface{}{
 			"sha256":  sha256sum,
 			"command": name,

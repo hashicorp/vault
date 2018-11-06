@@ -132,7 +132,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogTypedPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListByTypePath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
@@ -280,7 +280,13 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided, list it as unknown so that we
+		// add it to the catalog and UpdatePlugins later will sort it.
+		pluginTypeStr = "unknown"
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}

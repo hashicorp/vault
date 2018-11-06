@@ -270,8 +270,16 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
 	}
 
+	// If the plugin type is unknown, we want to keep it as a top-level key so
+	// UpdatePlugins will later sort it.
+	key := name
+	if pluginType != consts.PluginTypeUnknown {
+		// Prepend the plugin's name with its type to avoid overwriting plugins
+		// with the same name but different types.
+		key = pluginType.String() + "/" + key
+	}
 	logicalEntry := logical.StorageEntry{
-		Key:   pluginType.String() + "/" + name,
+		Key:   key,
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
