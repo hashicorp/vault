@@ -2493,9 +2493,9 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		tag  string
 	}{
 		{"/auth/token/lookup", "auth"},
-		{"/cubbyhole/.*", "secrets"}, // TODO update after sys docs update
+		{"/cubbyhole/{path}", "secrets"},
 		{"/identity/group/id", "identity"},
-		{"/secret/.*", "secrets"}, // TODO update after sys docs update
+		{"/secret/.*", "secrets"}, // TODO update after kv repo update
 		{"/sys/policy", "system"},
 	}
 

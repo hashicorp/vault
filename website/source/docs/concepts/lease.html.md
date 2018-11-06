@@ -51,9 +51,15 @@ Along with the lease ID, a _lease duration_ can be read. The lease duration is
 a Time To Live value: the time in seconds for which the lease is valid.  A
 consumer of this secret must renew the lease within that time.
 
-When renewing the lease, the user can request a specific amount of time from
-now to extend the lease. For example: `vault renew my-lease-id 3600` would
-request to extend the lease of "my-lease-id" by 1 hour (3600 seconds).
+When renewing the lease, the user can request a specific amount of time they
+want remaining on the lease, termed the `increment`. This is not an increment
+at the end of the current TTL; it is an increment _from the current time_. For
+example, `vault renew my-lease-id 3600` would request that the TTL of the lease
+be adjusted to 1 hour (3600 seconds). Having the increment be rooted at the
+current time instead of the end of the lease makes it easy for users to reduce
+the length of leases if they don't actually need credentials for the full
+possible lease period, allowing those credentials to expire sooner and
+resources to be cleaned up earlier.
 
 The requested increment is completely advisory. The backend in charge of the
 secret can choose to completely ignore it. For most secrets, the backend does

@@ -10,6 +10,11 @@ CHANGES:
    Although this has never been a source of a customer incident, it is simply a
    code path that is pretty trivial to activate, especially by mistyping
    `regenerate_key` instead of `generate_key`.
+ * Barrier Config Upgrade (Enterprise): When upgrading from Vault 0.8.x, the
+   seal type in the barrier config storage entry will be upgraded from
+   "hsm-auto" to "awskms" or "pkcs11" upon unseal if using AWSKMS or HSM seals.
+   If performing seal migration, the barrier config should first be upgraded
+   prior to starting migration.
 
 FEATURES:
 
@@ -36,6 +41,9 @@ BUG FIXES:
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
     having distinct scopes.
     [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
+   for all other operations for backwards compatibility
+   [[GH-19]](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/19)
  * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
  * agent: Fix issue when specifying two file sinks [GH-5610]
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show

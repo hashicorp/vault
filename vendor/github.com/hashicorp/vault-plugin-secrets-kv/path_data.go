@@ -165,6 +165,9 @@ func (b *versionedKVBackend) pathDataRead() framework.OperationFunc {
 func (b *versionedKVBackend) pathDataWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
 
 		config, err := b.config(ctx, req.Storage)
 		if err != nil {
