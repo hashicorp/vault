@@ -212,6 +212,14 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:     true,
 	})
 
+	// Valid values include "auth", "secret", and "database".
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-type",
+		Target:  &c.flagDevPluginType,
+		Default: "",
+		Hidden:  true,
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "dev-plugin-init",
 		Target:  &c.flagDevPluginInit,
