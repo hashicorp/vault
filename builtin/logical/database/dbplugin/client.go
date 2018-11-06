@@ -28,10 +28,11 @@ func (dc *DatabasePluginClient) Close() error {
 	return err
 }
 
-// newPluginClient returns a databaseRPCClient with a connection to a running
+// NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
+
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 supports both protocols
@@ -46,7 +47,13 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		},
 	}
 
-	client, err := pluginRunner.Run(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
+	var client *plugin.Client
+	var err error
+	if isMetadataMode {
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
+	} else {
+		client, err = pluginRunner.Run(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
+	}
 	if err != nil {
 		return nil, err
 	}

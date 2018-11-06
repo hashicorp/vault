@@ -10,11 +10,16 @@ import (
 	"strings"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
+
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
+	backendplugin "github.com/hashicorp/vault/logical/plugin"
 )
 
 var (
@@ -34,11 +39,16 @@ type PluginCatalog struct {
 	lock sync.RWMutex
 }
 
-func (c *Core) setupPluginCatalog() error {
+func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	c.pluginCatalog = &PluginCatalog{
 		builtinRegistry: c.builtinRegistry,
 		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:       c.pluginDirectory,
+	}
+
+	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
+	if err != nil {
+		c.logger.Error("error while upgrading plugin storage", "error", err)
 	}
 
 	if c.logger.IsInfo() {
@@ -46,6 +56,112 @@ func (c *Core) setupPluginCatalog() error {
 	}
 
 	return nil
+}
+
+func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// If the directory isn't set we can skip the upgrade attempt
+	if c.directory == "" {
+		return nil
+	}
+
+	// List plugins from old location
+	pluginsRaw, err := c.catalogView.List(ctx, "")
+	if err != nil {
+		return err
+	}
+	plugins := make([]string, 0, len(pluginsRaw))
+	for _, p := range pluginsRaw {
+		if !strings.HasSuffix(p, "/") {
+			plugins = append(plugins, p)
+		}
+	}
+
+	logger.Info("upgrading plugin information", "plugins", plugins)
+
+	var retErr error
+	for _, pluginName := range plugins {
+		pluginRaw, err := c.catalogView.Get(ctx, pluginName)
+		if err != nil {
+			return err
+		}
+
+		plugin := new(pluginutil.PluginRunner)
+		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
+			return errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
+		}
+
+		// prepend the plugin directory to the command
+		cmdOld := plugin.Command
+		plugin.Command = filepath.Join(c.directory, plugin.Command)
+
+		{
+			// Attempt to run as database plugin
+			client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+			if err == nil {
+				err = c.setInternal(ctx, pluginName, consts.PluginTypeDatabase, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+				if err != nil {
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					continue
+				}
+
+				err = c.catalogView.Delete(ctx, pluginName)
+				if err != nil {
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					continue
+				}
+
+				logger.Info("upgraded plugin type", "plugin", pluginName, "type", "database")
+				client.Close()
+				continue
+			}
+		}
+
+		{
+			// Attempt to run as backend plugin
+			client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+			if err == nil {
+				err := client.Setup(ctx, &logical.BackendConfig{})
+				if err != nil {
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					continue
+				}
+
+				var pluginType consts.PluginType
+				switch client.Type() {
+				case logical.TypeCredential:
+					pluginType = consts.PluginTypeCredential
+				case logical.TypeLogical:
+					pluginType = consts.PluginTypeSecrets
+				default:
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: unkown plugin type %s", pluginName, client.Type()))
+					continue
+				}
+
+				err = c.setInternal(ctx, pluginName, pluginType, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+				if err != nil {
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					continue
+
+				}
+				err = c.catalogView.Delete(ctx, pluginName)
+				if err != nil {
+					retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+					continue
+				}
+
+				logger.Info("upgraded plugin type", "plugin", pluginName, "type", pluginType.String())
+				client.Cleanup(ctx)
+				continue
+			}
+		}
+
+		retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+	}
+
+	return retErr
 }
 
 // Get retrieves a plugin with the specified name from the catalog. It first
@@ -115,6 +231,10 @@ func (c *PluginCatalog) Set(ctx context.Context, name string, pluginType consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	return c.setInternal(ctx, name, pluginType, command, args, env, sha256)
+}
+
+func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType consts.PluginType, command string, args []string, env []string, sha256 []byte) error {
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
 	commandFull := filepath.Join(c.directory, command)
