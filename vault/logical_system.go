@@ -1649,7 +1649,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		case apiConfig.PluginNameDeprecated != "":
 			logicalType = apiConfig.PluginNameDeprecated
 		case pluginName != "":
-			config.PluginNameDeprecated = pluginName
+			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
 					"plugin_name must be provided for plugin backend"),
