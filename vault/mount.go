@@ -682,9 +682,16 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMount(ctx, src)
-	if match == "" || ns.Path+src != match {
+	srcMatch := c.router.MatchingMountEntry(ctx, src)
+	if srcMatch == nil {
 		return fmt.Errorf("no matching mount at %q", src)
+	}
+	if srcMatch.NamespaceID != ns.ID {
+		return fmt.Errorf("source mount in a different namespace than request")
+	}
+
+	if err := verifyNamespace(c, ns, &MountEntry{Path: dst}); err != nil {
+		return err
 	}
 
 	if match := c.router.MatchingMount(ctx, dst); match != "" {
@@ -721,8 +728,9 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 
 	c.mountsLock.Lock()
 	var entry *MountEntry
-	for _, entry = range c.mounts.Entries {
-		if entry.Path == src {
+	for _, mountEntry := range c.mounts.Entries {
+		if mountEntry.Path == src && mountEntry.NamespaceID == ns.ID {
+			entry = mountEntry
 			entry.Path = dst
 			entry.Tainted = false
 			break
