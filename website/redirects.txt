@@ -97,6 +97,7 @@
 /docs/secrets/generic/index.html       /docs/secrets/kv/index.html
 /intro/getting-started/acl.html        /intro/getting-started/policies.html
 /intro/getting-started/secret-backends.html   /intro/getting-started/secrets-engines.html
+/intro/index.html                             /index.html
 
 /guides/configuration/policies.html                /guides/identity/policies.html
 /guides/configuration/authentication.html          /guides/identity/authentication.html
