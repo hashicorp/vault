@@ -74,9 +74,9 @@ type AESGCMBarrier struct {
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	b := &AESGCMBarrier{
-		backend:                  physical,
-		sealed:                   true,
-		cache:                    make(map[uint32]cipher.AEAD),
+		backend: physical,
+		sealed:  true,
+		cache:   make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
 	}
 	return b, nil
@@ -706,6 +706,11 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 	} else if pe == nil {
 		b.l.RUnlock()
 		return nil, nil
+	}
+
+	if pe.Value == nil {
+		b.l.RUnlock()
+		return nil, errors.New("no value present for key")
 	}
 
 	// Verify the term
