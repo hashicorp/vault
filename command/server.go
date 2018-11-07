@@ -26,10 +26,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
@@ -550,6 +551,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisablePerformanceStandby: config.DisablePerformanceStandby,
 		DisableIndexing:           config.DisableIndexing,
 		AllLoggers:                allLoggers,
+		BuiltinRegistry:           builtinplugins.Registry,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -967,6 +969,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 		var plugins []string
 		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
+
 			f, err := os.Open(c.flagDevPluginDir)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error reading plugin dir: %s", err))
@@ -1553,7 +1556,7 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
-		Path:        "sys/plugins/catalog/" + name,
+		Path:        fmt.Sprintf("sys/plugins/catalog/%s", name),
 		Data: map[string]interface{}{
 			"sha256":  sha256sum,
 			"command": name,

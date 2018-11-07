@@ -12,6 +12,7 @@ import (
 	"hash"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,8 +20,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	memdb "github.com/hashicorp/go-memdb"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -131,8 +132,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
@@ -255,19 +255,51 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-func (b *SystemBackend) handlePluginCatalogList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	plugins, err := b.Core.pluginCatalog.List(ctx)
+func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
 		return nil, err
 	}
 
+	plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
+	if err != nil {
+		return nil, err
+	}
 	return logical.ListResponse(plugins), nil
+}
+
+func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginsByType := make(map[string]interface{})
+	for _, pluginType := range consts.PluginTypes {
+		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+		if len(plugins) > 0 {
+			sort.Strings(plugins)
+			pluginsByType[pluginType.String()] = plugins
+		}
+	}
+	return &logical.Response{
+		Data: pluginsByType,
+	}, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided, list it as unknown so that we
+		// add it to the catalog and UpdatePlugins later will sort it.
+		pluginTypeStr = "unknown"
+	}
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
+	if err != nil {
+		return nil, err
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -302,7 +334,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, parts[0], args, env, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +347,13 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName)
+
+	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType)
 	if err != nil {
 		return nil, err
 	}
@@ -349,8 +387,11 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	err := b.Core.pluginCatalog.Delete(ctx, pluginName)
+	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
 	if err != nil {
+		return nil, err
+	}
+	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType); err != nil {
 		return nil, err
 	}
 
@@ -599,7 +640,6 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 		"force_no_cache":    entry.Config.ForceNoCache,
-		"plugin_name":       entry.Config.PluginName,
 	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
@@ -735,15 +775,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse(
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
-
 	case "plugin":
-		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginNameDeprecated
 		// option taking precedence.
 		switch {
-		case apiConfig.PluginName != "":
-			config.PluginName = apiConfig.PluginName
+		case apiConfig.PluginNameDeprecated != "":
+			logicalType = apiConfig.PluginNameDeprecated
 		case pluginName != "":
-			config.PluginName = pluginName
+			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
 					"plugin_name must be provided for plugin backend"),
@@ -1620,15 +1659,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
-
 	case "plugin":
-		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginNameDeprecated
 		// option taking precedence.
 		switch {
-		case apiConfig.PluginName != "":
-			config.PluginName = apiConfig.PluginName
+		case apiConfig.PluginNameDeprecated != "":
+			logicalType = apiConfig.PluginNameDeprecated
 		case pluginName != "":
-			config.PluginName = pluginName
+			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
 					"plugin_name must be provided for plugin backend"),
@@ -3642,8 +3680,16 @@ This path responds to the following HTTP methods.
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
+	"plugin-catalog-list-all": {
+		"Lists all the plugins known to Vault",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of names of configured plugins.
+		`,
+	},
 	"plugin-catalog": {
-		"Configures the plugins known to vault",
+		"Configures the plugins known to Vault",
 		`
 This path responds to the following HTTP methods.
 		LIST /
@@ -3661,6 +3707,10 @@ This path responds to the following HTTP methods.
 	},
 	"plugin-catalog_name": {
 		"The name of the plugin",
+		"",
+	},
+	"plugin-catalog_type": {
+		"The type of the plugin, may be auth, secret, or database",
 		"",
 	},
 	"plugin-catalog_sha-256": {

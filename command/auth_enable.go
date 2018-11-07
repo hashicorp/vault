@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -57,6 +58,10 @@ Usage: vault auth enable [options] TYPE
   Enable a custom auth plugin (after it's registered in the plugin registry):
 
       $ vault auth enable -path=my-auth -plugin-name=my-auth-plugin plugin
+
+      OR (preferred way):
+
+      $ vault auth enable -path=my-auth my-auth-plugin
 
 ` + c.Flags().Help()
 
@@ -135,7 +140,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
+		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})
@@ -212,6 +217,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	}
 
 	authType := strings.TrimSpace(args[0])
+	if authType == "plugin" {
+		authType = c.flagPluginName
+	}
 
 	// If no path is specified, we default the path to the backend type
 	// or use the plugin name if it's a plugin backend
@@ -242,7 +250,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
-			PluginName:      c.flagPluginName,
 		},
 		Options: c.flagOptions,
 	}
@@ -279,7 +286,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
 	}
-
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0
 }

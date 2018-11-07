@@ -106,7 +106,7 @@ func (s *SystemViewClient) ResponseWrapData(ctx context.Context, data map[string
 	return reply.ResponseWrapInfo, nil
 }
 
-func (s *SystemViewClient) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (s *SystemViewClient) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 

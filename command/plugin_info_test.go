@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
@@ -29,13 +30,13 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	}{
 		{
 			"too_many_args",
-			[]string{"foo", "bar"},
+			[]string{"foo", "bar", "fizz"},
 			"Too many arguments",
 			1,
 		},
 		{
 			"no_plugin_exist",
-			[]string{"not-a-real-plugin-like-ever"},
+			[]string{consts.PluginTypeCredential.String(), "not-a-real-plugin-like-ever"},
 			"Error reading plugin",
 			2,
 		},
@@ -79,13 +80,13 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName)
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
 
 		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			pluginName,
+			consts.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -110,14 +111,14 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		testPluginCreateAndRegister(t, client, pluginDir, pluginName)
+		testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
 
 		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
 			"-field", "builtin",
-			pluginName,
+			consts.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -139,7 +140,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"my-plugin",
+			consts.PluginTypeCredential.String(), "my-plugin",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

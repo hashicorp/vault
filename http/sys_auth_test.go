@@ -32,7 +32,6 @@ func TestSysAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
@@ -47,7 +46,6 @@ func TestSysAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
@@ -102,7 +100,6 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
@@ -116,7 +113,6 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 					"force_no_cache":    false,
 					"token_type":        "default-service",
 				},
@@ -131,7 +127,6 @@ func TestSysEnableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
@@ -145,7 +140,6 @@ func TestSysEnableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},
@@ -201,7 +195,6 @@ func TestSysDisableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
 					"token_type":        "default-service",
 					"force_no_cache":    false,
 				},
@@ -216,7 +209,6 @@ func TestSysDisableAuth(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
-				"plugin_name":       "",
 				"token_type":        "default-service",
 				"force_no_cache":    false,
 			},

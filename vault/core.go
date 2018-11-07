@@ -17,7 +17,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 
 	"google.golang.org/grpc"
 
@@ -136,6 +136,10 @@ type unlockInformation struct {
 // backends, router, security barrier, and audit trails.
 type Core struct {
 	entCore
+
+	// The registry of builtin plugins is passed in here as an interface because
+	// if it's used directly, it results in import cycles.
+	builtinRegistry BuiltinRegistry
 
 	// N.B.: This is used to populate a dev token down replication, as
 	// otherwise, after replication is started, a dev would have to go through
@@ -403,6 +407,8 @@ type Core struct {
 type CoreConfig struct {
 	DevToken string `json:"dev_token" structs:"dev_token" mapstructure:"dev_token"`
 
+	BuiltinRegistry BuiltinRegistry `json:"builtin_registry" structs:"builtin_registry" mapstructure:"builtin_registry"`
+
 	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
 
 	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
@@ -567,6 +573,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		disablePerfStandby:               true,
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
+		builtinRegistry:                  conf.BuiltinRegistry,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -619,7 +626,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	var err error
-	var ok bool
 
 	if conf.PluginDirectory != "" {
 		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
@@ -648,15 +654,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 
-	// Setup the backends
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
 	}
-	_, ok = logicalBackends["kv"]
+	_, ok := logicalBackends["kv"]
 	if !ok {
 		logicalBackends["kv"] = PassthroughBackendFactory
 	}
+
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := conf.Logger.Named("system")
@@ -1382,7 +1388,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.setupPluginCatalog(); err != nil {
+	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
 	if err := c.loadMounts(ctx); err != nil {
@@ -1694,4 +1700,13 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+// BuiltinRegistry is an interface that allows the "vault" package to use
+// the registry of builtin plugins without getting an import cycle. It
+// also allows for mocking the registry easily.
+type BuiltinRegistry interface {
+	Contains(name string, pluginType consts.PluginType) bool
+	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
+	Keys(pluginType consts.PluginType) []string
 }

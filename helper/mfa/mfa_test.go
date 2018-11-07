@@ -71,7 +71,7 @@ func TestMFALogin(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepEnableMFA(t),
 			testAccStepLogin(t, "user"),
@@ -84,7 +84,7 @@ func TestMFALoginDenied(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepEnableMFA(t),
 			testAccStepLoginDenied(t, "user"),

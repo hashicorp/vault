@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
@@ -34,7 +35,7 @@ type Database interface {
 // object in a logging and metrics middleware.
 func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName)
+	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, consts.PluginTypeDatabase)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(ctx, sys, pluginRunner, namedLogger)
+		db, err = NewPluginClient(ctx, sys, pluginRunner, namedLogger, false)
 		if err != nil {
 			return nil, err
 		}

@@ -564,7 +564,7 @@ func testBackendManagement(t *testing.T, version string) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData),
 			testAccStepWriteManagementPolicy(t, "test", ""),
@@ -608,7 +608,7 @@ func testBackendBasic(t *testing.T, version string) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData),
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
@@ -620,7 +620,7 @@ func testBackendBasic(t *testing.T, version string) {
 func TestBackend_crud(t *testing.T) {
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
 			testAccStepWritePolicy(t, "test2", testPolicy, ""),
@@ -635,7 +635,7 @@ func TestBackend_crud(t *testing.T) {
 func TestBackend_role_lease(t *testing.T) {
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
 			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),

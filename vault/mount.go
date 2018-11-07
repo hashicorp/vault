@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -60,6 +61,7 @@ const (
 	systemMountType    = "system"
 	identityMountType  = "identity"
 	cubbyholeMountType = "cubbyhole"
+	pluginMountType    = "plugin"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -221,7 +223,7 @@ type MountConfig struct {
 	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
@@ -234,7 +236,7 @@ type APIMountConfig struct {
 	DefaultLeaseTTL           string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginName                string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
@@ -417,12 +419,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
 
-	// Consider having plugin name under entry.Options
 	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
@@ -433,8 +430,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 
 	// Check for the correct backend type
 	backendType := backend.Type()
-	if entry.Type == "plugin" && backendType != logical.TypeLogical {
-		return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
+	if backendType != logical.TypeLogical {
+		if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
+			return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
+		}
 	}
 
 	addPathCheckers(c, entry, backend, viewPath)
@@ -1021,15 +1020,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		// Create the new backend
 		sysView := c.mountEntrySysView(entry)
-		// Set up conf to pass in plugin_name
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
 		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
-			if entry.Type == "plugin" {
+			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
@@ -1045,8 +1039,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		{
 			// Check for the correct backend type
 			backendType := backend.Type()
-			if entry.Type == "plugin" && backendType != logical.TypeLogical {
-				return fmt.Errorf("cannot mount %q of type %q as a logical backend", entry.Config.PluginName, backendType)
+
+			if backendType != logical.TypeLogical {
+				if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
+					return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
+				}
 			}
 
 			addPathCheckers(c, entry, backend, barrierPath)
@@ -1116,9 +1113,10 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if alias, ok := mountAliases[t]; ok {
 		t = alias
 	}
+
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %q", t)
+		f = plugin.Factory
 	}
 
 	// Set up conf to pass in plugin_name
@@ -1126,9 +1124,15 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
+
+	switch {
+	case entry.Type == "plugin":
+		conf["plugin_name"] = entry.Config.PluginNameDeprecated
+	default:
+		conf["plugin_name"] = t
 	}
+
+	conf["plugin_type"] = consts.PluginTypeSecrets.String()
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)
