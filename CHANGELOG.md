@@ -16,6 +16,15 @@ CHANGES:
    If performing seal migration, the barrier config should first be upgraded
    prior to starting migration.
 
+CHANGES FROM BETA 1:
+(Note: these items will be removed from the final 1.0 changelog as they are
+only breaking changes from beta1)
+
+ * Token Store Roles and Batch Tokens: Roles now default to `default-service`
+   token type, issuing service tokens by default but allowing overriding by the
+   client. They now also support `default-batch` in addition to `service` and
+   `batch`.
+
 FEATURES:
 
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
