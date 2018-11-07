@@ -10,11 +10,11 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <nav class="tabs">
       <ul>
-        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}" {{action (mut unwrapActiveTab) "data" on="click"}}>
-          <span class="link link-plain tab has-text-weight-semibold">Data</span>
+        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}">
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab)}}>Data</button>
         </li>
-        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}" {{action (mut unwrapActiveTab) "details" on="click"}}>
-          <span class="link link-plain tab has-text-weight-semibold">Wrap Details</span>
+        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}">
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}}>Wrap Details</button>
         </li>
       </ul>
     </nav>

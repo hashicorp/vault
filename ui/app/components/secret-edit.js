@@ -34,7 +34,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   wrappedData: null,
   isWrapping: false,
-  showWrapButton: true,
+  showWrapButton: computed.not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -277,16 +277,12 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleCopySuccess() {
       this.flashMessages.success('Copied Wrapped Data!');
-      this.set('showWrapButton', true);
+      this.set('wrappedData', null);
     },
 
     handleCopyError() {
       this.flashMessages.error('Could Not Copy Wrapped Data');
-      this.toggleProperty('showWrapButton', true);
-    },
-
-    hideWrappedData() {
-      this.set('showWrapButton', true);
+      this.set('wrappedData', null);
     },
 
     createOrUpdateKey(type, event) {
