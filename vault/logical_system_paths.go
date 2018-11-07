@@ -561,48 +561,27 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 func (b *SystemBackend) pluginsCatalogPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "plugins/catalog/(?P<name>.+)",
+			Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
-				},
 				"type": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
 				},
-				"sha256": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
-				},
-				"sha_256": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
-				},
-				"command": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
-				},
-				"args": &framework.FieldSchema{
-					Type:        framework.TypeStringSlice,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),
-				},
-				"env": &framework.FieldSchema{
-					Type:        framework.TypeStringSlice,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
-				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: b.handlePluginCatalogUpdate,
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePluginCatalogTypedList,
+					Summary:  "List the plugins in the catalog.",
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 		},
 		{
-			Pattern: "plugins/catalog/(?P<type>auth|database|secret)/(?P<name>.+)",
+			Pattern: "plugins/catalog(/(?P<type>auth|database|secret))?/(?P<name>.+)",
 
 			Fields: map[string]*framework.FieldSchema{
 				"name": &framework.FieldSchema{
@@ -647,26 +626,6 @@ func (b *SystemBackend) pluginsCatalogPaths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePluginCatalogRead,
 					Summary:  "Return the configuration data for the plugin with the given name.",
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
-		},
-		{
-			Pattern: "plugins/catalog/(?P<type>auth|database|secret)/?$",
-
-			Fields: map[string]*framework.FieldSchema{
-				"type": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-catalog_type"][0]),
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handlePluginCatalogTypedList,
-					Summary:  "List the plugins in the catalog.",
 				},
 			},
 
