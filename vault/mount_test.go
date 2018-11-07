@@ -487,7 +487,9 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	}
 
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		return &NoopBackend{}, nil
+		return &NoopBackend{
+			BackendType: logical.TypeCredential,
+		}, nil
 	}
 
 	me = &MountEntry{

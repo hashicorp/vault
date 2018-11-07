@@ -58,6 +58,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
+		BackendType: logical.TypeLogical,
 	}
 
 	b.Backend.Secrets = []*framework.Secret{
@@ -167,6 +168,10 @@ func (b *PassthroughBackend) GeneratesLeases() bool {
 }
 
 func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.Path == "" {
+		return logical.ErrorResponse("missing path"), nil
+	}
+
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return logical.ErrorResponse("missing data fields"), nil

@@ -22,7 +22,7 @@
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
             <T.trigger>
-              <ICon @glyph={{concat "enable/" (or method.type "auth")}} @size=24 @class="has-text-grey-light"/>
+              <ICon @glyph={{concat "enable/" (or method.methodType "auth")}} @size=24 @class="has-text-grey-light"/>
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">
@@ -34,11 +34,6 @@
             {{method.path}}
           </span>
           <br />
-          {{#if (eq method.methodType 'plugin')}}
-            <span class="tag">
-              {{method.methodType}}: {{method.config.plugin_name}}
-            </span>
-          {{/if}}
           <code class="has-text-grey is-size-8">
             {{method.accessor}}
           </code>

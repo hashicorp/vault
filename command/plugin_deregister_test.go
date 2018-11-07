@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
@@ -36,13 +37,13 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		},
 		{
 			"too_many_args",
-			[]string{"foo", "bar"},
+			[]string{"foo", "bar", "fizz"},
 			"Too many arguments",
 			1,
 		},
 		{
 			"not_a_plugin",
-			[]string{"nope_definitely_never_a_plugin_nope"},
+			[]string{consts.PluginTypeCredential.String(), "nope_definitely_never_a_plugin_nope"},
 			"",
 			0,
 		},
@@ -82,13 +83,14 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName)
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
+			Type:    consts.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
 		}); err != nil {
@@ -96,6 +98,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
 			pluginName,
 		})
 		if exp := 0; code != exp {
@@ -108,19 +111,23 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{})
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+			Type: consts.PluginTypeCredential,
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		found := false
-		for _, p := range resp.Names {
-			if p == pluginName {
-				found = true
+		for _, plugins := range resp.PluginsByType {
+			for _, p := range plugins {
+				if p == pluginName {
+					found = true
+				}
 			}
 		}
 		if found {
-			t.Errorf("expected %q to not be in %q", pluginName, resp.Names)
+			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
 		}
 	})
 
@@ -134,6 +141,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
 			"my-plugin",
 		})
 		if exp := 2; code != exp {

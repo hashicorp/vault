@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/version"
 )
@@ -19,7 +20,7 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string) (*PluginRunner, error)
+	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
 }
 
 // RunnerUtil interface defines the functions needed by the runner to wrap the
@@ -41,6 +42,7 @@ type LookRunnerUtil interface {
 // go-plugin.
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
+	Type           consts.PluginType           `json:"type" structs:"type"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
@@ -73,7 +75,7 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	cmd.Env = append(cmd.Env, env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if wrapper.MlockEnabled() {
+	if wrapper != nil && wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))

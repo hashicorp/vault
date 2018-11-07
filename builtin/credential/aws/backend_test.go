@@ -508,8 +508,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		Backend:        b,
+		AcceptanceTest:    false,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			stepCreate,
 			stepInvalidAccessKey,

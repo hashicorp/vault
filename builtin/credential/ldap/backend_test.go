@@ -402,7 +402,7 @@ func TestBackend_basic(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Map Scientists group (from LDAP server) with foo policy
@@ -429,7 +429,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Create LDAP user
@@ -444,7 +444,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Create engineers group with no policies
@@ -463,7 +463,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithAuthBind(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -478,7 +478,7 @@ func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithDiscover(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -493,7 +493,7 @@ func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlNoGroupDN(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -508,7 +508,7 @@ func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
 			testAccStepReadGroup(t, "g1", "foo"),
@@ -525,7 +525,7 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -687,7 +687,7 @@ func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "g1", "bar"),
 			testAccStepReadUser(t, "g1", "bar"),

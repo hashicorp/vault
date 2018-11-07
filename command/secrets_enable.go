@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -64,6 +65,10 @@ Usage: vault secrets enable [options] TYPE
   Enable a custom plugin (after it is registered in the plugin registry):
 
       $ vault secrets enable -path=my-secrets -plugin-name=my-plugin plugin
+
+  OR (preferred way):
+
+      $ vault secrets enable -path=my-secrets my-plugin
 
   For a full list of secrets engines and examples, please see the documentation.
 
@@ -151,7 +156,7 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(),
+		Completion: c.PredictVaultPlugins(consts.PluginTypeSecrets, consts.PluginTypeDatabase),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
 	})
@@ -223,6 +228,9 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 	// Get the engine type type (first arg)
 	engineType := strings.TrimSpace(args[0])
+	if engineType == "plugin" {
+		engineType = c.flagPluginName
+	}
 
 	// If no path is specified, we default the path to the backend type
 	// or use the plugin name if it's a plugin backend
@@ -255,7 +263,6 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
 			ForceNoCache:    c.flagForceNoCache,
-			PluginName:      c.flagPluginName,
 		},
 		Options: c.flagOptions,
 	}
@@ -288,7 +295,6 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 	if engineType == "plugin" {
 		thing = c.flagPluginName + " plugin"
 	}
-
 	c.UI.Output(fmt.Sprintf("Success! Enabled the %s at: %s", thing, mountPath))
 	return 0
 }

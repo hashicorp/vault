@@ -47,7 +47,7 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -77,7 +77,7 @@ func TestBackend_basicSTS(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepRotateRoot(accessKey),
@@ -103,7 +103,7 @@ func TestBackend_policyCrud(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -724,7 +724,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -755,7 +755,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -804,7 +804,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -840,7 +840,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -856,7 +856,7 @@ func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),

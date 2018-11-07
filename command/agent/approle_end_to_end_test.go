@@ -467,7 +467,7 @@ func TestAppRoleWithWrapping(t *testing.T) {
 	}
 
 	checkToken := func() string {
-		timeout := time.Now().Add(5 * time.Second)
+		timeout := time.Now().Add(10 * time.Second)
 		for {
 			if time.Now().After(timeout) {
 				t.Fatal("did not find a written token after timeout")

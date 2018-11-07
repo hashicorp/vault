@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 )
 
 // testPluginDir creates a temporary directory suitable for holding plugins.
@@ -61,13 +62,14 @@ func testPluginCreate(tb testing.TB, dir, name string) (string, string) {
 }
 
 // testPluginCreateAndRegister creates a plugin and registers it in the catalog.
-func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string) (string, string) {
+func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string, pluginType consts.PluginType) (string, string) {
 	tb.Helper()
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:    name,
+		Type:    pluginType,
 		Command: name,
 		SHA256:  sha256Sum,
 	}); err != nil {
