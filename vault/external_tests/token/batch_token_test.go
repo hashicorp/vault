@@ -464,7 +464,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	{
 		client.SetToken(rootToken)
 		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-			"token_type": "default-service",
+			"token_type": "default-batch",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -515,7 +515,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:2] != "b." {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
