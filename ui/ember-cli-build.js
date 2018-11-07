@@ -32,6 +32,9 @@ module.exports = function(defaults) {
     babel: {
       plugins: ['transform-object-rest-spread'],
     },
+    'ember-cli-babel': {
+      includePolyfill: true,
+    },
     autoprefixer: {
       grid: true,
       browsers: ['defaults', 'ie 11'],
