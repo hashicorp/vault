@@ -49,6 +49,8 @@ BUG FIXES:
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
    the revoke button in the UI [GH-5647]
  * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
+ * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
+   when trying to use tool/hash [GH-5714]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
