@@ -708,6 +708,11 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 		return nil, nil
 	}
 
+	if len(pe.Value) < 4 {
+		b.l.RUnlock()
+		return nil, errors.New("invalid value")
+	}
+
 	// Verify the term
 	term := binary.BigEndian.Uint32(pe.Value[:4])
 
