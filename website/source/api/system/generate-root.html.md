@@ -38,6 +38,7 @@ $ curl \
   "required": 3,
   "encoded_token": "",
   "pgp_fingerprint": "",
+  "otp_length": 24,
   "complete": false
 }
 ```
@@ -45,9 +46,16 @@ $ curl \
 If a root generation is started, `progress` is how many unseal keys have been
 provided for this generation attempt, where `required` must be reached to
 complete. The `nonce` for the current attempt and whether the attempt is
-complete is also displayed. If a PGP key is being used to encrypt the final root
-token, its fingerprint will be returned. Note that if an OTP is being used to
-encode the final root token, it will never be returned.
+complete is also displayed.
+
+If a PGP key is being used to encrypt the final root
+token, its fingerprint will be returned.
+
+If an OTP is being used to
+encode the final root token and is provided on the start request, it will never
+be returned, however, if it is omitted from the start request, it will be returned only
+once, on the response to the start request.
+If the OTP expected length is larger than 16, the OTP length is returned (0.11.2 and up).
 
 ## Start Root Token Generation
 
@@ -63,6 +71,11 @@ generation attempt can take place at a time.
 - `pgp_key` `(string: <optional>)` – Specifies a base64-encoded PGP public key.
   The raw bytes of the token will be encrypted with this value before being
   returned to the final unseal key provider.
+- `otp` `(string: <optional>)` – Specifies a base64-encoded 16-byte
+  value when the OTP length is 16 (under 0.11.2) or a base62 string
+  on version 0.11.2 and up, with length of otp_length.
+  The raw bytes of the token will be XOR'd with this value before being
+  returned to the final unseal key provider, encoded as base64.
 
 ### Sample Request
 
