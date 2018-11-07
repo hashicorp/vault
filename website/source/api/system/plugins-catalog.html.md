@@ -9,17 +9,17 @@ description: |-
 
 # `/sys/plugins/catalog`
 
-The `/sys/plugins/catalog` endpoint is used to list, register, update, and
+The `/sys/plugins/catalog` endpoint is used to read, register, update, and
 remove plugins in Vault's catalog. Plugins must be registered before use, and
 once registered backends can use the plugin by querying the catalog.
 
-## List Plugins
+## Read Plugins
 
-This endpoint lists the plugins in the catalog.
+This endpoint lists the plugins in the catalog by type.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/plugins/catalog`      | `200 application/json`  |
+| `GET`    | `/sys/plugins/catalog`       | `200 application/json` |
 
 ### Sample Request
 
@@ -35,11 +35,25 @@ $ curl \
 ```javascript
 {
     "data": {
-        "keys": [
+        "auth": [
+            "aws",
+            "azure",
+            "custom-auth-plugin",
+            "gcp",
+            "ldap"
+        ],
+        "database": [
             "cassandra-database-plugin",
             "mssql-database-plugin",
             "mysql-database-plugin",
             "postgresql-database-plugin"
+        ],
+        "secret": [
+            "ad",
+            "aws",
+            "azure",
+            "gcp",
+            "transit"
         ]
     }
 }
@@ -53,15 +67,18 @@ supplied name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/plugins/catalog/:name` | `204 (empty body)`     |
+| Method   | Path                               | Produces               |
+| :------- | :--------------------------------- | :--------------------- |
+| `PUT`    | `/sys/plugins/catalog/:type/:name` | `204 (empty body)`     |
 
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name for this plugin. The name
   is what is used to look up plugins in the catalog. This is part of the request
   URL.
+  
+- `type` `(string: <required>)` – Specifies the type of this plugin. May be 
+  "auth", "database", or "secret".
 
 - `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
@@ -94,7 +111,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
 
 ## Read Plugin
@@ -104,14 +121,17 @@ This endpoint returns the configuration data for the plugin with the given name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/plugins/catalog/:name` | `200 application/json` |
+| Method   | Path                               | Produces               |
+| :------- | :--------------------------------- | :--------------------- |
+| `GET`    | `/sys/plugins/catalog/:type/:name` | `200 application/json` |
 
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the plugin to retrieve.
   This is part of the request URL.
+  
+- `type` `(string: <required>)` – Specifies the type of this plugin. May be 
+  "auth", "database", or "secret".
 
 ### Sample Request
 
@@ -119,7 +139,7 @@ This endpoint returns the configuration data for the plugin with the given name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
 
 ### Sample Response
@@ -144,12 +164,15 @@ This endpoint removes the plugin with the given name.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/plugins/catalog/:name` | `204 (empty body)`     |
+| `DELETE` | `/sys/plugins/catalog/:type/:name` | `204 (empty body)`     |
 
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the plugin to delete.
   This is part of the request URL.
+  
+- `type` `(string: <required>)` – Specifies the type of this plugin. May be 
+  "auth", "database", or "secret".
 
 ### Sample Request
 
@@ -157,5 +180,5 @@ This endpoint removes the plugin with the given name.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```

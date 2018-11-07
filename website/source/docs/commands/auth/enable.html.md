@@ -54,6 +54,3 @@ flags](/docs/commands/index.html) included on all commands.
 - `-path` `(string: "")` - Place where the auth method will be accessible. This
   must be unique across all auth methods. This defaults to the "type" of the
   auth method. The auth method will be accessible at `/auth/<path>`.
-
-- `-plugin-name` `(string: "")` - Name of the auth method plugin. This plugin
-  name must already exist in the Vault server's plugin catalog.
