@@ -3,7 +3,7 @@
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
-module.exports = function(defaults) {
+module.exports = function (defaults) {
   var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
     favicons: {
@@ -31,9 +31,6 @@ module.exports = function(defaults) {
     },
     babel: {
       plugins: ['transform-object-rest-spread'],
-    },
-    'ember-cli-babel': {
-      includePolyfill: true,
     },
     autoprefixer: {
       grid: true,

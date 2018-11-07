@@ -16,10 +16,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   store: service(),
   auth: service(),
   currentCluster: service(),
-  modelTypes: computed(function() {
+  modelTypes: computed(function () {
     return ['node', 'secret', 'secret-engine'];
   }),
-  globalNamespaceModels: computed(function() {
+  globalNamespaceModels: computed(function () {
     return ['node', 'cluster'];
   }),
 
@@ -40,15 +40,14 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // the model types blacklisted in `globalNamespaceModels`
     let store = this.store;
     let modelsToKeep = this.get('globalNamespaceModels');
-    for (let model of getOwner(this)
-      .lookup('data-adapter:main')
-      .getModelTypes()) {
+    let models = getOwner(this).lookup('data-adapter:main').getModelTypes()
+    models.forEach(model => {
       let { name } = model;
       if (modelsToKeep.includes(name)) {
         return;
       }
       store.unloadAll(name);
-    }
+    });
   },
 
   beforeModel() {
@@ -69,7 +68,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return this.get('store').findRecord('cluster', id);
   },
 
-  poll: task(function*() {
+  poll: task(function* () {
     while (true) {
       // when testing, the polling loop causes promises to never settle so acceptance tests hang
       // to get around that, we just disable the poll in tests

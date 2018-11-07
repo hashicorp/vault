@@ -98,12 +98,12 @@ export default Service.extend({
   urlFromTransition(transition) {
     let routes = Object.keys(transition.params);
     let params = [];
-    for (let route of routes) {
+    routes.forEach(route => {
       let param = transition.params[route];
       if (Object.keys(param).length) {
         params.push(param);
       }
-    }
+    });
     let url = this.get('router').urlFor(transition.targetName, ...params, {
       queryParams: transition.queryParams,
     });

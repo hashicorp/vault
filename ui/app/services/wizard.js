@@ -178,7 +178,7 @@ export default Service.extend(DEFAULTS, {
     let expectedRouteName;
     let router = this.router;
 
-    for (let action of actions) {
+    actions.forEach(action => {
       let type = action;
       if (action.type) {
         type = action.type;
@@ -224,7 +224,7 @@ export default Service.extend(DEFAULTS, {
         default:
           break;
       }
-    }
+    });
     if (machineType === 'tutorial') {
       return;
     }
