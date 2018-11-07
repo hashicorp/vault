@@ -22,7 +22,7 @@ module('Acceptance | settings/auth/enable', function(hooks) {
     await withFlash(page.enable(type, path), () => {
       assert.equal(
         page.flash.latestMessage,
-        `Successfully mounted ${type} auth method at ${path}.`,
+        `Successfully mounted the ${type} auth method at ${path}.`,
         'success flash shows'
       );
     });

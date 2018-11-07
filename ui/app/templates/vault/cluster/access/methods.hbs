@@ -63,7 +63,7 @@
                       confirmButtonClasses="button is-primary"
                       buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
-                      confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
+                      confirmMessage=(concat "Are you sure you want to disable the " method.id " auth method at " method.path "?")
                       showConfirm=(get this (concat "shouldDelete-" method.id))
                       class=(if (get this (concat "shouldDelete-" method.id)) "message is-block is-warning is-outline")
                       containerClasses="message-body is-block"
