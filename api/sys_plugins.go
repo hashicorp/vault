@@ -20,6 +20,9 @@ type ListPluginsInput struct {
 type ListPluginsResponse struct {
 	// PluginsByType is the list of plugins by type.
 	PluginsByType map[consts.PluginType][]string `json:"types"`
+
+	// NamesDeprecated is the list of names of the plugins.
+	NamesDeprecated []string `json:"names"`
 }
 
 // ListPlugins lists all plugins in the catalog and returns their names as a
@@ -51,6 +54,26 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 	if secret == nil || secret.Data == nil {
 		return nil, errors.New("data from server response is empty")
+	}
+
+	if resp.StatusCode == 405 && req.Method == "GET" {
+		// We received an Unsupported Operation response from Vault, indicating
+		// Vault of an older version that doesn't support the READ method yet.
+		req.Method = "LIST"
+		resp, err := c.c.RawRequestWithContext(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		var result struct {
+			Data struct {
+				Keys []string `json:"keys"`
+			} `json:"data"`
+		}
+		if err := resp.DecodeJSON(&result); err != nil {
+			return nil, err
+		}
+		return &ListPluginsResponse{NamesDeprecated: result.Data.Keys}, nil
 	}
 
 	result := &ListPluginsResponse{
