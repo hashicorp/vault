@@ -17,3 +17,5 @@ method](https://www.vaultproject.io/docs/auth/kubernetes.html).
 ## Configuration
 
 - `role` `(string: required)` - The role to authenticate against on Vault
+- `token_path` `(string: optional)` - The file path to a custom JWT token to use
+for authentication. If omitted, the default service account token path is used.
