@@ -256,7 +256,8 @@ func (b *SystemBackend) handleTidyLeases(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+	pluginTypeStr := d.Get("type").(string)
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -265,6 +266,25 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	if err != nil {
 		return nil, err
 	}
+	return logical.ListResponse(plugins), nil
+}
+
+func (b *SystemBackend) handlePluginsListDeprecated(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var plugins []string
+	pluginsAdded := make(map[string]bool)
+	for _, pluginType := range consts.PluginTypes {
+		names, err := b.Core.pluginCatalog.List(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+		for _, name := range names {
+			if _, found := pluginsAdded[name]; !found {
+				plugins = append(plugins, name)
+				pluginsAdded[name] = true
+			}
+		}
+	}
+	sort.Strings(plugins)
 	return logical.ListResponse(plugins), nil
 }
 
