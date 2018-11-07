@@ -2550,11 +2550,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"explicit_max_ttl":    int64(0),
 		"renewable":           true,
-		"token_type":          "service",
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Now test updating; this should be set to an UpdateOperation
@@ -2596,11 +2596,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"explicit_max_ttl":    int64(0),
 		"renewable":           false,
-		"token_type":          "service",
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Now set explicit max ttl and clear the period
@@ -2634,11 +2634,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"period":              int64(0),
 		"renewable":           false,
-		"token_type":          "service",
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	req.Operation = logical.ListOperation
