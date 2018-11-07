@@ -710,7 +710,12 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 
 	if pe.Value == nil {
 		b.l.RUnlock()
-		return nil, errors.New("no value present for key")
+		return nil, errors.New("no value present")
+	}
+
+	if len(pe.Value) < 4 {
+		b.l.RUnlock()
+		return nil, errors.New("invalid value")
 	}
 
 	// Verify the term
