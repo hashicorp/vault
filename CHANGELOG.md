@@ -40,6 +40,7 @@ IMPROVEMENTS:
    when a user becomes active again [GH-5662]
  * ui: The unbundled UI page now has some styling [GH-5665]
  * ui: Improved banner and popup design [GH-5672]
+ * ui: Added token type to auth method mount config [GH-5723]
 
 BUG FIXES:
 
