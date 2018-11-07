@@ -331,90 +331,192 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	var err error
 	var secret *api.Secret
 
-	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"bound_cidrs": []string{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
-		Policies: []string{"default"},
-		Type:     "batch",
-	}, "testrole")
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.Auth.ClientToken[0:2] == "b." {
-		t.Fatal(secret.Auth.ClientToken)
+	// Test service
+	{
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"bound_cidrs": []string{},
+			"token_type":  "service",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "batch",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "s." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
 	}
 
 	// Test batch
-	client.SetToken(rootToken)
-	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"token_type": "batch",
-	})
-	// Orphan not set so we should error
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"token_type": "batch",
-		"orphan":     true,
-	})
-	// Renewable set so we should error
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"token_type": "batch",
-		"orphan":     true,
-		"renewable":  false,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
-		Policies: []string{"default"},
-		Type:     "service",
-	}, "testrole")
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.Auth.ClientToken[0:2] != "b." {
-		t.Fatal(secret.Auth.ClientToken)
+	{
+		client.SetToken(rootToken)
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"token_type": "batch",
+		})
+		// Orphan not set so we should error
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"token_type": "batch",
+			"orphan":     true,
+		})
+		// Renewable set so we should error
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"token_type": "batch",
+			"orphan":     true,
+			"renewable":  false,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "service",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "b." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
 	}
 
-	// Back to normal
-	client.SetToken(rootToken)
-	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"token_type": "service",
-	})
-	if err != nil {
-		t.Fatal(err)
+	// Test default-service
+	{
+		client.SetToken(rootToken)
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"token_type": "default-service",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Client specifies batch
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "batch",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "b." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
+		// Client specifies service
+		client.SetToken(rootToken)
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "service",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "s." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
+		// Client doesn't specify
+		client.SetToken(rootToken)
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "s." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
 	}
-	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
-		Policies: []string{"default"},
-		Type:     "batch",
-	}, "testrole")
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.SetToken(secret.Auth.ClientToken)
-	_, err = client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if secret.Auth.ClientToken[0:2] == "b." {
-		t.Fatal(secret.Auth.ClientToken)
+
+	// Test default-batch
+	{
+		client.SetToken(rootToken)
+		_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
+			"token_type": "default-batch",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Client specifies batch
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "batch",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "b." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
+		// Client specifies service
+		client.SetToken(rootToken)
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+			Type:     "service",
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "s." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
+		// Client doesn't specify
+		client.SetToken(rootToken)
+		secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
+			Policies: []string{"default"},
+		}, "testrole")
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		_, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret.Auth.ClientToken[0:2] != "b." {
+			t.Fatal(secret.Auth.ClientToken)
+		}
 	}
 }

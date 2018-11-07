@@ -444,6 +444,7 @@ The Google Cloud KMS secrets engine has a full HTTP API. Please see the
 [Google Cloud KMS secrets engine API docs][api] for more details.
 
 
+[api]: /api/secret/gcpkms/index.html
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
 [gce]: https://cloud.google.com/compute/
 [gke]: https://cloud.google.com/kubernetes-engine/

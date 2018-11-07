@@ -16,6 +16,15 @@ CHANGES:
    If performing seal migration, the barrier config should first be upgraded
    prior to starting migration.
 
+CHANGES FROM BETA 1:
+(Note: these items will be removed from the final 1.0 changelog as they are
+only breaking changes from beta1)
+
+ * Token Store Roles and Batch Tokens: Roles now default to `default-service`
+   token type, issuing service tokens by default but allowing overriding by the
+   client. They now also support `default-batch` in addition to `service` and
+   `batch`.
+
 FEATURES:
 
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
@@ -49,6 +58,8 @@ BUG FIXES:
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
    the revoke button in the UI [GH-5647]
  * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
+ * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
+   when trying to use tool/hash [GH-5714]
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 

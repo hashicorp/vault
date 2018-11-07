@@ -2155,7 +2155,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	tokenTypeStr := data.Type
 	if role != nil {
 		switch role.TokenType {
-		case logical.TokenTypeDefault, logical.TokenTypeService:
+		case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
+			// Use the user-given value, but fall back to service
+		case logical.TokenTypeDefaultBatch:
+			// Use the user-given value, but fall back to batch
+			if tokenTypeStr == "" {
+				tokenTypeStr = logical.TokenTypeBatch.String()
+			}
+		case logical.TokenTypeService:
 			tokenTypeStr = logical.TokenTypeService.String()
 		case logical.TokenTypeBatch:
 			tokenTypeStr = logical.TokenTypeBatch.String()
@@ -2927,6 +2934,10 @@ func (ts *TokenStore) tokenStoreRole(ctx context.Context, name string) (*tsRoleE
 		return nil, err
 	}
 
+	if result.TokenType == logical.TokenTypeDefault {
+		result.TokenType = logical.TokenTypeDefaultService
+	}
+
 	return &result, nil
 }
 
@@ -3121,19 +3132,26 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	}
 
 	tokenType := entry.TokenType
+	if tokenType == logical.TokenTypeDefault {
+		tokenType = logical.TokenTypeDefaultService
+	}
 	tokenTypeRaw, ok := data.GetOk("token_type")
 	if ok {
 		tokenTypeStr := tokenTypeRaw.(string)
 		switch tokenTypeStr {
-		case "", "service":
+		case "service":
 			tokenType = logical.TokenTypeService
 		case "batch":
 			tokenType = logical.TokenTypeBatch
+		case "default-service":
+			tokenType = logical.TokenTypeDefaultService
+		case "default-batch":
+			tokenType = logical.TokenTypeDefaultBatch
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenTypeStr)), nil
 		}
 	} else if req.Operation == logical.CreateOperation {
-		tokenType = logical.TokenTypeService
+		tokenType = logical.TokenTypeDefaultService
 	}
 	entry.TokenType = tokenType
 
