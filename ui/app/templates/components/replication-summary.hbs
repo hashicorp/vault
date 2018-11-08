@@ -1,4 +1,4 @@
-{{#if (not version.hasDRReplication)}}
+{{#if (and (not version.hasPerfReplication) (not version.hasDRReplication))}}
   {{upgrade-page title="Replication"}}
 {{else if (or cluster.allReplicationDisabled cluster.replicationAttrs.replicationDisabled)}}
   {{partial 'partials/replication/enable'}}
