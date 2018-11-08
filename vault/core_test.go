@@ -2292,9 +2292,9 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			"Should-Passthrough":                  []string{"foo"},
-			"Should-Passthrough-Case-Insensitive": []string{"baz"},
-			"Should-Not-Passthrough":              []string{"bar"},
+			"Should-Passthrough":                  {"foo"},
+			"Should-Passthrough-Case-Insensitive": {"baz"},
+			"Should-Not-Passthrough":              {"bar"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2365,8 +2365,8 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		Path:        "foo/test",
 		ClientToken: root,
 		Headers: map[string][]string{
-			consts.AuthHeaderName: []string{"foo"},
-			"Authorization":       []string{"baz"},
+			consts.AuthHeaderName: {"foo"},
+			"Authorization":       {"baz"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)

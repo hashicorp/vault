@@ -13,11 +13,11 @@ func pathUserPolicies(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username") + "/policies$",
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},

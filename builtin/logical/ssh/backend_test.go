@@ -539,7 +539,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
@@ -573,12 +573,12 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 			},
 
-			logicaltest.TestStep{
+			{
 				Operation:       logical.ReadOperation,
 				Path:            "public_key",
 				Unauthenticated: true,
@@ -758,7 +758,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 				"allow_user_key_ids":      false,
 				"allow_user_certificates": true,
 			}),
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "sign/testing",
 				Data: map[string]interface{}{

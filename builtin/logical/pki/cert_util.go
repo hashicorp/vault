@@ -1269,7 +1269,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 			!bytes.Equal(data.signingBundle.Certificate.AuthorityKeyId, data.signingBundle.Certificate.SubjectKeyId) {
 
 			result.CAChain = []*certutil.CertBlock{
-				&certutil.CertBlock{
+				{
 					Certificate: data.signingBundle.Certificate,
 					Bytes:       data.signingBundle.CertificateBytes,
 				},

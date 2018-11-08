@@ -18,12 +18,12 @@ func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate",
 			},
 
-			"crl": &framework.FieldSchema{
+			"crl": {
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
 May be DER or PEM encoded. Note: the expiration time

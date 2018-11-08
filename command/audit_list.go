@@ -114,7 +114,7 @@ func (c *AuditListCommand) Run(args []string) int {
 
 func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {
 	paths := make([]string, 0, len(audits))
-	for path, _ := range audits {
+	for path := range audits {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)
@@ -134,7 +134,7 @@ func (c *AuditListCommand) simpleAudits(audits map[string]*api.Audit) []string {
 
 func (c *AuditListCommand) detailedAudits(audits map[string]*api.Audit) []string {
 	paths := make([]string, 0, len(audits))
-	for path, _ := range audits {
+	for path := range audits {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)

@@ -15,22 +15,22 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
 			},
 
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
 are running GitHub Enterprise or an
 API-compatible authentication server.`,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeString,
 				Description: `Duration after which authentication will be expired`,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeString,
 				Description: `Maximum duration after which authentication will be expired`,
 			},

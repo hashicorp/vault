@@ -16,7 +16,7 @@ func pathConfigTidyRoletagBlacklist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", roletagBlacklistConfigPath),
 		Fields: map[string]*framework.FieldSchema{
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
 				Default: 15552000, //180d
 				Description: `The amount of extra time that must have passed beyond the roletag
@@ -24,7 +24,7 @@ expiration, before it is removed from the backend storage.
 Defaults to 4320h (180 days).`,
 			},
 
-			"disable_periodic_tidy": &framework.FieldSchema{
+			"disable_periodic_tidy": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to 'true', disables the periodic tidying of blacklisted entries.",

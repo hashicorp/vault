@@ -54,7 +54,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 			},
 			errors.New("this is an error"),
@@ -79,7 +79,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 					TTL: 60 * time.Second,
 				},
 				Headers: map[string][]string{
-					"foo": []string{"bar"},
+					"foo": {"bar"},
 				},
 			},
 			errors.New("this is an error"),

@@ -118,7 +118,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	c.mounts = &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop/",
 				Type:             "kv",
@@ -128,7 +128,7 @@ func TestCore_Mount_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop2/",
 				Type:             "kv",

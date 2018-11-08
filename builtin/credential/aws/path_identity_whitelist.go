@@ -12,7 +12,7 @@ func pathIdentityWhitelist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "identity-whitelist/" + framework.GenericNameRegex("instance_id"),
 		Fields: map[string]*framework.FieldSchema{
-			"instance_id": &framework.FieldSchema{
+			"instance_id": {
 				Type: framework.TypeString,
 				Description: `EC2 instance ID. A successful login operation from an EC2 instance
 gets cached in this whitelist, keyed off of instance ID.`,

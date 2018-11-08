@@ -210,7 +210,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
@@ -251,7 +251,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
@@ -292,7 +292,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
@@ -333,7 +333,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
@@ -467,7 +467,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	})))
 
 	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -482,7 +482,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "config/urls",
 			Data: map[string]interface{}{
@@ -492,7 +492,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.ReadOperation,
 			Path:      "config/urls",
 			Check: func(resp *logical.Response) error {
@@ -513,7 +513,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -534,7 +534,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -576,7 +576,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 		},
 
 		// Same as above but exclude adding to sans
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -653,7 +653,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 	})))
 
 	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -663,7 +663,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{
@@ -674,12 +674,12 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			ErrorOk: true,
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.DeleteOperation,
 			Path:      "root",
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
@@ -689,7 +689,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 
-		logicaltest.TestStep{
+		{
 			Operation: logical.UpdateOperation,
 			Path:      "root/sign-intermediate",
 			Data: map[string]interface{}{

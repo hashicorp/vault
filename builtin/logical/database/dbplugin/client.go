@@ -36,13 +36,13 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 supports both protocols
-		3: plugin.PluginSet{
+		3: {
 			"database": &DatabasePlugin{
 				GRPCDatabasePlugin: new(GRPCDatabasePlugin),
 			},
 		},
 		// Version 4 only supports gRPC
-		4: plugin.PluginSet{
+		4: {
 			"database": new(GRPCDatabasePlugin),
 		},
 	}

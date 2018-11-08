@@ -18,25 +18,25 @@ func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy",
 		Fields: map[string]*framework.FieldSchema{
-			"tidy_cert_store": &framework.FieldSchema{
+			"tidy_cert_store": {
 				Type: framework.TypeBool,
 				Description: `Set to true to enable tidying up
 the certificate store`,
 			},
 
-			"tidy_revocation_list": &framework.FieldSchema{
+			"tidy_revocation_list": {
 				Type:        framework.TypeBool,
 				Description: `Deprecated; synonym for 'tidy_revoked_certs`,
 			},
 
-			"tidy_revoked_certs": &framework.FieldSchema{
+			"tidy_revoked_certs": {
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
 and expired certificates, removing them both from the CRL and from storage. The
 CRL will be rotated if this causes any values to be removed.`,
 			},
 
-			"safety_buffer": &framework.FieldSchema{
+			"safety_buffer": {
 				Type: framework.TypeDurationSecond,
 				Description: `The amount of extra time that must have passed
 beyond certificate expiration before it is removed

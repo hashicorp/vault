@@ -12,7 +12,7 @@ func pathRotateCredentials(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "rotate-root/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of this database connection",
 			},

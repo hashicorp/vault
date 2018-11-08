@@ -26,12 +26,12 @@ func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `groups/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the LDAP group.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
 			},

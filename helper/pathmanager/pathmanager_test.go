@@ -118,16 +118,16 @@ func TestPathManager_HasExactPath(t *testing.T) {
 	}
 
 	tcases := []tCase{
-		tCase{"path1/key1", true},
-		tCase{"path2/key1", true},
-		tCase{"path3/key1", true},
-		tCase{"path1/key1/subkey1", true},
-		tCase{"path1/key1/subkey99", false},
-		tCase{"path2/key1/subkey1", true},
-		tCase{"path1/key1/subkey1/subkey1", false},
-		tCase{"nonexistentpath/key1", false},
-		tCase{"path4/key1", false},
-		tCase{"path5/key1/subkey1", false},
+		{"path1/key1", true},
+		{"path2/key1", true},
+		{"path3/key1", true},
+		{"path1/key1/subkey1", true},
+		{"path1/key1/subkey99", false},
+		{"path2/key1/subkey1", true},
+		{"path1/key1/subkey1/subkey1", false},
+		{"nonexistentpath/key1", false},
+		{"path4/key1", false},
+		{"path5/key1/subkey1", false},
 	}
 
 	for _, tc := range tcases {

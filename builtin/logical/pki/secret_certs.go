@@ -15,16 +15,16 @@ func secretCerts(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCertsType,
 		Fields: map[string]*framework.FieldSchema{
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type: framework.TypeString,
 				Description: `The PEM-encoded concatenated certificate and
 issuing certificate authority`,
 			},
-			"private_key": &framework.FieldSchema{
+			"private_key": {
 				Type:        framework.TypeString,
 				Description: "The PEM-encoded private key for the certificate",
 			},
-			"serial": &framework.FieldSchema{
+			"serial": {
 				Type: framework.TypeString,
 				Description: `The serial number of the certificate, for handy
 reference`,

@@ -1936,7 +1936,7 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 		},
 
 		Secrets: []*framework.Secret{
-			&framework.Secret{
+			{
 				Type: "badRenewBackend",
 				Revoke: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
 					return nil, fmt.Errorf("always errors")

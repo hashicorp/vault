@@ -527,12 +527,12 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
+			{
 				Operation: logical.UpdateOperation,
 				Path:      "config",
 				Data:      map[string]interface{}{},
 			},
-			logicaltest.TestStep{
+			{
 				Operation: logical.ReadOperation,
 				Path:      "config",
 				Check: func(resp *logical.Response) error {

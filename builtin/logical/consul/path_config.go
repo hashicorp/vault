@@ -13,12 +13,12 @@ func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Consul server address",
 			},
 
-			"scheme": &framework.FieldSchema{
+			"scheme": {
 				Type:        framework.TypeString,
 				Description: "URI scheme for the Consul address",
 
@@ -28,7 +28,7 @@ func pathConfigAccess(b *backend) *framework.Path {
 				Default: "http",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},

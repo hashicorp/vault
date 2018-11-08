@@ -42,7 +42,7 @@ func pathSetSignedIntermediate(b *backend) *framework.Path {
 		Pattern: "intermediate/set-signed",
 
 		Fields: map[string]*framework.FieldSchema{
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type: framework.TypeString,
 				Description: `PEM-format certificate. This must be a CA
 certificate with a public key matching the

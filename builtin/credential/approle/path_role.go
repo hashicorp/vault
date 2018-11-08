@@ -117,7 +117,7 @@ type roleIDStorageEntry struct {
 // role/<role_name>/secret-id-accessor/destroy - For deleting secret_id using accessor
 func rolePaths(b *backend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "role/?",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -125,64 +125,64 @@ func rolePaths(b *backend) []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-list"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name"),
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"bind_secret_id": &framework.FieldSchema{
+				"bind_secret_id": {
 					Type:        framework.TypeBool,
 					Default:     true,
 					Description: "Impose secret_id to be presented when logging in using this role. Defaults to 'true'.",
 				},
 				// Deprecated
-				"bound_cidr_list": &framework.FieldSchema{
+				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
 				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
+				"secret_id_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token.`,
 				},
-				"policies": &framework.FieldSchema{
+				"policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Default:     "default",
 					Description: "Comma separated list of policies on the role.",
 				},
-				"secret_id_num_uses": &framework.FieldSchema{
+				"secret_id_num_uses": {
 					Type: framework.TypeInt,
 					Description: `Number of times a SecretID can access the role, after which the SecretID
 will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
 				},
-				"secret_id_ttl": &framework.FieldSchema{
+				"secret_id_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
 				},
-				"token_num_uses": &framework.FieldSchema{
+				"token_num_uses": {
 					Type:        framework.TypeInt,
 					Description: `Number of times issued tokens can be used`,
 				},
-				"token_ttl": &framework.FieldSchema{
+				"token_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued token should expire. Defaults
 to 0, in which case the value will fall back to the system/mount defaults.`,
 				},
-				"token_max_ttl": &framework.FieldSchema{
+				"token_max_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued token should not be allowed to
 be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
 				},
-				"period": &framework.FieldSchema{
+				"period": {
 					Type:    framework.TypeDurationSecond,
 					Default: 0,
 					Description: `If set, indicates that the token generated using this role
@@ -190,16 +190,16 @@ should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
 				},
-				"role_id": &framework.FieldSchema{
+				"role_id": {
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
-				"local_secret_ids": &framework.FieldSchema{
+				"local_secret_ids": {
 					Type: framework.TypeBool,
 					Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
 				},
-				"token_type": &framework.FieldSchema{
+				"token_type": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: `The type of token to generate ("service" or "batch"), or "default" to use the default`,
@@ -215,10 +215,10 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/local-secret-ids$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
@@ -229,14 +229,14 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-local-secret-ids"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-local-secret-ids"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/policies$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"policies": &framework.FieldSchema{
+				"policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Default:     "default",
 					Description: "Comma separated list of policies on the role.",
@@ -250,14 +250,14 @@ can only be set during role creation and once set, it can't be reset later.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-policies"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-policies"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bound-cidr-list$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"bound_cidr_list": &framework.FieldSchema{
+				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
@@ -271,14 +271,14 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bound-cidr-list"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bound-cidr-list"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-bound-cidrs$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_bound_cidrs": &framework.FieldSchema{
+				"secret_id_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
@@ -292,14 +292,14 @@ IP addresses which can perform the login operation.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["secret-id-bound-cidrs"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-bound-cidrs$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token.`,
@@ -313,14 +313,14 @@ IP addresses which can use the returned token.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["token-bound-cidrs"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["token-bound-cidrs"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/bind-secret-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"bind_secret_id": &framework.FieldSchema{
+				"bind_secret_id": {
 					Type:        framework.TypeBool,
 					Default:     true,
 					Description: "Impose secret_id to be presented when logging in using this role.",
@@ -334,14 +334,14 @@ IP addresses which can use the returned token.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-bind-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-bind-secret-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-num-uses$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_num_uses": &framework.FieldSchema{
+				"secret_id_num_uses": {
 					Type:        framework.TypeInt,
 					Description: "Number of times a SecretID can access the role, after which the SecretID will expire.",
 				},
@@ -354,14 +354,14 @@ IP addresses which can use the returned token.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-num-uses"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_ttl": &framework.FieldSchema{
+				"secret_id_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
@@ -375,14 +375,14 @@ to 0, meaning no expiration.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/period$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"period": &framework.FieldSchema{
+				"period": {
 					Type:    framework.TypeDurationSecond,
 					Default: 0,
 					Description: `If set, indicates that the token generated using this role
@@ -399,14 +399,14 @@ TTL will be set to the value of this parameter.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-period"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-period"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-num-uses$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_num_uses": &framework.FieldSchema{
+				"token_num_uses": {
 					Type:        framework.TypeInt,
 					Description: `Number of times issued tokens can be used`,
 				},
@@ -419,14 +419,14 @@ TTL will be set to the value of this parameter.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-num-uses"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-num-uses"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_ttl": &framework.FieldSchema{
+				"token_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued token should expire. Defaults
 to 0, in which case the value will fall back to the system/mount defaults.`,
@@ -440,14 +440,14 @@ to 0, in which case the value will fall back to the system/mount defaults.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-max-ttl$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"token_max_ttl": &framework.FieldSchema{
+				"token_max_ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued token should not be allowed to
 be renewed. Defaults to 0, in which case the value will fall back to the system/mount defaults.`,
@@ -461,14 +461,14 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-max-ttl"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-token-max-ttl"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/role-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"role_id": &framework.FieldSchema{
+				"role_id": {
 					Type:        framework.TypeString,
 					Description: "Identifier of the role. Defaults to a UUID.",
 				},
@@ -480,26 +480,26 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"metadata": &framework.FieldSchema{
+				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing the metadata in key value pairs.`,
 				},
-				"cidr_list": &framework.FieldSchema{
+				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
@@ -512,14 +512,14 @@ IP addresses which can use the returned token. Should be a subset of the token C
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
 				},
@@ -530,14 +530,14 @@ IP addresses which can use the returned token. Should be a subset of the token C
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-lookup"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-lookup"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/destroy/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
 				},
@@ -549,14 +549,14 @@ IP addresses which can use the returned token. Should be a subset of the token C
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-destroy"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_accessor": &framework.FieldSchema{
+				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
 				},
@@ -567,14 +567,14 @@ IP addresses which can use the returned token. Should be a subset of the token C
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id_accessor": &framework.FieldSchema{
+				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
 				},
@@ -586,30 +586,30 @@ IP addresses which can use the returned token. Should be a subset of the token C
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
 		},
-		&framework.Path{
+		{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/custom-secret-id$",
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
-				"secret_id": &framework.FieldSchema{
+				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID to be attached to the role.",
 				},
-				"metadata": &framework.FieldSchema{
+				"metadata": {
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing metadata in key value pairs.`,
 				},
-				"cidr_list": &framework.FieldSchema{
+				"cidr_list": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks enforcing secret IDs to be used from
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
-				"token_bound_cidrs": &framework.FieldSchema{
+				"token_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
 					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,

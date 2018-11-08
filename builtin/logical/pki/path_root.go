@@ -98,7 +98,7 @@ func pathSignSelfIssued(b *backend) *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type:        framework.TypeString,
 				Description: `PEM-format self-issued certificate to be signed.`,
 			},

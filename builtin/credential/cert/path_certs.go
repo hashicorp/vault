@@ -31,18 +31,18 @@ func pathCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The name of the certificate",
 			},
 
-			"certificate": &framework.FieldSchema{
+			"certificate": {
 				Type: framework.TypeString,
 				Description: `The public certificate that should be trusted.
 Must be x509 PEM encoded.`,
 			},
 
-			"allowed_names": &framework.FieldSchema{
+			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in either the Common Name or SANs. Supports globbing.  
@@ -50,81 +50,81 @@ This parameter is deprecated, please use allowed_common_names, allowed_dns_sans,
 allowed_email_sans, allowed_uri_sans.`,
 			},
 
-			"allowed_common_names": &framework.FieldSchema{
+			"allowed_common_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
 At least one must exist in the Common Name. Supports globbing.`,
 			},
 
-			"allowed_dns_sans": &framework.FieldSchema{
+			"allowed_dns_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of DNS names.
 At least one must exist in the SANs. Supports globbing.`,
 			},
 
-			"allowed_email_sans": &framework.FieldSchema{
+			"allowed_email_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Email Addresses.
 At least one must exist in the SANs. Supports globbing.`,
 			},
 
-			"allowed_uri_sans": &framework.FieldSchema{
+			"allowed_uri_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
 			},
 
-			"allowed_organizational_units": &framework.FieldSchema{
+			"allowed_organizational_units": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of Organizational Units names.
 At least one must exist in the OU field.`,
 			},
 
-			"required_extensions": &framework.FieldSchema{
+			"required_extensions": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of extensions
 formatted as "oid:value". Expects the extension value to be some type of ASN1 encoded string.
 All values much match. Supports globbing on "value".`,
 			},
 
-			"display_name": &framework.FieldSchema{
+			"display_name": {
 				Type: framework.TypeString,
 				Description: `The display name to use for clients using this
 certificate.`,
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies.",
 			},
 
-			"lease": &framework.FieldSchema{
+			"lease": {
 				Type: framework.TypeInt,
 				Description: `Deprecated: use "ttl" instead. TTL time in
 seconds. Defaults to system/backend default TTL.`,
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `TTL for tokens issued by this backend.
 Defaults to system/backend default TTL time.`,
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `Duration in either an integer number of seconds (3600) or
 an integer time unit (60m) after which the
 issued token can no longer be renewed.`,
 			},
 
-			"period": &framework.FieldSchema{
+			"period": {
 				Type: framework.TypeDurationSecond,
 				Description: `If set, indicates that the token generated using this role
 should never expire. The token should be renewed within the
 duration specified by this value. At each renewal, the token's
 TTL will be set to the value of this parameter.`,
 			},
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,

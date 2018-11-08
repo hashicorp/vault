@@ -25,15 +25,15 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-			"tags": &framework.FieldSchema{
+			"tags": {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of tags for this role.",
 			},
-			"vhosts": &framework.FieldSchema{
+			"vhosts": {
 				Type:        framework.TypeString,
 				Description: "A map of virtual hosts to permissions.",
 			},

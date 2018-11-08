@@ -1417,7 +1417,7 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 func testAccStepListCerts(
 	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.ListOperation,
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
@@ -1436,7 +1436,7 @@ func testAccStepListCerts(
 				}
 				return nil
 			},
-		}, logicaltest.TestStep{
+		}, {
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {

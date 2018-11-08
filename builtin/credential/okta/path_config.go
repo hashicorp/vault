@@ -22,39 +22,39 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "(DEPRECATED) Okta organization to authenticate against. Use org_name instead.",
 			},
-			"org_name": &framework.FieldSchema{
+			"org_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the organization to be used in the Okta API.",
 			},
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "(DEPRECATED) Okta admin API token.  Use api_token instead.",
 			},
-			"api_token": &framework.FieldSchema{
+			"api_token": {
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
 			},
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type:        framework.TypeString,
 				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
 			},
-			"production": &framework.FieldSchema{
+			"production": {
 				Type:        framework.TypeBool,
 				Description: `(DEPRECATED) Use base_url.`,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Duration after which authentication will be expired`,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Maximum duration after which authentication will be expired`,
 			},
-			"bypass_okta_mfa": &framework.FieldSchema{
+			"bypass_okta_mfa": {
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
 			},

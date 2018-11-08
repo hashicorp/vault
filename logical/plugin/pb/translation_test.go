@@ -39,9 +39,9 @@ func TestTranslation_Errors(t *testing.T) {
 func TestTranslation_StorageEntry(t *testing.T) {
 	tCases := []*logical.StorageEntry{
 		nil,
-		&logical.StorageEntry{Key: "key", Value: []byte("value")},
-		&logical.StorageEntry{Key: "key1", Value: []byte("value1"), SealWrap: true},
-		&logical.StorageEntry{Key: "key1", SealWrap: true},
+		{Key: "key", Value: []byte("value")},
+		{Key: "key1", Value: []byte("value1"), SealWrap: true},
+		{Key: "key1", SealWrap: true},
 	}
 
 	for _, c := range tCases {
@@ -57,7 +57,7 @@ func TestTranslation_StorageEntry(t *testing.T) {
 func TestTranslation_Request(t *testing.T) {
 	tCases := []*logical.Request{
 		nil,
-		&logical.Request{
+		{
 			ID:                       "ID",
 			ReplicationCluster:       "RID",
 			Operation:                logical.CreateOperation,
@@ -76,7 +76,7 @@ func TestTranslation_Request(t *testing.T) {
 				RemoteAddr: "localhost",
 			},
 		},
-		&logical.Request{
+		{
 			ID:                 "ID",
 			ReplicationCluster: "RID",
 			Operation:          logical.CreateOperation,
@@ -129,7 +129,7 @@ func TestTranslation_Request(t *testing.T) {
 					Name:          "name",
 				},
 				GroupAliases: []*logical.Alias{
-					&logical.Alias{
+					{
 						MountType:     "type",
 						MountAccessor: "accessor",
 						Name:          "name",
@@ -137,7 +137,7 @@ func TestTranslation_Request(t *testing.T) {
 				},
 			},
 			Headers: map[string][]string{
-				"X-Vault-Test": []string{"test"},
+				"X-Vault-Test": {"test"},
 			},
 			ClientToken:         "token",
 			ClientTokenAccessor: "accessor",
@@ -176,13 +176,13 @@ func TestTranslation_Request(t *testing.T) {
 func TestTranslation_Response(t *testing.T) {
 	tCases := []*logical.Response{
 		nil,
-		&logical.Response{
+		{
 			Data: map[string]interface{}{
 				"data": "blah",
 			},
 			Warnings: []string{"warning"},
 		},
-		&logical.Response{
+		{
 			Data: map[string]interface{}{
 				"string": "string",
 				"bool":   true,
@@ -231,7 +231,7 @@ func TestTranslation_Response(t *testing.T) {
 					Name:          "name",
 				},
 				GroupAliases: []*logical.Alias{
-					&logical.Alias{
+					{
 						MountType:     "type",
 						MountAccessor: "accessor",
 						Name:          "name",

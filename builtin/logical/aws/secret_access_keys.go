@@ -22,16 +22,16 @@ func secretAccessKeys(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: secretAccessKeyType,
 		Fields: map[string]*framework.FieldSchema{
-			"access_key": &framework.FieldSchema{
+			"access_key": {
 				Type:        framework.TypeString,
 				Description: "Access Key",
 			},
 
-			"secret_key": &framework.FieldSchema{
+			"secret_key": {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
-			"security_token": &framework.FieldSchema{
+			"security_token": {
 				Type:        framework.TypeString,
 				Description: "Security Token",
 			},

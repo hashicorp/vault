@@ -17,7 +17,7 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
 		Fields: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "GitHub personal API token",
 			},

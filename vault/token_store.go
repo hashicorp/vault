@@ -137,57 +137,57 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "roles/" + framework.GenericNameRegex("role_name"),
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
 
-				"allowed_policies": &framework.FieldSchema{
+				"allowed_policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: tokenAllowedPoliciesHelp,
 				},
 
-				"disallowed_policies": &framework.FieldSchema{
+				"disallowed_policies": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: tokenDisallowedPoliciesHelp,
 				},
 
-				"orphan": &framework.FieldSchema{
+				"orphan": {
 					Type:        framework.TypeBool,
 					Default:     false,
 					Description: tokenOrphanHelp,
 				},
 
-				"period": &framework.FieldSchema{
+				"period": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: tokenPeriodHelp,
 				},
 
-				"path_suffix": &framework.FieldSchema{
+				"path_suffix": {
 					Type:        framework.TypeString,
 					Default:     "",
 					Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 				},
 
-				"explicit_max_ttl": &framework.FieldSchema{
+				"explicit_max_ttl": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: tokenExplicitMaxTTLHelp,
 				},
 
-				"renewable": &framework.FieldSchema{
+				"renewable": {
 					Type:        framework.TypeBool,
 					Default:     true,
 					Description: tokenRenewableHelp,
 				},
 
-				"bound_cidrs": &framework.FieldSchema{
+				"bound_cidrs": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 				},
 
-				"token_type": &framework.FieldSchema{
+				"token_type": {
 					Type:        framework.TypeString,
 					Default:     "service",
 					Description: "The type of token to generate, service or batch",
@@ -219,7 +219,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "create/" + framework.GenericNameRegex("role_name"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"role_name": &framework.FieldSchema{
+				"role_name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
@@ -248,11 +248,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup" + framework.OptionalParamRegex("urltoken"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
+				"urltoken": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Token to lookup (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 				},
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to lookup (POST request body)",
 				},
@@ -271,11 +271,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-accessor" + framework.OptionalParamRegex("urlaccessor"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
+				"urlaccessor": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Accessor of the token to lookup (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
 				},
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to look up (request body)",
 				},
@@ -293,7 +293,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "lookup-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to look up (unused, does not need to be set)",
 				},
@@ -312,11 +312,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-accessor" + framework.OptionalParamRegex("urlaccessor"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
+				"urlaccessor": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Accessor of the token to revoke (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
 				},
-				"accessor": &framework.FieldSchema{
+				"accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the token (request body)",
 				},
@@ -345,11 +345,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke" + framework.OptionalParamRegex("urltoken"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
+				"urltoken": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 				},
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -367,11 +367,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "revoke-orphan" + framework.OptionalParamRegex("urltoken"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
+				"urltoken": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 				},
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
 				},
@@ -389,11 +389,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew-self$",
 
 			Fields: map[string]*framework.FieldSchema{
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (unused, does not need to be set)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -412,15 +412,15 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Pattern: "renew" + framework.OptionalParamRegex("urltoken"),
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
+				"urltoken": {
 					Type:        framework.TypeString,
 					Description: "DEPRECATED: Token to renew (URL parameter). Do not use this; use the POST version instead with the token in the body.",
 				},
-				"token": &framework.FieldSchema{
+				"token": {
 					Type:        framework.TypeString,
 					Description: "Token to renew (request body)",
 				},
-				"increment": &framework.FieldSchema{
+				"increment": {
 					Type:        framework.TypeDurationSecond,
 					Default:     0,
 					Description: "The desired increment in seconds to the token expiration",
@@ -1978,7 +1978,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token to lookup",
 			},

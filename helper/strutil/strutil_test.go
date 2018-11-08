@@ -152,7 +152,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -164,7 +164,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -173,7 +173,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -182,7 +182,7 @@ func TestStrutil_ParseKeyValues(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -211,7 +211,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -224,7 +224,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -237,7 +237,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 
@@ -250,7 +250,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for k, _ := range actual {
+	for k := range actual {
 		delete(actual, k)
 	}
 }
@@ -326,23 +326,23 @@ func TestGlobbedStringsMatch(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{"", "", true},
-		tCase{"*", "*", true},
-		tCase{"**", "**", true},
-		tCase{"*t", "t", true},
-		tCase{"*t", "test", true},
-		tCase{"t*", "test", true},
-		tCase{"*test", "test", true},
-		tCase{"*test", "a test", true},
-		tCase{"test", "a test", false},
-		tCase{"*test", "tests", false},
-		tCase{"test*", "test", true},
-		tCase{"test*", "testsss", true},
-		tCase{"test**", "testsss", false},
-		tCase{"test**", "test*", true},
-		tCase{"**test", "*test", true},
-		tCase{"TEST", "test", false},
-		tCase{"test", "test", true},
+		{"", "", true},
+		{"*", "*", true},
+		{"**", "**", true},
+		{"*t", "t", true},
+		{"*t", "test", true},
+		{"t*", "test", true},
+		{"*test", "test", true},
+		{"*test", "a test", true},
+		{"test", "a test", false},
+		{"*test", "tests", false},
+		{"test*", "test", true},
+		{"test*", "testsss", true},
+		{"test**", "testsss", false},
+		{"test**", "test*", true},
+		{"**test", "*test", true},
+		{"TEST", "test", false},
+		{"test", "test", true},
 	}
 
 	for _, tc := range tCases {
@@ -408,11 +408,11 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{[]string{}, []string{}, false},
-		tCase{[]string{}, []string{}, true},
-		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
-		tCase{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
+		{[]string{}, []string{}, false},
+		{[]string{}, []string{}, true},
+		{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		{[]string{"A", "b", "a"}, []string{"A", "a", "b"}, false},
+		{[]string{"A", "b", "a"}, []string{"a", "b"}, true},
 	}
 
 	for _, tc := range tCases {
@@ -432,13 +432,13 @@ func TestStrUtil_ParseStringSlice(t *testing.T) {
 	}
 
 	tCases := []tCase{
-		tCase{"", "", []string{}},
-		tCase{"   ", ",", []string{}},
-		tCase{",   ", ",", []string{"", ""}},
-		tCase{"a", ",", []string{"a"}},
-		tCase{" a, b,   c   ", ",", []string{"a", "b", "c"}},
-		tCase{" a; b;   c   ", ";", []string{"a", "b", "c"}},
-		tCase{" a :: b  ::   c   ", "::", []string{"a", "b", "c"}},
+		{"", "", []string{}},
+		{"   ", ",", []string{}},
+		{",   ", ",", []string{"", ""}},
+		{"a", ",", []string{"a"}},
+		{" a, b,   c   ", ",", []string{"a", "b", "c"}},
+		{" a; b;   c   ", ";", []string{"a", "b", "c"}},
+		{" a :: b  ::   c   ", "::", []string{"a", "b", "c"}},
 	}
 
 	for _, tc := range tCases {

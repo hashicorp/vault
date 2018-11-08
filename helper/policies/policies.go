@@ -33,10 +33,10 @@ func EquivalentPolicies(a, b []string) bool {
 
 	// Now we'll build our checking slices
 	var sortedA, sortedB []string
-	for keyA, _ := range mapA {
+	for keyA := range mapA {
 		sortedA = append(sortedA, keyA)
 	}
-	for keyB, _ := range mapB {
+	for keyB := range mapB {
 		sortedB = append(sortedB, keyB)
 	}
 	sort.Strings(sortedA)

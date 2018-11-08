@@ -13,7 +13,7 @@ func pathConfigIdentity(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
 		Fields: map[string]*framework.FieldSchema{
-			"iam_alias": &framework.FieldSchema{
+			"iam_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasIAMUniqueID,
 				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q and %q", identityAliasIAMUniqueID, identityAliasIAMFullArn),

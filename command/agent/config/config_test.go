@@ -32,7 +32,7 @@ func TestLoadConfigFile(t *testing.T) {
 				},
 			},
 			Sinks: []*Sink{
-				&Sink{
+				{
 					Type:   "file",
 					DHType: "curve25519",
 					DHPath: "/tmp/file-foo-dhpath",
@@ -41,7 +41,7 @@ func TestLoadConfigFile(t *testing.T) {
 						"path": "/tmp/file-foo",
 					},
 				},
-				&Sink{
+				{
 					Type:    "file",
 					WrapTTL: 5 * time.Minute,
 					DHType:  "curve25519",

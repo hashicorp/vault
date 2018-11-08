@@ -30,32 +30,32 @@ func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Duration after which authentication will be expired",
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum duration after which authentication will be expired",
 			},
 
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,

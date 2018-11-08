@@ -17,11 +17,11 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role_id": &framework.FieldSchema{
+			"role_id": {
 				Type:        framework.TypeString,
 				Description: "Unique identifier of the Role. Required to be supplied when the 'bind_secret_id' constraint is set.",
 			},
-			"secret_id": &framework.FieldSchema{
+			"secret_id": {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "SecretID belong to the App role",

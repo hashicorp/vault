@@ -130,7 +130,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 // acquired for write operation before calling this method.
 func (b *backend) flushCachedEC2Clients() {
 	// deleting items in map during iteration is safe
-	for region, _ := range b.EC2ClientsMap {
+	for region := range b.EC2ClientsMap {
 		delete(b.EC2ClientsMap, region)
 	}
 }
@@ -141,7 +141,7 @@ func (b *backend) flushCachedEC2Clients() {
 // lock should be acquired for write operation before calling this method.
 func (b *backend) flushCachedIAMClients() {
 	// deleting items in map during iteration is safe
-	for region, _ := range b.IAMClientsMap {
+	for region := range b.IAMClientsMap {
 		delete(b.IAMClientsMap, region)
 	}
 }

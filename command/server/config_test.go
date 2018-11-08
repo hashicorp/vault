@@ -22,7 +22,7 @@ func TestLoadConfigFile(t *testing.T) {
 
 	expected := &Config{
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:443",
@@ -93,7 +93,7 @@ func TestLoadConfigFile_topLevel(t *testing.T) {
 
 	expected := &Config{
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:443",
@@ -167,7 +167,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 
 	expected := &Config{
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:443",
@@ -234,13 +234,13 @@ func TestLoadConfigFile_json2(t *testing.T) {
 
 	expected := &Config{
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:443",
 				},
 			},
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:444",
@@ -307,7 +307,7 @@ func TestLoadConfigDir(t *testing.T) {
 		DisableMlock: true,
 
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address": "127.0.0.1:443",
@@ -371,7 +371,7 @@ listener "tcp" {
 
 	expected := &Config{
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address":                            "127.0.0.1:443",

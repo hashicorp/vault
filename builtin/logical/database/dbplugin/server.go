@@ -17,14 +17,14 @@ func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.ServeConfig {
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		3: plugin.PluginSet{
+		3: {
 			"database": &DatabasePlugin{
 				GRPCDatabasePlugin: &GRPCDatabasePlugin{
 					Impl: db,
 				},
 			},
 		},
-		4: plugin.PluginSet{
+		4: {
 			"database": &GRPCDatabasePlugin{
 				Impl: db,
 			},

@@ -156,7 +156,7 @@ func TestPopulate_Basic(t *testing.T) {
 		}
 		if test.aliasAccessor != "" {
 			entity.Aliases = []*Alias{
-				&Alias{
+				{
 					MountAccessor: test.aliasAccessor,
 					ID:            test.aliasID,
 					Name:          test.aliasName,

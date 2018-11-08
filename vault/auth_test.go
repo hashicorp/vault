@@ -132,7 +132,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop/",
 				Type:             "noop",
@@ -142,7 +142,7 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            credentialTableType,
 				Path:             "noop2/",
 				Type:             "noop",

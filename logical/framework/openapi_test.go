@@ -286,11 +286,11 @@ func TestOpenAPI_Paths(t *testing.T) {
 			Pattern: "lookup/" + GenericNameRegex("id"),
 
 			Fields: map[string]*FieldSchema{
-				"id": &FieldSchema{
+				"id": {
 					Type:        TypeString,
 					Description: "My id parameter",
 				},
-				"token": &FieldSchema{
+				"token": {
 					Type:        TypeString,
 					Description: "My token",
 				},

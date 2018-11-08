@@ -31,7 +31,7 @@ func TestGCPCKMSSeal(t *testing.T) {
 
 	configCases := map[string]map[string]string{
 		"env_var": nil,
-		"config": map[string]string{
+		"config": {
 			"credentials": os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 		},
 	}

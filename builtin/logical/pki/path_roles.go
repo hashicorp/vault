@@ -31,12 +31,12 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type: framework.TypeDurationSecond,
 				Description: `The lease duration if no specific lease duration is
 requested. The lease duration controls the expiration
@@ -44,19 +44,19 @@ of certificates issued by this backend. Defaults to
 the value of max_ttl.`,
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
 			},
 
-			"allow_localhost": &framework.FieldSchema{
+			"allow_localhost": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `Whether to allow "localhost" as a valid common
 name in a request`,
 			},
 
-			"allowed_domains": &framework.FieldSchema{
+			"allowed_domains": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
@@ -65,7 +65,7 @@ information. This parameter accepts a comma-separated
 string or list of domains.`,
 			},
 
-			"allow_bare_domains": &framework.FieldSchema{
+			"allow_bare_domains": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates
 for the base domains themselves, e.g. "example.com".
@@ -73,7 +73,7 @@ This is a separate option as in some cases this can
 be considered a security threat.`,
 			},
 
-			"allow_subdomains": &framework.FieldSchema{
+			"allow_subdomains": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 subdomains of the CNs allowed by the other role options,
@@ -81,84 +81,84 @@ including wildcard subdomains. See the documentation for
 more information.`,
 			},
 
-			"allow_glob_domains": &framework.FieldSchema{
+			"allow_glob_domains": {
 				Type: framework.TypeBool,
 				Description: `If set, domains specified in "allowed_domains"
 can include glob patterns, e.g. "ftp*.example.com". See
 the documentation for more information.`,
 			},
 
-			"allow_any_name": &framework.FieldSchema{
+			"allow_any_name": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 any CN they like. See the documentation for more
 information.`,
 			},
 
-			"enforce_hostnames": &framework.FieldSchema{
+			"enforce_hostnames": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, only valid host names are allowed for
 CN and SANs. Defaults to true.`,
 			},
 
-			"allow_ip_sans": &framework.FieldSchema{
+			"allow_ip_sans": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted.`,
 			},
 
-			"allowed_uri_sans": &framework.FieldSchema{
+			"allowed_uri_sans": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
 			},
 
-			"allowed_other_sans": &framework.FieldSchema{
+			"allowed_other_sans": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 			},
 
-			"allowed_serial_numbers": &framework.FieldSchema{
+			"allowed_serial_numbers": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 			},
 
-			"server_flag": &framework.FieldSchema{
+			"server_flag": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for server auth use.
 Defaults to true.`,
 			},
 
-			"client_flag": &framework.FieldSchema{
+			"client_flag": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for client auth use.
 Defaults to true.`,
 			},
 
-			"code_signing_flag": &framework.FieldSchema{
+			"code_signing_flag": {
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for code signing
 use. Defaults to false.`,
 			},
 
-			"email_protection_flag": &framework.FieldSchema{
+			"email_protection_flag": {
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for email
 protection use. Defaults to false.`,
 			},
 
-			"key_type": &framework.FieldSchema{
+			"key_type": {
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
 			},
 
-			"key_bits": &framework.FieldSchema{
+			"key_bits": {
 				Type:    framework.TypeInt,
 				Default: 2048,
 				Description: `The number of bits to use. You will almost
@@ -166,7 +166,7 @@ certainly want to change this if you adjust
 the key_type.`,
 			},
 
-			"key_usage": &framework.FieldSchema{
+			"key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended
@@ -177,7 +177,7 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
-			"ext_key_usage": &framework.FieldSchema{
+			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
 				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
@@ -187,12 +187,12 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
-			"ext_key_usage_oids": &framework.FieldSchema{
+			"ext_key_usage_oids": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of extended key usage oids.`,
 			},
 
-			"use_csr_common_name": &framework.FieldSchema{
+			"use_csr_common_name": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, when used with a signing profile,
@@ -201,7 +201,7 @@ does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
 
-			"use_csr_sans": &framework.FieldSchema{
+			"use_csr_sans": {
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, when used with a signing profile,
@@ -209,49 +209,49 @@ the SANs in the CSR will be used. This does *not*
 include the Common Name (cn). Defaults to true.`,
 			},
 
-			"ou": &framework.FieldSchema{
+			"ou": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, O (Organization) will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"country": &framework.FieldSchema{
+			"country": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Country will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"locality": &framework.FieldSchema{
+			"locality": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Locality will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"province": &framework.FieldSchema{
+			"province": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Province will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"street_address": &framework.FieldSchema{
+			"street_address": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Street Address will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"postal_code": &framework.FieldSchema{
+			"postal_code": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Postal Code will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"generate_lease": &framework.FieldSchema{
+			"generate_lease": {
 				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will have Vault leases
@@ -263,7 +263,7 @@ to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
 			},
-			"no_store": &framework.FieldSchema{
+			"no_store": {
 				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will not be stored in the
@@ -273,20 +273,20 @@ or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
-			"require_cn": &framework.FieldSchema{
+			"require_cn": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
 			},
-			"policy_identifiers": &framework.FieldSchema{
+			"policy_identifiers": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy oids.`,
 			},
-			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
+			"basic_constraints_valid_for_non_ca": {
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
 			},
-			"not_before_duration": &framework.FieldSchema{
+			"not_before_duration": {
 				Type:        framework.TypeDurationSecond,
 				Default:     30,
 				Description: `The duration before now the cert needs to be created / signed.`,

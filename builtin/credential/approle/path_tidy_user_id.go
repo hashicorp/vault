@@ -169,7 +169,7 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 					lock.Lock()
 					defer lock.Unlock()
 				}
-				for accessorHash, _ := range accessorMap {
+				for accessorHash := range accessorMap {
 					logger.Trace("found dangling accessor, verifying")
 					// Ideally, locking on accessors should be performed here too
 					// but for that, accessors are required in plaintext, which are

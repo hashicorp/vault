@@ -16,35 +16,35 @@ func (b *backend) pathDatakey() *framework.Path {
 	return &framework.Path{
 		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The backend key used for encrypting the data key",
 			},
 
-			"plaintext": &framework.FieldSchema{
+			"plaintext": {
 				Type: framework.TypeString,
 				Description: `"plaintext" will return the key in both plaintext and
 ciphertext; "wrapped" will return the ciphertext only.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type:        framework.TypeString,
 				Description: "Context for key derivation. Required for derived keys.",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type:        framework.TypeString,
 				Description: "Nonce for when convergent encryption v1 is used (only in Vault 0.6.1)",
 			},
 
-			"bits": &framework.FieldSchema{
+			"bits": {
 				Type: framework.TypeInt,
 				Description: `Number of bits for the key; currently 128, 256,
 and 512 bits are supported. Defaults to 256.`,
 				Default: 256,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the Vault key to use for
 encryption of the data key. Must be 0 (for latest)

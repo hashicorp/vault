@@ -62,7 +62,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 	}
 
 	b.Backend.Secrets = []*framework.Secret{
-		&framework.Secret{
+		{
 			Type: "kv",
 
 			Renew:  b.handleRead,

@@ -27,17 +27,17 @@ func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the LDAP user.",
 			},
 
-			"groups": &framework.FieldSchema{
+			"groups": {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of additional groups associated with the user.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated with the user.",
 			},

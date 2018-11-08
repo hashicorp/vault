@@ -32,15 +32,15 @@ func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
 		Fields: map[string]*framework.FieldSchema{
-			"private_key": &framework.FieldSchema{
+			"private_key": {
 				Type:        framework.TypeString,
 				Description: `Private half of the SSH key that will be used to sign certificates.`,
 			},
-			"public_key": &framework.FieldSchema{
+			"public_key": {
 				Type:        framework.TypeString,
 				Description: `Public half of the SSH key that will be used to sign certificates.`,
 			},
-			"generate_signing_key": &framework.FieldSchema{
+			"generate_signing_key": {
 				Type:        framework.TypeBool,
 				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
 				Default:     true,

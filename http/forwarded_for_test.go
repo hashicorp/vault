@@ -30,7 +30,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: goodAddr,
 				},
 			}, true, false, 0)
@@ -75,7 +75,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: badAddr,
 				},
 			}, true, false, 0)
@@ -112,7 +112,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: badAddr,
 				},
 			}, true, true, 0)
@@ -146,7 +146,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: goodAddr,
 				},
 			}, true, true, 4)
@@ -180,7 +180,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: goodAddr,
 				},
 			}, true, true, 1)
@@ -217,7 +217,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 				w.Write([]byte(r.RemoteAddr))
 			})
 			return WrapForwardedForHandler(origHandler, []*sockaddr.SockAddrMarshaler{
-				&sockaddr.SockAddrMarshaler{
+				{
 					SockAddr: goodAddr,
 				},
 			}, true, true, 1)

@@ -13,7 +13,7 @@ func pathRoletagBlacklist(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roletag-blacklist/(?P<role_tag>.*)",
 		Fields: map[string]*framework.FieldSchema{
-			"role_tag": &framework.FieldSchema{
+			"role_tag": {
 				Type: framework.TypeString,
 				Description: `Role tag to be blacklisted. The tag can be supplied as-is. In order
 to avoid any encoding problems, it can be base64 encoded.`,

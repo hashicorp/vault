@@ -14,17 +14,17 @@ func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
 		Fields: map[string]*framework.FieldSchema{
-			"address": &framework.FieldSchema{
+			"address": {
 				Type:        framework.TypeString,
 				Description: "Nomad server address",
 			},
 
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Token for API calls",
 			},
 
-			"max_token_name_length": &framework.FieldSchema{
+			"max_token_name_length": {
 				Type:        framework.TypeInt,
 				Description: "Max length for name of generated Nomad tokens",
 			},

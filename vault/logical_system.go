@@ -151,10 +151,10 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			Pattern: "(raw/?$|raw/(?P<path>.+))",
 
 			Fields: map[string]*framework.FieldSchema{
-				"path": &framework.FieldSchema{
+				"path": {
 					Type: framework.TypeString,
 				},
-				"value": &framework.FieldSchema{
+				"value": {
 					Type: framework.TypeString,
 				},
 			},

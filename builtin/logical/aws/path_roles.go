@@ -33,27 +33,27 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
 			},
 
-			"credential_type": &framework.FieldSchema{
+			"credential_type": {
 				Type:        framework.TypeString,
 				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred),
 			},
 
-			"role_arns": &framework.FieldSchema{
+			"role_arns": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is " + assumedRoleCred,
 			},
 
-			"policy_arns": &framework.FieldSchema{
+			"policy_arns": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
 			},
 
-			"policy_document": &framework.FieldSchema{
+			"policy_document": {
 				Type: framework.TypeString,
 				Description: `JSON-encoded IAM policy document. Behavior varies by credential_type. When credential_type is
 iam_user, then it will attach the contents of the policy_document to the IAM
@@ -62,23 +62,23 @@ will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
 			},
 
-			"default_sts_ttl": &framework.FieldSchema{
+			"default_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
 			},
 
-			"max_sts_ttl": &framework.FieldSchema{
+			"max_sts_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
 			},
 
-			"arn": &framework.FieldSchema{
+			"arn": {
 				Type: framework.TypeString,
 				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
 or IAM role to assume`,
 			},
 
-			"policy": &framework.FieldSchema{
+			"policy": {
 				Type:        framework.TypeString,
 				Description: "Deprecated; use policy_document instead. IAM policy document",
 			},

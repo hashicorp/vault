@@ -201,13 +201,13 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c.audit = &MountTable{
 		Type: auditTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table: auditTableType,
 				Path:  "noop/",
 				Type:  "noop",
 				UUID:  "abcd",
 			},
-			&MountEntry{
+			{
 				Table: auditTableType,
 				Path:  "noop2/",
 				Type:  "noop",
@@ -255,7 +255,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	c.audit = &MountTable{
 		Type: auditTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:       auditTableType,
 				Path:        "noop/",
 				Type:        "noop",
@@ -264,7 +264,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 				NamespaceID: namespace.RootNamespaceID,
 				namespace:   namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:       auditTableType,
 				Path:        "noop2/",
 				Type:        "noop",
@@ -648,9 +648,9 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "sys/mounts",
 		Headers: map[string][]string{
-			"X-Test-Header":  []string{"foo"},
-			"X-Vault-Header": []string{"bar"},
-			"Content-Type":   []string{"baz"},
+			"X-Test-Header":  {"foo"},
+			"X-Vault-Header": {"bar"},
+			"Content-Type":   {"baz"},
 		},
 	}
 	respErr := fmt.Errorf("permission denied")
@@ -679,8 +679,8 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"x-test-header":  []string{"foo"},
-		"x-vault-header": []string{"bar"},
+		"x-test-header":  {"foo"},
+		"x-vault-header": {"bar"},
 	}
 
 	for _, a := range []*NoopAudit{a1, a2} {

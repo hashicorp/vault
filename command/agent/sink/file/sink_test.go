@@ -90,7 +90,7 @@ func TestSinkServerRetry(t *testing.T) {
 	})
 
 	in := make(chan string)
-	sinks := []*sink.SinkConfig{&sink.SinkConfig{Sink: b1}, &sink.SinkConfig{Sink: b2}}
+	sinks := []*sink.SinkConfig{{Sink: b1}, {Sink: b2}}
 	go ss.Run(ctx, in, sinks)
 
 	// Seed a token

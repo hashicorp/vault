@@ -98,14 +98,14 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
-		3: plugin.PluginSet{
+		3: {
 			"backend": &BackendPlugin{
 				GRPCBackendPlugin: &GRPCBackendPlugin{
 					MetadataMode: isMetadataMode,
 				},
 			},
 		},
-		4: plugin.PluginSet{
+		4: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
 			},

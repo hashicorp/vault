@@ -85,7 +85,7 @@ func DevConfig(ha, transactional bool) *Config {
 		},
 
 		Listeners: []*Listener{
-			&Listener{
+			{
 				Type: "tcp",
 				Config: map[string]interface{}{
 					"address":                         "127.0.0.1:8200",

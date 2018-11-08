@@ -1151,7 +1151,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
-		lns := []*TestListener{&TestListener{
+		lns := []*TestListener{{
 			Listener: tls.NewListener(ln, tlsConfig),
 			Address:  ln.Addr().(*net.TCPAddr),
 		},

@@ -108,7 +108,7 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	expect := []*PathRules{
-		&PathRules{
+		{
 			Prefix: "",
 			Policy: "deny",
 			Capabilities: []string{
@@ -117,7 +117,7 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{CapabilitiesBitmap: DenyCapabilityInt},
 			Glob:        true,
 		},
-		&PathRules{
+		{
 			Prefix: "stage/",
 			Policy: "sudo",
 			Capabilities: []string{
@@ -133,7 +133,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: true,
 		},
-		&PathRules{
+		{
 			Prefix: "prod/version",
 			Policy: "read",
 			Capabilities: []string{
@@ -143,7 +143,7 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
 			Glob:        false,
 		},
-		&PathRules{
+		{
 			Prefix: "foo/bar",
 			Policy: "read",
 			Capabilities: []string{
@@ -159,7 +159,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -175,7 +175,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -189,21 +189,21 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "baz/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			DeniedParametersHCL: map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
+			DeniedParametersHCL: map[string][]interface{}{"zip": {}, "zap": {}},
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
-				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
+				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "biz/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -219,23 +219,23 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "test/types",
 			Policy: "",
 			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			AllowedParametersHCL: map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
-			DeniedParametersHCL:  map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
+			AllowedParametersHCL: map[string][]interface{}{"map": {map[string]interface{}{"good": "one"}}, "int": {1, 2}},
+			DeniedParametersHCL:  map[string][]interface{}{"string": {"test"}, "bool": {false}},
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
-				AllowedParameters:  map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
-				DeniedParameters:   map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
+				AllowedParameters:  map[string][]interface{}{"map": {map[string]interface{}{"good": "one"}}, "int": {1, 2}},
+				DeniedParameters:   map[string][]interface{}{"string": {"test"}, "bool": {false}},
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "test/req",
 			Policy: "",
 			Capabilities: []string{
@@ -249,7 +249,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			Glob: false,
 		},
-		&PathRules{
+		{
 			Prefix: "test/mfa",
 			Policy: "",
 			Capabilities: []string{
