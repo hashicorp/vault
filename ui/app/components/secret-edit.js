@@ -249,7 +249,6 @@ export default Component.extend(FocusOnInsertMixin, {
           .then(resp => {
             this.set('wrappedData', resp.wrap_info.token);
             this.flashMessages.success('Secret Successfully Wrapped!');
-            this.set('showWrapButton', false);
           })
           .catch(() => {
             this.flashMessages.error('Could Not Wrap Secret');
@@ -264,7 +263,6 @@ export default Component.extend(FocusOnInsertMixin, {
           .then(resp => {
             this.set('wrappedData', resp.wrap_info.token);
             this.flashMessages.success('Secret Successfully Wrapped!');
-            this.set('showWrapButton', false);
           })
           .catch(() => {
             this.flashMessages.error('Could Not Wrap Secret');
@@ -275,14 +273,18 @@ export default Component.extend(FocusOnInsertMixin, {
       }
     },
 
+    clearWrappedData() {
+      this.set('wrappedData', null);
+    },
+
     handleCopySuccess() {
       this.flashMessages.success('Copied Wrapped Data!');
-      this.set('wrappedData', null);
+      this.send('clearWrappedData');
     },
 
     handleCopyError() {
       this.flashMessages.error('Could Not Copy Wrapped Data');
-      this.set('wrappedData', null);
+      this.send('clearWrappedData');
     },
 
     createOrUpdateKey(type, event) {
