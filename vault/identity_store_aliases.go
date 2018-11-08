@@ -181,6 +181,13 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			if entity == nil {
 				return nil, fmt.Errorf("existing alias is not associated with an entity")
 			}
+		} else if alias.ID != "" {
+			// This is an update, not a create; if we have an associated entity
+			// already, load it
+			entity, err = i.MemDBEntityByAliasID(alias.ID, true)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		resp := &logical.Response{}
@@ -210,21 +217,25 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 				// If entity is nil, we didn't find a previous alias from factors,
 				// so append to this entity
 				entity = canonicalEntity
+				i.logger.Warn("entity was nil, appending alias to this entity")
 				entity.Aliases = append(entity.Aliases, alias)
 			} else if entity.ID != canonicalEntity.ID {
-				// In this case we found an entity from alias factors but it's not
-				// the same, so it's a migration
+				// In this case we found an entity from alias factors or given
+				// alias ID but it's not the same, so it's a migration
 				previousEntity = entity
 				entity = canonicalEntity
 
 				for aliasIndex, item := range previousEntity.Aliases {
 					if item.ID == alias.ID {
+						i.logger.Warn("eliding entity", "previous", previousEntity.Aliases)
 						previousEntity.Aliases = append(previousEntity.Aliases[:aliasIndex], previousEntity.Aliases[aliasIndex+1:]...)
+						i.logger.Warn("eliding entity", "after", previousEntity.Aliases)
 						break
 					}
 				}
 
 				entity.Aliases = append(entity.Aliases, alias)
+				i.logger.Warn("entity was found, appending alias to this entity")
 				resp.AddWarning(fmt.Sprintf("alias is being transferred from entity %q to %q", previousEntity.ID, entity.ID))
 			}
 		}
