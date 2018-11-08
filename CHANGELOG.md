@@ -35,7 +35,8 @@ FEATURES:
 IMPROVEMENTS:
 
  * secret/totp: Allow @ character to be part of key name [GH-5652]
- * secret/consul: Add support for new policy based tokens added in Consul 1.4 [GH-5586]
+ * secret/consul: Add support for new policy based tokens added in Consul 1.4
+   [GH-5586]
  * ui: Improve the token auto-renew warning, and automatically begin renewal
    when a user becomes active again [GH-5662]
  * ui: The unbundled UI page now has some styling [GH-5665]
@@ -46,11 +47,12 @@ BUG FIXES:
 
  * auth/userpass: Fix minor timing issue that could leak the presence of a
    username [GH-5614]
- * cli: Fix panic that could occur if parameters were not provided. [GH-5603]
+ * cli: Fix panic that could occur if parameters were not provided [GH-5603]
  * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
+ * core: Fix buggy behavior if trying to remount into a namespace
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
-    having distinct scopes.
-    [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+   having distinct scopes
+   [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
  * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
    for all other operations for backwards compatibility
    [[GH-19]](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/19)
