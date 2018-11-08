@@ -59,6 +59,38 @@ func TestAWSKMSSeal_Lifecycle(t *testing.T) {
 	}
 }
 
+// This test executes real calls. The calls themselves should be free,
+// but the KMS key used is generally not free. AWS charges about $1/month
+// per key.
+//
+// To run this test, the following env variables need to be set:
+//   - VAULT_AWSKMS_SEAL_KEY_ID
+//   - AWS_REGION
+//   - AWS_ACCESS_KEY_ID
+//   - AWS_SECRET_ACCESS_KEY
+func TestAccAWSKMSSeal_Lifecycle(t *testing.T) {
+	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
+		t.SkipNow()
+	}
+
+	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	s.SetConfig(nil)
+	input := []byte("foo")
+	swi, err := s.Encrypt(context.Background(), input)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	pt, err := s.Decrypt(context.Background(), swi)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(input, pt) {
+		t.Fatalf("expected %s, got %s", input, pt)
+	}
+}
+
 func TestAWSKMSSeal_custom_endpoint(t *testing.T) {
 	customEndpoint := "https://custom.endpoint"
 	customEndpoint2 := "https://custom.endpoint.2"
