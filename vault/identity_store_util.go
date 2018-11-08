@@ -290,8 +290,34 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			return err
 		}
 
-		if aliasByFactors != nil && aliasByFactors.CanonicalID != entity.ID {
-			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID)
+		switch {
+		case aliasByFactors == nil:
+			// Not found, no merging needed
+		case aliasByFactors.CanonicalID == entity.ID:
+			// Lookup found the same entity, so it's already attached to the
+			// right place
+		case previousEntity != nil && aliasByFactors.CanonicalID == previousEntity.ID:
+			// previousEntity isn't upserted yet so may still contain the old
+			// alias reference in memdb if it was just changed; validate
+			// whether or not it's _actually_ still tied to the entity
+			var found bool
+			for _, prevEntAlias := range previousEntity.Aliases {
+				if prevEntAlias.ID == alias.ID {
+					found = true
+					break
+				}
+			}
+			// If we didn't find the alias still tied to previousEntity, we
+			// shouldn't use the merging logic and should bail
+			if !found {
+				break
+			}
+
+			// Otherwise it's still tied to previousEntity and fall through
+			// into merging
+			fallthrough
+		default:
+			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
 			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
 			switch {
 			case respErr != nil:
