@@ -22,6 +22,7 @@ export default {
     },
     enable: {
       onEntry: [
+        { type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
         { type: 'render', level: 'step', component: 'wizard/secrets-enable' },
       ],
@@ -34,6 +35,7 @@ export default {
     },
     details: {
       onEntry: [
+        { type: 'routeTransition', params: ['vault.cluster.settings.mount-secret-backend'] },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
         { type: 'render', level: 'step', component: 'wizard/secrets-details' },
       ],
