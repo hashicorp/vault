@@ -2,10 +2,10 @@ package alicloudkms
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
-	"sync/atomic"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
@@ -21,11 +21,10 @@ const (
 )
 
 type AliCloudKMSSeal struct {
-	logger       log.Logger
-	client       kmsClient
-	domain       string
-	keyID        string
-	currentKeyID *atomic.Value
+	logger log.Logger
+	client kmsClient
+	domain string
+	keyID  string
 }
 
 // Ensure that we are implementing AutoSealAccess
@@ -33,10 +32,8 @@ var _ seal.Access = (*AliCloudKMSSeal)(nil)
 
 func NewSeal(logger log.Logger) *AliCloudKMSSeal {
 	k := &AliCloudKMSSeal{
-		logger:       logger,
-		currentKeyID: new(atomic.Value),
+		logger: logger,
 	}
-	k.currentKeyID.Store("")
 	return k
 }
 
@@ -129,7 +126,9 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 	if keyInfo == nil || keyInfo.KeyMetadata.KeyId == "" {
 		return nil, errors.New("no key information returned")
 	}
-	k.currentKeyID.Store(keyInfo.KeyMetadata.KeyId)
+	if keyInfo.KeyMetadata.KeyId != k.keyID {
+		return nil, fmt.Errorf("unexpected keyID returned: %s", keyInfo.KeyMetadata.KeyId)
+	}
 
 	// Map that holds non-sensitive configuration info
 	sealInfo := make(map[string]string)
@@ -160,7 +159,7 @@ func (k *AliCloudKMSSeal) SealType() string {
 
 // KeyID returns the last known key id.
 func (k *AliCloudKMSSeal) KeyID() string {
-	return k.currentKeyID.Load().(string)
+	return k.keyID
 }
 
 // Encrypt is used to encrypt the master key using the the AliCloud CMK.
@@ -178,7 +177,7 @@ func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physica
 
 	input := kms.CreateEncryptRequest()
 	input.KeyId = k.keyID
-	input.Plaintext = string(env.Key)
+	input.Plaintext = base64.StdEncoding.EncodeToString(env.Ciphertext)
 	input.Domain = k.domain
 
 	output, err := k.client.Encrypt(input)
@@ -186,17 +185,10 @@ func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physica
 		return nil, errwrap.Wrapf("error encrypting data: {{err}}", err)
 	}
 
-	// Store the current key id.
-	keyID := output.KeyId
-	k.currentKeyID.Store(keyID)
-
 	ret := &physical.EncryptedBlobInfo{
-		Ciphertext: env.Ciphertext,
+		Ciphertext: []byte(output.CiphertextBlob),
 		IV:         env.IV,
-		KeyInfo: &physical.SealKeyInfo{
-			KeyID:      keyID,
-			WrappedKey: []byte(output.CiphertextBlob),
-		},
+		Key:        string(env.Key),
 	}
 
 	return ret, nil
@@ -208,22 +200,24 @@ func (k *AliCloudKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobI
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}
 
-	// KeyID is not passed to this call because AWS handles this
-	// internally based on the metadata stored with the encrypted data
 	input := kms.CreateDecryptRequest()
-	input.CiphertextBlob = string(in.KeyInfo.WrappedKey)
+	input.CiphertextBlob = string(in.Ciphertext)
 	input.Domain = k.domain
 
 	output, err := k.client.Decrypt(input)
 	if err != nil {
 		return nil, errwrap.Wrapf("error decrypting data encryption key: {{err}}", err)
 	}
-
-	envInfo := &seal.EnvelopeInfo{
-		Key:        []byte(output.Plaintext),
-		IV:         in.IV,
-		Ciphertext: in.Ciphertext,
+	decoded, err := base64.StdEncoding.DecodeString(output.Plaintext)
+	if err != nil {
+		return nil, err
 	}
+	envInfo := &seal.EnvelopeInfo{
+		Key:        []byte(in.Key),
+		IV:         in.IV,
+		Ciphertext: decoded,
+	}
+
 	plaintext, err := seal.NewEnvelope().Decrypt(envInfo)
 	if err != nil {
 		return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
