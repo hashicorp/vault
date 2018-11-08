@@ -50,6 +50,8 @@ BUG FIXES:
  * cli: Fix panic that could occur if parameters were not provided [GH-5603]
  * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
  * core: Fix buggy behavior if trying to remount into a namespace
+ * identity: Fix duplication of entity alias entity during alias transfer
+   between entities [GH-5733]
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
    having distinct scopes
    [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
