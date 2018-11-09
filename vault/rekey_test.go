@@ -366,7 +366,7 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 		t.Fatalf("expected error, ret is %#v\noldkeystr: %s\nnewkeystr: %s", *ret, oldkeystr, newkeystr)
 	}
 
-	// Check status has been reset
+	// Check progress has been reset
 	_, num, err := c.RekeyProgress(recovery, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
