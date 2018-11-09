@@ -35,28 +35,8 @@ func TestAWSKMSSeal_Lifecycle(t *testing.T) {
 	s.client = &mockAWSKMSSealClient{
 		keyID: aws.String(awsTestKeyID),
 	}
-
 	os.Setenv(EnvAWSKMSSealKeyID, awsTestKeyID)
-	_, err := s.SetConfig(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Test Encrypt and Decrypt calls
-	input := []byte("foo")
-	swi, err := s.Encrypt(context.Background(), input)
-	if err != nil {
-		t.Fatalf("err: %s", err.Error())
-	}
-
-	pt, err := s.Decrypt(context.Background(), swi)
-	if err != nil {
-		t.Fatalf("err: %s", err.Error())
-	}
-
-	if !reflect.DeepEqual(input, pt) {
-		t.Fatalf("expected %s, got %s", input, pt)
-	}
+	testEncryptionRoundTrip(t, s)
 }
 
 // This test executes real calls. The calls themselves should be free,
@@ -72,16 +52,19 @@ func TestAccAWSKMSSeal_Lifecycle(t *testing.T) {
 	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
 		t.SkipNow()
 	}
-
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
-	s.SetConfig(nil)
+	testEncryptionRoundTrip(t, s)
+}
+
+func testEncryptionRoundTrip(t *testing.T, seal *AWSKMSSeal) {
+	seal.SetConfig(nil)
 	input := []byte("foo")
-	swi, err := s.Encrypt(context.Background(), input)
+	swi, err := seal.Encrypt(context.Background(), input)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
 
-	pt, err := s.Decrypt(context.Background(), swi)
+	pt, err := seal.Decrypt(context.Background(), swi)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
