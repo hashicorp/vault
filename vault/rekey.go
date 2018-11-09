@@ -603,7 +603,6 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
 		c.recoveryRekeyConfig.RekeyProgress = nil
-
 	} else {
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
 		c.recoveryRekeyConfig.RekeyProgress = nil
