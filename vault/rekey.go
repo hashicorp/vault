@@ -372,8 +372,10 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyConfig.RekeyProgress[0]
+		c.barrierRekeyConfig.RekeyProgress = nil
 	} else {
 		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
+		c.barrierRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key: {{err}}", err).Error())
 		}
@@ -381,12 +383,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	if useRecovery {
 		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
-			c.logger.Error("rekey recovery key verification failed", "error", err)
+			c.logger.Error("rekey recovery key verification failed, resetting rekey progress", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 		}
 	} else {
 		if err := c.barrier.VerifyMaster(recoveredKey); err != nil {
-			c.logger.Error("master key verification failed", "error", err)
+			c.logger.Error("master key verification failed, resetting rekey progress", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("master key verification failed: {{err}}", err).Error())
 		}
 	}
@@ -600,8 +602,11 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
+		c.recoveryRekeyConfig.RekeyProgress = nil
+
 	} else {
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
+		c.recoveryRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
 		}
@@ -609,7 +614,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Verify the recovery key
 	if err := c.seal.VerifyRecoveryKey(ctx, recoveryKey); err != nil {
-		c.logger.Error("recovery key verification failed", "error", err)
+		c.logger.Error("recovery key verification failed,  esetting rekey progress", "error", err)
 		return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 	}
 
