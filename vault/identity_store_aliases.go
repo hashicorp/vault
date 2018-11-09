@@ -192,7 +192,7 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 
 		resp := &logical.Response{}
 
-		// If we found an exisitng alias we won't hit this condition because
+		// If we found an existing alias we won't hit this condition because
 		// canonicalID being empty will result in nil being returned in the block
 		// above, so in this case we know that creating a new entity is the right
 		// thing.
