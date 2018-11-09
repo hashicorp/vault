@@ -13,7 +13,7 @@ The `/sys/plugins/catalog` endpoint is used to read, register, update, and
 remove plugins in Vault's catalog. Plugins must be registered before use, and
 once registered backends can use the plugin by querying the catalog.
 
-## Read Plugins
+## LIST Plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -26,7 +26,6 @@ This endpoint lists the plugins in the catalog by type.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request LIST
     http://127.0.0.1:8200/v1/sys/plugins/catalog
 ```
 
@@ -54,6 +53,40 @@ $ curl \
             "azure",
             "gcp",
             "transit"
+        ]
+    }
+}
+```
+## LIST Plugins
+
+This endpoint lists the plugins in the catalog by type.
+
+| Method   | Path                              | Produces               |
+| :------- | :-------------------------------- | :--------------------- |
+| `LIST`   | `/sys/plugins/catalog/auth`       | `200 application/json` |
+| `LIST`   | `/sys/plugins/catalog/database`   | `200 application/json` |
+| `LIST`   | `/sys/plugins/catalog/secret`     | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/auth
+```
+
+### Sample Response
+
+```javascript
+{
+    "data": {
+        "keys": [
+            "aws",
+            "azure",
+            "custom-auth-plugin",
+            "gcp",
+            "ldap"
         ]
     }
 }

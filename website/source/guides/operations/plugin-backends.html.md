@@ -64,7 +64,7 @@ $ mv my-mock-plugin /etc/vault/vault_plugins
 Alternatively, if you wanted a custom version of a plugin built into Vault, such as AppRole:
 
 ```sh
-$ cd $GOPATH/src/github.com/hashicorp/vault/builtin/credential/approle/cmd
+$ cd $GOPATH/src/github.com/hashicorp/vault/builtin/credential/approle/cmd/approle
 $ go build
 $ mv approle /etc/vault/vault_plugins
 ```

@@ -100,9 +100,8 @@ This endpoint enables a new secrets engine at the given path.
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
 
-    These control the default and maximum lease time-to-live, force
-    disabling backend caching, and option plugin name for plugin backends
-    respectively. The first three options override the global defaults if
+    These control the default and maximum lease time-to-live, and the force
+    disabling backend caching. They override the global defaults if
     set on a specific mount.
 
     When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
