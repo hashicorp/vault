@@ -64,4 +64,22 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
+
+  test('it can edit via the JSON input', async function(assert) {
+    let content = JSON.stringify({ foo: 'fa', bar: 'boo' });
+    const path = `kv-path-${new Date().getTime()}`;
+    await listPage.visitRoot({ backend: 'secret' });
+    await listPage.create();
+    await editPage.path(path).toggleJSON();
+    await editPage.editor.fillIn(this, content);
+    await editPage.save();
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+    assert.equal(
+      showPage.editor.content(this),
+      JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
+      'saves the content'
+    );
+  });
 });

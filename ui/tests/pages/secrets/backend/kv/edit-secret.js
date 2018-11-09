@@ -1,6 +1,6 @@
 import { Base } from '../create';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
-
+import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
 export default create({
   ...Base,
   path: fillable('[data-test-secret-path]'),
@@ -11,6 +11,10 @@ export default create({
   confirmBtn: clickable('[data-test-confirm-button]'),
   visitEdit: visitable('/vault/secrets/:backend/edit/:id'),
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
+  toggleJSON: clickable('[data-test-secret-json-toggle]'),
+  editor: {
+    fillIn: codeFillable('[data-test-component="json-editor"]'),
+  },
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
