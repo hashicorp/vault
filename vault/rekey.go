@@ -383,12 +383,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 
 	if useRecovery {
 		if err := c.seal.VerifyRecoveryKey(ctx, recoveredKey); err != nil {
-			c.logger.Error("rekey recovery key verification failed, resetting rekey progress", "error", err)
+			c.logger.Error("rekey recovery key verification failed", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 		}
 	} else {
 		if err := c.barrier.VerifyMaster(recoveredKey); err != nil {
-			c.logger.Error("master key verification failed, resetting rekey progress", "error", err)
+			c.logger.Error("master key verification failed", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("master key verification failed: {{err}}", err).Error())
 		}
 	}
@@ -614,7 +614,7 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 
 	// Verify the recovery key
 	if err := c.seal.VerifyRecoveryKey(ctx, recoveryKey); err != nil {
-		c.logger.Error("recovery key verification failed,  esetting rekey progress", "error", err)
+		c.logger.Error("recovery key verification failed", "error", err)
 		return nil, logical.CodedError(http.StatusBadRequest, errwrap.Wrapf("recovery key verification failed: {{err}}", err).Error())
 	}
 
