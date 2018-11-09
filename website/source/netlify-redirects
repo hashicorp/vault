@@ -168,6 +168,7 @@
 /intro/what-is-vault/index.html /docs/what-is-vault
 
 # Intro getting started content -> Learn
+/intro/index.html https://learn.hashicorp.com/vault/#getting-started
 /intro/getting-started/ https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/index.html https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/dev-server.html https://learn.hashicorp.com/vault/getting-started/dev-server
