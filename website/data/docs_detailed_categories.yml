@@ -46,9 +46,9 @@
     - docs/commands/lease/index.html
     - docs/commands/list.html
     - docs/commands/login.html
+    - docs/commands/namespace.html
     - docs/commands/operator/index.html
     - docs/commands/path-help.html
-    - docs/commands/namespace.html
     - docs/commands/plugin/index.html
     - docs/commands/policy/index.html
     - docs/commands/read.html

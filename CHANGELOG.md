@@ -15,6 +15,11 @@ CHANGES:
    "hsm-auto" to "awskms" or "pkcs11" upon unseal if using AWSKMS or HSM seals.
    If performing seal migration, the barrier config should first be upgraded
    prior to starting migration.
+ * Go API client uses pooled HTTP client: The Go API client now uses a
+   connection-pooling HTTP client by default. For CLI operations this makes no
+   difference but it should provide significant performance benefits for those
+   writing custom clients using the Go API library. As before, this can be
+   changed to any custom HTTP client by the caller.
 
 CHANGES FROM BETA 1:
 (Note: these items will be removed from the final 1.0 changelog as they are
