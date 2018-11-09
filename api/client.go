@@ -121,7 +121,7 @@ type TLSConfig struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: cleanhttp.DefaultClient(),
+		HttpClient: cleanhttp.DefaultPooledClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
 
