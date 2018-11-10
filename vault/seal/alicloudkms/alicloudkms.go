@@ -2,6 +2,7 @@ package alicloudkms
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -64,13 +65,12 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 
 	region := ""
 	if k.client == nil {
-
 		// Check and set region.
 		region = os.Getenv("ALICLOUD_REGION")
 		if region == "" {
 			ok := false
 			if region, ok = config["region"]; !ok {
-				region = "us-east-1"
+				region = "cn-beijing"
 			}
 		}
 
@@ -129,6 +129,9 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 	if keyInfo == nil || keyInfo.KeyMetadata.KeyId == "" {
 		return nil, errors.New("no key information returned")
 	}
+
+	// Store the current key id. If using a key alias, this will point to the actual
+	// unique that that was used for this encrypt operation.
 	k.currentKeyID.Store(keyInfo.KeyMetadata.KeyId)
 
 	// Map that holds non-sensitive configuration info
@@ -178,7 +181,7 @@ func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physica
 
 	input := kms.CreateEncryptRequest()
 	input.KeyId = k.keyID
-	input.Plaintext = string(env.Key)
+	input.Plaintext = base64.StdEncoding.EncodeToString(env.Key)
 	input.Domain = k.domain
 
 	output, err := k.client.Encrypt(input)
@@ -208,7 +211,7 @@ func (k *AliCloudKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobI
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}
 
-	// KeyID is not passed to this call because AWS handles this
+	// KeyID is not passed to this call because AliCloud handles this
 	// internally based on the metadata stored with the encrypted data
 	input := kms.CreateDecryptRequest()
 	input.CiphertextBlob = string(in.KeyInfo.WrappedKey)
@@ -219,8 +222,13 @@ func (k *AliCloudKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobI
 		return nil, errwrap.Wrapf("error decrypting data encryption key: {{err}}", err)
 	}
 
+	keyBytes, err := base64.StdEncoding.DecodeString(output.Plaintext)
+	if err != nil {
+		return nil, err
+	}
+
 	envInfo := &seal.EnvelopeInfo{
-		Key:        []byte(output.Plaintext),
+		Key:        keyBytes,
 		IV:         in.IV,
 		Ciphertext: in.Ciphertext,
 	}
