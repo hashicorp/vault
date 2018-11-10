@@ -40,6 +40,10 @@ func TestAzureKeyVault_Lifecycle(t *testing.T) {
 	}
 
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	_, err := s.SetConfig(nil)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
 
 	// Test Encrypt and Decrypt calls
 	input := []byte("foo")
