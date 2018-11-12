@@ -17,6 +17,7 @@ export default Component.extend(FocusOnInsertMixin, {
   wizard: service(),
   router: service(),
   store: service(),
+  flashMessages: service(),
 
   // a key model
   key: null,
@@ -30,6 +31,10 @@ export default Component.extend(FocusOnInsertMixin, {
   mode: null,
 
   secretData: null,
+
+  wrappedData: null,
+  isWrapping: false,
+  showWrapButton: computed.not('wrappedData'),
 
   // called with a bool indicating if there's been a change in the secretData
   onDataChange() {},
@@ -233,6 +238,53 @@ export default Component.extend(FocusOnInsertMixin, {
     handleChange() {
       this.set('codemirrorString', this.secretData.toJSONString(true));
       set(this.modelForData, 'secretData', this.secretData.toJSON());
+    },
+
+    handleWrapClick() {
+      this.set('isWrapping', true);
+      if (this.isV2) {
+        this.store
+          .adapterFor('secret-v2-version')
+          .queryRecord(this.modelForData.id, { wrapTTL: 1800 })
+          .then(resp => {
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
+          })
+          .finally(() => {
+            this.set('isWrapping', false);
+          });
+      } else {
+        this.store
+          .adapterFor('secret')
+          .queryRecord(null, null, { backend: this.model.backend, id: this.modelForData.id, wrapTTL: 1800 })
+          .then(resp => {
+            this.set('wrappedData', resp.wrap_info.token);
+            this.flashMessages.success('Secret Successfully Wrapped!');
+          })
+          .catch(() => {
+            this.flashMessages.error('Could Not Wrap Secret');
+          })
+          .finally(() => {
+            this.set('isWrapping', false);
+          });
+      }
+    },
+
+    clearWrappedData() {
+      this.set('wrappedData', null);
+    },
+
+    handleCopySuccess() {
+      this.flashMessages.success('Copied Wrapped Data!');
+      this.send('clearWrappedData');
+    },
+
+    handleCopyError() {
+      this.flashMessages.error('Could Not Copy Wrapped Data');
+      this.send('clearWrappedData');
     },
 
     createOrUpdateKey(type, event) {

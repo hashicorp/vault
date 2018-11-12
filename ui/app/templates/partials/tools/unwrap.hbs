@@ -8,19 +8,43 @@
 
 {{#if unwrap_data}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <div class="field">
-      <label class="is-label">
-        Unwrapped data
-      </label>
-      <div class="control">
-        {{json-editor
-          value=(stringify unwrap_data)
-          options=(hash
-            readOnly=true
-          )
-        }}
+    <nav class="tabs">
+      <ul>
+        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}">
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab)}}>Data</button>
+        </li>
+        <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}">
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}}>Wrap Details</button>
+        </li>
+      </ul>
+    </nav>
+    {{#if (eq unwrapActiveTab "data")}}
+      <div class="field">
+        <div class="control">
+          {{json-editor
+            value=(stringify unwrap_data)
+            options=(hash
+              readOnly=true
+            )
+          }}
+        </div>
       </div>
-    </div>
+    {{else}}
+      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+        {{#each-in details as |key detail|}}
+          {{#info-table-row label=key value=key}}
+            {{#if (or (eq detail "No") (eq detail "None"))}}
+              <ICon  @class=has-text-grey @size="16" @glyph="cancel-square-outline" /> {{detail}}
+            {{else}}
+              {{#if (eq detail "Yes") }}
+                <ICon @class="has-text-success" @size="16" @glyph="checkmark-circled-outline" />
+              {{/if}}
+              {{detail}}
+            {{/if}}
+          {{/info-table-row}}
+        {{/each-in}}
+      </div>
+    {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
