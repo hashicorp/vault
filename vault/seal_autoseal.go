@@ -137,7 +137,15 @@ func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	// Decode the barrier entry
 	var keys [][]byte
 	if err := json.Unmarshal(pt, &keys); err != nil {
-		return nil, fmt.Errorf("failed to decode stored keys: %v, plaintext was %q", err, pe.Value)
+		return nil, errwrap.Wrapf("failed to decode stored keys: {{err}}", err)
+	}
+
+	// Upgrade the stored keys if the seal key has been rotated
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+		d.core.logger.Info("autoseal: upgrading stored keys")
+		if err := d.SetStoredKeys(ctx, keys); err != nil {
+			return nil, errwrap.Wrapf("failed to upgrade stored keys: {{err}}", err)
+		}
 	}
 
 	return keys, nil
@@ -391,6 +399,14 @@ func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 
 	if subtle.ConstantTimeCompare(key, pt) != 1 {
 		return fmt.Errorf("recovery key does not match submitted values")
+	}
+
+	// Upgrade the recovery keys if the seal key has been rotated
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+		d.core.logger.Info("autoseal: upgrading recovery keys")
+		if err := d.SetRecoveryKey(ctx, pt); err != nil {
+			return errwrap.Wrapf("failed to upgrade recovery keys: {{err}}", err)
+		}
 	}
 
 	return nil
