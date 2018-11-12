@@ -93,6 +93,11 @@ For a list of examples and supported providers, please see the
 
 The seal can be migrated between Shamir keys and automatic migration and vice versa.
 
+  ~> **NOTE**: This is not currently supported when using replication. While
+  the primary can be migrated without issue, the secondaries, depending on
+  which type of seal is being migrated from/to, may not work correctly. We plan
+  to support this officially in Vault 1.1.
+
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal/index.html) with the appropriate seal
 configuration.  When you bring up your server back up, run the unseal process with the
