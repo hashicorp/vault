@@ -2,8 +2,7 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:e26170d7ec7d444d7b74a5b1dbd6437fd8e552d27efce9327f733311737c4ae9"
+  digest = "1:a69ab3f1445ffd4815add4bd31ba05b65b3b9fec1ade5057d5d717f30e6efd6d"
   name = "github.com/SermoDigital/jose"
   packages = [
     ".",
@@ -12,7 +11,8 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "803625baeddc3526d01d321b5066029f53eafc81"
+  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
+  version = "1.1"
 
 [[projects]]
   branch = "master"
@@ -23,16 +23,17 @@
   revision = "7fddfc383310abc091d79a27f116d30cf0424032"
 
 [[projects]]
-  digest = "1:b12a893d64eb4c4c1980240c5706026032f505fef4ecd7d4cbfa2ed60ecd40c9"
+  branch = "master"
+  digest = "1:fb6bb07f738b9ec248ffa7b737dd983df2028001ebd0dad29dfb0830576cef12"
   name = "github.com/briankassouf/jose"
   packages = [
+    ".",
     "crypto",
     "jws",
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
-  version = "1.1"
+  revision = "d2569464773f2b9de32e57a79d87318bca5b56c0"
 
 [[projects]]
   digest = "1:34e709f36fd4f868fb00dbaf8a6cab4c1ae685832d392874ba9d7c5dec2429d1"
@@ -433,7 +434,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/SermoDigital/jose/jws",
     "github.com/briankassouf/jose/crypto",
     "github.com/briankassouf/jose/jws",
     "github.com/briankassouf/jose/jwt",
