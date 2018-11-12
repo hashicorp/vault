@@ -1193,7 +1193,13 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
 	// (in the case of an IAM user).
-	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+	splittedUserId := strings.Split(callerID.UserId, ":")
+	callerUniqueId := splittedUserId[0]
+	callerSessionId := ""
+	if len(splittedUserId) >= 2 {
+		callerSessionId = splittedUserId[1]
+	}
+
 	identityAlias := ""
 	switch identityConfigEntry.IAMAlias {
 	case identityAliasIAMUniqueID:
@@ -1314,6 +1320,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				"client_arn":           callerID.Arn,
 				"canonical_arn":        entity.canonicalArn(),
 				"client_user_id":       callerUniqueId,
+				"client_session_id":    callerSessionId,
 				"auth_type":            iamAuthType,
 				"inferred_entity_type": inferredEntityType,
 				"inferred_entity_id":   inferredEntityID,
