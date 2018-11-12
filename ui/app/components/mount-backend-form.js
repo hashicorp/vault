@@ -115,9 +115,10 @@ export default Component.extend({
       // err will display via model state
       return;
     }
-    this.get('flashMessages').success(
-      `Successfully mounted ${type} ${this.get('mountType')} method at ${path}.`
-    );
+
+    let mountType = this.get('mountType');
+    mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
+    this.get('flashMessages').success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
     if (this.get('mountType') === 'secret') {
       yield this.get('onMountSuccess')(type, path);
       return;
