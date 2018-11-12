@@ -131,7 +131,7 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 	}
 
 	// Store the current key id. If using a key alias, this will point to the actual
-	// unique that that was used for this encrypt operation.
+	// unique key that that was used for this encrypt operation.
 	k.currentKeyID.Store(keyInfo.KeyMetadata.KeyId)
 
 	// Map that holds non-sensitive configuration info
