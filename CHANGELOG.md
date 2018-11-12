@@ -35,7 +35,8 @@ FEATURES:
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
    credentials when having Agent automatically authenticate to Vault.
  * OpenAPI descriptions of mounted backends can be served directly from Vault.
- * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth 
+ * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth
+ * Added ability to wrap secrets and easily copy the wrap token or secret JSON in the UI.
 
 IMPROVEMENTS:
 
@@ -47,6 +48,7 @@ IMPROVEMENTS:
  * ui: The unbundled UI page now has some styling [GH-5665]
  * ui: Improved banner and popup design [GH-5672]
  * ui: Added token type to auth method mount config [GH-5723]
+ * ui: Display additonal wrap info when unwrapping. [GH-5664]
 
 BUG FIXES:
 
