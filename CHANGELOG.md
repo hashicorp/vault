@@ -23,7 +23,7 @@ CHANGES:
  * Paths within `auth/token` that allow specifying a token or accessor in the
    URL have been removed. These have been deprecated since March 2016 and
    undocumented, but were retained for backwards compatibility. They shouldn't
-   be used due to the possibility of those paths being logged so at this point
+   be used due to the possibility of those paths being logged, so at this point
    they are simply being removed.
 
 ## 1.0.0-beta2 (November 13th, 2018)
