@@ -1,4 +1,4 @@
-## 1.0.0-beta2 (November 12th, 2018)
+## 1.0.0-beta2 (November 13th, 2018)
 
 CHANGES:
 
@@ -63,7 +63,7 @@ BUG FIXES:
    the revoke button in the UI [GH-5647]
  * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
 
-## 0.11.5 (November 12th, 2018)
+## 0.11.5 (Unreleased)
 
 BUG FIXES:
 
