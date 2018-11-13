@@ -23,7 +23,9 @@ func TestAWSKMSSeal(t *testing.T) {
 	}
 
 	// Set the key
+	oldKeyID := os.Getenv(EnvAWSKMSSealKeyID)
 	os.Setenv(EnvAWSKMSSealKeyID, awsTestKeyID)
+	defer os.Setenv(EnvAWSKMSSealKeyID, oldKeyID)
 	_, err = s.SetConfig(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -31,11 +33,16 @@ func TestAWSKMSSeal(t *testing.T) {
 }
 
 func TestAWSKMSSeal_Lifecycle(t *testing.T) {
+	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
+		t.SkipNow()
+	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	s.client = &mockAWSKMSSealClient{
 		keyID: aws.String(awsTestKeyID),
 	}
+	oldKeyID := os.Getenv(EnvAWSKMSSealKeyID)
 	os.Setenv(EnvAWSKMSSealKeyID, awsTestKeyID)
+	defer os.Setenv(EnvAWSKMSSealKeyID, oldKeyID)
 	testEncryptionRoundTrip(t, s)
 }
 

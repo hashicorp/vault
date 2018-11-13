@@ -296,17 +296,18 @@ nope = "yes"
 }
 
 func TestPolicy_ParseBadPath(t *testing.T) {
+	// The wrong spelling is intended here
 	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
 path "/" {
 	capabilities = ["read"]
-	capabilities = ["read"]
+	capabilites  = ["read"]
 }
 `))
 	if err == nil {
 		t.Fatalf("expected error")
 	}
 
-	if !strings.Contains(err.Error(), `invalid key "capabilities" on line 3`) {
+	if !strings.Contains(err.Error(), `invalid key "capabilites" on line 3`) {
 		t.Errorf("bad error: %s", err)
 	}
 }

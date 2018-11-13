@@ -47,8 +47,8 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-For more information, see the [introduction section](https://www.vaultproject.io/intro)
-of the Vault website.
+For more information, see the [getting started guide](https://learn.hashicorp.com/vault/)
+on Hashicorp's learning platform.
 
 Getting Started & Documentation
 -------------------------------
