@@ -107,7 +107,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 }
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
-// specified core configurations overriden for testing.
+// specified core configurations overridden for testing.
 func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -282,7 +282,7 @@ func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 }
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
-// initialized, unsealed, with the any provided core config values overriden.
+// initialized, unsealed, with the any provided core config values overridden.
 func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
