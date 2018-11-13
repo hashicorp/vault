@@ -31,6 +31,9 @@ func TestAWSKMSSeal(t *testing.T) {
 }
 
 func TestAWSKMSSeal_Lifecycle(t *testing.T) {
+	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
+		t.SkipNow()
+	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	s.client = &mockAWSKMSSealClient{
 		keyID: aws.String(awsTestKeyID),
