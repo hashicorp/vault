@@ -6,25 +6,6 @@ const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 module.exports = function(defaults) {
   var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
-    favicons: {
-      faviconsConfig: {
-        appName: 'Vault Enterprise',
-        path: config.rootURL,
-        url: null,
-        icons: {
-          android: false,
-          appleIcon: false,
-          appleStartup: false,
-          coast: false,
-          favicons: true,
-          firefox: false,
-          opengraph: false,
-          twitter: false,
-          windows: false,
-          yandex: false,
-        },
-      },
-    },
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
