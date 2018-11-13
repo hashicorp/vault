@@ -1,4 +1,4 @@
-## 1.0.0-beta2 (Unreleased)
+## 1.0.0-beta2 (November 12th, 2018)
 
 CHANGES:
 
@@ -35,7 +35,8 @@ FEATURES:
  * AppRole support in Vault Agent Auto-Auth: You can now use AppRole
    credentials when having Agent automatically authenticate to Vault.
  * OpenAPI descriptions of mounted backends can be served directly from Vault.
- * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth 
+ * Support for Kubernetes Projected Service Account Tokens in Kubernetes auth
+ * Added ability to wrap secrets and easily copy the wrap token or secret JSON in the UI.
 
 IMPROVEMENTS:
 
@@ -47,29 +48,37 @@ IMPROVEMENTS:
  * ui: The unbundled UI page now has some styling [GH-5665]
  * ui: Improved banner and popup design [GH-5672]
  * ui: Added token type to auth method mount config [GH-5723]
+ * ui: Display additonal wrap info when unwrapping. [GH-5664]
 
 BUG FIXES:
 
- * auth/userpass: Fix minor timing issue that could leak the presence of a
-   username [GH-5614]
- * cli: Fix panic that could occur if parameters were not provided [GH-5603]
  * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
- * core: Fix buggy behavior if trying to remount into a namespace
- * identity: Fix duplication of entity alias entity during alias transfer
-   between entities [GH-5733]
  * secrets/azure: Fix valid roles being rejected for duplicate ids despite
    having distinct scopes
    [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
  * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
    for all other operations for backwards compatibility
    [[GH-19]](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/19)
- * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
- * agent: Fix issue when specifying two file sinks [GH-5610]
  * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
    the revoke button in the UI [GH-5647]
  * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
+
+## 0.11.5 (November 12th, 2018)
+
+BUG FIXES:
+
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * cli: Fix panic that could occur if parameters were not provided [GH-5603]
+ * core: Fix buggy behavior if trying to remount into a namespace
+ * identity: Fix duplication of entity alias entity during alias transfer
+   between entities [GH-5733]
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
  * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
    when trying to use tool/hash [GH-5714]
+ * agent: Fix issue when specifying two file sinks [GH-5610]
+ * autounseal/alicloud: Fix issue interacting with the API
+ * autounseal/azure: Fix key version tracking 
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 

@@ -19,6 +19,11 @@ export default ApplicationAdapter.extend({
     return this._url(backend, path) + `?version=${version}`;
   },
 
+  urlForQueryRecord(id) {
+    let [backend, path, version] = JSON.parse(id);
+    return this._url(backend, path) + `?version=${version}`;
+  },
+
   findRecord() {
     return this._super(...arguments).catch(errorOrModel => {
       // if it's a real 404, this will be an error, if not
@@ -27,6 +32,17 @@ export default ApplicationAdapter.extend({
         throw errorOrModel;
       }
       return errorOrModel;
+    });
+  },
+
+  queryRecord(id, options) {
+    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then(resp => {
+      if (options.wrapTTL) {
+        return resp;
+      }
+      resp.id = id;
+      resp.backend = backend;
+      return resp;
     });
   },
 
