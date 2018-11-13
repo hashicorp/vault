@@ -639,7 +639,7 @@ func (b *SystemBackend) pluginsCatalogListPaths() []*framework.Path {
 			Pattern: "plugins/catalog/?$",
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.handlePluginCatalogUntypedList,
+				logical.ListOperation: b.handlePluginCatalogUntypedList,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog-list-all"][0]),
