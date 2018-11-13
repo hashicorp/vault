@@ -271,19 +271,34 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 
 func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginsByType := make(map[string]interface{})
+	pluginsList := []string{}
 	for _, pluginType := range consts.PluginTypes {
 		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
 		if err != nil {
 			return nil, err
 		}
 		if len(plugins) > 0 {
-			sort.Strings(plugins)
-			pluginsByType[pluginType.String()] = plugins
+			if req.Operation == logical.ReadOperation {
+				sort.Strings(plugins)
+				pluginsByType[pluginType.String()] = plugins
+			} else {
+				for _, pluginName := range plugins {
+					if pluginType != consts.PluginTypeDatabase {
+						pluginName = fmt.Sprintf("%s-%s", pluginType, pluginName)
+					}
+					pluginsList = append(pluginsList, pluginName)
+				}
+			}
 		}
 	}
-	return &logical.Response{
-		Data: pluginsByType,
-	}, nil
+	if req.Operation == logical.ReadOperation {
+		return &logical.Response{
+			Data: pluginsByType,
+		}, nil
+	}
+	sort.Strings(pluginsList)
+	return logical.ListResponse(pluginsList), nil
+
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -3679,6 +3694,8 @@ This path responds to the following HTTP methods.
 		"Lists all the plugins known to Vault",
 		`
 This path responds to the following HTTP methods.
+		READ /
+			Returns a map of names of configured plugins by type.
 		LIST /
 			Returns a list of names of configured plugins.
 		`,
