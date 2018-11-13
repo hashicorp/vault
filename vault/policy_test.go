@@ -299,7 +299,7 @@ func TestPolicy_ParseBadPath(t *testing.T) {
 	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
 path "/" {
 	capabilities = ["read"]
-	capabilities  = ["read"]
+	capabilities = ["read"]
 }
 `))
 	if err == nil {
