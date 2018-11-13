@@ -3,6 +3,10 @@
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
+const environment = EmberApp.env();
+const isProd = environment === 'production';
+const isTest = environment === 'test';
+
 module.exports = function(defaults) {
   var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
@@ -14,7 +18,12 @@ module.exports = function(defaults) {
       plugins: ['transform-object-rest-spread'],
     },
     'ember-cli-babel': {
-      includePolyfill: true,
+      includePolyfill: isProd,
+    },
+    hinting: isTest,
+    tests: isTest,
+    sourcemaps: {
+      enabled: false,
     },
     autoprefixer: {
       grid: true,
