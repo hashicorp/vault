@@ -37,7 +37,7 @@ workflow, and each can solve different use cases.
 
 Note: The `ec2` method was implemented before the primitives to implement the
 `iam` method were supported by AWS. The `iam` method is the recommended approach
-as it is newer, more flexible and aligns with best practices to perform access
+as it is more flexible and aligns with best practices to perform access
 control and authentication. See the section on comparing the two auth methods
 below for more information.
 
