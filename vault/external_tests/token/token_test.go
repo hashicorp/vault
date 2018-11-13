@@ -152,7 +152,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// At this point there shouldn't be any identity policy on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +176,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup the token and expect entity policies on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +213,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup token and expect both entity and group policies on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +276,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Lookup token and expect entity, group and external group policies on the
 	// token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

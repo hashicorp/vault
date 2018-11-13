@@ -241,7 +241,9 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	//
 
 	// Extract the entity ID of the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
