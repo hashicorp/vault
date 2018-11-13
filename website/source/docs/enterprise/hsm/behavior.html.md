@@ -87,7 +87,7 @@ returned to the users that submitted their recovery keys.
 
 The recovery key can be rekeyed to change the number of shares/threshold or to
 target different key holders via different PGP keys. When using the Vault CLI,
-this is performed by using the `-recovery-key=true` flag to `vault operator rekey`.
+this is performed by using the `-target=recovery` flag to `vault operator rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`
