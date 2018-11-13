@@ -980,14 +980,8 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	path = ns.Path + namespace.Canonicalize("auth/"+path)
-
-	return b.handleTuneWriteCommon(ctx, path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
