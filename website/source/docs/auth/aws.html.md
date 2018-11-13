@@ -237,7 +237,7 @@ role. Some examples of how this works in practice:
 
 The iam and ec2 auth methods serve similar and somewhat overlapping
 functionality, in that both authenticate some type of AWS entity to Vault.
-Here are some comparisons that illustrate why `iam` method is better over
+Here are some comparisons that illustrate why `iam` method is preferred over
 `ec2`.
 
 * What type of entity is authenticated:
