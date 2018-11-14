@@ -29,9 +29,20 @@ export default ApplicationAdapter.extend({
     return this.createOrUpdate(...arguments);
   },
 
+<<<<<<< HEAD
   query(store, type) {
     return this.ajax(this.buildURL(type.modelName), 'GET', {
       data: { list: true },
     });
+=======
+  query(store, type, options) {
+    return this.ajax(
+      options && options.findAll ? this.buildURL() + `/${type.modelName}` : this.buildURL(type.modelName),
+      'GET',
+      {
+        data: { list: true },
+      }
+    );
+>>>>>>> add and use ember-power-select for policies in entity create/edit
   },
 });

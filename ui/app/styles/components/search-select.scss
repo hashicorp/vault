@@ -43,7 +43,7 @@
   padding: $spacing-xxs 0;
 
   .ember-power-select-option,
-  .ember-power-select-option[aria-current="true"] {
+  .ember-power-select-option[aria-current='true'] {
     align-items: center;
     display: flex;
     justify-content: space-between;
