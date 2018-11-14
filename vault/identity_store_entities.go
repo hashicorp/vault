@@ -480,7 +480,8 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 		return nil
 	}
 
-	// Remove entity ID as a member from all the groups it belongs to
+	// Remove entity ID as a member from all the groups it belongs, both
+	// internal and external
 	groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entity.ID, true, false)
 	if err != nil {
 		return nil
@@ -494,8 +495,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 		}
 	}
 
-	// Delete all the aliases in the entity. This function will also remove
-	// the corresponding alias indexes too.
+	// Delete all the aliases in the entity and the respective indexes
 	err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
 	if err != nil {
 		return err
