@@ -480,6 +480,20 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 		return nil
 	}
 
+	// Remove entity ID as a member from all the groups it belongs to
+	groups, err := i.MemDBGroupsByMemberEntityIDInTxn(txn, entity.ID, true, false)
+	if err != nil {
+		return nil
+	}
+
+	for _, group := range groups {
+		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entity.ID)
+		err = i.UpsertGroupInTxn(txn, group, true)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Delete all the aliases in the entity. This function will also remove
 	// the corresponding alias indexes too.
 	err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
