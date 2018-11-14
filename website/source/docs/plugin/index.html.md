@@ -27,8 +27,8 @@ Before a plugin backend can be mounted, it needs to be registered via the
 the plugin is registered, it can be mounted by specifying the registered plugin name:
 
 ```text
-$ vault secrets enable -path=my-secrets -plugin-name=passthrough-plugin plugin
-Successfully mounted plugin 'passthrough-plugin' at 'my-secrets'!
+$ vault secrets enable -path=my-secrets passthrough-plugin
+Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
 ```
 
 Listing secrets engines will display secrets engines that are mounted as
