@@ -25,7 +25,13 @@ module.exports = function(defaults) {
     sourcemaps: {
       enabled: false,
     },
+    sassOptions: {
+      sourceMap: false,
+      onlyIncluded: true,
+      implementation: require('sass'),
+    },
     autoprefixer: {
+      enabled: isProd,
       grid: true,
       browsers: ['defaults', 'ie 11'],
     },
@@ -49,6 +55,7 @@ module.exports = function(defaults) {
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
   app.import('node_modules/text-encoder-lite/index.js');
 
+  app.import('app/styles/bulma/bulma-radio-checkbox.css');
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //
