@@ -45,10 +45,10 @@
 {{else}}
   <EmptyState
     @title="No {{identityType}} aliases yet"
-    @message="A list of {{identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize identityType}} and click &quot;Add Alias&quot; to get started."
+    @message="A list of {{identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize identityType}} and click &quot;Create Alias&quot; to get started."
   >
     {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) tagName="button" class="link"}}
-      Add {{identityType}}
+      Create {{identityType}}
     {{/link-to}}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
       Learn More

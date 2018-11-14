@@ -12,7 +12,7 @@
     </p.levelLeft>
     <p.levelRight>
       {{#link-to "vault.cluster.policies.create" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true}}
-        Add {{uppercase policyType}} policy
+        Create {{uppercase policyType}} policy
         {{i-con glyph="chevron-right" size=11}}
       {{/link-to}}
     </p.levelRight>
@@ -154,10 +154,10 @@
   {{else}}
     <EmptyState
       @title="No {{uppercase policyType}} policies yet"
-      @message="A list of policies will be listed here. Add your first {{uppercase policyType}} policy to get started."
+      @message="A list of policies will be listed here. Create your first {{uppercase policyType}} policy to get started."
     >
       {{#link-to "vault.cluster.policies.create" class="link"}}
-        Add {{uppercase policyType}} policy
+        Create {{uppercase policyType}} policy
       {{/link-to}}
       <LearnLink @path="/vault/getting-started/policies">
         Learn More
