@@ -33,8 +33,12 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
+                        "role_session_name": &framework.FieldSchema{
+                                Type:        framework.TypeString,
+                                Description: "Session name of role to assume when credential_type is " + assumedRoleCred,
+                                Default:     "",
+                        },
 		},
-
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathCredsRead,
 			logical.UpdateOperation: b.pathCredsRead,
@@ -82,6 +86,8 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 	roleArn := d.Get("role_arn").(string)
 
+        roleSessionName := d.Get("role_session_name").(string)
+
 	var credentialType string
 	switch {
 	case len(role.CredentialTypes) == 1:
@@ -126,7 +132,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		case !strutil.StrListContains(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
-		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, ttl)
+		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, ttl, roleSessionName)
 	case federationTokenCred:
 		return b.secretTokenCreate(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, ttl)
 	default:

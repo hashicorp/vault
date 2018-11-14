@@ -112,7 +112,7 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
+	lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -125,6 +125,9 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		RoleArn:         aws.String(roleArn),
 		DurationSeconds: &lifeTimeInSeconds,
 	}
+        if roleSessionName != "" {
+                assumeRoleInput.SetRoleSessionName(roleSessionName)
+        }
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
 	}
