@@ -129,8 +129,16 @@ type GetPluginResponse struct {
 	SHA256  string   `json:"sha256"`
 }
 
+// GetPlugin retrieves information about the plugin.
 func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+
+	// Backwards compat, if type is not provided then use old path, upgrade
+	// logic should take care of registering it in the proper type
+	if i.Type == consts.PluginTypeUnknown {
+		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Name)
+	}
+
 	req := c.c.NewRequest(http.MethodGet, path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -206,6 +214,12 @@ type DeregisterPluginInput struct {
 // catalog.
 func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+
+	// Backwards compat, if type is not provided then use old path
+	if i.Type == consts.PluginTypeUnknown {
+		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Name)
+	}
+
 	req := c.c.NewRequest(http.MethodDelete, path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
