@@ -15,7 +15,6 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.10
-
 CGO_ENABLED=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -125,13 +124,13 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -139,7 +138,7 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build-dev
