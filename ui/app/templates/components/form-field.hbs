@@ -45,7 +45,23 @@
       {{/if}}
     </label>
   </div>
-
+{{else if (eq attr.options.editType "searchSelect")}}
+  <label for="{{attr.name}}" class="is-label">
+    {{labelString}}
+    {{#if attr.options.helpText}}
+      {{#info-tooltip}}
+        {{attr.options.helpText}}
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+  <SearchSelect
+    @id={{attr.name}}
+    @modelType={{attr.options.modelType}}
+    @displayAttr={{attr.options.displayAttr}}
+    @isList={{attr.options.isList}}
+    @onChange={{action (action "setAndBroadcast" valuePath)}}
+    @inputValue={{get model valuePath}}
+  />
 {{else if (eq attr.options.editType 'mountAccessor')}}
   {{mount-accessor-select
     name=attr.name
