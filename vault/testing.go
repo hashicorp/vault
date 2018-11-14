@@ -115,13 +115,7 @@ func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
-	conf := &CoreConfig{
-		Seal:            testSeal,
-		EnableUI:        false,
-		EnableRaw:       enableRaw,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
-	}
-	return TestCoreWithSealAndUI(t, conf)
+	return TestCoreWithSealAndUI(t, testCoreSealDefaultConfig(testSeal, enableRaw, false))
 }
 
 func TestCoreUI(t testing.T, enableUI bool) *Core {
@@ -155,6 +149,21 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	return c
+}
+
+func testCoreSealDefaultConfig(testSeal Seal, enableRaw bool, disableDefaultKv bool) *CoreConfig {
+	conf := testCoreDefaultConfig(enableRaw, disableDefaultKv)
+	conf.Seal = testSeal
+	return conf
+}
+
+func testCoreDefaultConfig(enableRaw bool, disableDefaultKv bool) *CoreConfig {
+	return &CoreConfig{
+		EnableUI:         false,
+		EnableRaw:        enableRaw,
+		BuiltinRegistry:  NewMockBuiltinRegistry(),
+		DisableDefaultKv: disableDefaultKv,
+	}
 }
 
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
@@ -1002,7 +1011,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA: true,
 		}
 		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
 		if err != nil {

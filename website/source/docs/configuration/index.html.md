@@ -99,6 +99,8 @@ to specify where the configuration is.
     LimitMEMLOCK=infinity
     ```
 
+- `disable_default_kv` `(bool: false)` - If this is set to true, Vault will not mount the generic/KV secret engine at `secret/` by default.
+  
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.

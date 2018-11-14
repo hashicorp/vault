@@ -68,6 +68,36 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	}
 }
 
+func TestCore_DefaultMountTableWithoutKv(t *testing.T) {
+	c, keys, _ := TestCoreUnsealedWithConfig(t, testCoreDefaultConfig(true, true))
+	verifyDefaultTable(t, c.mounts, c.disableDefaultKv)
+
+	// Start a second core with same physical
+	conf := &CoreConfig{
+		Physical:         c.physical,
+		DisableMlock:     true,
+		DisableDefaultKv: true,
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching mount tables
+	if !reflect.DeepEqual(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()) {
+		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
 func TestCore_Mount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
@@ -469,8 +499,9 @@ func TestDefaultMountTable(t *testing.T) {
 
 func TestDefaultMountTableWithoutKv(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	table := c.defaultMountTable(true)
-	verifyDefaultTable(t, table, true)
+	c.disableDefaultKv = true
+	table := c.defaultMountTable(c.disableDefaultKv)
+	verifyDefaultTable(t, table, c.disableDefaultKv)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
