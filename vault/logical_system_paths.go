@@ -560,7 +560,7 @@ func (b *SystemBackend) sealPaths() []*framework.Path {
 
 func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "plugins/catalog(/(?P<type>auth|database|secret))?/(?P<name>.+)",
+		Pattern: "plugins/catalog(/(?P<type>auth|database|secret|unknown))?/(?P<name>.+)",
 
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
