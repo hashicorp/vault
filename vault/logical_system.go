@@ -63,6 +63,7 @@ func systemBackendMemDBSchema() *memdb.DBSchema {
 	return systemSchema
 }
 
+// NewSystemBackend makes a new sys backend
 func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
@@ -1341,6 +1342,16 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			if meVersion < optVersion {
 				resp = &logical.Response{}
 				resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
+			}
+		} else {
+			// if version is not included in the
+			// options, and is present in the current
+			// mountEntry's options, copy it's value
+			// to the new options map to protect
+			// against accidental version downgrades
+			if vers, ok := mountEntry.Options["version"]; ok {
+				options["version"] = vers
+				numBuiltIn++
 			}
 		}
 		if options != nil {
