@@ -1,3 +1,21 @@
+## 0.11.5 (Unreleased)
+
+BUG FIXES:
+
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * cli: Fix panic that could occur if parameters were not provided [GH-5603]
+ * core: Fix buggy behavior if trying to remount into a namespace
+ * identity: Fix duplication of entity alias entity during alias transfer
+   between entities [GH-5733]
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
+ * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
+   when trying to use tool/hash [GH-5714]
+ * agent: Fix issue when specifying two file sinks [GH-5610]
+ * autounseal/alicloud: Fix issue interacting with the API
+ * autounseal/azure: Fix key version tracking
+ * namespaces: Fix tuning of auth mounts in a namespace
+
 ## 0.11.4 (October 23rd, 2018)
 
 CHANGES:
