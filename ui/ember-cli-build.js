@@ -28,7 +28,7 @@ module.exports = function(defaults) {
     sassOptions: {
       sourceMap: false,
       onlyIncluded: true,
-      implementation: require('sass'),
+      implementation: require('node-sass'),
     },
     autoprefixer: {
       enabled: isProd,
