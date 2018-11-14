@@ -418,7 +418,7 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 
 		err = i.handleEntityDeleteCommon(ctx, txn, entity)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 
 		txn.Commit()
@@ -462,7 +462,7 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 
 		err = i.handleEntityDeleteCommon(ctx, txn, entity)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 
 		txn.Commit()
