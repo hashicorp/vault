@@ -22,7 +22,11 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    editType: 'stringArray',
+    label: 'Policies',
+    editType: 'searchSelect',
+    modelType: 'policy',
+    displayAttr: 'id',
+    isList: true,
   }),
   creationTime: attr('string', {
     readOnly: true,

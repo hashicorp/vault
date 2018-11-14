@@ -127,5 +127,8 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "dependencies": {
+    "ember-power-select": "^2.0.9"
   }
 }
