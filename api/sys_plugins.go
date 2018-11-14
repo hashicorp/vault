@@ -172,6 +172,13 @@ type RegisterPluginInput struct {
 // RegisterPlugin registers the plugin with the given information.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+
+	// Backwards compat, if type is not provided then use old path, upgrade
+	// logic should take care of registering it in the proper type
+	if i.Type == consts.PluginTypeUnknown {
+		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Name)
+	}
+
 	req := c.c.NewRequest(http.MethodPut, path)
 	if err := req.SetJSONBody(i); err != nil {
 		return err
