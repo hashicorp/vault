@@ -30,10 +30,14 @@ export default ApplicationAdapter.extend({
   },
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> add policy search select and group search select to group creation
   query(store, type) {
     return this.ajax(this.buildURL(type.modelName), 'GET', {
       data: { list: true },
     });
+<<<<<<< HEAD
 =======
   query(store, type, options) {
     return this.ajax(
@@ -44,5 +48,7 @@ export default ApplicationAdapter.extend({
       }
     );
 >>>>>>> add and use ember-power-select for policies in entity create/edit
+=======
+>>>>>>> add policy search select and group search select to group creation
   },
 });
