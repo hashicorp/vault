@@ -36,15 +36,22 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    editType: 'stringArray',
+    label: 'Policies',
+    editType: 'searchSelect',
+    modelType: 'policy/acl',
+    isList: true,
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    modelType: 'identity/group',
+    isList: true,
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    modelType: 'identity/group',
+    isList: true,
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
