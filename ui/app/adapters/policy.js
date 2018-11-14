@@ -29,13 +29,9 @@ export default ApplicationAdapter.extend({
     return this.createOrUpdate(...arguments);
   },
 
-  query(store, type, options) {
-    return this.ajax(
-      options && options.findAll ? this.buildURL() + `/${type.modelName}` : this.buildURL(type.modelName),
-      'GET',
-      {
-        data: { list: true },
-      }
-    );
+  query(store, type) {
+    return this.ajax(this.buildURL(type.modelName), 'GET', {
+      data: { list: true },
+    });
   },
 });

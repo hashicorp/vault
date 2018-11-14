@@ -33,12 +33,12 @@ export default Component.extend({
   options: null,
   init() {
     this._super(...arguments);
-    this.set('selectedOptions', this.inputValue);
+    this.set('selectedOptions', this.inputValue || []);
   },
   fetchOptions: task(function*() {
     yield this.store
       .adapterFor(this.modelType)
-      .query(null, { modelName: this.modelType }, { findAll: true })
+      .query(null, { modelName: this.modelType })
       .then(resp => {
         let options = resp.data.keys;
         options.removeObjects(this.selectedOptions);
