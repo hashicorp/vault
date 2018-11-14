@@ -1,6 +1,7 @@
+import OuterHTML from './outer-html';
 import Component from '@ember/component';
 
-export default Component.extend({
+export default OuterHTML.extend({
   title: null,
-  classNames: ['empty-state box is-sideless is-marginless is-fullwidth is-bottomless'],
+  message: null,
 });

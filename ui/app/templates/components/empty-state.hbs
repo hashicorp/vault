@@ -1,15 +1,17 @@
-<div class="empty-state-content">
-  <h3 class="empty-state-title">
-    {{title}}
-  </h3>
-  {{#if message}}
+<div class="empty-state box is-sideless is-marginless is-fullwidth is-bottomless">
+  <div class="empty-state-content">
+    <h3 class="empty-state-title">
+      {{title}}
+    </h3>
+    {{#if message}}
     <p class="empty-state-message">
       {{message}}
     </p>
-  {{/if}}
-  {{#if hasBlock}}
+    {{/if}}
+    {{#if hasBlock}}
     <div class="empty-state-actions">
       {{yield}}
     </div>
-  {{/if}}
+    {{/if}}
+  </div>
 </div>
