@@ -1344,11 +1344,9 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 				resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
 			}
 		} else {
-			// if version is not included in the
-			// options, and is present in the current
-			// mountEntry's options, copy it's value
-			// to the new options map to protect
-			// against accidental version downgrades
+			// if version is not included in the options, and is present in the
+			// current mountEntry's options, copy it's value to the new options map to
+			// protect against accidental version downgrades
 			if vers, ok := mountEntry.Options["version"]; ok {
 				options["version"] = vers
 				numBuiltIn++
