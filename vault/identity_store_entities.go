@@ -412,39 +412,15 @@ func (i *IdentityStore) pathEntityIDDelete() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		// If there is no entity for the ID, do nothing
 		if entity == nil {
 			return nil, nil
 		}
 
-		ns, err := namespace.FromContext(ctx)
+		err = i.handleEntityDeleteCommon(ctx, txn, entity)
 		if err != nil {
-			return nil, err
-		}
-		if entity.NamespaceID != ns.ID {
 			return nil, nil
 		}
 
-		// Delete all the aliases in the entity. This function will also remove
-		// the corresponding alias indexes too.
-		err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
-		if err != nil {
-			return nil, err
-		}
-
-		// Delete the entity using the same transaction
-		err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Delete the entity from storage
-		err = i.entityPacker.DeleteItem(entity.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Committing the transaction *after* successfully deleting entity
 		txn.Commit()
 
 		return nil, nil
@@ -484,30 +460,46 @@ func (i *IdentityStore) pathEntityNameDelete() framework.OperationFunc {
 			return nil, nil
 		}
 
-		// Delete all the aliases in the entity. This function will also remove
-		// the corresponding alias indexes too.
-		err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
+		err = i.handleEntityDeleteCommon(ctx, txn, entity)
 		if err != nil {
-			return nil, err
+			return nil, nil
 		}
 
-		// Delete the entity using the same transaction
-		err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Delete the entity from storage
-		err = i.entityPacker.DeleteItem(entity.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Committing the transaction *after* successfully deleting entity
 		txn.Commit()
 
 		return nil, nil
 	}
+}
+
+func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb.Txn, entity *identity.Entity) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if entity.NamespaceID != ns.ID {
+		return nil
+	}
+
+	// Delete all the aliases in the entity. This function will also remove
+	// the corresponding alias indexes too.
+	err = i.deleteAliasesInEntityInTxn(txn, entity, entity.Aliases)
+	if err != nil {
+		return err
+	}
+
+	// Delete the entity using the same transaction
+	err = i.MemDBDeleteEntityByIDInTxn(txn, entity.ID)
+	if err != nil {
+		return err
+	}
+
+	// Delete the entity from storage
+	err = i.entityPacker.DeleteItem(entity.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *IdentityStore) pathEntityIDList() framework.OperationFunc {
