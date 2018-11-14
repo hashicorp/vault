@@ -58,6 +58,42 @@ $ curl \
     https://127.0.0.1:8200/v1/secret/config
 ```
 
+## Read KV Engine configuration
+
+This path retrieves the current configuration for the secrets backend at the
+given path.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`   | `/secret/config`             | `204 application/json`     |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/secret/config
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "...",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "cas_required": false,
+    "max_versions": 0
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
 
 ## Read Secret Version
 
