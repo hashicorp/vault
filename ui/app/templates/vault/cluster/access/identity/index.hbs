@@ -116,12 +116,13 @@
 {{else}}
   <EmptyState
     @title="No {{pluralize identityType}} yet"
-    @message="A list of {{pluralize identityType}} in this namespace will be listed here. Add your first {{identityType}} to get started.">
+    @message="A list of {{pluralize identityType}} in this namespace will be listed here. Add your first {{identityType}} to get started."
+  >
     {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) tagName="button" class="link"}}
       Add {{identityType}}
     {{/link-to}}
-    <DocLink @href="https://learn.hashicorp.com/vault/identity-access-management/iam-identity">
+    <LearnLink @path="/vault/identity-access-management/iam-identity">
       Learn More
-    </DocLink>
+    </LearnLink>
   </EmptyState>
 {{/if}}
