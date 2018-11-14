@@ -41,7 +41,7 @@ func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
 
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	verifyDefaultTable(t, c.mounts)
+	verifyDefaultTable(t, c.mounts, false)
 
 	// Start a second core with same physical
 	conf := &CoreConfig{
@@ -463,8 +463,14 @@ func TestCore_Remount_Protected(t *testing.T) {
 
 func TestDefaultMountTable(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	table := c.defaultMountTable()
-	verifyDefaultTable(t, table)
+	table := c.defaultMountTable(false)
+	verifyDefaultTable(t, table, false)
+}
+
+func TestDefaultMountTableWithoutKv(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	table := c.defaultMountTable(true)
+	verifyDefaultTable(t, table, true)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
@@ -633,8 +639,13 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	}
 }
 
-func verifyDefaultTable(t *testing.T, table *MountTable) {
-	if len(table.Entries) != 4 {
+func verifyDefaultTable(t *testing.T, table *MountTable, excludeKv bool) {
+	expectedEntryCount := 4
+	if excludeKv {
+		expectedEntryCount--
+	}
+
+	if len(table.Entries) != expectedEntryCount {
 		t.Fatalf("bad: %v", table.Entries)
 	}
 	table.sortEntriesByPath()
@@ -645,7 +656,7 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 				t.Fatalf("bad: %v", entry)
 			}
 		case "secret/":
-			if entry.Type != "kv" {
+			if entry.Type != "kv" || excludeKv {
 				t.Fatalf("bad: %v", entry)
 			}
 		case "sys/":

@@ -401,6 +401,9 @@ type Core struct {
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
 	allLoggersLock sync.RWMutex
+
+	// Prevents mounting the secret/ kv by default
+	disableDefaultKv bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -429,6 +432,9 @@ type CoreConfig struct {
 
 	// Disables mlock syscall
 	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
+
+	// Disables the default KV secret mount
+	DisableDefaultKv bool `json:"disable_default_kv" structs:"disable_default_kv" mapstructure:"disable_default_kv"`
 
 	// Custom cache size for the LRU cache on the physical backend, or zero for default
 	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
@@ -574,6 +580,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
+		disableDefaultKv:                 conf.DisableDefaultKv,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
