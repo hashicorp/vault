@@ -11,9 +11,10 @@ export default Component.extend({
 
   target: '_blank',
   rel: 'noreferrer noopener',
+  host: 'https://www.vaultproject.io',
 
   path: '/',
-  href: computed('path', function() {
-    return `https://www.vaultproject.io${this.get('path')}`;
+  href: computed('host', 'path', function() {
+    return `${this.host}${this.path}`;
   }),
 });
