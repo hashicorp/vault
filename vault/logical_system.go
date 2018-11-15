@@ -399,14 +399,16 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
+	var resp *logical.Response
 	pluginTypeStr := d.Get("type").(string)
 	if pluginTypeStr == "" {
 		// If the plugin type is not provided (i.e. the old
-		// sys/plugins/catalog/:name endpoint is being requested) short-circuit here
-		// and return a warning
-		resp := &logical.Response{}
+		// sys/plugins/catalog/:name endpoint is being requested), set type to
+		// unknown and let pluginCatalog.Delete proceed. It should handle
+		// deregistering out of the old storage path (root of core/plugin-catalog)
+		resp = new(logical.Response)
 		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot deregister plugin from catalog for %q", pluginName))
-		return resp, nil
+		pluginTypeStr = "unknown"
 	}
 
 	pluginType, err := consts.ParsePluginType(pluginTypeStr)
@@ -417,7 +419,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 		return nil, err
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
