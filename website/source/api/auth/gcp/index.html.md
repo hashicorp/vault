@@ -374,7 +374,7 @@ $ curl \
       "prod"
     ],
     "project_id": "project-123456",
-    "role": "gce",
+    "type": "gce",
     "ttl": 1800
   }
 }
