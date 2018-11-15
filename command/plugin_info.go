@@ -99,6 +99,11 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		return 2
 	}
 
+	if resp == nil {
+		c.UI.Error(fmt.Sprintf("No value found for plugin %q", pluginName))
+		return 2
+	}
+
 	data := map[string]interface{}{
 		"args":    resp.Args,
 		"builtin": resp.Builtin,

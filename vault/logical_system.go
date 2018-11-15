@@ -349,7 +349,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided (i.e. the old
+		// sys/plugins/catalog/:name endpoint is being requested) short-circuit here
+		// and return a warning
+		resp := &logical.Response{}
+		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot read plugin information from catalog for %q", pluginName))
+		return resp, nil
+	}
+
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +398,18 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided (i.e. the old
+		// sys/plugins/catalog/:name endpoint is being requested) short-circuit here
+		// and return a warning
+		resp := &logical.Response{}
+		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot deregister plugin from catalog for %q", pluginName))
+		return resp, nil
+	}
+
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}

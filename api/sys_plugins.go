@@ -150,13 +150,13 @@ func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	defer resp.Body.Close()
 
 	var result struct {
-		Data GetPluginResponse
+		Data *GetPluginResponse
 	}
 	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return nil, err
 	}
-	return &result.Data, err
+	return result.Data, err
 }
 
 // RegisterPluginInput is used as input to the RegisterPlugin function.
