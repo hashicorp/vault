@@ -294,7 +294,7 @@ same secondary token.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
-docs](/api/system/replication-dr.html#generate-disaster-recovery-operation-token) for more information.
+docs](#generate-disaster-recovery-operation-token) for more information.
 
 !> Only one performance primary should be active at a given time. Multiple primaries may
 result in data loss!
@@ -310,8 +310,8 @@ result in data loss!
   primary gives to secondary nodes. Useful if the primary's cluster address is
   not directly accessible and must be accessed via an alternate path/address
   (e.g. through a load balancer).
-- `force` `(bool: false)` - If true the cluster will be promoted even if it fails 
-  certain safety checks. Caution: Forcing promotion could result in data loss if 
+- `force` `(bool: false)` - If true the cluster will be promoted even if it fails
+  certain safety checks. Caution: Forcing promotion could result in data loss if
   data isn't fully replicated.
 
 ### Sample Payload
@@ -361,7 +361,7 @@ secondary activation token. This does not wipe all data in the cluster.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
-docs](/api/system/replication-dr.html#generate-disaster-recovery-operation-token) for more information.
+docs](#generate-disaster-recovery-operation-token) for more information.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -455,7 +455,7 @@ encode the final token, it will never be returned.
 ## Start Token Generation
 
 This endpoint initializes a new generation attempt. Only a single
-generation attempt can take place at a time. 
+generation attempt can take place at a time.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
