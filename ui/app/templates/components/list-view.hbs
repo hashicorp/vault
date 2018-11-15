@@ -6,7 +6,8 @@
   </div>
 {{else}}
   <EmptyState
-    @title={{emptyTitle}}
-    @message={{emptyMessage}}
+    @title={{this.emptyTitle}}
+    @message={{this.emptyMessage}}
+    @emptyActions={{this.emptyActions}}
   />
 {{/if}}

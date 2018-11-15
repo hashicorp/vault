@@ -9,9 +9,13 @@
     </p>
     {{/if}}
     {{#if hasBlock}}
-    <div class="empty-state-actions">
-      {{yield}}
-    </div>
+      <div class="empty-state-actions">
+        {{yield}}
+      </div>
+    {{else if emptyActions}}
+      <div class="empty-state-actions">
+        {{component emptyActions}}
+      </div>
     {{/if}}
   </div>
 </div>

@@ -6,6 +6,9 @@ export default Component.extend({
   tagName: '',
   items: null,
   itemNoun: 'item',
+  // the dasherized name of a component to render
+  // in the EmptyState component if there are no items in items.length
+  emptyActions: '',
 
   emptyTitle: computed('itemNoun', function() {
     let items = pluralize(this.get('itemNoun'));
