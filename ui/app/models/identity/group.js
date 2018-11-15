@@ -55,7 +55,9 @@ export default IdentityModel.extend({
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    modelType: 'identity/entity',
+    isList: true,
   }),
   hasMembers: computed(
     'memberEntityIds',
