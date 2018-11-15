@@ -40,12 +40,36 @@ export default Component.extend({
       .adapterFor(this.modelType)
       .query(null, { modelName: this.modelType })
       .then(resp => {
-        let options = resp.data.keys;
+        let options = [];
+        let data = resp.data;
+        switch (this.modelType) {
+          case 'identity/group':
+          case 'identity/entity':
+            data = data.key_info;
+            Object.keys(data).forEach(id => {
+              if (this.selectedOptions.includes(id)) {
+                this.selectedOptions.removeObject(id);
+                this.selectedOptions.addObject({ key: id, name: data[id].name });
+              } else {
+                options.addObject({ key: id, name: data[id].name });
+              }
+            });
+            break;
+          default:
+            options = data.keys;
+            break;
+        }
         options.removeObjects(this.selectedOptions);
-        this.set('options', resp.data.keys);
+        this.set('options', options);
       });
   }).on('didInsertElement'),
-
+  handleChange() {
+    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject == 'object') {
+      this.onChange(Array.from(this.selectedOptions, option => option.key));
+    } else {
+      this.onChange(this.selectedOptions);
+    }
+  },
   actions: {
     selectOption(option) {
       this.selectedOptions.pushObject(option);
@@ -53,12 +77,12 @@ export default Component.extend({
       if (!this.isList) {
         this.set('selectedOption', option);
       }
-      this.onChange(this.selectedOptions);
+      this.handleChange();
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
       this.options.pushObject(selected);
-      this.onChange(this.selectedOptions);
+      this.handleChange();
     },
   },
 });
