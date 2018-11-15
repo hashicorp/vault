@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {{#if shouldUseFallback}}
   {{component
     fallbackComponent
@@ -58,3 +59,31 @@
     </ul>
   {{/if}}
 {{/if}}
+=======
+{{#power-select
+  options=options
+  selected=selectedOption
+  onchange=(action "selectOption")
+  as |option|
+}}
+  {{#if option.name}}
+    <strong>{{option.key}}</strong> ({{option.name}})
+  {{else}}
+    {{option}}
+  {{/if}}
+{{/power-select}}
+{{#if isList}}
+  {{#each selectedOptions as |selected|}}
+    {{#if selected.name}}
+      <strong>{{selected.key}}</strong> ({{selected.name}})
+    {{else}}
+      {{selected}}
+    {{/if}}
+    <div class="control">
+      <button type="button" class="button is-expanded is-icon" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
+        {{i-con size=22 glyph='trash-a' excludeIconClass=true class="is-large has-text-grey-light"}}
+      </button>
+    </div>
+  {{/each}}
+{{/if}}
+>>>>>>> first pass at showing name and id for groups and entities
