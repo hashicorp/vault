@@ -1,9 +1,11 @@
 .ember-power-select-dropdown {
+  border-color: $grey-light;
   overflow: visible;
 }
 
 .ember-power-select-trigger {
   border: 0;
+  border-radius: $radius;
   padding-right: 0;
 }
 
