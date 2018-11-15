@@ -1,4 +1,29 @@
-$ember-power-select-border-color: $grey-light;
-$ember-power-select-border-radius: 0;
-$ember-power-select-text-color: $grey-dark;
-$ember-power-select-line-height: 2.5rem;
+.ember-power-select-dropdown {
+  overflow: visible;
+}
+
+.ember-power-select-trigger {
+  border: 0;
+  padding-right: 0;
+}
+
+.ember-power-select-trigger:focus,
+.ember-power-select-trigger--active {
+  border: 0;
+}
+
+.ember-power-select-status-icon {
+  display: none;
+}
+
+.ember-power-select-search {
+  position: absolute;
+  left: $spacing-l;
+  top: 0;
+  right: 0;
+  transform: translateY(-100%);
+}
+
+.ember-power-select-search-input {
+  border: 0;
+}
