@@ -143,7 +143,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 		}
 	}
 
-	out := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | Options | Description"}
+	out := []string{"Path | Type | Accessor | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | Options | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 
