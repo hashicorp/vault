@@ -154,7 +154,7 @@ management tool.
     $ vault write auth/gcp/role/my-gce-role \
         type="gce" \
         policies="dev,prod" \
-        bound_projects="my-project1, my-project2" \
+        bound_projects="my-project1,my-project2" \
         bound_zones="us-east1-b" \
         bound_labels="foo:bar,zip:zap"
     ```
