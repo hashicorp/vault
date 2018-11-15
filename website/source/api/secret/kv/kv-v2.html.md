@@ -65,7 +65,7 @@ given path.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/secret/config`             | `204 application/json`     |
+| `GET`   | `/secret/config`             | `200 application/json`     |
 
 
 ### Sample Request
@@ -80,17 +80,10 @@ $ curl \
 
 ```json
 {
-  "request_id": "...",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
   "data": {
     "cas_required": false,
     "max_versions": 0
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+  }
 }
 ```
 
@@ -184,7 +177,8 @@ $ curl \
 ```
 
 ### Sample Response
-```
+
+```json
 {
   "data": {
     "created_time": "2018-03-22T02:36:43.986212308Z",
