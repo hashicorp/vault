@@ -220,7 +220,7 @@
   position: relative;
 }
 .nav-user-button.may-expire .icon:first-of-type::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   right: 0;
@@ -235,12 +235,8 @@
   -webkit-overflow-scrolling: touch;
 
   &::before {
-    background-image: linear-gradient(
-      to bottom,
-      $ui-gray-900,
-      rgba($ui-gray-900, 0)
-    );
-    content: "";
+    background-image: linear-gradient(to bottom, $ui-gray-900, rgba($ui-gray-900, 0));
+    content: '';
     height: $spacing-xs;
     left: 0;
     position: absolute;

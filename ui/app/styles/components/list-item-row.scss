@@ -23,6 +23,7 @@ a.list-item-row,
     padding-left: $column-gap;
     padding-right: $column-gap;
     position: relative;
-    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow, $box-shadow-middle;
+    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow,
+      $box-shadow-middle;
   }
 }
