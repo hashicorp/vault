@@ -203,15 +203,13 @@ for a project `$PROJECT_ID`, in subfolder `$SUBFOLDER_ID`,
 in folder `$FOLDER_ID`, in organization `$ORG_ID`, the following group aliases
 will be added:
 
-```text
-
+```javascript
 [
     "project-$PROJECT_ID",
     "folder-$SUBFOLDER_ID",
-    "folder-$FOLDER_ID, 
+    "folder-$FOLDER_ID",
     "organization-$ORG_ID"
 ]
-
 ```
 
 Note this is opt-in as it requires a project-level or organizational-level
