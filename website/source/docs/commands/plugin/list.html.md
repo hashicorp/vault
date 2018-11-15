@@ -10,6 +10,7 @@ description: |-
 # plugin list
 
 The `plugin list` command lists all available plugins in the plugin catalog.
+It can be used alone or with a type such as "auth", "database", or "secret".
 
 ## Examples
 
@@ -21,6 +22,12 @@ $ vault plugin list
 Plugins
 -------
 my-custom-plugin
+# ...
+
+$ vault plugin list database
+Plugins
+-------
+cassandra-database-plugin
 # ...
 ```
 
