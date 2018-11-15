@@ -8,7 +8,6 @@ const isProd = environment === 'production';
 const isTest = environment === 'test';
 
 module.exports = function(defaults) {
-  var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
     codemirror: {
       modes: ['javascript', 'ruby'],
