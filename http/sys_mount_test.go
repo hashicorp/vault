@@ -676,7 +676,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Unset the mount tune value
+	// Check that we're not allowed to unset the options map once that's set
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
 		"options": map[string]string{},
 	})
@@ -698,10 +698,12 @@ func TestSysTuneMount_Options(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"options":           map[string]interface{}{"test": "true"},
 		},
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
+		"options":           map[string]interface{}{"test": "true"},
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
