@@ -46,17 +46,19 @@
       <hr class="is-marginless" />
     {{/each}}
   {{else}}
-    <div class="box is-bottomless has-background-white-bis is-marginless">
-      <div class="columns is-centered">
-        <div class="column is-half has-text-centered">
-          <div class="box is-shadowless has-background-white-bis">
-            <p class="has-text-grey">
-              There are currently no known {{performanceMode}} secondary clusters associated with this cluster.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <EmptyState
+      @title="No known {{performanceMode}} secondary clusters associated with this cluster"
+      @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
+    >
+      {{#if model.canAddSecondary}}
+        {{#link-to 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode class="link" }}
+          Add secondary
+        {{/link-to}}
+      {{/if}}
+      <DocLink @path="/docs/internals/replication.html">
+        Learn More
+      </DocLink>
+    </EmptyState>
   {{/if}}
   <div class="field is-grouped box is-shadowless is-fullwidth">
     {{#if model.canAddSecondary}}

@@ -10,13 +10,14 @@ description: |-
 # plugin info
 
 The `plugin info` displays information about a plugin in the catalog.
+The plugin's type of "auth", "database", or "secret" must be included.
 
 ## Examples
 
 Display information about a plugin
 
 ```text
-$ vault plugin info my-custom-plugin
+$ vault plugin info auth my-custom-plugin
 
 Key        Value
 ---        -----

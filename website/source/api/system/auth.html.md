@@ -84,9 +84,6 @@ For example, enable the "foo" auth method will make it accessible at
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
      string duration like "5s" or "30m".
 
-  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
-     to use.
-
   - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the request data object.
 
@@ -98,13 +95,6 @@ For example, enable the "foo" auth method will make it accessible at
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
-
-    The plugin_name can be provided in the config map or as a top-level option,
-    with the former taking precedence.
-
-- `plugin_name` `(string: "")` – Specifies the name of the auth plugin to
-  use based from the name in the plugin catalog. Applies only to plugin
-  methods.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:

@@ -1,3 +1,11 @@
+## 1.0.0 (Unreleased)
+
+BUG FIXES:
+
+ * identity: Update group memberships when entity is deleted [GH-5786]
+ * storage/gcs: Send md5 of values to GCS to avoid potential corruption
+   [GH-5804]
+
 ## 1.0.0-beta2 (November 13th, 2018)
 
 CHANGES:
@@ -63,7 +71,7 @@ BUG FIXES:
    the revoke button in the UI [GH-5647]
  * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
 
-## 0.11.5 (Unreleased)
+## 0.11.5 (November 13th, 2018)
 
 BUG FIXES:
 
@@ -79,6 +87,7 @@ BUG FIXES:
  * agent: Fix issue when specifying two file sinks [GH-5610]
  * autounseal/alicloud: Fix issue interacting with the API
  * autounseal/azure: Fix key version tracking 
+ * namespaces: Fix tuning of auth mounts in a namespace
 
 ## 1.0.0-beta1 (October 23rd, 2018)
 
