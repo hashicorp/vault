@@ -1,3 +1,8 @@
+## 1.0.0 (Unreleased)
+
+BUG FIXES:
+ * identity: Update group memberships when entity is deleted [GH-5786]
+
 ## 1.0.0-beta2 (November 13th, 2018)
 
 CHANGES:
