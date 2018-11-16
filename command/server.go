@@ -986,11 +986,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					pluginsNotLoaded = append(pluginsNotLoaded, name)
-					fmt.Println("===========", err)
-					if errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
-						fmt.Println("----------- got here")
+					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+						return 1
 					}
+					pluginsNotLoaded = append(pluginsNotLoaded, name)
 					continue
 				}
 				plugins = append(plugins, name)
@@ -1051,7 +1050,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		if len(pluginsNotLoaded) > 0 {
 			c.UI.Warn("")
 			c.UI.Warn(wrapAtLength(
-				"The following dev plugins FAILED to be registered in the catalog:"))
+				"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
 			for _, p := range pluginsNotLoaded {
 				c.UI.Warn(fmt.Sprintf("    - %s", p))
 			}
