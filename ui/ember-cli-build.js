@@ -17,7 +17,7 @@ module.exports = function(defaults) {
       plugins: ['transform-object-rest-spread'],
     },
     'ember-cli-babel': {
-      includePolyfill: isProd,
+      includePolyfill: isTest || isProd,
     },
     hinting: isTest,
     tests: isTest,
@@ -30,7 +30,7 @@ module.exports = function(defaults) {
       implementation: require('node-sass'),
     },
     autoprefixer: {
-      enabled: isProd,
+      enabled: isTest || isProd,
       grid: true,
       browsers: ['defaults', 'ie 11'],
     },
