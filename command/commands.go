@@ -51,6 +51,7 @@ import (
 	physEtcd "github.com/hashicorp/vault/physical/etcd"
 	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
+	physKube "github.com/hashicorp/vault/physical/kubernetes"
 	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
@@ -145,6 +146,7 @@ var (
 		"file":                   physFile.NewFileBackend,
 		"foundationdb":           physFoundationDB.NewFDBBackend,
 		"gcs":                    physGCS.NewBackend,
+		"kubernetes":             physKube.NewKubernetesBackend,
 		"inmem_ha":               physInmem.NewInmemHA,
 		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
 		"inmem_transactional":    physInmem.NewTransactionalInmem,
