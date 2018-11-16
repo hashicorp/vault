@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -177,6 +178,8 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
+	md5Array := md5.Sum(entry.Value)
+	w.MD5 = md5Array[:]
 	defer func() {
 		closeErr := w.Close()
 		if closeErr != nil {
