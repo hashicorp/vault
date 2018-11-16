@@ -6,22 +6,28 @@
   as |option|
 }}
   {{#if option.name}}
-    <strong>{{option.key}}</strong> ({{option.name}})
+    {{option.name}}
+    <small class="search-select-list-key">{{option.key}}</small>
   {{else}}
     {{option}}
   {{/if}}
 {{/power-select}}
 {{#if isList}}
-  {{#each selectedOptions as |selected|}}
-    {{#if selected.name}}
-      <strong>{{selected.key}}</strong> ({{selected.name}})
-    {{else}}
-      {{selected}}
-    {{/if}}
-    <div class="control">
-      <button type="button" class="button is-expanded is-icon" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
-        {{i-con size=22 glyph='trash-a' excludeIconClass=true class="is-large has-text-grey-light"}}
-      </button>
-    </div>
-  {{/each}}
+  <ul class="search-select-list">
+    {{#each selectedOptions as |selected|}}
+      <li class="search-select-list-item">
+        {{#if selected.name}}
+          {{selected.name}}
+          <small class="search-select-list-key">{{selected.key}}</small>
+        {{else}}
+          {{selected}}
+        {{/if}}
+        <div class="control">
+          <button type="button" class="button is-ghost" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
+            {{i-con size=16 glyph='trash-a' excludeIconClass=true}}
+          </button>
+        </div>
+      </li>
+    {{/each}}
+  </ul>
 {{/if}}
