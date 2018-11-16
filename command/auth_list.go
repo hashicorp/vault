@@ -155,10 +155,11 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			replication = "local"
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %s | %t | %v | %s ",
 			path,
 			mount.Type,
 			mount.Accessor,
+			mount.Config.DeprecatedPluginName,
 			defaultTTL,
 			maxTTL,
 			mount.Config.TokenType,

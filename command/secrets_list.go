@@ -155,10 +155,11 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			replication = "local"
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
 			path,
 			mount.Type,
 			mount.Accessor,
+			mount.Config.DeprecatedPluginName,
 			defaultTTL,
 			maxTTL,
 			mount.Config.ForceNoCache,
