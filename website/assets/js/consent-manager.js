@@ -20,7 +20,20 @@ init({
     {
       name: 'Marketo V2',
       description:
-        'Marketo is a marketing automation tool that allows us to segment users into different categories based off of their behaviors.  We use this information to provide tailored information to users in our email campaigns.'
+        'Marketo is a marketing automation tool that allows us to segment users into different categories based off of their behaviors.  We use this information to provide tailored information to users in our email campaigns.',
+      category: 'Email Marketing'
+    },
+    {
+      name: 'Hull',
+      description:
+        'Hull is a tool that we use to clean up analytics data and send it between different services. It does not add any javascript tracking code to this site.',
+      category: 'Analytics'
+    },
+    {
+      name: 'Hotjar',
+      description:
+        'Hotjar is a service that generates heatmaps of where users click on our sites. We use this information to ensure that our site is not confusing, and simple to use and navigate.',
+      category: 'Analytics'
     }
   ],
   categories: [
