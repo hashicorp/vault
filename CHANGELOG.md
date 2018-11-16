@@ -1,3 +1,11 @@
+## 1.0.0 (Unreleased)
+
+BUG FIXES:
+
+ * identity: Update group memberships when entity is deleted [GH-5786]
+ * storage/gcs: Send md5 of values to GCS to avoid potential corruption
+   [GH-5804]
+
 ## 1.0.0-beta2 (November 13th, 2018)
 
 CHANGES:

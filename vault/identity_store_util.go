@@ -118,7 +118,23 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 
 			txn := i.db.Txn(true)
 
-			err = i.UpsertGroupInTxn(txn, group, false)
+			// Before pull#5786, entity memberships in groups were not getting
+			// updated when respective entities were deleted. This is here to
+			// check that the entity IDs in the group are indeed valid, and if
+			// not remove them.
+			persist := false
+			for _, memberEntityID := range group.MemberEntityIDs {
+				entity, err := i.MemDBEntityByID(memberEntityID, false)
+				if err != nil {
+					return err
+				}
+				if entity == nil {
+					persist = true
+					group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
+				}
+			}
+
+			err = i.UpsertGroupInTxn(txn, group, persist)
 			if err != nil {
 				txn.Abort()
 				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
