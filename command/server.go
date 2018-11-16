@@ -987,6 +987,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				path := filepath.Join(f.Name(), name)
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
 					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+						c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
 						return 1
 					}
 					pluginsNotLoaded = append(pluginsNotLoaded, name)
