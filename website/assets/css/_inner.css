@@ -26,6 +26,10 @@
     margin-top: 0;
   }
 
+  & .g-section-header {
+    margin-bottom: 100px;
+  }
+
   /* TODO: this should be applied in global styles, temporary override here */
   & pre,
   & code {
