@@ -104,38 +104,16 @@
         glyph=(if item.isFolder 'folder' 'document')
         size=14
         class="has-text-grey-light"
-      }}
-      <span class="has-text-weight-semibold">
-        {{or item.keyWithoutParent item.id}}
-      </span>
-    {{/link-to}}
+      }}<span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>{{/link-to}}
   {{else}}
-    <div class="box is-sideless">
-      There are no leases matching <code>{{filter}}</code>
-    </div>
+    <EmptyState
+      @title="There are no leases matching &quot;{{this.filter}}&quot;"
+    />
   {{/each}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            {{#if (eq baseKey.id '')}}
-              There are currently no leases.
-            {{else}}
-              {{#if filterIsFolder}}
-                {{#if (eq filter baseKey.id)}}
-                  There are no leases under <code>{{filter}}</code>.
-                {{else}}
-                  We couldn't find a prefix matching <code>{{filter}}</code>.
-                {{/if}}
-              {{/if}}
-            {{/if}}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title={{this.emptyTitle}}
+  />
 {{/if}}
 {{#if (gt model.meta.lastPage 1) }}
   {{list-pagination

@@ -17,17 +17,9 @@
     {{/info-table-row}}
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis is-marginless">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            The secondary <code>{{model.config.id}}</code> does not currently have performance mount filtering configured.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="Performance Mount Filtering is not configured for this secondary"
+  />
 {{/if}}
 <div class="field is-fullwidth box is-shadowless">
   {{#if model.config.mode}}

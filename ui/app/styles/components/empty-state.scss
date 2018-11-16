@@ -1,0 +1,38 @@
+.empty-state {
+  align-items: center;
+  color: $grey;
+  display: flex;
+  background: $ui-gray-050;
+  justify-content: center;
+  padding: $spacing-xxl $spacing-s;
+  box-shadow: 0 -2px 0 -1px $ui-gray-300;
+}
+
+.empty-state-content {
+  max-width: 320px;
+}
+
+.empty-state-title {
+  color: $grey;
+  font-size: $size-4;
+  font-weight: $font-weight-semibold;
+  line-height: 1.2;
+  margin-bottom: $spacing-xs;
+}
+
+.empty-state-actions {
+  margin-top: $spacing-xs;
+
+  a,
+  .link,
+  a:not(.button):not(.file-delete-button):not(.tag) {
+    color: $blue;
+    font-size: $size-8;
+    font-weight: $font-weight-semibold;
+    text-decoration: none;
+  }
+
+  > * + * {
+    margin-left: $spacing-s;
+  }
+}
