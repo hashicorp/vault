@@ -1358,6 +1358,15 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			if err != nil {
 				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
 			}
+
+			// Only accept valid versions
+			switch optVersion {
+			case 1:
+			case 2:
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("invalid version provided: %d", meVersion)), logical.ErrInvalidRequest
+			}
+
 			if meVersion > optVersion {
 				// Return early if version option asks for a downgrade
 				return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
