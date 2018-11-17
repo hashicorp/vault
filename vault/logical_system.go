@@ -1364,7 +1364,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			case 1:
 			case 2:
 			default:
-				return logical.ErrorResponse(fmt.Sprintf("invalid version provided: %d", meVersion)), logical.ErrInvalidRequest
+				return logical.ErrorResponse(fmt.Sprintf("invalid version provided: %d", optVersion)), logical.ErrInvalidRequest
 			}
 
 			if meVersion > optVersion {
