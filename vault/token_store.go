@@ -2311,7 +2311,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			if len(finalPolicies) == 0 {
 				finalPolicies = sanitizedRolePolicies
 			} else {
-				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
+				if !strutil.StrListSubsetGlob(sanitizedRolePolicies, finalPolicies) {
 					return logical.ErrorResponse(fmt.Sprintf("token policies (%q) must be subset of the role's allowed policies (%q)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
 				}
 			}
@@ -2328,7 +2328,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies, true)
 
 			for _, finalPolicy := range finalPolicies {
-				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
+				if strutil.StrListContainsGlob(sanitizedRolePolicies, finalPolicy) {
 					return logical.ErrorResponse(fmt.Sprintf("token policy %q is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
 				}
 			}
@@ -2385,6 +2385,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil
 		}
 	}
+
+	// Remove any glob strings from policy list
+	te.Policies = strutil.RemoveGlobs(te.Policies)
 
 	if strutil.StrListContains(te.Policies, "root") {
 		// Prevent attempts to create a root token without an actual root token as parent.
@@ -3218,9 +3221,10 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenAllowedPoliciesHelp = `If set, tokens can be created with any subset of the policies in this
 list, rather than the normal semantics of tokens being a subset of the
 calling token's policies. The parameter is a comma-delimited string of
-policy names.`
+policy names or globs.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
-no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
+no policies in the given list are requested. The parameter is a comma-delimited string of policy names
+or globs.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role
