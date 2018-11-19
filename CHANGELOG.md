@@ -28,6 +28,11 @@ CHANGES:
    difference but it should provide significant performance benefits for those
    writing custom clients using the Go API library. As before, this can be
    changed to any custom HTTP client by the caller.
+ * Paths within `auth/token` that allow specifying a token or accessor in the
+   URL have been removed. These have been deprecated since March 2016 and
+   undocumented, but were retained for backwards compatibility. They shouldn't
+   be used due to the possibility of those paths being logged, so at this point
+   they are simply being removed.
 
 CHANGES FROM BETA 1:
 (Note: these items will be removed from the final 1.0 changelog as they are
