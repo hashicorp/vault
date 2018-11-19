@@ -9,7 +9,7 @@ import (
 )
 
 var ErrNonUTF8 = errors.New("key contains invalid UTF-8 characters")
-var ErrNonPrintable = errors.New("key contains invalid UTF-8 characters")
+var ErrNonPrintable = errors.New("key contains non-printable characters")
 
 // StorageEncoding is used to add errors into underlying physical requests
 type StorageEncoding struct {
