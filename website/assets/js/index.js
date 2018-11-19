@@ -9,6 +9,7 @@ import megaNav from '@hashicorp/hashi-mega-nav'
 import productDownloader from '@hashicorp/hashi-product-downloader'
 import hero from '@hashicorp/hashi-hero'
 import docsSidenav from '@hashicorp/hashi-docs-sidenav'
+import consentManager from '@hashicorp/hashi-consent-manager'
 
 const components = initializeComponents({
   nav,
@@ -18,5 +19,6 @@ const components = initializeComponents({
   megaNav,
   productDownloader,
   hero,
-  docsSidenav
+  docsSidenav,
+  consentManager
 })

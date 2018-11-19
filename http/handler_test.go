@@ -640,7 +640,6 @@ func TestHandler_nonPrintableChars(t *testing.T) {
 
 func testNonPrintable(t *testing.T, disable bool) {
 	core, _, token := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
-		Seal:                     vault.NewTestSeal(t, nil),
 		DisableKeyEncodingChecks: disable,
 	})
 	ln, addr := TestListener(t)
