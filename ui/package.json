@@ -114,6 +114,10 @@
     "xstate": "^3.3.3",
     "yargs-parser": "^10.0.0"
   },
+  "optionalDependencies": {
+    "husky": "^1.1.3",
+    "lint-staged": "^8.0.4"
+  },
   "engines": {
     "node": "6.* || 8.* || >= 10.*"
   },

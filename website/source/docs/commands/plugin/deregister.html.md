@@ -11,14 +11,15 @@ description: |-
 # plugin deregister
 
 The `plugin deregister` command deregisters an existing plugin from Vault's
-plugin catalog. If the plugin does not exist, no error is returned.
+plugin catalog. If the plugin does not exist, no error is returned. The plugin's
+type of "auth", "database", or "secret" must be included.
 
 ## Examples
 
 Deregister a plugin:
 
 ```text
-$ vault plugin deregister my-custom-plugin
+$ vault plugin deregister auth my-custom-plugin
 Success! Deregistered plugin (if it was registered): my-custom-plugin
 ```
 

@@ -12,6 +12,68 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
+	c, keys, rootToken := TestCoreUnsealed(t)
+
+	// Create a group
+	resp, err := c.identityStore.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err:%v\nresp: %#v", err, resp)
+	}
+
+	// Create a memdb transaction
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	// Fetch the above created group
+	group, err := c.identityStore.MemDBGroupByNameInTxn(namespace.RootContext(nil), txn, "testgroup", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually add an invalid entity as the group's member
+	group.MemberEntityIDs = []string{"invalidentityid"}
+
+	// Persist the group
+	err = c.identityStore.UpsertGroupInTxn(txn, group, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txn.Commit()
+
+	// Perform seal and unseal forcing an upgrade
+	err = c.Seal(rootToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("failed to unseal")
+		}
+	}
+
+	// Read the group and ensure that invalid entity id is cleaned up
+	group, err = c.identityStore.MemDBGroupByName(namespace.RootContext(nil), "testgroup", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(group.MemberEntityIDs) != 0 {
+		t.Fatalf("bad: member entity IDs; expected: none, actual: %#v", group.MemberEntityIDs)
+	}
+}
+
 func TestIdentityStore_MemberGroupIDDelete(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	i, _, _ := testIdentityStoreWithGithubAuth(ctx, t)

@@ -1,4 +1,4 @@
-{{identity/entity-nav identityType=identityType}}
+{{identity/entity-nav identityType=identityType model=model}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
     {{#linked-block
@@ -41,7 +41,7 @@
                 </li>
                 {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                   <li class="action">
-                    <button disabled=true type="button" class="link button is-loading is-transparent">
+                    <button disabled type="button" class="link button is-loading is-transparent">
                       loading
                     </button>
                   </li>
@@ -57,7 +57,7 @@
                         <button type="button" {{action "toggleDisabled" item}} class="link">
                           Enable
                         </button>
-                      {{else}}
+                      {{else if (eq identityType 'entity')}}
                         {{#confirm-action
                           confirmButtonClasses="button is-primary"
                           confirmButtonText="Disable"
@@ -77,7 +77,7 @@
                   {{#if item.canAddAlias}}
                     <li class="action">
                       {{#link-to "vault.cluster.access.identity.aliases.add" (pluralize identityType) item.id}}
-                        Add alias
+                        Create alias
                       {{/link-to}}
                     </li>
                   {{/if}}
@@ -106,23 +106,23 @@
       </div>
     {{/linked-block}}
   {{/each}}
+  {{#if (gt model.meta.lastPage 1) }}
+    {{list-pagination
+      page=model.meta.currentPage
+      lastPage=model.meta.lastPage
+      link="vault.cluster.access.identity.index"
+    }}
+  {{/if}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There are currently no {{pluralize identityType}}.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-{{/if}}
-{{#if (gt model.meta.lastPage 1) }}
-  {{list-pagination
-    page=model.meta.currentPage
-    lastPage=model.meta.lastPage
-    link="vault.cluster.access.identity.index"
-  }}
+  <EmptyState
+    @title="No {{pluralize identityType}} yet"
+    @message="A list of {{pluralize identityType}} in this namespace will be listed here. Create your first {{identityType}} to get started."
+  >
+    {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) tagName="button" class="link"}}
+      Create {{identityType}}
+    {{/link-to}}
+    <LearnLink @path="/vault/identity-access-management/iam-identity">
+      Learn More
+    </LearnLink>
+  </EmptyState>
 {{/if}}

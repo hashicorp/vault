@@ -38,7 +38,6 @@ $ curl \
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
       "force_no_cache": false,
-      "plugin_name": "",
       "seal_wrap": false
     }
   },
@@ -49,7 +48,6 @@ $ curl \
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
       "force_no_cache": false,
-      "plugin_name": "",
       "seal_wrap": false
     }
   }
@@ -89,9 +87,6 @@ This endpoint enables a new secrets engine at the given path.
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 
-  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
-     to use.
-
   - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the request data object.
 
@@ -105,11 +100,9 @@ This endpoint enables a new secrets engine at the given path.
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
 
-    These control the default and maximum lease time-to-live, force
-    disabling backend caching, and option plugin name for plugin backends
-    respectively. The first three options override the global defaults if
-    set on a specific mount. The plugin_name can be provided in the config
-    map or as a top-level option, with the former taking precedence.
+    These control the default and maximum lease time-to-live, and the force
+    disabling backend caching. They override the global defaults if
+    set on a specific mount.
 
     When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
     causes key material for supporting mounts to be wrapped by the seal's
@@ -122,10 +115,6 @@ This endpoint enables a new secrets engine at the given path.
     *Key/Value (KV)*  
     - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
       KV v2.
-
-- `plugin_name` `(string: "")` – Specifies the name of the plugin to
-  use based from the name in the plugin catalog. Applies only to plugin
-  backends.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:

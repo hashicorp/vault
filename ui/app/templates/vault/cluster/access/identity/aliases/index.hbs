@@ -1,4 +1,4 @@
-{{identity/entity-nav identityType=identityType}}
+{{identity/entity-nav identityType=identityType model=model}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
     {{#linked-block
@@ -35,23 +35,23 @@
       </div>
     {{/linked-block}}
   {{/each}}
+  {{#if (gt model.meta.lastPage 1) }}
+    {{list-pagination
+      page=model.meta.currentPage
+      lastPage=model.meta.lastPage
+      link="vault.cluster.access.identity.aliases.index"
+    }}
+  {{/if}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There are currently no {{identityType}} aliases.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-{{/if}}
-{{#if (gt model.meta.lastPage 1) }}
-  {{list-pagination
-    page=model.meta.currentPage
-    lastPage=model.meta.lastPage
-    link="vault.cluster.access.identity.aliases.index"
-  }}
+  <EmptyState
+    @title="No {{identityType}} aliases yet"
+    @message="A list of {{identityType}} aliases in this namespace will be listed here. Choose one of the {{pluralize identityType}} and click &quot;Create Alias&quot; to get started."
+  >
+    {{#link-to "vault.cluster.access.identity.create" (pluralize identityType) tagName="button" class="link"}}
+      Create {{identityType}}
+    {{/link-to}}
+    <LearnLink @path="/vault/identity-access-management/iam-identity">
+      Learn More
+    </LearnLink>
+  </EmptyState>
 {{/if}}

@@ -23,7 +23,9 @@ func TestAWSKMSSeal(t *testing.T) {
 	}
 
 	// Set the key
+	oldKeyID := os.Getenv(EnvAWSKMSSealKeyID)
 	os.Setenv(EnvAWSKMSSealKeyID, awsTestKeyID)
+	defer os.Setenv(EnvAWSKMSSealKeyID, oldKeyID)
 	_, err = s.SetConfig(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -31,25 +33,45 @@ func TestAWSKMSSeal(t *testing.T) {
 }
 
 func TestAWSKMSSeal_Lifecycle(t *testing.T) {
+	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
+		t.SkipNow()
+	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	s.client = &mockAWSKMSSealClient{
 		keyID: aws.String(awsTestKeyID),
 	}
-
+	oldKeyID := os.Getenv(EnvAWSKMSSealKeyID)
 	os.Setenv(EnvAWSKMSSealKeyID, awsTestKeyID)
-	_, err := s.SetConfig(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	defer os.Setenv(EnvAWSKMSSealKeyID, oldKeyID)
+	testEncryptionRoundTrip(t, s)
+}
 
-	// Test Encrypt and Decrypt calls
+// This test executes real calls. The calls themselves should be free,
+// but the KMS key used is generally not free. AWS charges about $1/month
+// per key.
+//
+// To run this test, the following env variables need to be set:
+//   - VAULT_AWSKMS_SEAL_KEY_ID
+//   - AWS_REGION
+//   - AWS_ACCESS_KEY_ID
+//   - AWS_SECRET_ACCESS_KEY
+func TestAccAWSKMSSeal_Lifecycle(t *testing.T) {
+	if os.Getenv(EnvAWSKMSSealKeyID) == "" {
+		t.SkipNow()
+	}
+	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	testEncryptionRoundTrip(t, s)
+}
+
+func testEncryptionRoundTrip(t *testing.T, seal *AWSKMSSeal) {
+	seal.SetConfig(nil)
 	input := []byte("foo")
-	swi, err := s.Encrypt(context.Background(), input)
+	swi, err := seal.Encrypt(context.Background(), input)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}
 
-	pt, err := s.Decrypt(context.Background(), swi)
+	pt, err := seal.Decrypt(context.Background(), swi)
 	if err != nil {
 		t.Fatalf("err: %s", err.Error())
 	}

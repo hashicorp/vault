@@ -65,7 +65,7 @@ const (
 )
 
 var (
-	// TokenLength is the size of tokens we are currenlty generating, without
+	// TokenLength is the size of tokens we are currently generating, without
 	// any namespace information
 	TokenLength = 24
 

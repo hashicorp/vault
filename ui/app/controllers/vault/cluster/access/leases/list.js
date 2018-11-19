@@ -49,6 +49,21 @@ export default Controller.extend({
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 
+  emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function() {
+    let id = this.get('baseKey.id');
+    let filter = this.filter;
+    if (id === '') {
+      return 'There are currently no leases.';
+    }
+    if (this.filterIsFolder) {
+      if (filter === id) {
+        return `There are no leases under &quot;${filter}&quot;.`;
+      } else {
+        return `We couldn't find a prefix matching &quot;${filter}&quot;.`;
+      }
+    }
+  }),
+
   actions: {
     setFilter(val) {
       this.set('filter', val);

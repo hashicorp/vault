@@ -54,6 +54,6 @@ func ParsePluginType(pluginType string) (PluginType, error) {
 	case "secret":
 		return PluginTypeSecrets, nil
 	default:
-		return PluginTypeUnknown, fmt.Errorf("%s is not a supported plugin type", pluginType)
+		return PluginTypeUnknown, fmt.Errorf("%q is not a supported plugin type", pluginType)
 	}
 }

@@ -349,7 +349,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided (i.e. the old
+		// sys/plugins/catalog/:name endpoint is being requested) short-circuit here
+		// and return a warning
+		resp := &logical.Response{}
+		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot read plugin information from catalog for %q", pluginName))
+		return resp, nil
+	}
+
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +398,20 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	pluginType, err := consts.ParsePluginType(d.Get("type").(string))
+
+	var resp *logical.Response
+	pluginTypeStr := d.Get("type").(string)
+	if pluginTypeStr == "" {
+		// If the plugin type is not provided (i.e. the old
+		// sys/plugins/catalog/:name endpoint is being requested), set type to
+		// unknown and let pluginCatalog.Delete proceed. It should handle
+		// deregistering out of the old storage path (root of core/plugin-catalog)
+		resp = new(logical.Response)
+		resp.AddWarning(fmt.Sprintf("Deprecated API endpoint, cannot deregister plugin from catalog for %q", pluginName))
+		pluginTypeStr = "unknown"
+	}
+
+	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +419,7 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 		return nil, err
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1041,14 +1064,8 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	path = ns.Path + namespace.Canonicalize("auth/"+path)
-
-	return b.handleTuneWriteCommon(ctx, path, data)
+	return b.handleTuneWriteCommon(ctx, "auth/"+path, data)
 }
 
 // handleMountTuneWrite is used to set config settings on a backend
@@ -2716,7 +2733,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 		return false
 	}
 
-	// If an ealier policy is giving us access to the mount path then we can do
+	// If an earlier policy is giving us access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
 	if !strutil.StrListContains(capabilities, DenyCapability) {
