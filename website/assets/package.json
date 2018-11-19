@@ -24,7 +24,7 @@
     "@hashicorp/hashi-newsletter-signup-form": "1.1.1",
     "@hashicorp/hashi-product-downloader": "^0.6.1",
     "@hashicorp/hashi-product-subnav": "^0.5.3",
-    "@hashicorp/hashi-section-header": "^3.0.0",
+    "@hashicorp/hashi-section-header": "^4.0.0",
     "@hashicorp/hashi-split-cta": "^0.1.4",
     "@hashicorp/hashi-vertical-text-block-list": "^0.1.1",
     "@hashicorp/js-utils": "^1.0.0",
