@@ -43,11 +43,7 @@
   padding: $spacing-xxs 0;
 
   .ember-power-select-option,
-<<<<<<< HEAD
   .ember-power-select-option[aria-current='true'] {
-=======
-  .ember-power-select-option[aria-current="true"] {
->>>>>>> UI: Search select styles (#5803)
     align-items: center;
     display: flex;
     justify-content: space-between;

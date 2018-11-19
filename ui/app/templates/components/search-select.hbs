@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {{#if shouldUseFallback}}
   {{component
     fallbackComponent
@@ -32,65 +31,28 @@
       {{option}}
     {{/if}}
   {{/power-select}}
-  {{#if isList}}
-    <ul class="search-select-list">
-      {{#each selectedOptions as |selected|}}
-        <li class="search-select-list-item">
-          {{#if selected.name}}
-            {{selected.name}}
-            <small class="search-select-list-key">
-              {{selected.key}}
-            </small>
-          {{else}}
-            {{selected}}
-          {{/if}}
-          <div class="control">
-            <button
-              type="button"
-              class="button is-ghost"
-              data-test-string-list-button="delete"
-              {{action "discardSelection" selected}}
-            >
-              {{i-con size=16 glyph="trash-a" excludeIconClass=true}}
-            </button>
-          </div>
-        </li>
-      {{/each}}
-    </ul>
-  {{/if}}
-{{/if}}
-=======
-{{#power-select
-  options=options
-  selected=selectedOption
-  onchange=(action "selectOption")
-  placeholderComponent="search-select-placeholder"
-  as |option|
-}}
-  {{#if option.name}}
-    {{option.name}}
-    <small class="search-select-list-key">{{option.key}}</small>
-  {{else}}
-    {{option}}
-  {{/if}}
-{{/power-select}}
-{{#if isList}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
       <li class="search-select-list-item">
         {{#if selected.name}}
           {{selected.name}}
-          <small class="search-select-list-key">{{selected.key}}</small>
+          <small class="search-select-list-key">
+            {{selected.key}}
+          </small>
         {{else}}
           {{selected}}
         {{/if}}
         <div class="control">
-          <button type="button" class="button is-ghost" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
-            {{i-con size=16 glyph='trash-a' excludeIconClass=true}}
+          <button
+            type="button"
+            class="button is-ghost"
+            data-test-string-list-button="delete"
+            {{action "discardSelection" selected}}
+          >
+            {{i-con size=16 glyph="trash-a" excludeIconClass=true}}
           </button>
         </div>
       </li>
     {{/each}}
   </ul>
 {{/if}}
->>>>>>> first pass at showing name and id for groups and entities
