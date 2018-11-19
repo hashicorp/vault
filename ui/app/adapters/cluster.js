@@ -180,7 +180,7 @@ export default ApplicationAdapter.extend({
   generateDrOperationToken(data, options) {
     const verb = options && options.checkStatus ? 'GET' : 'PUT';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.otp) {
+    if (!data || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {
