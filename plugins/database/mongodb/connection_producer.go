@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
-
 	"gopkg.in/mgo.v2"
 )
 
@@ -31,9 +29,10 @@ type mongoDBConnectionProducer struct {
 	WriteConcern  string `json:"write_concern" structs:"write_concern" mapstructure:"write_concern"`
 	Username      string `json:"username" structs:"username" mapstructure:"username"`
 	Password      string `json:"password" structs:"password" mapstructure:"password"`
-	SSLCert      string `json:"ssl_cert" structs:"ssl_cert" mapstructure:"ssl_cert"`
-	SSLKey      string `json:"ssl_key" structs:"ssl_key" mapstructure:"ssl_key"`
-	SSLCA      string `json:"ssl_ca" structs:"ssl_ca" mapstructure:"ssl_ca"`
+	TLSCert       string `json:"tls_cert" structs:"tls_cert" mapstructure:"tls_cert"`
+	TLSKey        string `json:"tls_key" structs:"tls_key" mapstructure:"tls_key"`
+	TLSCA         string `json:"tls_ca" structs:"tls_ca" mapstructure:"tls_ca"`
+	TLSVerify     string `json:"tls_verify" structs:"tls_verify" mapstructure:"tls_verify"`
 
 	Initialized bool
 	RawConfig   map[string]interface{}
@@ -124,12 +123,11 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 		c.session.Close()
 	}
 
-	dialInfo, err := parseMongoURL(c.ConnectionURL, c.SSLCert, c.SSLKey, c.SSLCA)
+	dialInfo, err := parseMongoURL(c.ConnectionURL, c.TLSCert, c.TLSKey, c.TLSCA, c.TLSVerify)
 	if err != nil {
 		return nil, err
 	}
 
-	c.session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +156,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (*mgo.DialInfo, error) {
+func parseMongoURL(rawURL, tlsCert, tlsKey, tlsCA, tlsVerify string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -207,33 +205,31 @@ func parseMongoURL(rawURL string, sslCert string, sslKey string, sslCA string) (
 			if ssl {
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 					tlsConfig := &tls.Config{}
-					if sslCert != "" && sslKey != "" && sslCA != "" {
-						clientCertPEM, err := ioutil.ReadFile(sslCert);
-						if err != nil {
-							return nil, errors.New("could not read file: " + sslCert)
-						}
-						clientKeyPEM, err := ioutil.ReadFile(sslKey);
-						if err != nil {
-							return nil, errors.New("could not read file: " + sslKey)
-						}
-						caPEM, err := ioutil.ReadFile(sslCA);
-						if err != nil {
-							return nil, errors.New("could not read file: " + sslCA)
-						}
+					if tlsCert != "" && tlsKey != "" && tlsCA != "" {
 						caCerts := x509.NewCertPool()
-						ok := caCerts.AppendCertsFromPEM([]byte(caPEM))
+						ok := caCerts.AppendCertsFromPEM([]byte(tlsCA))
 						if !ok {
-							return nil, errors.New("failed to parse root certificate " + sslCA)
+							return nil, errors.New("failed to parse tls_ca value")
 						}
-						clientCert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
+						clientCert, err := tls.X509KeyPair([]byte(tlsCert), []byte(tlsKey))
+						if err != nil {
+							return nil, errors.New("bad value for tls_cert or tls_key")
+						}
 						clientCert.Leaf, err = x509.ParseCertificate(clientCert.Certificate[0])
 						if err != nil {
-							return nil, errors.New("failed parsing ssl options")
+							return nil, errors.New("failed to parse tls_cert or tls_key")
+						}
+						insecureSkipVerify := false
+						if tlsVerify != "" {
+							insecureSkipVerify, err = strconv.ParseBool(tlsVerify)
+							if err != nil {
+								return nil, errors.New("bad value for tls verify: " + tlsVerify)
+							}
 						}
 						tlsConfig = &tls.Config{
-							Certificates: []tls.Certificate{clientCert},
-							RootCAs: caCerts,
-							InsecureSkipVerify: false,
+							Certificates:       []tls.Certificate{clientCert},
+							RootCAs:            caCerts,
+							InsecureSkipVerify: insecureSkipVerify,
 						}
 					}
 					return tls.Dial("tcp", addr.String(), tlsConfig)

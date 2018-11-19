@@ -39,9 +39,9 @@ more information about setting up the database secrets engine.
         connection_url="mongodb://{{username}}:{{password}}@mongodb.acme.com:27017/admin?ssl=true" \
         username="admin" \
         password="Password!" \
-        ssl_cert="path/to/ssl/cert" \
-        ssl_key="path/to/ssl/key" \
-        ssl_ca="path/to/ssl/ca"
+        tls_cert="PEM-encoded certificate string" \
+        tls_key="PEM encoded private key" \
+        tls_ca="PEM encoded CA"
     ```
 
 1. Configure a role that maps a name in Vault to an SQL statement to execute to

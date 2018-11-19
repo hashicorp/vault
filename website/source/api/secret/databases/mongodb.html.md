@@ -36,9 +36,9 @@ has a number of parameters to further configure a connection.
   map to the values in the [Safe][mgo-safe] struct from the mgo driver.
 - `username` `(string: "")` - The root credential username used in the connection URL.
 - `password` `(string: "")` - The root credential password used in the connection URL.
-- `ssl_cert` `(string: "")` - Path to a PEM-encoded client certificate.
-- `ssl_key` `(string: "")` - Path to the private key of the client certificate.
-- `ssl_ca` `(string: "")` - Path to a PEM-encoded CA certificate to verify the server against.
+- `tls_cert` `(string: "")` - PEM-encoded client certificate (optional).
+- `tls_key` `(string: "")` - PEM-encoded private key (optional).
+- `tls_ca` `(string: "")` - PEM-encoded CA certificate to verify the server against (optional).
 
 ### Sample Payload
 
@@ -50,9 +50,9 @@ has a number of parameters to further configure a connection.
   "write_concern": "{ \"wmode\": \"majority\", \"wtimeout\": 5000 }",
   "username": "admin",
   "password": "Password!",
-  "ssl_cert": "/path/to/ssl/cert",
-  "ssl_key": "/path/to/ssl/key",
-  "ssl_ca": "/path/to/ssl/ca"
+  "tls_cert": "<PEM encoded string of certificate>",
+  "tls_key": "<PEM encoded string of key>",
+  "tls_ca": "<PEM encoded string of CA>"
 }
 ```
 
