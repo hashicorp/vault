@@ -24,6 +24,7 @@ export default IdentityModel.extend({
   policies: attr({
     label: 'Policies',
     editType: 'searchSelect',
+    fallbackComponent: 'string-list',
     modelType: 'policy/acl',
     isList: true,
   }),

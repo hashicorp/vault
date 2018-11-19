@@ -38,24 +38,27 @@ export default IdentityModel.extend({
   policies: attr({
     label: 'Policies',
     editType: 'searchSelect',
-    modelType: 'policy/acl',
+    fallbackComponent: 'string-list',
     isList: true,
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
     editType: 'searchSelect',
+    fallbackComponent: 'stringArray',
     modelType: 'identity/group',
     isList: true,
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
     editType: 'searchSelect',
+    fallbackComponent: 'string-list',
     modelType: 'identity/group',
     isList: true,
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
     editType: 'searchSelect',
+    fallbackComponent: 'string-list',
     modelType: 'identity/entity',
     isList: true,
   }),
