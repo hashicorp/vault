@@ -689,7 +689,9 @@ START:
 	}
 
 	if timeout != 0 {
-		ctx, _ = context.WithTimeout(ctx, timeout)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 	}
 	req.Request = req.Request.WithContext(ctx)
 

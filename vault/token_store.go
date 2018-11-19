@@ -3070,7 +3070,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				if err != nil {
 					return logical.ErrorResponse(errwrap.Wrapf(fmt.Sprintf("invalid value %q when parsing bound cidrs: {{err}}", v), err).Error()), nil
 				}
-				parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{parsedCIDR})
+				parsedCIDRs = append(parsedCIDRs, &sockaddr.SockAddrMarshaler{SockAddr: parsedCIDR})
 			}
 			entry.BoundCIDRs = parsedCIDRs
 		}

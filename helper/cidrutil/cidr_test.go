@@ -205,7 +205,7 @@ func TestCIDRUtil_RemoteAddrIsOk_NegativeTest(t *testing.T) {
 		t.Fatal(err)
 	}
 	boundCIDRs := []*sockaddr.SockAddrMarshaler{
-		{addr},
+		{SockAddr: addr},
 	}
 	if RemoteAddrIsOk("123.0.0.1", boundCIDRs) {
 		t.Fatal("remote address of 123.0.0.1/2 should not be allowed for 127.0.0.1/8")
@@ -218,7 +218,7 @@ func TestCIDRUtil_RemoteAddrIsOk_PositiveTest(t *testing.T) {
 		t.Fatal(err)
 	}
 	boundCIDRs := []*sockaddr.SockAddrMarshaler{
-		{addr},
+		{SockAddr: addr},
 	}
 	if !RemoteAddrIsOk("127.0.0.1", boundCIDRs) {
 		t.Fatal("remote address of 127.0.0.1 should be allowed for 127.0.0.1/8")

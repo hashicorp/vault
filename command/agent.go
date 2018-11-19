@@ -251,6 +251,7 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
 	var sinks []*sink.SinkConfig
 	for _, sc := range config.AutoAuth.Sinks {

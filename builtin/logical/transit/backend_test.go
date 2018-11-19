@@ -885,7 +885,7 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 	p.Upgrade(context.Background(), storage) // Need to run the upgrade code to make the migration stick
 
 	if p.KDF != keysutil.Kdf_hmac_sha256_counter {
-		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
+		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, p)
 	}
 
 	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
