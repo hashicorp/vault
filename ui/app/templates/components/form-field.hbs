@@ -47,14 +47,6 @@
   </div>
 {{else if (eq attr.options.editType "searchSelect")}}
   <div class="form-section">
-    <label for="{{attr.name}}" class="title is-4">
-      {{labelString}}
-      {{#if attr.options.helpText}}
-        {{#info-tooltip}}
-          {{attr.options.helpText}}
-        {{/info-tooltip}}
-      {{/if}}
-    </label>
     <SearchSelect
       @id={{attr.name}}
       @modelType={{attr.options.modelType}}
@@ -62,6 +54,10 @@
       @isList={{attr.options.isList}}
       @onChange={{action (action "setAndBroadcast" valuePath)}}
       @inputValue={{get model valuePath}}
+      @helpText={{attr.options.helpText}}
+      @warning={{attr.options.warning}}
+      @label={{labelString}}
+      @fallbackComponent={{attr.options.fallbackComponent}}
     />
   </div>
 {{else if (eq attr.options.editType 'mountAccessor')}}

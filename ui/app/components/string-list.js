@@ -83,7 +83,7 @@ export default Component.extend({
   },
 
   setType() {
-    const list = this.get('inputList');
+    const list = this.inputList;
     if (!list) {
       return;
     }
@@ -91,9 +91,7 @@ export default Component.extend({
   },
 
   toVal() {
-    const inputs = this.get('inputList')
-      .filter(x => x.value)
-      .mapBy('value');
+    const inputs = this.inputList.filter(x => x.value).mapBy('value');
     if (this.get('format') === 'string') {
       return inputs.join(',');
     }
@@ -101,8 +99,8 @@ export default Component.extend({
   },
 
   toList() {
-    let input = this.get('inputValue') || [];
-    const inputList = this.get('inputList');
+    let input = this.inputValue || [];
+    const inputList = this.inputList;
     if (typeof input === 'string') {
       input = input.split(',');
     }
@@ -111,22 +109,22 @@ export default Component.extend({
 
   actions: {
     inputChanged(idx, val) {
-      const inputObj = this.get('inputList').objectAt(idx);
-      const onChange = this.get('onChange');
+      const inputObj = this.inputList.objectAt(idx);
+      const onChange = this.onChange;
       set(inputObj, 'value', val);
       onChange(this.toVal());
     },
 
     addInput() {
-      const inputList = this.get('inputList');
+      const inputList = this.inputList;
       if (inputList.get('lastObject.value') !== '') {
         inputList.pushObject({ value: '' });
       }
     },
 
     removeInput(idx) {
-      const onChange = this.get('onChange');
-      const inputs = this.get('inputList');
+      const onChange = this.onChange;
+      const inputs = this.inputList;
       inputs.removeObject(inputs.objectAt(idx));
       onChange(this.toVal());
     },
