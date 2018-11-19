@@ -35,7 +35,7 @@ func NewStorageEncoding(b Backend) Backend {
 	}
 
 	if bTxn, ok := b.(Transactional); ok {
-		return TransactionalStorageEncoding{
+		return &TransactionalStorageEncoding{
 			StorageEncoding: enc,
 			Transactional:   bTxn,
 		}
