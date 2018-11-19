@@ -713,7 +713,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		case "plugin":
 			// If we are a plugin type and the plugin name is "kv" check the
 			// mount entry options.
-			if matchingMountEntry.Config.PluginNameDeprecated == "kv" && (matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true") {
+			if matchingMountEntry.Config.PluginName == "kv" && (matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true") {
 				registerLease = false
 				resp.Secret.Renewable = false
 			}
