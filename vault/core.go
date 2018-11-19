@@ -466,6 +466,7 @@ type CoreConfig struct {
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
+	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
 }
