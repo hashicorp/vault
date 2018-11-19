@@ -129,8 +129,9 @@ type GetPluginResponse struct {
 	SHA256  string   `json:"sha256"`
 }
 
+// GetPlugin retrieves information about the plugin.
 func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
-	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -142,13 +143,13 @@ func (c *Sys) GetPlugin(i *GetPluginInput) (*GetPluginResponse, error) {
 	defer resp.Body.Close()
 
 	var result struct {
-		Data GetPluginResponse
+		Data *GetPluginResponse
 	}
 	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return nil, err
 	}
-	return &result.Data, err
+	return result.Data, err
 }
 
 // RegisterPluginInput is used as input to the RegisterPlugin function.
@@ -171,8 +172,9 @@ type RegisterPluginInput struct {
 
 // RegisterPlugin registers the plugin with the given information.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
-	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodPut, path)
+
 	if err := req.SetJSONBody(i); err != nil {
 		return err
 	}
@@ -198,7 +200,7 @@ type DeregisterPluginInput struct {
 // DeregisterPlugin removes the plugin with the given name from the plugin
 // catalog.
 func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
-	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", i.Type, i.Name)
+	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -208,4 +210,16 @@ func (c *Sys) DeregisterPlugin(i *DeregisterPluginInput) error {
 		defer resp.Body.Close()
 	}
 	return err
+}
+
+// catalogPathByType is a helper to construct the proper API path by plugin type
+func catalogPathByType(pluginType consts.PluginType, name string) string {
+	path := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", pluginType, name)
+
+	// Backwards compat, if type is not provided then use old path
+	if pluginType == consts.PluginTypeUnknown {
+		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", name)
+	}
+
+	return path
 }

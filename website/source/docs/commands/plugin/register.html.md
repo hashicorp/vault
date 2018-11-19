@@ -11,6 +11,7 @@ description: |-
 # plugin register
 
 The `plugin register` command registers a new plugin in Vault's plugin catalog.
+The plugin's type of "auth", "database", or "secret" must be included.
 
 ## Examples
 
@@ -19,7 +20,7 @@ Register a plugin:
 ```text
 $ vault plugin register \
     -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
-    my-custom-plugin
+    auth my-custom-plugin
 Success! Registered plugin: my-custom-plugin
 ```
 
@@ -29,7 +30,7 @@ Register a plugin with custom args:
 $ vault plugin register \
     -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
     -args=--with-glibc,--with-curl-bindings \
-    my-custom-plugin
+    auth my-custom-plugin
 ```
 
 ## Usage

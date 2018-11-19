@@ -33,10 +33,12 @@
     </ul>
   </nav>
 </div>
-<div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-  <div class="level">
-    <div class="level-left">
-      {{identity/lookup-input type=identityType}}
+{{#if model.meta.total}}
+  <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
+    <div class="level">
+      <div class="level-left">
+        {{identity/lookup-input type=identityType}}
+      </div>
     </div>
   </div>
-</div>
+{{/if}}

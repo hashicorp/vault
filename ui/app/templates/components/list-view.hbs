@@ -5,15 +5,9 @@
     {{/each}}
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            {{emptyMessage}}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title={{this.emptyTitle}}
+    @message={{this.emptyMessage}}
+    @emptyActions={{this.emptyActions}}
+  />
 {{/if}}

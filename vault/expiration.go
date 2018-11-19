@@ -1454,14 +1454,14 @@ func (m *ExpirationManager) loadEntryInternal(ctx context.Context, leaseID strin
 	view := m.leaseView(ns)
 	out, err := view.Get(ctx, leaseID)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read lease entry: {{err}}", err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read lease entry %s: {{err}}", leaseID), err)
 	}
 	if out == nil {
 		return nil, nil
 	}
 	le, err := decodeLeaseEntry(out.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode lease entry: {{err}}", err)
+		return nil, errwrap.Wrapf(fmt.Sprintf("failed to decode lease entry %s: {{err}}", leaseID), err)
 	}
 	le.namespace = ns
 
