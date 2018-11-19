@@ -800,11 +800,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
 	case "plugin":
-		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginNameDeprecated
+		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
 		// option taking precedence.
 		switch {
-		case apiConfig.PluginNameDeprecated != "":
-			logicalType = apiConfig.PluginNameDeprecated
+		case apiConfig.PluginName != "":
+			logicalType = apiConfig.PluginName
 		case pluginName != "":
 			logicalType = pluginName
 		default:
@@ -1699,11 +1699,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 				"backend type must be specified as a string"),
 			logical.ErrInvalidRequest
 	case "plugin":
-		// Only set plugin name if mount is of type plugin, with apiConfig.PluginNameDeprecated
+		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
 		// option taking precedence.
 		switch {
-		case apiConfig.PluginNameDeprecated != "":
-			logicalType = apiConfig.PluginNameDeprecated
+		case apiConfig.PluginName != "":
+			logicalType = apiConfig.PluginName
 		case pluginName != "":
 			logicalType = pluginName
 		default:

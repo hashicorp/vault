@@ -21,8 +21,11 @@ type ListPluginsResponse struct {
 	// PluginsByType is the list of plugins by type.
 	PluginsByType map[consts.PluginType][]string `json:"types"`
 
-	// NamesDeprecated is the list of names of the plugins.
-	NamesDeprecated []string `json:"names"`
+	// Names is the list of names of the plugins.
+	//
+	// Deprecated: Newer server responses should be returning PluginsByType (json:
+	// "types") instead.
+	Names []string `json:"names"`
 }
 
 // ListPlugins lists all plugins in the catalog and returns their names as a
@@ -73,7 +76,7 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 		if err := resp.DecodeJSON(&result); err != nil {
 			return nil, err
 		}
-		return &ListPluginsResponse{NamesDeprecated: result.Data.Keys}, nil
+		return &ListPluginsResponse{Names: result.Data.Keys}, nil
 	}
 
 	result := &ListPluginsResponse{
