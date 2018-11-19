@@ -1,4 +1,5 @@
 import { currentURL, currentRouteName } from '@ember/test-helpers';
+import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
@@ -9,6 +10,9 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import withFlash from 'vault/tests/helpers/with-flash';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
 
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
@@ -29,6 +33,21 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('it can create a secret when check-and-set is required', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'foo/bar';
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
+
+    await listPage.visitRoot({ backend: enginePath });
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
