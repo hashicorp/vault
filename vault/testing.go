@@ -148,6 +148,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableRaw = opts.EnableRaw
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
+	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
 	c, err := NewCore(conf)
 	if err != nil {
