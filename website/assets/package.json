@@ -11,7 +11,7 @@
     "@hashicorp/hashi-button": "1.0.5",
     "@hashicorp/hashi-callouts": "^2.0.5",
     "@hashicorp/hashi-content": "^0.1.0",
-    "@hashicorp/hashi-docs-sidenav": "^0.2.0",
+    "@hashicorp/hashi-docs-sidenav": "^0.3.0",
     "@hashicorp/hashi-docs-sitemap": "^0.1.4",
     "@hashicorp/hashi-footer": "1.1.2",
     "@hashicorp/hashi-ga-form-fields": "1.0.2",
