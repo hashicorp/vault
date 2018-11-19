@@ -6,42 +6,42 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	log "github.com/hashicorp/go-hclog"
 )
 
 var ErrNonUTF8 = errors.New("key contains invalid UTF-8 characters")
 var ErrNonPrintable = errors.New("key contains invalid UTF-8 characters")
 
-// ErrorInjector is used to add errors into underlying physical requests
+// StorageEncoding is used to add errors into underlying physical requests
 type StorageEncoding struct {
 	Backend
 }
 
-// TransactionalErrorInjector is the transactional version of the error
+// TransactionalStorageEncoding is the transactional version of the error
 // injector
 type TransactionalStorageEncoding struct {
 	*StorageEncoding
 	Transactional
 }
 
-// Verify ErrorInjector satisfies the correct interfaces
+// Verify StorageEncoding satisfies the correct interfaces
 var _ Backend = (*StorageEncoding)(nil)
 var _ Transactional = (*TransactionalStorageEncoding)(nil)
 
-// NewErrorInjector returns a wrapped physical backend to inject error
-func NewStorageEncoding(b Backend, logger log.Logger) *StorageEncoding {
-	return &StorageEncoding{
+// NewStorageEncoding returns a wrapped physical backend and verifys the key
+// encoding
+func NewStorageEncoding(b Backend) Backend {
+	enc := &StorageEncoding{
 		Backend: b,
 	}
-}
 
-// NewTransactionalErrorInjector creates a new transactional ErrorInjector
-func NewTransactionalStorageEncoding(b Backend, errorPercent int, logger log.Logger) *TransactionalStorageEncoding {
-	return &TransactionalStorageEncoding{
-		StorageEncoding: NewStorageEncoding(b, logger),
-		Transactional:   b.(Transactional),
+	if bTxn, ok := b.(Transactional); ok {
+		return TransactionalStorageEncoding{
+			StorageEncoding: enc,
+			Transactional:   bTxn,
+		}
 	}
+
+	return enc
 }
 
 func (e *StorageEncoding) containsNonPrintableChars(key string) bool {
@@ -89,4 +89,16 @@ func (e *TransactionalStorageEncoding) Transaction(ctx context.Context, txns []*
 	}
 
 	return e.Transactional.Transaction(ctx, txns)
+}
+
+func (e *StorageEncoding) Purge(ctx context.Context) {
+	if purgeable, ok := e.Backend.(ToggleablePurgemonster); ok {
+		purgeable.Purge(ctx)
+	}
+}
+
+func (e *StorageEncoding) SetEnabled(enabled bool) {
+	if purgeable, ok := e.Backend.(ToggleablePurgemonster); ok {
+		purgeable.SetEnabled(enabled)
+	}
 }

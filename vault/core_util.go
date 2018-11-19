@@ -30,7 +30,8 @@ func coreInit(c *Core, conf *CoreConfig) error {
 		c.physical = physical.NewCache(c.sealUnwrapper, conf.CacheSize, cacheLogger)
 	}
 	c.physicalCache = c.physical.(physical.ToggleablePurgemonster)
-
+	// Wrap in encoding checks
+	c.physical = physical.NewStorageEncoding(c.physical)
 	return nil
 }
 
