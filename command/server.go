@@ -552,6 +552,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableIndexing:           config.DisableIndexing,
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
+		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID

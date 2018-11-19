@@ -791,7 +791,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
 		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
-			return fmt.Errorf("failed to delete previous role ID index")
+			return errwrap.Wrapf("failed to delete previous role ID index: {{err}}", err)
 		}
 	}
 
