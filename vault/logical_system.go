@@ -1218,14 +1218,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 	if optionsRaw, ok := data.GetOk("options"); ok {
 		options = optionsRaw.(map[string]string)
 	}
+
 	if len(options) > 0 {
 		b.Core.logger.Info("mount tuning of options", "path", path, "options", options)
+		newOptions := make(map[string]string)
+		var kvUpgraded bool
 
-		var changed bool
-		var numBuiltIn int
+		// The version options should only apply to the KV mount, check that first
 		if v, ok := options["version"]; ok {
-			changed = true
-			numBuiltIn++
 			// Special case to make sure we can not disable versioning once it's
 			// enabled. If the vkv backend suports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
@@ -1236,38 +1236,59 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			if err != nil {
 				return handleError(errwrap.Wrapf("unable to parse options: {{err}}", err))
 			}
+
+			// Only accept valid versions
+			switch optVersion {
+			case 1:
+			case 2:
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("invalid version provided: %d", optVersion)), logical.ErrInvalidRequest
+			}
+
 			if meVersion > optVersion {
+				// Return early if version option asks for a downgrade
 				return logical.ErrorResponse(fmt.Sprintf("cannot downgrade mount from version %d", meVersion)), logical.ErrInvalidRequest
 			}
 			if meVersion < optVersion {
+				kvUpgraded = true
 				resp = &logical.Response{}
 				resp.AddWarning(fmt.Sprintf("Upgrading mount from version %d to version %d. This mount will be unavailable for a brief period and will resume service shortly.", meVersion, optVersion))
 			}
 		}
-		if options != nil {
-			// For anything we don't recognize and provide special handling,
-			// always write
-			if len(options) > numBuiltIn {
-				changed = true
+
+		// Upsert options value to a copy of the existing mountEntry's options
+		for k, v := range mountEntry.Options {
+			newOptions[k] = v
+		}
+		for k, v := range options {
+			// If the value of the provided option is empty, delete the key We
+			// special-case the version value here to guard against KV downgrades, but
+			// this piece could potentially be refactored in the future to be non-KV
+			// specific.
+			if len(v) == 0 && k != "version" {
+				delete(newOptions, k)
+			} else {
+				newOptions[k] = v
 			}
 		}
 
-		if changed {
-			oldVal := mountEntry.Options
-			mountEntry.Options = options
-			// Update the mount table
-			switch {
-			case strings.HasPrefix(path, "auth/"):
-				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-			default:
-				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-			}
-			if err != nil {
-				mountEntry.Options = oldVal
-				return handleError(err)
-			}
+		// Update the mount table
+		oldVal := mountEntry.Options
+		mountEntry.Options = newOptions
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Options = oldVal
+			return handleError(err)
+		}
 
-			// Reload the backend to kick off the upgrade process.
+		// Reload the backend to kick off the upgrade process. It should only apply to KV backend so we
+		// trigger based on the version logic above.
+		if kvUpgraded {
 			b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
 		}
 	}

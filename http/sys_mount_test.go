@@ -712,7 +712,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
 
-	// Unset the mount tune value
+	// Check that we're not allowed to unset the options map once that's set
 	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/foo/tune", map[string]interface{}{
 		"options": map[string]string{},
 	})
