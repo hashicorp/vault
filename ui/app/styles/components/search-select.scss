@@ -1,4 +1,89 @@
-$ember-power-select-border-color: $grey-light;
-$ember-power-select-border-radius: 0;
-$ember-power-select-text-color: $grey-dark;
-$ember-power-select-line-height: 2.5rem;
+.ember-power-select-dropdown {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+
+  &.ember-power-select-dropdown.ember-basic-dropdown-content--below {
+    border: 0;
+  }
+}
+
+.ember-power-select-trigger {
+  border: 0;
+  border-radius: $radius;
+  padding-right: 0;
+}
+
+.ember-power-select-trigger:focus,
+.ember-power-select-trigger--active {
+  border: 0;
+}
+
+.ember-power-select-status-icon {
+  display: none;
+}
+
+.ember-power-select-search {
+  position: absolute;
+  left: $spacing-l;
+  top: 0;
+  right: 0;
+  transform: translateY(-100%);
+}
+
+.ember-power-select-search-input {
+  border: 0;
+}
+
+.ember-power-select-options {
+  background: $white;
+  border: $base-border;
+  box-shadow: $box-shadow-middle;
+  margin: -4px $spacing-xs 0;
+  padding: $spacing-xxs 0;
+
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current="true"] {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ember-power-select-option--no-matches-message {
+    color: $grey;
+    font-size: $size-8;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+
+    &:hover {
+      background: transparent;
+      color: $grey;
+    }
+  }
+}
+
+.search-select-list-item {
+  align-items: center;
+  display: flex;
+  margin: 0 $spacing-m;
+  padding: $spacing-xxs;
+  justify-content: space-between;
+
+  &:not(:last-child) {
+    border-bottom: $light-border;
+  }
+
+  .control .button {
+    color: $grey-light;
+    min-width: auto;
+
+    &:hover {
+      color: $blue;
+    }
+  }
+}
+
+.search-select-list-key {
+  color: $grey;
+  font-size: $size-8;
+}

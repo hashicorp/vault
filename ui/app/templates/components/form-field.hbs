@@ -11,7 +11,7 @@
   </label>
 {{/unless}}
 {{#if attr.options.possibleValues}}
-  <div class="control is-expanded" >
+  <div class="control is-expanded">
     <div class="select is-fullwidth">
       <select
         name="{{attr.name}}"
@@ -46,22 +46,24 @@
     </label>
   </div>
 {{else if (eq attr.options.editType "searchSelect")}}
-  <label for="{{attr.name}}" class="is-label">
-    {{labelString}}
-    {{#if attr.options.helpText}}
-      {{#info-tooltip}}
-        {{attr.options.helpText}}
-      {{/info-tooltip}}
-    {{/if}}
-  </label>
-  <SearchSelect
-    @id={{attr.name}}
-    @modelType={{attr.options.modelType}}
-    @displayAttr={{attr.options.displayAttr}}
-    @isList={{attr.options.isList}}
-    @onChange={{action (action "setAndBroadcast" valuePath)}}
-    @inputValue={{get model valuePath}}
-  />
+  <div class="form-section">
+    <label for="{{attr.name}}" class="title is-4">
+      {{labelString}}
+      {{#if attr.options.helpText}}
+        {{#info-tooltip}}
+          {{attr.options.helpText}}
+        {{/info-tooltip}}
+      {{/if}}
+    </label>
+    <SearchSelect
+      @id={{attr.name}}
+      @modelType={{attr.options.modelType}}
+      @displayAttr={{attr.options.displayAttr}}
+      @isList={{attr.options.isList}}
+      @onChange={{action (action "setAndBroadcast" valuePath)}}
+      @inputValue={{get model valuePath}}
+    />
+  </div>
 {{else if (eq attr.options.editType 'mountAccessor')}}
   {{mount-accessor-select
     name=attr.name
@@ -115,7 +117,6 @@
         class="textarea"
         ></textarea>
     {{else if (eq attr.options.editType 'json')}}
-
       <label for="{{attr.name}}" class="is-label">
         {{labelString}}
         {{#if attr.options.helpText}}
