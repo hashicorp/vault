@@ -31,6 +31,7 @@ export default Component.extend({
   selectedOption: null,
   selectedOptions: null,
   options: null,
+  shouldUseFallback: false,
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -61,6 +62,11 @@ export default Component.extend({
         }
         options.removeObjects(this.selectedOptions);
         this.set('options', options);
+      })
+      .catch(err => {
+        if (err.httpStatus === 403) {
+          this.set('shouldUseFallback', true);
+        }
       });
   }).on('didInsertElement'),
   handleChange() {
@@ -71,6 +77,9 @@ export default Component.extend({
     }
   },
   actions: {
+    onChange(val) {
+      this.onChange(val);
+    },
     selectOption(option) {
       this.selectedOptions.pushObject(option);
       this.options.removeObject(option);

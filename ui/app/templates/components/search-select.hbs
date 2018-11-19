@@ -1,33 +1,53 @@
-{{#power-select
-  options=options
-  selected=selectedOption
-  onchange=(action "selectOption")
-  placeholderComponent="search-select-placeholder"
-  as |option|
-}}
-  {{#if option.name}}
-    {{option.name}}
-    <small class="search-select-list-key">{{option.key}}</small>
-  {{else}}
-    {{option}}
+{{#if shouldUseFallback}}
+  {{debugger}}
+  {{component fallbackComponent
+    label=label
+    onChange=(action "onChange")
+    inputValue=inputValue
+    warning=warning
+    helpText=helpText
+  }}
+{{else}}
+  <label for="{{name}}" class="is-label">
+    {{label}}
+    {{#if helpText}}
+      {{#info-tooltip}}
+        {{helpText}}
+      {{/info-tooltip}}
+    {{/if}}
+  </label>
+  {{#power-select
+    options=options
+    selected=selectedOption
+    onchange=(action "selectOption")
+    placeholderComponent="search-select-placeholder"
+    beforeOptionsComponent=(component "power-select/before-options" autofocus=true)
+    as |option|
+  }}
+    {{#if option.name}}
+      {{option.name}}
+      <small class="search-select-list-key">{{option.key}}</small>
+    {{else}}
+      {{option}}
+    {{/if}}
+  {{/power-select}}
+  {{#if isList}}
+    <ul class="search-select-list">
+      {{#each selectedOptions as |selected|}}
+        <li class="search-select-list-item">
+          {{#if selected.name}}
+            {{selected.name}}
+            <small class="search-select-list-key">{{selected.key}}</small>
+          {{else}}
+            {{selected}}
+          {{/if}}
+          <div class="control">
+            <button type="button" class="button is-ghost" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
+              {{i-con size=16 glyph='trash-a' excludeIconClass=true}}
+            </button>
+          </div>
+        </li>
+      {{/each}}
+    </ul>
   {{/if}}
-{{/power-select}}
-{{#if isList}}
-  <ul class="search-select-list">
-    {{#each selectedOptions as |selected|}}
-      <li class="search-select-list-item">
-        {{#if selected.name}}
-          {{selected.name}}
-          <small class="search-select-list-key">{{selected.key}}</small>
-        {{else}}
-          {{selected}}
-        {{/if}}
-        <div class="control">
-          <button type="button" class="button is-ghost" {{action "discardSelection" selected}} data-test-string-list-button="delete" >
-            {{i-con size=16 glyph='trash-a' excludeIconClass=true}}
-          </button>
-        </div>
-      </li>
-    {{/each}}
-  </ul>
 {{/if}}
