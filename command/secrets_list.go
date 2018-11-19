@@ -155,7 +155,12 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			replication = "local"
 		}
 
-		if mount.Config.PluginName == "plugin" {
+		pluginName := mount.Type
+		if pluginName == "plugin" {
+			pluginName = mount.Config.PluginName
+		}
+
+		if mount.Type == "plugin" {
 			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
 				path,
 				mount.Type,
