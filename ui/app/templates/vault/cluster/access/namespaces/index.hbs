@@ -7,12 +7,12 @@
     </p.levelLeft>
     <p.levelRight>
       {{#link-to 'vault.cluster.access.namespaces.create' class="button has-icon-right is-ghost is-compact"}}
-        Create a namespace
+        Create namespace
         <ICon @glyph="chevron-right" @size=11 />
       {{/link-to}}
     </p.levelRight>
   </PageHeader>
-  <ListView @items={{model}} @itemNoun="namespace" as |list|>
+  <ListView @items={{model}} @itemNoun="namespace" @emptyActions="empty-action-namespaces" as |list|>
     <ListItem as |Item|>
       <Item.content>
         {{list.item.id}}

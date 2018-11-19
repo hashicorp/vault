@@ -177,7 +177,7 @@ for your server at `path/to/plugins`:
 1. Enable the plugin in the catalog:
 
     ```text
-    $ vault write sys/plugins/catalog/azure-auth \
+    $ vault write sys/plugins/catalog/auth/azure-auth \
         command="vault-plugin-auth-azure" \
         sha256="..."
     ```
@@ -185,7 +185,7 @@ for your server at `path/to/plugins`:
 1. Enable the azure auth method as a plugin:
 
     ```text
-    $ vault auth enable -path=azure -plugin-name=azure-auth plugin
+    $ vault auth enable -path=azure azure-auth
     ```
 
 ## API

@@ -51,7 +51,7 @@ $ vault secrets enable -max-lease-ttl=30m database
 Enable a custom plugin (after it is registered in the plugin registry):
 
 ```text
-$ vault secrets enable -path=my-secrets -plugin-name=my-plugin plugin
+$ vault secrets enable -path=my-secrets my-plugin
 ```
 
 For more information on the specific configuration options and paths, please see
@@ -84,6 +84,3 @@ flags](/docs/commands/index.html) included on all commands.
 - `-path` `(string: "")` Place where the secrets engine will be accessible. This
   must be unique cross all secrets engines. This defaults to the "type" of the
   secrets engine.
-
-- `-plugin-name` `(string: "")` - Name of the secrets engine plugin. This plugin
-  name must already exist in Vault's plugin catalog.

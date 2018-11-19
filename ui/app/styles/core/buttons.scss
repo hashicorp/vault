@@ -13,8 +13,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   min-width: 6rem;
   padding: $size-10 $size-8;
   text-decoration: none;
-  transition: background-color $speed, border-color $speed, box-shadow $speed,
-    color $speed;
+  transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
   vertical-align: middle;
 
   &.is-icon {
@@ -45,7 +44,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
-    @if $name == "primary" {
+    @if $name == 'primary' {
       $color: $blue;
     }
     $color-invert: nth($pair, 2);
@@ -211,8 +210,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 }
 
+.button.auto-width,
 .button .icon.auto-width {
   width: auto;
+  min-width: auto;
   margin: 0 !important;
 }
 
