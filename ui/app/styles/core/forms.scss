@@ -184,8 +184,11 @@ label {
   }
 }
 
-.select:not(.is-multiple)::after,
-.select:not(.is-multiple)::before {
+.select:not(.is-multiple) {
+  height: 2.5rem;
+}
+
+.select:not(.is-multiple)::after {
   border-color: $black;
   border-width: 2px;
   margin-top: 0;

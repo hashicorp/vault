@@ -5,7 +5,7 @@ import { computed } from '@ember/object';
 
 export default Component.extend({
   'data-test-component': 'search-select',
-  classNames: ['field', 'search-select', 'form-section'],
+  classNames: ['field', 'search-select'],
   store: service(),
   /*
    * @public
