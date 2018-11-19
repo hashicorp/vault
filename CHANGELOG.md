@@ -6,6 +6,11 @@ CHANGES:
    undocumented, but were retained for backwards compatibility. They shouldn't
    be used due to the possibility of those paths being logged, so at this point
    they are simply being removed.
+   
+IMPROVEMENTS:
+
+ * agent: Support for configuring the location of the kubernetes service account
+   [GH-5725]
 
 BUG FIXES:
 
