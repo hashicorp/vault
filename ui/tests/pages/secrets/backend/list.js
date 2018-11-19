@@ -10,7 +10,12 @@ export default create({
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
 
   tabs: collection('[data-test-tab]'),
-  secrets: collection('[data-test-secret-link]'),
+  secrets: collection('[data-test-secret-link]', {
+    menuToggle: clickable('[data-test-popup-menu-trigger]'),
+  }),
+  menuItems: collection('.ember-basic-dropdown-content li', {
+    testContainer: '#ember-testing',
+  }),
 
   backendIsEmpty: getter(function() {
     return this.secrets.length === 0;
