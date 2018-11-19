@@ -27,7 +27,7 @@ type TransactionalStorageEncoding struct {
 var _ Backend = (*StorageEncoding)(nil)
 var _ Transactional = (*TransactionalStorageEncoding)(nil)
 
-// NewStorageEncoding returns a wrapped physical backend and verifys the key
+// NewStorageEncoding returns a wrapped physical backend and verifies the key
 // encoding
 func NewStorageEncoding(b Backend) Backend {
 	enc := &StorageEncoding{
