@@ -155,18 +155,34 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			replication = "local"
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
-			path,
-			mount.Type,
-			mount.Accessor,
-			defaultTTL,
-			maxTTL,
-			mount.Config.ForceNoCache,
-			replication,
-			mount.SealWrap,
-			mount.Options,
-			mount.Description,
-		))
+		if mount.Config.PluginName == "plugin" {
+			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
+				path,
+				mount.Type,
+				mount.Accessor,
+				mount.Config.PluginName,
+				defaultTTL,
+				maxTTL,
+				mount.Config.ForceNoCache,
+				replication,
+				mount.SealWrap,
+				mount.Options,
+				mount.Description,
+			))
+		} else {
+			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
+				path,
+				mount.Type,
+				mount.Accessor,
+				defaultTTL,
+				maxTTL,
+				mount.Config.ForceNoCache,
+				replication,
+				mount.SealWrap,
+				mount.Options,
+				mount.Description,
+			))
+		}
 	}
 
 	return out

@@ -155,18 +155,35 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			replication = "local"
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
-			path,
-			mount.Type,
-			mount.Accessor,
-			defaultTTL,
-			maxTTL,
-			mount.Config.TokenType,
-			replication,
-			mount.SealWrap,
-			mount.Options,
-			mount.Description,
-		))
+		if mount.Config.PluginName == "plugin" {
+			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
+				path,
+				mount.Type,
+				mount.Accessor,
+				mount.Config.PluginName,
+				defaultTTL,
+				maxTTL,
+				mount.Config.TokenType,
+				replication,
+				mount.SealWrap,
+				mount.Options,
+				mount.Description,
+			))
+		} else {
+			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
+				path,
+				mount.Type,
+				mount.Accessor,
+				defaultTTL,
+				maxTTL,
+				mount.Config.TokenType,
+				replication,
+				mount.SealWrap,
+				mount.Options,
+				mount.Description,
+			))
+		}
+
 	}
 
 	return out
