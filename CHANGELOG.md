@@ -1,4 +1,11 @@
 ## 1.0.0 (Unreleased)
+CHANGES:
+
+ * Paths within `auth/token` that allow specifying a token or accessor in the
+   URL have been removed. These have been deprecated since March 2016 and
+   undocumented, but were retained for backwards compatibility. They shouldn't
+   be used due to the possibility of those paths being logged, so at this point
+   they are simply being removed.
 
 BUG FIXES:
 
@@ -8,6 +15,7 @@ BUG FIXES:
  * ui: Fix the PKI context menu so that items load [GH-5824]
  * ui: Fix dr secondary operation token generation via the ui [GH-5818]
  * ui: Allow for secret creation in kv v2 when cas_required=true [GH-5823]
+ * agent: fix auth when multiple redirects [GH-5814]
 
 ## 1.0.0-beta2 (November 13th, 2018)
 
@@ -31,11 +39,6 @@ CHANGES:
    difference but it should provide significant performance benefits for those
    writing custom clients using the Go API library. As before, this can be
    changed to any custom HTTP client by the caller.
- * Paths within `auth/token` that allow specifying a token or accessor in the
-   URL have been removed. These have been deprecated since March 2016 and
-   undocumented, but were retained for backwards compatibility. They shouldn't
-   be used due to the possibility of those paths being logged, so at this point
-   they are simply being removed.
 
 CHANGES FROM BETA 1:
 (Note: these items will be removed from the final 1.0 changelog as they are
