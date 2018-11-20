@@ -25,6 +25,7 @@ BUG FIXES:
  * agent: Fix auth when multiple redirects [GH-5814]
  * secrets/kv: Fix issue where storage version would get incorrectly downgraded 
    [GH-5809]
+ * performance standby: Fix audit table upgrade on standbys [GH-5811]
 
 ## 1.0.0-beta2 (November 13th, 2018)
 
