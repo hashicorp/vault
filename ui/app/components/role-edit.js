@@ -87,18 +87,6 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
-      e.stopPropagation();
-      if (!(e.keyCode === keys.ENTER && e.metaKey)) {
-        return;
-      }
-      let $form = this.$('form');
-      if ($form.length) {
-        $form.submit();
-      }
-      $form = null;
-    },
-
     createOrUpdate(type, event) {
       event.preventDefault();
 
@@ -113,10 +101,6 @@ export default Component.extend(FocusOnInsertMixin, {
         this.hasDataChanges();
         this.transitionToRoute(SHOW_ROUTE, modelId);
       });
-    },
-
-    handleChange() {
-      this.hasDataChanges();
     },
 
     setValue(key, event) {

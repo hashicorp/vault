@@ -69,18 +69,6 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleKeyDown(_, e) {
-      e.stopPropagation();
-      if (!(e.keyCode === keys.ENTER && e.metaKey)) {
-        return;
-      }
-      let $form = this.$('form');
-      if ($form.length) {
-        $form.submit();
-      }
-      $form = null;
-    },
-
     createOrUpdateKey(type, event) {
       event.preventDefault();
 
@@ -99,10 +87,6 @@ export default Component.extend(FocusOnInsertMixin, {
         },
         type === 'create'
       );
-    },
-
-    handleChange() {
-      this.hasDataChanges();
     },
 
     setValueOnKey(key, event) {

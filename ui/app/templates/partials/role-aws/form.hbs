@@ -1,4 +1,4 @@
-<form onsubmit={{action "createOrUpdate" "create"}} onchange={{action "handleChange"}}>
+<form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{message-error model=model}}
     <NamespaceReminder @mode={{mode}} @noun="AWS role" />
