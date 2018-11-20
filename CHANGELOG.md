@@ -6,6 +6,8 @@ CHANGES:
    undocumented, but were retained for backwards compatibility. They shouldn't
    be used due to the possibility of those paths being logged, so at this point
    they are simply being removed.
+ * Vault will no longer accept updates when the storage key has invalid UTF-8 
+   character encoding [GH-5819]
    
 IMPROVEMENTS:
 
