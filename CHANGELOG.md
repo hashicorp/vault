@@ -13,6 +13,8 @@ IMPROVEMENTS:
 
  * agent: Support for configuring the location of the kubernetes service account
    [GH-5725]
+ * ui: Empty states have updated styling and link to relevant actions and 
+   documentation [GH-5758]
 
 BUG FIXES:
 
