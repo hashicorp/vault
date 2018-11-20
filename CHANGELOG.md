@@ -109,8 +109,8 @@ BUG FIXES:
  * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
    when trying to use tool/hash [GH-5714]
  * agent: Fix issue when specifying two file sinks [GH-5610]
- * autounseal/alicloud: Fix issue interacting with the API
- * autounseal/azure: Fix key version tracking 
+ * autounseal/alicloud: Fix issue interacting with the API (Enterprise)
+ * autounseal/azure: Fix key version tracking (Enterprise)
  * namespaces: Fix tuning of auth mounts in a namespace
 
 ## 1.0.0-beta1 (October 23rd, 2018)
