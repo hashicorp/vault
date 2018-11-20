@@ -1,4 +1,4 @@
-## 1.0.0 (Unreleased)
+## 1.0.0-rc1 (Nov 20th, 2018)
 CHANGES:
 
  * Paths within `auth/token` that allow specifying a token or accessor in the
