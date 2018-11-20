@@ -1425,10 +1425,10 @@
 			"revisionTime": "2018-08-16T20:11:31Z"
 		},
 		{
-			"checksumSHA1": "pJC3V+AR+Khd/TpvekLf1ZRU7rA=",
+			"checksumSHA1": "h7m+nCb1vdvcy5cUkCarix08yJI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "86f7837fd8102347f7a10e3f0ad275e5a256863c",
-			"revisionTime": "2018-10-25T21:28:40Z"
+			"revision": "0a3edf071747fcb84aa4f9d08a34d2c249e6228d",
+			"revisionTime": "2018-11-15T01:46:55Z"
 		},
 		{
 			"checksumSHA1": "tt3FtyjXgdBI9Mb43UL4LtOZmAk=",
@@ -2807,6 +2807,12 @@
 			"path": "google.golang.org/api/cloudkms/v1",
 			"revision": "cc9bd73d51b4c5610e35bcb01f15368185cfaab3",
 			"revisionTime": "2018-10-16T15:55:58Z"
+		},
+		{
+			"checksumSHA1": "9Gt9K/Z3m6q4vOJPIm1ynTvgecg=",
+			"path": "google.golang.org/api/cloudresourcemanager/v1",
+			"revision": "83a9d304b1e613fc253e1e2710778642fe81af53",
+			"revisionTime": "2018-11-14T18:14:26Z"
 		},
 		{
 			"checksumSHA1": "QkzppExyctFz029dvXzKzh6UHgU=",
