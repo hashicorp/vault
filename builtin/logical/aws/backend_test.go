@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -65,6 +66,7 @@ func TestBackend_basicSTS(t *testing.T) {
 	}
 	roleName := generateUniqueName(t.Name())
 	userName := generateUniqueName(t.Name())
+	roleSessionName := generateUniqueName(t.Name())
 	accessKey := &awsAccessKey{}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -87,6 +89,7 @@ func TestBackend_basicSTS(t *testing.T) {
 			testAccStepReadSTSWithArnPolicy(t, "test"),
 			testAccStepWriteArnRoleRef(t, "test2", roleName, awsAccountID),
 			testAccStepRead(t, "sts", "test2", []credentialTestFunc{describeInstancesTest}),
+			testAccStepReadWithRoleSessionName(t, "sts", "test2", roleSessionName),
 		},
 		Teardown: func() error {
 			return teardown(accessKey, roleName, userName)
@@ -903,6 +906,50 @@ func testAccStepWriteArnRoleRef(t *testing.T, vaultRoleName, awsRoleName, awsAcc
 		Path:      "roles/" + vaultRoleName,
 		Data: map[string]interface{}{
 			"arn": fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, awsRoleName),
+		},
+	}
+}
+
+func testAccStepReadWithRoleSessionName(t *testing.T, path, name string, roleSessionName string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      path + "/" + name,
+		Data: map[string]interface{}{
+			"role_session_name": roleSessionName,
+		},
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				AccessKey string `mapstructure:"access_key"`
+				SecretKey string `mapstructure:"secret_key"`
+				STSToken  string `mapstructure:"security_token"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+
+			log.Printf("[WARN] Generated credentials: %v", d)
+
+			svc := sts.New(session.Must(session.NewSession(&aws.Config{
+				Credentials: credentials.NewStaticCredentials(d.AccessKey, d.SecretKey, d.STSToken),
+			})))
+
+			params := &sts.GetCallerIdentityInput{}
+			res, err := svc.GetCallerIdentity(params)
+
+			if err != nil {
+				return err
+			}
+
+			if res == nil {
+				return fmt.Errorf("got nil response from GetCallerIdentity")
+			}
+
+			//For assumed role, GetCallerIdentity.UserId contains: role_id:caller-specified-role-name
+			//https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable
+			if strings.Split(*res.UserId, ":")[1] != roleSessionName {
+				return fmt.Errorf("bad roleSessionName: got: %#v\nexpected: %#v", *res.UserId, roleSessionName)
+			}
+			return nil
 		},
 	}
 }

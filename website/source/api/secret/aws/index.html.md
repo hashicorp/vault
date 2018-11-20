@@ -411,9 +411,12 @@ credentials retrieved through `/aws/creds` must be of the `iam_user` type.
   (for `assumed_role` credential types) and
   [GetFederationToken](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html)
   (for `federation_token` credential types) for more details.
+- `role_session_name` `(string: "")` – Specifies the RoleSessionName when `credential_type` is `assumed_role`.
+  When not specified, `role_session_name` defaults to empty string, and Vault will dynamically generate a username for the RoleSessionName parameter.  See the AWS documentation on the RoleSessionName parameter for
+  [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html).
 
 ### Sample Request
-
+### Sample Request
 ```
 $ curl \
     --header "X-Vault-Token: ..." \

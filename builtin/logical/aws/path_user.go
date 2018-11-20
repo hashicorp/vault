@@ -33,11 +33,11 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
-                        "role_session_name": &framework.FieldSchema{
-                                Type:        framework.TypeString,
-                                Description: "Session name of role to assume when credential_type is " + assumedRoleCred,
-                                Default:     "",
-                        },
+			"role_session_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Session name of role to assume when credential_type is " + assumedRoleCred,
+				Default:     "",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathCredsRead,
@@ -86,7 +86,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 	roleArn := d.Get("role_arn").(string)
 
-        roleSessionName := d.Get("role_session_name").(string)
+	roleSessionName := d.Get("role_session_name").(string)
 
 	var credentialType string
 	switch {

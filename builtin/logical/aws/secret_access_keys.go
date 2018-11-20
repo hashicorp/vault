@@ -125,9 +125,9 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 		RoleArn:         aws.String(roleArn),
 		DurationSeconds: &lifeTimeInSeconds,
 	}
-        if roleSessionName != "" {
-                assumeRoleInput.SetRoleSessionName(roleSessionName)
-        }
+	if roleSessionName != "" {
+		assumeRoleInput.SetRoleSessionName(roleSessionName)
+	}
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
 	}
