@@ -15,12 +15,12 @@ let LinkedBlockComponent = Component.extend({
   encode: false,
 
   click(event) {
-    const $target = this.$(event.target);
+    const $target = event.target;
     const isAnchorOrButton =
-      $target.is('a') ||
-      $target.is('button') ||
-      $target.closest('button', event.currentTarget).length > 0 ||
-      $target.closest('a', event.currentTarget).length > 0;
+      $target.tagName === 'A' ||
+      $target.tagName === 'BUTTON' ||
+      $target.closest('button') ||
+      $target.closest('a');
     if (!isAnchorOrButton) {
       let params = this.get('params');
       if (this.encode) {

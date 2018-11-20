@@ -60,6 +60,7 @@
     "ember-cli-clipboard": "^0.8.0",
     "ember-cli-content-security-policy": "^1.0.0",
     "ember-cli-dependency-checker": "^3.0.0",
+    "ember-cli-element-closest-polyfill": "^0.0.1",
     "ember-cli-eslint": "^4.2.3",
     "ember-cli-flash": "^1.6.6",
     "ember-cli-htmlbars": "^3.0.0",
