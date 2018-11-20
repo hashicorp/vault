@@ -16,6 +16,7 @@ module.exports = {
   rules: {
     'no-unused-vars': ['error', { ignoreRestSiblings: true }],
     'prettier/prettier': 'error',
+    'ember/no-jquery': 'error',
   },
   globals: {
     TextEncoderLite: true,
