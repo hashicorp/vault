@@ -177,7 +177,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 		} else {
 			out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s",
 				path,
-				mount.Type,
+				pluginName,
 				mount.Accessor,
 				defaultTTL,
 				maxTTL,
