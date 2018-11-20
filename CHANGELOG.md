@@ -8,6 +8,11 @@ CHANGES:
    they are simply being removed.
  * Vault will no longer accept updates when the storage key has invalid UTF-8 
    character encoding [GH-5819]
+ * Mount/Auth tuning the `options` map on backends will now upsert any provided
+   values, and keep any of the existing values in place if not provided. The
+   options map itself cannot be unset once it's set, but the keypairs within the
+   map can be unset if an empty value is provided, with the exception of the
+   `version` keypair which is handled differently for KVv2 purposes.
    
 IMPROVEMENTS:
 
@@ -30,6 +35,8 @@ BUG FIXES:
  * performance standby: Fix audit table upgrade on standbys [GH-5811]
  * performance standby: Fix redirect on approle update [GH-5820]
  * cli: Restore the `-policy-override` flag [GH-5826]
+ * core: Fix rekey progress reset which did not happen under certain
+   circumstances. [GH-5743]
 
 ## 1.0.0-beta2 (November 13th, 2018)
 
