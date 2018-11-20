@@ -1,9 +1,10 @@
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
-import $ from 'jquery';
 import Component from '@ember/component';
+import { task, waitForEvent } from 'ember-concurrency';
 import { set, get } from '@ember/object';
+
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 import keys from 'vault/lib/keycodes';
 
@@ -19,23 +20,22 @@ export default Component.extend(FocusOnInsertMixin, {
   key: null,
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
-  init() {
-    this._super(...arguments);
-  },
-
-  didInsertElement() {
-    this._super(...arguments);
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  },
-
   willDestroyElement() {
     this._super(...arguments);
     const key = this.get('key');
     if (get(key, 'isError')) {
       key.rollbackAttributes();
     }
-    $(document).off('keyup.keyEdit');
   },
+
+  waitForKeyUp: task(function*() {
+    while (true) {
+      let event = yield waitForEvent(document.body, 'keyup');
+      this.onEscape(event);
+    }
+  })
+    .on('didInsertElement')
+    .cancelOn('willDestroyElement'),
 
   transitionToRoute() {
     this.get('router').transitionTo(...arguments);

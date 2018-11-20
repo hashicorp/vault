@@ -1,7 +1,7 @@
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
-import $ from 'jquery';
+import { task, waitForEvent } from 'ember-concurrency';
 import Component from '@ember/component';
 import { set, get } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
@@ -42,19 +42,22 @@ export default Component.extend(FocusOnInsertMixin, {
     }
   },
 
-  didInsertElement() {
-    this._super(...arguments);
-    $(document).on('keyup.keyEdit', this.onEscape.bind(this));
-  },
-
   willDestroyElement() {
     this._super(...arguments);
     const model = this.get('model');
     if (get(model, 'isError')) {
       model.rollbackAttributes();
     }
-    $(document).off('keyup.keyEdit');
   },
+
+  waitForKeyUp: task(function*() {
+    while (true) {
+      let event = yield waitForEvent(document.body, 'keyup');
+      this.onEscape(event);
+    }
+  })
+    .on('didInsertElement')
+    .cancelOn('willDestroyElement'),
 
   transitionToRoute() {
     this.get('router').transitionTo(...arguments);
