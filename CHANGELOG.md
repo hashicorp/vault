@@ -29,6 +29,7 @@ BUG FIXES:
    [GH-5809]
  * performance standby: Fix audit table upgrade on standbys [GH-5811]
  * performance standby: Fix redirect on approle update [GH-5820]
+ * cli: Restore the `-policy-override` flag [GH-5826]
 
 ## 1.0.0-beta2 (November 13th, 2018)
 
