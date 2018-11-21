@@ -3,13 +3,14 @@ import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
 import RSVP from 'rsvp';
 import DS from 'ember-data';
+import AdapterFetch from 'ember-fetch/mixins/adapter-fetch';
 import fetch from 'fetch';
 import config from '../config/environment';
 
 const { APP } = config;
 const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
-export default DS.RESTAdapter.extend({
+export default DS.RESTAdapter.extend(AdapterFetch, {
   auth: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
