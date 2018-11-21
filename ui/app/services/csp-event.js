@@ -1,6 +1,5 @@
 /*eslint-disable no-constant-condition*/
 import { computed } from '@ember/object';
-import { filterBy } from '@ember/object/computed';
 
 import Service from '@ember/service';
 import { task, waitForEvent } from 'ember-concurrency';
@@ -9,7 +8,9 @@ export default Service.extend({
   events: computed(function() {
     return [];
   }),
-  connectionViolations: filterBy('events', 'violatedDirective', 'connect-src'),
+  connectionViolations: computed('events.[].violatedDirective', function() {
+    return this.get('events').filter(e => e.violatedDirective.startsWith('connect-src'));
+  }),
 
   attach() {
     this.monitor.perform();
