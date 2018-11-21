@@ -1,4 +1,5 @@
 ## 1.0.0-rc1 (Nov 20th, 2018)
+ 
 CHANGES:
 
  * Paths within `auth/token` that allow specifying a token or accessor in the
@@ -13,7 +14,7 @@ CHANGES:
    options map itself cannot be unset once it's set, but the keypairs within the
    map can be unset if an empty value is provided, with the exception of the
    `version` keypair which is handled differently for KVv2 purposes.
-   
+
 IMPROVEMENTS:
 
  * agent: Support for configuring the location of the kubernetes service account
