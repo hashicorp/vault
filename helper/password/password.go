@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 var ErrInterrupted = errors.New("interrupted")
@@ -34,7 +35,7 @@ func Read(f *os.File) (string, error) {
 	case <-ch:
 		return "", ErrInterrupted
 	case <-doneCh:
-		return result, resultErr
+		return removeDeletes(result), resultErr
 	}
 }
 
@@ -61,4 +62,17 @@ func readline(f *os.File) (string, error) {
 	}
 
 	return string(resultBuf), nil
+}
+
+func removeDeletes(input string) string {
+	for {
+		i := strings.Index(input, "\x7f")
+		if i == -1 {
+			return input
+		}
+		if i == 0 {
+			return input[1:]
+		}
+		input = input[:i-1] + input[i+1:]
+	}
 }
