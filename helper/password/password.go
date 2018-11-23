@@ -35,7 +35,7 @@ func Read(f *os.File) (string, error) {
 	case <-ch:
 		return "", ErrInterrupted
 	case <-doneCh:
-		return removeDeletes(result), resultErr
+		return removeiTermDelete(result), resultErr
 	}
 }
 
@@ -64,15 +64,6 @@ func readline(f *os.File) (string, error) {
 	return string(resultBuf), nil
 }
 
-func removeDeletes(input string) string {
-	for {
-		i := strings.Index(input, "\x7f")
-		if i == -1 {
-			return input
-		}
-		if i == 0 {
-			return input[1:]
-		}
-		input = input[:i-1] + input[i+1:]
-	}
+func removeiTermDelete(input string) string {
+	return strings.TrimPrefix(input, "\x20\x7f")
 }
