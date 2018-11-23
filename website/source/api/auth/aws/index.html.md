@@ -422,9 +422,9 @@ $ curl \
 
 Deletes a previously configured AWS account/STS role association.
 
-| Method   | Path                              | Produces           |
-| :------- | :-------------------------------- | :------------------|
-| `DELETE` | `/auth/aws/config/sts:account_id` | `204 (empty body)` |
+| Method   | Path                               | Produces           |
+| :------- | :--------------------------------- | :------------------|
+| `DELETE` | `/auth/aws/config/sts/:account_id` | `204 (empty body)` |
 
 ### Parameters
 
