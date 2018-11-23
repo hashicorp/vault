@@ -436,8 +436,6 @@ can be set in a CSR are supported.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
   changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
-  See https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed
-  bit lengths for `ec`.
 
 - `exclude_cn_from_sans` `(bool: false)` – If true, the given `common_name` will
   not be included in DNS or Email Subject Alternate Names (as appropriate).
@@ -723,8 +721,6 @@ request is denied.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use for the
   generated keys. This will need to be changed for `ec` keys, e.g., 224 or 521.
-  See https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed
-  bit lengths for `ec`.
 
 - `key_usage` `(string: "DigitalSignature,KeyAgreement,KeyEncipherment")` –
   Specifies the allowed key usage constraint on issued certificates. This is a
@@ -930,8 +926,6 @@ root at the end of its lease period; the CA certificate will sign its own CRL.
 
 - `key_bits` `(int: 2048)` – Specifies the number of bits to use. This must be
   changed to a valid value if the `key_type` is `ec`, e.g., 224 or 521.
-  See https://golang.org/pkg/crypto/elliptic/#Curve for an overview of allowed
-  bit lengths for `ec`.
 
 - `max_path_length` `(int: -1)` – Specifies the maximum path length to encode in
   the generated certificate. `-1` means no limit. Unless the signing certificate
