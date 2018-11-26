@@ -83,9 +83,6 @@ export default Component.extend({
     selectOption(option) {
       this.selectedOptions.pushObject(option);
       this.options.removeObject(option);
-      if (!this.isList) {
-        this.set('selectedOption', option);
-      }
       this.handleChange();
     },
     discardSelection(selected) {

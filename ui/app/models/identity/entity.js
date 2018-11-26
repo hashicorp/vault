@@ -26,7 +26,6 @@ export default IdentityModel.extend({
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     modelType: 'policy/acl',
-    isList: true,
   }),
   creationTime: attr('string', {
     readOnly: true,
