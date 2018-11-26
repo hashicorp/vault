@@ -5129,10 +5129,10 @@ ember-native-dom-helpers@^0.5.3:
     broccoli-funnel "^1.1.0"
     ember-cli-babel "^6.6.0"
 
-ember-power-select@^2.0.9:
-  version "2.0.9"
-  resolved "https://registry.yarnpkg.com/ember-power-select/-/ember-power-select-2.0.9.tgz#ebe08f7d3f2fdec44558370adaa6b533486132b5"
-  integrity sha512-qx/kfPEgUm/dIgV31+gXNqoWd3ZAn547SyZokdtpqzICrUQMurLhadYY2KGHNuoT70Hr7JjdOm8/m44p11L+sA==
+ember-power-select@^2.0.12:
+  version "2.0.12"
+  resolved "https://registry.yarnpkg.com/ember-power-select/-/ember-power-select-2.0.12.tgz#24ee54333b9dab482e6da2e2e31966c40cdc445c"
+  integrity sha512-81I850ypsDqik2djv2hbDeV7yFjcxmjkkQk+TADoM+MVo4W5FzRsl87MiX1RK35ZADYxG1RTjVBcCrtKWuMEEg==
   dependencies:
     ember-basic-dropdown "^1.0.0"
     ember-cli-babel "^6.16.0"
