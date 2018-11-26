@@ -1,10 +1,43 @@
-## 1.0.0 (Unreleased)
+## 1.0.0-rc1 (Nov 20th, 2018)
+ 
+CHANGES:
+
+ * Paths within `auth/token` that allow specifying a token or accessor in the
+   URL have been removed. These have been deprecated since March 2016 and
+   undocumented, but were retained for backwards compatibility. They shouldn't
+   be used due to the possibility of those paths being logged, so at this point
+   they are simply being removed.
+ * Vault will no longer accept updates when the storage key has invalid UTF-8 
+   character encoding [GH-5819]
+ * Mount/Auth tuning the `options` map on backends will now upsert any provided
+   values, and keep any of the existing values in place if not provided. The
+   options map itself cannot be unset once it's set, but the keypairs within the
+   map can be unset if an empty value is provided, with the exception of the
+   `version` keypair which is handled differently for KVv2 purposes.
+
+IMPROVEMENTS:
+
+ * agent: Support for configuring the location of the kubernetes service account
+   [GH-5725]
+ * ui: Empty states have updated styling and link to relevant actions and 
+   documentation [GH-5758]
 
 BUG FIXES:
 
  * identity: Update group memberships when entity is deleted [GH-5786]
  * storage/gcs: Send md5 of values to GCS to avoid potential corruption
    [GH-5804]
+ * ui: Fix the PKI context menu so that items load [GH-5824]
+ * ui: Fix dr secondary operation token generation via the ui [GH-5818]
+ * ui: Allow for secret creation in kv v2 when cas_required=true [GH-5823]
+ * agent: Fix auth when multiple redirects [GH-5814]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded 
+   [GH-5809]
+ * performance standby: Fix audit table upgrade on standbys [GH-5811]
+ * performance standby: Fix redirect on approle update [GH-5820]
+ * cli: Restore the `-policy-override` flag [GH-5826]
+ * core: Fix rekey progress reset which did not happen under certain
+   circumstances. [GH-5743]
 
 ## 1.0.0-beta2 (November 13th, 2018)
 
@@ -85,8 +118,8 @@ BUG FIXES:
  * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
    when trying to use tool/hash [GH-5714]
  * agent: Fix issue when specifying two file sinks [GH-5610]
- * autounseal/alicloud: Fix issue interacting with the API
- * autounseal/azure: Fix key version tracking 
+ * autounseal/alicloud: Fix issue interacting with the API (Enterprise)
+ * autounseal/azure: Fix key version tracking (Enterprise)
  * namespaces: Fix tuning of auth mounts in a namespace
 
 ## 1.0.0-beta1 (October 23rd, 2018)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"encoding/json"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -23,8 +24,7 @@ If not specified, will use application default credentials`,
 			"google_certs_endpoint": {
 				Type: framework.TypeString,
 				Description: `
-Base endpoint url that Vault will use to get Google certificates.
-If not specified, will use the OAuth2 library default. Useful for testing.`,
+Deprecated. This field does nothing and be removed in a future release`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -65,9 +65,6 @@ func (b *GcpAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	// Invalidate exisitng clients so they read the new configuration
-	b.Close()
-
 	return nil, nil
 }
 
@@ -94,9 +91,6 @@ func (b *GcpAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 	if v := config.Credentials.ProjectId; v != "" {
 		resp["project_id"] = v
 	}
-	if v := config.GoogleCertsEndpoint; v != "" {
-		resp["google_certs_endpoint"] = v
-	}
 
 	return &logical.Response{
 		Data: resp,
@@ -115,8 +109,30 @@ iam AUTH:
 
 // gcpConfig contains all config required for the GCP backend.
 type gcpConfig struct {
-	Credentials         *gcputil.GcpCredentials `json:"credentials"`
-	GoogleCertsEndpoint string                  `json:"google_certs_endpoint"`
+	Credentials *gcputil.GcpCredentials `json:"credentials"`
+}
+
+// standardizedCreds wraps gcputil.GcpCredentials with a type to allow
+// parsing through Google libraries, since the google libraries struct is not
+// exposed.
+type standardizedCreds struct {
+	*gcputil.GcpCredentials
+	CredType string `json:"type"`
+}
+
+const serviceAccountCredsType = "service_account"
+
+// formatAsCredentialJSON converts and marshals the config credentials
+// into a parsable format by Google libraries.
+func (config *gcpConfig) formatAndMarshalCredentials() ([]byte, error) {
+	if config == nil || config.Credentials == nil {
+		return []byte{}, nil
+	}
+
+	return json.Marshal(standardizedCreds{
+		GcpCredentials: config.Credentials,
+		CredType:       serviceAccountCredsType,
+	})
 }
 
 // Update sets gcpConfig values parsed from the FieldData.
@@ -132,12 +148,6 @@ func (config *gcpConfig) Update(data *framework.FieldData) error {
 		}
 		config.Credentials = creds
 	}
-
-	certsEndpoint := data.Get("google_certs_endpoint").(string)
-	if len(certsEndpoint) > 0 {
-		config.GoogleCertsEndpoint = certsEndpoint
-	}
-
 	return nil
 }
 

@@ -17,15 +17,6 @@ end
 proxy '_redirects', 'netlify-redirects', ignore: true
 
 helpers do
-  # get correct analytics id
-  def segmentId()
-    if (ENV['ENV'] == 'tmp-production')
-      'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
-    else
-      '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'
-    end
-  end
-
   # Formats and filters a category of docs for the sidebar component
   def get_sidebar_data(category)
     sitemap.resources.select { |resource|
