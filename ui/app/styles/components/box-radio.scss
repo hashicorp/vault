@@ -32,13 +32,13 @@
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
   }
 
-  input[type=radio].radio {
+  input[type='radio'].radio {
     position: absolute;
     z-index: 1;
     opacity: 0;
   }
 
-  input[type=radio].radio + label {
+  input[type='radio'].radio + label {
     border: 1px solid $grey-light;
     border-radius: 50%;
     cursor: pointer;
@@ -50,12 +50,12 @@
     flex-grow: 0;
   }
 
-  input[type=radio].radio:checked + label {
+  input[type='radio'].radio:checked + label {
     background: $blue;
     border: 1px solid $blue;
     box-shadow: inset 0 0 0 0.15rem $white;
   }
-  input[type=radio].radio:focus + label {
+  input[type='radio'].radio:focus + label {
     box-shadow: 0 0 10px 1px rgba($blue, 0.4), inset 0 0 0 0.15rem $white;
   }
 }
