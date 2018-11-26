@@ -49,13 +49,18 @@
     justify-content: space-between;
   }
 
+  .ember-power-select-option[aria-current='true'] {
+    @extend .ember-power-select-option:hover;
+  }
+
   .ember-power-select-option--no-matches-message {
     color: $grey;
     font-size: $size-8;
     font-weight: $font-weight-semibold;
     text-transform: uppercase;
 
-    &:hover {
+    &:hover,
+    &:focus {
       background: transparent;
       color: $grey;
     }
@@ -77,7 +82,8 @@
     color: $grey-light;
     min-width: auto;
 
-    &:hover {
+    &:hover,
+    &:focus {
       color: $blue;
     }
   }
