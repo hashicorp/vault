@@ -45,7 +45,7 @@ export default IdentityModel.extend({
     label: 'Member Group IDs',
     editType: 'searchSelect',
     fallbackComponent: 'stringArray',
-    modelType: ['identity/group'],
+    models: ['identity/group'],
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
