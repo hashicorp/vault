@@ -133,6 +133,6 @@
     }
   },
   "dependencies": {
-    "ember-power-select": "^2.0.9"
+    "ember-power-select": "^2.0.12"
   }
 }

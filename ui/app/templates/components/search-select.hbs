@@ -1,5 +1,4 @@
 {{#if shouldUseFallback}}
-  {{debugger}}
   {{component fallbackComponent
     label=label
     onChange=(action "onChange")
@@ -21,7 +20,8 @@
     selected=selectedOption
     onchange=(action "selectOption")
     placeholderComponent="search-select-placeholder"
-    beforeOptionsComponent=(component "power-select/before-options" autofocus=true)
+    renderInPlace=true
+    verticalPosition="below"
     as |option|
   }}
     {{#if option.name}}
