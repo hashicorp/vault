@@ -68,7 +68,7 @@
   <div class="form-section">
     <SearchSelect
       @id={{attr.name}}
-      @modelType={{attr.options.modelType}}
+      @models={{attr.options.models}}
       @displayAttr={{attr.options.displayAttr}}
       @isList={{attr.options.isList}}
       @onChange={{action (action "setAndBroadcast" valuePath)}}

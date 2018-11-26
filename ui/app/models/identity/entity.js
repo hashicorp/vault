@@ -25,7 +25,7 @@ export default IdentityModel.extend({
     label: 'Policies',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
-    modelType: 'policy/acl',
+    models: ['policy/acl', 'policy/rgp'],
   }),
   creationTime: attr('string', {
     readOnly: true,

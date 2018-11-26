@@ -37,37 +37,42 @@ export default Component.extend({
     this.set('selectedOptions', this.inputValue || []);
   },
   fetchOptions: task(function*() {
-    yield this.store
-      .adapterFor(this.modelType)
-      .query(null, { modelName: this.modelType })
-      .then(resp => {
-        let options = [];
-        let data = resp.data;
-        switch (this.modelType) {
-          case 'identity/group':
-          case 'identity/entity':
-            data = data.key_info;
-            Object.keys(data).forEach(id => {
-              if (this.selectedOptions.includes(id)) {
-                this.selectedOptions.removeObject(id);
-                this.selectedOptions.addObject({ key: id, name: data[id].name });
-              } else {
-                options.addObject({ key: id, name: data[id].name });
-              }
-            });
-            break;
-          default:
-            options = data.keys;
-            break;
-        }
-        options.removeObjects(this.selectedOptions);
-        this.set('options', options);
-      })
-      .catch(err => {
-        if (err.httpStatus === 403) {
-          this.set('shouldUseFallback', true);
-        }
-      });
+    for (let modelType of this.models) {
+      yield this.store
+        .adapterFor(modelType)
+        .query(null, { modelName: modelType })
+        .then(resp => {
+          let options = [];
+          let data = resp.data;
+          switch (modelType) {
+            case 'identity/group':
+            case 'identity/entity':
+              data = data.key_info;
+              Object.keys(data).forEach(id => {
+                if (this.selectedOptions.includes(id)) {
+                  this.selectedOptions.removeObject(id);
+                  this.selectedOptions.addObject({ key: id, name: data[id].name });
+                } else {
+                  options.addObject({ key: id, name: data[id].name });
+                }
+              });
+              break;
+            default:
+              options = data.keys;
+              break;
+          }
+          options.removeObjects(this.selectedOptions);
+          if (this.options) {
+            options = this.options.concat(options);
+          }
+          this.set('options', options);
+        })
+        .catch(err => {
+          if (err.httpStatus === 403) {
+            this.set('shouldUseFallback', true);
+          }
+        });
+    }
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
