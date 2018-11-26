@@ -70,7 +70,7 @@ export default Component.extend({
       });
   }).on('didInsertElement'),
   handleChange() {
-    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject == 'object') {
+    if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.onChange(Array.from(this.selectedOptions, option => option.key));
     } else {
       this.onChange(this.selectedOptions);
