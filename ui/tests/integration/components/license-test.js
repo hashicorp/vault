@@ -1,4 +1,4 @@
-import moment from 'moment';
+import { addMinutes } from 'date-fns';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -26,9 +26,10 @@ module('Integration | Component | license info', function(hooks) {
   const LICENSE_WARNING_TEXT = `Warning Your temporary license expires in 30 minutes and your vault will seal. Please enter a valid license below.`;
 
   test('it renders properly for temporary license', async function(assert) {
+    const now = Date.now();
     this.set('licenseId', 'temporary');
-    this.set('expirationTime', moment(moment.now()).add(30, 'minutes'));
-    this.set('startTime', moment.now());
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
     this.set('features', ['HSM', 'Namespaces']);
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
@@ -52,9 +53,10 @@ module('Integration | Component | license info', function(hooks) {
   });
 
   test('it renders feature status properly for features associated with license', async function(assert) {
+    const now = Date.now();
     this.set('licenseId', 'temporary');
-    this.set('expirationTime', moment(moment.now()).add(30, 'minutes'));
-    this.set('startTime', moment.now());
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
     this.set('features', ['HSM', 'Namespaces']);
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
@@ -65,9 +67,10 @@ module('Integration | Component | license info', function(hooks) {
   });
 
   test('it renders properly for non-temporary license', async function(assert) {
+    const now = Date.now();
     this.set('licenseId', 'test');
-    this.set('expirationTime', moment(moment.now()).add(30, 'minutes'));
-    this.set('startTime', moment.now());
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
     this.set('features', ['HSM', 'Namespaces']);
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
@@ -79,9 +82,10 @@ module('Integration | Component | license info', function(hooks) {
   });
 
   test('it shows and hides license form when enter and cancel buttons are clicked', async function(assert) {
+    const now = Date.now();
     this.set('licenseId', 'test');
-    this.set('expirationTime', moment(moment.now()).add(30, 'minutes'));
-    this.set('startTime', moment.now());
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
     this.set('features', ['HSM', 'Namespaces']);
     await render(
       hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}}/>`
@@ -97,9 +101,10 @@ module('Integration | Component | license info', function(hooks) {
   });
 
   test('it calls saveModel when save button is clicked', async function(assert) {
+    const now = Date.now();
     this.set('licenseId', 'temporary');
-    this.set('expirationTime', moment(moment.now()).add(30, 'minutes'));
-    this.set('startTime', moment.now());
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
     this.set('features', ['HSM', 'Namespaces']);
     this.set('saveModel', sinon.spy());
     await render(
