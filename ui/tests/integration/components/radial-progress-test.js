@@ -10,14 +10,6 @@ const component = create(radialProgress);
 module('Integration | Component | radial progress', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders', async function(assert) {
     let circumference = (19 / 2) * Math.PI * 2;
     await render(hbs`{{radial-progress progressDecimal=0.5}}`);

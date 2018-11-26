@@ -9,14 +9,6 @@ const component = create(copyButton);
 module('Integration | Component | hover copy button', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   // ember-cli-clipboard helpers don't like the new style
   skip('it shows success message in tooltip', async function(assert) {
     this.set('copyValue', 'foo');

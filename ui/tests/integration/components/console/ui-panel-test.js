@@ -10,14 +10,6 @@ const component = create(uiPanel);
 module('Integration | Component | console/ui panel', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders', async function(assert) {
     await render(hbs`{{console/ui-panel}}`);
     assert.ok(component.hasInput);

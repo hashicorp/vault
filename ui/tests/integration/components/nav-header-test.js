@@ -10,14 +10,6 @@ const component = create(navHeader);
 module('Integration | Component | nav header', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   test('it renders', async function(assert) {
     await render(hbs`
         {{#nav-header as |h|}}

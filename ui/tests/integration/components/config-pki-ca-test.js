@@ -29,7 +29,6 @@ module('Integration | Component | config pki ca', function(hooks) {
 
   hooks.beforeEach(function() {
     this.server = apiStub();
-    component.setContext(this);
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.owner.register('service:store', storeStub);
     this.storeService = this.owner.lookup('service:store');
@@ -37,7 +36,6 @@ module('Integration | Component | config pki ca', function(hooks) {
 
   hooks.afterEach(function() {
     this.server.shutdown();
-    component.removeContext();
   });
 
   const config = function(pem) {

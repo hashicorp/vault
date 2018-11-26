@@ -41,12 +41,7 @@ module('Integration | Component | control group success', function(hooks) {
       this.owner.register('service:router', routerService);
       this.owner.register('service:store', storeService);
       this.router = this.owner.lookup('service:router');
-      component.setContext(this);
     });
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   const MODEL = {
