@@ -1,5 +1,5 @@
 .status-indicator-button {
-  &[data-status="good"] {
+  &[data-status='good'] {
     .status-indicator-icon-dot {
       fill: $green-light;
     }
@@ -9,7 +9,7 @@
     }
   }
 
-  &[data-status="mixed"] {
+  &[data-status='mixed'] {
     .status-indicator-icon-dot {
       fill: $yellow;
     }
@@ -19,7 +19,7 @@
     }
   }
 
-  &[data-status="bad"] {
+  &[data-status='bad'] {
     .status-indicator-icon-dot {
       fill: $red;
     }

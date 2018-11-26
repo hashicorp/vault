@@ -9,7 +9,7 @@
           queryParams=(query-params tab='')
           data-test-transit-link="details"
           }}
-            Details
+          Details
         {{/secret-link}}
       </li>
 
@@ -21,7 +21,7 @@
           queryParams=(query-params tab='versions')
           data-test-transit-link="versions"
           }}
-            Versions
+          Versions
         {{/secret-link}}
       </li>
     </ul>
@@ -52,16 +52,16 @@
           <div class="td is-borderless">
             {{version}}
             {{#if (coerce-eq key.minDecryptionVersion version)}}
-            <p class="help has-text-grey">(current minimum decryption version)</p>
+              <p class="help has-text-grey">(current minimum decryption version)</p>
             {{/if}}
           </div>
         </div>
         <div class="column is-half td">
           <div class="td is-borderless">
-            {{moment-format (unix creationTimestamp) 'MMM DD, YYYY hh:mm:ss A'}}
-            <br/>
+            {{date-format creationTimestamp 'MMM DD, YYYY hh:mm:ss A'}}
+            <br />
             <small class="is-font-mono has-text-grey">
-              {{moment-format (unix creationTimestamp) }}
+              {{date-format creationTimestamp }}
             </small>
           </div>
         </div>
@@ -95,7 +95,8 @@
       </div>
     </div>
     {{#each-in key.keys as |version meta|}}
-      <div class="columns is-gapless is-marginless table {{if (get this (concat version '-open')) 'has-background-grey-lighter' }}" data-test-transit-key-version-row={{version}}>
+      <div class="columns is-gapless is-marginless table {{if (get this (concat version '-open')) 'has-background-grey-lighter' }}"
+        data-test-transit-key-version-row={{version}}>
         <div class="column {{if (get this (concat version '-open')) '' 'td' }}">
           <div class="columns is-marginless is-gapless">
             <div class="column is-11">
@@ -116,10 +117,10 @@
                 <div class="column is-one-third">
                   <div class="td is-borderless">
                     <div>
-                      {{moment-format meta.creation_time 'MMM DD, YYYY hh:mm:ss A'}}
-                      <br/>
+                      {{date-format meta.creation_time 'MMM DD, YYYY hh:mm:ss A'}}
+                      <br />
                       <small class="is-font-mono has-text-grey">
-                        {{moment-format meta.creation_time}}
+                        {{date-format meta.creation_time}}
                       </small>
                     </div>
                   </div>
@@ -136,26 +137,26 @@
       </div>
       {{#if (get this (concat version '-open'))}}
         <div class="table has-background-grey-lighter is-paddingless is-marginless">
-        <div class="td">
-          <div>
-            <span class="is-label">
-              Public Key
-            </span>
-            <pre class="has-background-transparent"><code class="is-paddingless">{{meta.public_key}}</code></pre>
-            <div class="box is-fullwidth has-background-transparent is-shadowless">
-              <div class="control">
-                {{#copy-button
+          <div class="td">
+            <div>
+              <span class="is-label">
+                Public Key
+              </span>
+              <pre class="has-background-transparent"><code class="is-paddingless">{{meta.public_key}}</code></pre>
+              <div class="box is-fullwidth has-background-transparent is-shadowless">
+                <div class="control">
+                  {{#copy-button
                   clipboardText=meta.public_key
                   class="button"
                   buttonType="button"
                   success=(action (set-flash-message (concat 'Public key for version ' version ' copied!')))
                   }}
-                  Copy
-                {{/copy-button}}
+                    Copy
+                  {{/copy-button}}
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       {{/if}}
     {{/each-in}}
