@@ -7,7 +7,7 @@
           {{i-con glyph="hashicorp" size=18 aria-label="HashiCorp logo" }}
         </span>
         <span class="is-inline-block">
-          &copy; {{moment-format (now) "Y"}} HashiCorp, Inc.
+          &copy; {{date-format (now) "YYYY"}} HashiCorp, Inc.
         </span>
         <span>
           Vault {{activeCluster.leaderNode.version}}
