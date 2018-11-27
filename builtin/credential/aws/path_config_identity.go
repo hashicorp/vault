@@ -78,7 +78,7 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *fra
 }
 
 func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	configEntry, err := identityConfigEntry(ctx, req.Storage)
+	config, err := identityConfigEntry(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 		if !strutil.StrListContains(allowedIAMAliasValues, iamAlias) {
 			return logical.ErrorResponse(fmt.Sprintf("iam_alias of %q not in set of allowed values: %v", iamAlias, allowedIAMAliasValues)), nil
 		}
-		configEntry.IAMAlias = iamAlias
+		config.IAMAlias = iamAlias
 	}
 
 	ec2AliasRaw, ok := data.GetOk("ec2_alias")
@@ -100,10 +100,10 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 		if !strutil.StrListContains(allowedEC2AliasValues, ec2Alias) {
 			return logical.ErrorResponse(fmt.Sprintf("ec2_alias of %q not in set of allowed values: %v", ec2Alias, allowedEC2AliasValues)), nil
 		}
-		configEntry.EC2Alias = ec2Alias
+		config.EC2Alias = ec2Alias
 	}
 
-	entry, err := logical.StorageEntryJSON("config/identity", configEntry)
+	entry, err := logical.StorageEntryJSON("config/identity", config)
 	if err != nil {
 		return nil, err
 	}
