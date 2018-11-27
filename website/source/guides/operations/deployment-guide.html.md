@@ -6,7 +6,7 @@ description: |-
   This deployment guide covers the steps required to install and
   configure a single HashiCorp Vault cluster as defined in the
   Vault Reference Architecture
-product_version: 0.11
+product_version: 1.0
 ---
 
 # Vault Deployment Guide
@@ -263,6 +263,17 @@ The following parameters are set for the `consul` storage stanza:
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
 If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
+
+### High Availability Parameters
+
+New in Vault 1.0 there are additional configuration parameters for HA. Add the below configuration to the Vault configuration file:
+
+```hcl
+api_addr = {{full URL to Vault API endpoint}}
+}
+```
+
+This specifies the address (full URL) to advertise to other Vault servers in the cluster for client redirection. In general this should be set as a full URL that points to the value of the listener address. See [High Availability Configuration Parameters section](/docs/configuration/#high-availability-parameters) of our documentation.
 
 ### Vault UI
 
