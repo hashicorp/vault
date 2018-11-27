@@ -12,6 +12,11 @@
   border: 0;
   border-radius: $radius;
   padding-right: 0;
+
+  &--active {
+    outline-width: 3px;
+    outline-offset: -2px;
+  }
 }
 
 .ember-power-select-trigger:focus,
