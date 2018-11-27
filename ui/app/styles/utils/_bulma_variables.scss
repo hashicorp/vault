@@ -11,7 +11,7 @@ $black-bis: $ui-gray-900;
 $black-ter: $ui-gray-700;
 $grey-darker: $ui-gray-900;
 $grey-lighter: $ui-gray-050;
-$white-ter: rgba($white, .5);
+$white-ter: rgba($white, 0.5);
 $white-bis: $ui-gray-050;
 $code: $grey-dark;
 $code-background: transparent;
@@ -23,11 +23,9 @@ $mobile: 769px;
 $header-height: 4rem;
 
 //typography
-$family-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-  "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-  sans-serif;
-$family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
- monospace;
+$family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu',
+  'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+$family-monospace: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 $family-primary: $family-sans;
 $body-size: 14px;
 $size-3: (24/14) + 0rem;
@@ -53,14 +51,10 @@ $radius-large: 4px;
 //box
 $box-radius: 0;
 $box-shadow: 0 0 0 1px rgba($black, 0.1);
-$box-shadow-low: 0 5px 1px -2px rgba($black, 0.12),
-  0 3px 2px -1px rgba($black, 0);
-$box-shadow-middle: 0 8px 4px -4px rgba($black, 0.10),
-  0 6px 8px -2px rgba($black, 0.05);
-$box-shadow-high: 0 12px 5px -7px rgba($black, 0.08),
-  0 11px 10px -3px rgba($black, 0.10);
-$box-shadow-highest: 0 16px 6px -10px rgba($black, 0.06),
-  0 16px 16px -4px rgba($black, 0.20);
+$box-shadow-low: 0 5px 1px -2px rgba($black, 0.12), 0 3px 2px -1px rgba($black, 0);
+$box-shadow-middle: 0 8px 4px -4px rgba($black, 0.1), 0 6px 8px -2px rgba($black, 0.05);
+$box-shadow-high: 0 12px 5px -7px rgba($black, 0.08), 0 11px 10px -3px rgba($black, 0.1);
+$box-shadow-highest: 0 16px 6px -10px rgba($black, 0.06), 0 16px 16px -4px rgba($black, 0.2);
 
 $breadcrumb-item-color: $blue;
 $breadcrumb-item-separator-color: rgba($blue, 0.5);
