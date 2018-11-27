@@ -34,12 +34,12 @@
 
   &::after {
     background: $white;
-    bottom: 0;
+    bottom: $spacing-xxs;
     content: '';
     left: $spacing-xxs + $spacing-l;
     position: absolute;
-    right: 0;
-    top: 0;
+    right: $spacing-xxs;
+    top: $spacing-xxs;
     z-index: -1;
   }
 }
@@ -108,4 +108,12 @@
 .search-select-list-key {
   color: $grey;
   font-size: $size-8;
+}
+
+.ember-power-select-dropdown.ember-basic-dropdown-content {
+  animation: none;
+
+  .ember-power-select-options {
+    animation: drop-fade-above 0.15s;
+  }
 }
