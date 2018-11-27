@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -39,7 +38,7 @@ func pathConfigIdentity(b *backend) *framework.Path {
 func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfig, error) {
 	entryRaw, err := s.Get(ctx, "config/identity")
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to retrieve identity config: {{err}}", err)
+		return nil, err
 	}
 
 	var entry identityConfig
@@ -49,8 +48,9 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 		return &entry, nil
 	}
 
-	if err = entryRaw.DecodeJSON(&entry); err != nil {
-		return nil, errwrap.Wrapf("failed to parse stored identity config: {{err}}", err)
+	err = entryRaw.DecodeJSON(&entry)
+	if err != nil {
+		return nil, err
 	}
 
 	switch {
@@ -78,7 +78,10 @@ func pathConfigIdentityRead(ctx context.Context, req *logical.Request, data *fra
 }
 
 func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var configEntry identityConfig
+	configEntry, err := identityConfigEntry(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
 
 	iamAliasRaw, ok := data.GetOk("iam_alias")
 	if ok {

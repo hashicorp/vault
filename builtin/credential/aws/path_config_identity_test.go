@@ -100,10 +100,37 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["iam_alias"] != identityAliasIAMFullArn {
-		t.Fatalf("bad: expected response with iam_alias value of %q; got %#v", identityAliasIAMFullArn, resp)
+		t.Fatalf("bad: expected response with iam_alias value of %q; got %#v", identityAliasIAMFullArn, resp.Data["iam_alias"])
 	}
 	if resp.Data["ec2_alias"] != identityAliasEC2ImageID {
-		t.Fatalf("bad: expected response with ec2_alias value of %q; got %#v", identityAliasEC2ImageID, resp)
+		t.Fatalf("bad: expected response with ec2_alias value of %q; got %#v", identityAliasEC2ImageID, resp.Data["ec2_alias"])
+	}
+
+	// Modify one field and ensure that the other one is unchanged
+	data["ec2_alias"] = identityAliasEC2InstanceID
+	delete(data, "iam_alias")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Data:      data,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Data["iam_alias"] != identityAliasIAMFullArn {
+		t.Fatalf("bad: expected response with iam_alias value of %q; got %#v", identityAliasIAMFullArn, resp.Data["iam_alias"])
+	}
+	if resp.Data["ec2_alias"] != identityAliasEC2InstanceID {
+		t.Fatalf("bad: expected response with ec2_alias value of %q; got %#v", identityAliasEC2ImageID, resp.Data["ec2_alias"])
 	}
 
 	// Update both iam_alias and ec2_alias
@@ -129,9 +156,9 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
 	if resp.Data["iam_alias"] != identityAliasIAMUniqueID {
-		t.Fatalf("bad: expected response with iam_alias value of %q; got %#v", identityAliasIAMFullArn, resp)
+		t.Fatalf("bad: expected response with iam_alias value of %q; got %#v", identityAliasIAMFullArn, resp.Data["iam_alias"])
 	}
 	if resp.Data["ec2_alias"] != identityAliasEC2InstanceID {
-		t.Fatalf("bad: expected response with ec2_alias value of %q; got %#v", identityAliasEC2ImageID, resp)
+		t.Fatalf("bad: expected response with ec2_alias value of %q; got %#v", identityAliasEC2ImageID, resp.Data["ec2_alias"])
 	}
 }
