@@ -871,10 +871,7 @@ request is denied.
   added to the CRL by `vault revoke <lease_id>` when certificates are associated
   with leases.  It can also be done using the `pki/revoke` endpoint. However,
   when lease generation is disabled, invoking `pki/revoke` would be the only way
-  to add the certificates to the CRL. When large number of certificates are
-  generated with long lifetimes, it is recommended that lease generation be
-  disabled, as large amount of leases adversely affect the startup time of
-  Vault.
+  to add the certificates to the CRL.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
   role will not be stored in the storage backend. This can improve performance
