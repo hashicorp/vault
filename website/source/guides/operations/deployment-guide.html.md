@@ -266,7 +266,7 @@ If you decide to configure Vault to publish telemtery data, you should review th
 
 ### High Availability Parameters
 
-New in Vault 1.0 there are additional configuration parameters for HA. Add the below configuration to the Vault configuration file:
+As this cluster has multiple Vault servers, add the below configuration to the Vault configuration file:
 
 ```hcl
 api_addr = {{full URL to Vault API endpoint}}
