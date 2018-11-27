@@ -9,6 +9,7 @@ export default Component.extend({
   auth: service(),
   store: service(),
   media: service(),
+  version: service(),
   type: 'cluster',
   itemTag: null,
   partialName: computed('type', function() {
