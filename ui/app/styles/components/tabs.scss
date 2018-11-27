@@ -10,16 +10,19 @@
     &:focus {
       box-shadow: none;
     }
-    &.is-active a, &.is-active .tab {
+    &.is-active a,
+    &.is-active .tab {
       border-color: $blue;
       color: $blue;
     }
-    &:first-child a, &:first-child .tab {
+    &:first-child a,
+    &:first-child .tab {
       margin-left: $size-5;
     }
   }
 
-  a, .tab {
+  a,
+  .tab {
     color: $grey-dark;
     font-weight: $font-weight-semibold;
     text-decoration: none;
