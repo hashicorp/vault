@@ -29,7 +29,7 @@ type kubernetesMethod struct {
 	// the pod, for use instead of the default service account token.
 	tokenPath string
 
-	// jwtData is a ReaderCloser used to inject a ReadCloser for mocking tests.
+	// jwtData is a ReadCloser used to inject a ReadCloser for mocking tests.
 	jwtData io.ReadCloser
 }
 
