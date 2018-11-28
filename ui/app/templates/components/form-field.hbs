@@ -89,6 +89,14 @@
     value=(get model valuePath)
     onChange=(action "setAndBroadcast" valuePath)
   }}
+{{else if (eq attr.options.editType "kv")}}
+  {{kv-object-editor
+    value=(get model valuePath)
+    onChange=(action "setAndBroadcast" valuePath)
+    label=labelString
+    warning=attr.options.warning
+    helpText=attr.options.helpText
+  }}
 {{else if (eq attr.options.editType "file")}}
   {{text-file
     index=""
