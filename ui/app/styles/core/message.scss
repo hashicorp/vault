@@ -110,4 +110,12 @@
   .p {
     margin: 0;
   }
+
+  &.has-top {
+    margin-top: 1rem;
+  }
+}
+
+.has-text-highlight {
+  color: $yellow-500;
 }
