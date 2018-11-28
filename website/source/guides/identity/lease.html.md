@@ -96,9 +96,7 @@ This also allows for organizations to plan and train for various
 
 To perform the tasks described in this guide, you need to have a Vault
 environment.  Refer to the [Getting
-Started](/intro/getting-started/install.html) guide to install Vault. Make sure
-that your Vault server has been [initialized and
-unsealed](/intro/getting-started/deploy.html).
+Started](https://learn.hashicorp.com/vault/getting-started/install) guide to install Vault. Make sure that your Vault server has been [initialized and unsealed](https://learn.hashicorp.com/vault/getting-started/deploy).
 
 
 ### Policy requirements
@@ -642,7 +640,7 @@ are talking about long-running apps that need to be able to renew their token
 indefinitely.
 
 -> For more details about AppRole, read the [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide.
+Authentication](/guides/identity/authentication) guide.
 
 To create AppRole periodic tokens, create your AppRole role with
 `period` specified.
@@ -844,5 +842,5 @@ renewable          	true
 ## Next steps
 
 Now that you have learned the lifecycle of tokens and leases, read the [AppRole Pull
-Authentication](/guides/identity/authentication.html) guide to learn how to generate
+Authentication](/guides/identity/authentication) guide to learn how to generate
 tokens for apps or machines.
