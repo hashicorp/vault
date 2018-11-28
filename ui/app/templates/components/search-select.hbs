@@ -22,25 +22,25 @@
     renderInPlace=true
     verticalPosition="below" as |option|
   }}
-    {{#if option.name}}
+    {{#if shouldRenderName}}
       {{option.name}}
       <small class="search-select-list-key">
-        {{option.key}}
+        {{option.id}}
       </small>
     {{else}}
-      {{option}}
+      {{option.id}}
     {{/if}}
   {{/power-select}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
       <li class="search-select-list-item">
-        {{#if selected.name}}
+        {{#if shouldRenderName}}
           {{selected.name}}
           <small class="search-select-list-key">
-            {{selected.key}}
+            {{selected.id}}
           </small>
         {{else}}
-          {{selected}}
+          {{selected.id}}
         {{/if}}
         <div class="control">
           <button

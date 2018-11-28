@@ -7,13 +7,13 @@ export default Component.extend({
   'data-test-component': 'search-select',
   classNames: ['field', 'search-select'],
   store: service(),
+
   /*
    * @public
    * @param Function
    *
    * Function called when any of the inputs change
-   * accepts a single param `value` that is the
-   * result of calling `toVal()`.
+   * accepts a single param `value`
    *
    */
   onChange: () => {},
@@ -28,55 +28,45 @@ export default Component.extend({
   inputValue: computed(function() {
     return [];
   }),
-  selectedOption: null,
-  selectedOptions: null,
-  options: null,
+  selectedOptions: null, //list of selected options
+  options: null, //all possible options
   shouldUseFallback: false,
+  shouldRenderName: false,
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
   },
   fetchOptions: task(function*() {
     for (let modelType of this.models) {
-      yield this.store
-        .adapterFor(modelType)
-        .query(null, { modelName: modelType })
-        .then(resp => {
-          let options = [];
-          let data = resp.data;
-          switch (modelType) {
-            case 'identity/group':
-            case 'identity/entity':
-              data = data.key_info;
-              Object.keys(data).forEach(id => {
-                if (this.selectedOptions.includes(id)) {
-                  this.selectedOptions.removeObject(id);
-                  this.selectedOptions.addObject({ key: id, name: data[id].name });
-                } else {
-                  options.addObject({ key: id, name: data[id].name });
-                }
-              });
-              break;
-            default:
-              options = data.keys;
-              break;
-          }
-          options.removeObjects(this.selectedOptions);
-          if (this.options) {
-            options = this.options.concat(options);
-          }
-          this.set('options', options);
-        })
-        .catch(err => {
-          if (err.httpStatus === 403) {
-            this.set('shouldUseFallback', true);
-          }
+      if (modelType.includes('identity')) {
+        this.set('shouldRenderName', true);
+      }
+      try {
+        let options = yield this.store.query(modelType, {});
+        options = options.toArray();
+        let formattedOptions = this.selectedOptions.map(option => {
+          let matchingOption = options.findBy('id', option);
+          options.removeObject(matchingOption);
+          return { id: option, name: matchingOption.name };
         });
+        this.set('selectedOptions', formattedOptions);
+        if (this.options) {
+          options = this.options.concat(options);
+        }
+        this.set('options', options);
+      } catch (err) {
+        if (err.httpStatus === 404) {
+          //leave options alone, it's okay
+        }
+        if (err.httpStatus === 403) {
+          this.set('shouldUseFallback', true);
+        }
+      }
     }
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, option => option.key));
+      this.onChange(Array.from(this.selectedOptions, option => option.id));
     } else {
       this.onChange(this.selectedOptions);
     }
