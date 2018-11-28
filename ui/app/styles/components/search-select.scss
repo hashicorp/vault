@@ -12,6 +12,11 @@
   border: 0;
   border-radius: $radius;
   padding-right: 0;
+
+  &--active {
+    outline-width: 3px;
+    outline-offset: -2px;
+  }
 }
 
 .ember-power-select-trigger:focus,
@@ -24,15 +29,31 @@
 }
 
 .ember-power-select-search {
+  left: 0;
+  padding: 0;
   position: absolute;
-  left: $spacing-l;
   top: 0;
   right: 0;
   transform: translateY(-100%);
+  z-index: -1;
+
+  &::after {
+    background: $white;
+    bottom: $spacing-xxs;
+    content: '';
+    left: $spacing-xxs + $spacing-l;
+    position: absolute;
+    right: $spacing-xxs;
+    top: $spacing-xxs;
+    z-index: -1;
+  }
 }
 
 .ember-power-select-search-input {
+  background: transparent;
   border: 0;
+  padding: $spacing-xxs $spacing-s;
+  padding-left: $spacing-xxs + $spacing-l;
 }
 
 .ember-power-select-options {
@@ -92,4 +113,12 @@
 .search-select-list-key {
   color: $grey;
   font-size: $size-8;
+}
+
+.ember-power-select-dropdown.ember-basic-dropdown-content {
+  animation: none;
+
+  .ember-power-select-options {
+    animation: drop-fade-above 0.15s;
+  }
 }
