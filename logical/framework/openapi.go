@@ -119,6 +119,7 @@ func NewOASOperation() *OASOperation {
 type OASOperation struct {
 	Summary     string               `json:"summary,omitempty"`
 	Description string               `json:"description,omitempty"`
+	OperationID string               `json:"operationId,omitempty"`
 	Tags        []string             `json:"tags,omitempty"`
 	Parameters  []OASParameter       `json:"parameters,omitempty"`
 	RequestBody *OASRequestBody      `json:"requestBody,omitempty"`
@@ -610,4 +611,57 @@ func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
 	}
 
 	return &r, nil
+}
+
+// CreateOperationIDs generates unique operationIds for all paths/methods.
+// The transform will convert path/method into camelcase. e.g.:
+//
+// /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
+//
+// In the unlikely case of a duplicate ids, a numeric suffix is added:
+//   postSysToolsRandomUrlbytes_2
+//
+// An optional user-provided suffix ("context") may also be appended.
+func (d *OASDocument) CreateOperationIDs(context string) {
+	nonWordRe := regexp.MustCompile(`[^\w]+`)
+	operationIDs := make(map[string]int)
+
+	for path, pi := range d.Paths {
+		for _, method := range []string{"get", "post", "delete"} {
+			var oasOperation *OASOperation
+			switch method {
+			case "get":
+				oasOperation = pi.Get
+			case "post":
+				oasOperation = pi.Post
+			case "delete":
+				oasOperation = pi.Delete
+			}
+
+			if oasOperation == nil {
+				continue
+			}
+
+			// Space-split on non-words, title case everything, recombine
+			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
+			opID = strings.Title(opID)
+			opID = method + strings.Replace(opID, " ", "", -1)
+
+			// deduplicate operationIds. This is a safeguard, since generated IDs should
+			// already be unique given our current path naming conventions.
+			n := operationIDs[opID]
+			if n > 0 {
+				operationIDs[opID] += 1
+				opID = fmt.Sprintf("%s_%d", opID, n)
+			} else {
+				operationIDs[opID] = 2
+			}
+
+			if context != "" {
+				opID += "_" + context
+			}
+
+			oasOperation.OperationID = opID
+		}
+	}
 }
