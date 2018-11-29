@@ -898,8 +898,8 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	return &roleTagLoginResponse{
-		Policies:                 rTag.Policies,
-		MaxTTL:                   rTag.MaxTTL,
+		Policies: rTag.Policies,
+		MaxTTL:   rTag.MaxTTL,
 		DisallowReauthentication: rTag.DisallowReauthentication,
 	}, nil
 }
@@ -1338,6 +1338,17 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			},
 			Alias: &logical.Alias{
 				Name: identityAlias,
+				Metadata: map[string]string{
+					"client_arn":           callerID.Arn,
+					"canonical_arn":        entity.canonicalArn(),
+					"client_user_id":       callerUniqueId,
+					"client_session_id":    callerSessionId,
+					"auth_type":            iamAuthType,
+					"inferred_entity_type": inferredEntityType,
+					"inferred_entity_id":   inferredEntityID,
+					"inferred_aws_region":  roleEntry.InferredAWSRegion,
+					"account_id":           entity.AccountNumber,
+				},
 			},
 		},
 	}
