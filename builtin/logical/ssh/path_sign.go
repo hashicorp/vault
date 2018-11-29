@@ -285,11 +285,21 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 		keyIDFormat = role.KeyIDFormat
 	}
 
-	keyID := substQuery(keyIDFormat, map[string]string{
+	substMap := map[string]string{
 		"token_display_name": req.DisplayName,
 		"role_name":          data.Get("role").(string),
 		"public_key_hash":    fmt.Sprintf("%x", sha256.Sum256(pubKey.Marshal())),
-	})
+	}
+
+	entity, _ := b.System().EntityInfo(req.EntityID)
+
+	if entity != nil && len(entity.Aliases) > 0 && entity.Aliases[0].GetMetadata() != nil {
+		for key, value := range entity.Aliases[0].GetMetadata() {
+			substMap[fmt.Sprintf("alias_meta_%s", key)] = value
+		}
+	}
+
+	keyID := substQuery(keyIDFormat, substMap)
 
 	return keyID, nil
 }

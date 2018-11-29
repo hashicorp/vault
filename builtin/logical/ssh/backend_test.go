@@ -692,7 +692,25 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 }
 
 func TestBackend_CustomKeyIDFormat(t *testing.T) {
-	config := logical.TestBackendConfig()
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 2
+	config := &logical.BackendConfig{
+		Logger:      nil,
+		StorageView: &logical.InmemStorage{},
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+			EntityVal: &logical.Entity{
+				Aliases: []*logical.Alias{
+					&logical.Alias{
+						Metadata: map[string]string{
+							"test_meta_key": "test_meta_value",
+						},
+					},
+				},
+			},
+		},
+	}
 
 	b, err := Factory(context.Background(), config)
 	if err != nil {
@@ -706,7 +724,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 
 			createRoleStep("customrole", map[string]interface{}{
 				"key_type":                 "ca",
-				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}",
+				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}-{{alias_meta_test_meta_key}}",
 				"allowed_users":            "tuber",
 				"default_user":             "tuber",
 				"allow_user_certificates":  true,
@@ -720,7 +738,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 				},
 			}),
 
-			signCertificateStep("customrole", "customrole-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.UserCert, []string{"tuber"}, map[string]string{
+			signCertificateStep("customrole", "customrole-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51-test_meta_value", ssh.UserCert, []string{"tuber"}, map[string]string{
 				"secondary": "value",
 			}, map[string]string{
 				"additional": "value",
