@@ -16,7 +16,6 @@
   </label>
   {{#power-select
     options=options
-    selected=selectedOption
     onchange=(action "selectOption")
     placeholderComponent="search-select-placeholder"
     renderInPlace=true
@@ -34,7 +33,7 @@
   {{/power-select}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
-      <li class="search-select-list-item" data-test-selected-item="true">
+      <li class="search-select-list-item" data-test-selected-option="true">
         {{#if shouldRenderName}}
           {{selected.name}}
           <small class="search-select-list-key">

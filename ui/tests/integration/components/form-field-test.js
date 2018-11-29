@@ -125,6 +125,11 @@ module('Integration | Component | form field', function(hooks) {
     assert.deepEqual(spy.args[0], ['foo', ['array']], 'onChange called with correct args');
   });
 
+  test('it renders: editType searchSelect', async function(assert) {
+    await setup.call(this, createAttr('foo', 'string', { editType: 'searchSelect', models: ['policy/acl'] }));
+    assert.ok(component.hasSearchSelect, 'renders the search-select component');
+  });
+
   test('it uses a passed label', async function(assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
     assert.equal(component.fields[0].labelText, 'Not Foo', 'renders the label from options');

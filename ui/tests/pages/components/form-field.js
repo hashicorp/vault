@@ -12,6 +12,7 @@ import {
 
 export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
+  hasSearchSelect: isPresent('[data-test-component=search-select]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
   hasTTLPicker: isPresent('[data-test-component=ttl-picker]'),
   hasJSONEditor: isPresent('[data-test-component=json-editor]'),
