@@ -43,11 +43,14 @@ export default Component.extend({
       }
       try {
         let options = yield this.store.query(modelType, {});
-        options = options.toArray();
+        options = options.toArray().map(option => {
+          option.searchText = `${option.name} ${option.id}`;
+          return option;
+        });
         let formattedOptions = this.selectedOptions.map(option => {
           let matchingOption = options.findBy('id', option);
           options.removeObject(matchingOption);
-          return { id: option, name: matchingOption.name };
+          return { id: option, name: matchingOption.name, searchText: matchingOption.searchText };
         });
         this.set('selectedOptions', formattedOptions);
         if (this.options) {

@@ -8,7 +8,7 @@
     helpText=helpText
   }}
 {{else}}
-  <label for="{{name}}" class="title is-4">
+  <label for="{{name}}" class="title is-4" data-test-field-label>
     {{label}}
     {{#if helpText}}
       {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
@@ -20,6 +20,7 @@
     onchange=(action "selectOption")
     placeholderComponent="search-select-placeholder"
     renderInPlace=true
+    searchField="searchText"
     verticalPosition="below" as |option|
   }}
     {{#if shouldRenderName}}
@@ -33,7 +34,7 @@
   {{/power-select}}
   <ul class="search-select-list">
     {{#each selectedOptions as |selected|}}
-      <li class="search-select-list-item">
+      <li class="search-select-list-item" data-test-selected-item="true">
         {{#if shouldRenderName}}
           {{selected.name}}
           <small class="search-select-list-key">
@@ -46,7 +47,7 @@
           <button
             type="button"
             class="button is-ghost"
-            data-test-string-list-button="delete"
+            data-test-selected-list-button="delete"
             {{action "discardSelection" selected}}
           >
             {{i-con size=16 glyph="trash-a" excludeIconClass=true}}
