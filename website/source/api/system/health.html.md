@@ -39,9 +39,9 @@ The default status codes are:
   response. This will not apply if the node is a performance standby.
   
 - `perfstandbyok` `(bool: false)` – Specifies if being a performance standby should
-  still return the active status code instead of the standby status code. This is
-  useful when Vault is behind a non-configurable load balance that just wants a
-  200-level response.
+  still return the active status code instead of the performance standby status code.
+  This is useful when Vault is behind a non-configurable load balance that just wants
+  a 200-level response.
 
 - `activecode` `(int: 200)` – Specifies the status code that should be returned
   for an active node.
