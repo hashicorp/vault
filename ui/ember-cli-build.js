@@ -22,7 +22,7 @@ module.exports = function(defaults) {
     hinting: isTest,
     tests: isTest,
     sourcemaps: {
-      enabled: false,
+      enabled: !isProd,
     },
     sassOptions: {
       sourceMap: false,
