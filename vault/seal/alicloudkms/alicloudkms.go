@@ -60,7 +60,7 @@ func (k *AliCloudKMSSeal) SetConfig(config map[string]string) (map[string]string
 	case config["kms_key_id"] != "":
 		k.keyID = config["kms_key_id"]
 	default:
-		return nil, fmt.Errorf("'kms_key_id' not found for AliCloud KMS sealconfiguration")
+		return nil, fmt.Errorf("'kms_key_id' not found for AliCloud KMS seal configuration")
 	}
 
 	region := ""
