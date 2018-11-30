@@ -24,7 +24,7 @@
   }}
     {{#if shouldRenderName}}
       {{option.name}}
-      <small class="search-select-list-key">
+      <small class="search-select-list-key" data-test-smaller-id="true">
         {{option.id}}
       </small>
     {{else}}
@@ -36,7 +36,7 @@
       <li class="search-select-list-item" data-test-selected-option="true">
         {{#if shouldRenderName}}
           {{selected.name}}
-          <small class="search-select-list-key">
+          <small class="search-select-list-key" data-test-smaller-id="true">
             {{selected.id}}
           </small>
         {{else}}

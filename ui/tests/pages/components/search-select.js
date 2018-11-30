@@ -11,4 +11,5 @@ export default {
   selectedOptionText: text('[aria-current=true]'),
   selectOption: clickable('[aria-current=true]'),
   hasStringList: isPresent('[data-test-string-list-input]'),
+  smallOptionIds: collection('[data-test-smaller-id]'),
 };

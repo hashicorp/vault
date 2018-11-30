@@ -128,4 +128,24 @@ module('Integration | Component | search select', function(hooks) {
     );
     assert.ok(component.hasStringList);
   });
+
+  test('it shows both name and smaller id for identity endpoints', async function(assert) {
+    const models = ['identity/entity'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await clickTrigger();
+    assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.smallOptionIds.length, 3, 'shows the smaller id text and the name');
+  });
+
+  test('it does not show name and smaller id for non-identity endpoints', async function(assert) {
+    const models = ['policy/acl'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await clickTrigger();
+    assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.smallOptionIds.length, 0, 'only shows the regular sized id');
+  });
 });
