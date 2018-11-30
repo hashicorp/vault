@@ -97,15 +97,15 @@ export default Route.extend(UnloadModelRoute, {
         })
         .catch(err => {
           //don't have access to the metadata, so we'll make
-          //a dummy metadata model and try to load the version
+          //a stub metadata model and try to load the version
           if (modelType === 'secret-v2' && err.httpStatus === 403) {
             let secretModel = this.store.createRecord('secret-v2');
             secretModel.setProperties({
               engine: backendModel,
               id: secret,
-              // so we know it's a dummy model and won't be saving it
+              // so we know it's a stub model and won't be saving it
               // because we don't have access to that endpoint
-              isDummy: true,
+              isStub: true,
             });
             let targetVersion = params.version ? parseInt(params.version, 10) : null;
             let versionId = targetVersion ? [backend, secret, targetVersion] : [backend, secret];
