@@ -129,6 +129,18 @@ module('Integration | Component | search select', function(hooks) {
     assert.ok(component.hasStringList);
   });
 
+  test('it shows no results if endpoint 404s', async function(assert) {
+    const models = ['test'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    await render(
+      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
+    );
+    await clickTrigger();
+    assert.equal(component.options.length, 1, 'has the disabled no results option');
+    assert.equal(component.options[0].text, 'No results found', 'text of option shows No results found');
+  });
+
   test('it shows both name and smaller id for identity endpoints', async function(assert) {
     const models = ['identity/entity'];
     this.set('models', models);
