@@ -60,10 +60,13 @@ export default Component.extend({
       } catch (err) {
         if (err.httpStatus === 404) {
           //leave options alone, it's okay
+          return;
         }
         if (err.httpStatus === 403) {
           this.set('shouldUseFallback', true);
+          return;
         }
+        throw err;
       }
     }
   }).on('didInsertElement'),

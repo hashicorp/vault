@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -20,16 +20,21 @@ const storeService = Service.extend({
           resolve([{ id: '1', name: '1' }, { id: '2', name: '2' }, { id: '3', name: '3' }]);
           break;
         case 'policy/rgp':
-          reject({ httpStatus: 403 });
+          reject({ httpStatus: 403, message: 'permission denied' });
           break;
         case 'identity/entity':
           resolve([{ id: '7', name: 'seven' }, { id: '8', name: 'eight' }, { id: '9', name: 'nine' }]);
           break;
+        case 'server/error':
+          var error = new Error('internal server error');
+          error.httpStatus = 500;
+          reject(error);
+          break;
         default:
-          reject({ httpStatus: 404 });
+          reject({ httpStatus: 404, message: 'not found' });
           break;
       }
-      reject({ httpStatus: 404 });
+      reject({ httpStatus: 404, message: 'not found' });
     });
   },
 });
@@ -42,11 +47,6 @@ module('Integration | Component | search select', function(hooks) {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
     });
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it renders', async function(assert) {
@@ -91,6 +91,7 @@ module('Integration | Component | search select', function(hooks) {
     await component.selectOption();
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
     assert.ok(this.onChange.calledOnce);
+    assert.ok(this.onChange.calledWith(['7']));
     await clickTrigger();
     assert.equal(component.options.length, 2, 'shows two options');
   });
@@ -106,7 +107,7 @@ module('Integration | Component | search select', function(hooks) {
     assert.equal(component.options.length, 2, 'shows two options');
   });
 
-  test('it adds discarded lsit items back into select', async function(assert) {
+  test('it adds discarded list items back into select', async function(assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
@@ -116,6 +117,7 @@ module('Integration | Component | search select', function(hooks) {
     await component.deleteButtons[0].click();
     assert.equal(component.selectedOptions.length, 0, 'there are no selected options');
     assert.ok(this.onChange.calledOnce);
+    assert.ok(this.onChange.calledWith([]));
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
   });
@@ -160,5 +162,14 @@ module('Integration | Component | search select', function(hooks) {
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
     assert.equal(component.smallOptionIds.length, 0, 'only shows the regular sized id');
+  });
+
+  skip('it throws an error if endpoint 500s', async function(assert) {
+    const models = ['server/error'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+    assert.throws(
+      await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`)
+    );
   });
 });
