@@ -21,11 +21,6 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
-let editSecret = async function(backend, path, key, val) {
-  await editPage.visitEdit({ backend, id: path });
-  return editPage.editSecret(path, key, val);
-};
-
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
@@ -45,6 +40,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
 
     await listPage.create();
+    assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
     await editPage.createSecret(path, 'foo', 'bar');
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -132,8 +128,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let userToken = consoleComponent.lastLogOutput;
     await logout.visit();
     await authPage.login(userToken);
-    await writeSecret(backend, 'secret', 'foo', 'bar');
 
+    await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -161,7 +157,10 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
 
-    await editSecret(backend, 'secret', 'baz', 'bop');
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+    await editPage.editSecret('bar', 'baz');
+
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });

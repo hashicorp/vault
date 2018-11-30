@@ -1,5 +1,5 @@
 import { Base } from '../create';
-import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
+import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-page-object';
 import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
 export default create({
   ...Base,
@@ -12,6 +12,7 @@ export default create({
   visitEdit: visitable('/vault/secrets/:backend/edit/:id'),
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   toggleJSON: clickable('[data-test-secret-json-toggle]'),
+  hasMetadataFields: isPresent('[data-test-metadata-fields]'),
   editor: {
     fillIn: codeFillable('[data-test-component="json-editor"]'),
   },
@@ -24,7 +25,7 @@ export default create({
       .secretValue(value)
       .save();
   },
-  editSecret: async function(path, key, value) {
+  editSecret: async function(key, value) {
     return this.secretKey(key)
       .secretValue(value)
       .save();
