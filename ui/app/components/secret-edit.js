@@ -109,7 +109,7 @@ export default Component.extend(FocusOnInsertMixin, {
     'model.id',
     'mode'
   ),
-  canDelete: alias('updatePath.canDelete'),
+  canDelete: alias('model.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
 
   v2UpdatePath: maybeQueryRecord(
@@ -181,19 +181,21 @@ export default Component.extend(FocusOnInsertMixin, {
   // successCallback is called in the context of the component
   persistKey(successCallback) {
     let secret = this.model;
-    let model = this.modelForData;
+    let secretData = this.modelForData;
     let isV2 = this.isV2;
-    let key = model.get('path') || model.id;
+    let key = secretData.get('path') || secretData.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
-      model.set(model.pathAttr, key);
+      secretData.set(secretData.pathAttr, key);
     }
 
-    return model.save().then(() => {
-      if (!model.isError) {
-        if (isV2 && Object.keys(secret.changedAttributes()).length) {
+    return secretData.save().then(() => {
+      if (!secretData.isError) {
+        if (isV2) {
           secret.set('id', key);
+        }
+        if (isV2 && Object.keys(secret.changedAttributes()).length) {
           // save secret metadata
           secret
             .save()
@@ -296,8 +298,8 @@ export default Component.extend(FocusOnInsertMixin, {
         return;
       }
 
-      this.persistKey(key => {
-        this.transitionToRoute(SHOW_ROUTE, key);
+      this.persistKey(() => {
+        this.transitionToRoute(SHOW_ROUTE, this.model.id);
       });
     },
 
