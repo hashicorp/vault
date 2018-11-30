@@ -18,10 +18,14 @@ export default create({
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
-
   createSecret: async function(path, key, value) {
     return this.path(path)
       .secretKey(key)
+      .secretValue(value)
+      .save();
+  },
+  editSecret: async function(path, key, value) {
+    return this.secretKey(key)
       .secretValue(value)
       .save();
   },

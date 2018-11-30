@@ -21,17 +21,22 @@ let writeSecret = async function(backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
+let editSecret = async function(backend, path, key, val) {
+  await editPage.visitEdit({ backend, id: path });
+  return editPage.editSecret(path, key, val);
+};
+
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(async function() {
     this.server = apiStub({ usePassthrough: true });
+    await logout.visit();
     return authPage.login();
   });
 
   hooks.afterEach(function() {
     this.server.shutdown();
-    return logout.visit();
   });
 
   test('it creates a secret and redirects', async function(assert) {
@@ -113,12 +118,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
         capabilities = ["list"]
       }
       path "kv-v2/data/secret" {
-        capabilities = ["create", "read", "update", "delete"]
+        capabilities = ["create", "read", "update"]
       }
     '`;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      // delete any kv previously written here so that tests can be re-run
       'delete kv-v2/metadata/secret',
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
@@ -128,6 +134,34 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await authPage.login(userToken);
     await writeSecret(backend, 'secret', 'foo', 'bar');
 
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('version 2 with restricted policy still allows edit', async function(assert) {
+    let backend = 'kv-v2';
+    const V2_POLICY = `'
+      path "kv-v2/metadata/*" {
+        capabilities = ["list"]
+      }
+      path "kv-v2/data/secret" {
+        capabilities = ["create", "read", "update"]
+      }
+    '`;
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/kv-v2-degrade policy=${V2_POLICY}`,
+      // delete any kv previously written here so that tests can be re-run
+      'delete kv-v2/metadata/secret',
+      'write -field=client_token auth/token/create policies=kv-v2-degrade',
+    ]);
+
+    let userToken = consoleComponent.lastLogOutput;
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await editSecret(backend, 'secret', 'baz', 'bop');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });

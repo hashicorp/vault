@@ -183,7 +183,7 @@ export default Component.extend(FocusOnInsertMixin, {
     let secret = this.model;
     let secretData = this.modelForData;
     let isV2 = this.isV2;
-    let key = secretData.get('path') || secretData.id;
+    let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
