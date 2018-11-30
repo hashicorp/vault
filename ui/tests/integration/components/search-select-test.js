@@ -13,7 +13,7 @@ import searchSelect from '../../pages/components/search-select';
 const component = create(searchSelect);
 
 const storeService = Service.extend({
-  query(modelType, options) {
+  query(modelType) {
     return new Promise((resolve, reject) => {
       switch (modelType) {
         case 'policy/acl':
@@ -24,6 +24,7 @@ const storeService = Service.extend({
           break;
         case 'identity/entity':
           resolve([{ id: '7', name: 'seven' }, { id: '8', name: 'eight' }, { id: '9', name: 'nine' }]);
+          break;
         default:
           reject({ httpStatus: 404 });
           break;
