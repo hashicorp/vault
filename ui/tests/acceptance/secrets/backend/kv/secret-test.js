@@ -132,6 +132,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await writeSecret(backend, 'secret', 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    await logout.visit();
   });
 
   test('version 2 with restricted policy still allows edit', async function(assert) {
@@ -163,5 +164,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    await logout.visit();
   });
 });
