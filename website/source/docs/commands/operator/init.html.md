@@ -25,6 +25,8 @@ called "unseal keys" in Vault's documentation.
 
 This command cannot be run against already-initialized Vault cluster.
 
+> Running init should be manual process, as it should only ever be required once. Scripting the initilization less secure as it means you have to manage the availability of the root token and recovery key.
+
 For more information on sealing and unsealing, please the [seal concepts page](/docs/concepts/seal.html).
 
 ## Examples
