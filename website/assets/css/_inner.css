@@ -6,7 +6,7 @@
   position: relative;
   width: 100%;
 
-  @media (min-width: 768px) {
+  @media (min-width: 940px) {
     flex-direction: row;
     margin-top: 72px;
     margin-bottom: 72px;
@@ -14,16 +14,24 @@
 }
 
 #inner {
-  flex: 1;
-  margin: 100px 0;
+  margin: 64px 0;
   overflow: auto;
+  width: 100%;
 
-  @media (min-width: 768px) {
+  @media (min-width: 940px) {
+    flex: 1;
     margin: 0;
   }
 
-  & .g-content > h1:first-child {
-    margin-top: 0;
+  & .g-content {
+    @media (max-width: 939px) {
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    & > h1:first-child {
+      margin-top: 0;
+    }
   }
 
   & .g-section-header {
