@@ -57,11 +57,11 @@ CHANGES:
    difference but it should provide significant performance benefits for those
    writing custom clients using the Go API library. As before, this can be
    changed to any custom HTTP client by the caller.
- * Builtin Secret Engines and Auth Methods are integrated deeper into the plugin 
-   system. The plugin catalog can now override builtin plugins with custom 
-   versions of the same name. Additionally the plugin system now requires a plugin
-   `type` field when configuring plugins, this can be "auth", "database", or 
-   "secret".
+ * Builtin Secret Engines and Auth Methods are integrated deeper into the
+   plugin system. The plugin catalog can now override builtin plugins with
+   custom versions of the same name. Additionally the plugin system now
+   requires a plugin `type` field when configuring plugins, this can be "auth",
+   "database", or "secret".
 
 FEATURES:
 
