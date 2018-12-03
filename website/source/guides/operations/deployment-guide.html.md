@@ -269,8 +269,7 @@ If you decide to configure Vault to publish telemtery data, you should review th
 As this cluster has multiple Vault servers, add the below configuration to the Vault configuration file:
 
 ```hcl
-api_addr = {{full URL to Vault API endpoint}}
-}
+api_addr = "{{full URL to Vault API endpoint}}"
 ```
 
 This specifies the address (full URL) to advertise to other Vault servers in the cluster for client redirection. In general this should be set as a full URL that points to the value of the listener address. See [High Availability Configuration Parameters section](/docs/configuration/#high-availability-parameters) of our documentation.
