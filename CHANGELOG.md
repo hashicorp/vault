@@ -1,4 +1,4 @@
-## 1.0.0
+## 1.0.0 (December 3rd, 2018)
 
 SECURITY:
 
