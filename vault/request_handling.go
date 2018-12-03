@@ -373,10 +373,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 
 	resp, err = c.handleCancelableRequest(ctx, ns, req)
 
-	if req != nil {
-		req.SetTokenEntry(nil)
-	}
-
+	req.SetTokenEntry(nil)
 	cancel()
 	c.stateLock.RUnlock()
 	return resp, err
