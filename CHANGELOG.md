@@ -57,16 +57,21 @@ CHANGES:
    difference but it should provide significant performance benefits for those
    writing custom clients using the Go API library. As before, this can be
    changed to any custom HTTP client by the caller.
+ * Builtin Secret Engines and Auth Methods are integrated deeper into the plugin 
+   system. The plugin catalog can now override builtin plugins with custom 
+   versions of the same name. Additionally the plugin system now requires a plugin
+   `type` field when configuring plugins, this can be "auth", "database", or 
+   "secret".
 
 FEATURES:
 
  * **Auto-Unseal in Open Source**: Cloud-based auto-unseal has been migrated
    from Enterprise to Open Source. We've created a migrator to allow migrating
    between Shamir seals and auto unseal methods.
- * Batch Tokens: Batch tokens trade off some features of service tokens for no
+ * **Batch Tokens**: Batch tokens trade off some features of service tokens for no
    storage overhead, and in most cases can be used across performance
    replication clusters.
- * Replication Speed Improvements: We've worked hard to speed up a lot of
+ * **Replication Speed Improvements**: We've worked hard to speed up a lot of
    operations when using Vault Enterprise Replication.
  * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
    pattern to keys stored within GCP Cloud KMS.
