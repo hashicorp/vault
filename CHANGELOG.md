@@ -1,3 +1,17 @@
+## 1.0.0
+
+IMPROVEMENTS:
+
+ * ui: Allow editing of KV V2 data when a token doesn't have capabilities to
+   read secret metadata [GH-5879]
+
+BUG FIXES:
+
+ * ui: Update DR Secondary Token generation command [GH-5857]
+ * ui: Fix pagination bug where controls would be rendered once for each
+   item when viewing policies [GH-5866]
+
+
 ## 1.0.0-rc1 (Nov 20th, 2018)
  
 CHANGES:
