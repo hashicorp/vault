@@ -1,5 +1,25 @@
 ## 1.0.0
 
+SECURITY:
+
+ * When debugging a customer incident we discovered that in the case of
+   malformed data from an autoseal mechanism, Vault's master key could be
+   logged in Vault's server log. For this to happen, the data would need to be
+   modified by the autoseal mechanism after being submitted to it by Vault but
+   prior to encryption, or after decryption, prior to it being returned to
+   Vault. To put it another way, it requires the data that Vault submits for
+   encryption to not match the data returned after decryption. It is not
+   sufficient for the autoseal mechanism to return an error, and it cannot be
+   triggered by an outside attacker changing the on-disk ciphertext as all
+   autoseal mechanisms use authenticated encryption. We do not believe that
+   this is generally a cause for concern; since it involves the autoseal
+   mechanism returning bad data to Vault but with no error, in a working Vault
+   configuration this code path should never be hit, and if hitting this issue
+   Vault will not be unsealing properly anyways so it will be obvious what is
+   happening and an immediate rekey of the master key can be performed after
+   service is restored. We have filed for a CVE (CVE-2018-19786) and a CVSS V3
+   score of 5.2 has been assigned.
+
 CHANGES:
 
  * Tokens are now prefixed by a designation to indicate what type of token they
