@@ -266,13 +266,17 @@ If you decide to configure Vault to publish telemtery data, you should review th
 
 ### High Availability Parameters
 
-As this cluster has multiple Vault servers, add the below configuration to the Vault configuration file:
+The `api_addr` parameter configures the API address used in high availability scenarios, when client redirection is used instead of request forwarding. Client redirection is the fallback method used when request forwarding is turned off or there is an error performing the forwarding. As such, a redirect address is always required for all HA setups.
+
+This parameter value defaults to the `address` specified in the `listener` stanza, but Vault will log a `[WARN]` message if it is not explicitly configured.
+
+Add the below configuration to the Vault configuration file:
 
 ```hcl
-api_addr = "{{full URL to Vault API endpoint}}"
+api_addr = "{{ full URL to Vault API endpoint }}"
 ```
 
-This specifies the address (full URL) to advertise to other Vault servers in the cluster for client redirection. In general this should be set as a full URL that points to the value of the listener address. See [High Availability Configuration Parameters section](/docs/configuration/#high-availability-parameters) of our documentation.
+[More information about high availability configuration](/docs/configuration/#high-availability-parameters).
 
 ### Vault UI
 
