@@ -45,15 +45,10 @@ To authenticate, you will need two things:
 ### Via CLI
 
 The default path is `/gcp`. If this auth method was enabled at a different
-path, specify `-path=/my-path` in the CLI.
-
+path, specify `-path=/my-path` in the CLI. 
 The backend takes a signed [JSON Web Token][jwt] (JWT) as proof-of-identity.
 
-```text
-$ vault login -method=gcp role="my-role" jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-#### Obtaining `iam` JWT
+#### Generate `iam` JWT and Login
  
 Because the process to sign a service account JWT can be tedious, Vault includes
 a CLI helper that handles obtaining a properly-formatted and signed JWT on your
@@ -80,6 +75,17 @@ Note that `credentials` must have signJwt permissions on `service_account`.
 
 For more details on each field, please run `vault auth help gcp`.
 
+#### Login With Existing JWT
+
+If you already have an existing service account JWT that you generated
+from the API or by yourself, you can run the following command to 
+login. 
+
+
+```text
+$ vault write -field=token auth/gcp/login role="my-role" jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
 #### Obtaining `gce` JWT (Metadata)
 
 GCE tokens are obtained from a GCE instance's own metadata server endpoint, 
@@ -94,7 +100,7 @@ SERVICE_ACCOUNT="default"
 curl \
   --header "Metadata-Flavor: Google" \
   --get \
-  --data-urlencode "aud=http://vault/${ROLE}" \
+  --data-urlencode "audience=http://vault/${ROLE}" \
   --data-urlencode "format=full" \
   "http://metadata/computeMetadata/v1/instance/service-accounts/${SERVICE_ACCOUNT}/identity"
 ```
