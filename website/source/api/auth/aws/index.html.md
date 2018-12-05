@@ -323,8 +323,8 @@ $ curl \
 
 Allows the explicit association of STS roles to satellite AWS accounts
 (i.e. those which are not the account in which the Vault server is
-running.) Login attempts from EC2 instances running in these accounts will
-be verified using credentials obtained by assumption of these STS roles.
+running.) Vault will use credentials obtained by assuming these STS roles
+when validating IAM principals or EC2 instances in the particular AWS account.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
