@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud KMS - Secrets Engines"
-sidebar_title: "Google Cloud KMS <sup>1.0 BETA</sup>"
+sidebar_title: "Google Cloud KMS"
 sidebar_current: "docs-secrets-gcpkms"
 description: |-
   The Google Cloud KMS secrets engine for Vault interfaces with Google Cloud
