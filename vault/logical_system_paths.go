@@ -824,6 +824,17 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
+		{
+			Pattern: "internal/counters/requests",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.pathInternalCountersRequests,
+					Unpublished: true,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
+		},
 	}
 }
 

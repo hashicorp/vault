@@ -2984,6 +2984,28 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	return resp, nil
 }
 
+func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	counters, err := b.Core.loadAllRequestCounters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := json.Marshal(counters.Dated)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPStatusCode:  200,
+			logical.HTTPRawBody:     buf,
+			logical.HTTPContentType: "application/json",
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientToken == "" {
 		// 204 -- no ACL
@@ -3897,5 +3919,9 @@ This path responds to the following HTTP methods.
 	"metrics": {
 		"Export the metrics aggregated for telemetry purpose.",
 		"",
+	},
+	"internal-counters-requests": {
+		"Count of requests seen by this Vault cluster over time.",
+		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
 }
