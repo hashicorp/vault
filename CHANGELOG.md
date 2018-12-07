@@ -1,3 +1,10 @@
+## 1.0.1 (unreleased)
+
+BUG FIXES:
+
+ * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
+   command - [GH-5909]
+
 ## 1.0.0 (December 3rd, 2018)
 
 SECURITY:
