@@ -83,7 +83,7 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	case config["kms_key_id"] != "":
 		k.keyID = config["kms_key_id"]
 	default:
-		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS sealconfiguration")
+		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
 	// Check and set region

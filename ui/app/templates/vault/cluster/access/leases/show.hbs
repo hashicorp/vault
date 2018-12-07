@@ -18,7 +18,7 @@
 </PageHeader>
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#info-table-row label="Issue time" value=model.issueTime}}
-    {{moment-format model.issueTime 'MMM DD, YYYY hh:mm:ss A'}}
+    {{date-format model.issueTime 'MMM DD, YYYY hh:mm:ss A'}}
     <br/>
     <code>
       {{model.issueTime}}
@@ -26,7 +26,7 @@
   {{/info-table-row}}
   {{info-table-row label="Renewable" value=model.renewable}}
   {{#info-table-row label="Last renewal" value=model.lastRenewal}}
-    {{moment-format model.lastRenewal 'MMM DD, YYYY hh:mm:ss A'}}
+    {{date-format model.lastRenewal 'MMM DD, YYYY hh:mm:ss A'}}
     <br/>
     <code>
       {{model.lastRenewal}}
@@ -34,13 +34,13 @@
   {{/info-table-row}}
   {{#if model.expireTime}}
     {{#info-table-row label="Expiration time" value=model.expireTime}}
-      {{moment-format model.expireTime 'MMM DD, YYYY hh:mm:ss A'}}
+      {{date-format model.expireTime 'MMM DD, YYYY hh:mm:ss A'}}
       <br/>
       <code>
         {{model.expireTime}}
       </code>
     {{/info-table-row}}
-    {{info-table-row label="Expires in" value=(moment-from-now model.expireTime interval=1000 hideSuffix=true)}}
+    {{info-table-row label="Expires in" value=(date-from-now model.expireTime interval=1000 hideSuffix=true)}}
   {{/if}}
   {{info-table-row label="TTL" value=model.ttl}}
 </div>

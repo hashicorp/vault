@@ -27,7 +27,6 @@ export default Route.extend(ClusterRoute, ListRoute, {
         page: params.page,
         pageFilter: params.pageFilter,
         responsePath: 'data.keys',
-        size: 100,
       })
       .catch(err => {
         // acls will never be empty, but sentinel policies can be

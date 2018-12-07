@@ -16,7 +16,7 @@
 
   .confirm-action span .button {
     display: block;
-    margin: .25rem auto;
+    margin: 0.25rem auto;
     width: 95%;
   }
 
@@ -47,11 +47,6 @@
         color: $menu-item-hover-color;
       }
 
-      &.is-active {
-        background-color: $menu-item-active-background-color;
-        color: $menu-item-active-color;
-      }
-
       &.is-destroy {
         color: $red;
 
@@ -63,7 +58,7 @@
 
       &.disabled {
         opacity: 0.5;
-        
+
         &:hover {
           background: transparent;
           cursor: default;
@@ -128,21 +123,21 @@
 
   &--below {
     &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-above .15s;
+      animation: drop-fade-above 0.15s;
     }
 
     &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-above .15s reverse;
+      animation: drop-fade-above 0.15s reverse;
     }
   }
 
   &--above {
     &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-below .15s;
+      animation: drop-fade-below 0.15s;
     }
 
     &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-below .15s reverse;
+      animation: drop-fade-below 0.15s reverse;
     }
   }
 }

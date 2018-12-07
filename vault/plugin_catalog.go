@@ -26,6 +26,7 @@ var (
 	pluginCatalogPath         = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
 	ErrPluginNotFound         = errors.New("plugin not found in the catalog")
+	ErrPluginBadType          = errors.New("unable to determine plugin type")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -270,7 +271,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 
 		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
 		if err != nil || pluginType == consts.PluginTypeUnknown {
-			return errors.New("unable to determine plugin type")
+			return ErrPluginBadType
 		}
 	}
 

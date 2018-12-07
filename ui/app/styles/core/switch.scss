@@ -1,4 +1,4 @@
-.switch[type="checkbox"] {
+.switch[type='checkbox'] {
   &.is-small {
     + label {
       font-size: $size-8;
@@ -24,12 +24,12 @@
     }
   }
 }
-.switch[type="checkbox"].is-small + label::after {
+.switch[type='checkbox'].is-small + label::after {
   will-change: left;
 }
-.switch[type="checkbox"]:focus + label {
+.switch[type='checkbox']:focus + label {
   box-shadow: 0 0 1px $blue;
 }
-.switch[type="checkbox"].is-success:checked + label::before {
+.switch[type='checkbox'].is-success:checked + label::before {
   background: $blue;
 }

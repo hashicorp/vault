@@ -372,8 +372,10 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyConfig.RekeyProgress[0]
+		c.barrierRekeyConfig.RekeyProgress = nil
 	} else {
 		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
+		c.barrierRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key: {{err}}", err).Error())
 		}
@@ -600,8 +602,10 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
+		c.recoveryRekeyConfig.RekeyProgress = nil
 	} else {
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
+		c.recoveryRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
 		}

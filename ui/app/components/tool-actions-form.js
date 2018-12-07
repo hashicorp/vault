@@ -3,7 +3,7 @@ import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set, get } from '@ember/object';
-import moment from 'moment';
+import { addSeconds } from 'date-fns';
 
 const DEFAULTS = {
   token: null,
@@ -67,7 +67,8 @@ export default Component.extend(DEFAULTS, {
     if (!(creation_time && creation_ttl)) {
       return null;
     }
-    return moment(creation_time).add(moment.duration(creation_ttl, 'seconds'));
+
+    return addSeconds(creation_time, creation_ttl);
   }),
 
   handleError(e) {

@@ -109,6 +109,12 @@ func (b *kubeAuthBackend) pathLogin() framework.OperationFunc {
 				Period:  role.Period,
 				Alias: &logical.Alias{
 					Name: serviceAccount.uid(),
+					Metadata: map[string]string{
+						"service_account_uid":         serviceAccount.uid(),
+						"service_account_name":        serviceAccount.name(),
+						"service_account_namespace":   serviceAccount.namespace(),
+						"service_account_secret_name": serviceAccount.SecretName,
+					},
 				},
 				InternalData: map[string]interface{}{
 					"role": roleName,

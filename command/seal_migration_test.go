@@ -1,3 +1,5 @@
+// +build !enterprise
+
 package command
 
 import (

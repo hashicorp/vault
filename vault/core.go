@@ -466,6 +466,7 @@ type CoreConfig struct {
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
+	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
 }
@@ -1144,8 +1145,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		c.stateLock.RUnlock()
 		return retErr
 	}
-
-	req.SetTokenEntry(te)
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{

@@ -41,6 +41,7 @@ export default AuthConfig.extend({
   bindpass: attr('string', {
     label: 'Password',
     helpText: 'Used along with binddn when performing user search',
+    sensitive: true,
   }),
 
   userdn: attr('string', {

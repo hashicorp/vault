@@ -552,6 +552,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableIndexing:           config.DisableIndexing,
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
+		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -967,7 +968,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
-		var plugins []string
+		var plugins, pluginsNotLoaded []string
 		if c.flagDevPluginDir != "" && c.flagDevPluginInit {
 
 			f, err := os.Open(c.flagDevPluginDir)
@@ -986,8 +987,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
-					return 1
+					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+						c.UI.Error(fmt.Sprintf("Error enabling plugin %s: %s", name, err))
+						return 1
+					}
+					pluginsNotLoaded = append(pluginsNotLoaded, name)
+					continue
 				}
 				plugins = append(plugins, name)
 			}
@@ -1040,6 +1045,15 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			c.UI.Warn(wrapAtLength(
 				"The following dev plugins are registered in the catalog:"))
 			for _, p := range plugins {
+				c.UI.Warn(fmt.Sprintf("    - %s", p))
+			}
+		}
+
+		if len(pluginsNotLoaded) > 0 {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(
+				"The following dev plugins FAILED to be registered in the catalog due to unknown type:"))
+			for _, p := range pluginsNotLoaded {
 				c.UI.Warn(fmt.Sprintf("    - %s", p))
 			}
 		}

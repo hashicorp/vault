@@ -1142,6 +1142,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
 				},
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["token_type"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

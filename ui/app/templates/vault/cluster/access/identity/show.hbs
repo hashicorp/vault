@@ -32,7 +32,7 @@
 <div class="box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav">
     <ul>
-      {{#each (tabs-for-identity-show modennl.identityType model.type) as |tab|}}
+      {{#each (tabs-for-identity-show model.identityType model.type) as |tab|}}
         {{#link-to "vault.cluster.access.identity.show" (pluralize model.identityType) model.id tab tagName="li"}}
           {{#link-to "vault.cluster.access.identity.show" (pluralize model.identityType) model.id tab}}
             {{capitalize (humanize tab)}}

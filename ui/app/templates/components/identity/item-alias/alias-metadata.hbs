@@ -17,15 +17,15 @@
     </div>
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There is no metadata associated with {{model.name}}.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="No metadata for {{model.name}} yet"
+    @message="You can store custom data that you want to associate with a {{lowercase (humanize model.identityType)}}. Edit this {{lowercase (humanize model.identityType)}} to get started."
+  >
+    {{#link-to "vault.cluster.access.identity.aliases.edit" model.id tagName="button" class="link"}}
+      Edit {{lowercase (humanize model.identityType)}}
+    {{/link-to}}
+    <LearnLink @path="/vault/identity-access-management/iam-identity">
+      Learn More
+    </LearnLink>
+  </EmptyState>
 {{/each-in}}

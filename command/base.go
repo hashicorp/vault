@@ -38,16 +38,17 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress       string
-	flagCACert        string
-	flagCAPath        string
-	flagClientCert    string
-	flagClientKey     string
-	flagNamespace     string
-	flagNS            string
-	flagTLSServerName string
-	flagTLSSkipVerify bool
-	flagWrapTTL       time.Duration
+	flagAddress        string
+	flagCACert         string
+	flagCAPath         string
+	flagClientCert     string
+	flagClientKey      string
+	flagNamespace      string
+	flagNS             string
+	flagPolicyOverride bool
+	flagTLSServerName  string
+	flagTLSSkipVerify  bool
+	flagWrapTTL        time.Duration
 
 	flagFormat string
 	flagField  string
@@ -134,6 +135,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 	if c.flagNamespace != notSetValue {
 		client.SetNamespace(namespace.Canonicalize(c.flagNamespace))
+	}
+	if c.flagPolicyOverride {
+		client.SetPolicyOverride(c.flagPolicyOverride)
 	}
 
 	c.client = client
@@ -291,6 +295,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Disable verification of TLS certificates. Using this option " +
 					"is highly discouraged and decreases the security of data " +
 					"transmissions to and from the Vault server.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "policy-override",
+				Target:  &c.flagPolicyOverride,
+				Default: false,
+				Usage: "Override a Sentinel policy that has a soft-mandatory " +
+					"enforcement_level specified",
 			})
 
 			f.DurationVar(&DurationVar{
