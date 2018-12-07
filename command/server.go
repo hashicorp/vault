@@ -94,6 +94,7 @@ type ServerCommand struct {
 	flagDevLatency       int
 	flagDevLatencyJitter int
 	flagDevLeasedKV      bool
+	flagDevKVV1          bool
 	flagDevSkipInit      bool
 	flagDevThreeNode     bool
 	flagDevFourCluster   bool
@@ -251,6 +252,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "dev-kv-v1",
+		Target:  &c.flagDevKVV1,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "dev-auto-seal",
 		Target:  &c.flagDevAutoSeal,
 		Default: false,
@@ -356,7 +364,7 @@ func (c *ServerCommand) Run(args []string) int {
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
 		c.flagDev = true
 	}
 
@@ -1334,7 +1342,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Upgrade the default K/V store
-	if !c.flagDevLeasedKV {
+	if !c.flagDevLeasedKV && !c.flagDevKVV1 {
 		req := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: init.RootToken,
