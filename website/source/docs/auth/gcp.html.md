@@ -276,14 +276,13 @@ commands from the GCE instance.** The JWT token can be obtained from the
 
 ```text
 ROLE="my-gce-role"
-SERVICE_ACCOUNT="service-account@my-project.iam.gserviceaccount.com"
 
 curl \
   --header "Metadata-Flavor: Google" \
   --get \
-  --data-urlencode "aud=http://vault/${ROLE}" \
+  --data-urlencode "audience=http://vault/${ROLE}" \
   --data-urlencode "format=full" \
-  "http://metadata/computeMetadata/v1/instance/service-accounts/${SERVICE_ACCOUNT}/identity"
+  "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity"
 ```
 
 ## API
