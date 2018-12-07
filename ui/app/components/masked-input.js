@@ -4,6 +4,7 @@ import autosize from 'autosize';
 
 export default Component.extend({
   value: null,
+  placeholder: 'value',
   didInsertElement() {
     this._super(...arguments);
     autosize(this.element.querySelector('textarea'));

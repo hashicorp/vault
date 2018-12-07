@@ -19,6 +19,7 @@ export default {
   hasInput: isPresent('input'),
   hasCheckbox: isPresent('input[type=checkbox]'),
   hasTextarea: isPresent('textarea'),
+  hasMaskedInput: isPresent('[data-test-masked-input]'),
   hasTooltip: isPresent('[data-test-component=info-tooltip]'),
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   tooltipContent: text('[data-test-help-text]'),
