@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 
@@ -17,7 +16,9 @@ import (
 	"github.com/ory/dockertest"
 )
 
-const testInfluxRole = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
+const testInfluxRole = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
+
+const testWrongInfluxRole = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
 GRANT ALL PERMISSIONS ON ALL KEYSPACES TO {{username}};`
 
 func prepareInfluxdbTestContainer(t *testing.T) (func(), string, int) {
@@ -48,12 +49,12 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), string, int) {
 	}
 
 	port, _ := strconv.Atoi(resource.GetPort("8086/tcp"))
-	address := fmt.Sprintf("http://127.0.0.1:%d", port)
+	address := "127.0.0.1"
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		cli, err := influx.NewHTTPClient(influx.HTTPConfig{
-			Addr:     address,
+			Addr:     fmt.Sprintf("http://%s:%d", address, port),
 			Username: "influx-root",
 			Password: "influx-root",
 		})
@@ -247,7 +248,6 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 		t.Fatal("Credentials were not revoked")
 	}
 }
-
 func TestInfluxdb_RotateRootCredentials(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
@@ -290,18 +290,26 @@ func TestInfluxdb_RotateRootCredentials(t *testing.T) {
 }
 
 func testCredsExist(t testing.TB, address string, port int, username, password string) error {
-	clusterConfig := gocql.NewCluster(address)
-	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
+	cli, err := influx.NewHTTPClient(influx.HTTPConfig{
+		Addr:     fmt.Sprintf("http://%s:%d", address, port),
 		Username: username,
 		Password: password,
-	}
-	clusterConfig.ProtoVersion = 4
-	clusterConfig.Port = port
-
-	session, err := clusterConfig.CreateSession()
+	})
 	if err != nil {
-		return errwrap.Wrapf("error creating session: {{err}}", err)
+		return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
 	}
-	defer session.Close()
+	defer cli.Close()
+	_, _, err = cli.Ping(1)
+	if err != nil {
+		return errwrap.Wrapf("error checking server ping: {{err}}", err)
+	}
+	q := influx.NewQuery("SHOW SERIES ON vault", "", "")
+	response, err := cli.Query(q)
+	if err != nil {
+		return errwrap.Wrapf("error querying influxdb server: {{err}}", err)
+	}
+	if response.Error() != nil {
+		return errwrap.Wrapf("error using the correct influx database: {{err}}", response.Error())
+	}
 	return nil
 }
