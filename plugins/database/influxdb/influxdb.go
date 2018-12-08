@@ -198,6 +198,7 @@ func (i *Influxdb) RevokeUser(ctx context.Context, statements dbplugin.Statement
 	return result.ErrorOrNil()
 }
 
+// RotateRootCredentials is useful when we try to change root credential
 func (i *Influxdb) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
 	// Grab the lock
 	i.Lock()
