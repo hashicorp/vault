@@ -12,14 +12,6 @@ const component = create(formFields);
 module('Integration | Component | form field', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   const createAttr = (name, type, options) => {
     return {
       name,
