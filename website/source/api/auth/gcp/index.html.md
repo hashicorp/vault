@@ -158,7 +158,7 @@ entities attempting to login.
    generated under this token will have associated group aliases, namely
    `project-$PROJECT_ID`, `folder-$PROJECT_ID`, and `organization-$ORG_ID`
    for the entities project and all its folder or organization ancestors. This
-   requires Vault to have IAM permission `resourcemanager.projects.get` 
+   requires Vault to have IAM permission `resourcemanager.projects.get`.
     
 #### `iam`-only Parameters
 
