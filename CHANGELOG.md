@@ -1,4 +1,6 @@
 ## 1.0.1 (unreleased)
+FEATURES:
+ * ui: Added ability to search for Group and Policy IDs when creating Groups and Entities instead of typing them in            manually.
 
 BUG FIXES:
 
