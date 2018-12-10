@@ -1,12 +1,12 @@
 <div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}" data-test-masked-input>
 	{{#if displayOnly}}
 		<pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
-	{{else}}
+  {{else}}
   <textarea
     class="input masked-value"
     rows=1
     wrap="off"
-    placeholder="value"
+    placeholder={{placeholder}}
     onfocus={{action (mut isFocused) true}}
     onblur={{action (mut isFocused) false}}
     onkeydown={{action onKeyDown}}
@@ -18,7 +18,7 @@
   {{#if allowCopy}}
     <CopyButton
       @clipboardText={{value}}
-      @class="copy-button button is-compact"
+      @class="copy-button button {{if displayOnly "is-compact"}}"
       @success={{success}}
       data-test-copy-button
     >

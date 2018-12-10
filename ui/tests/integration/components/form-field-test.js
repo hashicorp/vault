@@ -117,6 +117,11 @@ module('Integration | Component | form field', function(hooks) {
     assert.deepEqual(spy.args[0], ['foo', ['array']], 'onChange called with correct args');
   });
 
+  test('it renders: sensitive', async function(assert) {
+    await setup.call(this, createAttr('password', 'string', { sensitive: true }));
+    assert.ok(component.hasMaskedInput, 'renders the masked-input component');
+  });
+
   test('it uses a passed label', async function(assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
     assert.equal(component.fields[0].labelText, 'Not Foo', 'renders the label from options');

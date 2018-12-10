@@ -90,7 +90,7 @@ For example, enable the "foo" auth method will make it accessible at
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
      in the UI-specific listing endpoint.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
@@ -218,7 +218,7 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
