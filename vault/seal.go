@@ -70,6 +70,7 @@ type Seal interface {
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
+	GetRecoveryKey(context.Context) ([]byte, error)
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 
@@ -259,6 +260,13 @@ func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 		return nil
 	}
 	return fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) GetRecoveryKey(ctx context.Context) ([]byte, error) {
+	if d.PretendToAllowRecoveryKeys {
+		return d.PretendRecoveryKey, nil
+	}
+	return nil, fmt.Errorf("stored keys are not supported")
 }
 
 // SealConfig is used to describe the seal configuration

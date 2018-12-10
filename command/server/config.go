@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,7 +26,7 @@ type Config struct {
 	Storage   *Storage    `hcl:"-"`
 	HAStorage *Storage    `hcl:"-"`
 
-	Seal *Seal `hcl:"-"`
+	Seals []*Seal `hcl:"-"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -263,9 +264,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.Seal = c.Seal
-	if c2.Seal != nil {
-		result.Seal = c2.Seal
+	for _, s := range c.Seals {
+		result.Seals = append(result.Seals, s)
+	}
+	for _, s := range c2.Seals {
+		result.Seals = append(result.Seals, s)
 	}
 
 	result.Telemetry = c.Telemetry
@@ -497,13 +500,13 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "hsm"); err != nil {
+		if err := parseSeals(&result, o, "hsm"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
-		if err := parseSeal(&result, o, "seal"); err != nil {
+		if err := parseSeals(&result, o, "seal"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
 		}
 	}
@@ -734,39 +737,45 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
-	if len(list.Items) > 1 {
-		return fmt.Errorf("only one %q block is permitted", blockName)
+func parseSeals(result *Config, list *ast.ObjectList, blockName string) error {
+	if len(list.Items) > 2 {
+		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
 	}
 
-	// Get our item
-	item := list.Items[0]
-
-	key := blockName
-	if len(item.Keys) > 0 {
-		key = item.Keys[0].Token.Value().(string)
-	}
-
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-	}
-
-	var disabled bool
-	var err error
-	if v, ok := m["disabled"]; ok {
-		disabled, err = strconv.ParseBool(v)
-		if err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+	seals := make([]*Seal, 0, len(list.Items))
+	for _, item := range list.Items {
+		key := "seal"
+		if len(item.Keys) > 0 {
+			key = item.Keys[0].Token.Value().(string)
 		}
-		delete(m, "disabled")
+
+		var m map[string]string
+		if err := hcl.DecodeObject(&m, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("seal.%s:", key))
+		}
+
+		var disabled bool
+		var err error
+		if v, ok := m["disabled"]; ok {
+			disabled, err = strconv.ParseBool(v)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
+			delete(m, "disabled")
+		}
+		seals = append(seals, &Seal{
+			Type:     strings.ToLower(key),
+			Disabled: disabled,
+			Config:   m,
+		})
 	}
 
-	result.Seal = &Seal{
-		Type:     strings.ToLower(key),
-		Disabled: disabled,
-		Config:   m,
+	if len(seals) == 2 &&
+		(seals[0].Disabled && seals[1].Disabled || !seals[0].Disabled && !seals[1].Disabled) {
+		return errors.New("seals: two seals provided but both are disabled or neither are disabled")
 	}
+
+	result.Seals = seals
 
 	return nil
 }

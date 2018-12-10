@@ -8,6 +8,7 @@ import (
 )
 
 type TestSeal struct {
+	Type   string
 	logger log.Logger
 }
 
@@ -15,6 +16,7 @@ var _ Access = (*TestSeal)(nil)
 
 func NewTestSeal(logger log.Logger) *TestSeal {
 	return &TestSeal{
+		Type:   Test,
 		logger: logger,
 	}
 }
@@ -28,7 +30,7 @@ func (t *TestSeal) Finalize(_ context.Context) error {
 }
 
 func (t *TestSeal) SealType() string {
-	return Test
+	return t.Type
 }
 
 func (t *TestSeal) KeyID() string {

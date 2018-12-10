@@ -487,45 +487,58 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = c.flagLogLevel
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := vaultseal.Shamir
-	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
-		if config.Seal == nil {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-		} else {
-			sealType = config.Seal.Type
-		}
-	}
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
 
-	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
 		sealLogger := c.logger.Named(vaultseal.Test)
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
 	} else {
-		sealLogger := c.logger.Named(sealType)
-		allLoggers = append(allLoggers, sealLogger)
-		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+		for _, configSeal := range config.Seals {
+			sealType := vaultseal.Shamir
+			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+				sealType = os.Getenv("VAULT_SEAL_TYPE")
+			} else {
+				sealType = configSeal.Type
+			}
+
+			var seal vault.Seal
+			sealLogger := c.logger.Named(sealType)
+			allLoggers = append(allLoggers, sealLogger)
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+			if sealConfigError != nil {
+				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+					c.UI.Error(fmt.Sprintf(
+						"Error parsing Seal configuration: %s", sealConfigError))
+					return 1
+				}
+			}
+			if seal == nil {
 				c.UI.Error(fmt.Sprintf(
-					"Error parsing Seal configuration: %s", sealConfigError))
+					"After configuring seal nil returned, seal type was %s", sealType))
 				return 1
 			}
+
+			if configSeal.Disabled {
+				unwrapSeal = seal
+			} else {
+				barrierSeal = seal
+			}
+
+			// Ensure that the seal finalizer is called, even if using verify-only
+			defer func() {
+				err = seal.Finalize(context.Background())
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				}
+			}()
+
 		}
 	}
 
-	// Ensure that the seal finalizer is called, even if using verify-only
-	defer func() {
-		if seal != nil {
-			err = seal.Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}
-	}()
-
-	if seal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+	if barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -533,7 +546,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
 		HAPhysical:                nil,
-		Seal:                      seal,
+		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -924,7 +937,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+	if err := adjustCoreForSealMigration(context.Background(), core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}

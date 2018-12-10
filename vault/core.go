@@ -165,6 +165,10 @@ type Core struct {
 	// seal we're migrating *from*.
 	migrationSeal Seal
 
+	// unwrapSeal is the seal to use on Enterprise to unwrap values wrapped
+	// with the previous seal.
+	unwrapSeal Seal
+
 	// barrier is the security barrier wrapping the physical backend
 	barrier SecurityBarrier
 
@@ -898,9 +902,12 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 				return nil, errwrap.Wrapf("unable to retrieve stored keys: {{err}}", err)
 			}
 
-			if len(masterKeyShares) == 1 {
+			switch len(masterKeyShares) {
+			case 0:
+				return nil, errors.New("seal returned no master key shares")
+			case 1:
 				masterKey = masterKeyShares[0]
-			} else {
+			default:
 				masterKey, err = shamir.Combine(masterKeyShares)
 				if err != nil {
 					return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
@@ -919,10 +926,50 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		}
 		defer c.barrier.Seal()
 
-		// The seal used in this function will have been the migration seal,
-		// and c.seal will be the opposite type, so there are two
-		// possibilities: Shamir to auto, and auto to Shamir.
-		if !seal.RecoveryKeySupported() {
+		switch {
+		case c.migrationSeal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
+			// Set the recovery and barrier keys to be the same.
+			recoveryKey, err := c.migrationSeal.GetRecoveryKey(ctx)
+			if err != nil {
+				return nil, errwrap.Wrapf("error getting recovery key to set on new seal: {{err}}", err)
+			}
+
+			if err := c.seal.SetRecoveryKey(ctx, recoveryKey); err != nil {
+				return nil, errwrap.Wrapf("error setting new recovery key information during migrate: {{err}}", err)
+			}
+
+			barrierKeys, err := c.migrationSeal.GetStoredKeys(ctx)
+			if err != nil {
+				return nil, errwrap.Wrapf("error getting stored keys to set on new seal: {{err}}", err)
+			}
+
+			if err := c.seal.SetStoredKeys(ctx, barrierKeys); err != nil {
+				return nil, errwrap.Wrapf("error setting new barrier key information during migrate: {{err}}", err)
+			}
+
+		case c.migrationSeal.RecoveryKeySupported():
+			// Auto to Shamir, since recovery key isn't supported on new seal
+
+			// In this case we have to ensure that the recovery information was
+			// set properly.
+			if recoveryKey == nil {
+				return nil, errors.New("did not get expected recovery information to set new seal during migration")
+			}
+
+			// We have recovery keys; we're going to use them as the new
+			// barrier key.
+			if err := c.barrier.Rekey(ctx, recoveryKey); err != nil {
+				return nil, errwrap.Wrapf("error rekeying barrier during migration: {{err}}", err)
+			}
+
+			if err := c.barrier.Delete(ctx, StoredBarrierKeysPath); err != nil {
+				// Don't actually exit here as successful deletion isn't critical
+				c.logger.Error("error deleting stored barrier keys after migration; continuing anyways", "error", err)
+			}
+
+			masterKey = recoveryKey
+
+		case c.seal.RecoveryKeySupported():
 			// The new seal will have recovery keys; we set it to the existing
 			// master key, so barrier key shares -> recovery key shares
 			if err := c.seal.SetRecoveryKey(ctx, masterKey); err != nil {
@@ -947,25 +994,9 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 
 			// Return the new key so it can be used to unlock the barrier
 			masterKey = newMasterKey
-		} else {
-			// In this case we have to ensure that the recovery information was
-			// set properly.
-			if recoveryKey == nil {
-				return nil, errors.New("did not get expected recovery information to set new seal during migration")
-			}
 
-			// Auto to Shamir. We have recovery keys; we're going to use them
-			// as the new barrier key
-			if err := c.barrier.Rekey(ctx, recoveryKey); err != nil {
-				return nil, errwrap.Wrapf("error rekeying barrier during migration: {{err}}", err)
-			}
-
-			if err := c.barrier.Delete(ctx, StoredBarrierKeysPath); err != nil {
-				// Don't actually exit here as successful deletion isn't critical
-				c.logger.Error("error deleting stored barrier keys after migration; continuing anyways", "error", err)
-			}
-
-			masterKey = recoveryKey
+		default:
+			return nil, errors.New("unhandled migration case (shamir to shamir)")
 		}
 
 		// At this point we've swapped things around and need to ensure we
@@ -1656,12 +1687,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	return barrierConf, recoveryConf, nil
 }
 
-func (c *Core) SetSealsForMigration(migrationSeal, newSeal Seal) {
+func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	c.migrationSeal = migrationSeal
-	c.seal = newSeal
-	c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal")
+	c.unwrapSeal = unwrapSeal
+	if newSeal != nil && migrationSeal != nil {
+		c.migrationSeal = migrationSeal
+		c.seal = newSeal
+		c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationSeal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
+	}
 }
 
 func (c *Core) IsInSealMigration() bool {
