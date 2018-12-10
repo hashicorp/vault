@@ -17,9 +17,9 @@ func TestPostgreSQLBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 
 	// Use docker as pg backend if no url is provided via environment variables
-	var connURL string
 	var cleanup func()
-	if os.Getenv("PGURL") == "" {
+	connURL := os.Getenv("PGURL")
+	if connURL == "" {
 		cleanup, connURL = prepareTestContainer(t, logger)
 		defer cleanup()
 	}
