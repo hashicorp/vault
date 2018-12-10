@@ -117,7 +117,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 
 	// Fail to overwrite it
 	resp, err = b.HandleRequest(context.Background(), caReq)
-	if err == nil {
+	if err == nil && resp.Data["error"] == "" {
 		t.Fatalf("expected an error")
 	}
 
@@ -142,7 +142,7 @@ func TestSSH_ConfigCAUpdateDelete(t *testing.T) {
 
 	// Fail to overwrite it
 	resp, err = b.HandleRequest(context.Background(), caReq)
-	if err == nil {
+	if err == nil && resp.Data["error"] == "" {
 		t.Fatalf("expected an error")
 	}
 
