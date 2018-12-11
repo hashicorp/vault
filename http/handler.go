@@ -444,19 +444,21 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseJSONRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
+func parseJSONRequest(r *http.Request, w http.ResponseWriter, out interface{}, alreadyLimited bool) error {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
-	ctx := r.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			reader = http.MaxBytesReader(w, r.Body, max)
+	if !alreadyLimited {
+		ctx := r.Context()
+		maxRequestSize := ctx.Value("max_request_size")
+		if maxRequestSize != nil {
+			max, ok := maxRequestSize.(int64)
+			if !ok {
+				return errors.New("could not parse max_request_size from request context")
+			}
+			if max > 0 {
+				reader = http.MaxBytesReader(w, r.Body, max)
+			}
 		}
 	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)

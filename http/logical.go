@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -78,6 +79,22 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	case "POST", "PUT":
 		op = logical.UpdateOperation
 
+		// Limit the maximum number of bytes to MaxRequestSize to protect
+		// against an indefinite amount of data being read.
+		reader := r.Body
+		ctx := r.Context()
+		maxRequestSize := ctx.Value("max_request_size")
+		if maxRequestSize != nil {
+			max, ok := maxRequestSize.(int64)
+			if !ok {
+				return nil, http.StatusInternalServerError, errors.New("could not parse max_request_size from request context")
+			}
+			if max > 0 {
+				reader = http.MaxBytesReader(w, r.Body, max)
+			}
+		}
+		r.Body = reader
+
 		// First attempt to get form parameters; if none exist, read the body and
 		// parse as JSON
 		err := r.ParseForm()
@@ -98,7 +115,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 				}
 			}
 		} else {
-			err := parseJSONRequest(r, w, &data)
+			err := parseJSONRequest(r, w, &data, true)
 			if err == io.EOF {
 				data = nil
 				err = nil
