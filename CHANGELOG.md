@@ -1,9 +1,14 @@
 ## 1.0.1 (unreleased)
+
 FEATURES:
- * ui: Added ability to search for Group and Policy IDs when creating Groups and Entities instead of typing them in            manually.
+
+ * ui: Added ability to search for Group and Policy IDs when creating Groups
+   and Entities instead of typing them in manually
 
 BUG FIXES:
 
+ * secret/pki: Fix panic that could occur during tidy operation when malformed
+   data was found [GH-5931]
  * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
    command - [GH-5909]
 
