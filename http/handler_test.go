@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -667,5 +670,57 @@ func testNonPrintable(t *testing.T, disable bool) {
 		testResponseStatus(t, resp, 204)
 	} else {
 		testResponseStatus(t, resp, 400)
+	}
+}
+
+func TestHandler_Parse_URLEncoded(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+		DisableTLS:  true,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	// make it easy to get access to the active
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	c := cleanhttp.DefaultClient()
+	values := url.Values{
+		"zip": []string{"zap"},
+	}
+	req, err := http.NewRequest("POST", cores[0].Client.Address()+"/v1/secret/foo", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Header.Set("x-vault-token", cluster.RootToken)
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 204 {
+		t.Fatalf("bad response: %#v\nrequest was: %#v\nurl was: %#v", *resp, *req, req.URL)
+	}
+
+	client := cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	apiResp, err := client.Logical().Read("secret/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiResp == nil {
+		t.Fatal("api resp is nil")
+	}
+	expected := map[string]interface{}{
+		"zip": "zap",
+	}
+	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 }

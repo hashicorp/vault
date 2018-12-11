@@ -86,7 +86,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Parse the request
 		var req UnsealRequest
-		if err := parseRequest(r, w, &req); err != nil {
+		if err := parseJSONRequest(r, w, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}

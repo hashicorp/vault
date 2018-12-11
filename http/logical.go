@@ -77,9 +77,28 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	case "POST", "PUT":
 		op = logical.UpdateOperation
-		// Parse the request if we can
-		if op == logical.UpdateOperation {
-			err := parseRequest(r, w, &data)
+
+		// First attempt to get form parameters; if none exist, read the body and
+		// parse as JSON
+		err := r.ParseForm()
+		if err != nil {
+			return nil, http.StatusBadRequest, errwrap.Wrapf("error when parsing form: {{err}}", err)
+		}
+		if len(r.PostForm) != 0 {
+			data = make(map[string]interface{}, len(r.PostForm))
+			for k, v := range r.PostForm {
+				switch len(v) {
+				case 0:
+				case 1:
+					data[k] = v[0]
+				default:
+					// Almost anywhere taking in a string list can take in comma
+					// separated values, and really this is super niche anyways
+					data[k] = strings.Join(v, ",")
+				}
+			}
+		} else {
+			err := parseJSONRequest(r, w, &data)
 			if err == io.EOF {
 				data = nil
 				err = nil

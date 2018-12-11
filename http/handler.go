@@ -444,7 +444,7 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
+func parseJSONRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
