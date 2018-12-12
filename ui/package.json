@@ -65,7 +65,7 @@
     "ember-cli-htmlbars": "^3.0.0",
     "ember-cli-htmlbars-inline-precompile": "^1.0.3",
     "ember-cli-inject-live-reload": "^1.8.2",
-    "ember-cli-page-object": "1.15.0-beta.4",
+    "ember-cli-page-object": "^1.15.0",
     "ember-cli-pretender": "^3.0.0",
     "ember-cli-qunit": "^4.4.0",
     "ember-cli-sass": "^9.0.0",
