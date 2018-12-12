@@ -49,6 +49,9 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	if err != nil && resp == nil {
 		return nil, err
 	}
+	if resp == nil {
+		return nil, nil
+	}
 	defer resp.Body.Close()
 
 	// We received an Unsupported Operation response from Vault, indicating

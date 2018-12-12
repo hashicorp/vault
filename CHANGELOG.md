@@ -1,6 +1,6 @@
 ## 1.0.1 (unreleased)
 
-FEATURES:
+IMPROVEMENTS:
 
  * cli: Strip iTerm extra characters from password manager input [GH-5837]
  * ui: Added ability to search for Group and Policy IDs when creating Groups
@@ -9,6 +9,7 @@ FEATURES:
 BUG FIXES:
 
  * cli: Show correct stored keys/threshold for autoseals [GH-5910]
+ * cli: Fix backwards compatibility fallback when listing plugins [GH-5913]
  * namespaces: Correctly reload the proper mount when tuning or reloading the
    mount [GH-5937]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
