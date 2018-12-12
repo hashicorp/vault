@@ -9,7 +9,7 @@ FEATURES:
 BUG FIXES:
 
  * cli: Show correct stored keys/threshold for autoseals [GH-5910]
- * namespaces: Correctly reload the proper mount when tuning or reloading the 
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
    mount [GH-5937]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
    data was found [GH-5931]
