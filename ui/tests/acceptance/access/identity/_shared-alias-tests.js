@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -84,6 +84,7 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     `${itemType}: shows flash message`
   );
 
+  await settled();
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
