@@ -624,7 +624,7 @@ func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
 //
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {
-	operationIDs := make(map[string]int)
+	opIDCount := make(map[string]int)
 
 	for path, pi := range d.Paths {
 		for _, method := range []string{"get", "post", "delete"} {
@@ -649,12 +649,9 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 
 			// deduplicate operationIds. This is a safeguard, since generated IDs should
 			// already be unique given our current path naming conventions.
-			n := operationIDs[opID]
-			if n > 0 {
-				operationIDs[opID] += 1
-				opID = fmt.Sprintf("%s_%d", opID, n)
-			} else {
-				operationIDs[opID] = 2
+			opIDCount[opID]++
+			if opIDCount[opID] > 1 {
+				opID = fmt.Sprintf("%s_%d", opID, opIDCount[opID])
 			}
 
 			if context != "" {
