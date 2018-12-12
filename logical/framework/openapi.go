@@ -186,6 +186,7 @@ var cleanSuffixRe = regexp.MustCompile(`/\?\$?$`)                    // Path suf
 var wsRe = regexp.MustCompile(`\s+`)                                 // Match whitespace, to be compressed during cleaning
 var altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
 var altFieldsRe = regexp.MustCompile(`\w+(\|\w+)+`)                  // Match an options set, e.g. "a|b|c"
+var nonWordRe = regexp.MustCompile(`[^\w]+`)                         // Match a sequence of non-word characters
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, doc *OASDocument) error {
@@ -623,7 +624,6 @@ func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
 //
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {
-	nonWordRe := regexp.MustCompile(`[^\w]+`)
 	operationIDs := make(map[string]int)
 
 	for path, pi := range d.Paths {
