@@ -12,11 +12,24 @@ import (
 
 const requestCounterDatePathFormat = "2006/01"
 
+type counters struct {
+	// requests counts requests seen by Vault this month; does not include requests
+	// excluded by design, e.g. health checks and UI asset requests.
+	requests *uint64
+	// activePath is set at startup to the path we primed the requests counter from,
+	// or empty string if there wasn't a relevant path - either because this is the first
+	// time Vault starts with the feature enabled, or because Vault hadn't written
+	// out the request counter this month yet.
+	// Whenever we write out the counters, we update activePath if it's no longer
+	// accurate.  This coincides with a reset of the counters.
+	// There's no lock because the only reader/writer of activePath is the goroutine
+	// doing background syncs.
+	activePath string
+}
+
 // RequestCounter stores the state of request counters for a single unspecified period.
 type RequestCounter struct {
-	// Total holds the sum total of all requests seen during the period.
-	// "All" does not include requests excluded by design, e.g. health checks and UI
-	// asset requests.
+	// Total is the number of requests seen during a given period.
 	Total *uint64 `json:"total"`
 }
 
@@ -28,15 +41,9 @@ type DatedRequestCounter struct {
 	RequestCounter
 }
 
-// AllRequestCounters contains all request counters from the dawn of time.
-type AllRequestCounters struct {
-	// Dated holds the request counters dating back to when the feature was first
-	// introduced in this instance, ordered by time (oldest first).
-	Dated []DatedRequestCounter
-}
-
-// loadAllRequestCounters returns all request counters found in storage.
-func (c *Core) loadAllRequestCounters(ctx context.Context) (*AllRequestCounters, error) {
+// loadAllRequestCounters returns all request counters found in storage,
+// ordered by time (oldest first.)
+func (c *Core) loadAllRequestCounters(ctx context.Context) ([]DatedRequestCounter, error) {
 	view := c.systemBarrierView.SubView("counters/requests/")
 
 	datepaths, err := view.List(ctx, "")
@@ -47,7 +54,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context) (*AllRequestCounters,
 		return nil, nil
 	}
 
-	var all AllRequestCounters
+	var all []DatedRequestCounter
 	sort.Strings(datepaths)
 	for _, datepath := range datepaths {
 		datesubpaths, err := view.List(ctx, datepath)
@@ -66,11 +73,11 @@ func (c *Core) loadAllRequestCounters(ctx context.Context) (*AllRequestCounters,
 				return nil, err
 			}
 
-			all.Dated = append(all.Dated, DatedRequestCounter{StartTime: t, RequestCounter: *counter})
+			all = append(all, DatedRequestCounter{StartTime: t, RequestCounter: *counter})
 		}
 	}
 
-	return &all, nil
+	return all, nil
 }
 
 // loadCurrentRequestCounters reads the current RequestCounter out of storage.
@@ -84,7 +91,7 @@ func (c *Core) loadCurrentRequestCounters(ctx context.Context, now time.Time) er
 	}
 	if counter != nil {
 		c.counters.activePath = datepath
-		atomic.StoreUint64(&c.counters.requests, *counter.Total)
+		atomic.StoreUint64(c.counters.requests, *counter.Total)
 	}
 	return nil
 }
@@ -118,21 +125,21 @@ func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*Reque
 // now should be the current time; it is a parameter to facilitate testing.
 func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) error {
 	view := c.systemBarrierView.SubView("counters/requests/")
-	datepath := now.Format(requestCounterDatePathFormat)
+	requests := atomic.LoadUint64(c.counters.requests)
+	curDatePath := now.Format(requestCounterDatePathFormat)
 
-	var requests uint64
-	if c.counters.activePath == "" || c.counters.activePath == datepath {
-		// We leave requests at 0 in the case where the month has just changed; we don't
-		// want to write the current count of requests (from last month) to the new month
-		// datepath.  This means we discard any requests counted since the last time
-		// we wrote, but since we write frequently that's okay.
-		requests = atomic.LoadUint64(&c.counters.requests)
+	// If activePath is empty string, we were started with nothing in storage
+	// for the current month, so we should not reset the in-mem counter.
+	// But if activePath is nonempty and not curDatePath, we should reset.
+	shouldReset, writeDatePath := false, curDatePath
+	if c.counters.activePath != "" && c.counters.activePath != curDatePath {
+		shouldReset, writeDatePath = true, c.counters.activePath
 	}
 
 	localCounters := &RequestCounter{
 		Total: &requests,
 	}
-	entry, err := logical.StorageEntryJSON(datepath, localCounters)
+	entry, err := logical.StorageEntryJSON(writeDatePath, localCounters)
 	if err != nil {
 		return errwrap.Wrapf("failed to create request counters entry: {{err}}", err)
 	}
@@ -141,11 +148,11 @@ func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) er
 		return errwrap.Wrapf("failed to save request counters: {{err}}", err)
 	}
 
-	if datepath != c.counters.activePath {
-		if c.counters.activePath != "" {
-			atomic.StoreUint64(&c.counters.requests, 0)
-		}
-		c.counters.activePath = datepath
+	if shouldReset {
+		atomic.StoreUint64(c.counters.requests, 0)
+	}
+	if c.counters.activePath != curDatePath {
+		c.counters.activePath = curDatePath
 	}
 
 	return nil

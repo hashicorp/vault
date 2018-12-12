@@ -26,7 +26,7 @@ func TestRequestCounterLoadCurrent(t *testing.T) {
 	decemberRequests := uint64(555)
 
 	// It's December, and we got some requests.  Persist the counter.
-	atomic.StoreUint64(&c.counters.requests, decemberRequests)
+	atomic.StoreUint64(c.counters.requests, decemberRequests)
 	err := c.saveCurrentRequestCounters(context.Background(), december2018)
 	if err != nil {
 		t.Fatal(err)
@@ -35,24 +35,24 @@ func TestRequestCounterLoadCurrent(t *testing.T) {
 	// It's still December, simulate being restarted.  At startup the counter is
 	// zero initially, until we read the counter from storage post-unseal via
 	// loadCurrentRequestCounters.
-	atomic.StoreUint64(&c.counters.requests, 0)
+	atomic.StoreUint64(c.counters.requests, 0)
 	err = c.loadCurrentRequestCounters(context.Background(), december2018)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := atomic.LoadUint64(&c.counters.requests); got != decemberRequests {
+	if got := atomic.LoadUint64(c.counters.requests); got != decemberRequests {
 		t.Fatalf("expected=%d, got=%d", decemberRequests, got)
 	}
 
 	// Now simulate being restarted in January. We never wrote anything out during
 	// January, so the in-mem counter should remain zero.
 	january2019 := testParseTime(t, time.RFC3339, "2019-01-02T08:21:11-05:00")
-	atomic.StoreUint64(&c.counters.requests, 0)
+	atomic.StoreUint64(c.counters.requests, 0)
 	err = c.loadCurrentRequestCounters(context.Background(), january2019)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := atomic.LoadUint64(&c.counters.requests); got != 0 {
+	if got := atomic.LoadUint64(c.counters.requests); got != 0 {
 		t.Fatalf("expected=%d, got=%d", 0, got)
 	}
 }
@@ -65,12 +65,13 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 	// storeSaveLoad stores newValue in the in-mem counter, saves it to storage,
 	// then verifies in-mem counter has value expectedPostLoad.
 	storeSaveLoad := func(newValue, expectedPostLoad uint64, now time.Time) {
-		atomic.StoreUint64(&c.counters.requests, newValue)
+		t.Helper()
+		atomic.StoreUint64(c.counters.requests, newValue)
 		err := c.saveCurrentRequestCounters(context.Background(), now)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := atomic.LoadUint64(&c.counters.requests); got != expectedPostLoad {
+		if got := atomic.LoadUint64(c.counters.requests); got != expectedPostLoad {
 			t.Fatalf("expected=%d, got=%d", expectedPostLoad, got)
 		}
 	}
@@ -85,24 +86,25 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 	storeSaveLoad(decemberRequests, decemberRequests, december2018)
 
 	decemberStartTime := testParseTime(t, requestCounterDatePathFormat, december2018.Format(requestCounterDatePathFormat))
-	expected2018 := AllRequestCounters{
-		Dated: []DatedRequestCounter{
-			DatedRequestCounter{decemberStartTime, RequestCounter{Total: &decemberRequests}},
-		},
+	expected2018 := []DatedRequestCounter{
+		DatedRequestCounter{decemberStartTime, RequestCounter{Total: &decemberRequests}},
 	}
 	all, err := c.loadAllRequestCounters(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := deep.Equal(*all, expected2018); len(diff) != 0 {
-		t.Errorf("Expected=%v, got=%v, diff=%v", expected2018, *all, diff)
+	if diff := deep.Equal(all, expected2018); len(diff) != 0 {
+		t.Errorf("Expected=%v, got=%v, diff=%v", expected2018, all, diff)
 	}
 
 	// Now it's January. Saving after transition to new month should reset in-mem
 	// counter to zero, and also write zero to storage for the new month.
 	january2019 := testParseTime(t, time.RFC3339, "2019-01-02T08:21:11-05:00")
-	januaryRequests := decemberRequests
-	storeSaveLoad(januaryRequests, 0, january2019)
+	decemberRequests += 5
+	storeSaveLoad(decemberRequests, 0, january2019)
+
+	januaryRequests := uint64(333)
+	storeSaveLoad(januaryRequests, januaryRequests, january2019)
 
 	all, err = c.loadAllRequestCounters(context.Background())
 	if err != nil {
@@ -110,11 +112,10 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 	}
 
 	januaryStartTime := testParseTime(t, requestCounterDatePathFormat, january2019.Format(requestCounterDatePathFormat))
-	var expectedJanuary uint64
 	expected2019 := expected2018
-	expected2019.Dated = append(expected2019.Dated,
-		DatedRequestCounter{januaryStartTime, RequestCounter{&expectedJanuary}})
-	if diff := deep.Equal(*all, expected2019); len(diff) != 0 {
-		t.Errorf("Expected=%v, got=%v, diff=%v", expected2019, *all, diff)
+	expected2019 = append(expected2019,
+		DatedRequestCounter{januaryStartTime, RequestCounter{&januaryRequests}})
+	if diff := deep.Equal(all, expected2019); len(diff) != 0 {
+		t.Errorf("Expected=%v, got=%v, diff=%v", expected2019, all, diff)
 	}
 }

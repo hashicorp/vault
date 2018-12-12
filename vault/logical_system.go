@@ -2990,16 +2990,9 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 		return nil, err
 	}
 
-	buf, err := json.Marshal(counters.Dated)
-	if err != nil {
-		return nil, err
-	}
-
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPStatusCode:  200,
-			logical.HTTPRawBody:     buf,
-			logical.HTTPContentType: "application/json",
+			"counters": counters,
 		},
 	}
 
