@@ -207,7 +207,7 @@ Lists all the roles that are registered with the plugin.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/jwt/roles`            | `200 application/json` |
+| `LIST`   | `/auth/jwt/role`            | `200 application/json` |
 
 ### Sample Request
 
@@ -215,7 +215,7 @@ Lists all the roles that are registered with the plugin.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://127.0.0.1:8200/v1/auth/jwt/roles
+    https://127.0.0.1:8200/v1/auth/jwt/role
 ```
 
 ### Sample Response
