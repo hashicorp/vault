@@ -8,6 +8,7 @@ FEATURES:
 
 BUG FIXES:
 
+ * cli: Show correct stored keys/threshold for autoseals [GH-5910]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
    data was found [GH-5931]
  * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
