@@ -1045,12 +1045,7 @@ abbrev@1, abbrev@~1.1.1:
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"
   integrity sha512-nne9/IiQ/hzIhY6pdDnbBtz7DjPTKrY00P/zvPSm5pOFkl6xuGrGnXn/VtTNNfNtAfZ9/1RtehkszU9qcTii0Q==
 
-abortcontroller-polyfill@^1.1.9:
-  version "1.1.9"
-  resolved "https://registry.yarnpkg.com/abortcontroller-polyfill/-/abortcontroller-polyfill-1.1.9.tgz#9fefe359fda2e9e0932dc85e6106453ac393b2da"
-  integrity sha512-omvG7zOHIs3BphdH62Kh3xy8nlftAsTyp7PDa9EmC3Jz9pa6sZFYk7UhNgu9Y4sIBhj6jF0RgeFZYvPnsP5sBw==
-
-abortcontroller-polyfill@^1.2.1:
+abortcontroller-polyfill@^1.1.9, abortcontroller-polyfill@^1.2.1:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/abortcontroller-polyfill/-/abortcontroller-polyfill-1.2.1.tgz#4e88847513a4ed691d5e4899d8b3a3af6f7d90ee"
   integrity sha512-9jN7+BijYKWO8fxfcG7QZh7js6V+g3OjkxMRHfKWNjjs85048VY4cd27Uoe6yk55P66L/z7Dflu5+YEApgMzkA==
@@ -5126,10 +5121,10 @@ ember-export-application-global@^2.0.0:
   dependencies:
     ember-cli-babel "^6.0.0-beta.7"
 
-ember-fetch@^6.2.0:
-  version "6.3.0"
-  resolved "https://registry.yarnpkg.com/ember-fetch/-/ember-fetch-6.3.0.tgz#7eeff312d7c5f6da90f525d31afde8c1889e1408"
-  integrity sha512-KZSKkjw2D+lCRRIUOO+VfcVC1FbpoXLZZeAGgEKx3mNPe0Gwyr3jZuiVmD2sVg4ckhTEnR3iWvp+5x4naPa1kQ==
+ember-fetch@~6.2.0:
+  version "6.2.3"
+  resolved "https://registry.yarnpkg.com/ember-fetch/-/ember-fetch-6.2.3.tgz#f46c39111594e63143139b9e09cba5533a0bd99a"
+  integrity sha512-8/KzGFppE6jsSCg6llv1P9MEQRIEM3Ezy/XBI+8ydyngd6Hb8UHzaUObkTfvS/lHhB2on/jm6T0YsutUrbVZzw==
   dependencies:
     abortcontroller-polyfill "^1.2.1"
     broccoli-concat "^3.2.2"

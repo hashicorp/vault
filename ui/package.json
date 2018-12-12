@@ -80,7 +80,7 @@
     "ember-data": "~3.4.0",
     "ember-data-model-fragments": "^3.3.0",
     "ember-export-application-global": "^2.0.0",
-    "ember-fetch": "^6.2.0",
+    "ember-fetch": "~6.2.0",
     "ember-inflector": "^3.0.0",
     "ember-link-action": "^0.1.2",
     "ember-load-initializers": "^1.1.0",
