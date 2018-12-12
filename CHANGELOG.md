@@ -14,6 +14,7 @@ BUG FIXES:
    mount [GH-5937]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
    data was found [GH-5931]
+ * secret/pki: Strip empty line in ca_chain output [GH-5779]
  * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
    command - [GH-5909]
 
