@@ -754,8 +754,15 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "internal/specs/openapi",
+			Fields: map[string]*framework.FieldSchema{
+				"context": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Context string appended to every operationId",
+				},
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathInternalOpenAPI,
+				logical.ReadOperation:   b.pathInternalOpenAPI,
+				logical.UpdateOperation: b.pathInternalOpenAPI,
 			},
 		},
 		{
