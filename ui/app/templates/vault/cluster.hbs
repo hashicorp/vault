@@ -1,5 +1,5 @@
 {{#if showNav}}
-  <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}} {{if consoleFullscreen ' panel-fullscreen'}}"
+  <NavHeader data-test-header-with-nav @class="{{if consoleOpen 'panel-open'}}"
     as |Nav|>
     <Nav.home>
       <HomeLink @class="navbar-item has-text-white has-current-color-fill">
@@ -77,7 +77,6 @@
       <div class="navbar-item nav-user-button {{if auth.allowExpiration "may-expire"}}" data-test-allow-expiration="{{auth.allowExpiration}}">
         <StatusMenu @type="user" @label="User" @onLinkClick={{action Nav.closeDrawer}} />
       </div>
-      {{console/ui-panel isFullscreen=consoleFullscreen}}
     </Nav.items>
   </NavHeader>
 {{/if}}

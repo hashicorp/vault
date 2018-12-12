@@ -137,7 +137,7 @@ func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	// Decode the barrier entry
 	var keys [][]byte
 	if err := json.Unmarshal(pt, &keys); err != nil {
-		return nil, fmt.Errorf("failed to decode stored keys: %v, plaintext was %q", err, pe.Value)
+		return nil, fmt.Errorf("failed to decode stored keys: %v", err)
 	}
 
 	return keys, nil

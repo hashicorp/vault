@@ -1,4 +1,5 @@
-.popup-menu-content {
+.popup-menu-content,
+.ember-power-select-options {
   border-radius: 2px;
   margin: -2px 0 0 0;
 
@@ -23,51 +24,62 @@
   .menu {
     padding: $size-11 0;
 
-    button.link,
-    a,
-    .menu-item {
-      background: transparent;
-      box-shadow: none;
-      border: none;
-      display: block;
-      height: auto;
-      font-size: $size-7;
-      font-weight: $font-weight-semibold;
-      padding: $size-9 $size-8;
-      text-align: left;
-      text-decoration: none;
-      width: 100%;
-    }
-
-    button.link,
-    a {
-      color: $menu-item-color;
-      &:hover {
-        background-color: $menu-item-hover-background-color;
-        color: $menu-item-hover-color;
-      }
-
-      &.is-destroy {
-        color: $red;
-
-        &:hover {
-          background-color: $red;
-          color: $white;
-        }
-      }
-
-      &.disabled {
-        opacity: 0.5;
-
-        &:hover {
-          background: transparent;
-          cursor: default;
-        }
-      }
-    }
-
     small code {
       margin-left: $spacing-xs;
+    }
+  }
+
+  button.link,
+  a,
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
+  .menu-item {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    display: block;
+    height: auto;
+    font-size: $size-7;
+    font-weight: $font-weight-semibold;
+    padding: $size-9 $size-8;
+    text-align: left;
+    text-decoration: none;
+    width: 100%;
+  }
+  
+  button.link,
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
+  a {
+    background-color: $white;
+    color: $menu-item-color;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
+    }
+
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+
+    &.is-destroy {
+      color: $red;
+
+      &:hover {
+        background-color: $red;
+        color: $white;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.5;
+
+      &:hover {
+        background: transparent;
+        cursor: default;
+      }
     }
   }
 

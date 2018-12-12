@@ -50,7 +50,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 			errors = multierror.Append(errors, errwrap.Wrapf(fmt.Sprintf("cannot reload plugin on %q: {{err}}", mount), err))
 			continue
 		}
-		c.logger.Info("successfully reloaded plugin", "plugin", entry.Type, "path", entry.Path)
+		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
 	}
 	return errors
 }
@@ -96,7 +96,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	// Fast-path out if the backend doesn't exist
-	raw, ok := c.router.root.Get(path)
+	raw, ok := c.router.root.Get(entry.Namespace().Path + path)
 	if !ok {
 		return nil
 	}

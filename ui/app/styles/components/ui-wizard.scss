@@ -10,10 +10,13 @@
   flex-grow: 1;
   transition: padding $speed;
   will-change: padding;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
 .ui-wizard-container .app-content.wizard-open {
   padding-right: 324px;
+  padding-right: calc(324px + env(safe-area-inset-right));
 
   @include until($tablet) {
     padding-right: 0;

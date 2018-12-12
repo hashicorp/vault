@@ -110,6 +110,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting nil entry with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					if certEntry.Value == nil || len(certEntry.Value) == 0 {
