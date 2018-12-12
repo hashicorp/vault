@@ -56,7 +56,7 @@ module('Integration | Component | mount backend form', function(hooks) {
   });
 
   test('it calls mount success', async function(assert) {
-    this.server.post('/v1/sys/auth/foo', request => {
+    this.server.post('/v1/sys/auth/foo', () => {
       return [204, { 'Content-Type': 'application/json' }];
     });
     const spy = sinon.spy();
@@ -73,11 +73,11 @@ module('Integration | Component | mount backend form', function(hooks) {
   });
 
   test('it calls the correct jwt config', async function(assert) {
-    this.server.post('/v1/sys/auth/jwt', request => {
+    this.server.post('/v1/sys/auth/jwt', () => {
       return [204, { 'Content-Type': 'application/json' }];
     });
 
-    this.server.post('/v1/auth/jwt/config', request => {
+    this.server.post('/v1/auth/jwt/config', () => {
       return [
         400,
         { 'Content-Type': 'application/json' },
@@ -98,10 +98,10 @@ module('Integration | Component | mount backend form', function(hooks) {
   });
 
   test('it calls mount config error', async function(assert) {
-    this.server.post('/v1/sys/auth/bar', request => {
+    this.server.post('/v1/sys/auth/bar', () => {
       return [204, { 'Content-Type': 'application/json' }];
     });
-    this.server.post('/v1/auth/bar/config', request => {
+    this.server.post('/v1/auth/bar/config', () => {
       return [
         400,
         { 'Content-Type': 'application/json' },
