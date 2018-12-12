@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -69,6 +69,7 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     createItemPage.createItem(itemType);
   }
   await withFlash();
+  await settled();
   idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
@@ -93,6 +94,7 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
     );
   });
 
+  await settled();
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
