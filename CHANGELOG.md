@@ -2,6 +2,7 @@
 
 FEATURES:
 
+ * cli: Strip iTerm extra characters from password manager input [GH-5837]
  * ui: Added ability to search for Group and Policy IDs when creating Groups
    and Entities instead of typing them in manually
 
