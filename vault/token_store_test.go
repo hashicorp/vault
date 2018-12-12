@@ -2728,7 +2728,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	ts := core.tokenStore
 	ps := core.policyStore
 
-	// Create 3 different policies
+	// Create 4 different policies
 	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test1"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
@@ -2743,6 +2743,12 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 
 	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test3"
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
+	policy.Name = "test3b"
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
@@ -2778,10 +2784,20 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/testnot23")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "test2,test3*",
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
 	// Create a token that has all the policies defined above
 	req = logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
-	req.Data["policies"] = []string{"test1", "test2", "test3"}
+	req.Data["policies"] = []string{"test1", "test2", "test3", "test3b"}
 	resp = testMakeTokenViaRequest(t, ts, req)
 	if resp == nil || resp.Auth == nil {
 		t.Fatal("got nil response")
@@ -2812,10 +2828,41 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
 	// Disallowed should act as a blacklist so make sure we can still make
 	// something with other policies in the request
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
 	req.Data["policies"] = []string{"foo", "bar"}
+	req.ClientToken = parentToken
+	testMakeTokenViaRequest(t, ts, req)
+
+	// Check to be sure 'test3*' matches 'test3'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check to be sure 'test3*' matches 'test3b'
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test3b"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatalf("expected an error response, got %#v", resp)
+	}
+
+	// Check that non-blacklisted policies still work
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/testnot23")
+	req.Data["policies"] = []string{"test1"}
 	req.ClientToken = parentToken
 	testMakeTokenViaRequest(t, ts, req)
 
@@ -2866,6 +2913,34 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	}
 
 	req.Data["policies"] = []string{"test2"}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// allowed_policies should also support globs
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies": "test*",
+	}
+
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"footest"}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"testfoo", "test2"}
 	resp = testMakeTokenViaRequest(t, ts, req)
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)

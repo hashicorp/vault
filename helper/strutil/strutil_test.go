@@ -104,6 +104,43 @@ func TestStrutil_ListContains(t *testing.T) {
 	}
 }
 
+func TestStrutil_ListSubsetGlob(t *testing.T) {
+	parent := []string{
+		"dev",
+		"ops*",
+		"root/*",
+		"*-dev",
+		"_*_",
+	}
+	if StrListSubsetGlob(parent, []string{"tubez", "dev", "root/admin"}) {
+		t.Fatalf("Bad")
+	}
+	if StrListSubsetGlob(parent, []string{"devops", "ops-dev"}) {
+		t.Fatalf("Bad")
+	}
+	if StrListSubsetGlob(nil, parent) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, []string{"root/test", "dev", "_test_"}) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, []string{"ops_test", "ops", "devops-dev"}) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, []string{"ops"}) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, []string{"test-dev"}) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, []string{"_test_"}) {
+		t.Fatalf("Bad")
+	}
+	if !StrListSubsetGlob(parent, nil) {
+		t.Fatalf("Bad")
+	}
+}
+
 func TestStrutil_ListSubset(t *testing.T) {
 	parent := []string{
 		"dev",
@@ -417,6 +454,28 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 
 	for _, tc := range tCases {
 		actual := RemoveDuplicates(tc.input, tc.lowercase)
+
+		if !reflect.DeepEqual(actual, tc.expect) {
+			t.Fatalf("Bad testcase %#v, expected %v, got %v", tc, tc.expect, actual)
+		}
+	}
+}
+
+func TestStrUtil_RemoveGlobs(t *testing.T) {
+	type tCase struct {
+		input  []string
+		expect []string
+	}
+
+	tCases := []tCase{
+		tCase{[]string{}, []string{}},
+		tCase{[]string{"hello"}, []string{"hello"}},
+		tCase{[]string{"h*i"}, []string{}},
+		tCase{[]string{"one", "two*", "*three", "f*our", "five"}, []string{"one", "five"}},
+	}
+
+	for _, tc := range tCases {
+		actual := RemoveGlobs(tc.input)
 
 		if !reflect.DeepEqual(actual, tc.expect) {
 			t.Fatalf("Bad testcase %#v, expected %v, got %v", tc, tc.expect, actual)

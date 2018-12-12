@@ -32,6 +32,17 @@ func StrListContains(haystack []string, needle string) bool {
 	return false
 }
 
+// StrListSubsetGlob checks if a given list is a subset of
+// another set, allowing for globs.
+func StrListSubsetGlob(super, sub []string) bool {
+	for _, item := range sub {
+		if !StrListContainsGlob(super, item) {
+			return false
+		}
+	}
+	return true
+}
+
 // StrListSubset checks if a given list is a subset
 // of another set
 func StrListSubset(super, sub []string) bool {
@@ -237,6 +248,18 @@ func RemoveDuplicates(items []string, lowercase bool) []string {
 	}
 	sort.Strings(items)
 	return items
+}
+
+// RemoveGlobs removes any elements containing globs from a slice of strings.
+func RemoveGlobs(items []string) []string {
+	ret := make([]string, 0, len(items))
+	for _, item := range items {
+		// glob.GLOB is "*"; ignore items containing that
+		if !strings.Contains(item, glob.GLOB) {
+			ret = append(ret, item)
+		}
+	}
+	return ret
 }
 
 // EquivalentSlices checks whether the given string sets are equivalent, as in,
