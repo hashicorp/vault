@@ -209,12 +209,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			}
 
 			if revocationStmtsRaw, ok := data.GetOk("revocation_statements"); ok {
-				revStmts := revocationStmtsRaw.([]string)
-				revStmts = strutil.RemoveEmpty(revStmts)
-				// Only overwrite if they provided real data
-				if len(revStmts) > 0 {
-					role.Statements.Revocation = revStmts
-				}
+				role.Statements.Revocation = revocationStmtsRaw.([]string)
 			} else if req.Operation == logical.CreateOperation {
 				role.Statements.Revocation = data.Get("revocation_statements").([]string)
 			}
