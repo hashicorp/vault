@@ -684,6 +684,9 @@ list in order to satisfy that constraint.
   the iam auth method. Wildcards are supported at the end of the ARN, e.g.,
   "arn:aws:iam::123456789012:role/\*" will match all roles in the AWS account.
   This is a comma-separated string or JSON array.
+- `bound_cidr` `(string: "", or list: [])` – If set, restricts usage of the
+  login and token to client IPs falling within the range of the specified
+  CIDR(s).
 - `inferred_entity_type` `(string: "")` -  When set, instructs Vault to turn on
   inferencing. The only current valid value is "ec2\_instance" instructing Vault
   to infer that the role comes from an EC2 instance in an IAM instance profile.

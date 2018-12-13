@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -600,6 +601,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"auth_type":                      ec2AuthType,
 		"bound_ami_id":                   []string{"testamiid"},
 		"bound_account_id":               []string{"testaccountid"},
+		"bound_cidr":			  []*sockaddr.SockAddrMarshaler(nil),
 		"bound_region":                   []string{"testregion"},
 		"bound_ec2_instance_id":          []string{"i-12345678901234567", "i-76543210987654321"},
 		"bound_iam_principal_arn":        []string{},

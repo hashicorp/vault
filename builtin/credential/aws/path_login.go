@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -612,6 +613,9 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	}
 	if roleEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
 	}
@@ -816,6 +820,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 			Alias: &logical.Alias{
 				Name: identityDocParsed.InstanceID,
 			},
+			BoundCIDRs: roleEntry.BoundCIDRs,
 		},
 	}
 
@@ -941,6 +946,10 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 	}
 	if roleEntry == nil {
 		return nil, fmt.Errorf("role entry not found")
+	}
+
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.BoundCIDRs) {
+		return logical.ErrorResponse("renew request originated from invalid CIDR"), nil
 	}
 
 	// we don't really care what the inferred entity type was when the role was initially created. We
@@ -1069,6 +1078,10 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, d
 	}
 	if roleEntry == nil {
 		return nil, fmt.Errorf("role entry not found")
+	}
+
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
 	}
 
 	// If the login was made using the role tag, then max_ttl from tag
@@ -1231,6 +1244,10 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %s not found", roleName)), nil
 	}
 
+	if !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, roleEntry.BoundCIDRs) {
+		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
+	}
+
 	if roleEntry.AuthType != iamAuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method iam not allowed for role %s", roleName)), nil
 	}
@@ -1332,6 +1349,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			Alias: &logical.Alias{
 				Name: identityAlias,
 			},
+			BoundCIDRs: roleEntry.BoundCIDRs,
 		},
 	}
 

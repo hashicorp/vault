@@ -1084,6 +1084,14 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatal(err)
 	}
 
+	testValidConnection := &logical.Connection{
+		RemoteAddr: "127.0.0.1",
+	}
+
+	testInvalidConnection := &logical.Connection{
+		RemoteAddr: "127.0.0.2",
+	}
+
 	accessKey := os.Getenv("TEST_AWS_ACCESS_KEY")
 	secretKey := os.Getenv("TEST_AWS_SECRET_KEY")
 
@@ -1130,6 +1138,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		Path:      "login",
 		Storage:   storage,
 		Data:      loginInput,
+		Connection: testValidConnection,
 	}
 
 	// Baseline role data that should succeed permit login
@@ -1141,6 +1150,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		"bound_account_id":      accountID,
 		"bound_iam_role_arn":    iamARN,
 		"bound_ec2_instance_id": []string{parsedIdentityDoc.InstanceID, "i-1234567"},
+		"bound_cidr":            "127.0.0.1/32",
 	}
 
 	roleReq := &logical.Request{
@@ -1207,13 +1217,16 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	// globbed IAM role ARN
 	data["bound_iam_role_arn"] = []string{"wrong_iam_role_arn_1", fmt.Sprintf("%s*", iamARN[:len(iamARN)-2]), "wrong_iam_role_arn_2"}
-	resp, err := b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	// use an invalid client connection CIDR
+	loginRequest.Connection = testInvalidConnection
+	if err := updateRoleExpectLoginFail(roleReq, loginRequest); err != nil {
+		t.Fatal(err)
 	}
 
+	// Use a valid client connection CIDR
 	// Now, the login attempt should succeed
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	loginRequest.Connection = testValidConnection
+	resp, err := b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1461,6 +1474,14 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	testValidConnection := &logical.Connection{
+		RemoteAddr: "127.0.0.1",
+	}
+
+	testInvalidConnection := &logical.Connection{
+		RemoteAddr: "127.0.0.2",
+	}
+
 	// Override the default AWS env vars (if set) with our test creds
 	// so that the credential provider chain will pick them up
 	// NOTE that I'm not bothing to override the shared config file location,
@@ -1552,6 +1573,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		"bound_iam_principal_arn": []string{entity.canonicalArn(), "arn:aws:iam::123456789012:role/FakeRoleArn1*"}, // Fake ARN MUST be wildcard terminated because we're resolving unique IDs, and the wildcard termination prevents unique ID resolution
 		"policies":                "root",
 		"auth_type":               iamAuthType,
+		"bound_cidr":		   "127.0.0.1/32",
 	}
 	roleRequest := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -1636,6 +1658,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Path:      "login",
 		Storage:   storage,
 		Data:      loginData,
+		Connection: testValidConnection,
 	}
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
@@ -1655,6 +1678,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Path:      "login",
 		Storage:   storage,
 		Data:      loginData,
+		Connection: testValidConnection,
 	}
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
@@ -1667,9 +1691,16 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Errorf("bad: expected failed login due to bad auth type: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// finally, the happy path test :)
-
+	loginRequest.Connection = testInvalidConnection
 	loginData["role"] = testValidRoleName
+	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	if err != nil || resp == nil || !resp.IsError() {
+		t.Errorf("bad: expected failed login due to invalid bound CIDR: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// finally, the happy path test :)
+	loginRequest.Connection = testValidConnection
+
 	resp, err = b.HandleRequest(context.Background(), loginRequest)
 	if err != nil {
 		t.Fatal(err)
@@ -1747,6 +1778,15 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("bad: expected valid login: resp:%#v", resp)
 	}
+
+	// ensure we can't renew with an invalid CIDR
+	renewReq = generateRenewRequest(storage, resp.Auth)
+	renewReq.Connection = testInvalidConnection
+	renewResp, err := b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
+	if err != nil || renewResp == nil || !renewResp.IsError() {
+		t.Errorf("bad: expected failed renew due to invalid bound CIDR: resp:%#v\nerr:%v", renewResp, err)
+	}
+
 	// and ensure we can renew
 	renewReq = generateRenewRequest(storage, resp.Auth)
 	resp, err = b.pathLoginRenew(context.Background(), renewReq, empty_login_fd)
@@ -1810,6 +1850,10 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 	renewReq.Auth.LeaseOptions = auth.LeaseOptions
 	renewReq.Auth.Policies = auth.Policies
 	renewReq.Auth.Period = auth.Period
+	renewReq.Connection = &logical.Connection{
+		RemoteAddr: "127.0.0.1",
+	}
+
 
 	return renewReq
 }

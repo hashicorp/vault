@@ -6,9 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -120,6 +122,12 @@ If set, defines a constraint on the EC2 instance to be associated with the
 subnet ID that matches one of the values specified by this parameter. This is
 only applicable when auth_type is ec2 or inferred_entity_type is
 ec2_instance.`,
+			},
+			"bound_cidr": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `
+Comma-separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can perform the login operation.`,
 			},
 			"role_tag": {
 				Type:    framework.TypeString,
@@ -562,6 +570,15 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		roleEntry.BoundIamPrincipalARNs = principalARNs
 		roleEntry.BoundIamPrincipalIDs = []string{}
 	}
+
+	if boundCIDRsRaw, ok := data.GetOk("bound_cidr"); ok {
+		boundCIDRs, err := parseutil.ParseAddrs(boundCIDRsRaw)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		roleEntry.BoundCIDRs = boundCIDRs
+	}
+
 	if roleEntry.ResolveAWSUniqueIDs && len(roleEntry.BoundIamPrincipalIDs) == 0 {
 		// we might be turning on resolution on this role, so ensure we update the IDs
 		for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
@@ -810,6 +827,7 @@ type awsRoleEntry struct {
 	AuthType                    string        `json:"auth_type" `
 	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
 	BoundAccountIDs             []string      `json:"bound_account_id_list"`
+	BoundCIDRs		    []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
 	BoundIamPrincipalARNs       []string      `json:"bound_iam_principal_arn_list"`
 	BoundIamPrincipalIDs        []string      `json:"bound_iam_principal_id_list"`
@@ -847,6 +865,7 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"auth_type":                      r.AuthType,
 		"bound_ami_id":                   r.BoundAmiIDs,
 		"bound_account_id":               r.BoundAccountIDs,
+		"bound_cidr":			  r.BoundCIDRs,
 		"bound_ec2_instance_id":          r.BoundEc2InstanceIDs,
 		"bound_iam_principal_arn":        r.BoundIamPrincipalARNs,
 		"bound_iam_principal_id":         r.BoundIamPrincipalIDs,

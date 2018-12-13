@@ -311,6 +311,10 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 				Path:      "login",
 				Storage:   storage,
 				Data:      loginData,
+				Connection:  &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+
 			}
 
 			resp, err := b.HandleRequest(context.Background(), loginRequest)
