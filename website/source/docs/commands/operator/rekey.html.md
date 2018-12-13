@@ -47,7 +47,7 @@ $ vault operator rekey \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 ```
 
-Rekey KMS recovery keys and encrypt the resulting keys with PGP:
+Rekey an Auto Unseal vault and encrypt the resulting recovery keys with PGP:
 
 ```text
 $ vault operator rekey \
