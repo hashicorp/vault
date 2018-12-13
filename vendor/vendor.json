@@ -97,6 +97,12 @@
 			"revisionTime": "2018-10-10T17:36:19Z"
 		},
 		{
+			"checksumSHA1": "oXTAP5DbYVI2htDEdkFr5jF3gHM=",
+			"path": "github.com/AndreasBriese/bbloom",
+			"revision": "343706a395b76e5ca5c7dca46a5d937b48febc74",
+			"revisionTime": "2018-09-13T14:06:56Z"
+		},
+		{
 			"checksumSHA1": "giyBgcgqsXnR5yMNZ6msWxHonq0=",
 			"path": "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute",
 			"revision": "ef9744da754d0cf00d0cfeae7d1a83f2245a4b1c",
@@ -715,6 +721,12 @@
 			"revisionTime": "2017-04-17T20:07:03Z"
 		},
 		{
+			"checksumSHA1": "20Pind5XCrfZL/F0oibWfd9gotA=",
+			"path": "github.com/boltdb/bolt",
+			"revision": "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+			"revisionTime": "2018-03-02T18:00:52Z"
+		},
+		{
 			"checksumSHA1": "X/ezkFEECpsC9T8wf1m6jbJo3A4=",
 			"path": "github.com/boombuler/barcode",
 			"revision": "34fff276c74eba9c3506f0c6f4064dbaa67d8da3",
@@ -873,10 +885,52 @@
 			"revisionTime": "2018-10-14T14:49:52Z"
 		},
 		{
+			"checksumSHA1": "/TDEEKkPFm6UmQVBmbBROvM9iJk=",
+			"path": "github.com/dgraph-io/badger",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
+			"checksumSHA1": "oOuT7ebEiZ1ViHLKdFxKFOvobAQ=",
+			"path": "github.com/dgraph-io/badger/options",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
+			"checksumSHA1": "d8wE18ae6lOhmJqh0jwwhmQCkII=",
+			"path": "github.com/dgraph-io/badger/protos",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
+			"checksumSHA1": "00T6XbLV4d95J7hm6kTXDReaQHM=",
+			"path": "github.com/dgraph-io/badger/skl",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
+			"checksumSHA1": "dCvRZ5BRgoLnfrL8rehjYt0Pmj4=",
+			"path": "github.com/dgraph-io/badger/table",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
+			"checksumSHA1": "4CGMDSqxpw7KoDkyOw70a7qalkw=",
+			"path": "github.com/dgraph-io/badger/y",
+			"revision": "49a49e3217461bd89dba15c33edb90779bbfece2",
+			"revisionTime": "2018-11-26T21:07:12Z"
+		},
+		{
 			"checksumSHA1": "blOHP3HPYU+IeV6yWCalQuuM+zE=",
 			"path": "github.com/dgrijalva/jwt-go",
 			"revision": "3af4c746e1c248ee8491a3e0c6f7a9cd831e95f8",
 			"revisionTime": "2018-09-21T17:23:15Z"
+		},
+		{
+			"checksumSHA1": "+MUIij/Y6vqAkx0P5GjHeqnU9ZU=",
+			"path": "github.com/dgryski/go-farm",
+			"revision": "2de33835d10275975374b37b2dcfd22c9020a1f5",
+			"revisionTime": "2018-01-09T07:02:41Z"
 		},
 		{
 			"checksumSHA1": "7EjxkAUND/QY/sN+2fNKJ52v1Rc=",
@@ -1387,6 +1441,12 @@
 			"path": "github.com/hashicorp/raft",
 			"revision": "82694fb663be3ffa7769961ee9a65e4c39ebbf2c",
 			"revisionTime": "2018-08-23T11:55:32Z"
+		},
+		{
+			"checksumSHA1": "Y2PM65le0fGtiD12RaKknBscFys=",
+			"path": "github.com/hashicorp/raft-boltdb",
+			"revision": "6e5ba93211eaf8d9a2ad7e41ffad8c6f160f9fe3",
+			"revisionTime": "2017-10-10T15:18:10Z"
 		},
 		{
 			"checksumSHA1": "0PeWsO2aI+2PgVYlYlDPKfzCLEQ=",
@@ -2237,6 +2297,12 @@
 			"path": "github.com/ugorji/go/codec",
 			"revision": "8333dd4495169d0d17214592e805b1ce5cbcdf86",
 			"revisionTime": "2018-10-12T06:40:53Z"
+		},
+		{
+			"checksumSHA1": "9VCT03G1QYtkpnzbRf+LWrX+oeA=",
+			"path": "go.etcd.io/bbolt",
+			"revision": "7ee3ded59d4835e10f3e7d0f7603c42aa5e83820",
+			"revisionTime": "2018-09-12T20:56:54Z"
 		},
 		{
 			"checksumSHA1": "8nCoO1ACxWgrtwUl84Se7YIWVMA=",
