@@ -44,7 +44,7 @@ $ vault operator init \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 ```
 
-Initialize when using AWS KMS AutoUnseal, but encrypt the recovery keys with pgp keys:
+Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
 
 ```text
 $ vault operator init \
