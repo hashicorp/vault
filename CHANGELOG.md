@@ -1,5 +1,12 @@
 ## 1.0.1 (unreleased)
 
+CHANGES:
+
+ * secret/database: On role read, empty statements will be returned as empty
+   slices instead of potentially being returned as JSON null values. This makes
+   it more in line with other parts of Vault and makes it easier for statically
+   typed languages to interpret the values.
+
 IMPROVEMENTS:
 
  * cli: Strip iTerm extra characters from password manager input [GH-5837]
