@@ -136,7 +136,7 @@ proto:
 	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
 fmtcheck:
-	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
