@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/ryanuber/go-glob"
+	glob "github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -83,32 +83,27 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
-	resp := &logical.Response{
-		Auth: &logical.Auth{
-			Period: matched.Entry.Period,
-			InternalData: map[string]interface{}{
-				"subject_key_id":   skid,
-				"authority_key_id": akid,
-			},
-			Policies:    matched.Entry.Policies,
-			DisplayName: matched.Entry.DisplayName,
-			Metadata: map[string]string{
-				"cert_name":        matched.Entry.Name,
-				"common_name":      clientCerts[0].Subject.CommonName,
-				"serial_number":    clientCerts[0].SerialNumber.String(),
-				"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
-				"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
-			},
-			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       matched.Entry.TTL,
-				MaxTTL:    matched.Entry.MaxTTL,
-			},
-			Alias: &logical.Alias{
-				Name: clientCerts[0].Subject.CommonName,
-			},
-			BoundCIDRs: matched.Entry.BoundCIDRs,
+	auth := &logical.Auth{
+		InternalData: map[string]interface{}{
+			"subject_key_id":   skid,
+			"authority_key_id": akid,
 		},
+		DisplayName: matched.Entry.DisplayName,
+		Metadata: map[string]string{
+			"cert_name":        matched.Entry.Name,
+			"common_name":      clientCerts[0].Subject.CommonName,
+			"serial_number":    clientCerts[0].SerialNumber.String(),
+			"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
+			"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
+		},
+		Alias: &logical.Alias{
+			Name: clientCerts[0].Subject.CommonName,
+		},
+	}
+	matched.Entry.PopulateTokenAuth(auth)
+
+	resp := &logical.Response{
+		Auth: auth,
 	}
 
 	// Generate a response
