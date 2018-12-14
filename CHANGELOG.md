@@ -11,6 +11,8 @@ BUG FIXES:
 
  * cli: Show correct stored keys/threshold for autoseals [GH-5910]
  * cli: Fix backwards compatibility fallback when listing plugins [GH-5913]
+ * core: Fix upgrades when the seal config had been created on early versions
+   of vault [GH-5956]
  * namespaces: Correctly reload the proper mount when tuning or reloading the
    mount [GH-5937]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
