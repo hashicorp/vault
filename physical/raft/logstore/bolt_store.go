@@ -1,10 +1,10 @@
-package raftboltdb
+package logstore
 
 import (
 	"errors"
 
-	"github.com/boltdb/bolt"
 	"github.com/hashicorp/raft"
+	bolt "go.etcd.io/bbolt"
 )
 
 const (

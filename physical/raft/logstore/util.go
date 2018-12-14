@@ -1,4 +1,4 @@
-package raftboltdb
+package logstore
 
 import (
 	"bytes"

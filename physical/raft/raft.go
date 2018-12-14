@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/consul/lib"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
+	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 
 	"github.com/hashicorp/vault/physical"
 )

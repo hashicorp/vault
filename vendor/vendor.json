@@ -721,12 +721,6 @@
 			"revisionTime": "2017-04-17T20:07:03Z"
 		},
 		{
-			"checksumSHA1": "20Pind5XCrfZL/F0oibWfd9gotA=",
-			"path": "github.com/boltdb/bolt",
-			"revision": "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
-			"revisionTime": "2018-03-02T18:00:52Z"
-		},
-		{
 			"checksumSHA1": "X/ezkFEECpsC9T8wf1m6jbJo3A4=",
 			"path": "github.com/boombuler/barcode",
 			"revision": "34fff276c74eba9c3506f0c6f4064dbaa67d8da3",
@@ -1441,12 +1435,6 @@
 			"path": "github.com/hashicorp/raft",
 			"revision": "82694fb663be3ffa7769961ee9a65e4c39ebbf2c",
 			"revisionTime": "2018-08-23T11:55:32Z"
-		},
-		{
-			"checksumSHA1": "Y2PM65le0fGtiD12RaKknBscFys=",
-			"path": "github.com/hashicorp/raft-boltdb",
-			"revision": "6e5ba93211eaf8d9a2ad7e41ffad8c6f160f9fe3",
-			"revisionTime": "2017-10-10T15:18:10Z"
 		},
 		{
 			"checksumSHA1": "0PeWsO2aI+2PgVYlYlDPKfzCLEQ=",
