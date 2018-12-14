@@ -44,8 +44,17 @@ BUG FIXES:
 
 ## 0.11.6 (December 14th, 2018)
 
-This release contains the security fixes from 1.0.0 and 1.0.1 and the namespace
-bug fix from GH-5937. It is otherwise identical to 0.11.5.
+This release contains the three security fixes from 1.0.0 and 1.0.1 and the
+following bug fixes from 1.0.0/1.0.1:
+
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
+   mount [GH-5937]
+ * replication/perfstandby: Fix audit table upgrade on standbys [GH-5811]
+ * replication/perfstandby: Fix redirect on approle update [GH-5820]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded
+   [GH-5809]
+
+It is otherwise identical to 0.11.5.
 
 ## 1.0.0 (December 3rd, 2018)
 
