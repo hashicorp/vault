@@ -29,8 +29,10 @@ ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 
 RUN go get github.com/mitchellh/gox
-RUN go get github.com/elazarl/go-bindata-assetfs
 RUN go get github.com/hashicorp/go-bindata
+RUN go get github.com/hashicorp/go-bindata/go-bindata
+RUN go get github.com/elazarl/go-bindata-assetfs
+RUN go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 
 RUN mkdir -p /gopath/src/github.com/hashicorp/vault
 WORKDIR /gopath/src/github.com/hashicorp/vault
