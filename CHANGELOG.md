@@ -28,13 +28,17 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/azure: Cache azure authorizer [15]
+ * auth/gcp: Remove explicit project for service account in GCE authorizer [58]
  * cli: Show correct stored keys/threshold for autoseals [GH-5910]
  * cli: Fix backwards compatibility fallback when listing plugins [GH-5913]
  * core: Fix upgrades when the seal config had been created on early versions
    of vault [GH-5956]
  * namespaces: Correctly reload the proper mount when tuning or reloading the
    mount [GH-5937]
+ * secret/azure: Cache azure authorizer [19]
  * secret/database: Strip empty statements on user input [GH-5955]
+ * secret/gcpkms: Add path for retrieving the public key [5]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
    data was found [GH-5931]
  * secret/pki: Strip empty line in ca_chain output [GH-5779]
