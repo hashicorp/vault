@@ -166,14 +166,58 @@ For more examples, please look at the Vault API client.
 
 To retrieve the help for any API within Vault, including mounted backends, auth
 methods, etc. then append `?help=1` to any URL. If you have valid permission to
-access the path, then the help text will be returned with the following
-structure:
+access the path, then the help text will be return a markdown-formatted block in the `help` attribute of the response.
+
+Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi.html) in Vault, you will get back a small
+OpenAPI document in the `openapi` attribute. This document is relevant for the path you're looking up and any paths under it - also note paths in the OpenAPI document are relative to the initial path queried.
+
+Example request:
+
+```shell
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    http://127.0.0.1:8200/v1/secret?help=1
+```
+
+Example response: 
 
 ```javascript
+
 {
-  "help": "help text"
+  "help": "## DESCRIPTION\n\nThis backend provides a versioned key-value store. The kv backend reads and\nwrites arbitrary secrets to the storage backend. The secrets are\nencrypted/decrypted by Vault: they are never stored unencrypted in the backend\nand the backend never has an opportunity to see the unencrypted value. Each key\ncan have a configured number of versions, and versions can be retrieved based on\ntheir version numbers.\n\n## PATHS\n\nThe following paths are supported by this backend. To view help for\nany of the paths below, use the help command with any route matching\nthe path pattern. Note that depending on the policy of your auth token,\nyou may or may not be able to access certain paths.\n\n    ^.*$\n\n\n    ^config$\n        Configures settings for the KV store\n\n    ^data/(?P<path>.*)$\n        Write, Read, and Delete data in the Key-Value Store.\n\n    ^delete/(?P<path>.*)$\n        Marks one or more versions as deleted in the KV store.\n\n    ^destroy/(?P<path>.*)$\n        Permanently removes one or more versions in the KV store\n\n    ^metadata/(?P<path>.*)$\n        Configures settings for the KV store\n\n    ^undelete/(?P<path>.*)$\n        Undeletes one or more versions from the KV store.",
+  "openapi": {
+    "openapi": "3.0.2",
+    "info": {
+      "title": "HashiCorp Vault API",
+      "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+      "version": "1.0.0",
+      "license": {
+        "name": "Mozilla Public License 2.0",
+        "url": "https://www.mozilla.org/en-US/MPL/2.0"
+      }
+    },
+    "paths": {
+      "/.*": {},
+      "/config": {
+        "description": "Configures settings for the KV store",
+        "x-vault-create-supported": true,
+        "get": {
+          "summary": "Read the backend level settings.",
+          "tags": [
+            "secrets"
+          ],
+          "responses": {
+            "200": {
+              "description": "OK"
+            }
+          }
+        },
+     ...[output truncated]...
+     }
+  }
 }
 ```
+
 
 ## Error Response
 
