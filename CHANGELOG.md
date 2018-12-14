@@ -1,4 +1,16 @@
-## 1.0.1 (unreleased)
+## 1.0.1 (December 14th, 2018)
+
+SECURITY:
+
+ * Update version of Go to 1.11.3 to fix Go bug
+   https://github.com/golang/go/issues/29233 which corresponds to
+   CVE-2018-16875
+ * Database user revocation: If a client has configured custom revocation
+   statements for a role with a value of `""`, that statement would be executed
+   verbatim, resulting in a lack of actual revocation but success for the
+   operation. Vault will now strip empty statements from any provided; as a
+   result if an empty statement is provided, it will behave as if no statement
+   is provided, falling back to the default revocation statement.
 
 CHANGES:
 
@@ -22,12 +34,18 @@ BUG FIXES:
    of vault [GH-5956]
  * namespaces: Correctly reload the proper mount when tuning or reloading the
    mount [GH-5937]
+ * secret/database: Strip empty statements on user input [GH-5955]
  * secret/pki: Fix panic that could occur during tidy operation when malformed
    data was found [GH-5931]
  * secret/pki: Strip empty line in ca_chain output [GH-5779]
  * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
    command - [GH-5909]
  * ui: Fix a bug where you couldn't write a jwt auth method config [GH-5936]
+
+## 0.11.6 (December 14th, 2018)
+
+This release contains the security fixes from 1.0.0 and 1.0.1 and the namespace
+bug fix from GH-5937. It is otherwise identical to 0.11.5.
 
 ## 1.0.0 (December 3rd, 2018)
 
