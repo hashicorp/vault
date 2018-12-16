@@ -44,6 +44,12 @@ has a number of parameters to further configure a connection.
 
 - `password` `(string: "")` - The root credential password used in the connection URL. 
 
+- `ca_cert` `(string: "")` - The server's root CA certificate, if SSL encryption is used
+
+- `client_public_key` `(string: "")` - The client's public key, if SSL encryption is used
+
+- `client_private_key` `(string: "")` - The client's private key, if SSL encryption is used
+
 ### Sample Payload
 
 ```json
@@ -55,6 +61,23 @@ has a number of parameters to further configure a connection.
   "max_connection_lifetime": "5s",
   "username": "username",
   "password": "password"
+}
+```
+
+### Sample Payload, SSL Encryption
+
+```json
+{
+  "plugin_name": "postgresql-database-plugin",
+  "allowed_roles": "readonly",
+  "connection_url": "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-ca&sslinline=true&sslrootcert={{ca_cert}}&sslcert={{client_public_key}}&sslkey={{client_private_key}}",
+  "max_open_connections": 5,
+  "max_connection_lifetime": "5s",
+  "username": "username",
+  "password": "password",
+  "ca_cert": "-----BEGIN CERTIFICATE-----\nMIIDI...",
+  "client_public_key": "-----BEGIN CERTIFICATE-----\nMIIDLT...",
+  "client_private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBA..."
 }
 ```
 

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
+	"net/url"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
@@ -24,6 +25,9 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	CaCert                   string      `json:"ca_cert" mapstructure:"ca_cert" structs:"ca_cert"`
+	ClientPublicKey          string      `json:"client_public_key" mapstructure:"client_public_key" structs:"client_public_key"`
+	ClientPrivateKey         string      `json:"client_private_key" mapstructure:"client_private_key" structs:"client_private_key"`
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -56,6 +60,9 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
 		"username": c.Username,
 		"password": c.Password,
+		"ca_cert": url.QueryEscape(c.CaCert),
+		"client_public_key": url.QueryEscape(c.ClientPublicKey),
+		"client_private_key": url.QueryEscape(c.ClientPrivateKey),
 	})
 
 	if c.MaxOpenConnections == 0 {

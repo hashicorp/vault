@@ -46,6 +46,21 @@ and a negative value disables idle connections.
 If larger than max_open_connections it will be
 reduced to the same size.`,
 			},
+
+			"ca_cert": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: "Public CA sertificate of the database",
+			},
+
+			"client_public_key": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: "Public key for the client",
+			},
+
+			"client_secret_key": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: "Private key for the client",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
