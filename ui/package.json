@@ -75,7 +75,7 @@
     "ember-cli-uglify": "^2.1.0",
     "ember-composable-helpers": "^2.0.3",
     "ember-computed-query": "^0.1.1",
-    "ember-concurrency": "^0.8.14",
+    "ember-concurrency": "^0.8.26",
     "ember-copy": "^1.0.0",
     "ember-data": "~3.4.0",
     "ember-data-model-fragments": "^3.3.0",
