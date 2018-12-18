@@ -15,7 +15,7 @@ export default Component.extend({
   }),
   featuresInfo: computed('model', 'features', function() {
     return allFeatures().map(feature => {
-      let active = this.features.includes(feature) ? true : false;
+      let active = this.features.includes(feature);
       if (active && feature === 'Performance Standby') {
         let count = this.model.performanceStandbyCount;
         return {
