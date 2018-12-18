@@ -467,11 +467,12 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	InMemMetrics, err := c.setupTelemetry(config)
+	inMemMetrics, err := c.setupTelemetry(config)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
+	prometheusEnabled := config.Telemetry != nil && config.Telemetry.PrometheusRetentionTime > 0
 
 	// Initialize the backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
@@ -563,6 +564,8 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
+		InMemSink:                 inMemMetrics,
+		PrometheusEnabled:         prometheusEnabled,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1078,12 +1081,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
-			Core:                         core,
-			MaxRequestSize:               ln.maxRequestSize,
-			MaxRequestDuration:           ln.maxRequestDuration,
-			DisablePrintableCheck:        config.DisablePrintableCheck,
-			TelemetryMemSink:             InMemMetrics,
-			TelemetryPrometheusRetention: config.Telemetry.PrometheusRetentionTime,
+			Core:                  core,
+			MaxRequestSize:        ln.maxRequestSize,
+			MaxRequestDuration:    ln.maxRequestDuration,
+			DisablePrintableCheck: config.DisablePrintableCheck,
 		})
 
 		// We perform validation on the config earlier, we can just cast here
@@ -1680,10 +1681,11 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 	metrics.DefaultInmemSignal(inm)
 
 	var telConfig *server.Telemetry
-	if config.Telemetry == nil {
-		config.Telemetry = &server.Telemetry{}
+	if config.Telemetry != nil {
+		telConfig = config.Telemetry
+	} else {
+		telConfig = &server.Telemetry{}
 	}
-	telConfig = config.Telemetry
 
 	metricsConf := metrics.DefaultConfig("vault")
 	metricsConf.EnableHostname = !telConfig.DisableHostname

@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -18,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/common/expfmt"
+
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -33,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -124,6 +128,20 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 			LocalStorage: []string{
 				expirationSubPath,
+			},
+			&framework.Path{
+				Pattern: "metrics",
+				Fields: map[string]*framework.FieldSchema{
+					"format": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Format to export metrics into. Currently accept only \"prometheus\"",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleMetrics,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["metrics"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["metrics"][1]),
 			},
 		},
 	}
@@ -2473,6 +2491,58 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	return response, nil
 }
 
+func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
+	format := data.Get("format").(string)
+
+	acceptHeaders := req.Headers["Accept"]
+	if format == "prometheus" || (len(acceptHeaders) > 0 && strings.HasPrefix(acceptHeaders[0], "application/openmetrics-text")) {
+		if !b.Core.prometheusEnabled {
+			err := "prometheus support is not enabled"
+			return nil, fmt.Errorf(err)
+		}
+
+		metricsFamilies, err := prometheus.DefaultGatherer.Gather()
+		if err != nil && len(metricsFamilies) == 0 {
+			return nil, fmt.Errorf("no prometheus metrics could be decoded: %s", err)
+		}
+
+		// Initialize a byte buffer.
+		buf := &bytes.Buffer{}
+		defer buf.Reset()
+
+		e := expfmt.NewEncoder(buf, expfmt.FmtText)
+		for _, mf := range metricsFamilies {
+			err := e.Encode(mf)
+			if err != nil {
+				return nil, fmt.Errorf("error during the encoding of metrics: %s", err)
+			}
+		}
+		return &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPContentType: "text/plain",
+				logical.HTTPRawBody:     buf.Bytes(),
+				logical.HTTPStatusCode:  200,
+			},
+		}, nil
+	}
+	summary, err := b.Core.inMemSink.DisplayMetrics(nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error while fetching the in-memory metrics: %s", err)
+	}
+	content, err := json.Marshal(summary)
+	if err != nil {
+		return nil, fmt.Errorf("error while marshalling the in-memory metrics: %s", err)
+	}
+	return &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "application/json",
+			logical.HTTPRawBody:     content,
+			logical.HTTPStatusCode:  200,
+		},
+	}, nil
+}
+
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This ordering of lookups has been validated already in the wrapping
 	// validation func, we're just doing this for a safety check
@@ -3851,6 +3921,10 @@ This path responds to the following HTTP methods.
 	},
 	"internal-ui-resultant-acl": {
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"metrics": {
+		"Export the metrics aggregated for telemetry purpose.",
 		"",
 	},
 }

@@ -1267,6 +1267,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
 		BackendAwareUUID: sysBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Accept"},
+		},
 	}
 
 	identityUUID, err := uuid.GenerateUUID()

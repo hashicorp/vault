@@ -402,6 +402,10 @@ type Core struct {
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
 	allLoggersLock sync.RWMutex
+
+	// Telemetry objects
+	inMemSink         *metrics.InmemSink
+	prometheusEnabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -470,6 +474,10 @@ type CoreConfig struct {
 	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
+
+	// Telemetry objects
+	InMemSink         *metrics.InmemSink
+	PrometheusEnabled bool
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -576,6 +584,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
+		inMemSink:                        conf.InMemSink,
+		prometheusEnabled:                conf.PrometheusEnabled,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
