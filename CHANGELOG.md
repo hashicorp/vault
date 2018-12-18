@@ -1,3 +1,11 @@
+## 1.0.2 (Unreleased)
+
+CHANGES:
+
+ * secret/aws: Role now returns `credential_type` instead of `credential_types`
+   to match role input. If a legacy role that can supply more than one
+   credential type, they will be concatenated with a `,`.
+
 ## 1.0.1 (December 14th, 2018)
 
 SECURITY:
