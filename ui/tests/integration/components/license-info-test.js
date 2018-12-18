@@ -136,6 +136,6 @@ module('Integration | Component | license info', function(hooks) {
     );
 
     let row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
-    assert.equal(row.featureStatus, 'Active — count: 4', 'renders active and displays count');
+    assert.equal(row.featureStatus, 'Active — 4 standby nodes allotted', 'renders active and displays count');
   });
 });
