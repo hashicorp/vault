@@ -99,19 +99,16 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		k.region = "us-east-1"
 	}
 
-	// Check and set AWS access key and secret key
-	k.accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
-	if k.accessKey == "" {
-		if accessKey, ok := config["access_key"]; ok {
-			k.accessKey = accessKey
-		}
+	// Check and set AWS access key, secret key, and session token
+	var accessKey, secretKey, sessionToken string
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+		accessKey = config["access_key"]
 	}
-
-	k.secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if k.secretKey == "" {
-		if secretKey, ok := config["secret_key"]; ok {
-			k.secretKey = secretKey
-		}
+	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		secretKey = config["secret_key"]
+	}
+	if os.Getenv("AWS_SESSION_TOKEN") == "" {
+		sessionToken = config["session_token"]
 	}
 
 	k.endpoint = os.Getenv("AWS_KMS_ENDPOINT")

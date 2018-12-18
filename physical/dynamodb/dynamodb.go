@@ -15,7 +15,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/physical"
@@ -155,16 +155,14 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		writeCapacity = DefaultDynamoDBWriteCapacity
 	}
 
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	if accessKey == "" {
+	var accessKey, secretKey, sessionToken string
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
 		accessKey = conf["access_key"]
 	}
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if secretKey == "" {
+	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 		secretKey = conf["secret_key"]
 	}
-	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
-	if sessionToken == "" {
+	if os.Getenv("AWS_SESSION_TOKEN") == "" {
 		sessionToken = conf["session_token"]
 	}
 
