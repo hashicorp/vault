@@ -394,13 +394,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 	}
-	tokenhelper.AddTokenFields(rolesPath.Fields)
+	// Roles in token store handle policies and TTLs differently
+	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields,
+		[]string{"bound_cidrs", "explicit_max_ttl", "period", "renewable", "token_type"})
 	// For this backend default to service
 	rolesPath.Fields["token_type"].Default = "service"
-	// Roles in token store handle policies and TTLs differently
-	delete(rolesPath.Fields, "policies")
-	delete(rolesPath.Fields, "ttl")
-	delete(rolesPath.Fields, "max_ttl")
 	p = append(p, rolesPath)
 
 	return p

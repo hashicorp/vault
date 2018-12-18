@@ -7,6 +7,7 @@ import (
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -39,8 +40,15 @@ type TokenParams struct {
 // AddRoleFields adds fields to an existing role. It panics if it would
 // overwrite an existing field.
 func AddTokenFields(m map[string]*framework.FieldSchema) {
+	AddTokenFieldsWithAllowList(m, nil)
+}
+
+func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []string) {
 	r := TokenFields()
 	for k, v := range r {
+		if len(allowed) > 0 && !strutil.StrListContains(allowed, k) {
+			continue
+		}
 		if _, has := m[k]; has {
 			panic(fmt.Sprintf("adding role field %s would overwrite existing field", k))
 		}
