@@ -94,7 +94,6 @@ type ServerCommand struct {
 	flagDevLatency       int
 	flagDevLatencyJitter int
 	flagDevLeasedKV      bool
-	flagDevKVV1          bool
 	flagDevSkipInit      bool
 	flagDevThreeNode     bool
 	flagDevFourCluster   bool
@@ -252,13 +251,6 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
-		Name:    "dev-kv-v1",
-		Target:  &c.flagDevKVV1,
-		Default: false,
-		Hidden:  true,
-	})
-
-	f.BoolVar(&BoolVar{
 		Name:    "dev-auto-seal",
 		Target:  &c.flagDevAutoSeal,
 		Default: false,
@@ -364,7 +356,7 @@ func (c *ServerCommand) Run(args []string) int {
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal {
 		c.flagDev = true
 	}
 
@@ -503,6 +495,10 @@ func (c *ServerCommand) Run(args []string) int {
 		sealLogger := c.logger.Named(vaultseal.Test)
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
 	} else {
+		// Handle the case where no seal is provided
+		if len(config.Seals) == 0 {
+			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		}
 		for _, configSeal := range config.Seals {
 			sealType := vaultseal.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
@@ -1355,7 +1351,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	}
 
 	// Upgrade the default K/V store
-	if !c.flagDevLeasedKV && !c.flagDevKVV1 {
+	if !c.flagDevLeasedKV {
 		req := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: init.RootToken,
