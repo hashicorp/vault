@@ -38,11 +38,12 @@ const (
 // AWSKMSSeal represents credentials and Key information for the KMS Key used to
 // encryption and decryption
 type AWSKMSSeal struct {
-	accessKey string
-	secretKey string
-	region    string
-	keyID     string
-	endpoint  string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	keyID        string
+	endpoint     string
 
 	currentKeyID *atomic.Value
 
@@ -100,15 +101,14 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	}
 
 	// Check and set AWS access key, secret key, and session token
-	var accessKey, secretKey, sessionToken string
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		accessKey = config["access_key"]
+		k.accessKey = config["access_key"]
 	}
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		secretKey = config["secret_key"]
+		k.secretKey = config["secret_key"]
 	}
 	if os.Getenv("AWS_SESSION_TOKEN") == "" {
-		sessionToken = config["session_token"]
+		k.sessionToken = config["session_token"]
 	}
 
 	k.endpoint = os.Getenv("AWS_KMS_ENDPOINT")
@@ -278,6 +278,7 @@ func (k *AWSKMSSeal) getAWSKMSClient() (*kms.KMS, error) {
 
 	credsConfig.AccessKey = k.accessKey
 	credsConfig.SecretKey = k.secretKey
+	credsConfig.SessionToken = k.sessionToken
 	credsConfig.Region = k.region
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
