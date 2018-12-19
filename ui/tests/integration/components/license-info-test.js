@@ -15,14 +15,6 @@ const component = create(license);
 module('Integration | Component | license info', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   const LICENSE_WARNING_TEXT = `Warning Your temporary license expires in 30 minutes and your vault will seal. Please enter a valid license below.`;
 
   test('it renders properly for temporary license', async function(assert) {
@@ -113,5 +105,37 @@ module('Integration | Component | license info', function(hooks) {
     await component.text('ABCDE12345');
     await component.saveButton();
     assert.ok(this.get('saveModel').calledOnce);
+  });
+
+  test('it renders Performance Standby as inactive if count is 0', async function(assert) {
+    const now = Date.now();
+    this.set('licenseId', 'temporary');
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
+    this.set('model', { performanceStandbyCount: 0 });
+    this.set('features', ['Performance Standby', 'Namespaces']);
+
+    await render(
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}} @model={{this.model}}/>`
+    );
+
+    let row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
+    assert.equal(row.featureStatus, 'Not Active', 'renders feature as inactive because when count is 0');
+  });
+
+  test('it renders Performance Standby as active and shows count', async function(assert) {
+    const now = Date.now();
+    this.set('licenseId', 'temporary');
+    this.set('expirationTime', addMinutes(now, 30));
+    this.set('startTime', now);
+    this.set('model', { performanceStandbyCount: 4 });
+    this.set('features', ['Performance Standby', 'Namespaces']);
+
+    await render(
+      hbs`<LicenseInfo @licenseId={{this.licenseId}} @expirationTime={{this.expirationTime}} @startTime={{this.startTime}} @features={{this.features}} @model={{this.model}}/>`
+    );
+
+    let row = component.featureRows.filterBy('featureName', 'Performance Standby')[0];
+    assert.equal(row.featureStatus, 'Active — 4 standby nodes allotted', 'renders active and displays count');
   });
 });

@@ -261,7 +261,7 @@ used.
 
 ## Flags
 
-There are diffrent CLI flags that are avaialble depending on subcommands. Some
+There are different CLI flags that are available depending on subcommands. Some
 flags, such as those used for setting HTTP and output options, are available
 globally, while others are specific to a particular subcommand. For a completely
 list of available flags, run:

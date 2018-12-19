@@ -177,7 +177,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
-		certificate = []byte(certStr)
+		certificate = []byte(strings.TrimSpace(certStr))
 		goto reply
 	}
 

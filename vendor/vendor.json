@@ -1413,10 +1413,10 @@
 			"revisionTime": "2018-11-09T18:06:36Z"
 		},
 		{
-			"checksumSHA1": "ojr0r/jmutGEhftDXiHthCCwpIA=",
+			"checksumSHA1": "Jj3mz58lSv0dsuXd6bVxGV4759w=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
-			"revision": "d75e09c45e50144d92d5fa0d711996b4ac98c1e4",
-			"revisionTime": "2018-08-16T20:10:44Z"
+			"revision": "4c0b46069a2293d5a6ca7506c8d3e0c4a92f3dbc",
+			"revisionTime": "2018-12-07T23:25:28Z"
 		},
 		{
 			"checksumSHA1": "4Z/niOo76EcP8KpLdSL5GdDcy78=",
@@ -1425,10 +1425,10 @@
 			"revisionTime": "2018-08-16T20:11:31Z"
 		},
 		{
-			"checksumSHA1": "h7m+nCb1vdvcy5cUkCarix08yJI=",
+			"checksumSHA1": "llLHR3FVdqtuFgjIoL9GNN8zKKI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "0a3edf071747fcb84aa4f9d08a34d2c249e6228d",
-			"revisionTime": "2018-11-15T01:46:55Z"
+			"revision": "4d63bbfe6fcf0363a2ea2c273846e88b95d85089",
+			"revisionTime": "2018-12-10T20:01:33Z"
 		},
 		{
 			"checksumSHA1": "tt3FtyjXgdBI9Mb43UL4LtOZmAk=",
@@ -1473,10 +1473,10 @@
 			"revisionTime": "2018-11-09T18:14:53Z"
 		},
 		{
-			"checksumSHA1": "Zr5xVeEJxmlBLWgaUq5rRRIuryE=",
+			"checksumSHA1": "rgeBhrdLyF2orH3QA/H66ZSSbuo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
-			"revision": "26e517ba4190bab20ebb28336921434f96093250",
-			"revisionTime": "2018-11-08T17:16:20Z"
+			"revision": "0087bdef705a9db855528525a6ede4d768a2639c",
+			"revisionTime": "2018-12-07T23:25:00Z"
 		},
 		{
 			"checksumSHA1": "tFP1EEyVlomSSx46NHDZWGPzUz0=",
@@ -1497,10 +1497,10 @@
 			"revisionTime": "2018-09-21T17:32:00Z"
 		},
 		{
-			"checksumSHA1": "mZTWeo/P2ZKbLHOjEqFUumNyEOo=",
+			"checksumSHA1": "TbPoZQkYZ7Bukdw6U+/GejbaZAs=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcpkms",
-			"revision": "a7d4151e40a5c1649d41440cadd1fe654df7e61c",
-			"revisionTime": "2018-10-19T21:34:31Z"
+			"revision": "6cd991800a6d7af69b1950ec4cbf402d021a099d",
+			"revisionTime": "2018-12-12T18:25:53Z"
 		},
 		{
 			"checksumSHA1": "0Uh543eKwac5M7mSsijM0GNekto=",

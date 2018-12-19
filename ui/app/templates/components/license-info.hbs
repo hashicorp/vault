@@ -71,7 +71,8 @@
     {{#each featuresInfo as |info|}}
       {{#info-table-row label=info.name value=(if info.active "Active" "Not Active") data-test-feature-row="data-test-feature-row"}}
         {{#if info.active}}
-          <ICon @size=28 @glyph="true" /> <span data-test-feature-status>Active</span>
+        <ICon @size=28 @glyph="true" /> <span data-test-feature-status>Active {{#if info.count}}&mdash;
+         {{info.count}} standby nodes allotted{{/if}}</span>
         {{else}}
           <ICon @size=28 @glyph="false" /> <span data-test-feature-status>Not Active</span>
         {{/if}}

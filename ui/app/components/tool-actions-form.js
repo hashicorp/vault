@@ -106,7 +106,7 @@ export default Component.extend(DEFAULTS, {
         : JSON.parse(get(this, 'data'));
     }
     if (action === 'random') {
-      return this.getProperties('bytes');
+      return this.getProperties('bytes', 'format');
     }
 
     if (action === 'hash') {
