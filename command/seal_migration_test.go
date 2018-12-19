@@ -257,7 +257,7 @@ func TestSealMigration(t *testing.T) {
 
 		var resp *api.SealStatusResponse
 		unsealOpts := &api.UnsealOpts{}
-		for i, key := range keys {
+		for _, key := range keys {
 			unsealOpts.Key = key
 			unsealOpts.Migrate = false
 			resp, err = client.Sys().UnsealWithOptions(unsealOpts)
