@@ -63,7 +63,6 @@ export default Route.extend({
           responsePath: 'data.keys',
           page: params.page,
           pageFilter: params.pageFilter,
-          size: 100,
         })
         .then(model => {
           this.set('has404', false);

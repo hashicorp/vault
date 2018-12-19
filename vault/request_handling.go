@@ -136,6 +136,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			c.logger.Error("failed to lookup token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
 		}
+		// Set the token entry here since it has not been cached yet
+		req.SetTokenEntry(te)
 	default:
 		te = req.TokenEntry()
 	}
@@ -343,17 +345,16 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
+		c.stateLock.RUnlock()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
+		c.stateLock.RUnlock()
 		return nil, consts.ErrStandby
 	}
 
 	ctx, cancel := context.WithCancel(c.activeContext)
-	defer cancel()
-
 	go func(ctx context.Context, httpCtx context.Context) {
 		select {
 		case <-ctx.Done():
@@ -362,6 +363,23 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 		}
 	}(ctx, httpCtx)
 
+	ns, err := namespace.FromContext(httpCtx)
+	if err != nil {
+		cancel()
+		c.stateLock.RUnlock()
+		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
+	}
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+
+	resp, err = c.handleCancelableRequest(ctx, ns, req)
+
+	req.SetTokenEntry(nil)
+	cancel()
+	c.stateLock.RUnlock()
+	return resp, err
+}
+
+func (c *Core) handleCancelableRequest(ctx context.Context, ns *namespace.Namespace, req *logical.Request) (resp *logical.Response, err error) {
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -378,12 +396,6 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	if err != nil {
 		return nil, err
 	}
-
-	ns, err := namespace.FromContext(httpCtx)
-	if err != nil {
-		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
-	}
-	ctx = namespace.ContextWithNamespace(ctx, ns)
 
 	if !hasNamespaces(c) && ns.Path != "" {
 		return nil, logical.CodedError(403, "namespaces feature not enabled")

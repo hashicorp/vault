@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 const (
@@ -1146,8 +1147,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		return retErr
 	}
 
-	req.SetTokenEntry(te)
-
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
@@ -1642,6 +1641,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	if err := jsonutil.DecodeJSON(pe.Value, barrierConf); err != nil {
 		return nil, nil, errwrap.Wrapf("failed to decode barrier seal configuration at migration check time: {{err}}", err)
 	}
+	err = barrierConf.Validate()
+	if err != nil {
+		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
+	}
+	// In older versions of vault the default seal would not store a type. This
+	// is here to offer backwards compatability for older seal configs.
+	if barrierConf.Type == "" {
+		barrierConf.Type = seal.Shamir
+	}
 
 	var recoveryConf *SealConfig
 	pe, err = c.physical.Get(ctx, recoverySealConfigPlaintextPath)
@@ -1652,6 +1660,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		recoveryConf = &SealConfig{}
 		if err := jsonutil.DecodeJSON(pe.Value, recoveryConf); err != nil {
 			return nil, nil, errwrap.Wrapf("failed to decode seal configuration at migration check time: {{err}}", err)
+		}
+		err = recoveryConf.Validate()
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
+		}
+		// In older versions of vault the default seal would not store a type. This
+		// is here to offer backwards compatability for older seal configs.
+		if recoveryConf.Type == "" {
+			recoveryConf.Type = seal.Shamir
 		}
 	}
 

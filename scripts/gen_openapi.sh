@@ -8,7 +8,7 @@ set -e
 #
 #   1. Vault has been checked out at an appropriate version and built
 #   2. vault executable is in your path
-#   3. Vault isn't alredy running
+#   3. Vault isn't already running
 
 echo "Starting Vault..."
 if pgrep -x "vault" > /dev/null

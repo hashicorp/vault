@@ -27,6 +27,6 @@ export default DS.Model.extend(KeyMixin, {
   backend: attr('string'),
   secretPath: lazyCapabilities(apiPath`${'backend'}/${'id'}`, 'backend', 'id'),
   canEdit: alias('secretPath.canUpdate'),
-  canDelete: alias('secretPath.canUpdate'),
+  canDelete: alias('secretPath.canDelete'),
   canRead: alias('secretPath.canRead'),
 });

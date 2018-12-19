@@ -442,7 +442,7 @@ func (b *GcpAuthBackend) pathGceLogin(ctx context.Context, req *logical.Request,
 			metadata.ProjectId, metadata.Zone, metadata.InstanceName, err)), nil
 	}
 
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, loginInfo.EmailOrId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, metadata.ProjectId, instance, req.Storage, role, loginInfo.EmailOrId); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -575,7 +575,7 @@ func (b *GcpAuthBackend) pathGceRenew(ctx context.Context, req *logical.Request,
 	if !ok {
 		return errors.New("invalid auth metadata: service_account_id not found")
 	}
-	if err := b.authorizeGCEInstance(ctx, instance, req.Storage, role, serviceAccountId); err != nil {
+	if err := b.authorizeGCEInstance(ctx, meta.ProjectId, instance, req.Storage, role, serviceAccountId); err != nil {
 		return fmt.Errorf("could not renew token for role %s: %v", roleName, err)
 	}
 
@@ -631,7 +631,7 @@ func getInstanceMetadataFromAuth(authMetadata map[string]string) (*gcputil.GCEId
 
 // authorizeGCEInstance returns an error if the given GCE instance is not
 // authorized for the role.
-func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *compute.Instance, s logical.Storage, role *gcpRole, serviceAccountId string) error {
+func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, project string, instance *compute.Instance, s logical.Storage, role *gcpRole, serviceAccountId string) error {
 	httpC, err := b.httpClient(ctx, s)
 	if err != nil {
 		return err
@@ -652,8 +652,8 @@ func (b *GcpAuthBackend) authorizeGCEInstance(ctx context.Context, instance *com
 			computeSvc: gceClient,
 			iamSvc:     iamClient,
 		},
-		serviceAccount: serviceAccountId,
-
+		serviceAccount:   serviceAccountId,
+		project:          project,
 		instanceLabels:   instance.Labels,
 		instanceSelfLink: instance.SelfLink,
 		instanceZone:     instance.Zone,

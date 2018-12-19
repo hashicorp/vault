@@ -33,6 +33,6 @@ export default Model.extend(KeyMixin, {
   secretPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
 
   canEdit: alias('versionPath.canUpdate'),
-  canDelete: alias('secretPath.canUpdate'),
+  canDelete: alias('secretPath.canDelete'),
   canRead: alias('secretPath.canRead'),
 });

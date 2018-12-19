@@ -22,7 +22,7 @@ module.exports = function(defaults) {
     hinting: isTest,
     tests: isTest,
     sourcemaps: {
-      enabled: false,
+      enabled: !isProd,
     },
     sassOptions: {
       sourceMap: false,
@@ -41,6 +41,9 @@ module.exports = function(defaults) {
         // and https://github.com/webpack/webpack/issues/5627
         devtool: 'inline-source-map',
       },
+    },
+    'ember-test-selectors': {
+      strip: isProd,
     },
   });
 

@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "AliCloud KMS - Seals - Configuration"
-sidebar_title: "AliCloud KMS <sup>1.0 BETA</sup>"
+sidebar_title: "AliCloud KMS"
 sidebar_current: "docs-configuration-seal-alicloudkms"
 description: |-
   The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping

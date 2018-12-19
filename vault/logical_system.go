@@ -1411,7 +1411,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		// Reload the backend to kick off the upgrade process. It should only apply to KV backend so we
 		// trigger based on the version logic above.
 		if kvUpgraded {
-			b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+			err = b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+			if err != nil {
+				b.Core.logger.Error("mount tuning of options: could not reload backend", "error", err, "path", path, "options", options)
+			}
+
 		}
 	}
 
@@ -2894,6 +2898,11 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	me := b.Core.router.MatchingMountEntry(ctx, path)
 	if me == nil {
 		// Return a permission denied error here so this path cannot be used to
@@ -2905,6 +2914,9 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		Data: mountInfo(me),
 	}
 	resp.Data["path"] = me.Path
+	if ns.ID != me.Namespace().ID {
+		resp.Data["path"] = me.Namespace().Path + me.Path
+	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
@@ -2922,11 +2934,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if te != nil && te.EntityID != "" && entity == nil {
 		b.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
-	}
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
@@ -3057,6 +3064,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
+	context := d.Get("context").(string)
+
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
 	doc := framework.NewOASDocument()
@@ -3136,6 +3145,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	if err := procMountGroup("auth", "auth/"); err != nil {
 		return nil, err
 	}
+
+	doc.CreateOperationIDs(context)
 
 	buf, err := json.Marshal(doc)
 	if err != nil {

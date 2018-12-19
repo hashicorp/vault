@@ -43,7 +43,7 @@
                 }}
               {{/if}}
             </li>
-          {{else if activeCluster.version.isOSS}}
+          {{else if version.isOSS}}
             <li>
               {{#link-to "vault.cluster.replication"}}
                 <div class="level is-mobile">
@@ -68,7 +68,7 @@
       </nav>
       <hr/>
     {{/if}}
-    {{#unless isOSS}}
+    {{#unless version.isOSS}}
       <nav class="menu">
         <div class="menu-label">
           License
