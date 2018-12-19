@@ -1020,9 +1020,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 		endpointURL := "http://"+config.Listeners[0].Config["address"].(string)
 		if runtime.GOOS == "windows" {
-			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\" (PowerShell)", endpointURL))
-			c.UI.Warn("OR")
-			c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s (cmd.exe)", endpointURL))
+			c.UI.Warn("PowerShell:")
+			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+			c.UI.Warn("cmd.exe:")
+			c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
 		} else {
 			c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
 		}
