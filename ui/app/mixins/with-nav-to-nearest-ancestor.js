@@ -35,6 +35,6 @@ export default Mixin.create({
         errored = false;
       }
     }
-    this.transitionToRoute('vault.cluster.secrets.backend.list-root');
+    yield this.transitionToRoute('vault.cluster.secrets.backend.list-root');
   }),
 });
