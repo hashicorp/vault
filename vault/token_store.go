@@ -19,8 +19,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/go-multierror"
+	metrics "github.com/armon/go-metrics"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -723,7 +723,7 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 
 	var err error
 	// Create a random accessor
-	entry.Accessor, err = base62.Random(TokenLength, true)
+	entry.Accessor, err = base62.Random(TokenLength)
 	if err != nil {
 		return err
 	}
@@ -790,7 +790,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.Random(TokenLength, true)
+			entry.ID, err = base62.Random(TokenLength)
 			if err != nil {
 				return err
 			}
@@ -812,7 +812,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
 			if entry.CubbyholeID == "" {
-				cubbyholeID, err := base62.Random(TokenLength, true)
+				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
 					return err
 				}
