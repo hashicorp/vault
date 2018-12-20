@@ -70,7 +70,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 		t.Fatalf("PostgreSQLDB does not implement HABackend")
 	}
 
-	if ha1.HAEnabled() && ha1.HAEnabled() {
+	if ha1.HAEnabled() && ha2.HAEnabled() {
 		physical.ExerciseHABackend(t, ha1, ha2)
 	}
 }
