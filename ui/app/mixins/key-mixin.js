@@ -1,6 +1,6 @@
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
-import utils from '../lib/key-utils';
+import utils from 'vault/lib/key-utils';
 
 export default Mixin.create({
   // what attribute has the path for the key

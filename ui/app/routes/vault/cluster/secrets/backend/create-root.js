@@ -6,9 +6,9 @@ let secretModel = (store, backend, key) => {
   let backendModel = store.peekRecord('secret-engine', backend);
   let modelType = backendModel.get('modelTypeForKV');
   if (modelType !== 'secret-v2') {
-    return store.createRecord(modelType, {
-      id: key,
-    });
+    let model = store.createRecord(modelType);
+    model.set('id', key);
+    return model;
   }
   let secret = store.createRecord(modelType);
   secret.set('engine', backendModel);
