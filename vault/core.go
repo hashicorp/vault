@@ -158,6 +158,10 @@ type Core struct {
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
 
+	// underlyingPhysical will always point to the underlying backend
+	// implementation. This is an un-trusted backend with durable data
+	underlyingPhysical physical.Backend
+
 	// seal is our seal, for seal configuration information
 	seal Seal
 
@@ -544,6 +548,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		entCore:                          entCore{},
 		devToken:                         conf.DevToken,
 		physical:                         conf.Physical,
+		underlyingPhysical:               conf.Physical,
 		redirectAddr:                     conf.RedirectAddr,
 		clusterAddr:                      conf.ClusterAddr,
 		seal:                             conf.Seal,
@@ -1008,6 +1013,14 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
+	// If the storage backend needs to be unsealed
+	if unsealable, ok := c.underlyingPhysical.(physical.Unsealable); ok {
+		err := unsealable.Unseal(ctx, c.barrier)
+		if err != nil {
+			return false, err
+		}
+	}
+
 	if err := preUnsealInternal(ctx, c); err != nil {
 		return false, err
 	}
@@ -1336,6 +1349,14 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		<-c.standbyDoneCh
 		atomic.StoreUint32(c.keepHALockOnStepDown, 0)
 		c.logger.Debug("runStandby done")
+	}
+
+	// If the storage backend needs to be sealed
+	if unsealable, ok := c.underlyingPhysical.(physical.Unsealable); ok {
+		err := unsealable.Seal(context.Background())
+		if err != nil {
+			return err
+		}
 	}
 
 	c.logger.Debug("sealing barrier")

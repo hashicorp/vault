@@ -115,6 +115,16 @@ type Lock interface {
 	Value() (bool, string, error)
 }
 
+type EncryptorHook interface {
+	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
+	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
+}
+
+type Unsealable interface {
+	Unseal(context.Context, EncryptorHook) error
+	Seal(context.Context) error
+}
+
 // Factory is the factory function to create a physical backend.
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
 

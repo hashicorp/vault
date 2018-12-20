@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
@@ -19,6 +20,7 @@ import (
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
+var _ physical.Unsealable = (*RaftBackend)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -31,6 +33,8 @@ var (
 
 type RaftBackend struct {
 	logger log.Logger
+	conf   map[string]string
+	l      sync.RWMutex
 
 	fsm          *FSM
 	raft         *raft.Raft
@@ -39,16 +43,32 @@ type RaftBackend struct {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
-	}
-
 	// Create the FSM.
 	var err error
 	fsm, err := NewFSM(conf, logger)
 	if err != nil {
 		return nil, err
+	}
+
+	return &RaftBackend{
+		logger: logger,
+		fsm:    fsm,
+		conf:   conf,
+	}, nil
+}
+
+func (b *RaftBackend) Unseal(ctx context.Context, encryptor physical.EncryptorHook) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	// We are already unsealed
+	if b.raft != nil {
+		return nil
+	}
+
+	path, ok := b.conf["path"]
+	if !ok {
+		return fmt.Errorf("'path' must be set")
 	}
 
 	raftConfig := raft.DefaultConfig()
@@ -62,7 +82,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	// Create a transport layer.
 	trans, err := raft.NewTCPTransport("127.0.0.1:8202", nil, 3, 10*time.Second, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	/*	transConfig := &raft.NetworkTransportConfig{
@@ -99,27 +119,27 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		// Create the base raft path.
 		path := filepath.Join(path, raftState)
 		if err := lib.EnsurePath(path, true); err != nil {
-			return nil, err
+			return err
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
+		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"), encryptor)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		stable = store
 
 		// Wrap the store in a LogCache to improve performance.
 		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		log = cacheStore
 
 		// Create the snapshot store.
 		snapshots, err := raft.NewFileSnapshotStore(path, snapshotsRetained, nil)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		snap = snapshots
 	}
@@ -129,7 +149,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	//		if s.config.Bootstrap || s.config.DevMode {
 	hasState, err := raft.HasExistingState(log, stable, snap)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !hasState {
 		configuration := raft.Configuration{
@@ -141,7 +161,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			},
 		}
 		if err := raft.BootstrapCluster(raftConfig, log, stable, snap, trans, configuration); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	//		}
@@ -151,17 +171,23 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	raftConfig.NotifyCh = raftNotifyCh
 
 	// Setup the Raft store.
-	raftObj, err := raft.NewRaft(raftConfig, fsm, log, stable, snap, trans)
+	raftObj, err := raft.NewRaft(raftConfig, b.fsm, log, stable, snap, trans)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	b.raft = raftObj
+	b.raftNotifyCh = raftNotifyCh
 
-	return &RaftBackend{
-		logger:       logger,
-		fsm:          fsm,
-		raft:         raftObj,
-		raftNotifyCh: raftNotifyCh,
-	}, nil
+	return nil
+}
+
+func (b *RaftBackend) Seal(ctx context.Context) error {
+	b.l.Lock()
+	future := b.raft.Shutdown()
+	b.raft = nil
+	b.l.Unlock()
+
+	return future.Error()
 }
 
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
@@ -232,8 +258,11 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 }
 
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	if b.raft == nil {
-		return errors.New("raft: not configured")
+		return errors.New("raft storage backend is sealed")
 	}
 
 	commandBytes, err := proto.Marshal(command)
