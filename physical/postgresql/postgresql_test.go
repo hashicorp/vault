@@ -61,7 +61,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	//Read postgres version to test basic connects works
 	var pgversion string
 	if err = pg.client.QueryRow("SELECT current_setting('server_version_num')").Scan(&pgversion); err != nil {
-		logger.Info(fmt.Sprintf("Failed to check for Postgres version: %v", err))
+		t.Fatalf("Failed to check for Postgres version: %v", err)
 	}
 	logger.Info(fmt.Sprintf("Postgres Version: %v", pgversion))
 
