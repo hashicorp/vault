@@ -20,7 +20,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = PrepareTestContainer(t, logger)
+		cleanup, connURL = prepareTestContainer(t, logger)
 		defer cleanup()
 	}
 
@@ -65,7 +65,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 	logger.Info(fmt.Sprintf("Postgres Version: %v", pgversion))
 
-	SetupDatabaseObjects(t, logger, pg)
+	setupDatabaseObjects(t, logger, pg)
 
 	defer func() {
 		pg := b1.(*PostgreSQLBackend)
@@ -96,7 +96,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 }
 
-func PrepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
+func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
 	// If environment variable is set, use this connectionstring without starting docker container
 	if os.Getenv("PGURL") != "" {
 		return func() {}, os.Getenv("PGURL")
@@ -140,7 +140,7 @@ func PrepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retC
 	return cleanup, retConnString
 }
 
-func SetupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {
+func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {
 	var err error
 	//Setup tables and indexes if not exists.
 	createTableSQL := fmt.Sprintf(
