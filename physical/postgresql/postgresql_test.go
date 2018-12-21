@@ -20,7 +20,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = prepareTestContainer(t, logger)
+		cleanup, connURL = PrepareTestContainer(t, logger)
 		defer cleanup()
 	}
 
@@ -43,7 +43,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	//Read postgres version to test basic connects works
 	var pgversion string
 	if err = pg.client.QueryRow("SELECT current_setting('server_version_num')").Scan(&pgversion); err != nil {
-		logger.Info(fmt.Sprintf("Failed to check for Postgres version: %v", err))
+		t.Fatalf("Failed to check for Postgres version: %v", err)
 	}
 	logger.Info(fmt.Sprintf("Postgres Version: %v", pgversion))
 
@@ -81,7 +81,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
-func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
+func PrepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
 	// If environment variable is set, use this connectionstring without starting docker container
 	if os.Getenv("PGURL") != "" {
 		return func() {}, os.Getenv("PGURL")
