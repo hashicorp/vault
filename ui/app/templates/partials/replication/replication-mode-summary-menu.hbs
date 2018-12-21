@@ -1,36 +1,30 @@
 <div class="level is-mobile">
   <div class="level-left is-flex-1">
-    <div>
-      {{#if replicationUnsupported}}
-       Unsupported
-      {{else if (and (eq mode 'performance') (not version.hasPerfReplication))}}
-        <p>
-           Upgrade to Vault Enterprise Premium to use Performance Replication.
-        </p>
-      {{else if replicationEnabled}}
-        <span>
-          {{capitalize modeForUrl}}
-        </span>
-        {{#if secondaryId}}
-          <span class="tag">
-            <code>
-              {{secondaryId}}
-            </code>
-          </span>
-        {{/if}}
-        <span class="tag">
+    {{#if replicationUnsupported}}
+      Unsupported
+    {{else if replicationEnabled}}
+      <span>
+        {{capitalize modeForUrl}}
+      </span>
+      {{#if secondaryId}}
+        <small>
           <code>
-            {{clusterIdDisplay}}
+            {{secondaryId}}
           </code>
-        </span>
-      {{else}}
-        {{#if (eq tagName 'a')}}
-          Enable
-        {{else}}
-          Disabled
-        {{/if}}
+        </small>
       {{/if}}
-    </div>
+      <small>
+        <code>
+          {{clusterIdDisplay}}
+        </code>
+      </small>
+    {{else if (and (eq mode 'performance') (not version.hasPerfReplication))}}
+      Learn More
+    {{else if auth.currentToken}}
+      Enable {{if (eq mode 'performance') 'Performance' 'DR'}}
+    {{else}}
+      Not Enabled
+    {{/if}}
   </div>
   <div class="level-right">
     {{#if replicationEnabled}}
@@ -43,6 +37,8 @@
           {{syncProgress.progress}} of {{syncProgress.total}} keys
         </progress>
       {{/if}}
+    {{else}}
+      <ICon @glyph="neutral-circled-outline" @size="16" @class="has-text-grey-light" />
     {{/if}}
   </div>
 </div>

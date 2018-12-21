@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -146,8 +147,8 @@ func (b *BaseCommand) PredictVaultAuths() complete.Predictor {
 }
 
 // PredictVaultPlugins returns a predictor for installed plugins.
-func (b *BaseCommand) PredictVaultPlugins() complete.Predictor {
-	return NewPredict().VaultPlugins()
+func (b *BaseCommand) PredictVaultPlugins(pluginTypes ...consts.PluginType) complete.Predictor {
+	return NewPredict().VaultPlugins(pluginTypes...)
 }
 
 // PredictVaultPolicies returns a predictor for "folders". See PredictVaultFiles
@@ -191,8 +192,11 @@ func (p *Predict) VaultAuths() complete.Predictor {
 // VaultPlugins returns a predictor for Vault's plugin catalog. This is a public
 // API for consumers, but you probably want BaseCommand.PredictVaultPlugins
 // instead.
-func (p *Predict) VaultPlugins() complete.Predictor {
-	return p.filterFunc(p.plugins)
+func (p *Predict) VaultPlugins(pluginTypes ...consts.PluginType) complete.Predictor {
+	filterFunc := func() []string {
+		return p.plugins(pluginTypes...)
+	}
+	return p.filterFunc(filterFunc)
 }
 
 // VaultPolicies returns a predictor for Vault "folders". This is a public API for
@@ -329,17 +333,35 @@ func (p *Predict) auths() []string {
 }
 
 // plugins returns a sorted list of the plugins in the catalog.
-func (p *Predict) plugins() []string {
+func (p *Predict) plugins(pluginTypes ...consts.PluginType) []string {
+	// This method's signature doesn't enforce that a pluginType must be passed in.
+	// If it's not, it's likely the caller's intent is go get a list of all of them,
+	// so let's help them out.
+	if len(pluginTypes) == 0 {
+		pluginTypes = append(pluginTypes, consts.PluginTypeUnknown)
+	}
+
 	client := p.Client()
 	if client == nil {
 		return nil
 	}
 
-	result, err := client.Sys().ListPlugins(nil)
-	if err != nil {
-		return nil
+	var plugins []string
+	pluginsAdded := make(map[string]bool)
+	for _, pluginType := range pluginTypes {
+		result, err := client.Sys().ListPlugins(&api.ListPluginsInput{Type: pluginType})
+		if err != nil {
+			return nil
+		}
+		for _, names := range result.PluginsByType {
+			for _, name := range names {
+				if _, ok := pluginsAdded[name]; !ok {
+					plugins = append(plugins, name)
+					pluginsAdded[name] = true
+				}
+			}
+		}
 	}
-	plugins := result.Names
 	sort.Strings(plugins)
 	return plugins
 }

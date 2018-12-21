@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Security Model"
+sidebar_title: "Security Model"
 sidebar_current: "docs-internals-security"
 description: |-
   Learn about the security model of Vault.

@@ -11,10 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -274,7 +273,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -287,7 +285,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -300,7 +297,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
-					"plugin_name":       "",
 				},
 				"local":     true,
 				"seal_wrap": false,
@@ -313,7 +309,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
-					"plugin_name":       "",
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -327,7 +322,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -340,7 +334,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -353,7 +346,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
-				"plugin_name":       "",
 			},
 			"local":     true,
 			"seal_wrap": false,
@@ -366,7 +358,6 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
-				"plugin_name":       "",
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -648,7 +639,9 @@ func TestHandler_nonPrintableChars(t *testing.T) {
 }
 
 func testNonPrintable(t *testing.T, disable bool) {
-	core, _, token := vault.TestCoreUnsealed(t)
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
+		DisableKeyEncodingChecks: disable,
+	})
 	ln, addr := TestListener(t)
 	props := &vault.HandlerProperties{
 		Core:                  core,

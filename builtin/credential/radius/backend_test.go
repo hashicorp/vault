@@ -112,7 +112,7 @@ func TestBackend_Config(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: false,
 		// PreCheck:       func() { testAccPreCheck(t) },
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigWrite(t, configDataBasic, false),
 			testConfigWrite(t, configDataMissingRequired, true),
@@ -135,7 +135,7 @@ func TestBackend_users(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testStepUpdateUser(t, "web", "foo"),
 			testStepUpdateUser(t, "web2", "foo"),
@@ -210,9 +210,9 @@ func TestBackend_acceptance(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend:        b,
-		PreCheck:       testAccPreCheck(t, host, port),
-		AcceptanceTest: true,
+		CredentialBackend: b,
+		PreCheck:          testAccPreCheck(t, host, port),
+		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
 			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),

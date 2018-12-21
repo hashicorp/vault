@@ -5,10 +5,14 @@
 </PageHeader>
 <MessageError @model={{model}} />
 {{#if isTemporary}}
-  <section class="box is-sideless">
-    <MessageInPage data-test-cluster-status @type="warning" @class="license-warning" data-test-warning-text>
-      Your temporary license expires {{moment-from-now expirationTime}} and your vault will seal. Please enter a valid license below.
-    </MessageInPage>
+  <section class="box is-sideless is-fullwidth">
+    <AlertBanner
+      @type="warning"
+      @message="Your temporary license expires in {{date-from-now expirationTime}} and your vault will seal. Please enter a valid license below."
+      @class="license-warning"
+      data-test-cluster-status
+      data-test-warning-text
+    />
     <span class="title is-5" data-test-temp-license>Temporary License</span>
     <form {{action "saveModel" text on="submit"}}>
       <div class="box is-shadowless is-fullwidth is-marginless">
@@ -27,7 +31,7 @@
     </form>
   </section>
 {{else}}
-  <section class="box is-sideless">
+  <section class="box is-sideless is-fullwidth">
     <span class="title is-5">Details</span>
     {{#if showForm}}
       <form {{action "saveModel" text on="submit"}}>
@@ -50,7 +54,7 @@
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
         {{info-table-row label="License ID" value=licenseId}}
         {{#info-table-row label="Valid from" value=startTime}}
-          {{moment-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}} to {{moment-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
+          {{date-format model.startTime 'MMM DD, YYYY hh:mm:ss A'}} to {{date-format expirationTime 'MMM DD, YYYY hh:mm:ss A'}}
         {{/info-table-row}}
       </div>
       <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
@@ -61,7 +65,7 @@
     {{/if}}
     </section>
   {{/if}}
-<section class="box is-sideless is-marginless is-shadowless">
+<section class="box is-sideless is-marginless is-shadowless is-fullwidth">
   <span class="title is-5">Features</span>
   <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
     {{#each featuresInfo as |info|}}

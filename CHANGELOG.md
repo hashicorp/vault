@@ -1,29 +1,201 @@
-## Next (Unreleased)
+## 1.0.0 (December 3rd, 2018)
+
+SECURITY:
+
+ * When debugging a customer incident we discovered that in the case of
+   malformed data from an autoseal mechanism, Vault's master key could be
+   logged in Vault's server log. For this to happen, the data would need to be
+   modified by the autoseal mechanism after being submitted to it by Vault but
+   prior to encryption, or after decryption, prior to it being returned to
+   Vault. To put it another way, it requires the data that Vault submits for
+   encryption to not match the data returned after decryption. It is not
+   sufficient for the autoseal mechanism to return an error, and it cannot be
+   triggered by an outside attacker changing the on-disk ciphertext as all
+   autoseal mechanisms use authenticated encryption. We do not believe that
+   this is generally a cause for concern; since it involves the autoseal
+   mechanism returning bad data to Vault but with no error, in a working Vault
+   configuration this code path should never be hit, and if hitting this issue
+   Vault will not be unsealing properly anyways so it will be obvious what is
+   happening and an immediate rekey of the master key can be performed after
+   service is restored. We have filed for a CVE (CVE-2018-19786) and a CVSS V3
+   score of 5.2 has been assigned.
 
 CHANGES:
 
- * core: HA lock file is no longer copied during `operator migrate` [GH-5503]
+ * Tokens are now prefixed by a designation to indicate what type of token they
+   are. Service tokens start with `s.` and batch tokens start with `b.`.
+   Existing tokens will still work (they are all of service type and will be
+   considered as such). Prefixing allows us to be more efficient when consuming
+   a token, which keeps the critical path of requests faster.
+ * Paths within `auth/token` that allow specifying a token or accessor in the
+   URL have been removed. These have been deprecated since March 2016 and
+   undocumented, but were retained for backwards compatibility. They shouldn't
+   be used due to the possibility of those paths being logged, so at this point
+   they are simply being removed.
+ * Vault will no longer accept updates when the storage key has invalid UTF-8 
+   character encoding [GH-5819]
+ * Mount/Auth tuning the `options` map on backends will now upsert any provided
+   values, and keep any of the existing values in place if not provided. The
+   options map itself cannot be unset once it's set, but the keypairs within the
+   map can be unset if an empty value is provided, with the exception of the
+   `version` keypair which is handled differently for KVv2 purposes.
+ * Agent no longer automatically reauthenticates when new credentials are
+   detected. It's not strictly necessary and in some cases was causing
+   reauthentication much more often than intended.
+ * HSM Regenerate Key Support Removed: Vault no longer supports destroying and
+   regenerating encryption keys on an HSM; it only supports creating them.
+   Although this has never been a source of a customer incident, it is simply a
+   code path that is too trivial to activate, especially by mistyping
+   `regenerate_key` instead of `generate_key`.
+ * Barrier Config Upgrade (Enterprise): When upgrading from Vault 0.8.x, the
+   seal type in the barrier config storage entry will be upgraded from
+   "hsm-auto" to "awskms" or "pkcs11" upon unseal if using AWSKMS or HSM seals.
+   If performing seal migration, the barrier config should first be upgraded
+   prior to starting migration.
+ * Go API client uses pooled HTTP client: The Go API client now uses a
+   connection-pooling HTTP client by default. For CLI operations this makes no
+   difference but it should provide significant performance benefits for those
+   writing custom clients using the Go API library. As before, this can be
+   changed to any custom HTTP client by the caller.
+ * Builtin Secret Engines and Auth Methods are integrated deeper into the
+   plugin system. The plugin catalog can now override builtin plugins with
+   custom versions of the same name. Additionally the plugin system now
+   requires a plugin `type` field when configuring plugins, this can be "auth",
+   "database", or "secret".
 
 FEATURES:
 
- * Transit Key Trimming: Keys in transit secret engine can now be trimmed to
-   remove older unused key versions [GH-5388]
+ * **Auto-Unseal in Open Source**: Cloud-based auto-unseal has been migrated
+   from Enterprise to Open Source. We've created a migrator to allow migrating
+   between Shamir seals and auto unseal methods.
+ * **Batch Tokens**: Batch tokens trade off some features of service tokens for no
+   storage overhead, and in most cases can be used across performance
+   replication clusters.
+ * **Replication Speed Improvements**: We've worked hard to speed up a lot of
+   operations when using Vault Enterprise Replication.
+ * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
+   pattern to keys stored within GCP Cloud KMS.
+ * **AppRole support in Vault Agent Auto-Auth**: You can now use AppRole
+   credentials when having Agent automatically authenticate to Vault
+ * **OpenAPI Support**: Descriptions of mounted backends can be served directly
+   from Vault
+ * **Kubernetes Projected Service Account Tokens**: Projected Service Account
+   Tokens are now supported in Kubernetes auth
+ * **Response Wrapping in UI**: Added ability to wrap secrets and easily copy
+   the wrap token or secret JSON in the UI
 
 IMPROVEMENTS:
 
+ * agent: Support for configuring the location of the kubernetes service account
+   [GH-5725]
+ * auth/token: New tokens are indexed in storage HMAC-SHA256 instead of SHA1
+ * secret/totp: Allow @ character to be part of key name [GH-5652]
+ * secret/consul: Add support for new policy based tokens added in Consul 1.4
+   [GH-5586]
+ * ui: Improve the token auto-renew warning, and automatically begin renewal
+   when a user becomes active again [GH-5662]
+ * ui: The unbundled UI page now has some styling [GH-5665]
+ * ui: Improved banner and popup design [GH-5672]
+ * ui: Added token type to auth method mount config [GH-5723]
+ * ui: Display additonal wrap info when unwrapping. [GH-5664]
+ * ui: Empty states have updated styling and link to relevant actions and 
+   documentation [GH-5758]
+ * ui: Allow editing of KV V2 data when a token doesn't have capabilities to
+   read secret metadata [GH-5879]
+
+BUG FIXES:
+
+ * agent: Fix auth when multiple redirects [GH-5814]
+ * cli: Restore the `-policy-override` flag [GH-5826]
+ * core: Fix rekey progress reset which did not happen under certain
+   circumstances. [GH-5743]
+ * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
+ * identity: Update group memberships when entity is deleted [GH-5786]
+ * replication/perfstandby: Fix audit table upgrade on standbys [GH-5811]
+ * replication/perfstandby: Fix redirect on approle update [GH-5820]
+ * secrets/azure: Fix valid roles being rejected for duplicate ids despite
+   having distinct scopes
+   [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * storage/gcs: Send md5 of values to GCS to avoid potential corruption
+   [GH-5804]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded 
+   [GH-5809]
+ * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
+   for all other operations for backwards compatibility
+   [[GH-19]](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/19)
+ * ui: Allow for secret creation in kv v2 when cas_required=true [GH-5823]
+ * ui: Fix dr secondary operation token generation via the ui [GH-5818]
+ * ui: Fix the PKI context menu so that items load [GH-5824]
+ * ui: Update DR Secondary Token generation command [GH-5857]
+ * ui: Fix pagination bug where controls would be rendered once for each
+   item when viewing policies [GH-5866]
+ * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
+   the revoke button in the UI [GH-5647]
+ * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
+
+## 0.11.5 (November 13th, 2018)
+
+BUG FIXES:
+
+ * agent: Fix issue when specifying two file sinks [GH-5610]
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * autounseal/alicloud: Fix issue interacting with the API (Enterprise)
+ * autounseal/azure: Fix key version tracking (Enterprise)
+ * cli: Fix panic that could occur if parameters were not provided [GH-5603]
+ * core: Fix buggy behavior if trying to remount into a namespace
+ * identity: Fix duplication of entity alias entity during alias transfer
+   between entities [GH-5733]
+ * namespaces: Fix tuning of auth mounts in a namespace
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
+ * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
+   when trying to use tool/hash [GH-5714]
+ 
+## 0.11.4 (October 23rd, 2018)
+
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503].
+   We've categorized this as a change, but generally this can be considered
+   just a bug fix, and no action is needed.
+
+FEATURES:
+
+ * **Transit Key Trimming**: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions
+ * **Web UI support for KV Version 2**: Browse, delete, undelete and destroy 
+   individual secret versions in the UI
+ * **Azure Existing Service Principal Support**: Credentials can now be generated
+   against an existing service principal
+
+IMPROVEMENTS:
+
+ * core: Add last WAL in leader/health output for easier debugging [GH-5523]
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
+ * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS
+   credentials [GH-5500]
  * secret/database: Allow Cassandra user to be non-superuser so long as it has
    role creation permissions [GH-5402]
  * secret/radius: Allow setting the NAS Identifier value in the generated
    packet [GH-5465]
+ * secret/ssh: Allow usage of JSON arrays when setting zero addresses [GH-5528]
+ * secret/transit: Allow trimming unused keys [GH-5388]
+ * ui: Support KVv2 [GH-5547], [GH-5563]
  * ui: Allow viewing and updating Vault license via the UI
  * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and
+   visibility is toggleable
 
 BUG FIXES:
 
  * agent: Fix potential hang during agent shutdown [GH-5026]
+ * auth/ldap: Fix listing of users/groups that contain slashes [GH-5537]
+ * core: Fix memory leak during some expiration calls [GH-5505]
  * core: Fix generate-root operations requiring empty `otp` to be provided
    instead of an empty body [GH-5495]
  * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
  * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
    generated certificates to be set to the Unix epoch if the role value was not
    set, instead of using the default of 30 seconds [GH-5481]
@@ -65,13 +237,13 @@ CHANGES:
 
 FEATURES:
 
- * AWS Secret Engine Root Credential Rotation: The credential used by the AWS
+ * **AWS Secret Engine Root Credential Rotation**: The credential used by the AWS
    secret engine can now be rotated, to ensure that only Vault knows the
-   credentials it is using. [GH-5140]
- * Storage Backend Migrator: A new `operator migrate` command allows offline
-   migration of data between two storage backends.
- * AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise): AliCloud KMS can now be used a support seal for 
-   Auto Unseal and Seal Wrapping.
+   credentials it is using [GH-5140]
+ * **Storage Backend Migrator**: A new `operator migrate` command allows offline
+   migration of data between two storage backends
+ * **AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise)**: AliCloud KMS can now be used a support seal for 
+   Auto Unseal and Seal Wrapping
 
 BUG FIXES:
 

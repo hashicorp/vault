@@ -14,15 +14,7 @@
     </div>
   </div>
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There is no metadata associated with {{model.name}}.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="No metadata associated with {{model.name}} yet"
+  />
 {{/each-in}}

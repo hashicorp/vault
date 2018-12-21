@@ -17,9 +17,9 @@ RUN apt-get install -y nodejs
 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g yarn@1.9.4
+RUN npm install -g yarn@1.12.1
 
-ENV GOVERSION 1.11.1
+ENV GOVERSION 1.11.2
 RUN mkdir /goroot && mkdir /gopath
 RUN curl https://storage.googleapis.com/golang/go${GOVERSION}.linux-amd64.tar.gz \
            | tar xvzf - -C /goroot --strip-components=1

@@ -2,12 +2,12 @@ package framework
 
 import (
 	"context"
+	"net/http"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"net/http"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -52,10 +52,17 @@ func TestBackendHandleRequest(t *testing.T) {
 			},
 		}, nil
 	}
+	handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"amount": data.Get("amount"),
+			},
+		}, nil
+	}
 
 	b := &Backend{
 		Paths: []*Path{
-			&Path{
+			{
 				Pattern: "foo/bar",
 				Fields: map[string]*FieldSchema{
 					"value": &FieldSchema{Type: TypeInt},
@@ -64,19 +71,46 @@ func TestBackendHandleRequest(t *testing.T) {
 					logical.ReadOperation: callback,
 				},
 			},
+			{
+				Pattern: "foo/baz/handler",
+				Fields: map[string]*FieldSchema{
+					"amount": &FieldSchema{Type: TypeInt},
+				},
+				Operations: map[logical.Operation]OperationHandler{
+					logical.ReadOperation: &PathOperation{Callback: handler},
+				},
+			},
+			{
+				Pattern: "foo/both/handler",
+				Fields: map[string]*FieldSchema{
+					"amount": &FieldSchema{Type: TypeInt},
+				},
+				Callbacks: map[logical.Operation]OperationFunc{
+					logical.ReadOperation: callback,
+				},
+				Operations: map[logical.Operation]OperationHandler{
+					logical.ReadOperation: &PathOperation{Callback: handler},
+				},
+			},
 		},
 	}
 
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "foo/bar",
-		Data:      map[string]interface{}{"value": "42"},
-	})
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if resp.Data["value"] != 42 {
-		t.Fatalf("bad: %#v", resp)
+	for _, path := range []string{"foo/bar", "foo/baz/handler", "foo/both/handler"} {
+		key := "value"
+		if strings.Contains(path, "handler") {
+			key = "amount"
+		}
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      path,
+			Data:      map[string]interface{}{key: "42"},
+		})
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		if resp.Data[key] != 42 {
+			t.Fatalf("bad: %#v", resp)
+		}
 	}
 }
 

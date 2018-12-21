@@ -82,8 +82,8 @@ func TestBackend_basic(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),
@@ -104,8 +104,8 @@ func TestBackend_roleCrud(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),

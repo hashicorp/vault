@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"strings"
 
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
@@ -12,8 +11,12 @@ import (
 // pathDestroy returns the path configuration for the destroy endpoint
 func pathDestroy(b *versionedKVBackend) *framework.Path {
 	return &framework.Path{
-		Pattern: "destroy/.*",
+		Pattern: "destroy/" + framework.MatchAllRegex("path"),
 		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: "Location of the secret.",
+			},
 			"versions": {
 				Type:        framework.TypeCommaIntSlice,
 				Description: "The versions to destroy. Their data will be permanently deleted.",
@@ -31,7 +34,7 @@ func pathDestroy(b *versionedKVBackend) *framework.Path {
 
 func (b *versionedKVBackend) pathDestroyWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "destroy/")
+		key := data.Get("path").(string)
 
 		versions := data.Get("versions").([]int)
 		if len(versions) == 0 {

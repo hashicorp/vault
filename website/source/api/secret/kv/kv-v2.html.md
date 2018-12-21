@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv-v2"
+sidebar_title: "K/V Version 2"
+sidebar_current: "api-http-secret-kv-v2"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---
@@ -55,6 +56,35 @@ $ curl \
     --request POST \
     --data @payload.json \
     https://127.0.0.1:8200/v1/secret/config
+```
+
+## Read KV Engine configuration
+
+This path retrieves the current configuration for the secrets backend at the
+given path.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`   | `/secret/config`             | `200 application/json`     |
+
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/secret/config
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "cas_required": false,
+    "max_versions": 0
+  }
+}
 ```
 
 
@@ -147,7 +177,8 @@ $ curl \
 ```
 
 ### Sample Response
-```
+
+```json
 {
   "data": {
     "created_time": "2018-03-22T02:36:43.986212308Z",

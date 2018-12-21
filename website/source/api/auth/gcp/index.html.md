@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Google Cloud - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-gcp"
+sidebar_title: "Google Cloud"
+sidebar_current: "api-http-auth-gcp"
 description: |-
   This is the API documentation for the Vault Google Cloud authentication
   method.
@@ -373,7 +374,7 @@ $ curl \
       "prod"
     ],
     "project_id": "project-123456",
-    "role_type": "gce",
+    "type": "gce",
     "ttl": 1800
   }
 }

@@ -23,7 +23,7 @@
       </SecretLink>
     </div>
     <div class="column has-text-right">
-      <PopupMenu name="secret-menu" @contentClass="is-wide">
+      <PopupMenu name="secret-menu">
         <nav class="menu">
           <ul class="menu-list">
             {{#if item.isFolder}}
@@ -37,7 +37,7 @@
             {{else}}
               {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
                 <li class="action">
-                  <button disabled=true type="button" class="link button is-loading is-transparent">
+                  <button disabled type="button" class="link button is-loading is-transparent">
                     loading
                   </button>
                 </li>
@@ -52,13 +52,17 @@
                       Details
                     </SecretLink>
                   </li>
-                  {{!--  // will add a link to the history view once it exists
                   {{#if backendModel.isV2KV}}
                     <li class="action">
-                      Verion History
+                      <SecretLink
+                        @mode="versions"
+                        @secret={{item.id}}
+                        @class="has-text-black has-text-weight-semibold"
+                      > 
+                        View version history
+                      </SecretLink>
                     </li>
                   {{/if}}
-                  --}}
                 {{/if}}
                 {{#if item.canEdit}}
                   <li class="action">

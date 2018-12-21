@@ -17,10 +17,22 @@ func GenericNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>\\w(([\\w-.]+)?\\w)?)", name)
 }
 
+// GenericNameWithAtRegex returns a generic regex that allows alphanumeric
+// characters along with -, . and @.
+func GenericNameWithAtRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>\\w(([\\w-.@]+)?\\w)?)", name)
+}
+
 // Helper which returns a regex string for optionally accepting the a field
 // from the API URL
 func OptionalParamRegex(name string) string {
 	return fmt.Sprintf("(/(?P<%s>.+))?", name)
+}
+
+// Helper which returns a regex string for capturing an entire endpoint path
+// as the given name.
+func MatchAllRegex(name string) string {
+	return fmt.Sprintf(`(?P<%s>.*)`, name)
 }
 
 // PathAppend is a helper for appending lists of paths into a single
@@ -52,6 +64,13 @@ type Path struct {
 	// whereas all fields are available in the Write operation.
 	Fields map[string]*FieldSchema
 
+	// Operations is the set of operations supported and the associated OperationsHandler.
+	//
+	// If both Create and Update operations are present, documentation and examples from
+	// the Update definition will be used. Similarly if both Read and List are present,
+	// Read will be used for documentation.
+	Operations map[logical.Operation]OperationHandler
+
 	// Callbacks are the set of callbacks that are called for a given
 	// operation. If a callback for a specific operation is not present,
 	// then logical.ErrUnsupportedOperation is automatically generated.
@@ -60,6 +79,8 @@ type Path struct {
 	// automatically handle if the Help field is set. If both the Help
 	// field is set and there is a callback registered here, then the
 	// callback will be called.
+	//
+	// Deprecated: Operations should be used instead and will take priority if present.
 	Callbacks map[logical.Operation]OperationFunc
 
 	// ExistenceCheck, if implemented, is used to query whether a given
@@ -73,6 +94,10 @@ type Path struct {
 	// FeatureRequired, if implemented, will validate if the given feature is
 	// enabled for the set of paths
 	FeatureRequired license.Features
+
+	// Deprecated denotes that this path is considered deprecated. This may
+	// be reflected in help and documentation.
+	Deprecated bool
 
 	// Help is text describing how to use this path. This will be used
 	// to auto-generate the help operation. The Path will automatically
@@ -89,7 +114,86 @@ type Path struct {
 	HelpDescription string
 }
 
-func (p *Path) helpCallback() OperationFunc {
+// OperationHandler defines and describes a specific operation handler.
+type OperationHandler interface {
+	Handler() OperationFunc
+	Properties() OperationProperties
+}
+
+// OperationProperties describes an operation for documentation, help text,
+// and other clients. A Summary should always be provided, whereas other
+// fields can be populated as needed.
+type OperationProperties struct {
+	// Summary is a brief (usually one line) description of the operation.
+	Summary string
+
+	// Description is extended documentation of the operation and may contain
+	// Markdown-formatted text markup.
+	Description string
+
+	// Examples provides samples of the expected request data. The most
+	// relevant example should be first in the list, as it will be shown in
+	// documentation that supports only a single example.
+	Examples []RequestExample
+
+	// Responses provides a list of response description for a given response
+	// code. The most relevant response should be first in the list, as it will
+	// be shown in documentation that only allows a single example.
+	Responses map[int][]Response
+
+	// Unpublished indicates that this operation should not appear in public
+	// documentation or help text. The operation may still have documentation
+	// attached that can be used internally.
+	Unpublished bool
+
+	// Deprecated indicates that this operation should be avoided.
+	Deprecated bool
+}
+
+// RequestExample is example of request data.
+type RequestExample struct {
+	Description string                 // optional description of the request
+	Data        map[string]interface{} // map version of sample JSON request data
+
+	// Optional example response to the sample request. This approach is considered
+	// provisional for now, and this field may be changed or removed.
+	Response *Response
+}
+
+// Response describes and optional demonstrations an operation response.
+type Response struct {
+	Description string            // summary of the the response and should always be provided
+	MediaType   string            // media type of the response, defaulting to "application/json" if empty
+	Example     *logical.Response // example response data
+}
+
+// PathOperation is a concrete implementation of OperationHandler.
+type PathOperation struct {
+	Callback    OperationFunc
+	Summary     string
+	Description string
+	Examples    []RequestExample
+	Responses   map[int][]Response
+	Unpublished bool
+	Deprecated  bool
+}
+
+func (p *PathOperation) Handler() OperationFunc {
+	return p.Callback
+}
+
+func (p *PathOperation) Properties() OperationProperties {
+	return OperationProperties{
+		Summary:     strings.TrimSpace(p.Summary),
+		Description: strings.TrimSpace(p.Description),
+		Responses:   p.Responses,
+		Examples:    p.Examples,
+		Unpublished: p.Unpublished,
+		Deprecated:  p.Deprecated,
+	}
+}
+
+func (p *Path) helpCallback(b *Backend) OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
 		var tplData pathTemplateData
 		tplData.Request = req.Path
@@ -131,7 +235,13 @@ func (p *Path) helpCallback() OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
-		return logical.HelpResponse(help, nil), nil
+		// Build OpenAPI response for this path
+		doc := NewOASDocument()
+		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+			b.Logger().Warn("error generating OpenAPI", "error", err)
+		}
+
+		return logical.HelpResponse(help, nil, doc), nil
 	}
 }
 

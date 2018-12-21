@@ -1,28 +1,11 @@
-{{#unless (and isDismissed (is-before (now interval=1000) auth.tokenExpirationDate))}}
-  {{#if (is-after (now interval=1000) auth.tokenExpirationDate)}}
-    {{#message-in-page type="danger"}}
-      <div class="content">
-        <p>
-        Your auth token expired on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.
-        </p>
-      </div>
-      <button type="button" class="button" {{action "reauthenticate"}}>
+{{#if (and expirationDate (is-after (now interval=1000) expirationDate)) }}
+  <div class="token-expire-warning">
+    <AlertBanner @type="danger" @message="Your auth token expired on {{date-format expirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.">
+      {{#link-to "vault.cluster.logout" class="button link"}}
         Reauthenticate
-      </button>
-    {{/message-in-page}}
-  {{else if auth.allowExpiration}}
-    {{#message-in-page type="warning"}}
-      <div class="content">
-        <p>
-          We've stopped auto-renewing your current auth token due to inactivity.
-          Your token will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}} on
-          {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}
-        </p>
-        <button type="button" class="button" {{action "renewToken"}}>Resume auto-renewal</button>
-      </div>
-      <button type="button" class="button is-transparent close-button" {{action "dismiss"}}>
-        {{i-con size=12 glyph="close"}}
-      </button>
-    {{/message-in-page}}
-  {{/if}}
-{{/unless}}
+      {{/link-to}}
+    </AlertBanner>
+  </div>
+{{else}}
+  {{yield}}
+{{/if}}

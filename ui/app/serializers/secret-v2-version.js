@@ -16,11 +16,9 @@ export default ApplicationSerializer.extend({
     return payload;
   },
   serialize(snapshot) {
-    let version = 0;
     let secret = snapshot.belongsTo('secret');
-    if (secret) {
-      version = secret.attr('currentVersion');
-    }
+    let version = secret.record.isStub ? snapshot.attr('version') : secret.attr('currentVersion');
+    version = version || 0;
     return {
       data: snapshot.attr('secretData'),
       options: {

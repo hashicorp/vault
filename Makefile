@@ -15,7 +15,6 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 GO_VERSION_MIN=1.10
-
 CGO_ENABLED=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -36,6 +35,16 @@ dev-ui: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
+# *-mem variants will enable memory profiling which will write snapshots of heap usage
+# to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
+# Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
+dev-mem: BUILD_TAGS+=memprofiler
+dev-mem: dev
+dev-ui-mem: BUILD_TAGS+=memprofiler
+dev-ui-mem: dev-ui
+dev-dynamic-mem: BUILD_TAGS+=memprofiler
+dev-dynamic-mem: dev-dynamic
 
 testtravis: BUILD_TAGS+=travis
 testtravis: test
@@ -115,13 +124,13 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -129,7 +138,7 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build-dev
@@ -147,9 +156,9 @@ proto:
 	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
 	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
 	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
-	sed -i '1s;^;// +build !enterprise\n;' physical/types.pb.go
 	sed -i '1s;^;// +build !enterprise\n;' helper/identity/mfa/types.pb.go
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go logical/identity.pb.go
+	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
 fmtcheck:
 	@true

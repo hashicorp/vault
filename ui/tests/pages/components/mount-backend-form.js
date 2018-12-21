@@ -1,6 +1,6 @@
 import { clickable, collection, fillable, text, value } from 'ember-cli-page-object';
 import fields from './form-field';
-import errorText from './message-in-page';
+import errorText from './alert-banner';
 
 export default {
   ...fields,

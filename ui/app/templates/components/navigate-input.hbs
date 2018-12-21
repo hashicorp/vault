@@ -5,6 +5,7 @@
     disabled={{disabled}}
     value={{@filter}}
     placeholder={{ or @placeholder "Filter keys" }}
+    type="text"
 
     oninput={{action "handleInput" value="target.value"}}
     onkeyup={{action "handleKeyUp" }}

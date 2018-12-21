@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "SSH - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-ssh"
+sidebar_title: "SSH"
+sidebar_current: "api-http-secret-ssh"
 description: |-
   This is the API documentation for the Vault SSH secrets engine.
 ---
@@ -597,6 +598,7 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/ssh/verify
+```
 
 ### Sample Response
 

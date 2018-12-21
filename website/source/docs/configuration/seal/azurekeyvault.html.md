@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure Key Vault - Seals - Configuration"
+sidebar_title: "Azure Key Vault"
 sidebar_current: "docs-configuration-seal-azurekeyvault"
 description: |-
   The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal wrapping
@@ -10,8 +11,7 @@ description: |-
 # `azurekeyvault` Seal
 
 The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal
-wrapping mechanism. Vault Enterprise's Azure Key Vault seal is activated by one of
-the following:
+wrapping mechanism. The Azure Key Vault seal is activated by one of the following:
 
 * The presence of a `seal "azurekeyvault"` block in Vault's configuration file.
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `azurekeyvault`.

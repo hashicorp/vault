@@ -6,11 +6,9 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
-    <p>
-      The current cluster configuration does not support replication.
-    </p>
-  </div>
+  <EmptyState
+    @title="The current cluster configuration does not support replication"
+  />
 {{else}}
   {{replication-summary
     cluster=model

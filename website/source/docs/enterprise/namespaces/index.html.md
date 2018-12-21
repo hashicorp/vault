@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Namespaces - Vault Enterprise"
+sidebar_title: "Namespaces"
 sidebar_current: "docs-vault-enterprise-namespaces"
 description: |-
   Vault Enterprise has support for Namespaces, a feature to enable Secure Multi-tenancy (SMT) and self-management. 

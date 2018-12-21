@@ -27,18 +27,20 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	DoneCh   chan struct{}
-	OutputCh chan string
-	logger   hclog.Logger
-	client   *api.Client
-	random   *rand.Rand
-	wrapTTL  time.Duration
+	DoneCh                       chan struct{}
+	OutputCh                     chan string
+	logger                       hclog.Logger
+	client                       *api.Client
+	random                       *rand.Rand
+	wrapTTL                      time.Duration
+	enableReauthOnNewCredentials bool
 }
 
 type AuthHandlerConfig struct {
-	Logger  hclog.Logger
-	Client  *api.Client
-	WrapTTL time.Duration
+	Logger                       hclog.Logger
+	Client                       *api.Client
+	WrapTTL                      time.Duration
+	EnableReauthOnNewCredentials bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -46,11 +48,12 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		DoneCh: make(chan struct{}),
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
-		OutputCh: make(chan string, 1),
-		logger:   conf.Logger,
-		client:   conf.Client,
-		random:   rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
-		wrapTTL:  conf.WrapTTL,
+		OutputCh:                     make(chan string, 1),
+		logger:                       conf.Logger,
+		client:                       conf.Client,
+		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		wrapTTL:                      conf.WrapTTL,
+		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 	}
 
 	return ah
@@ -77,6 +80,21 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 	}()
 
 	credCh := am.NewCreds()
+	if !ah.enableReauthOnNewCredentials {
+		realCredCh := credCh
+		credCh = nil
+		if realCredCh != nil {
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-realCredCh:
+					}
+				}
+			}()
+		}
+	}
 	if credCh == nil {
 		credCh = make(chan struct{})
 	}
@@ -158,7 +176,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 
 		default:
-			if secret.Auth == nil {
+			if secret == nil || secret.Auth == nil {
 				ah.logger.Error("authentication returned nil auth info", "backoff", backoff.Seconds())
 				backoffOrQuit(ctx, backoff)
 				continue

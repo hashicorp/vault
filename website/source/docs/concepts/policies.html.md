@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Policies"
+sidebar_title: "Policies"
 sidebar_current: "docs-concepts-policies"
 description: |-
   Policies are how authorization is done in Vault, allowing you to restrict which parts of Vault a user can access.
@@ -27,7 +28,7 @@ would take to configure Vault to authenticate using a corporate LDAP or
 ActiveDirectory installation. Even though this example uses LDAP, the concept
 applies to all auth methods.
 
-[![Vault Auth Workflow](/assets/images/vault-policy-workflow.svg)](/assets/images/vault-policy-workflow.svg)
+[![Vault Auth Workflow](/img/vault-policy-workflow.svg)](/img/vault-policy-workflow.svg)
 
 1. The security team configures Vault to connect to an auth method.
 This configuration varies by auth method. In the case of LDAP, Vault
@@ -55,7 +56,7 @@ Now Vault has an internal mapping between a backend authentication system and
 internal policy. When a user authenticates to Vault, the actual authentication
 is delegated to the auth method. As a user, the flow looks like:
 
-[![Vault Auth Workflow](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
+[![Vault Auth Workflow](/img/vault-auth-workflow.svg)](/img/vault-auth-workflow.svg)
 
 1. A user attempts to authenticate to Vault using their LDAP credentials,
 providing Vault with their LDAP username and password.
@@ -243,7 +244,7 @@ injected, and currently the `path` keys in policies allow injection.
 | `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
-| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                                        |
+| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                                        |
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                                        |
 
 ### Examples
@@ -563,10 +564,6 @@ policy in Vault:
 $ vault policy write policy-name policy-file.hcl
 ```
 
--> The `@` tells Vault to read from a file on disk. In the example above, Vault
--will read the contents of `my-policy.hcl` in the current working directory into
--the value for that parameter.
-
 or via the API:
 
 ```sh
@@ -574,10 +571,10 @@ $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
   --data '{"policy":"path \"...\" {...} "}' \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
-In both examples, the name of the policy is "my-policy". You can think of this
+In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
@@ -606,7 +603,7 @@ $ curl \
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
 ```sh
-$ vault delete sys/policy/my-policy
+$ vault delete sys/policy/policy-name
 ```
 
 or via the API:
@@ -615,7 +612,7 @@ or via the API:
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
 This is an idempotent operation. Vault will not return an error when deleting a

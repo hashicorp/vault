@@ -151,8 +151,8 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -178,8 +178,8 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -208,7 +208,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -249,7 +249,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -290,7 +290,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -331,7 +331,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -982,9 +982,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			cert := parsedCertBundle.Certificate
 
 			actualDiff := time.Now().Sub(cert.NotBefore)
-			certRoleDiff := role.NotBeforeDuration - actualDiff
+			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
 			// These times get truncated, so give a 1 second buffer on each side
-			if certRoleDiff > -1*time.Second && certRoleDiff < 1*time.Second {
+			if certRoleDiff >= -1*time.Second && certRoleDiff <= 1*time.Second {
 				return nil
 			}
 			return fmt.Errorf("validity period out of range diff: %v", certRoleDiff)

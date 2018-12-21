@@ -47,7 +47,7 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -77,7 +77,7 @@ func TestBackend_basicSTS(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigWithCreds(t, accessKey),
 			testAccStepRotateRoot(accessKey),
@@ -103,7 +103,7 @@ func TestBackend_policyCrud(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWritePolicy(t, "test", testDynamoPolicy),
@@ -652,6 +652,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"policy_document":  value,
 				"credential_types": []string{iamUserCred, federationTokenCred},
 				"default_sts_ttl":  int64(0),
+				"max_sts_ttl":      int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -723,7 +724,7 @@ func TestBackend_basicPolicyArnRef(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -749,11 +750,12 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"credential_types": []string{iamUserCred},
 		"role_arns":        []string(nil),
 		"default_sts_ttl":  int64(0),
+		"max_sts_ttl":      int64(0),
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -802,7 +804,7 @@ func TestBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -828,6 +830,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 		"role_arns":       []string{fmt.Sprintf("arn:aws:iam::%s:role/%s", awsAccountID, roleName)},
 		"credential_type": assumedRoleCred,
 		"default_sts_ttl": minAwsAssumeRoleDuration,
+		"max_sts_ttl":     minAwsAssumeRoleDuration,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -837,7 +840,7 @@ func TestBackend_RoleDefaultSTSTTL(t *testing.T) {
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
 		},
-		Backend: getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
@@ -853,7 +856,7 @@ func TestBackend_policyArnCrud(t *testing.T) {
 	t.Parallel()
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Backend:        getBackend(t),
+		LogicalBackend: getBackend(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteArnPolicyRef(t, "test", ec2PolicyArn),
@@ -883,6 +886,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"policy_document":  "",
 				"credential_types": []string{iamUserCred},
 				"default_sts_ttl":  int64(0),
+				"max_sts_ttl":      int64(0),
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

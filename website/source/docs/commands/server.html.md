@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "server - Command"
+sidebar_title: "<code>server</code>"
 sidebar_current: "docs-commands-server"
 description: |-
   The "server" command starts a Vault server that responds to API requests. By

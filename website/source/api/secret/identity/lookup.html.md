@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Lookup - HTTP API"
-sidebar_current: "docs-http-secret-identity-lookup"
+sidebar_title: "Lookup"
+sidebar_current: "api-http-secret-identity-lookup"
 description: |-
   This is the API documentation for entity and group lookups from identity
   store.

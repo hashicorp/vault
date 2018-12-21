@@ -1,6 +1,7 @@
 ---
 layout: "api"
 page_title: "AliCloud - Secrets Engines - HTTP API"
+sidebar_title: "AliCloud"
 sidebar_current: "docs-http-secret-alicloud"
 description: |-
   This is the API documentation for the Vault AliCloud secrets engine.

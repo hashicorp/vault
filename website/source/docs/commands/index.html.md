@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Commands (CLI)"
+sidebar_title: "Commands (CLI)"
 sidebar_current: "docs-commands"
 description: |-
   In addition to a verbose HTTP API, Vault features a command-line interface

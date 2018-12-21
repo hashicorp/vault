@@ -52,7 +52,14 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: ".*",
+				Pattern: framework.MatchAllRegex("path"),
+
+				Fields: map[string]*framework.FieldSchema{
+					"path": {
+						Type:        framework.TypeString,
+						Description: "Location of the secret.",
+					},
+				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead(),
@@ -101,7 +108,9 @@ type PassthroughBackend struct {
 
 func (b *PassthroughBackend) handleExistenceCheck() framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-		out, err := req.Storage.Get(ctx, req.Path)
+		key := data.Get("path").(string)
+
+		out, err := req.Storage.Get(ctx, key)
 		if err != nil {
 			return false, fmt.Errorf("existence check failed: %v", err)
 		}
@@ -112,8 +121,10 @@ func (b *PassthroughBackend) handleExistenceCheck() framework.ExistenceFunc {
 
 func (b *PassthroughBackend) handleRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		key := data.Get("path").(string)
+
 		// Read the path
-		out, err := req.Storage.Get(ctx, req.Path)
+		out, err := req.Storage.Get(ctx, key)
 		if err != nil {
 			return nil, fmt.Errorf("read failed: %v", err)
 		}
@@ -180,6 +191,11 @@ func (b *PassthroughBackend) GeneratesLeases() bool {
 
 func (b *PassthroughBackend) handleWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
+
 		// Check that some fields are given
 		if len(req.Data) == 0 {
 			return logical.ErrorResponse("missing data fields"), nil
@@ -193,7 +209,7 @@ func (b *PassthroughBackend) handleWrite() framework.OperationFunc {
 
 		// Write out a new key
 		entry := &logical.StorageEntry{
-			Key:   req.Path,
+			Key:   key,
 			Value: buf,
 		}
 		if err := req.Storage.Put(ctx, entry); err != nil {
@@ -206,8 +222,10 @@ func (b *PassthroughBackend) handleWrite() framework.OperationFunc {
 
 func (b *PassthroughBackend) handleDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		key := data.Get("path").(string)
+
 		// Delete the key at the request path
-		if err := req.Storage.Delete(ctx, req.Path); err != nil {
+		if err := req.Storage.Delete(ctx, key); err != nil {
 			return nil, err
 		}
 
@@ -220,7 +238,7 @@ func (b *PassthroughBackend) handleList() framework.OperationFunc {
 		// Right now we only handle directories, so ensure it ends with /; however,
 		// some physical backends may not handle the "/" case properly, so only add
 		// it if we're not listing the root
-		path := req.Path
+		path := data.Get("path").(string)
 		if path != "" && !strings.HasSuffix(path, "/") {
 			path = path + "/"
 		}

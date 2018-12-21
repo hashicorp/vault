@@ -1,4 +1,4 @@
-<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}}" data-test-masked-input>
+<div class="masked-input {{if shouldObscure "masked"}} {{if displayOnly "display-only"}} {{if allowCopy "allow-copy"}}" data-test-masked-input>
 	{{#if displayOnly}}
 		<pre class="masked-value display-only is-word-break">{{displayValue}}</pre>
 	{{else}}
@@ -15,7 +15,17 @@
     data-test-textarea
     />
 	{{/if}}
-  <button {{action "toggleMask"}}  class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button is-compact" data-test-button>
+  {{#if allowCopy}}
+    <CopyButton
+      @clipboardText={{value}}
+      @class="copy-button button is-compact"
+      @success={{success}}
+      data-test-copy-button
+    >
+      <ICon @glyph="copy" aria-hidden="true" @size=16 />
+    </CopyButton>
+  {{/if}}
+  <button {{action "toggleMask"}}  class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}" data-test-button>
     {{i-con glyph=(if shouldObscure "hidden" "visible") aria-hidden="true" size=16}}
 	</button>
 </div>

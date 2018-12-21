@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -141,11 +142,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	var backend logical.Backend
 	// Create the new backend
 	sysView := c.mountEntrySysView(entry)
-	conf := make(map[string]string)
-	if entry.Config.PluginName != "" {
-		conf["plugin_name"] = entry.Config.PluginName
-	}
-	// Create the new backend
 	backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
@@ -156,8 +152,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	// Check for the correct backend type
 	backendType := backend.Type()
-	if entry.Type == "plugin" && backendType != logical.TypeCredential {
-		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Config.PluginName, backendType)
+	if backendType != logical.TypeCredential {
+		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
 
 	addPathCheckers(c, entry, backend, viewPath)
@@ -600,15 +596,11 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
-		conf := make(map[string]string)
-		if entry.Config.PluginName != "" {
-			conf["plugin_name"] = entry.Config.PluginName
-		}
 
 		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			if entry.Type == "plugin" {
+			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeCredential) {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
@@ -624,8 +616,8 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		{
 			// Check for the correct backend type
 			backendType := backend.Type()
-			if entry.Type == "plugin" && backendType != logical.TypeCredential {
-				return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Config.PluginName, backendType)
+			if backendType != logical.TypeCredential {
+				return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 			}
 
 			addPathCheckers(c, entry, backend, viewPath)
@@ -660,6 +652,10 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Check if this is the token store
 		if entry.Type == "token" {
 			c.tokenStore = backend.(*TokenStore)
+
+			// At some point when this isn't beta we may persist this but for
+			// now always set it on mount
+			entry.Config.TokenType = logical.TokenTypeDefaultService
 
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
@@ -713,7 +709,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %q", t)
+		f = plugin.Factory
 	}
 
 	// Set up conf to pass in plugin_name
@@ -721,9 +717,15 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
-	if entry.Config.PluginName != "" {
+
+	switch {
+	case entry.Type == "plugin":
 		conf["plugin_name"] = entry.Config.PluginName
+	default:
+		conf["plugin_name"] = t
 	}
+
+	conf["plugin_type"] = consts.PluginTypeCredential.String()
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)

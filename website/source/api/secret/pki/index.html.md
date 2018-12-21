@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "PKI - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-pki"
+sidebar_title: "PKI"
+sidebar_current: "api-http-secret-pki"
 description: |-
   This is the API documentation for the Vault PKI secrets engine.
 ---
@@ -870,10 +871,7 @@ request is denied.
   added to the CRL by `vault revoke <lease_id>` when certificates are associated
   with leases.  It can also be done using the `pki/revoke` endpoint. However,
   when lease generation is disabled, invoking `pki/revoke` would be the only way
-  to add the certificates to the CRL. When large number of certificates are
-  generated with long lifetimes, it is recommended that lease generation be
-  disabled, as large amount of leases adversely affect the startup time of
-  Vault.
+  to add the certificates to the CRL.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
   role will not be stored in the storage backend. This can improve performance
@@ -1544,10 +1542,9 @@ expiration time.
 - `tidy_cert_store` `(bool: false)` Specifies whether to tidy up the certificate
   store.
 
-- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
-  certificates, even if their duration has not yet passed, removing them both
-  from the CRL and from storage. The CRL will be rotated if this causes any
-  values to be removed.
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked and
+  expired certificates, removing them both from the CRL and from storage. The
+  CRL will be rotated if this causes any values to be removed.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

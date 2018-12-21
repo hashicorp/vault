@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TCP - Listeners - Configuration"
+sidebar_title: "TCP"
 sidebar_current: "docs-configuration-listener-tcp"
 description: |-
   The TCP listener configures Vault to listen on the specified TCP address and
@@ -102,7 +103,7 @@ advertise the correct address to other nodes.
   is for Vault to request client certificates when available.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
-  Specifies the list of source IP addresses for which an X-Forwarded-For header
+  Specifies the list of source IP CIDRs for which an X-Forwarded-For header
   will be trusted. Comma-separated list or JSON array. This turns on
   X-Forwarded-For support.
 

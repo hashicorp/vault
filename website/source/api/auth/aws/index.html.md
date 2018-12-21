@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-auth-aws"
 description: |-
   This is the API documentation for the Vault AWS auth method.
 ---
@@ -360,15 +361,14 @@ $ curl \
 
 Returns the previously configured STS role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/sts/:account_id` | `200 application/json` |
+| Method   | Path                               | Produces               |
+| :------- | :--------------------------------- | :--------------------- |
+| `GET`    | `/auth/aws/config/sts/:account_id` | `200 application/json` |
 
 ### Parameters
 
-- `account_id` `(string: <required>)` - AWS account ID to be associated with
-  STS role. If set, Vault will use assumed credentials to verify any login
-  attempts from EC2 instances in this account.
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -422,9 +422,14 @@ $ curl \
 
 Deletes a previously configured AWS account/STS role association.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/config/sts`       | `204 (empty body)`  |
+| Method   | Path                               | Produces           |
+| :------- | :--------------------------------- | :------------------|
+| `DELETE` | `/auth/aws/config/sts/:account_id` | `204 (empty body)` |
+
+### Parameters
+
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -432,7 +437,7 @@ Deletes a previously configured AWS account/STS role association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/config/sts
+    http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
 ## Configure Identity Whitelist Tidy Operation

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "audit list - Command"
+sidebar_title: "<code>list</code>"
 sidebar_current: "docs-commands-audit-list"
 description: |-
   The "audit list" command lists the audit devices enabled. The output lists the

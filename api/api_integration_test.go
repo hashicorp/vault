@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 
@@ -56,6 +57,7 @@ func testVaultServerUnseal(t testing.TB) (*api.Client, []string, func()) {
 			"pki":            pki.Factory,
 			"transit":        transit.Factory,
 		},
+		BuiltinRegistry: builtinplugins.Registry,
 	})
 }
 

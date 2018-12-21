@@ -8,7 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 
-	"github.com/SermoDigital/jose/jws"
+	"github.com/briankassouf/jose/jws"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )

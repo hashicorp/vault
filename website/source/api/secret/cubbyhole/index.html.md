@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Cubbyhole - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-cubbyhole"
+sidebar_title: "Cubbyhole"
+sidebar_current: "api-http-secret-cubbyhole"
 description: |-
   This is the API documentation for the Vault Cubbyhole secrets engine.
 ---

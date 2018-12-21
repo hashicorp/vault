@@ -276,6 +276,11 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 		return nil
 	}
 
+	// Disallow auto-unsealing when migrating
+	if c.IsInSealMigration() {
+		return nil
+	}
+
 	sealed := c.Sealed()
 	if !sealed {
 		return nil

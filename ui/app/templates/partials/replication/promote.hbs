@@ -45,10 +45,12 @@
               Force promotion of this cluster
             </label>
           </div>
-          <p class="help has-text-grey">
-            <em class="has-text-danger">Caution</em>: Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
-            promotes the cluster even if certain safety checks fail.
-          </p>
+          <AlertInline
+            @class="has-top"
+            @type="warning"
+            @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+            promotes the cluster even if certain safety checks fail."
+          />
         </div>
       </div>
     {{/if}}
@@ -74,10 +76,11 @@
   </h4>
   <div class="content">
     <p>Promote the cluster to primary.</p>
-    <p>
-      <em class="has-text-danger">Caution</em>: Vault replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
-      If the cluster has a primary, be sure to demote it before promoting a secondary.
-    </p>
+    <AlertInline
+      @type="warning"
+      @message="Vault replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
+        If the cluster has a primary, be sure to demote it before promoting a secondary."
+    />
     <div class="field">
       <label for="primary_cluster_addr" class="is-label">
         Primary cluster address <em class="is-optional">(optional)</em>
@@ -101,10 +104,12 @@
           Force promotion of this cluster
         </label>
       </div>
-      <p class="help has-text-grey">
-        <em class="has-text-danger">Caution</em>: Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
-        promotes the cluster even if certain safety checks fail.
-      </p>
+      <AlertInline
+        @class="has-top"
+        @type="warning"
+        @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+          promotes the cluster even if certain safety checks fail."
+      />
     </div>
   </div>
   <div class="field">

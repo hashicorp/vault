@@ -1,0 +1,10 @@
+<WizardSection
+  @headerText="AliCloud"
+  @headerIcon="enable/alicloud"
+  @docText="Docs: Google Cloud Secrets"
+  @docPath="/docs/secrets/alicloud/index.html"
+>
+  <p>
+    The AliCloud secrets engine dynamically generates AliCloud access tokens based on RAM policies, or AliCloud STS credentials based on RAM roles. This generally makes working with AliCloud easier, since it does not involve clicking in the web UI. The AliCloud access tokens are time-based and are automatically revoked when the Vault lease expires. STS credentials are short-lived, non-renewable, and expire on their own.
+  </p>
+</WizardSection>

@@ -19,11 +19,11 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login$`,
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "The role to log in against.",
 			},
-			"jwt": &framework.FieldSchema{
+			"jwt": {
 				Type:        framework.TypeString,
 				Description: "The signed JWT to validate.",
 			},
@@ -179,7 +179,32 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 
 	var groupAliases []*logical.Alias
 	if role.GroupsClaim != "" {
-		groupsClaimRaw, ok := allClaims[role.GroupsClaim]
+		mapPath, err := parseClaimWithDelimiters(role.GroupsClaim, role.GroupsClaimDelimiterPattern)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error parsing delimiters for groups claim: {{err}}", err).Error()), nil
+		}
+		if len(mapPath) < 1 {
+			return logical.ErrorResponse("unexpected length 0 of claims path after parsing groups claim against delimiters"), nil
+		}
+		var claimKey string
+		claimMap := allClaims
+		for i, key := range mapPath {
+			if i == len(mapPath)-1 {
+				claimKey = key
+				break
+			}
+			nextMapRaw, ok := claimMap[key]
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("map via key %q not found while navigating group claim delimiters", key)), nil
+			}
+			nextMap, ok := nextMapRaw.(map[string]interface{})
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("key %q does not reference a map while navigating group claim delimiters", key)), nil
+			}
+			claimMap = nextMap
+		}
+
+		groupsClaimRaw, ok := claimMap[claimKey]
 		if !ok {
 			return logical.ErrorResponse(fmt.Sprintf("%q claim not found in token", role.GroupsClaim)), nil
 		}

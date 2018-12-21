@@ -181,15 +181,18 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 			if entity == nil {
 				return nil, fmt.Errorf("existing alias is not associated with an entity")
 			}
-			if canonicalID == "" || entity.ID == canonicalID {
-				// Nothing to do
-				return nil, nil
+		} else if alias.ID != "" {
+			// This is an update, not a create; if we have an associated entity
+			// already, load it
+			entity, err = i.MemDBEntityByAliasID(alias.ID, true)
+			if err != nil {
+				return nil, err
 			}
 		}
 
 		resp := &logical.Response{}
 
-		// If we found an exisitng alias we won't hit this condition because
+		// If we found an existing alias we won't hit this condition because
 		// canonicalID being empty will result in nil being returned in the block
 		// above, so in this case we know that creating a new entity is the right
 		// thing.
@@ -216,8 +219,8 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 				entity = canonicalEntity
 				entity.Aliases = append(entity.Aliases, alias)
 			} else if entity.ID != canonicalEntity.ID {
-				// In this case we found an entity from alias factors but it's not
-				// the same, so it's a migration
+				// In this case we found an entity from alias factors or given
+				// alias ID but it's not the same, so it's a migration
 				previousEntity = entity
 				entity = canonicalEntity
 
@@ -253,6 +256,12 @@ func (i *IdentityStore) handleAliasUpdateCommon() framework.OperationFunc {
 		err = i.sanitizeAlias(ctx, alias)
 		if err != nil {
 			return nil, err
+		}
+
+		for index, item := range entity.Aliases {
+			if item.ID == alias.ID {
+				entity.Aliases[index] = alias
+			}
 		}
 
 		// Index entity and its aliases in MemDB and persist entity along with

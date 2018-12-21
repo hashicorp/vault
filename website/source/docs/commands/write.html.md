@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "write - Command"
+sidebar_title: "<code>write</code>"
 sidebar_current: "docs-commands-write"
 description: |-
   The "write" command writes data to Vault at the given path. The data can be

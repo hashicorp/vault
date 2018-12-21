@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy read - Command"
+sidebar_title: "<code>read</code>"
 sidebar_current: "docs-commands-policy-read"
 description: |-
   The "policy read" command prints the contents and metadata of the Vault policy

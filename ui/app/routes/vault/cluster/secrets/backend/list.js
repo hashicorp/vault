@@ -63,16 +63,17 @@ export default Route.extend({
           responsePath: 'data.keys',
           page: params.page,
           pageFilter: params.pageFilter,
-          size: 100,
         })
         .then(model => {
           this.set('has404', false);
           return model;
         })
         .catch(err => {
+          // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
           } else {
+            // else we're throwing and dealing with this in the error action
             throw err;
           }
         }),
@@ -109,6 +110,11 @@ export default Route.extend({
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.get('has404');
+    // only clear store cache if this is a new model
+    if (secret !== controller.get('baseKey.id')) {
+      this.store.clearAllDatasets();
+    }
+
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -153,9 +159,9 @@ export default Route.extend({
       if (hasModel && error.httpStatus === 404) {
         this.set('has404', true);
         transition.abort();
-      } else {
-        return true;
+        return false;
       }
+      return true;
     },
 
     willTransition(transition) {

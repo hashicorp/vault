@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Okta - Auth Methods"
+sidebar_title: "Okta"
 sidebar_current: "docs-auth-okta"
 description: |-
   The Okta auth method allows users to authenticate with Vault using Okta

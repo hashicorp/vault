@@ -10,12 +10,13 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -74,6 +75,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 		CredentialBackends: credentialBackends,
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
 }
@@ -90,6 +92,7 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 }
 
@@ -107,6 +110,7 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
 		PluginDirectory:    pluginDir,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 }
 
@@ -156,6 +160,7 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	if err != nil {
 		tb.Fatal(err)

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth Azure Method"
+sidebar_title: "Azure"
 sidebar_current: "docs-agent-autoauth-methods-azure"
 description: |-
   Azure Method for Vault Agent Auto-Auth

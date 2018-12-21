@@ -365,6 +365,15 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 	if err == nil {
 		t.Fatalf("expected error, ret is %#v\noldkeystr: %s\nnewkeystr: %s", *ret, oldkeystr, newkeystr)
 	}
+
+	// Check progress has been reset
+	_, num, err := c.RekeyProgress(recovery, false)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if num != 0 {
+		t.Fatalf("rekey progress should be 0, got: %d", num)
+	}
 }
 
 func TestCore_Rekey_Standby(t *testing.T) {

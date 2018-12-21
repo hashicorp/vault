@@ -3,10 +3,11 @@
     {{message-error model=model}}
     <NamespaceReminder @mode={{mode}} @noun="AWS role" />
     {{#if (gt model.credentialTypes.length 1)}}
-      {{#message-in-page type="warning"}}
-        This role has more than one <code>credential_type</code>, currently: <code>{{join ', ' model.credentialTypes}}</code>.
-        Multiple credential types is deprecated and you must choose one in order to save this role.
-      {{/message-in-page}}
+      <AlertBanner
+        @type="warning"
+        @message="This role has more than one credential_type, currently: {{join ', ' model.credentialTypes}}.
+          Multiple credential types is deprecated and you must choose one in order to save this role."
+      />
     {{/if}}
     {{#each (if (eq mode 'edit') (drop 1 model.fields) model.fields) as |attr|}}
       {{form-field data-test-field attr=attr model=model}}

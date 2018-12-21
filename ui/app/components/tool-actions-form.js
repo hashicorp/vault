@@ -3,7 +3,7 @@ import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { setProperties, computed, set, get } from '@ember/object';
-import moment from 'moment';
+import { addSeconds } from 'date-fns';
 
 const DEFAULTS = {
   token: null,
@@ -14,6 +14,7 @@ const DEFAULTS = {
   creation_ttl: null,
   data: '{\n}',
   unwrap_data: null,
+  details: null,
   wrapTTL: null,
   sum: null,
   random_bytes: null,
@@ -33,6 +34,7 @@ export default Component.extend(DEFAULTS, {
   algorithm: 'sha2-256',
 
   tagName: '',
+  unwrapActiveTab: 'data',
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -65,7 +67,8 @@ export default Component.extend(DEFAULTS, {
     if (!(creation_time && creation_ttl)) {
       return null;
     }
-    return moment(creation_time).add(moment.duration(creation_ttl, 'seconds'));
+
+    return addSeconds(creation_time, creation_ttl);
   }),
 
   handleError(e) {
@@ -76,7 +79,13 @@ export default Component.extend(DEFAULTS, {
     let props = {};
     let secret = (resp && resp.data) || resp.auth;
     if (secret && action === 'unwrap') {
-      props = assign({}, props, { unwrap_data: secret });
+      let details = {
+        'Request ID': resp.request_id,
+        'Lease ID': resp.lease_id || 'None',
+        Renewable: resp.renewable ? 'Yes' : 'No',
+        'Lease Duration': resp.lease_duration || 'None',
+      };
+      props = assign({}, props, { unwrap_data: secret }, { details: details });
     }
     props = assign({}, props, secret);
     if (resp && resp.wrap_info) {

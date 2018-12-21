@@ -5,28 +5,31 @@ const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
 
 export function extractDataAndFlags(data, flags) {
-  return data.concat(flags).reduce((accumulator, val) => {
-    // will be "key=value" or "-flag=value" or "foo=bar=baz"
-    // split on the first =
-    let [item, value] = val.split(/=(.+)/);
-    if (item.startsWith('-')) {
-      let flagName = item.replace(/^-/, '');
-      if (flagName === 'wrap-ttl') {
-        flagName = 'wrapTTL';
+  return data.concat(flags).reduce(
+    (accumulator, val) => {
+      // will be "key=value" or "-flag=value" or "foo=bar=baz"
+      // split on the first =
+      let [item, value] = val.split(/=(.+)/);
+      if (item.startsWith('-')) {
+        let flagName = item.replace(/^-/, '');
+        if (flagName === 'wrap-ttl') {
+          flagName = 'wrapTTL';
+        }
+        accumulator.flags[flagName] = value || true;
+        return accumulator;
       }
-      accumulator.flags[flagName] = value || true;
-      return accumulator;
-    }
-    // if it exists in data already, then we have multiple
-    // foo=bar in the list and need to make it an array
-    if (accumulator.data[item]) {
-      accumulator.data[item] = [].concat(accumulator.data[item], value);
-      return accumulator;
-    }
-    accumulator.data[item] = value;
+      // if it exists in data already, then we have multiple
+      // foo=bar in the list and need to make it an array
+      if (accumulator.data[item]) {
+        accumulator.data[item] = [].concat(accumulator.data[item], value);
+        return accumulator;
+      }
+      accumulator.data[item] = value;
 
-    return accumulator;
-  }, { data: {}, flags: {} });
+      return accumulator;
+    },
+    { data: {}, flags: {} }
+  );
 }
 
 export function executeUICommand(command, logAndOutput, clearLog, toggleFullscreen, refreshFn) {

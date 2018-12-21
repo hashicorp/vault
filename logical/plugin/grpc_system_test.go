@@ -142,7 +142,7 @@ func TestSystem_GRPC_lookupPlugin(t *testing.T) {
 
 	testSystemView := newGRPCSystemView(client)
 
-	if _, err := testSystemView.LookupPlugin(context.Background(), "foo"); err == nil {
+	if _, err := testSystemView.LookupPlugin(context.Background(), "foo", consts.PluginTypeDatabase); err == nil {
 		t.Fatal("LookPlugin(): expected error on due to unsupported call from plugin")
 	}
 }

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator init - Command"
+sidebar_title: "<code>init</code>"
 sidebar_current: "docs-commands-operator-init"
 description: |-
   The "operator init" command initializes a Vault server. Initialization is the

@@ -333,7 +333,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		root := match[0][1]
 		decryptedRoot := testPGPDecrypt(t, pgpkeys.TestPrivKey1, root)
 
-		if l, exp := len(decryptedRoot), vault.TokenLength; l != exp {
+		if l, exp := len(decryptedRoot), vault.TokenLength+2; l != exp {
 			t.Errorf("expected %d to be %d", l, exp)
 		}
 	})

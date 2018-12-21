@@ -9,9 +9,10 @@
   </label>
 {{/if}}
 {{#if warning}}
-  {{#message-in-page type="warning"}}
-    {{warning}}
-  {{/message-in-page}}
+  <AlertBanner
+    @type="warning"
+    @message={{warning}}
+  />
 {{/if}}
 {{#each inputList as |data index|}}
   <div class="field is-grouped" data-test-string-list-row="{{index}}">

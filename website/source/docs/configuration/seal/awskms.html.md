@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS KMS - Seals - Configuration"
+sidebar_title: "AWS KMS"
 sidebar_current: "docs-configuration-seal-awskms"
 description: |-
   The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping
@@ -10,7 +11,7 @@ description: |-
 # `awskms` Seal
 
 The AWS KMS seal configures Vault to use AWS KMS as the seal wrapping mechanism.
-Vault Enterprise's AWS KMS seal is activated by one of the following:
+The AWS KMS seal is activated by one of the following:
 
 * The presence of a `seal "awskms"` block in Vault's configuration file
 * The presence of the environment variable `VAULT_SEAL_TYPE` set to `awskms`. If
@@ -30,6 +31,7 @@ seal "awskms" {
   access_key = "AKIAIOSFODNN7EXAMPLE"
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
   kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+  endpoint   = "https://vpce-0e1bb1852241f8cc6-pzi0do8n.kms.us-east-1.vpce.amazonaws.com"
 }
 ```
 
@@ -54,6 +56,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   and decryption. May also be specified by the `VAULT_AWSKMS_SEAL_KEY_ID`
   environment variable.
 
+- `endpoint` `(string: "")`: The KMS API endpoint to be used to make AWS KMS
+  requests. May also be specified by the `AWS_KMS_ENDPOINT` environment
+  variable. This is useful, for example, when connecting to KMS over a [VPC
+  Endpoint](https://docs.aws.amazon.com/kms/latest/developerguide/kms-vpc-endpoint.html).
+  If not set, Vault will use the default API endpoint for your region.
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment
@@ -75,6 +83,15 @@ Note: The client uses the official AWS SDK and will use the specified
 credentials, environment credentials, shared file credentials, or IAM role/ECS
 task credentials in that order, if the above AWS specific values are not
 provided.
+
+Vault needs the following permissions on the KMS key:
+
+* `kms:Encrypt`
+* `kms:Decrypt`
+* `kms:DescribeKey`
+
+These can be granted via IAM permissions on the principal that Vault uses, on
+the KMS key policy for the KMS key, or via KMS Grants on the key.
 
 ## `awskms` Environment Variables
 

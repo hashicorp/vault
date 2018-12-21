@@ -1,4 +1,4 @@
-package plugin
+package plugin_test
 
 import (
 	"context"
@@ -7,24 +7,26 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/plugin"
+	logicalPlugin "github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestBackend_impl(t *testing.T) {
-	var _ logical.Backend = &backend{}
+	var _ logical.Backend = &plugin.PluginBackend{}
 }
 
 func TestBackend(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := Backend(context.Background(), config)
+	_, err := plugin.Backend(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestBackend_Factory(t *testing.T) {
 	config, cleanup := testConfig(t)
 	defer cleanup()
 
-	_, err := Factory(context.Background(), config)
+	_, err := plugin.Factory(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +61,7 @@ func TestBackend_PluginMain(t *testing.T) {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
-	err := plugin.Serve(&plugin.ServeOpts{
+	err := logicalPlugin.Serve(&logicalPlugin.ServeOpts{
 		BackendFactoryFunc: mock.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
@@ -84,12 +86,13 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",
+			"plugin_type": "database",
 		},
 	}
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
 
 	return config, func() {
 		cluster.Cleanup()

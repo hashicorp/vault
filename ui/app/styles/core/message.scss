@@ -1,38 +1,121 @@
 .message {
-  &.is-list {
-    margin: $size-10 0;
+  background: $blue-010;
+  border: 1px solid $blue-100;
+  margin-bottom: $spacing-s;
+  padding: $spacing-s $spacing-m $spacing-m $spacing-s;
+  position: relative;
+
+  .message-icon {
+    color: $blue;
+    margin-right: $spacing-xs;
   }
 
-  &.is-warning {
-    .message-body {
-      color: $yellow-darkest;
-      padding: 0.75rem 1.25rem;
+  .close-button {
+    background: transparent;
+    border: 0;
+    color: $grey;
+    cursor: pointer;
+    position: absolute;
+    right: $spacing-s;
+    top: $spacing-m;
+  }
+
+  .message-title {
+    color: $blue-500;
+    font-size: 16px;
+    font-weight: $font-weight-bold;
+    line-height: 1.25;
+  }
+
+  .close-button + .message-title {
+    padding-right: $spacing-m;
+  }
+
+  .message-body {
+    border: 0;
+    margin-top: $spacing-xxs;
+  }
+
+  p {
+    font-size: $size-8;
+    border: 0;
+    padding: 0;
+  }
+
+  .message-actions {
+    margin-top: $spacing-xs;
+
+    a,
+    a:not(.button):not(.file-delete-button):not(.tag) {
+      color: $blue;
+      font-weight: $font-weight-semibold;
+      text-decoration: none;
+    }
+
+    > * + * {
+      margin-left: $spacing-xs;
     }
   }
 
   &.is-highlight {
-    background: $yellow-lightest;
-    .message-body {
-      border: none;
-      box-shadow: 0 0 0 1px $yellow;
-      color: $yellow-darkest;
+    background: $yellow-010;
+    border: 1px solid $yellow-100;
+
+    .message-icon {
+      color: $yellow-500;
     }
-    .has-text-highlight,
-    .close-button {
-      color: $yellow;
-    }
-    .title,
-    code {
-      background: none;
-      color: inherit;
-    }
-    .content .button {
-      border-color: $yellow;
-      color: $yellow-darkest;
+
+    .message-title {
+      color: $orange-700;
     }
   }
 
-  .content {
-    margin-bottom: 0;
+  &.is-success {
+    background: $green-010;
+    border: 1px solid $green-100;
+
+    .message-icon {
+      color: $green-500;
+    }
+
+    .message-title {
+      color: $green-700;
+    }
   }
+
+  &.is-danger {
+    background: $red-010;
+    border: 1px solid $red-050;
+
+    .message-icon {
+      color: $red-500;
+    }
+
+    .message-title {
+      color: $red-700;
+    }
+  }
+}
+
+.message-inline {
+  display: flex;
+  margin: -$spacing-xs 0 $spacing-l;
+
+  .icon {
+    flex: 0;
+    margin: 0 $spacing-xxs 0 0;
+    min-width: fit-content;
+  }
+
+  .p {
+    margin: 0;
+  }
+
+  &.has-top {
+    margin-top: 1rem;
+  }
+}
+
+.has-text-highlight {
+  color: $yellow-500;
 }

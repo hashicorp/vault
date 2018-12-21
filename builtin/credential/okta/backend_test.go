@@ -49,7 +49,7 @@ func TestBackend_Config(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
 			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),

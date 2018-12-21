@@ -33,15 +33,18 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
+	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/mitchellh/go-testing-interface"
 
 	physInmem "github.com/hashicorp/vault/physical/inmem"
@@ -104,7 +107,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 }
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
-// specified core configurations overriden for testing.
+// specified core configurations overridden for testing.
 func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -113,17 +116,19 @@ func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	conf := &CoreConfig{
-		Seal:      testSeal,
-		EnableUI:  false,
-		EnableRaw: enableRaw,
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
 
 func TestCoreUI(t testing.T, enableUI bool) *Core {
 	conf := &CoreConfig{
-		EnableUI:  enableUI,
-		EnableRaw: true,
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -143,6 +148,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableRaw = opts.EnableRaw
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
+	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -176,6 +182,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		b := new(framework.Backend)
 		b.Setup(ctx, config)
+		b.BackendType = logical.TypeCredential
 		return b, nil
 	}
 	noopBackends["http"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
@@ -207,6 +214,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	return conf
@@ -255,7 +263,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 }
 
 func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(context.Background(), key)
+	return core.UnsealWithRecoveryKeys(key)
 }
 
 // TestCoreUnsealed returns a pure in-memory core that is already
@@ -275,7 +283,7 @@ func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 }
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
-// initialized, unsealed, with the any provided core config values overriden.
+// initialized, unsealed, with the any provided core config values overridden.
 func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
@@ -348,7 +356,7 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
-func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string, env []string, tempDir string) {
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -410,7 +418,7 @@ func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string, env []string
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, fileName, args, env, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, pluginType, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +646,7 @@ func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) erro
 }
 
 func (n *rawHTTP) Type() logical.BackendType {
-	return logical.TypeUnknown
+	return logical.TypeLogical
 }
 
 func GenerateRandBytes(length int) ([]byte, error) {
@@ -884,6 +892,7 @@ type TestListener struct {
 
 type TestClusterCore struct {
 	*Core
+	CoreConfig        *CoreConfig
 	Client            *api.Client
 	Handler           http.Handler
 	Listeners         []*TestListener
@@ -1176,6 +1185,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		DisableMlock:       true,
 		EnableUI:           true,
 		EnableRaw:          true,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1191,6 +1201,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSealWrap = base.DisableSealWrap
 		coreConfig.DevLicenseDuration = base.DevLicenseDuration
 		coreConfig.DisableCache = base.DisableCache
+		if base.BuiltinRegistry != nil {
+			coreConfig.BuiltinRegistry = base.BuiltinRegistry
+		}
 
 		if !coreConfig.DisableMlock {
 			base.DisableMlock = false
@@ -1259,34 +1272,43 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	cores := []*Core{}
+	coreConfigs := []*CoreConfig{}
 	for i := 0; i < numCores; i++ {
-		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
-		if coreConfig.ClusterAddr != "" {
-			coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
+		localConfig := *coreConfig
+		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
+		if localConfig.ClusterAddr != "" {
+			localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
 		}
 
 		// if opts.SealFunc is provided, use that to generate a seal for the config instead
 		if opts != nil && opts.SealFunc != nil {
-			coreConfig.Seal = opts.SealFunc()
+			localConfig.Seal = opts.SealFunc()
 		}
 
 		if opts != nil && opts.Logger != nil {
-			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
-		coreConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
 
-		c, err := NewCore(coreConfig)
+		c, err := NewCore(&localConfig)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		cores = append(cores, c)
+		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
 			handlers[i] = opts.HandlerFunc(&HandlerProperties{
 				Core:               c,
 				MaxRequestDuration: DefaultMaxRequestDuration,
 			})
 			servers[i].Handler = handlers[i]
+		}
+
+		// Set this in case the Seal was manually set before the core was
+		// created
+		if localConfig.Seal != nil {
+			localConfig.Seal.SetCore(c)
 		}
 	}
 
@@ -1304,8 +1326,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		return ret
 	}
 
-	if numCores > 1 {
-		for i := 1; i < numCores; i++ {
+	for i := 0; i < numCores; i++ {
+		if coreConfigs[i].ClusterAddr != "" {
 			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
 			cores[i].SetClusterHandler(handlers[i])
 		}
@@ -1444,6 +1466,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		tcc := &TestClusterCore{
 			Core:            cores[i],
+			CoreConfig:      coreConfigs[i],
 			ServerKey:       certInfoSlice[i].key,
 			ServerKeyPEM:    certInfoSlice[i].keyPEM,
 			ServerCert:      certInfoSlice[i].cert,
@@ -1471,4 +1494,57 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
 
 	return &testCluster
+}
+
+func NewMockBuiltinRegistry() *mockBuiltinRegistry {
+	return &mockBuiltinRegistry{
+		forTesting: map[string]consts.PluginType{
+			"mysql-database-plugin":      consts.PluginTypeDatabase,
+			"postgresql-database-plugin": consts.PluginTypeDatabase,
+		},
+	}
+}
+
+type mockBuiltinRegistry struct {
+	forTesting map[string]consts.PluginType
+}
+
+func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
+	testPluginType, ok := m.forTesting[name]
+	if !ok {
+		return nil, false
+	}
+	if pluginType != testPluginType {
+		return nil, false
+	}
+	if name == "postgresql-database-plugin" {
+		return dbPostgres.New, true
+	}
+	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+}
+
+// Keys only supports getting a realistic list of the keys for database plugins.
+func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
+	if pluginType != consts.PluginTypeDatabase {
+		return []string{}
+	}
+	/*
+		This is a hard-coded reproduction of the db plugin keys in helper/builtinplugins/registry.go.
+		The registry isn't directly used because it causes import cycles.
+	*/
+	return []string{
+		"mysql-database-plugin",
+		"mysql-aurora-database-plugin",
+		"mysql-rds-database-plugin",
+		"mysql-legacy-database-plugin",
+		"postgresql-database-plugin",
+		"mssql-database-plugin",
+		"cassandra-database-plugin",
+		"mongodb-database-plugin",
+		"hana-database-plugin",
+	}
+}
+
+func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	return false
 }

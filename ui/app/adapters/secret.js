@@ -34,22 +34,29 @@ export default ApplicationAdapter.extend({
     return url;
   },
 
-  optionsForQuery(id, action) {
+  optionsForQuery(id, action, wrapTTL) {
     let data = {};
     if (action === 'query') {
-      data['list'] = true;
+      data.list = true;
     }
-
+    if (wrapTTL) {
+      return { data, wrapTTL };
+    }
     return { data };
   },
 
   fetchByQuery(query, action) {
-    const { id, backend } = query;
-    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
-      resp.id = id;
-      resp.backend = backend;
-      return resp;
-    });
+    const { id, backend, wrapTTL } = query;
+    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action, wrapTTL)).then(
+      resp => {
+        if (wrapTTL) {
+          return resp;
+        }
+        resp.id = id;
+        resp.backend = backend;
+        return resp;
+      }
+    );
   },
 
   query(store, type, query) {

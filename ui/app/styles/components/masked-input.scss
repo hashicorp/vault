@@ -1,9 +1,19 @@
 .masked-input {
-  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.masked-input .masked-value {
-  padding-left: 2.5rem;
+.masked-input.masked.display-only,
+.masked-input:not(.masked) {
+  align-items: start;
+}
+
+.has-label .masked-input {
+  padding-top: $spacing-s;
+}
+
+.has-padding {
+  padding: $size-10 $size-8;
 }
 
 // we want to style the boxes the same everywhere so they
@@ -11,14 +21,17 @@
 .masked-input.masked .masked-value {
   font-size: 9px;
   font-family: $family-primary;
-}
-
-.masked-input.masked .masked-value {
   line-height: 2.5;
 }
+
+.masked-input.display-only .masked-value {
+  order: 1;
+}
+
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
+  border-radius: $radius 0 0 $radius;
 }
 
 //override bulma's pre styling
@@ -27,48 +40,53 @@
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
+  padding-left: $spacing-s;
+  background-color: transparent;
 }
 
-.masked-input-toggle {
-  background: transparent;
-  position: absolute;
-  height: auto;
-  top: $size-6/4;
-  bottom: $size-6/4;
-  left: 1px;
-  line-height: 1rem;
-  min-width: 0;
-  max-height: 2rem;
-  padding: 0 $size-8;
-  z-index: 100;
-  border: 0;
-  box-shadow: none;
-  color: $blue;
+.button.masked-input-toggle,
+.button.copy-button {
+  min-width: $spacing-xl;
+  border-left: 0;
+  border-radius: 0 $radius $radius 0;
+  color: $grey;
+}
 
-  &:active,
-  &.is-active,
-  &:focus,
-  &.is-focused,
-  &:hover,
-  &:focus:not(:active) {
-    color: $blue;
+.display-only {
+  .button.masked-input-toggle,
+  .button.copy-button {
+    background: transparent;
+    height: auto;
+    line-height: 1rem;
+    min-width: $spacing-l;
+    z-index: 100;
     border: 0;
     box-shadow: none;
+    color: $grey-light;
+    padding-left: 0;
+    padding-right: 0;
+
+    &:active,
+    &.is-active,
+    &:focus,
+    &.is-focused,
+    &:hover,
+    &:focus:not(:active) {
+      color: $blue;
+      border: 0;
+      box-shadow: none;
+    }
   }
 }
 
-.masked-input.display-only .masked-input-toggle {
-  top: 0;
-  font-size: 0.5rem;
-  height: 1rem;
-  padding-left: 0;
+.masked-input.masked .masked-value {
+  color: $grey-light;
+}
+
+.masked-input:not(.masked) .masked-input-toggle {
+  color: $blue;
 }
 
 .masked-input .input:focus + .masked-input-toggle {
   background: rgba($white, 0.95);
-}
-
-.masked-input.masked .masked-value,
-.masked-input.masked .masked-input-toggle {
-  color: $grey-light;
 }

@@ -23,7 +23,7 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 
 		// Basically: if we have empty "keys" or no keys at all, 404. This
 		// provides consistency with GET.
-		case req.Operation == ListOperation && resp.WrapInfo == nil:
+		case req.Operation == ListOperation && (resp == nil || resp.WrapInfo == nil):
 			if resp == nil {
 				return http.StatusNotFound, nil
 			}

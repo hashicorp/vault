@@ -17,35 +17,35 @@
       {{/link-to}}
     </p.levelRight>
   </PageHeader>
-  <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-    <div class="level">
-      <div class="level-left">
-        {{navigate-input
-          filterFocusDidChange=(action "setFilterFocus")
-          filterDidChange=(action "setFilter")
-          filter=filter
-          filterMatchesKey=filterMatchesKey
-          firstPartialMatch=firstPartialMatch
-          extraNavParams=policyType
-          placeholder="Filter policies"
-          mode="policy"
-        }}
-        {{#if filterFocused}}
-          {{#if filterMatchesKey}}
-            <p class="input-hint">
-              <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
-            </p>
+  {{#if model.meta.total}}
+    <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
+      <div class="level">
+        <div class="level-left">
+          {{navigate-input
+            filterFocusDidChange=(action "setFilterFocus")
+            filterDidChange=(action "setFilter")
+            filter=filter
+            filterMatchesKey=filterMatchesKey
+            firstPartialMatch=firstPartialMatch
+            extraNavParams=policyType
+            placeholder="Filter policies"
+            mode="policy"
+          }}
+          {{#if filterFocused}}
+            {{#if filterMatchesKey}}
+              <p class="input-hint">
+                <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
+              </p>
+            {{/if}}
+            {{#if firstPartialMatch}}
+              <p class="input-hint">
+                <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+              </p>
+            {{/if}}
           {{/if}}
-          {{#if firstPartialMatch}}
-            <p class="input-hint">
-              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
-            </p>
-          {{/if}}
-        {{/if}}
+        </div>
       </div>
     </div>
-  </div>
-  {{#if model.meta.total}}
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>
@@ -90,12 +90,12 @@
                   <ul class="menu-list">
                     {{#if item.updatePath.isPending}}
                       <li class="action">
-                        <button disabled=true type="button" class="link button is-loading is-transparent">
+                        <button disabled type="button" class="link button is-loading is-transparent">
                           loading
                         </button>
                       </li>
                       <li class="action">
-                        <button disabled=true type="button" class="link button is-loading is-transparent">
+                        <button disabled type="button" class="link button is-loading is-transparent">
                           loading
                         </button>
                       </li>
@@ -140,29 +140,29 @@
         {{/linked-block}}
       {{/if}}
     {{else}}
-      <div class="box is-sideless">
-        <p> There are no policies matching <code>{{pageFilter}}</code>.  </p>
-      </div>
+      <EmptyState
+        @title="No policies matching &quot;{{pageFilter}}&quot;"
+      />
     {{/each}}
+    {{#if (gt model.meta.lastPage 1) }}
+      {{list-pagination
+        page=model.meta.currentPage
+        lastPage=model.meta.lastPage
+        link="vault.cluster.policies.index"
+      }}
+    {{/if}}
   {{else}}
-    <div class="box is-bottomless has-background-white-bis">
-      <div class="columns is-centered">
-        <div class="column is-half has-text-centered">
-          <div class="box is-shadowless has-background-white-bis">
-            <p class="has-text-grey" data-test-no-policies-text>
-            There are currently no {{uppercase policyType}} policies.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  {{/if}}
-  {{#if (gt model.meta.lastPage 1) }}
-    {{list-pagination
-      page=model.meta.currentPage
-      lastPage=model.meta.lastPage
-      link="vault.cluster.policies.index"
-    }}
+    <EmptyState
+      @title="No {{uppercase policyType}} policies yet"
+      @message="A list of policies will be listed here. Create your first {{uppercase policyType}} policy to get started."
+    >
+      {{#link-to "vault.cluster.policies.create" class="link"}}
+        Create {{uppercase policyType}} policy
+      {{/link-to}}
+      <LearnLink @path="/vault/getting-started/policies">
+        Learn More
+      </LearnLink>
+    </EmptyState>
   {{/if}}
 {{else}}
   {{upgrade-page title="Sentinel" minimumEdition="Vault Enterprise Premium"}}

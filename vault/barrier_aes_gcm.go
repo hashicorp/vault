@@ -708,6 +708,11 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 		return nil, nil
 	}
 
+	if len(pe.Value) < 4 {
+		b.l.RUnlock()
+		return nil, errors.New("invalid value")
+	}
+
 	// Verify the term
 	term := binary.BigEndian.Uint32(pe.Value[:4])
 
@@ -845,7 +850,11 @@ func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain
 	case AESGCMVersion1:
 		out = gcm.Seal(out, nonce, plain, nil)
 	case AESGCMVersion2:
-		out = gcm.Seal(out, nonce, plain, []byte(path))
+		aad := []byte(nil)
+		if path != "" {
+			aad = []byte(path)
+		}
+		out = gcm.Seal(out, nonce, plain, aad)
 	default:
 		panic("Unknown AESGCM version")
 	}
@@ -865,7 +874,11 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 	case AESGCMVersion1:
 		return gcm.Open(out, nonce, raw, nil)
 	case AESGCMVersion2:
-		return gcm.Open(out, nonce, raw, []byte(path))
+		aad := []byte(nil)
+		if path != "" {
+			aad = []byte(path)
+		}
+		return gcm.Open(out, nonce, raw, aad)
 	default:
 		return nil, fmt.Errorf("version bytes mis-match")
 	}
