@@ -20,7 +20,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = prepareTestContainer(t, logger)
+		cleanup, connURL = PrepareTestContainer(t, logger)
 		defer cleanup()
 	}
 
@@ -31,14 +31,13 @@ func TestPostgreSQLBackend(t *testing.T) {
 
 	hae := os.Getenv("PGHAENABLED")
 	if hae == "" {
-		hae = "false"
+		hae = "true"
 	}
 
 	// Run vault tests
-	logger := logging.NewVaultLogger(log.Debug)
 	logger.Info(fmt.Sprintf("Connection URL: %v", connURL))
 
-	b, err := NewPostgreSQLBackend(map[string]string{
+	b1, err := NewPostgreSQLBackend(map[string]string{
 		"connection_url": connURL,
 		"table":          table,
 		"ha_enabled":     hae,
@@ -54,31 +53,10 @@ func TestPostgreSQLBackend(t *testing.T) {
 		"ha_enabled":     hae,
 	}, logger)
 
-	//Setup tables and indexes if not exists.
-	createTableSQL := fmt.Sprintf(
-		"  CREATE TABLE IF NOT EXISTS %v ( "+
-			"  parent_path TEXT COLLATE \"C\" NOT NULL, "+
-			"  path        TEXT COLLATE \"C\", "+
-			"  key         TEXT COLLATE \"C\", "+
-			"  value       BYTEA, "+
-			"  CONSTRAINT pkey PRIMARY KEY (path, key) "+
-			" ); ", table)
-
-	_, err = pg.client.Exec(createTableSQL)
-	if err != nil {
-		t.Fatalf("Failed to create table: %v", err)
-	}
-
-	createIndexSQL := fmt.Sprintf(" CREATE INDEX IF NOT EXISTS parent_path_idx ON %v (parent_path); ", table)
-
-	_, err = pg.client.Exec(createIndexSQL)
-	if err != nil {
-		t.Fatalf("Failed to create index: %v", err)
-	}
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
-	pg := b.(*PostgreSQLBackend)
+	pg := b1.(*PostgreSQLBackend)
 
 	//Read postgres version to test basic connects works
 	var pgversion string
@@ -87,40 +65,22 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 	logger.Info(fmt.Sprintf("Postgres Version: %v", pgversion))
 
-	//Setup tables and indexes if not exists.
-	createTableSQL := fmt.Sprintf(
-		"  CREATE TABLE IF NOT EXISTS %v ( "+
-			"  parent_path TEXT COLLATE \"C\" NOT NULL, "+
-			"  path        TEXT COLLATE \"C\", "+
-			"  key         TEXT COLLATE \"C\", "+
-			"  value       BYTEA, "+
-			"  CONSTRAINT pkey PRIMARY KEY (path, key) "+
-			" ); ", table)
-
-	_, err = pg.client.Exec(createTableSQL)
-	if err != nil {
-		t.Fatalf("Failed to create table: %v", err)
-	}
-
-	createIndexSQL := fmt.Sprintf(" CREATE INDEX IF NOT EXISTS parent_path_idx ON %v (parent_path); ", table)
-
-	_, err = pg.client.Exec(createIndexSQL)
-	if err != nil {
-		t.Fatalf("Failed to create index: %v", err)
-	}
+	SetupDatabaseObjects(t, logger, pg)
 
 	defer func() {
-		pg := b.(*PostgreSQLBackend)
+		pg := b1.(*PostgreSQLBackend)
 		_, err := pg.client.Exec(fmt.Sprintf(" TRUNCATE TABLE %v ", pg.table))
 		if err != nil {
 			t.Fatalf("Failed to truncate table: %v", err)
 		}
 	}()
 
-	physical.ExerciseBackend(t, b)
-	physical.ExerciseBackend_ListPrefix(t, b)
+	logger.Info("Running basic backend tests")
+	physical.ExerciseBackend(t, b1)
+	logger.Info("Running list prefix backend tests")
+	physical.ExerciseBackend_ListPrefix(t, b1)
 
-	ha1, ok := b.(physical.HABackend)
+	ha1, ok := b1.(physical.HABackend)
 	if !ok {
 		t.Fatalf("PostgreSQLDB does not implement HABackend")
 	}
@@ -131,11 +91,12 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	if ha1.HAEnabled() && ha2.HAEnabled() {
+		logger.Info("Running ha backend tests")
 		physical.ExerciseHABackend(t, ha1, ha2)
 	}
 }
 
-func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
+func PrepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
 	// If environment variable is set, use this connectionstring without starting docker container
 	if os.Getenv("PGURL") != "" {
 		return func() {}, os.Getenv("PGURL")
@@ -177,4 +138,43 @@ func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retC
 	}
 
 	return cleanup, retConnString
+}
+
+func SetupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {
+	var err error
+	//Setup tables and indexes if not exists.
+	createTableSQL := fmt.Sprintf(
+		"  CREATE TABLE IF NOT EXISTS %v ( "+
+			"  parent_path TEXT COLLATE \"C\" NOT NULL, "+
+			"  path        TEXT COLLATE \"C\", "+
+			"  key         TEXT COLLATE \"C\", "+
+			"  value       BYTEA, "+
+			"  CONSTRAINT pkey PRIMARY KEY (path, key) "+
+			" ); ", pg.table)
+
+	_, err = pg.client.Exec(createTableSQL)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	createIndexSQL := fmt.Sprintf(" CREATE INDEX IF NOT EXISTS parent_path_idx ON %v (parent_path); ", pg.table)
+
+	_, err = pg.client.Exec(createIndexSQL)
+	if err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+
+	createHaTableSQL :=
+		" CREATE TABLE IF NOT EXISTS vault_ha_store ( " +
+			" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
+			" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
+			" ha_value                                    TEXT COLLATE \"C\", " +
+			" valid_until                                 TIMESTAMP NOT NULL, " +
+			" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
+			" ); "
+
+	_, err = pg.client.Exec(createHaTableSQL)
+	if err != nil {
+		t.Fatalf("Failed to create hatable: %v", err)
+	}
 }
