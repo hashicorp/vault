@@ -7,14 +7,13 @@ import (
 	"sync"
 	"time"
 
-	influx "github.com/influxdata/influxdb/client/v2"
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	influx "github.com/influxdata/influxdb/client/v2"
+	"github.com/mitchellh/mapstructure"
 )
 
 // influxdbConnectionProducer implements ConnectionProducer and provides an
@@ -223,7 +222,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 	}
 
 	// verifying infos about the connection
-	isAdmin, err := isUserAnAdmin(cli, i.Username)
+	isAdmin, err := isUserAdmin(cli, i.Username)
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting if provided username is admin: {{err}}", err)
 	}
@@ -242,7 +241,7 @@ func (i *influxdbConnectionProducer) secretValues() map[string]interface{} {
 	}
 }
 
-func isUserAnAdmin(cli influx.Client, user string) (bool, error) {
+func isUserAdmin(cli influx.Client, user string) (bool, error) {
 	q := influx.NewQuery("SHOW USERS", "", "")
 	response, err := cli.Query(q)
 	if err != nil {
@@ -260,5 +259,5 @@ func isUserAnAdmin(cli influx.Client, user string) (bool, error) {
 			}
 		}
 	}
-	return false, fmt.Errorf("The provided username is not a valid user in the influx db")
+	return false, fmt.Errorf("the provided username is not a valid user in the influxdb")
 }

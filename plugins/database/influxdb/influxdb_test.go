@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -9,17 +10,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-
-	"fmt"
-
 	influx "github.com/influxdata/influxdb/client/v2"
 	"github.com/ory/dockertest"
 )
 
 const testInfluxRole = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
-
-const testWrongInfluxRole = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;
-GRANT ALL PERMISSIONS ON ALL KEYSPACES TO {{username}};`
 
 func prepareInfluxdbTestContainer(t *testing.T) (func(), string, int) {
 	if os.Getenv("INFLUXDB_HOST") != "" {
