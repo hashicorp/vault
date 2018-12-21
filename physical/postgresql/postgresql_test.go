@@ -20,7 +20,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	var cleanup func()
 	connURL := os.Getenv("PGURL")
 	if connURL == "" {
-		cleanup, connURL = PrepareTestContainer(t, logger)
+		cleanup, connURL = prepareTestContainer(t, logger)
 		defer cleanup()
 	}
 
@@ -81,7 +81,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
-func PrepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
+func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
 	// If environment variable is set, use this connectionstring without starting docker container
 	if os.Getenv("PGURL") != "" {
 		return func() {}, os.Getenv("PGURL")
