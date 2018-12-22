@@ -70,7 +70,7 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 	switch {
 	case os.Getenv("VAULT_TRANSIT_SEAL_DISABLE_RENEWAL") != "":
 		disableRenewalRaw = os.Getenv("VAULT_TRANSIT_SEAL_DISABLE_RENEWAL")
-	case config["key_name"] != "":
+	case config["disable_renewal"] != "":
 		disableRenewalRaw = config["disable_renewal"]
 	}
 	disableRenewal, err := strconv.ParseBool(disableRenewalRaw)

@@ -1,0 +1,117 @@
+package transit
+
+import (
+	"context"
+	"fmt"
+	"path"
+	"reflect"
+	"testing"
+
+	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/logging"
+	"github.com/ory/dockertest"
+)
+
+func TestTransitSeal_Lifecycle(t *testing.T) {
+	cleanup, retAddress, token, mountPath, keyName := prepareTestContainer(t)
+	defer cleanup()
+
+	sealConfig := map[string]string{
+		"address":    retAddress,
+		"token":      token,
+		"mount_path": mountPath,
+		"key_name":   keyName,
+	}
+	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	_, err := s.SetConfig(sealConfig)
+	if err != nil {
+		t.Fatalf("error setting seal config: %v", err)
+	}
+
+	// Test Encrypt and Decrypt calls
+	input := []byte("foo")
+	swi, err := s.Encrypt(context.Background(), input)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	pt, err := s.Decrypt(context.Background(), swi)
+	if err != nil {
+		t.Fatalf("err: %s", err.Error())
+	}
+
+	if !reflect.DeepEqual(input, pt) {
+		t.Fatalf("expected %s, got %s", input, pt)
+	}
+}
+
+func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, mountPath, keyName string) {
+	testToken, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testMountPath, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testKeyName, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	dockerOptions := &dockertest.RunOptions{
+		Repository: "vault",
+		Tag:        "latest",
+		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", testToken),
+			"-dev-listen-address=0.0.0.0:8200"},
+	}
+	resource, err := pool.RunWithOptions(dockerOptions)
+	if err != nil {
+		t.Fatalf("Could not start local Vault docker container: %s", err)
+	}
+
+	cleanup = func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	retAddress = fmt.Sprintf("http://localhost:%s", resource.GetPort("8200/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		vaultConfig := api.DefaultConfig()
+		vaultConfig.Address = retAddress
+		vault, err := api.NewClient(vaultConfig)
+		if err != nil {
+			return err
+		}
+		vault.SetToken(testToken)
+
+		// Set up transit
+		if err := vault.Sys().Mount(testMountPath, &api.MountInput{
+			Type: "transit",
+		}); err != nil {
+			return err
+		}
+
+		// Create default aesgcm key
+		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", testKeyName), map[string]interface{}{}); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to docker: %s", err)
+	}
+	return cleanup, retAddress, testToken, testMountPath, testKeyName
+}
