@@ -125,7 +125,7 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 					for {
 						select {
 						case err := <-renewer.DoneCh():
-							s.logger.Info("renewer done channel triggered")
+							s.logger.Info("shutting down token renewal")
 							if err != nil {
 								s.logger.Error("error renewing token", "error", err)
 							}
