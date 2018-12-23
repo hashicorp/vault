@@ -20,14 +20,14 @@ func configureTransitSeal(config *server.Config, infoKeys *[]string, info *map[s
 	}
 	autoseal := vault.NewAutoSeal(transitSeal)
 	if sealInfo != nil {
-		*infoKeys = append(*infoKeys, "Seal Type", "Transit Seal Address", "Transit Seal Mount Path", "Transit Seal Key Name")
+		*infoKeys = append(*infoKeys, "Seal Type", "Transit Address", "Transit Mount Path", "Transit Key Name")
 		(*info)["Seal Type"] = config.Seal.Type
-		(*info)["Transit Seal Address"] = sealInfo["address"]
-		(*info)["Transit Seal Mount Path"] = sealInfo["mount_path"]
-		(*info)["Transit Seal Key Name"] = sealInfo["key_name"]
-		if endpoint, ok := sealInfo["namespace"]; ok {
-			*infoKeys = append(*infoKeys, "Transit Seal Namespace")
-			(*info)["AWS KMS Endpoint"] = endpoint
+		(*info)["Transit Address"] = sealInfo["address"]
+		(*info)["Transit Mount Path"] = sealInfo["mount_path"]
+		(*info)["Transit Key Name"] = sealInfo["key_name"]
+		if namespace, ok := sealInfo["namespace"]; ok {
+			*infoKeys = append(*infoKeys, "Transit Namespace")
+			(*info)["Transit Namespace"] = namespace
 		}
 	}
 	return autoseal, nil
