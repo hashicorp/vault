@@ -140,7 +140,11 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 				s.logger.Info("unable to renew token, disabling renewal", "err", err)
 			}
 		}
+	}
 
+	// Send a value to test the seal and to set the current key id
+	if _, err := s.Encrypt(context.Background(), []byte("a")); err != nil {
+		return nil, err
 	}
 
 	sealInfo := make(map[string]string)
