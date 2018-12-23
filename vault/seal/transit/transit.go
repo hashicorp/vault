@@ -102,26 +102,19 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 		if namespace != "" {
 			client.SetNamespace(namespace)
 		}
+		if client.Token() == "" {
+			return nil, errors.New("missing token")
+		}
 		s.client = client
 
 		if !disableRenewal {
-			tokenInfo, err := client.Auth().Token().LookupSelf()
-			if err != nil {
-				return nil, err
-			}
-
-			// Only set up renewer if the token can be renewed
-			if tokenInfo.Renewable {
-				// Build a api.SecretAuth block for the renewer
-				secretAuth := &api.SecretAuth{
-					ClientToken:   s.client.Token(),
-					LeaseDuration: tokenInfo.LeaseDuration,
-					Renewable:     tokenInfo.Renewable,
-				}
+			// Renew the token immediately to get a secret to pass to renewer
+			secret, err := client.Auth().Token().RenewTokenAsSelf(s.client.Token(), 0)
+			// If we don't get an error renewing, set up a renewer.  The token may not be renewable or not have
+			// permission to renew-self.
+			if err == nil {
 				renewer, err := s.client.NewRenewer(&api.RenewerInput{
-					Secret: &api.Secret{
-						Auth: secretAuth,
-					},
+					Secret: secret,
 				})
 				if err != nil {
 					return nil, err
@@ -129,13 +122,22 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 				s.renewer = renewer
 
 				go func() {
-					err := <-renewer.DoneCh()
-					s.logger.Info("renewer done channel triggered")
-					if err != nil {
-						s.logger.Error("error renewing token", "error", err)
+					for {
+						select {
+						case err := <-renewer.DoneCh():
+							s.logger.Info("renewer done channel triggered")
+							if err != nil {
+								s.logger.Error("error renewing token", "error", err)
+							}
+							return
+						case <-renewer.RenewCh():
+							s.logger.Trace("successfully renewed token")
+						}
 					}
 				}()
 				go s.renewer.Renew()
+			} else {
+				s.logger.Info("unable to renew token, disabling renewal", "err", err)
 			}
 		}
 
