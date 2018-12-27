@@ -66,16 +66,20 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 		return nil, fmt.Errorf("key_name is required")
 	}
 
-	disableRenewalRaw := "false"
+	var disableRenewal bool
+	var disableRenewalRaw string
 	switch {
 	case os.Getenv("VAULT_TRANSIT_SEAL_DISABLE_RENEWAL") != "":
 		disableRenewalRaw = os.Getenv("VAULT_TRANSIT_SEAL_DISABLE_RENEWAL")
 	case config["disable_renewal"] != "":
 		disableRenewalRaw = config["disable_renewal"]
 	}
-	disableRenewal, err := strconv.ParseBool(disableRenewalRaw)
-	if err != nil {
-		return nil, err
+	if disableRenewalRaw != "" {
+		var err error
+		disableRenewal, err = strconv.ParseBool(disableRenewalRaw)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var namespace string
