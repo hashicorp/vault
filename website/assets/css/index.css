@@ -32,6 +32,9 @@
 @import 'pages/_home';
 @import 'pages/_downloads.css';
 
+/* Print styles */
+@import '_print';
+
 h5 {
   font-weight: 600;
 }
