@@ -21,19 +21,11 @@ func TestDefaultS3Backend(t *testing.T) {
 	DoS3BackendTest(t, "", "")
 }
 
-func TestS3BackendSseAes256(t *testing.T) {
-	DoS3BackendTest(t, "AES256", "")
-}
-
 func TestS3BackendSseKms(t *testing.T) {
-	DoS3BackendTest(t, "aws:kms", "")
-}
-
-func TestS3BackendSseKmsWithAliasedKey(t *testing.T) {
 	DoS3BackendTest(t, "aws:kms", "alias/aws/s3")
 }
 
-func DoS3BackendTest(t *testing.T, sse string, kmsKeyId string) {
+func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	credsConfig := &awsutil.CredentialsConfig{}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
@@ -100,7 +92,6 @@ func DoS3BackendTest(t *testing.T, sse string, kmsKeyId string) {
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{
 		"bucket":   bucket,
-		"sse":      sse,
 		"kmsKeyId": kmsKeyId,
 	}, logger)
 	if err != nil {
