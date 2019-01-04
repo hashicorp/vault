@@ -12,6 +12,11 @@ CHANGES:
    environment values, please ensure the config values are unset if you want to
    use environment values.
 
+IMPROVEMENTS:
+
+ * autounseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+   [GH-5999]
+
 BUG FIXES:
 
  * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
