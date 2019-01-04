@@ -5,6 +5,12 @@ CHANGES:
  * secret/aws: Role now returns `credential_type` instead of `credential_types`
    to match role input. If a legacy role that can supply more than one
    credential type, they will be concatenated with a `,`.
+ * physical/dynamodb, autoseal/aws: Instead of Vault performing environment
+   variable handling, and overriding static (config file) values if found, we
+   use the default AWS SDK env handling behavior, which also looks for
+   deprecated values. If you were previously providing both config values and
+   environment values, please ensure the config values are unset if you want to
+   use environment values.
 
 ## 1.0.1 (December 14th, 2018)
 

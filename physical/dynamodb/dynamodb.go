@@ -155,17 +155,6 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		writeCapacity = DefaultDynamoDBWriteCapacity
 	}
 
-	var accessKey, secretKey, sessionToken string
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" {
-		accessKey = conf["access_key"]
-	}
-	if os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		secretKey = conf["secret_key"]
-	}
-	if os.Getenv("AWS_SESSION_TOKEN") == "" {
-		sessionToken = conf["session_token"]
-	}
-
 	endpoint := os.Getenv("AWS_DYNAMODB_ENDPOINT")
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
@@ -195,9 +184,9 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    accessKey,
-		SecretKey:    secretKey,
-		SessionToken: sessionToken,
+		AccessKey:    conf["access_key"],
+		SecretKey:    conf["secret_key"],
+		SessionToken: conf["session_token"],
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
