@@ -58,7 +58,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   encryption and decryption. May also be specified by the
   `VAULT_GCPCKMS_SEAL_CRYPTO_KEY` environment variable.
 
-## Authentication
+## Authentication &amp; Permissions
 
 Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
@@ -76,6 +76,20 @@ credentials, environment credentials, or [application default
 credentials](https://developers.google.com/identity/protocols/application-default-credentials)
 in that order, if the above GCP specific values are not provided.
 
+The service account needs the following minimum permissions on the crypto key:
+
+```text
+cloudkms.cryptoKeyVersions.useToEncrypt
+cloudkms.cryptoKeyVersions.useToDecrypt
+```
+
+these permissions are available as part of the following role:
+
+```text
+roles/cloudkms.cryptoKeyEncrypterDecrypter
+```
+
+
 ## `gcpckms` Environment Variables
 
 Alternatively, the GCP Cloud KMS seal can be activated by providing the following
@@ -89,8 +103,8 @@ environment variables:
 
 ## Key Rotation
 
-This seal supports rotating keys defined in Google Cloud KMS 
-[doc](https://cloud.google.com/kms/docs/rotating-keys). Both scheduled rotation and manual 
-rotation is supported for CKMS since the key information. Old keys version must not be 
-disabled or deleted and are used to decrypt older data. Any new or updated data will be 
+This seal supports rotating keys defined in Google Cloud KMS
+[doc](https://cloud.google.com/kms/docs/rotating-keys). Both scheduled rotation and manual
+rotation is supported for CKMS since the key information. Old keys version must not be
+disabled or deleted and are used to decrypt older data. Any new or updated data will be
 encrypted with the primary key version.
