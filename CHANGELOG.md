@@ -14,7 +14,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
- * autounseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+ * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
    [GH-5999]
 
 BUG FIXES:
