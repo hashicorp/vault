@@ -21,16 +21,23 @@ import (
 )
 
 const (
-	appNamePrefix = "vault-"
-	retryTimeout  = 80 * time.Second
+	appNamePrefix  = "vault-"
+	retryTimeout   = 80 * time.Second
+	clientLifetime = 30 * time.Minute
 )
 
 // client offers higher level Azure operations that provide a simpler interface
 // for handlers. It in turn relies on a Provider interface to access the lower level
 // Azure Client SDK methods.
 type client struct {
-	provider AzureProvider
-	settings *clientSettings
+	provider   AzureProvider
+	settings   *clientSettings
+	expiration time.Time
+}
+
+// Valid returns whether the client defined and not expired.
+func (c *client) Valid() bool {
+	return c != nil && time.Now().Before(c.expiration)
 }
 
 func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (*client, error) {
@@ -38,28 +45,32 @@ func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (
 	unlockFunc := b.lock.RUnlock
 	defer func() { unlockFunc() }()
 
+	if b.client.Valid() {
+		return b.client, nil
+	}
+
+	b.lock.RUnlock()
+	b.lock.Lock()
+	unlockFunc = b.lock.Unlock
+
+	if b.client.Valid() {
+		return b.client, nil
+	}
+
 	if b.settings == nil {
-		// Upgrade lock
-		b.lock.RUnlock()
-		b.lock.Lock()
-		unlockFunc = b.lock.Unlock
-
-		if b.settings == nil {
-			// Create a new client from the stored or empty config
-			config, err := b.getConfig(ctx, s)
-			if err != nil {
-				return nil, err
-			}
-			if config == nil {
-				config = new(azureConfig)
-			}
-
-			settings, err := b.getClientSettings(ctx, config)
-			if err != nil {
-				return nil, err
-			}
-			b.settings = settings
+		config, err := b.getConfig(ctx, s)
+		if err != nil {
+			return nil, err
 		}
+		if config == nil {
+			config = new(azureConfig)
+		}
+
+		settings, err := b.getClientSettings(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		b.settings = settings
 	}
 
 	p, err := b.getProvider(b.settings)
@@ -68,9 +79,11 @@ func (b *azureSecretBackend) getClient(ctx context.Context, s logical.Storage) (
 	}
 
 	c := &client{
-		provider: p,
-		settings: b.settings,
+		provider:   p,
+		settings:   b.settings,
+		expiration: time.Now().Add(clientLifetime),
 	}
+	b.client = c
 
 	return c, nil
 }

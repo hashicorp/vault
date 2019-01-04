@@ -22,12 +22,27 @@ like any normal GitHub project, and we'll merge it in.
 
 ## Running the Site Locally
 
-Running the site locally is simple. Clone this repo and run `make website`. If it is your first time running the site, the build will take a little longer as it needs to download a docker image and a bunch of dependencies, so maybe go grab a coffee. On subsequent runs, it will be much faster as dependencies are cached.
+When running the site locally, you can choose between running it directly on your machine, or running it through Docker. Docker has the advantage of requiring only Docker to be installed - no other dependencies are needed on your machine. However, Docker's overhead makes the site's compilation perform much slower than running it directly on your machine. If you are a frequent contributor, are bothered by the performance in Docker, or have no issues with installing ruby and node / already have them installed, it might be an advantage to try running the site directly on your machine. Instructions for both approaches are included below.
 
-Then open up `http://localhost:4567`. Note that some URLs you may need to append
+### Running the Site with Docker
+
+First, make sure that [docker](docker) is installed. It can be installed in many ways, [the desktop app](docker-desktop) is the simplest. To run the site, clone this repo down, `cd` into the `website` directory, and run `make website`. If it is your first time running the site, the build will take a little longer as it needs to download a docker image and a bunch of dependencies, so maybe go grab a coffee. On subsequent runs, it will be faster as dependencies are cached.
+
+### Running the Site Directly
+
+This site requires a recent version of ruby as well as nodejs to be installed in order to run. There are [many ways to install ruby](https://www.ruby-lang.org/en/documentation/installation/), we recommend [rbenv](rbenv), which has very clear installation instructions in its readme, linked here, and installing ruby version `2.4.3`. Once ruby has been installed, you will need to install `bundler` as well, using `gem install bundler`. Node is quite easy to install [via universal binary](node) or [homebrew](homebrew) if you are a mac user.
+
+Once ruby and node have been installed, within this directory, you can run `sh bootstrap.sh` to install all the dependencies needed to run the site, then run `middleman` to start the dev server.
+
+### Browsing the Site Locally
+
+Once you have the local dev server running, head to `http://localhost:4567` in your browser. Note that for some URLs, you may need to append
 ".html" to make them work (in the navigation).
-
-> **Note:** We are currently working through some issues with the `make website` command introduced by architecture changes to the site. You will likely experience slow performance while we get these issues patched up. In order to bypass these issues, you can run middleman directly on your machine by running `gem install middleman`, then `bundle && bundle exec middleman`. Assuming you have a reasonably recent version of ruby installed, this will run the site locally.
 
 [middleman]: https://www.middlemanapp.com
 [vault]: https://www.vaultproject.io
+[docker]: https://www.docker.com/
+[docker-desktop]: https://www.docker.com/products/docker-desktop
+[rbenv]: https://github.com/rbenv/rbenv#installation
+[node]: https://nodejs.org/en/
+[homebrew]: https://brew.sh/

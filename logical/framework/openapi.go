@@ -625,8 +625,16 @@ func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {
 	opIDCount := make(map[string]int)
+	var paths []string
 
-	for path, pi := range d.Paths {
+	// traverse paths in a stable order to ensure stable output
+	for path := range d.Paths {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		pi := d.Paths[path]
 		for _, method := range []string{"get", "post", "delete"} {
 			var oasOperation *OASOperation
 			switch method {
