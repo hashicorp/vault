@@ -12,6 +12,15 @@ CHANGES:
    environment values, please ensure the config values are unset if you want to
    use environment values.
 
+BUG FIXES:
+
+ * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
+   also provided [GH-5965]
+ * command/operator/rekey: Fix help output showing `-delete-backup` when it
+   should show `-backup-delete` [GH-5981]
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
+
 ## 1.0.1 (December 14th, 2018)
 
 SECURITY:
