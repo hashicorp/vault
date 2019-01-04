@@ -18,11 +18,11 @@ import (
 )
 
 func TestDefaultS3Backend(t *testing.T) {
-	DoS3BackendTest(t, "", "")
+	DoS3BackendTest(t, "")
 }
 
 func TestS3BackendSseKms(t *testing.T) {
-	DoS3BackendTest(t, "aws:kms", "alias/aws/s3")
+	DoS3BackendTest(t, "alias/aws/s3")
 }
 
 func DoS3BackendTest(t *testing.T, kmsKeyId string) {
