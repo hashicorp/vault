@@ -34,7 +34,6 @@ var _ physical.Backend = (*S3Backend)(nil)
 // within an S3 bucket.
 type S3Backend struct {
 	bucket     string
-	sse        string
 	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
@@ -137,11 +136,6 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		}
 	}
 
-	sse, ok := conf["sse"]
-	if !ok {
-		sse = ""
-	}
-	
 	kmsKeyId, ok := conf["kms_key_id"]
 	if !ok {
 		kmsKeyId = ""
@@ -150,7 +144,6 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
-		sse:        sse,
 		kmsKeyId:   kmsKeyId,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
@@ -171,11 +164,8 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		Body:   bytes.NewReader(entry.Value),
 	}
 
-	if s.sse != "" {
-		putObjectInput.ServerSideEncryption = aws.String(s.sse)
-	}
-	
 	if s.kmsKeyId != "" {
+		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
 		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
 	}
 	
