@@ -17,43 +17,52 @@
             </NamespacePicker>
           </li>
         {{/if}}
-        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.secrets"
-            current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-            invokeAction=(action Nav.closeDrawer)
-          }}
-            Secrets
-          {{/link-to}}
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.access"
-              current-when="vault.cluster.access vault.cluster.settings.auth"
+        {{#if (has-permission 'secrets')}}
+          <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+            {{#link-to
+              "vault.cluster.secrets"
+              current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
               invokeAction=(action Nav.closeDrawer)
             }}
-            Access
-          {{/link-to}}
-        </li>
-        <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-          {{#link-to
-            "vault.cluster.policies"
-            "acl"
-            current-when="vault.cluster.policies vault.cluster.policy"
-            invokeAction=(action Nav.closeDrawer)
-          }}
-            Policies
-          {{/link-to}}
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.tools.tool"
-            "wrap"
-            invokeAction=(action Nav.closeDrawer)
-          }}
-            Tools
-          {{/link-to}}
-        </li>
+              Secrets
+            {{/link-to}}
+          </li>
+        {{/if}}
+        {{#if (has-permission 'access')}}
+          <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
+            {{#link-to
+              "vault.cluster.access"
+                current-when="vault.cluster.access vault.cluster.settings.auth"
+                invokeAction=(action Nav.closeDrawer)
+              }}
+              Access
+            {{/link-to}}
+          </li>
+        {{/if}}
+        {{#if (has-permission 'policies')}}
+          <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
+            {{!-- we will have to check for all 3 policies in the map; if they have access to acl, then the link-to should go to acl; but if they don't have acccess to acl but they have access to rgp, then it should go to the next one in the list--}}
+            {{#link-to
+              "vault.cluster.policies"
+              "acl"
+              current-when="vault.cluster.policies vault.cluster.policy"
+              invokeAction=(action Nav.closeDrawer)
+            }}
+              Policies
+            {{/link-to}}
+          </li>
+        {{/if}}
+        {{#if (has-permission 'tools')}}
+          <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
+            {{#link-to
+              "vault.cluster.tools.tool"
+              "wrap"
+              invokeAction=(action Nav.closeDrawer)
+            }}
+              Tools
+            {{/link-to}}
+          </li>
+        {{/if}}
       </ul>
     </Nav.main>
     <Nav.items>

@@ -1,6 +1,29 @@
 import Service, { inject as service } from '@ember/service';
 import { task, waitForProperty } from 'ember-concurrency';
 
+const PATHS = {
+  secrets: ['cubbyhole/'],
+  access: [
+    'sys/auth',
+    'access',
+    'identity/entities',
+    'identity/groups',
+    'sys/leases/lookup',
+    'sys/namespaces',
+    'sys/control-group/',
+  ],
+  policies: ['sys/policies/acl', 'sys/policies/rgp', 'sys/policies/egp'],
+  tools: [
+    'sys/wrapping/lookup',
+    'sys/wrapping/rewrap',
+    'sys/wrapping/unwrap',
+    'sys/wrapping/wrap',
+    'sys/tools/random',
+    'sys/tools/hash',
+  ],
+  status: ['sys/replication', 'sys/license', 'sys/seal'],
+};
+
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
@@ -30,6 +53,10 @@ export default Service.extend({
     yield this.getPaths.perform();
   }),
 
+  hasNavPermission(navItem) {
+    return PATHS[navItem].some(path => this.hasPermission(path));
+  },
+
   hasPermission(pathName) {
     if (this.isRootToken || this.hasMatchingExactPath(pathName) || this.hasMatchingGlobPath(pathName)) {
       return true;
@@ -39,11 +66,13 @@ export default Service.extend({
 
   hasMatchingExactPath(pathName) {
     const exactPaths = this.get('exactPaths');
+    console.log(exactPaths);
     return exactPaths && exactPaths.hasOwnProperty(pathName) && this.isNotDenied(exactPaths[pathName]);
   },
 
   hasMatchingGlobPath(pathName) {
     const globPaths = this.get('globPaths');
+    console.log(globPaths);
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
       return (matchingPath && this.isNotDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
