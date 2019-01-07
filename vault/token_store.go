@@ -1907,7 +1907,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 						saltedID, err := ts.SaltID(quitCtx, te.ID)
 						if err != nil {
-							return err
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							continue
 						}
 						cubbyholeKey = salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)
 					default:
@@ -1921,9 +1922,6 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				}
 			}
 
-			// Remove any leaked cubbyhole storage entries
-			ts.cubbyholeBackend.handleTidy(quitCtx, validCubbyholeKeys)
-
 			ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
 			ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
 			ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
@@ -1932,6 +1930,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+
+			// Remove any leaked cubbyhole storage entries
+			err = ts.cubbyholeBackend.handleTidy(quitCtx, validCubbyholeKeys)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, err)
+			}
 
 			return tidyErrors.ErrorOrNil()
 		}
