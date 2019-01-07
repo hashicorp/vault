@@ -1744,7 +1744,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(ctx, "")
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
@@ -1933,7 +1933,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			for _, key := range cubbyholeKeys {
 				key = strings.TrimSuffix(key, "/")
 				if !strutil.StrListContains(validCubbyholeKeys, key) {
-					err = ts.cubbyholeBackend.revoke(ctx, key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, key)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole storage key %q: {{err}}", key), err))
 					}
