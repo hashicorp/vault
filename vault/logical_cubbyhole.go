@@ -7,9 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -183,27 +181,6 @@ func (b *CubbyholeBackend) handleDelete(ctx context.Context, req *logical.Reques
 	}
 
 	return nil, nil
-}
-
-func (b *CubbyholeBackend) handleTidy(ctx context.Context, validKeys []string) error {
-	// List all the cubbyhole storage keys
-	keys, err := b.storageView.List(ctx, "")
-	if err != nil {
-		return err
-	}
-
-	// Revoke the keys that are not valid
-	var tidyErrors *multierror.Error
-	for _, key := range keys {
-		key = strings.TrimSuffix(key, "/")
-		if !strutil.StrListContains(validKeys, key) {
-			err = b.revoke(ctx, key)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole storage key %q: {{err}}", key), err))
-			}
-		}
-	}
-	return tidyErrors.ErrorOrNil()
 }
 
 func (b *CubbyholeBackend) handleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

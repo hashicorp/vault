@@ -1818,7 +1818,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			var countAccessorList,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor int64
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
 
 			var validCubbyholeKeys []string
 
@@ -1922,6 +1923,24 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				}
 			}
 
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(ctx, "")
+			if err != nil {
+				return err
+			}
+
+			// Revoke invalid cubbyhole storage keys
+			for _, key := range cubbyholeKeys {
+				key = strings.TrimSuffix(key, "/")
+				if !strutil.StrListContains(validCubbyholeKeys, key) {
+					err = ts.cubbyholeBackend.revoke(ctx, key)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole storage key %q: {{err}}", key), err))
+					}
+					deletedCountInvalidCubbyholeKey++
+				}
+			}
+
 			ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
 			ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
 			ts.logger.Info("number of tokens scanned in parent index list", "count", countParentList)
@@ -1930,12 +1949,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
-
-			// Remove any leaked cubbyhole storage entries
-			err = ts.cubbyholeBackend.handleTidy(quitCtx, validCubbyholeKeys)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, err)
-			}
+			ts.logger.Info("number of deleted dangling cubbyhole storage keys", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}
