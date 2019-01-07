@@ -37,7 +37,7 @@ type TokenParams struct {
 	TTL time.Duration `json:"ttl" mapstructure:"ttl"`
 }
 
-// AddRoleFields adds fields to an existing role. It panics if it would
+// AddTokenFields adds fields to an existing role. It panics if it would
 // overwrite an existing field.
 func AddTokenFields(m map[string]*framework.FieldSchema) {
 	AddTokenFieldsWithAllowList(m, nil)
