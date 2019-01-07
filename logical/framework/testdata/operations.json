@@ -29,7 +29,8 @@
           "description": "a header value",
           "in": "header",
           "schema": {
-            "type": "string"
+            "type": "string",
+            "enum": ["a", "b", "c"]
           }
         }
       ],
@@ -71,6 +72,11 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "age": {
+                    "type": "number",
+                    "description": "the age",
+                    "enum": [1, 2, 3]
                   },
                   "name": {
                     "type": "string",
