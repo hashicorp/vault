@@ -1743,6 +1743,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
 			}
 
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(ctx, "")
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
+			}
+
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
 
 			// Scan through the secondary index entries; if there is an entry
@@ -1921,12 +1927,6 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					}
 					validCubbyholeKeys = append(validCubbyholeKeys, cubbyholeKey)
 				}
-			}
-
-			// List all the cubbyhole storage keys
-			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(ctx, "")
-			if err != nil {
-				return err
 			}
 
 			// Revoke invalid cubbyhole storage keys
