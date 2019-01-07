@@ -85,16 +85,8 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS == nil {
-			return namespace.ErrNoNamespace
-		}
-
-		switch tokenNS.ID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -1722,7 +1714,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed get namespace from context: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
 	}
 
 	go func() {
@@ -1828,6 +1820,8 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				deletedCountAccessorInvalidToken,
 				deletedCountInvalidTokenInAccessor int64
 
+			var validCubbyholeKeys []string
+
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
 			// and delete the accessor as well.
@@ -1871,10 +1865,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				lock.RUnlock()
 
-				// If token entry is not found assume that the token is not valid any
-				// more and conclude that accessor, leases, and secondary index entries
-				// for this token should not exist as well.
-				if te == nil {
+				switch {
+				case te == nil:
+					// If token entry is not found assume that the token is not valid any
+					// more and conclude that accessor, leases, and secondary index entries
+					// for this token should not exist as well.
+
 					ts.logger.Info("deleting token with nil entry referenced by accessor", "salted_accessor", saltedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
@@ -1904,8 +1900,29 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						continue
 					}
 					deletedCountAccessorInvalidToken++
+				default:
+					// Cache the cubbyhole storage key when the token is valid
+					var cubbyholeKey string
+					switch {
+					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
+						saltedID, err := ts.SaltID(quitCtx, te.ID)
+						if err != nil {
+							return err
+						}
+						cubbyholeKey = salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)
+					default:
+						if te.CubbyholeID == "" {
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
+							continue
+						}
+						cubbyholeKey = te.CubbyholeID
+					}
+					validCubbyholeKeys = append(validCubbyholeKeys, cubbyholeKey)
 				}
 			}
+
+			// Remove any leaked cubbyhole storage entries
+			ts.cubbyholeBackend.handleTidy(quitCtx, validCubbyholeKeys)
 
 			ts.logger.Info("number of entries scanned in parent prefix", "count", countParentEntries)
 			ts.logger.Info("number of entries deleted in parent prefix", "count", deletedCountParentEntries)
