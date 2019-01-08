@@ -1822,6 +1822,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
+				countCubbyholeKeys,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
 				deletedCountInvalidTokenInAccessor,
@@ -1931,6 +1932,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 			// Revoke invalid cubbyhole storage keys
 			for _, key := range cubbyholeKeys {
+				countCubbyholeKeys++
+				if countCubbyholeKeys%500 == 0 {
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+				}
+
 				key = strings.TrimSuffix(key, "/")
 				if !strutil.StrListContains(validCubbyholeKeys, key) {
 					err = ts.cubbyholeBackend.revoke(quitCtx, key)
