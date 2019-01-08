@@ -8,7 +8,7 @@ const PERMISSIONS_RESPONSE = {
       foo: {
         capabilities: ['read'],
       },
-      bar: {
+      'bar/bee': {
         capabilities: ['create'],
       },
       boo: {
@@ -48,6 +48,12 @@ module('Unit | Service | permissions', function(hooks) {
     let service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     assert.equal(service.hasPermission('foo'), true);
+  });
+
+  test('returns true if a paths prefix is included in the policys exact paths', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
+    assert.equal(service.hasPermission('bar'), true);
   });
 
   test('it returns true if a policy includes access to a glob path', function(assert) {

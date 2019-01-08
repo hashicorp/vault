@@ -66,13 +66,15 @@ export default Service.extend({
 
   hasMatchingExactPath(pathName) {
     const exactPaths = this.get('exactPaths');
-    console.log(exactPaths);
-    return exactPaths && exactPaths.hasOwnProperty(pathName) && this.isNotDenied(exactPaths[pathName]);
+    if (exactPaths) {
+      const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
+      return prefix && this.isNotDenied(exactPaths[prefix]);
+    }
+    return false;
   },
 
   hasMatchingGlobPath(pathName) {
     const globPaths = this.get('globPaths');
-    console.log(globPaths);
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
       return (matchingPath && this.isNotDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
