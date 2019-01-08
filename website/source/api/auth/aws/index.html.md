@@ -323,8 +323,8 @@ $ curl \
 
 Allows the explicit association of STS roles to satellite AWS accounts
 (i.e. those which are not the account in which the Vault server is
-running.) Login attempts from EC2 instances running in these accounts will
-be verified using credentials obtained by assumption of these STS roles.
+running.) Vault will use credentials obtained by assuming these STS roles
+when validating IAM principals or EC2 instances in the particular AWS account.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -361,15 +361,14 @@ $ curl \
 
 Returns the previously configured STS role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/sts/:account_id` | `200 application/json` |
+| Method   | Path                               | Produces               |
+| :------- | :--------------------------------- | :--------------------- |
+| `GET`    | `/auth/aws/config/sts/:account_id` | `200 application/json` |
 
 ### Parameters
 
-- `account_id` `(string: <required>)` - AWS account ID to be associated with
-  STS role. If set, Vault will use assumed credentials to verify any login
-  attempts from EC2 instances in this account.
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -423,9 +422,14 @@ $ curl \
 
 Deletes a previously configured AWS account/STS role association.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/config/sts`       | `204 (empty body)`  |
+| Method   | Path                               | Produces           |
+| :------- | :--------------------------------- | :------------------|
+| `DELETE` | `/auth/aws/config/sts/:account_id` | `204 (empty body)` |
+
+### Parameters
+
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -433,7 +437,7 @@ Deletes a previously configured AWS account/STS role association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/config/sts
+    http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
 ## Configure Identity Whitelist Tidy Operation

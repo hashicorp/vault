@@ -797,7 +797,7 @@ request is denied.
   server use.
 
 - `client_flag` `(bool: true)` – Specifies if certificates are flagged for
-  client use.  
+  client use.
 
 - `code_signing_flag` `(bool: false)` – Specifies if certificates are flagged
   for code signing use.
@@ -871,10 +871,7 @@ request is denied.
   added to the CRL by `vault revoke <lease_id>` when certificates are associated
   with leases.  It can also be done using the `pki/revoke` endpoint. However,
   when lease generation is disabled, invoking `pki/revoke` would be the only way
-  to add the certificates to the CRL. When large number of certificates are
-  generated with long lifetimes, it is recommended that lease generation be
-  disabled, as large amount of leases adversely affect the startup time of
-  Vault.
+  to add the certificates to the CRL.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
   role will not be stored in the storage backend. This can improve performance
@@ -1023,9 +1020,9 @@ As with other issued certificates, Vault will automatically revoke the
 generated root at the end of its lease period; the CA certificate will sign its
 own CRL.
 
-As of Vault 0.8.1, if a CA cert/key already exists, this function will return a
-204 and will not overwrite it. Previous versions of Vault would overwrite the
-existing cert/key with new values.
+As of Vault 0.8.1, if a CA cert/key already exists, this function will not
+overwrite it; it must be deleted first. Previous versions of Vault would
+overwrite the existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

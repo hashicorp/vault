@@ -16,12 +16,12 @@ export default ApplicationAdapter.extend({
 
   urlForFindRecord(id) {
     let [backend, path, version] = JSON.parse(id);
-    return this._url(backend, path) + `?version=${version}`;
+    let base = this._url(backend, path);
+    return version ? base + `?version=${version}` : base;
   },
 
   urlForQueryRecord(id) {
-    let [backend, path, version] = JSON.parse(id);
-    return this._url(backend, path) + `?version=${version}`;
+    return this.urlForFindRecord(id);
   },
 
   findRecord() {

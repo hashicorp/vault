@@ -140,18 +140,15 @@ func (s *GCPCKMSSeal) SetConfig(config map[string]string) (map[string]string, er
 		if err != nil {
 			return nil, errwrap.Wrapf("error initializing GCP CKMS seal client: {{err}}", err)
 		}
-
-		// Make sure cryto key exists in GCP
-		keyInfo, err := kmsClient.Projects.Locations.KeyRings.CryptoKeys.Get(s.parentName).Do()
-		if err != nil {
-			return nil, errwrap.Wrapf("error fetching GCP CKMS seal key information: {{err}}", err)
-		}
-		if keyInfo == nil {
-			return nil, errors.New("no key information returned")
-		}
-		s.currentKeyID.Store(keyInfo.Name)
-
 		s.client = kmsClient
+
+		// Make sure user has permissions to encrypt (also checks if key exists)
+		ctx := context.Background()
+		if _, err := s.Encrypt(ctx, []byte("vault-gcpckms-test")); err != nil {
+			return nil, errwrap.Wrapf("failed to encryot with GCP CKMS - ensure the "+
+				"key exists and the service account has at least "+
+				"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: {{err}", err)
+		}
 	}
 
 	// Map that holds non-sensitive configuration info to return

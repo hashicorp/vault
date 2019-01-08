@@ -223,12 +223,16 @@ type MountConfig struct {
 	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+
+	// PluginName is the name of the plugin registered in the catalog.
+	//
+	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
+	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -236,12 +240,16 @@ type APIMountConfig struct {
 	DefaultLeaseTTL           string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+
+	// PluginName is the name of the plugin registered in the catalog.
+	//
+	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
+	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -1135,7 +1143,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	switch {
 	case entry.Type == "plugin":
-		conf["plugin_name"] = entry.Config.PluginNameDeprecated
+		conf["plugin_name"] = entry.Config.PluginName
 	default:
 		conf["plugin_name"] = t
 	}

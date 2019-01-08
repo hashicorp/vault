@@ -52,15 +52,7 @@
     {{/linked-block}}
   {{/each}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            There are no members in this group.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="No members in this group yet"
+  />
 {{/if}}

@@ -93,7 +93,7 @@ This endpoint enables a new secrets engine at the given path.
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`.  If not set, behaves like `"hidden"`.
 
@@ -220,7 +220,7 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount in
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 

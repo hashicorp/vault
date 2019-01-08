@@ -135,6 +135,10 @@ type MountInput struct {
 	Local       bool              `json:"local"`
 	SealWrap    bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	Options     map[string]string `json:"options"`
+
+	// Deprecated: Newer server responses should be returning this information in the
+	// Type field (json: "type") instead.
+	PluginName string `json:"plugin_name,omitempty"`
 }
 
 type MountConfigInput struct {
@@ -148,6 +152,9 @@ type MountConfigInput struct {
 	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
+
+	// Deprecated: This field will always be blank for newer server responses.
+	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 type MountOutput struct {
@@ -169,4 +176,7 @@ type MountConfigOutput struct {
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
+
+	// Deprecated: This field will always be blank for newer server responses.
+	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }

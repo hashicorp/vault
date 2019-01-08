@@ -1389,10 +1389,10 @@
 			"revisionTime": "2018-11-09T18:06:36Z"
 		},
 		{
-			"checksumSHA1": "ojr0r/jmutGEhftDXiHthCCwpIA=",
+			"checksumSHA1": "Jj3mz58lSv0dsuXd6bVxGV4759w=",
 			"path": "github.com/hashicorp/vault-plugin-auth-azure",
-			"revision": "d75e09c45e50144d92d5fa0d711996b4ac98c1e4",
-			"revisionTime": "2018-08-16T20:10:44Z"
+			"revision": "4c0b46069a2293d5a6ca7506c8d3e0c4a92f3dbc",
+			"revisionTime": "2018-12-07T23:25:28Z"
 		},
 		{
 			"checksumSHA1": "4Z/niOo76EcP8KpLdSL5GdDcy78=",
@@ -1401,10 +1401,10 @@
 			"revisionTime": "2018-08-16T20:11:31Z"
 		},
 		{
-			"checksumSHA1": "pJC3V+AR+Khd/TpvekLf1ZRU7rA=",
+			"checksumSHA1": "llLHR3FVdqtuFgjIoL9GNN8zKKI=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "86f7837fd8102347f7a10e3f0ad275e5a256863c",
-			"revisionTime": "2018-10-25T21:28:40Z"
+			"revision": "4d63bbfe6fcf0363a2ea2c273846e88b95d85089",
+			"revisionTime": "2018-12-10T20:01:33Z"
 		},
 		{
 			"checksumSHA1": "tt3FtyjXgdBI9Mb43UL4LtOZmAk=",
@@ -1413,10 +1413,10 @@
 			"revisionTime": "2018-10-31T19:59:42Z"
 		},
 		{
-			"checksumSHA1": "8J4z30a2oTqSPQYOaT4j/jiZuNE=",
+			"checksumSHA1": "Ldg2jQeyPrpAupyQq4lRVN+jfFY=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "5328b889a921243d6e19cda38fb2c31a48cba2b2",
-			"revisionTime": "2018-11-01T19:05:09Z"
+			"revision": "091d9e5d5fabce920533eff31ad778778992a671",
+			"revisionTime": "2018-11-30T16:25:33Z"
 		},
 		{
 			"checksumSHA1": "PmhyvCKVlEMEP6JO31ozW+CBIiE=",
@@ -1449,10 +1449,10 @@
 			"revisionTime": "2018-11-09T18:14:53Z"
 		},
 		{
-			"checksumSHA1": "Zr5xVeEJxmlBLWgaUq5rRRIuryE=",
+			"checksumSHA1": "rgeBhrdLyF2orH3QA/H66ZSSbuo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-azure",
-			"revision": "26e517ba4190bab20ebb28336921434f96093250",
-			"revisionTime": "2018-11-08T17:16:20Z"
+			"revision": "0087bdef705a9db855528525a6ede4d768a2639c",
+			"revisionTime": "2018-12-07T23:25:00Z"
 		},
 		{
 			"checksumSHA1": "tFP1EEyVlomSSx46NHDZWGPzUz0=",
@@ -1473,10 +1473,10 @@
 			"revisionTime": "2018-09-21T17:32:00Z"
 		},
 		{
-			"checksumSHA1": "mZTWeo/P2ZKbLHOjEqFUumNyEOo=",
+			"checksumSHA1": "TbPoZQkYZ7Bukdw6U+/GejbaZAs=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcpkms",
-			"revision": "a7d4151e40a5c1649d41440cadd1fe654df7e61c",
-			"revisionTime": "2018-10-19T21:34:31Z"
+			"revision": "6cd991800a6d7af69b1950ec4cbf402d021a099d",
+			"revisionTime": "2018-12-12T18:25:53Z"
 		},
 		{
 			"checksumSHA1": "0Uh543eKwac5M7mSsijM0GNekto=",
@@ -2589,80 +2589,80 @@
 		{
 			"checksumSHA1": "Pa6ivEz5fid3ECb1hptNbC+USfA=",
 			"path": "golang.org/x/net/bpf",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
 			"path": "golang.org/x/net/context",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "WHc3uByvGaMcnSoI21fhzYgbOgg=",
+			"checksumSHA1": "aFpql3G+Nw8zkzfqLWQJNZC8pu0=",
 			"path": "golang.org/x/net/context/ctxhttp",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "pCY4YtdNKVBYRbNvODjx8hj0hIs=",
 			"path": "golang.org/x/net/http/httpguts",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "N0asyGBBR6/7qIdCpdb2OxAyv4U=",
+			"checksumSHA1": "QmfYRV9T2HIj1cvl2ZQCd6bXXKo=",
 			"path": "golang.org/x/net/http2",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "KZniwnfpWkaTPhUQDUTvgex/7y0=",
 			"path": "golang.org/x/net/http2/hpack",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "RcrB7tgYS/GMW4QrwVdMOTNqIU8=",
 			"path": "golang.org/x/net/idna",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "8oJoT8rfokzpkJ19eNhRs2JgRxI=",
 			"path": "golang.org/x/net/internal/iana",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "YsXlbexuTtUXHyhSv927ILOkf6A=",
+			"checksumSHA1": "2E/IhopfwJODvSbFATpSOLdU0wE=",
 			"path": "golang.org/x/net/internal/socket",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "UxahDzW2v4mf/+aFxruuupaoIwo=",
 			"path": "golang.org/x/net/internal/timeseries",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "K4XNY0c60IPBpv5sO6aiCuB8o/0=",
+			"checksumSHA1": "JhZzMS6woOLvx1vzxwkecNcasaE=",
 			"path": "golang.org/x/net/ipv4",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "hDszlYGI8m9puPsEIDr59ccTiF8=",
+			"checksumSHA1": "ltSF2aw/oe3XQUsufr2KchG/8d8=",
 			"path": "golang.org/x/net/ipv6",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
-			"checksumSHA1": "6ckrK99wkirarIfFNX4+AHWBEHM=",
+			"checksumSHA1": "4vGl3N46SAJwQl/uSlQvZQvc734=",
 			"path": "golang.org/x/net/trace",
-			"revision": "49bb7cea24b1df9410e1712aa6433dae904ff66a",
-			"revisionTime": "2018-10-11T05:27:23Z"
+			"revision": "adae6a3d119ae4890b46832a2e88a95adc62b8e7",
+			"revisionTime": "2018-11-14T21:44:15Z"
 		},
 		{
 			"checksumSHA1": "j0z/2h06wsvTkGiLaZ5XFLbMKfo=",
@@ -2783,6 +2783,12 @@
 			"path": "google.golang.org/api/cloudkms/v1",
 			"revision": "cc9bd73d51b4c5610e35bcb01f15368185cfaab3",
 			"revisionTime": "2018-10-16T15:55:58Z"
+		},
+		{
+			"checksumSHA1": "9Gt9K/Z3m6q4vOJPIm1ynTvgecg=",
+			"path": "google.golang.org/api/cloudresourcemanager/v1",
+			"revision": "83a9d304b1e613fc253e1e2710778642fe81af53",
+			"revisionTime": "2018-11-14T18:14:26Z"
 		},
 		{
 			"checksumSHA1": "QkzppExyctFz029dvXzKzh6UHgU=",

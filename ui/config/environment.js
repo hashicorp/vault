@@ -24,6 +24,8 @@ module.exports = function(environment) {
       // endpoints that UI uses to determine the cluster state
       // calls to these endpoints will always go to the root namespace
       NAMESPACE_ROOT_URLS: ['sys/health', 'sys/seal-status', 'sys/license/features'],
+      // number of records to show on a single page by default - this is used by the client-side pagination
+      DEFAULT_PAGE_SIZE: 100,
     },
     flashMessageDefaults: {
       timeout: 7000,
@@ -60,6 +62,7 @@ module.exports = function(environment) {
     ENV.flashMessageDefaults.timeout = 50;
   }
   if (environment !== 'production') {
+    ENV.APP.DEFAULT_PAGE_SIZE = 5;
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {

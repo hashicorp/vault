@@ -3,32 +3,26 @@ package gcpauth
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"runtime"
-	"sync"
-
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-gcp-common/gcputil"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/version"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
+	"net/http"
 )
+
+const defaultCloudScope = "https://www.googleapis.com/auth/cloud-platform"
 
 type GcpAuthBackend struct {
 	*framework.Backend
 
 	// OAuth scopes for generating HTTP and GCP service clients.
 	oauthScopes []string
-
-	// Locks for guarding service clients
-	clientMutex sync.RWMutex
-
-	// -- GCP service clients --
-	iamClient *iam.Service
-	gceClient *compute.Service
 }
 
 // Factory returns a new backend as logical.Backend.
@@ -42,16 +36,12 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func Backend() *GcpAuthBackend {
 	b := &GcpAuthBackend{
-		oauthScopes: []string{
-			iam.CloudPlatformScope,
-			compute.ComputeReadonlyScope,
-		},
+		oauthScopes: []string{defaultCloudScope},
 	}
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
-		Invalidate:  b.invalidate,
 		Help:        backendHelp,
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
@@ -72,106 +62,77 @@ func Backend() *GcpAuthBackend {
 	return b
 }
 
-func (b *GcpAuthBackend) invalidate(_ context.Context, key string) {
-	switch key {
-	case "config":
-		b.Close()
-	}
-}
-
-// Close deletes created GCP clients in backend.
-func (b *GcpAuthBackend) Close() {
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	b.iamClient = nil
-	b.gceClient = nil
-}
-
-func (b *GcpAuthBackend) IAM(ctx context.Context, s logical.Storage) (*iam.Service, error) {
-	b.clientMutex.RLock()
-	if b.iamClient != nil {
-		defer b.clientMutex.RUnlock()
-		return b.iamClient, nil
-	}
-
-	b.clientMutex.RUnlock()
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	// Check if client was created during lock switch.
-	if b.iamClient == nil {
-		err := b.initClients(ctx, s)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b.iamClient, nil
-}
-
-func (b *GcpAuthBackend) GCE(ctx context.Context, s logical.Storage) (*compute.Service, error) {
-	b.clientMutex.RLock()
-	if b.gceClient != nil {
-		defer b.clientMutex.RUnlock()
-		return b.gceClient, nil
-	}
-
-	b.clientMutex.RUnlock()
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
-
-	// Check if client was created during lock switch.
-	if b.gceClient == nil {
-		err := b.initClients(ctx, s)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return b.gceClient, nil
-}
-
-// Initialize attempts to create GCP clients from stored config.
-// It does not attempt to claim the client lock.
-func (b *GcpAuthBackend) initClients(ctx context.Context, s logical.Storage) (err error) {
+func (b *GcpAuthBackend) httpClient(ctx context.Context, s logical.Storage) (*http.Client, error) {
 	config, err := b.config(ctx, s)
 	if err != nil {
-		return err
+		return nil, errwrap.Wrapf(
+			"could not check to see if GCP credentials were configured, error"+
+				"reading config: {{err}}", err)
 	}
 
-	var httpClient *http.Client
-	if config == nil || config.Credentials == nil {
-		_, tknSrc, err := gcputil.FindCredentials("", ctx, b.oauthScopes...)
+	credsBytes, err := config.formatAndMarshalCredentials()
+	if err != nil {
+		return nil, errwrap.Wrapf(
+			"unable to marshal given GCP credential JSON: {{err}}", err)
+	}
+
+	var creds *google.Credentials
+	if config != nil && config.Credentials != nil {
+		creds, err = google.CredentialsFromJSON(ctx, credsBytes, b.oauthScopes...)
 		if err != nil {
-			return fmt.Errorf("credentials were not configured and fallback to application default credentials failed: %v", err)
+			return nil, errwrap.Wrapf("failed to parse credentials: {{err}}", err)
 		}
-		cleanCtx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultClient())
-		httpClient = oauth2.NewClient(cleanCtx, tknSrc)
 	} else {
-		httpClient, err = gcputil.GetHttpClient(config.Credentials, b.oauthScopes...)
+		creds, err = google.FindDefaultCredentials(ctx, b.oauthScopes...)
 		if err != nil {
-			return err
+			return nil, errwrap.Wrapf(
+				"credentials were not configured and Vault could not find "+
+					"Application Default Credentials (ADC). Either set ADC or "+
+					"configure this auth backend at auth/$MOUNT/config "+
+					"(default auth/gcp/config). Error: {{err}}", err)
 		}
 	}
 
-	userAgentStr := fmt.Sprintf("(%s %s) Vault/%s", runtime.GOOS, runtime.GOARCH, version.GetVersion().FullVersionNumber(true))
+	cleanCtx := context.WithValue(ctx, oauth2.HTTPClient, cleanhttp.DefaultClient())
+	client := oauth2.NewClient(cleanCtx, creds.TokenSource)
+	return client, nil
+}
 
-	b.iamClient, err = iam.New(httpClient)
+func (b *GcpAuthBackend) newGcpClients(ctx context.Context, s logical.Storage) (*clientHandles, error) {
+	httpC, err := b.httpClient(ctx, s)
 	if err != nil {
-		b.Close()
-		return err
+		return nil, errwrap.Wrapf("could not obtain HTTP client: {{err}}", err)
 	}
-	b.iamClient.UserAgent = userAgentStr
 
-	b.gceClient, err = compute.New(httpClient)
+	iamClient, err := iam.New(httpC)
 	if err != nil {
-		b.Close()
-		return err
+		return nil, fmt.Errorf(clientErrorTemplate, "IAM", err)
 	}
-	b.gceClient.UserAgent = userAgentStr
+	iamClient.UserAgent = useragent.String()
 
-	return nil
+	gceClient, err := compute.New(httpC)
+	if err != nil {
+		return nil, fmt.Errorf(clientErrorTemplate, "Compute", err)
+	}
+	iamClient.UserAgent = useragent.String()
+
+	crmClient, err := cloudresourcemanager.New(httpC)
+	if err != nil {
+		return nil, fmt.Errorf(clientErrorTemplate, "Cloud Resource Manager", err)
+	}
+	crmClient.UserAgent = useragent.String()
+
+	return &clientHandles{
+		iam:             iamClient,
+		gce:             gceClient,
+		resourceManager: crmClient,
+	}, nil
+}
+
+type clientHandles struct {
+	iam             *iam.Service
+	gce             *compute.Service
+	resourceManager *cloudresourcemanager.Service
 }
 
 const backendHelp = `

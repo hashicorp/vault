@@ -162,7 +162,7 @@ func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 
 	migrationStatus, err := CheckStorageMigration(from)
 	if err != nil {
-		return errors.New("error checking migration status")
+		return errwrap.Wrapf("error checking migration status: {{err}}", err)
 	}
 
 	if migrationStatus != nil {

@@ -3,57 +3,39 @@
 package base62
 
 import (
-	"math/big"
-
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-// Encode converts buf into a base62 string
-//
-// Note: this should only be used for reducing a string's character set range.
-// It is not for use with arbitrary data since leading 0 bytes will be dropped.
-func Encode(buf []byte) string {
-	var encoder big.Int
+const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+const csLen = byte(len(charset))
 
-	encoder.SetBytes(buf)
-	return encoder.Text(62)
-}
-
-// Decode converts input from base62 to its byte representation
-// If the decoding fails, an empty slice is returned.
-func Decode(input string) []byte {
-	var decoder big.Int
-
-	decoder.SetString(input, 62)
-	return decoder.Bytes()
-}
-
-// Random generates a random base62-encoded string.
-// If truncate is true, the result will be a string of the requested length.
-// Otherwise, it will be the encoded result of length bytes of random data.
-func Random(length int, truncate bool) (string, error) {
-	bytesNeeded := length
-
-	// ~0.74 bytes are needed per output character in truncate mode. We'll
-	// ask for just a little more than that.
-	if truncate {
-		bytesNeeded = (bytesNeeded * 3 / 4) + 1
+// Random generates a random string using base-62 characters.
+// Resulting entropy is ~5.95 bits/character.
+func Random(length int) (string, error) {
+	if length == 0 {
+		return "", nil
 	}
+	output := make([]byte, 0, length)
+
+	// Request a bit more than length to reduce the chance
+	// of needing more than one batch of random bytes
+	batchSize := length + length/4
 
 	for {
-		buf, err := uuid.GenerateRandomBytes(bytesNeeded)
+		buf, err := uuid.GenerateRandomBytes(batchSize)
 		if err != nil {
 			return "", err
 		}
 
-		result := Encode(buf)
+		for _, b := range buf {
+			// Avoid bias by using a value range that's a multiple of 62
+			if b < (csLen * 4) {
+				output = append(output, charset[b%csLen])
 
-		if truncate {
-			if len(result) < length {
-				continue
+				if len(output) == length {
+					return string(output), nil
+				}
 			}
-			result = result[:length]
 		}
-		return result, nil
 	}
 }

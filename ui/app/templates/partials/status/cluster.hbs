@@ -43,7 +43,7 @@
                 }}
               {{/if}}
             </li>
-          {{else if activeCluster.version.isOSS}}
+          {{else if version.isOSS}}
             <li>
               {{#link-to "vault.cluster.replication"}}
                 <div class="level is-mobile">
@@ -54,7 +54,7 @@
             </li>
           {{else}}
             <li>
-              {{#link-to "vault.cluster.replication" 
+              {{#link-to "vault.cluster.replication"
                 invokeAction=(action onLinkClick)
               }}
                 <div class="level is-mobile">
@@ -68,16 +68,17 @@
       </nav>
       <hr/>
     {{/if}}
-    {{#unless isOSS}}
+    {{#unless version.isOSS}}
       <nav class="menu">
         <div class="menu-label">
           License
         </div>
         <ul class="menu-list">
           <li class="action">
-            {{#link-to "vault.cluster.license" activeClusterName id="license" invokeAction=onLinkClick}}
+            {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
               <div class="level is-mobile">
                 <span class="level-left">See Details</span>
+                <ICon @glyph="chevron-right" @size="12" @class="has-text-grey-light level-right" />
               </div>
             {{/link-to}}
           </li>
@@ -91,7 +92,7 @@
       </div>
       <ul class="menu-list">
         <li class="action">
-          {{#if activeCluster.unsealed }}
+          {{#if activeCluster.unsealed}}
             {{#link-to 'vault.cluster.settings.seal' cluster.name
               class="level is-mobile"
               invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))

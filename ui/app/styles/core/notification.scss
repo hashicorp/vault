@@ -20,16 +20,13 @@
     &.is-#{$name} {
       background-color: lighten($color, $color-lightning);
       border-color: $color;
-      color: desaturate(
-        darken($color, $darken-percentage),
-        $desaturate-percentage
-      );
+      color: desaturate(darken($color, $darken-percentage), $desaturate-percentage);
       .delete {
         color: $color;
       }
       .title {
         color: $color-invert;
-        margin-bottom: .5rem;
+        margin-bottom: 0.5rem;
       }
     }
   }

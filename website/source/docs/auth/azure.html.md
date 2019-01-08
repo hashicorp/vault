@@ -56,7 +56,7 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using bound_service_pricipal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
+The `role` and `jwt` parameters are required. When using bound_service_principal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
 
 ### Via the API
 
