@@ -22,6 +22,56 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestTokenStore_CubbyholeDeletion(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 0; i < 10; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Write data in the token's cubbyhole
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Revoke the token
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Path:        "revoke-self",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// List the cubbyhole keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// There should be no entries
+	if len(cubbyholeKeys) != 0 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 0, actual: %d", len(cubbyholeKeys))
+	}
+}
+
 func TestTokenStore_CubbyholeTidy(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
