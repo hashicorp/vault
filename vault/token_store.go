@@ -1937,6 +1937,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				key := strings.TrimSuffix(key, "/")
 				if !validCubbyholeKeys[key] {
+					ts.logger.Info("deleting invalid cubbyhole", "key", key)
 					err = ts.cubbyholeBackend.revoke(quitCtx, key)
 					if err != nil {
 						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
