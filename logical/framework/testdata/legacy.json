@@ -24,6 +24,7 @@
         }
       ],
       "get": {
+        "operationId": "getLookupId",
         "summary": "Synopsis",
         "tags": ["secrets"],
         "responses": {
@@ -33,6 +34,7 @@
         }
       },
       "post": {
+        "operationId": "postLookupId",
         "summary": "Synopsis",
         "tags": ["secrets"],
         "requestBody": {

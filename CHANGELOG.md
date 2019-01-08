@@ -1,3 +1,34 @@
+## 1.0.2 (Unreleased)
+
+CHANGES:
+
+ * secret/aws: Role now returns `credential_type` instead of `credential_types`
+   to match role input. If a legacy role that can supply more than one
+   credential type, they will be concatenated with a `,`.
+ * physical/dynamodb, autoseal/aws: Instead of Vault performing environment
+   variable handling, and overriding static (config file) values if found, we
+   use the default AWS SDK env handling behavior, which also looks for
+   deprecated values. If you were previously providing both config values and
+   environment values, please ensure the config values are unset if you want to
+   use environment values.
+
+IMPROVEMENTS:
+
+ * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+   [GH-5999]
+ * physical/foundationdb: TLS support added. [GH-5800]  
+
+BUG FIXES:
+
+ * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
+   also provided [GH-5965]
+ * command/operator/rekey: Fix help output showing `-delete-backup` when it
+   should show `-backup-delete` [GH-5981]
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
+ * replication: Correctly forward identity entity creation that originates from
+   performance standby nodes (Enterprise)
+
 ## 1.0.1 (December 14th, 2018)
 
 SECURITY:
@@ -22,6 +53,7 @@ CHANGES:
 IMPROVEMENTS:
 
  * cli: Strip iTerm extra characters from password manager input [GH-5837]
+ * command/server: Setting default kv engine to v1 in -dev mode can now be specified via -dev-kv-v1 [GH-5919]
  * core: Add operationId field to OpenAPI output [GH-5876]
  * ui: Added ability to search for Group and Policy IDs when creating Groups
    and Entities instead of typing them in manually

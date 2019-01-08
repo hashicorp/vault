@@ -14,6 +14,7 @@
       "description": "Synopsis",
       "x-vault-unauthenticated": true,
       "delete": {
+        "operationId": "deleteFoo",
         "tags": ["secrets"],
         "summary": "Delete stuff",
         "responses": {
@@ -23,6 +24,7 @@
         }
       },
       "get": {
+        "operationId": "getFoo",
         "tags": ["secrets"],
         "summary": "My Summary",
         "description": "My Description",

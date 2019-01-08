@@ -47,6 +47,17 @@ $ vault operator rekey \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 ```
 
+Rekey an Auto Unseal vault and encrypt the resulting recovery keys with PGP:
+
+```text
+$ vault operator rekey \
+    -target=recovery \
+    -init \
+    -pgp-keys=keybase:grahamhashicorp 
+    -key-shares=1 
+    -key-threshold=1
+```
+
 Store encrypted PGP keys in Vault's core:
 
 ```text

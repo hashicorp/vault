@@ -1,6 +1,6 @@
 {
 	"comment": "",
-	"ignore": "test",
+	"ignore": "test github.com/apple/foundationdb/bindings/go/src/fdb/",
 	"package": [
 		{
 			"path": "appengine",
@@ -371,30 +371,6 @@
 			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
 			"revision": "c5825d35a94a5a25d936ebe6bed5779255d02cf4",
 			"revisionTime": "2018-10-12T12:19:43Z"
-		},
-		{
-			"checksumSHA1": "x5pRbco8m4cXGS3u/NnbzIZJ1Hg=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "VxeCD1wWXix+y3N83t8PHmXDTIo=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/directory",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "im/gTxCCpiNchCB6gNYZez+4pYI=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/subspace",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "EkxFtJERI529/WjdfgoLGzQ/yJM=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/tuple",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
 		},
 		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
