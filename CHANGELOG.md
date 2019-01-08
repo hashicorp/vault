@@ -16,6 +16,7 @@ IMPROVEMENTS:
 
  * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
    [GH-5999]
+ * physical/foundationdb: TLS support added. [GH-5800]  
 
 BUG FIXES:
 
