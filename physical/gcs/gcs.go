@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/physical"
 
 	"cloud.google.com/go/storage"
-	"github.com/armon/go-metrics"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )

@@ -5,9 +5,8 @@ import (
 	"errors"
 	"net/rpc"
 
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/go-plugin"
+	hclog "github.com/hashicorp/go-hclog"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )

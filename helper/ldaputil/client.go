@@ -14,8 +14,8 @@ import (
 
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
+	hclog "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 var _ TokenHelper = (*InternalTokenHelper)(nil)

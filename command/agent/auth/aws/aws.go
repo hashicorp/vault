@@ -13,11 +13,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/aws"
+	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
 
