@@ -1910,7 +1910,6 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 					deletedCountAccessorInvalidToken++
 				default:
 					// Cache the cubbyhole storage key when the token is valid
-					var cubbyholeKey string
 					switch {
 					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 						saltedID, err := ts.SaltID(quitCtx, te.ID)
@@ -1918,15 +1917,14 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
 							continue
 						}
-						cubbyholeKey = salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)
+						validCubbyholeKeys = append(validCubbyholeKeys, salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
 					default:
 						if te.CubbyholeID == "" {
 							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
 							continue
 						}
-						cubbyholeKey = te.CubbyholeID
+						validCubbyholeKeys = append(validCubbyholeKeys, te.CubbyholeID)
 					}
-					validCubbyholeKeys = append(validCubbyholeKeys, cubbyholeKey)
 				}
 			}
 
@@ -1941,7 +1939,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				if !strutil.StrListContains(validCubbyholeKeys, key) {
 					err = ts.cubbyholeBackend.revoke(quitCtx, key)
 					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole storage key %q: {{err}}", key), err))
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
 					}
 					deletedCountInvalidCubbyholeKey++
 				}
@@ -1955,7 +1953,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
-			ts.logger.Info("number of deleted dangling cubbyhole storage keys", "count", deletedCountInvalidCubbyholeKey)
+			ts.logger.Info("number of deleted cubbyhole keys that were invalid", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}
