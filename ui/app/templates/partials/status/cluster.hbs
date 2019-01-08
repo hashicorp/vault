@@ -1,117 +1,130 @@
 <div class="popup-menu-content">
   <div class="box">
     {{#if (and activeCluster.unsealed auth.currentToken)}}
-      <nav class="menu">
-        <p class="menu-label">Replication</p>
-        <ul>
-          {{#if cluster.anyReplicationEnabled}}
-            <li>
-              {{#link-to
-                "vault.cluster.replication.mode.index"
-                "dr"
-                disabled=(not currentToken)
-                invokeAction=(action onLinkClick)
-              }}
-                {{replication-mode-summary
-                  mode="dr"
-                  display='menu'
-                  cluster=cluster
-                }}
-              {{/link-to}}
-            </li>
-            <li>
-              {{#if (has-feature "Performance Replication")}}
+      {{#if (has-permission 'status' 'replication')}}
+        <nav class="menu">
+          <p class="menu-label">Replication</p>
+          <ul>
+            {{#if cluster.anyReplicationEnabled}}
+              <li>
                 {{#link-to
                   "vault.cluster.replication.mode.index"
-                  "performance"
+                  "dr"
                   disabled=(not currentToken)
                   invokeAction=(action onLinkClick)
                 }}
                   {{replication-mode-summary
+                    mode="dr"
+                    display='menu'
+                    cluster=cluster
+                  }}
+                {{/link-to}}
+              </li>
+              <li>
+                {{#if (has-feature "Performance Replication")}}
+                  {{#link-to
+                    "vault.cluster.replication.mode.index"
+                    "performance"
+                    disabled=(not currentToken)
+                    invokeAction=(action onLinkClick)
+                  }}
+                    {{replication-mode-summary
+                      mode="performance"
+                      display="menu"
+                      cluster=cluster
+                      tagName="span"
+                    }}
+                  {{/link-to}}
+                {{else}}
+                  {{replication-mode-summary
                     mode="performance"
                     display="menu"
                     cluster=cluster
-                    tagName="span"
+                    class="menu-item"
                   }}
+                {{/if}}
+              </li>
+            {{else if version.isOSS}}
+              <li>
+                {{#link-to "vault.cluster.replication"}}
+                  <div class="level is-mobile">
+                    <span class="level-left">Learn More</span>
+                    <ICon @glyph="edition-enterprise" @size="16" @class="level-right" />
+                  </div>
                 {{/link-to}}
-              {{else}}
-                {{replication-mode-summary
-                  mode="performance"
-                  display="menu"
-                  cluster=cluster
-                  class="menu-item"
+              </li>
+            {{else}}
+              <li>
+                {{#link-to "vault.cluster.replication"
+                  invokeAction=(action onLinkClick)
                 }}
-              {{/if}}
-            </li>
-          {{else if version.isOSS}}
-            <li>
-              {{#link-to "vault.cluster.replication"}}
-                <div class="level is-mobile">
-                  <span class="level-left">Learn More</span>
-                  <ICon @glyph="edition-enterprise" @size="16" @class="level-right" />
-                </div>
-              {{/link-to}}
-            </li>
-          {{else}}
-            <li>
-              {{#link-to "vault.cluster.replication"
-                invokeAction=(action onLinkClick)
-              }}
-                <div class="level is-mobile">
-                  <span class="level-left">Enable</span>
-                  <ICon @glyph="neutral-circled-outline" @size="16" @class="has-text-grey-light level-right" />
-                </div>
-              {{/link-to}}
-            </li>
-          {{/if}}
-        </ul>
-      </nav>
-      <hr/>
+                  <div class="level is-mobile">
+                    <span class="level-left">Enable</span>
+                    <ICon @glyph="neutral-circled-outline" @size="16" @class="has-text-grey-light level-right" />
+                  </div>
+                {{/link-to}}
+              </li>
+            {{/if}}
+          </ul>
+        </nav>
+        <hr/>
+      {{/if}}
     {{/if}}
     {{#unless version.isOSS}}
+      {{#if (has-permission 'status' 'license')}}
+        <nav class="menu">
+          <div class="menu-label">
+            License
+          </div>
+          <ul class="menu-list">
+            <li class="action">
+              {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
+                <div class="level is-mobile">
+                  <span class="level-left">See Details</span>
+                  <ICon @glyph="chevron-right" @size="12" @class="has-text-grey-light level-right" />
+                </div>
+              {{/link-to}}
+            </li>
+          </ul>
+        </nav>
+        <hr/>
+      {{/if}}
+    {{/unless}}
       <nav class="menu">
         <div class="menu-label">
-          License
+          Seal Status
         </div>
         <ul class="menu-list">
           <li class="action">
-            {{#link-to "vault.cluster.license" activeCluster.name invokeAction=onLinkClick}}
-              <div class="level is-mobile">
-                <span class="level-left">See Details</span>
-                <ICon @glyph="chevron-right" @size="12" @class="has-text-grey-light level-right" />
-              </div>
-            {{/link-to}}
+            {{#if activeCluster.unsealed}}
+              {{#if (has-permission 'status' 'seal')}}
+                {{#link-to 'vault.cluster.settings.seal' cluster.name
+                  class="level is-mobile"
+                  invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
+                }}
+                  <div class="level is-mobile">
+                    <span class="level-left">Unsealed</span>
+                    <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+                  </div>
+                {{/link-to}}
+              {{else}}
+                <span class="menu-item">
+                  <div class="level is-mobile">
+                    <span class="level-left">Unsealed</span>
+                    <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+                  </div>
+                </span>
+              {{/if}}
+            {{else}}
+              <span class="menu-item">
+                <div class="level is-mobile">
+                  <span class="level-left has-text-danger">Sealed</span>
+                  <ICon @glyph="close-circled-outline" @size="16" @class="has-text-danger level-right" />
+                </div>
+              </span>
+            {{/if}}
           </li>
         </ul>
       </nav>
-      <hr/>
-    {{/unless}}
-    <nav class="menu">
-      <div class="menu-label">
-        Seal Status
-      </div>
-      <ul class="menu-list">
-        <li class="action">
-          {{#if activeCluster.unsealed}}
-            {{#link-to 'vault.cluster.settings.seal' cluster.name
-              class="level is-mobile"
-              invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))
-            }}
-              <div class="level is-mobile">
-                <span class="level-left">Unsealed</span>
-                <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
-              </div>
-            {{/link-to}}
-          {{else}}
-            <span class="menu-item">
-              <div class="level is-mobile">
-                <span class="level-left has-text-danger">Sealed</span>
-                <ICon @glyph="close-circled-outline" @size="16" @class="has-text-danger level-right" />
-              </div>
-            </span>
-          {{/if}}
-        </li>
-      </ul>
-    </nav>
   </div>
 </div>
