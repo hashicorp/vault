@@ -156,7 +156,6 @@ func (i *Influxdb) CreateUser(ctx context.Context, statements dbplugin.Statement
 }
 
 // RenewUser is not supported on Influxdb, so this is a no-op.
-//  TO CHECK THIS FIRST
 func (i *Influxdb) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
