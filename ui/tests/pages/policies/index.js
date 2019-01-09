@@ -3,17 +3,18 @@ export default create({
   visit: visitable('/vault/policies/:type'),
   policies: collection('[data-test-policy-item]', {
     name: text('[data-test-policy-name]'),
+  }),
+  row: collection('[data-test-policy-link]', {
+    name: text(),
     menu: clickable('[data-test-popup-menu-trigger]'),
   }),
   findPolicyByName(name) {
     return this.policies.filterBy('name', name)[0];
   },
   delete: clickable('[data-test-confirm-action-trigger]', {
-    scope: '[data-test-item-delete]',
     testContainer: '#ember-testing',
   }),
   confirmDelete: clickable('[data-test-confirm-button]', {
-    scope: '[data-test-item-delete]',
     testContainer: '#ember-testing',
   }),
 });
