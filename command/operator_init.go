@@ -549,8 +549,15 @@ func newMachineInit(req *api.InitRequest, resp *api.InitResponse) *machineInit {
 		init.UnsealKeysB64[i] = v
 	}
 
-	init.UnsealShares = req.SecretShares
-	init.UnsealThreshold = req.SecretThreshold
+	// If we don't get a set of keys back, it means that we are storing the keys,
+	// so the key shares and threshold has been set to 1.
+	if len(resp.Keys) == 0 {
+		init.UnsealShares = 1
+		init.UnsealThreshold = 1
+	} else {
+		init.UnsealShares = req.SecretShares
+		init.UnsealThreshold = req.SecretThreshold
+	}
 
 	init.RecoveryKeysHex = make([]string, len(resp.RecoveryKeys))
 	for i, v := range resp.RecoveryKeys {

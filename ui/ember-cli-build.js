@@ -42,6 +42,9 @@ module.exports = function(defaults) {
         devtool: 'inline-source-map',
       },
     },
+    'ember-test-selectors': {
+      strip: isProd,
+    },
   });
 
   app.import('vendor/string-includes.js');

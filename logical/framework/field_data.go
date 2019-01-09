@@ -268,6 +268,11 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		return result, true, nil
 
 	case TypeStringSlice:
+		rawString, ok := raw.(string)
+		if ok && rawString == "" {
+			return []string{}, true, nil
+		}
+
 		var result []string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, false, err

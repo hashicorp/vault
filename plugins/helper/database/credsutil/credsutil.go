@@ -37,7 +37,7 @@ func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 		prefix = reqStr
 	}
 
-	randomStr, err := base62.Random(length-len(prefix), true)
+	randomStr, err := base62.Random(length - len(prefix))
 	if err != nil {
 		return "", err
 	}

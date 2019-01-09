@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/credential/app-id"
+	hclog "github.com/hashicorp/go-hclog"
+	appId "github.com/hashicorp/vault/builtin/credential/app-id"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 )

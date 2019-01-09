@@ -46,22 +46,17 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, req)
-	if err != nil {
+	if err != nil && resp == nil {
 		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if secret == nil || secret.Data == nil {
-		return nil, errors.New("data from server response is empty")
-	}
-
+	// We received an Unsupported Operation response from Vault, indicating
+	// Vault of an older version that doesn't support the READ method yet.
 	if resp.StatusCode == 405 && req.Method == "GET" {
-		// We received an Unsupported Operation response from Vault, indicating
-		// Vault of an older version that doesn't support the READ method yet.
 		req.Method = "LIST"
 		resp, err := c.c.RawRequestWithContext(ctx, req)
 		if err != nil {
@@ -77,6 +72,14 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 			return nil, err
 		}
 		return &ListPluginsResponse{Names: result.Data.Keys}, nil
+	}
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
 	}
 
 	result := &ListPluginsResponse{

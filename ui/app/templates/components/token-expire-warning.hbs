@@ -1,6 +1,11 @@
-{{#if (and expirationDate (is-after (now interval=1000) expirationDate)) }}
+{{#if (and expirationDate (is-after (now interval=1000) expirationDate))}}
   <div class="token-expire-warning">
-    <AlertBanner @type="danger" @message="Your auth token expired on {{date-format expirationDate 'MMMM Do YYYY, h:mm:ss a'}}. You will need to re-authenticate.">
+    <AlertBanner
+      @type="danger"
+      @message="Your auth token expired on
+        {{date-format expirationDate "MMMM Do YYYY, h:mm:ss a"}}
+         . You will need to re-authenticate."
+    >
       {{#link-to "vault.cluster.logout" class="button link"}}
         Reauthenticate
       {{/link-to}}

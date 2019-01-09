@@ -797,7 +797,7 @@ request is denied.
   server use.
 
 - `client_flag` `(bool: true)` – Specifies if certificates are flagged for
-  client use.  
+  client use.
 
 - `code_signing_flag` `(bool: false)` – Specifies if certificates are flagged
   for code signing use.
@@ -1020,9 +1020,9 @@ As with other issued certificates, Vault will automatically revoke the
 generated root at the end of its lease period; the CA certificate will sign its
 own CRL.
 
-As of Vault 0.8.1, if a CA cert/key already exists, this function will return a
-204 and will not overwrite it. Previous versions of Vault would overwrite the
-existing cert/key with new values.
+As of Vault 0.8.1, if a CA cert/key already exists, this function will not
+overwrite it; it must be deleted first. Previous versions of Vault would
+overwrite the existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |

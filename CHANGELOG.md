@@ -1,3 +1,97 @@
+## 1.0.2 (Unreleased)
+
+CHANGES:
+
+ * secret/aws: Role now returns `credential_type` instead of `credential_types`
+   to match role input. If a legacy role that can supply more than one
+   credential type, they will be concatenated with a `,`.
+ * physical/dynamodb, autoseal/aws: Instead of Vault performing environment
+   variable handling, and overriding static (config file) values if found, we
+   use the default AWS SDK env handling behavior, which also looks for
+   deprecated values. If you were previously providing both config values and
+   environment values, please ensure the config values are unset if you want to
+   use environment values.
+
+IMPROVEMENTS:
+
+ * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+   [GH-5999]
+ * physical/foundationdb: TLS support added. [GH-5800]  
+
+BUG FIXES:
+
+ * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
+   also provided [GH-5965]
+ * command/operator/rekey: Fix help output showing `-delete-backup` when it
+   should show `-backup-delete` [GH-5981]
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
+ * replication: Correctly forward identity entity creation that originates from
+   performance standby nodes (Enterprise)
+
+## 1.0.1 (December 14th, 2018)
+
+SECURITY:
+
+ * Update version of Go to 1.11.3 to fix Go bug
+   https://github.com/golang/go/issues/29233 which corresponds to
+   CVE-2018-16875
+ * Database user revocation: If a client has configured custom revocation
+   statements for a role with a value of `""`, that statement would be executed
+   verbatim, resulting in a lack of actual revocation but success for the
+   operation. Vault will now strip empty statements from any provided; as a
+   result if an empty statement is provided, it will behave as if no statement
+   is provided, falling back to the default revocation statement.
+
+CHANGES:
+
+ * secret/database: On role read, empty statements will be returned as empty
+   slices instead of potentially being returned as JSON null values. This makes
+   it more in line with other parts of Vault and makes it easier for statically
+   typed languages to interpret the values.
+
+IMPROVEMENTS:
+
+ * cli: Strip iTerm extra characters from password manager input [GH-5837]
+ * command/server: Setting default kv engine to v1 in -dev mode can now be specified via -dev-kv-v1 [GH-5919]
+ * core: Add operationId field to OpenAPI output [GH-5876]
+ * ui: Added ability to search for Group and Policy IDs when creating Groups
+   and Entities instead of typing them in manually
+
+BUG FIXES:
+
+ * auth/azure: Cache azure authorizer [15]
+ * auth/gcp: Remove explicit project for service account in GCE authorizer [58]
+ * cli: Show correct stored keys/threshold for autoseals [GH-5910]
+ * cli: Fix backwards compatibility fallback when listing plugins [GH-5913]
+ * core: Fix upgrades when the seal config had been created on early versions
+   of vault [GH-5956]
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
+   mount [GH-5937]
+ * secret/azure: Cache azure authorizer [19]
+ * secret/database: Strip empty statements on user input [GH-5955]
+ * secret/gcpkms: Add path for retrieving the public key [5]
+ * secret/pki: Fix panic that could occur during tidy operation when malformed
+   data was found [GH-5931]
+ * secret/pki: Strip empty line in ca_chain output [GH-5779]
+ * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
+   command - [GH-5909]
+ * ui: Fix a bug where you couldn't write a jwt auth method config [GH-5936]
+
+## 0.11.6 (December 14th, 2018)
+
+This release contains the three security fixes from 1.0.0 and 1.0.1 and the
+following bug fixes from 1.0.0/1.0.1:
+
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
+   mount [GH-5937]
+ * replication/perfstandby: Fix audit table upgrade on standbys [GH-5811]
+ * replication/perfstandby: Fix redirect on approle update [GH-5820]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded
+   [GH-5809]
+
+It is otherwise identical to 0.11.5.
+
 ## 1.0.0 (December 3rd, 2018)
 
 SECURITY:

@@ -14,6 +14,7 @@ type azureSecretBackend struct {
 	*framework.Backend
 
 	getProvider func(*clientSettings) (AzureProvider, error)
+	client      *client
 	settings    *clientSettings
 	lock        sync.RWMutex
 
@@ -61,14 +62,15 @@ func backend() *azureSecretBackend {
 	return &b
 }
 
-// reset clears the backend's Provider
-// This is useful when the configuration changes and a new Provider should be
+// reset clears the backend's cached client
+// This is used when the configuration changes and a new client should be
 // created with the updated settings.
 func (b *azureSecretBackend) reset() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.settings = nil
+	b.client = nil
 }
 
 func (b *azureSecretBackend) invalidate(ctx context.Context, key string) {

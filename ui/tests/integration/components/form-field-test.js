@@ -12,14 +12,6 @@ const component = create(formFields);
 module('Integration | Component | form field', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
-    component.setContext(this);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
-  });
-
   const createAttr = (name, type, options) => {
     return {
       name,
@@ -123,6 +115,11 @@ module('Integration | Component | form field', function(hooks) {
     await component.fields[0].input('array').change();
     assert.deepEqual(model.get('foo'), ['array'], 'sets the value on the model');
     assert.deepEqual(spy.args[0], ['foo', ['array']], 'onChange called with correct args');
+  });
+
+  test('it renders: sensitive', async function(assert) {
+    await setup.call(this, createAttr('password', 'string', { sensitive: true }));
+    assert.ok(component.hasMaskedInput, 'renders the masked-input component');
   });
 
   test('it uses a passed label', async function(assert) {

@@ -3,7 +3,7 @@ package dbplugin
 import (
 	"crypto/tls"
 
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
