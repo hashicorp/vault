@@ -34,7 +34,7 @@
   </nav>
   <form
     id="auth-form"
-    {{action (action "doSubmit") on="submit"}}
+    onsubmit={{action (if isOIDC "startOIDCAuth" "doSubmit")}}
   >
     <div class="box is-marginless is-shadowless">
       {{#if (and cluster.standby hasCSPError)}}
@@ -65,7 +65,15 @@
           </div>
         </div>
       {{/if}}
-      {{partial providerPartialName}}
+      {{#if (eq this.selectedAuthBackend.type "jwt")}}
+      <AuthJwt
+        @selectedAuthPath={{or this.selectedAuthBackend.id this.customPath}}
+        @onRoleChange={{action (mut this.role)}}
+        @isOIDC={{this.isOIDC}}
+      />
+      {{else}}
+        {{partial providerPartialName}}
+      {{/if}}
       {{#unless (or selectedAuthIsPath (eq selectedAuthBackend.type "token"))}}
         <div class="box has-slim-padding is-shadowless">
           {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
@@ -94,7 +102,11 @@
     </div>
     <div class="box is-marginless is-shadowless">
       <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
+        {{#if isOIDC}}
+        Sign In via OIDC Provider
+        {{else}}
         Sign In
+        {{/if}}
       </button>
     </div>
   </form>

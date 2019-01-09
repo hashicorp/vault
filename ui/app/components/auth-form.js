@@ -14,6 +14,7 @@ const DEFAULTS = {
   username: null,
   password: null,
   customPath: null,
+  role: null,
 };
 
 export default Component.extend(DEFAULTS, {
@@ -124,6 +125,20 @@ export default Component.extend(DEFAULTS, {
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
 
+  isOIDC: computed('role', 'selectedAuthBackend.type', function() {
+    return this.role && this.role.authUrl && this.selectedAuthBackend.type === 'jwt';
+  }),
+
+  OIDCredirectUrl: computed('isOIDC', function() {
+    if (!this.isOIDC) {
+      return null;
+    }
+    let [path] = JSON.parse(this.role.id);
+    return `${
+      this.role.authUrl
+    }&redirect_uri=${window.location.origin}${this.router.urlFor('vault.cluster.oidc-callback', { auth_path: path })}`;
+  }),
+
   unwrapToken: task(function*(token) {
     // will be using the token auth method, so set it here
     this.set('selectedAuth', 'token');
@@ -209,6 +224,13 @@ export default Component.extend(DEFAULTS, {
         data.path = this.get('customPath') || get(backend, 'id');
       }
       this.authenticate.perform(backend.type, data);
+    },
+    startOIDCAuth() {
+      window.location = this.OIDCredirectUrl;
+      // window opener service opens window at the auth url
+      // use localStorage events to sync across tabs / windows
+      // fire event that navigates to the pending screen
+      // and waits for the OIDC flow
     },
   },
 });

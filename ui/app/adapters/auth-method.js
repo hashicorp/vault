@@ -56,4 +56,8 @@ export default ApplicationAdapter.extend({
   urlForDeleteRecord(id, modelName, snapshot) {
     return this.url(snapshot.id);
   },
+
+  exchangeOIDC(path, state, code) {
+    return this.ajax(`/v1/auth/${path}/oidc/callback`, 'GET', { data: { state, code }, wrapTTL: '30s' });
+  },
 });
