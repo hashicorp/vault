@@ -7,6 +7,7 @@ export default Controller.extend({
   store: service(),
   media: service(),
   router: service(),
+  permissions: service(),
   namespaceService: service('namespace'),
 
   vaultVersion: service('version'),
@@ -43,11 +44,13 @@ export default Controller.extend({
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
+    'permissions.checkAuthToken.isRunning',
     function() {
       if (
         this.get('activeCluster.dr.isSecondary') ||
         this.get('activeCluster.needsInit') ||
-        this.get('activeCluster.sealed')
+        this.get('activeCluster.sealed') ||
+        this.permissions.checkAuthToken.isRunning
       ) {
         return false;
       }
