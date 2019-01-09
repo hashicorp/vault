@@ -20,18 +20,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-sockaddr"
+	multierror "github.com/hashicorp/go-multierror"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/gated-writer"
+	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -1018,7 +1018,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("You may need to set the following environment variable:")
 		c.UI.Warn("")
 
-		endpointURL := "http://"+config.Listeners[0].Config["address"].(string)
+		endpointURL := "http://" + config.Listeners[0].Config["address"].(string)
 		if runtime.GOOS == "windows" {
 			c.UI.Warn("PowerShell:")
 			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))

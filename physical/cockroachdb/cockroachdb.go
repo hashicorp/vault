@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"

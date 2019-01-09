@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/pathmanager"
 )
