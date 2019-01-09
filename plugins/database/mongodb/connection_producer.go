@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
 
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 )
 
 // mongoDBConnectionProducer implements ConnectionProducer and provides an

@@ -16,11 +16,151 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestTokenStore_CubbyholeDeletion(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 0; i < 10; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%2 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Write data in the token's cubbyhole
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Revoke the token
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Path:        "revoke-self",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// List the cubbyhole keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// There should be no entries
+	if len(cubbyholeKeys) != 0 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 0, actual: %d", len(cubbyholeKeys))
+	}
+}
+
+func TestTokenStore_CubbyholeTidy(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 1; i <= 20; i++ {
+		// Create 20 tokens
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%3 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+
+		// Create 4 junk cubbyhole entries
+		if i%5 == 0 {
+			invalidToken, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err := ts.cubbyholeBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+				ClientToken: invalidToken,
+				Operation:   logical.UpdateOperation,
+				Path:        "cubbyhole/sample/data",
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+				Storage: ts.cubbyholeBackend.storageView,
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+			}
+		}
+
+		// Write into cubbyholes of 10 tokens
+		if i%2 == 0 {
+			continue
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// Tidy cubbyhole storage
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "tidy",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Wait for tidy operation to complete
+	time.Sleep(2 * time.Second)
+
+	// List all the cubbyhole storage keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The junk entries must have been cleaned up
+	if len(cubbyholeKeys) != 10 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 10, actual: %d", len(cubbyholeKeys))
+	}
+}
 
 func TestTokenStore_Salting(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

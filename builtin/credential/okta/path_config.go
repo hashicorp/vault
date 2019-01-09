@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/chrismalek/oktasdk-go/okta"
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )

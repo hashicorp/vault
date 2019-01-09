@@ -1491,6 +1491,38 @@
 			"revisionTime": "2018-10-12T17:50:58Z"
 		},
 		{
+			"checksumSHA1": "MUEiIhsVEYI4xI2TPCPElVLicEw=",
+			"path": "github.com/influxdata/influxdb/client/v2",
+			"revision": "cb03c542a4054f0f4d3dc13919d31c456bdb5c39",
+			"revisionTime": "2018-11-14T18:54:52Z",
+			"version": "v1.7.1",
+			"versionExact": "v1.7.1"
+		},
+		{
+			"checksumSHA1": "/SC4ZMeKnNqhuYDhWLZp+z4yeG8=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "9dff5f072fb7b0aab643c9e2338b52763f59b7b6",
+			"revisionTime": "2018-12-07T16:01:49Z"
+		},
+		{
+			"checksumSHA1": "Z0Bb5PWa5WL/j5Dm2KJCLGn1l7U=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "9dff5f072fb7b0aab643c9e2338b52763f59b7b6",
+			"revisionTime": "2018-12-07T16:01:49Z"
+		},
+		{
+			"checksumSHA1": "lDHmXNdRAl7aVdjAiPM8Y0SP5Vo=",
+			"path": "github.com/influxdata/platform/models",
+			"revision": "df0b084543160564b4afa50a944d3d20145f3120",
+			"revisionTime": "2018-12-08T01:46:35Z"
+		},
+		{
+			"checksumSHA1": "Z1jNHNivahCME1jnd0nsJ/rUpfc=",
+			"path": "github.com/influxdata/platform/pkg/escape",
+			"revision": "df0b084543160564b4afa50a944d3d20145f3120",
+			"revisionTime": "2018-12-08T01:46:35Z"
+		},
+		{
 			"checksumSHA1": "FHpNxGUqXNu02lBFaei16tXFhU0=",
 			"path": "github.com/jackc/pgx",
 			"revision": "20eaa7963b9d714bfaf678dcb2448fbd1e3671b9",

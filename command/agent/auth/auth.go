@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )

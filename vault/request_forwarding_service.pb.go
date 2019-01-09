@@ -5,9 +5,10 @@ package vault
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	forwarding "github.com/hashicorp/vault/helper/forwarding"
-	math "math"
 )
 
 import (

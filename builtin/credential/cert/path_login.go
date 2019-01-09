@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/ryanuber/go-glob"
+	glob "github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted

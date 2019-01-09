@@ -15,15 +15,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/patrickmn/go-cache"
+	multierror "github.com/hashicorp/go-multierror"
+	uuid "github.com/hashicorp/go-uuid"
+	cache "github.com/patrickmn/go-cache"
 
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"

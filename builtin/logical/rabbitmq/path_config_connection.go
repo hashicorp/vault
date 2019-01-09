@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole"
 )
 
 func pathConfigConnection(b *backend) *framework.Path {
