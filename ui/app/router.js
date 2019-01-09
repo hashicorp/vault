@@ -9,6 +9,7 @@ const Router = EmberRouter.extend({
 Router.map(function() {
   this.route('vault', { path: '/' }, function() {
     this.route('cluster', { path: '/:cluster_name' }, function() {
+      this.route('oidc-callback', { path: '/oidc-callback/:auth_path' });
       this.route('auth');
       this.route('init');
       this.route('logout');
