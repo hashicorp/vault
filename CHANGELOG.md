@@ -11,6 +11,10 @@ CHANGES:
    deprecated values. If you were previously providing both config values and
    environment values, please ensure the config values are unset if you want to
    use environment values.
+ * Namespaces (Enterprise): Providing "root" as the header value for
+   `X-Vault-Namespace` will perform the request on the root namespace. This is
+   equivalent to providing an empty value. Creating a namespace called "root" in
+   the root namespace is disallowed.
 
 IMPROVEMENTS:
 
@@ -53,7 +57,8 @@ CHANGES:
 IMPROVEMENTS:
 
  * cli: Strip iTerm extra characters from password manager input [GH-5837]
- * command/server: Setting default kv engine to v1 in -dev mode can now be specified via -dev-kv-v1 [GH-5919]
+ * command/server: Setting default kv engine to v1 in -dev mode can now be
+   specified via -dev-kv-v1 [GH-5919]
  * core: Add operationId field to OpenAPI output [GH-5876]
  * ui: Added ability to search for Group and Policy IDs when creating Groups
    and Entities instead of typing them in manually
