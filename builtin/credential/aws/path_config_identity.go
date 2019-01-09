@@ -124,8 +124,8 @@ type identityConfig struct {
 
 const identityAliasIAMUniqueID = "unique_id"
 const identityAliasIAMFullArn = "full_arn"
-const identityAliasEC2InstanceID = "instance-id"
-const identityAliasEC2ImageID = "image-id"
+const identityAliasEC2InstanceID = "instance_id"
+const identityAliasEC2ImageID = "image_id"
 
 const pathConfigIdentityHelpSyn = `
 Configure the way the AWS auth method interacts with the identity store

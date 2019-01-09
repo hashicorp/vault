@@ -156,10 +156,10 @@ This configures the way that Vault interacts with the
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
-- `ec2_alias (string: "instance-id")` - Configures how to generate the identity alias when
-  using the `ec2` auth method. Valid choices are `instance-id` and `image-id`.
-  When `instance-id` is selected, the instance identifier is used as the
-  identity alias name. When `image-id` is selected, AMI ID of the instance is
+- `ec2_alias (string: "instance_id")` - Configures how to generate the identity alias when
+  using the `ec2` auth method. Valid choices are `instance_id` and `image_id`.
+  When `instance_id` is selected, the instance identifier is used as the
+  identity alias name. When `image_id` is selected, AMI ID of the instance is
   used as the identity alias name.
 
 ### Sample Payload
