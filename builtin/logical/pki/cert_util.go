@@ -262,11 +262,11 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 		return nil, nil
 	}
 
-	// Retrieve the old-style path
-	certEntry, err = req.Storage.Get(ctx, legacyPath)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
-	}
+	// Retrieve the old-style path.  We disregard errors here because they
+	// always manifest on windows, and thus the initial check for a revoked
+	// cert fails would return an error when the cert isn't revoked, preventing
+	// the happy path from working.
+	certEntry, _ = req.Storage.Get(ctx, legacyPath)
 	if certEntry == nil {
 		return nil, nil
 	}
