@@ -18,6 +18,8 @@ type SecretsListCommand struct {
 	*BaseCommand
 
 	flagDetailed bool
+
+	flagType string
 }
 
 func (c *SecretsListCommand) Synopsis() string {
@@ -59,6 +61,16 @@ func (c *SecretsListCommand) Flags() *FlagSets {
 			"about each secrets engine.",
 	})
 
+	f.StringVar(&StringVar{
+        Name:       "type",
+        Target:     &c.flagType,
+        Default:    "",
+        EnvVar:     "",
+        Completion: complete.PredictAnything,
+        Usage: "The type of secret engine to list the secrets for." +
+            "The value can be kv, cubbyhole etc",
+    })
+
 	return set
 }
 
@@ -90,7 +102,7 @@ func (c *SecretsListCommand) Run(args []string) int {
 		return 2
 	}
 
-	mounts, err := client.Sys().ListMounts()
+	mounts, err := client.Sys().ListMountsOfType(c.flagType)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing secrets engines: %s", err))
 		return 2
