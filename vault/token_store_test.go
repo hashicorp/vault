@@ -33,6 +33,12 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 			Path:        "create",
 			ClientToken: root,
 		}
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%2 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
 		token := resp.Auth.ClientToken
 
@@ -86,6 +92,13 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 
 		resp := testMakeTokenViaRequest(t, ts, tokenReq)
 		token := resp.Auth.ClientToken
+
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%3 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
 
 		// Create 4 junk cubbyhole entries
 		if i%5 == 0 {
