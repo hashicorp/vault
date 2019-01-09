@@ -31,9 +31,9 @@
         {{#if (has-permission 'access')}}
           <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
             {{#link-to
-              "vault.cluster.access"
-                current-when="vault.cluster.access vault.cluster.settings.auth"
-                invokeAction=(action Nav.closeDrawer)
+              params=(route-params-for 'access')
+              current-when="vault.cluster.access vault.cluster.settings.auth"
+              invokeAction=(action Nav.closeDrawer)
               }}
               Access
             {{/link-to}}

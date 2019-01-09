@@ -1,31 +1,16 @@
 import Service, { inject as service } from '@ember/service';
 import { task, waitForProperty } from 'ember-concurrency';
 
-const PATHS = {
-  secrets: ['cubbyhole/'],
-  access: [
-    'sys/auth',
-    'access',
-    'identity/entities',
-    'identity/groups',
-    'sys/leases/lookup',
-    'sys/namespaces',
-    'sys/control-group/',
-  ],
-  // The order of policies and tools determines which route the navigation links to.
-  policies: ['sys/policies/acl', 'sys/policies/rgp', 'sys/policies/egp'],
-  tools: [
-    'sys/wrapping/wrap',
-    'sys/wrapping/lookup',
-    'sys/wrapping/unwrap',
-    'sys/wrapping/rewrap',
-    'sys/tools/random',
-    'sys/tools/hash',
-  ],
-  status: ['sys/replication', 'sys/license', 'sys/seal'],
-};
-
-const ROUTE_PARAMS_TO_API_PATHS = {
+const API_PATHS = {
+  secrets: { engine: 'cubbyhole/' },
+  access: {
+    methods: 'sys/auth',
+    entities: 'identity/entities',
+    groups: 'identity/groups',
+    leases: 'sys/leases/lookup',
+    namespaces: 'sys/namespaces',
+    'control-groups': 'sys/control-group/',
+  },
   policies: {
     acl: 'sys/policies/acl',
     rgp: 'sys/policies/rgp',
@@ -39,14 +24,20 @@ const ROUTE_PARAMS_TO_API_PATHS = {
     random: 'sys/tools/random',
     hash: 'sys/tools/hash',
   },
-  access: {
-    methods: '/sys/auth',
-    entities: '/identity/entities',
-    groups: '/identity/groups',
-    leases: '/sys/leases/lookup',
-    namespaces: '/sys/namespaces',
-    'control-groups': '/sys/control -group/',
+  status: {
+    replication: 'sys/replication',
+    license: 'sys/license',
+    seal: 'sys/seal',
   },
+};
+
+const API_PATHS_TO_ROUTE_PARAMS = {
+  'sys/auth': ['vault.cluster.access.methods'],
+  'identity/entities': ['vault.cluster.access.identity', 'entities'],
+  'identity/groups': ['vault.cluster.access.identity', 'groups'],
+  'sys/leases/lookup': ['vault.cluster.access.leases'],
+  'sys/namespaces': ['vault.cluster.access.namespaces'],
+  'sys/control-group/': ['vault.cluster.access.control-groups'],
 };
 
 export default Service.extend({
@@ -80,19 +71,19 @@ export default Service.extend({
 
   hasNavPermission(navItem, routeParams) {
     if (routeParams) {
-      return this.hasPermission(ROUTE_PARAMS_TO_API_PATHS[navItem][routeParams]);
+      return this.hasPermission(API_PATHS[navItem][routeParams]);
     }
-    return PATHS[navItem].some(path => this.hasPermission(path));
+    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
   },
 
   navPathParams(navItem) {
-    const path = PATHS[navItem].find(path => this.hasPermission(path));
+    const path = Object.values(API_PATHS[navItem]).find(path => this.hasPermission(path));
     // if it is policies or tools, split, otherwise look through a map
-    if (['policies', 'tools'].includes(navItem.firstObject)) {
+    if (['policies', 'tools'].includes(navItem)) {
       return path.split('/').lastObject;
     }
 
-    return 'hello';
+    return API_PATHS_TO_ROUTE_PARAMS[path];
   },
 
   hasPermission(pathName) {
