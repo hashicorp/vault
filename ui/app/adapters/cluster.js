@@ -139,6 +139,7 @@ export default ApplicationAdapter.extend({
     const authBackend = type.toLowerCase();
     const authURLs = {
       github: 'login',
+      jwt: 'login',
       userpass: `login/${encodeURIComponent(username)}`,
       ldap: `login/${encodeURIComponent(username)}`,
       okta: `login/${encodeURIComponent(username)}`,

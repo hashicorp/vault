@@ -34,6 +34,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     formAttributes: ['username', 'password'],
   },
   {
+    type: 'jwt',
+    typeDisplay: 'JWT/OIDC',
+    description: 'Token authentication.',
+    tokenPath: 'client_token',
+    displayNamePath: 'display_name',
+    formAttributes: ['token'],
+  },
+  {
     type: 'github',
     typeDisplay: 'GitHub',
     description: 'GitHub authentication.',
