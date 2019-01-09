@@ -8,6 +8,7 @@ export default Route.extend(ModelBoundaryRoute, {
   controlGroup: service(),
   flashMessages: service(),
   console: service(),
+  permissions: service(),
 
   modelTypes: computed(function() {
     return ['secret', 'secret-engine'];
@@ -21,5 +22,6 @@ export default Route.extend(ModelBoundaryRoute, {
     this.clearModelCache();
     this.replaceWith('vault.cluster');
     this.get('flashMessages').clearMessages();
+    this.permissions.clearPaths();
   },
 });

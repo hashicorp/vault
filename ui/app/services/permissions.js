@@ -64,6 +64,13 @@ export default Service.extend({
     this.set('isRootToken', resp.data.root);
   },
 
+  clearPaths() {
+    this.set('exactPaths', null);
+    this.set('globPaths', null);
+    this.set('isRootToken', null);
+    this.checkAuthToken.perform();
+  },
+
   checkAuthToken: task(function*() {
     yield waitForProperty(this.auth, 'currentTokenName', token => !!token);
     yield this.getPaths.perform();
