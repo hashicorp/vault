@@ -1,0 +1,30 @@
+<div class="field">
+  <label for="role" class="is-label">Role</label>
+  <div class="control">
+    <input
+      value={{@roleName}}
+      placeholder="Role"
+      oninput={{perform this.fetchRole value="target.value"}}
+      autocomplete="off"
+      name="role"
+      id="role"
+      class="input"
+      type="text"
+    />
+  </div>
+</div>
+{{#unless @isOIDC}}
+  <div class="field">
+    <label for="token" class="is-label">JWT Token</label>
+    <div class="control">
+      {{input
+        type="password"
+        value=token
+        name="token"
+        class="input"
+        autocomplete="off"
+        data-test-token=true
+      }}
+    </div>
+  </div>
+{{/unless}}
