@@ -53,10 +53,11 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 		return nil, err
 	}
 
-	switch {
-	case entry.IAMAlias == "":
+	if entry.IAMAlias == "" {
 		entry.IAMAlias = identityAliasIAMUniqueID
-	case entry.EC2Alias == "":
+	}
+
+	if entry.EC2Alias == "" {
 		entry.EC2Alias = identityAliasEC2InstanceID
 	}
 
