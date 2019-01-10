@@ -382,7 +382,7 @@ func (l *PostgreSQLLock) Value() (bool, string, error) {
 		return false, "", err
 	}
 
-	return l.held, result, nil
+	return true, result, nil
 }
 
 // tryToLock tries to create a new item in PostgreSQL
