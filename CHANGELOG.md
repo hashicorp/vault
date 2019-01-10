@@ -18,6 +18,8 @@ CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   image ID [GH-5846]
  * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
    [GH-5999]
  * physical/foundationdb: TLS support added. [GH-5800]  
@@ -32,6 +34,7 @@ BUG FIXES:
    array) [GH-5972]
  * replication: Correctly forward identity entity creation that originates from
    performance standby nodes (Enterprise)
+ * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
 
 ## 1.0.1 (December 14th, 2018)
 
