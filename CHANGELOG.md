@@ -16,6 +16,10 @@ CHANGES:
    equivalent to providing an empty value. Creating a namespace called "root" in
    the root namespace is disallowed.
 
+FEATURES:
+ * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
+   users
+
 IMPROVEMENTS:
 
  * auth/aws: AWS EC2 authentication can optionally create entity aliases by
