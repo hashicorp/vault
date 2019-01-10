@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-sockaddr"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
 // Auth is the resulting authentication information that is part of

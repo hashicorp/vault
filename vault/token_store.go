@@ -19,8 +19,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/go-multierror"
+	metrics "github.com/armon/go-metrics"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -85,16 +85,8 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS == nil {
-			return namespace.ErrNoNamespace
-		}
-
-		switch tokenNS.ID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -723,7 +715,7 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 
 	var err error
 	// Create a random accessor
-	entry.Accessor, err = base62.Random(TokenLength, true)
+	entry.Accessor, err = base62.Random(TokenLength)
 	if err != nil {
 		return err
 	}
@@ -790,7 +782,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.Random(TokenLength, true)
+			entry.ID, err = base62.Random(TokenLength)
 			if err != nil {
 				return err
 			}
@@ -812,7 +804,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
 			if entry.CubbyholeID == "" {
-				cubbyholeID, err := base62.Random(TokenLength, true)
+				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
 					return err
 				}
@@ -1722,7 +1714,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed get namespace from context: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
 	}
 
 	go func() {
@@ -1749,6 +1741,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			parentList, err := ts.parentView(ns).List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
+			}
+
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1824,9 +1822,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
+				countCubbyholeKeys,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor int64
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
+
+			validCubbyholeKeys := make(map[string]bool)
 
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
@@ -1871,10 +1873,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				lock.RUnlock()
 
-				// If token entry is not found assume that the token is not valid any
-				// more and conclude that accessor, leases, and secondary index entries
-				// for this token should not exist as well.
-				if te == nil {
+				switch {
+				case te == nil:
+					// If token entry is not found assume that the token is not valid any
+					// more and conclude that accessor, leases, and secondary index entries
+					// for this token should not exist as well.
+
 					ts.logger.Info("deleting token with nil entry referenced by accessor", "salted_accessor", saltedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
@@ -1904,6 +1908,41 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						continue
 					}
 					deletedCountAccessorInvalidToken++
+				default:
+					// Cache the cubbyhole storage key when the token is valid
+					switch {
+					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
+						saltedID, err := ts.SaltID(quitCtx, te.ID)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							continue
+						}
+						validCubbyholeKeys[salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)] = true
+					default:
+						if te.CubbyholeID == "" {
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
+							continue
+						}
+						validCubbyholeKeys[te.CubbyholeID] = true
+					}
+				}
+			}
+
+			// Revoke invalid cubbyhole storage keys
+			for _, key := range cubbyholeKeys {
+				countCubbyholeKeys++
+				if countCubbyholeKeys%500 == 0 {
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+				}
+
+				key := strings.TrimSuffix(key, "/")
+				if !validCubbyholeKeys[key] {
+					ts.logger.Info("deleting invalid cubbyhole", "key", key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
+					}
+					deletedCountInvalidCubbyholeKey++
 				}
 			}
 
@@ -1915,6 +1954,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+			ts.logger.Info("number of deleted cubbyhole keys that were invalid", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}

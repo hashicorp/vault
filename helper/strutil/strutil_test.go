@@ -363,6 +363,22 @@ func TestTrimStrings(t *testing.T) {
 	}
 }
 
+func TestRemoveEmpty(t *testing.T) {
+	input := []string{"abc", "", "abc", ""}
+	expected := []string{"abc", "abc"}
+	actual := RemoveEmpty(input)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Bad TrimStrings: expected:%#v, got:%#v", expected, actual)
+	}
+
+	input = []string{""}
+	expected = []string{}
+	actual = RemoveEmpty(input)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Bad TrimStrings: expected:%#v, got:%#v", expected, actual)
+	}
+}
+
 func TestStrutil_AppendIfMissing(t *testing.T) {
 	keys := []string{}
 

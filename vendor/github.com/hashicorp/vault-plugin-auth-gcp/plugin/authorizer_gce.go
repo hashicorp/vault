@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
@@ -140,12 +141,11 @@ func AuthorizeGCE(ctx context.Context, i *AuthorizeGCEInput) error {
 	// Verify instance is running under one of the allowed service accounts.
 	if len(i.boundServiceAccounts) > 0 {
 		// ServiceAccount wraps a call to the GCP IAM API to get a service account.
-		name := fmt.Sprintf("projects/%s/serviceAccounts/%s", i.project, i.serviceAccount)
+		name := fmt.Sprintf("projects/-/serviceAccounts/%s", i.serviceAccount)
 
 		saId, saEmail, err := i.client.ServiceAccount(ctx, name)
 		if err != nil {
-			return fmt.Errorf("could not find service account %q in project %q: %s",
-				i.serviceAccount, i.project, err)
+			return errwrap.Wrapf(fmt.Sprintf("could not find service account %q: {{err}}", i.serviceAccount), err)
 		}
 
 		if !(strutil.StrListContains(i.boundServiceAccounts, saEmail) ||

@@ -7,18 +7,25 @@ export default Component.extend({
   startTime: '',
   licenseId: '',
   features: null,
+  model: null,
   text: '',
   showForm: false,
   isTemporary: computed('licenseId', function() {
     return this.licenseId === 'temporary';
   }),
-  featuresInfo: computed('features', function() {
-    let info = [];
-    allFeatures().forEach(feature => {
-      let active = this.features.includes(feature) ? true : false;
-      info.push({ name: feature, active: active });
+  featuresInfo: computed('model', 'features', function() {
+    return allFeatures().map(feature => {
+      let active = this.features.includes(feature);
+      if (active && feature === 'Performance Standby') {
+        let count = this.model.performanceStandbyCount;
+        return {
+          name: feature,
+          active: count ? active : false,
+          count,
+        };
+      }
+      return { name: feature, active };
     });
-    return info;
   }),
   saveModel() {},
   actions: {

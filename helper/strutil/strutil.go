@@ -239,6 +239,22 @@ func RemoveDuplicates(items []string, lowercase bool) []string {
 	return items
 }
 
+// RemoveEmpty removes empty elements from a slice of
+// strings
+func RemoveEmpty(items []string) []string {
+	if len(items) == 0 {
+		return items
+	}
+	itemsSlice := make([]string, 0, len(items))
+	for _, item := range items {
+		if item == "" {
+			continue
+		}
+		itemsSlice = append(itemsSlice, item)
+	}
+	return itemsSlice
+}
+
 // EquivalentSlices checks whether the given string sets are equivalent, as in,
 // they contain the same values.
 func EquivalentSlices(a, b []string) bool {

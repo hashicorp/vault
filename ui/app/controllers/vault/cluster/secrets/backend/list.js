@@ -3,8 +3,9 @@ import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
+import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 
-export default Controller.extend(BackendCrumbMixin, {
+export default Controller.extend(BackendCrumbMixin, WithNavToNearestAncestor, {
   flashMessages: service(),
   queryParams: ['page', 'pageFilter', 'tab'],
 
@@ -71,7 +72,7 @@ export default Controller.extend(BackendCrumbMixin, {
         this.get('flashMessages').success(`${name} was successfully deleted.`);
         this.send('reload');
         if (type === 'secret') {
-          return this.transitionToRoute('vault.cluster.secrets.backend.list-root');
+          this.navToNearestAncestor.perform(name);
         }
       });
     },

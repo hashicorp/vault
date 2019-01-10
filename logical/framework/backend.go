@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/logging"
@@ -505,6 +505,12 @@ type FieldSchema struct {
 	Description string
 	Required    bool
 	Deprecated  bool
+
+	// AllowedValues is an optional list of permitted values for this field.
+	// This constraint is not (yet) enforced by the framework, but the list is
+	// output as part of OpenAPI generation and may effect documentation and
+	// dynamic UI generation.
+	AllowedValues []interface{}
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
