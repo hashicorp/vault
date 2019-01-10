@@ -138,6 +138,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     );
   });
 
+  // https://github.com/hashicorp/vault/issues/5994
+  test('version 1: key named keys', async function(assert) {
+    await consoleComponent.runCommands([
+      'vault write sys/mounts/test type=kv',
+      'refresh',
+      'vault write test/a keys=a keys=b',
+    ]);
+    await showPage.visit({ backend: 'test', id: 'a' });
+    assert.ok(showPage.editIsPresent, 'renders the page properly');
+  });
+
   test('it redirects to the path ending in / for list pages', async function(assert) {
     const path = `foo/bar/kv-path-${new Date().getTime()}`;
     await listPage.visitRoot({ backend: 'secret' });
