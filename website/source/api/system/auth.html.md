@@ -69,6 +69,8 @@ For example, enable the "foo" auth method will make it accessible at
 - `path` `(string: <required>)` – Specifies the path in which to enable the auth
   method. This is part of the request URL.
 
+    !> **NOTE:** Use ASCII printable characters to specify the desired path.
+
 - `description` `(string: "")` – Specifies a human-friendly description of the
   auth method.
 
