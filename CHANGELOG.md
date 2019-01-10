@@ -35,6 +35,13 @@ BUG FIXES:
  * replication: Correctly forward identity entity creation that originates from
    performance standby nodes (Enterprise)
  * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
+ * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
+ * ui - fix disappearing nested secrets and go to the nearest parent when deleting
+   a secret - [GH-5976]
+ * ui - fix error where deleting an item via the context menu would fail if the 
+   item name contained dots [GH-6018]
+ * ui - allow saving of kv secret after an errored save attempt [GH-6022]
+ * ui - fix display of kv-v1 secret containing a key named "keys" [GH-6023]
 
 ## 1.0.1 (December 14th, 2018)
 
