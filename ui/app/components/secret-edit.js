@@ -134,14 +134,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  buttonDisabled: or(
-    'requestInFlight',
-    'model.isFolder',
-    'model.isError',
-    'model.flagsIsInvalid',
-    'hasLintError',
-    'error'
-  ),
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
   modelForData: computed('isV2', 'model', function() {
     return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
