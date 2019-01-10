@@ -23,6 +23,7 @@
               "vault.cluster.secrets"
               current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
               invokeAction=(action Nav.closeDrawer)
+              data-test-navbar-item='secrets'
             }}
               Secrets
             {{/link-to}}
@@ -34,6 +35,7 @@
               params=(route-params-for 'access')
               current-when="vault.cluster.access vault.cluster.settings.auth"
               invokeAction=(action Nav.closeDrawer)
+              data-test-navbar-item='access'
               }}
               Access
             {{/link-to}}
@@ -46,6 +48,7 @@
               (route-params-for 'policies')
               current-when="vault.cluster.policies vault.cluster.policy"
               invokeAction=(action Nav.closeDrawer)
+              data-test-navbar-item='policies'
             }}
               Policies
             {{/link-to}}

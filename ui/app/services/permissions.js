@@ -85,7 +85,6 @@ export default Service.extend({
 
   navPathParams(navItem) {
     const path = Object.values(API_PATHS[navItem]).find(path => this.hasPermission(path));
-    // if it is policies or tools, split, otherwise look through a map
     if (['policies', 'tools'].includes(navItem)) {
       return path.split('/').lastObject;
     }

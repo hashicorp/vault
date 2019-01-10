@@ -85,4 +85,53 @@ module('Unit | Service | permissions', function(hooks) {
     service.set('isRootToken', true);
     assert.equal(service.hasPermission('hi'), true);
   });
+
+  test('returns the first allowed nav route for policies', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    const policyPaths = {
+      'sys/policies/acl': {
+        capabilities: ['deny'],
+      },
+      'sys/policies/rgp': {
+        capabilities: ['read'],
+      },
+    };
+    service.set('exactPaths', policyPaths);
+    assert.equal(service.navPathParams('policies'), 'rgp');
+  });
+
+  test('returns the first allowed nav route for access', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    const accessPaths = {
+      'sys/auth': {
+        capabilities: ['deny'],
+      },
+      'identity/entities': {
+        capabilities: ['read'],
+      },
+    };
+    const expected = ['vault.cluster.access.identity', 'entities'];
+    service.set('exactPaths', accessPaths);
+    assert.deepEqual(service.navPathParams('access'), expected);
+  });
+
+  test('hasNavPermission returns true if a policy includes access to at least one path', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    const accessPaths = {
+      'sys/auth': {
+        capabilities: ['deny'],
+      },
+      'sys/leases/lookup': {
+        capabilities: ['read'],
+      },
+    };
+    service.set('exactPaths', accessPaths);
+    assert.equal(service.hasNavPermission('access', 'leases'), true);
+  });
+
+  test('hasNavPermission returns false if a policy does not include access to any paths', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.set('exactPaths', {});
+    assert.equal(service.hasNavPermission('access'), false);
+  });
 });
