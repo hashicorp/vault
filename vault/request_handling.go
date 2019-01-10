@@ -577,7 +577,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		newCtErr, cgResp, cgAuth, cgRetErr := checkNeedsCG(ctx, c, req, auth, ctErr, nonHMACReqDataKeys)
 		switch {
 		case newCtErr != nil:
-			ctErr = err
+			ctErr = newCtErr
 		case cgResp != nil || cgAuth != nil:
 			if cgRetErr != nil {
 				retErr = multierror.Append(retErr, cgRetErr)
