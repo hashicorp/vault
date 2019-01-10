@@ -7,12 +7,14 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/physical"
@@ -98,6 +100,21 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		k.region = region
 	default:
 		k.region = "us-east-1"
+
+		// If available, get the region from EC2 instance metadata
+		sess, err := session.NewSession(nil)
+		if err != nil {
+			k.logger.Warn(fmt.Sprintf("unable to begin session: %s, defaulting region to %s", err, k.region))
+			break
+		}
+
+		// This will hang for ~10 seconds if the agent isn't running on an EC2 instance
+		region, err := ec2metadata.New(sess).Region()
+		if err != nil {
+			k.logger.Warn(fmt.Sprintf("unable to retrieve region from ec2 instance metadata: %s, defaulting region to %s", err, k.region))
+			break
+		}
+		k.region = region
 	}
 
 	// Check and set AWS access key, secret key, and session token
