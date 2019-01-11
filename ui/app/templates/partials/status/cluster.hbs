@@ -1,7 +1,7 @@
 <div class="popup-menu-content">
   <div class="box">
     {{#if (and activeCluster.unsealed auth.currentToken)}}
-      {{#if (has-permission 'status' 'replication')}}
+      {{#if (has-permission 'status' routeParams='replication')}}
         <nav class="menu">
           <p class="menu-label">Replication</p>
           <ul>
@@ -71,7 +71,7 @@
       {{/if}}
     {{/if}}
     {{#unless version.isOSS}}
-      {{#if (has-permission 'status' 'license')}}
+      {{#if (has-permission 'status' routeParams='license')}}
         <nav class="menu">
           <div class="menu-label">
             License
@@ -97,7 +97,7 @@
         <ul class="menu-list">
           <li class="action">
             {{#if activeCluster.unsealed}}
-              {{#if (has-permission 'status' 'seal')}}
+              {{#if (has-permission 'status' routeParams='seal')}}
                 {{#link-to 'vault.cluster.settings.seal' cluster.name
                   class="level is-mobile"
                   invokeAction=(action (queue (action onLinkClick) (action d.actions.close)))

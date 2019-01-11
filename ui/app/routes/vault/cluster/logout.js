@@ -22,6 +22,6 @@ export default Route.extend(ModelBoundaryRoute, {
     this.clearModelCache();
     this.replaceWith('vault.cluster');
     this.get('flashMessages').clearMessages();
-    this.permissions.clearPaths();
+    this.get('permissions').reset();
   },
 });

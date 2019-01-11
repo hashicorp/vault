@@ -80,6 +80,12 @@ module('Unit | Service | permissions', function(hooks) {
     assert.equal(service.hasPermission('danger'), false);
   });
 
+  test('sets the root token', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.setPaths({ data: { root: true } });
+    assert.equal(service.isRootToken, true);
+  });
+
   test('returns true with the root token', function(assert) {
     let service = this.owner.lookup('service:permissions');
     service.set('isRootToken', true);

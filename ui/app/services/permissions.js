@@ -40,6 +40,12 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/control-group/': ['vault.cluster.access.control-groups'],
 };
 
+/*
+  The Permissions service is used to gate top navigation and sidebar items. It fetches
+  a users' policy from the resultant-acl endpoint and stores their allowed exact and glob
+  paths as state. It also has methods for checking whether a user has permission for a given
+  path.
+*/
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
@@ -64,7 +70,7 @@ export default Service.extend({
     this.set('isRootToken', resp.data.root);
   },
 
-  clearPaths() {
+  reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('isRootToken', null);
@@ -103,7 +109,7 @@ export default Service.extend({
     const exactPaths = this.get('exactPaths');
     if (exactPaths) {
       const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
-      return prefix && this.isNotDenied(exactPaths[prefix]);
+      return prefix && !this.isDenied(exactPaths[prefix]);
     }
     return false;
   },
@@ -112,12 +118,12 @@ export default Service.extend({
     const globPaths = this.get('globPaths');
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
-      return (matchingPath && this.isNotDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+      return (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
     }
     return false;
   },
 
-  isNotDenied(path) {
-    return !path.capabilities.includes('deny');
+  isDenied(path) {
+    return path.capabilities.includes('deny');
   },
 });

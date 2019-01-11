@@ -1,34 +1,34 @@
 <div class="columns">
   {{#menu-sidebar title="Access" class="is-3" data-test-sidebar=true}}
-    {{#if (has-permission "access" "methods")}}
+    {{#if (has-permission "access" routeParams="methods")}}
       <li>
         {{#link-to "vault.cluster.access.methods" data-test-link=true current-when="vault.cluster.access.methods vault.cluster.access.method"}}
           Auth Methods
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" "entities")}}
+    {{#if (has-permission "access" routeParams="entities")}}
       <li>
         {{#link-to "vault.cluster.access.identity" "entities" data-test-link=true }}
           Entities
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" "groups")}}
+    {{#if (has-permission "access" routeParams="groups")}}
       <li>
         {{#link-to "vault.cluster.access.identity" "groups" data-test-link=true }}
           Groups
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" "leases")}}
+    {{#if (has-permission "access" routeParams="leases")}}
       <li>
         {{#link-to "vault.cluster.access.leases" data-test-link=true}}
           Leases
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" "namespaces")}}
+    {{#if (has-permission "access" routeParams="namespaces")}}
       <li>
         {{#link-to "vault.cluster.access.namespaces" data-test-link=true }}
           Namespaces
@@ -40,7 +40,7 @@
         {{/link-to}}
       </li>
     {{/if}}
-    {{#if (has-permission "access" "control-groups")}}
+    {{#if (has-permission "access" routeParams="control-groups")}}
       <li>
         {{#link-to "vault.cluster.access.control-groups" data-test-link=true current-when="vault.cluster.access.control-groups vault.cluster.access.control-group-accessor vault.cluster.access.control-groups-configure"}}
           Control Groups
