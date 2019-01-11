@@ -27,7 +27,7 @@ func TestLoadConfigFile(t *testing.T) {
 		}
 	}
 
-	t.Run("non-embedded type", func(t *testing.T) {
+	t.Run("non-embedded-type", func(t *testing.T) {
 		expected := &Config{
 			AutoAuth: &AutoAuth{
 				Method: &Method{
