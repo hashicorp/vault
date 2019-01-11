@@ -49,7 +49,7 @@ const API_PATHS_TO_ROUTE_PARAMS = {
 export default Service.extend({
   exactPaths: null,
   globPaths: null,
-  isRootToken: null,
+  canViewAll: null,
   store: service(),
   auth: service(),
 
@@ -57,23 +57,29 @@ export default Service.extend({
     if (this.paths) {
       return;
     }
-    let resp = yield this.get('store')
-      .adapterFor('permissions')
-      .query();
-    this.setPaths(resp);
-    return;
+
+    try {
+      let resp = yield this.get('store')
+        .adapterFor('permissions')
+        .query();
+      this.setPaths(resp);
+      return;
+    } catch (err) {
+      // If no policy can be found, default to showing all nav items.
+      this.set('canViewAll', true);
+    }
   }),
 
   setPaths(resp) {
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
-    this.set('isRootToken', resp.data.root);
+    this.set('canViewAll', resp.data.root);
   },
 
   reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
-    this.set('isRootToken', null);
+    this.set('canViewAll', null);
     this.checkAuthToken.perform();
   },
 
@@ -99,7 +105,7 @@ export default Service.extend({
   },
 
   hasPermission(pathName) {
-    if (this.isRootToken || this.hasMatchingExactPath(pathName) || this.hasMatchingGlobPath(pathName)) {
+    if (this.canViewAll || this.hasMatchingExactPath(pathName) || this.hasMatchingGlobPath(pathName)) {
       return true;
     }
     return false;

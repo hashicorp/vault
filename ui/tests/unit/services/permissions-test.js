@@ -83,13 +83,22 @@ module('Unit | Service | permissions', function(hooks) {
   test('sets the root token', function(assert) {
     let service = this.owner.lookup('service:permissions');
     service.setPaths({ data: { root: true } });
-    assert.equal(service.isRootToken, true);
+    assert.equal(service.canViewAll, true);
   });
 
   test('returns true with the root token', function(assert) {
     let service = this.owner.lookup('service:permissions');
-    service.set('isRootToken', true);
+    service.set('canViewAll', true);
     assert.equal(service.hasPermission('hi'), true);
+  });
+
+  test('defaults to show all items when policy cannot be found', async function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
+      return [403, { 'Content-Type': 'application/json' }];
+    });
+    await service.getPaths.perform();
+    assert.equal(service.canViewAll, true);
   });
 
   test('returns the first allowed nav route for policies', function(assert) {
