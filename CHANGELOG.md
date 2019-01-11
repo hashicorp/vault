@@ -30,6 +30,12 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: Fix a couple of places where we were using the `LIST` HTTP verb
+   (necessary to get the right method into the wrapping lookup function) and
+   not then modifying it to a `GET`; although this is officially the verb Vault
+   uses for listing and it's fully legal to use custom verbs, since many WAFs
+   and API gateways choke on anything outside of RFC-standardized verbs we fall
+   back to `GET` [GH-6026]
  * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
    also provided [GH-5965]
  * command/operator/rekey: Fix help output showing `-delete-backup` when it
