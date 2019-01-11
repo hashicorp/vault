@@ -208,8 +208,8 @@ This endpoint creates or updates a named role.
   '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
   e.g. "custom-keyid-{{token_display_name}}"
 
-- `signed_key_constraints` `(map<string|int>: "")` – Specifies a map of ssh key types
-  and their minimum sizes which are allowed to be signed by the CA type.
+- `allowed_user_key_lengths` `(map<string|int>: "")` – Specifies a map of ssh key types
+  and their expected sizes which are allowed to be signed by the CA type.
 
 ### Sample Payload
 

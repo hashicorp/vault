@@ -15,9 +15,12 @@ import (
 )
 
 const (
-	KeyTypeOTP     = "otp"
+	// KeyTypeOTP is an key of type OTP
+	KeyTypeOTP = "otp"
+	// KeyTypeDynamic is dynamic key type
 	KeyTypeDynamic = "dynamic"
-	KeyTypeCA      = "ca"
+	// KeyTypeCA is an key of type CA
+	KeyTypeCA = "ca"
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
@@ -48,7 +51,7 @@ type sshRole struct {
 	AllowSubdomains        bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
 	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
 	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
-        SignedKeyConstraints   map[string]int    `mapstructure:"signed_key_constraints" json:"signed_key_constraints"`
+	AllowedUserKeyLengths  map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -280,13 +283,13 @@ func pathRoles(b *backend) *framework.Path {
 				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,
 			},
-                        "signed_key_constraints": &framework.FieldSchema{
-                                Type: framework.TypeMap,
-                                Description: `
+			"allowed_user_key_lengths": &framework.FieldSchema{
+				Type: framework.TypeMap,
+				Description: `
                                 [Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
                                 If set, allows the enforcement of key types and minimum key sizes to be signed.
                                 `,
-                        },
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -466,7 +469,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
 	defaultExtensions := convertMapToStringValue(data.Get("default_extensions").(map[string]interface{}))
-        signedKeyConstraints := convertMapToIntValue(data.Get("signed_key_constraints").(map[string]interface{}))
+	allowedUserKeyLengths := convertMapToIntValue(data.Get("allowed_user_key_lengths").(map[string]interface{}))
 
 	if ttl != 0 && maxTTL != 0 && ttl > maxTTL {
 		return nil, logical.ErrorResponse(
@@ -478,7 +481,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 	role.MaxTTL = maxTTL.String()
 	role.DefaultCriticalOptions = defaultCriticalOptions
 	role.DefaultExtensions = defaultExtensions
-        role.SignedKeyConstraints = signedKeyConstraints
+	role.AllowedUserKeyLengths = allowedUserKeyLengths
 
 	return role, nil
 }
@@ -544,7 +547,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"key_bits":                 role.KeyBits,
 			"default_critical_options": role.DefaultCriticalOptions,
 			"default_extensions":       role.DefaultExtensions,
-                        "signed_key_constraints":   role.SignedKeyConstraints,
+			"allowed_user_key_lengths": role.AllowedUserKeyLengths,
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{
