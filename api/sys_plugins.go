@@ -61,8 +61,9 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	defer resp.Body.Close()
 
 	// We received an Unsupported Operation response from Vault, indicating
-	// Vault of an older version that doesn't support the READ method yet.
-	if resp.StatusCode == 405 && method == "GET" {
+	// Vault of an older version that doesn't support the GET method yet;
+	// switch it to a LIST.
+	if resp.StatusCode == 405 {
 		req.Params.Set("list", "true")
 		resp, err := c.c.RawRequestWithContext(ctx, req)
 		if err != nil {
