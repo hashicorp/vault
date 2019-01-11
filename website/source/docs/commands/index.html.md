@@ -51,6 +51,11 @@ and arguments if any:
 vault <command> [options] [path] [args]
 ```
 
+- `options` - CLI flags to specify additional settings (e.g. display the command
+  output in JSON format)    
+- `args` - Request parameters specific to the command operation (equivalent
+  to the parameters you set when invoking Vault API)
+
 For example, the following `write` command passes the `-address` option flag to
 specify the Vault server address which precedes the path
 (`auth/userpass/users/bob`) and its command argument
