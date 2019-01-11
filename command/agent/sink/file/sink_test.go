@@ -1,11 +1,13 @@
 package file
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -118,4 +120,36 @@ func TestSinkServerRetry(t *testing.T) {
 	// Tell it to shut down and give it time to do so
 	cancelFunc()
 	<-ss.DoneCh
+}
+
+func TestSinkServerNoSinks(t *testing.T) {
+	buf := new(bytes.Buffer)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:  hclog.Info,
+		Output: buf,
+	})
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	ss := sink.NewSinkServer(&sink.SinkServerConfig{
+		Logger: logger.Named("sink.server"),
+	})
+
+	uuidStr, _ := uuid.GenerateUUID()
+	in := make(chan string)
+	go ss.Run(ctx, in, nil) // no sinks provided
+
+	// Seed a token
+	in <- uuidStr
+
+	// Give it time to finish writing
+	time.Sleep(1 * time.Second)
+
+	// Tell it to shut down and give it time to do so
+	cancelFunc()
+	<-ss.DoneCh
+
+	if strings.Contains(buf.String(), "[ERROR]") {
+		t.Fatalf("Sink server should have produced no errors when len(sinks) < 1. Got errors:\n\t%s", buf.String())
+	}
 }

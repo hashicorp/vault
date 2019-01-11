@@ -78,7 +78,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	}()
 
 	latestToken := new(string)
-	sinkCh := make(chan func() error, len(sinks))
+	sinkCh := make(chan func() error, len(sinks) + 1)
 	for {
 		select {
 		case <-ctx.Done():

@@ -126,11 +126,8 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
 	}
 
-	switch {
-	case a.Method == nil:
+	if a.Method == nil {
 		return fmt.Errorf("no 'method' block found")
-	case len(a.Sinks) == 0:
-		return fmt.Errorf("at least one 'sink' block must be provided")
 	}
 
 	return nil
@@ -185,7 +182,7 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 
 	sinkList := list.Filter(name)
 	if len(sinkList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
+		return nil
 	}
 
 	var ts []*Sink
