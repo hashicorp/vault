@@ -43,8 +43,8 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 
 	req := c.c.NewRequest(method, path)
 	if method == "LIST" {
-		// Set this for broader compatibility, but we use LIST above to be able to
-		// handle the wrapping lookup function
+		// Set this for broader compatibility, but we use LIST above to be able
+		// to handle the wrapping lookup function
 		req.Method = "GET"
 		req.Params.Set("list", "true")
 	}
