@@ -42,6 +42,12 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 
 	req := c.c.NewRequest(method, path)
+	if method == "LIST" {
+		// Set this for broader compatibility, but we use LIST above to be able to
+		// handle the wrapping lookup function
+		req.Method = "GET"
+		req.Params.Set("list", "true")
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -56,8 +62,8 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 
 	// We received an Unsupported Operation response from Vault, indicating
 	// Vault of an older version that doesn't support the READ method yet.
-	if resp.StatusCode == 405 && req.Method == "GET" {
-		req.Method = "LIST"
+	if resp.StatusCode == 405 && method == "GET" {
+		req.Params.Set("list", "true")
 		resp, err := c.c.RawRequestWithContext(ctx, req)
 		if err != nil {
 			return nil, err
