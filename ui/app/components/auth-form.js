@@ -1,4 +1,4 @@
-import { run } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -24,7 +24,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
 
-  // set during init and potentially passed in via a query param
+  //  passed in via a query param
   selectedAuth: null,
   methods: null,
   cluster: null,
@@ -129,16 +129,6 @@ export default Component.extend(DEFAULTS, {
     return this.role && this.role.authUrl && this.selectedAuthBackend.type === 'jwt';
   }),
 
-  OIDCredirectUrl: computed('isOIDC', function() {
-    if (!this.isOIDC) {
-      return null;
-    }
-    let [path] = JSON.parse(this.role.id);
-    return `${
-      this.role.authUrl
-    }&redirect_uri=${window.location.origin}${this.router.urlFor('vault.cluster.oidc-callback', { auth_path: path })}`;
-  }),
-
   unwrapToken: task(function*(token) {
     // will be using the token auth method, so set it here
     this.set('selectedAuth', 'token');
@@ -146,7 +136,9 @@ export default Component.extend(DEFAULTS, {
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('token', response.auth.client_token);
-      this.send('doSubmit');
+      next(() => {
+        this.send('doSubmit');
+      });
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
@@ -161,7 +153,7 @@ export default Component.extend(DEFAULTS, {
         },
       });
       this.set('methods', methods.map(m => m.serialize({ includeId: true })));
-      run.next(() => {
+      next(() => {
         store.unloadAll('auth-method');
       });
     } catch (e) {
@@ -226,7 +218,10 @@ export default Component.extend(DEFAULTS, {
       this.authenticate.perform(backend.type, data);
     },
     startOIDCAuth() {
-      window.location = this.OIDCredirectUrl;
+      if (!this.isOIDC) {
+        return;
+      }
+      window.location = this.role.authUrl;
       // window opener service opens window at the auth url
       // use localStorage events to sync across tabs / windows
       // fire event that navigates to the pending screen

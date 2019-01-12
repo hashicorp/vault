@@ -8,8 +8,10 @@ export default Route.extend({
     let adapter = this.store.adapterFor('auth-method');
 
     return adapter.exchangeOIDC(auth_path, state, code).then(resp => {
-      let token = resp.wrapped_token;
-      return this.transitionTo('vault.cluster.auth', { queryParams: { wrapped_token: token } });
+      let { token } = resp.wrap_info;
+      return this.transitionTo('vault.cluster.auth', {
+        queryParams: { wrapped_token: token, with: 'token' },
+      });
     });
   },
 });
