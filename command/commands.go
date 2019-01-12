@@ -31,6 +31,7 @@ import (
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
+	credOidc "github.com/hashicorp/vault/builtin/credential/oidc"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -175,6 +176,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
+		"oidc":     &credOidc.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
