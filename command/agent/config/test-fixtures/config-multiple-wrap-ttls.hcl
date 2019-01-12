@@ -16,6 +16,6 @@ auto_auth {
 		aad = "foobar"
 		dh_type = "curve25519"
 		dh_path = "/tmp/file-foo-dhpath"
-    wrap_ttl = 300
+		wrap_ttl = 300
 	}
 }
