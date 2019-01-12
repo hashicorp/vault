@@ -21,7 +21,6 @@ auto_auth {
 
 	sink {
 		type = "file"
-		wrap_ttl = "5m" 
 		aad_env_var = "TEST_AAD_ENV"
 		dh_type = "curve25519"
 		dh_path = "/tmp/file-foo-dhpath2"

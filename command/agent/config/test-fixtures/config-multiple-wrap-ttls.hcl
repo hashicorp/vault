@@ -16,14 +16,6 @@ auto_auth {
 		aad = "foobar"
 		dh_type = "curve25519"
 		dh_path = "/tmp/file-foo-dhpath"
-	}
-
-	sink "file" {
-		aad_env_var = "TEST_AAD_ENV"
-		dh_type = "curve25519"
-		dh_path = "/tmp/file-foo-dhpath2"
-		config = {
-			path = "/tmp/file-bar"
-		}
+    wrap_ttl = 300
 	}
 }
