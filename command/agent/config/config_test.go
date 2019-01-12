@@ -113,7 +113,7 @@ func TestLoadConfigFile(t *testing.T) {
 	})
 
 	t.Run("multiple-wrap-ttls", func(t *testing.T) {
-		err := errors.New("error parsing 'auto_auth': error parsing 'sink' stanzas: sink.file 'wrap_ttl' must be in either the 'method' or 'sink' block, but not in both")
+		err := errors.New("error parsing 'auto_auth': error parsing 'sink' stanzas: sink.file 'wrap_ttl' may be in either the 'method' or 'sink' block, but not in both")
 		testLoadConfig("./test-fixtures/config-multiple-wrap-ttls.hcl", nil, err)
 	})
 }

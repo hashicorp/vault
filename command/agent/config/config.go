@@ -207,7 +207,7 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 
 		if s.WrapTTLRaw != nil {
 			if result.AutoAuth.Method.WrapTTL > 0 {
-				return multierror.Prefix(errors.New("'wrap_ttl' must be in either the 'method' or 'sink' block, but not in both"), fmt.Sprintf("sink.%s", s.Type))
+				return multierror.Prefix(errors.New("'wrap_ttl' may be in either the 'method' or 'sink' block, but not in both"), fmt.Sprintf("sink.%s", s.Type))
 			}
 
 			var err error
