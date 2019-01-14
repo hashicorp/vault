@@ -409,7 +409,9 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 	lock.Lock()
 	defer lock.Unlock()
 
-	pRaw, ok = lm.cache.Load(name)
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(name)
+	}
 	if ok {
 		p = pRaw.(*Policy)
 		p.l.Lock()
