@@ -277,7 +277,10 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		}
 
 		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
-		if err != nil || pluginType == consts.PluginTypeUnknown {
+		if err != nil {
+			return err
+		}
+		if pluginType == consts.PluginTypeUnknown {
 			return ErrPluginBadType
 		}
 	}
