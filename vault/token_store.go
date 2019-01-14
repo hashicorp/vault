@@ -688,7 +688,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 	for _, entry := range entries {
 		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
 		if err != nil {
-			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
 			continue
 		}
 
