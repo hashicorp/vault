@@ -100,9 +100,30 @@
             },
             'delete',
             {
+              category: 'kv',
+              content: [
+                'delete',
+                'destroy',
+                'enable-versioning',
+                'get',
+                'list',
+                {
+                  category: 'metadata',
+                  content: [
+                    'delete',
+                    'get',
+                    'put',
+                  ]
+                },
+                'patch',
+                'put',
+                'undelete'
+              ]
+            },
+            {
               category: 'lease',
               content: ['renew', 'revoke']
-            },
+            }, 
             'list',
             'login',
             'namespace',
