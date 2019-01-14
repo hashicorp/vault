@@ -44,13 +44,11 @@ export default Controller.extend({
     'activeClusterName',
     'auth.currentToken',
     'activeCluster.{dr.isSecondary,needsInit,sealed}',
-    'permissions.checkAuthToken.isRunning',
     function() {
       if (
         this.get('activeCluster.dr.isSecondary') ||
         this.get('activeCluster.needsInit') ||
-        this.get('activeCluster.sealed') ||
-        this.permissions.checkAuthToken.isRunning
+        this.get('activeCluster.sealed')
       ) {
         return false;
       }

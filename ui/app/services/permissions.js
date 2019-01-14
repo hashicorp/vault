@@ -1,5 +1,5 @@
 import Service, { inject as service } from '@ember/service';
-import { task, waitForProperty } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 
 const API_PATHS = {
   secrets: { engine: 'cubbyhole/' },
@@ -52,6 +52,7 @@ export default Service.extend({
   canViewAll: null,
   store: service(),
   auth: service(),
+  namespace: service(),
 
   getPaths: task(function*() {
     if (this.paths) {
@@ -80,13 +81,7 @@ export default Service.extend({
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('canViewAll', null);
-    this.checkAuthToken.perform();
   },
-
-  checkAuthToken: task(function*() {
-    yield waitForProperty(this.auth, 'currentTokenName', token => !!token);
-    yield this.getPaths.perform();
-  }),
 
   hasNavPermission(navItem, routeParams) {
     if (routeParams) {
@@ -104,8 +99,19 @@ export default Service.extend({
     return API_PATHS_TO_ROUTE_PARAMS[path];
   },
 
+  pathNameWithNamespace(pathName) {
+    const namespace = this.get('namespace').path;
+    if (namespace) {
+      return `${namespace}/${pathName}`;
+    } else {
+      return pathName;
+    }
+  },
+
   hasPermission(pathName) {
-    if (this.canViewAll || this.hasMatchingExactPath(pathName) || this.hasMatchingGlobPath(pathName)) {
+    const path = this.pathNameWithNamespace(pathName);
+
+    if (this.canViewAll || this.hasMatchingExactPath(path) || this.hasMatchingGlobPath(path)) {
       return true;
     }
     return false;

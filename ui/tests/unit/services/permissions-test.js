@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import Pretender from 'pretender';
+import Service from '@ember/service';
 
 const PERMISSIONS_RESPONSE = {
   data: {
@@ -148,5 +149,14 @@ module('Unit | Service | permissions', function(hooks) {
     let service = this.owner.lookup('service:permissions');
     service.set('exactPaths', {});
     assert.equal(service.hasNavPermission('access'), false);
+  });
+
+  test('appends the namespace to the path if there is one', function(assert) {
+    const namespaceService = Service.extend({
+      path: 'marketing',
+    });
+    this.owner.register('service:namespace', namespaceService);
+    let service = this.owner.lookup('service:permissions');
+    assert.equal(service.pathNameWithNamespace('sys/auth'), 'marketing/sys/auth');
   });
 });
