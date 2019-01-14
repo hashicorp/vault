@@ -83,7 +83,8 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 		if err == nil {
 			err := client.Setup(ctx, &logical.BackendConfig{})
 			if err != nil {
-				return consts.PluginTypeUnknown, err
+				errs = multierror.Append(errs, err)
+				return consts.PluginTypeUnknown, errs
 			}
 
 			backendType := client.Type()
