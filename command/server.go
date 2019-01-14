@@ -741,7 +741,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
-		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
+		if vault.IsFatalError(newCoreError) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
@@ -938,7 +938,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
+		if vault.IsFatalError(err) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
 			return 1
 		}
