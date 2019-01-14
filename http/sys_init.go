@@ -135,7 +135,10 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	core.UnsealWithStoredKeys(ctx)
+	if err := core.UnsealWithStoredKeys(ctx); err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	respondOk(w, resp)
 }
