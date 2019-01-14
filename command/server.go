@@ -937,12 +937,31 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
-	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-		if vault.IsFatalError(err) {
-			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
-			return 1
+	// Attempt unsealing in a background goroutine. This is needed for when a
+	// Vault cluster with multiple servers is configured with auto-unseal but is
+	// uninitialized. Once one server initializes the storage backend, this
+	// goroutine will pick up the unseal keys and unseal this instance.
+	go func() {
+		for {
+			err := core.UnsealWithStoredKeys(context.Background())
+			if err == nil {
+				return
+			}
+
+			if vault.IsFatalError(err) {
+				c.logger.Error(fmt.Sprintf("Error unsealing core", "error", err))
+				return
+			} else {
+				c.logger.Warn(fmt.Sprintf("Failed to unseal core", "error" err))
+			}
+
+			select {
+			case <-c.ShutdownCh:
+				return
+			case <-time.After(5 * time.Second):
+			}
 		}
-	}
+	}()
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.

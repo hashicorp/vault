@@ -281,7 +281,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	defer c.unsealWithStoredKeysLock.Unlock()
 
 	if !c.seal.StoredKeysSupported() {
-		return errors.New("stored keys are not supported")
+		return nil
 	}
 
 	// Disallow auto-unsealing when migrating
