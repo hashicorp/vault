@@ -2,7 +2,11 @@
   <h2 class="title is-6">
     Choosing where to go
   </h2>
-  <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below</p>
+  <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below.</p>
+  <div class="access-information">
+    <ICon @glyph="information-circled" class="has-text-info"/>
+    <p>Vault only shows links to pages that you have access to based on your policies. Contact your administrator if you need access changes.</p>
+  </div>
   {{#if (or (has-feature "Performance Replication") (has-feature "DR Replication")) }}
   {{/if}}
   <h3 class="feature-header">Walk me through setting up:</h3>

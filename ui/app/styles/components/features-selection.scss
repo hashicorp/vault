@@ -4,6 +4,12 @@
   color: $grey;
 }
 
+.access-information {
+  display: flex;
+  padding: 12px 0px;
+  font-size: $size-8;
+}
+
 .feature-box {
   box-shadow: $box-shadow;
   border-radius: $radius;
