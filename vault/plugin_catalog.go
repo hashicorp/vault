@@ -63,8 +63,8 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
-	var errs error
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+
 	{
 		// Attempt to run as database plugin
 		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
@@ -73,7 +73,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 			client.Close()
 			return consts.PluginTypeDatabase, nil
 		} else {
-			errs = multierror.Append(errs, err)
+			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
 		}
 	}
 
@@ -83,8 +83,7 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 		if err == nil {
 			err := client.Setup(ctx, &logical.BackendConfig{})
 			if err != nil {
-				errs = multierror.Append(errs, err)
-				return consts.PluginTypeUnknown, errs
+				return consts.PluginTypeUnknown, err
 			}
 
 			backendType := client.Type()
@@ -96,13 +95,13 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 			case logical.TypeLogical:
 				return consts.PluginTypeSecrets, nil
 			}
-			errs = multierror.Append(errs, fmt.Errorf("unrecognized backendType: %s", backendType))
+			logger.Warn(fmt.Sprintf("unknown backendType of %s", backendType))
 		} else {
-			errs = multierror.Append(errs, err)
+			logger.Warn(fmt.Sprintf("received %s attempting as an auth/secret plugin, continuing", err))
 		}
 	}
 
-	return consts.PluginTypeUnknown, errs
+	return consts.PluginTypeUnknown, nil
 }
 
 // UpdatePlugins will loop over all the plugins of unknown type and attempt to
@@ -148,7 +147,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, err := c.getPluginTypeFromUnknown(ctx, plugin)
+		pluginType, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
@@ -276,7 +275,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 			Builtin: false,
 		}
 
-		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
 		if err != nil {
 			return err
 		}
