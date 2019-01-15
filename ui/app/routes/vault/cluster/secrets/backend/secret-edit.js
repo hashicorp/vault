@@ -1,11 +1,13 @@
 import { set } from '@ember/object';
 import { hash, resolve } from 'rsvp';
+import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
+import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import DS from 'ember-data';
 
 export default Route.extend(UnloadModelRoute, {
+  pathHelp: service('path-help'),
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
@@ -35,6 +37,7 @@ export default Route.extend(UnloadModelRoute, {
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
     const { secret } = this.paramsFor(this.routeName);
+    this.buildModel(secret);
     const parentKey = utils.parentKeyForKey(secret);
     const mode = this.routeName.split('.').pop();
     if (mode === 'edit' && utils.keyIsFolder(secret)) {
@@ -44,6 +47,24 @@ export default Route.extend(UnloadModelRoute, {
         return this.transitionTo('vault.cluster.secrets.backend.list-root');
       }
     }
+  },
+
+  buildModel(secret) {
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let modelType = this.modelType(backend, secret);
+    let modelFactory = getOwner(this).factoryFor(`model:${modelType}`);
+    this.pathHelp.getAttrs(modelType, backend).then(attrs => {
+      let newModel;
+      if (modelFactory) {
+        //combine them
+        newModel = modelFactory.class.reopen({
+          attrs,
+        });
+      } else {
+        //generate a whole new model
+      }
+      getOwner(this).register(newModel.toString(), newModel);
+    });
   },
 
   modelType(backend, secret) {
