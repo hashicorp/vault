@@ -51,7 +51,7 @@ and arguments if any:
 vault <command> [options] [path] [args]
 ```
 
-- `options` - CLI flags to specify additional settings
+- `options` - [Flags](/docs/commands/index.html#flags) to specify additional settings
 - `args` - API arguments specific to the operation
 
   -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
@@ -77,8 +77,8 @@ $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
         auth/userpass/users/bob password="long-password" policies="admin"
 ```
 
-The options (CLI flags) come after the command (or subcommand) preceding the
-path, and the args always follow the path to set API parameter values.
+The options (flags) come after the command (or subcommand) preceding the path,
+and the args always follow the path to set API parameter values.
 
 ## Exit Codes
 
