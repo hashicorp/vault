@@ -72,9 +72,9 @@ type AESGCMBarrier struct {
 // the provided physical backend for storage.
 func NewAESGCMBarrier(physical physical.Backend) (*AESGCMBarrier, error) {
 	b := &AESGCMBarrier{
-		backend: physical,
-		sealed:  true,
-		cache:   make(map[uint32]cipher.AEAD),
+		backend:                  physical,
+		sealed:                   true,
+		cache:                    make(map[uint32]cipher.AEAD),
 		currentAESGCMVersionByte: byte(AESGCMVersion2),
 	}
 	return b, nil

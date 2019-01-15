@@ -2419,19 +2419,19 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"common_name": "issuer.abc.com",
-		"csr":         resp.Data["csr"],
+		"common_name":           "issuer.abc.com",
+		"csr":                   resp.Data["csr"],
 		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
+		"ttl":                   "5h",
 	})
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"use_csr_values": true,
-		"csr":            resp.Data["csr"],
+		"use_csr_values":        true,
+		"csr":                   resp.Data["csr"],
 		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
+		"ttl":                   "5h",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -2439,10 +2439,10 @@ func TestBackend_Permitted_DNS_Domains(t *testing.T) {
 
 	// Sign a valid intermediate
 	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"common_name": "issuer.zipzap.com",
-		"csr":         resp.Data["csr"],
+		"common_name":           "issuer.zipzap.com",
+		"csr":                   resp.Data["csr"],
 		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
+		"ttl":                   "5h",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2613,8 +2613,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber: big.NewInt(1234),
-		IsCA:         false,
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2644,8 +2644,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber: big.NewInt(2345),
-		IsCA:         true,
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)

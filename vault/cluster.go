@@ -241,7 +241,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 				// 30 years of single-active uptime ought to be enough for anybody
 				NotAfter:              time.Now().Add(262980 * time.Hour),
 				BasicConstraintsValid: true,
-				IsCA: true,
+				IsCA:                  true,
 			}
 
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)

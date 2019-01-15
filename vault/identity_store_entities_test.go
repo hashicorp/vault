@@ -151,8 +151,8 @@ func TestIdentityStore_EntityCreateUpdate(t *testing.T) {
 
 func TestIdentityStore_CloneImmutability(t *testing.T) {
 	alias := &identity.Alias{
-		ID:   "testaliasid",
-		Name: "testaliasname",
+		ID:                     "testaliasid",
+		Name:                   "testaliasname",
 		MergedFromCanonicalIDs: []string{"entityid1"},
 	}
 
@@ -324,7 +324,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	meGH.UUID = meGHUUID
 
 	// Mount accessor for github auth
-	githubAccessor, err := c.generateMountAccessor("github")
+	githubAccessor, err := c.generateMountAccessor("github", "")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate github accessor: %v", err))
 	}

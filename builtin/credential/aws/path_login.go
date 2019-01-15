@@ -863,8 +863,8 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	return &roleTagLoginResponse{
-		Policies: rTag.Policies,
-		MaxTTL:   rTag.MaxTTL,
+		Policies:                 rTag.Policies,
+		MaxTTL:                   rTag.MaxTTL,
 		DisallowReauthentication: rTag.DisallowReauthentication,
 	}, nil
 }

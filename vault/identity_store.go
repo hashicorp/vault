@@ -33,10 +33,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	iStore := &IdentityStore{
-		view:        config.StorageView,
-		db:          db,
-		entityLocks: locksutil.CreateLocks(),
-		logger:      core.logger,
+		view:                      config.StorageView,
+		db:                        db,
+		entityLocks:               locksutil.CreateLocks(),
+		logger:                    core.logger,
 		validateMountAccessorFunc: core.router.validateMountByAccessor,
 	}
 

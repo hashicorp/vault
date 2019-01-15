@@ -88,7 +88,7 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
-		accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+		accessor, err := c.generateMountAccessor(entry.Type, entry.Path)
 		if err != nil {
 			return err
 		}
@@ -333,7 +333,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 			needPersist = true
 		}
 		if entry.Accessor == "" {
-			accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+			accessor, err := c.generateMountAccessor(entry.Type, entry.Path)
 			if err != nil {
 				return err
 			}
@@ -566,7 +566,7 @@ func (c *Core) defaultAuthTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
 	}
-	tokenAccessor, err := c.generateMountAccessor("auth_token")
+	tokenAccessor, err := c.generateMountAccessor("auth_token", "")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate accessor for default auth table token entry: %v", err))
 	}

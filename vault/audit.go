@@ -81,7 +81,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry) error {
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
-		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
+		accessor, err := c.generateMountAccessor(entry.Type, entry.Path)
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ func (c *Core) loadAudits(ctx context.Context) error {
 			needPersist = true
 		}
 		if entry.Accessor == "" {
-			accessor, err := c.generateMountAccessor("audit_" + entry.Type)
+			accessor, err := c.generateMountAccessor(entry.Type, entry.Path)
 			if err != nil {
 				return err
 			}
