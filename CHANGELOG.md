@@ -1,5 +1,11 @@
 ## 1.0.2 (Unreleased)
 
+SECURITY:
+
+ * When creating a child token from a parent with `bound_cidrs`, the list of
+   CIDRs would not be propagated to the child token, allowing the child token
+   to be used from any address.
+
 CHANGES:
 
  * secret/aws: Role now returns `credential_type` instead of `credential_types`
@@ -40,10 +46,11 @@ BUG FIXES:
    also provided [GH-5965]
  * command/operator/rekey: Fix help output showing `-delete-backup` when it
    should show `-backup-delete` [GH-5981]
- * secret/aws: Make input `credential_type` match the output type (string, not
-   array) [GH-5972]
+ * core: Fix bound_cidrs not being propagated to child tokens
  * replication: Correctly forward identity entity creation that originates from
    performance standby nodes (Enterprise)
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
  * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
  * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
  * ui - fix disappearing nested secrets and go to the nearest parent when deleting

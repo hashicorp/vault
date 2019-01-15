@@ -2428,10 +2428,17 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// At this point, it is clear whether the token is going to be an orphan or
 	// not. If the token is not going to be an orphan, inherit the parent's
-	// entity identifier into the child token. We must also verify that, if
-	// it's not an orphan, the parent isn't a batch token.
+	// entity identifier into the child token.
 	if te.Parent != "" {
 		te.EntityID = parent.EntityID
+
+		// If the parent has bound CIDRs, copy those into the child. We don't
+		// do this if role is not nil because then we always use the role's
+		// bound CIDRs; roles allow escalation of privilege in proper
+		// circumstances.
+		if role == nil {
+			te.BoundCIDRs = parent.BoundCIDRs
+		}
 	}
 
 	var explicitMaxTTLToUse time.Duration
