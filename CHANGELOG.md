@@ -1,4 +1,4 @@
-## 1.0.2 (Unreleased)
+## 1.0.2 (January 15th, 2019)
 
 SECURITY:
 
