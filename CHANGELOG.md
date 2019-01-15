@@ -52,6 +52,7 @@ BUG FIXES:
  * secret/aws: Make input `credential_type` match the output type (string, not
    array) [GH-5972]
  * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
+ * secret/pki: Fix reading certificates on windows with the file storage backend [GH-6013]
  * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
  * ui - fix disappearing nested secrets and go to the nearest parent when deleting
    a secret - [GH-5976]
