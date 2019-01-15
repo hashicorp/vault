@@ -41,8 +41,8 @@ $ vault <subcommand> -h
 
 ## CLI Command Structure
 
-There are a number of command options available: HTTP options, output options,
-and command specific options.
+There are a number of command and subcommand options available: HTTP options,
+output options, and command specific options.
 
 Construct your Vault CLI command such that the command options precede its path
 and arguments if any:
@@ -51,26 +51,34 @@ and arguments if any:
 vault <command> [options] [path] [args]
 ```
 
-- `options` - CLI flags to specify additional settings (e.g. display the output
-  in JSON format)    
-- `args` - Input parameters specific to the command operation you are invoking
+- `options` - CLI flags to specify additional settings
+- `args` - API arguments specific to the operation
 
-For example, the following `write` command passes the `-address` option flag to
-specify the Vault server address which precedes the path
-(`auth/userpass/users/bob`) and its command argument
+  -> **NOTE:** Run `vault path-help <path>` to see the list of args (parameters).
+
+#### Examples:
+
+The following `write` command creates a new user (`bob`) in the userpass auth
+method. It passes the `-address` flag to specify the Vault server address which
+precedes the path (`auth/userpass/users/bob`) and its
+[argument](/api/auth/userpass/index.html#create-update-user)
 (`password="long-password"`) at last.
 
 ```text
 $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password="long-password"
 ```
 
-If multiple options (`-address` and `-namespace`) and arguments (`password`
-and `policies`) are specified, the command would look like:
+If multiple options (`-address` and `-namespace`) and
+[arguments](/api/auth/userpass/index.html#create-update-user) (`password` and
+`policies`) are specified, the command would look like:
 
 ```text
 $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
         auth/userpass/users/bob password="long-password" policies="admin"
 ```
+
+The options (CLI flags) come after the command (or subcommand) preceding the
+path, and the args always follow the path to set API parameter values.
 
 ## Exit Codes
 
