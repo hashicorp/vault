@@ -82,6 +82,16 @@ $ bin/vault
 ...
 ```
 
+To compile a development version of Vault with the UI, run `make static-dist dev-ui`. This will
+put the Vault binary in the `bin` and `$GOPATH/bin` folders:
+
+```sh
+$ make static-dist dev-ui
+...
+$ bin/vault
+...
+```
+
 To run tests, type `make test`. Note: this requires Docker to be installed. If
 this exits with exit status 0, then everything is working!
 
