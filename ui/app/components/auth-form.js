@@ -6,7 +6,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task } from 'ember-concurrency';
+import { task, timeout, waitForEvent } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
 const DEFAULTS = {
@@ -199,8 +199,51 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
+  handleOIDCError(err) {
+    this.set('error', err);
+  },
+
+  prepareForOIDC: task(function*(oidcWindow) {
+    this.waitForClose.perform(oidcWindow);
+    let onMessageEvent = yield waitForEvent(window, 'message');
+    this.exchangeOIDC.perform(onMessageEvent, oidcWindow);
+  }),
+
+  waitForClose: task(function*(oidcWindow) {
+    while (true) {
+      yield timeout(500);
+      if (!oidcWindow || oidcWindow.closed) {
+        return this.handleOIDCError('windowClosed');
+      }
+    }
+  }),
+
+  closeWindow(oidcWindow) {
+    this.waitForClose.cancelAll();
+    oidcWindow.close();
+  },
+
+  exchangeOIDC: task(function*(event, oidcWindow) {
+    let { namespace, path, state, code } = event.data;
+    this.closeWindow(oidcWindow);
+    if (!path || !state || !code) {
+      return this.handleOIDCError('missingParams');
+    }
+    let adapter = this.store.adapterFor('auth-method');
+    // this might be bad to mutate the outer state
+    this.set('namespace', namespace);
+    let resp = yield adapter.exchangeOIDC(path, state, code);
+    let token = resp.auth.client_token;
+    this.set('selectedAuth', 'token');
+    this.set('token', token);
+    yield this.send('doSubmit');
+  }),
+
   actions: {
-    doSubmit() {
+    doSubmit(e) {
+      if (e) {
+        e.preventDefault();
+      }
       let data = {};
       this.setProperties({
         error: null,
@@ -215,17 +258,21 @@ export default Component.extend(DEFAULTS, {
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }
-      this.authenticate.perform(backend.type, data);
+      return this.authenticate.perform(backend.type, data);
     },
-    startOIDCAuth() {
+
+    startOIDCAuth(e) {
+      e.preventDefault();
       if (!this.isOIDC) {
         return;
       }
-      window.location = this.role.authUrl;
-      // window opener service opens window at the auth url
-      // use localStorage events to sync across tabs / windows
-      // fire event that navigates to the pending screen
-      // and waits for the OIDC flow
+
+      let oidcWindow = window.open(
+        this.role.authUrl,
+        'vaultOIDCWindow',
+        'width=500,height=600,resizable,scrollbars=yes,centerscreen=yes,chrome=yes'
+      );
+      this.prepareForOIDC.perform(oidcWindow);
     },
   },
 });

@@ -58,6 +58,6 @@ export default ApplicationAdapter.extend({
   },
 
   exchangeOIDC(path, state, code) {
-    return this.ajax(`/v1/auth/${path}/oidc/callback`, 'GET', { data: { state, code }, wrapTTL: '30s' });
+    return this.ajax(`/v1/auth/${path}/oidc/callback`, 'GET', { data: { state, code } });
   },
 });
