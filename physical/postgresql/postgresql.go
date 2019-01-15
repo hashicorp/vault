@@ -164,7 +164,7 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 	}
 
 	ent := &physical.Entry{
-		Key:   key,
+		Key:   fullPath,
 		Value: result,
 	}
 	return ent, nil
