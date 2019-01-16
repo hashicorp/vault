@@ -128,7 +128,7 @@ test-ember:
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
-ember-dist:
+ember-dist: static-assets
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
@@ -136,15 +136,15 @@ ember-dist:
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
-ember-dist-dev:
+ember-dist-dev: static-assets
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build-dev
 
-static-dist: ember-dist static-assets
-static-dist-dev: ember-dist-dev static-assets
+static-dist: ember-dist
+static-dist-dev: ember-dist-dev
 
 proto:
 	protoc vault/*.proto --go_out=plugins=grpc:../../..
