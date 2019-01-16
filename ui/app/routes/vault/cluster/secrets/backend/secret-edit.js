@@ -32,7 +32,7 @@ export default Route.extend(UnloadModelRoute, {
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel() {
+  beforeModel(params) {
     // currently there is no recursive delete for folders in vault, so there's no need to 'edit folders'
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
@@ -53,17 +53,20 @@ export default Route.extend(UnloadModelRoute, {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, secret);
     let modelFactory = getOwner(this).factoryFor(`model:${modelType}`);
+    let owner = getOwner(this);
     this.pathHelp.getAttrs(modelType, backend).then(attrs => {
       let newModel;
       if (modelFactory) {
         //combine them
-        newModel = modelFactory.class.reopen({
-          attrs,
-        });
+        newModel = modelFactory.class.reopenClass(attrs);
       } else {
         //generate a whole new model
       }
-      getOwner(this).register(newModel.toString(), newModel);
+      newModel = newModel.class.reopenClass({ merged: true });
+      debugger; //eslint-disable-line
+      owner.unregister(newModel.toString());
+      owner.register(newModel.toString(), newModel);
+      this.refresh();
     });
   },
 

@@ -36,6 +36,7 @@ import { expandProperties } from '@ember/object/computed';
  */
 
 export const expandAttributeMeta = function(modelClass, attributeNames, namePrefix, map) {
+  debugger; //eslint-disable-line
   let fields = [];
   // expand all attributes
   attributeNames.forEach(field => expandProperties(field, x => fields.push(x)));
@@ -96,6 +97,7 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
  */
 
 export default function(modelClass, fieldGroups) {
+  debugger; //eslint-disable-line
   return fieldGroups.map(group => {
     const groupKey = Object.keys(group)[0];
     const fields = expandAttributeMeta(modelClass, group[groupKey]);
