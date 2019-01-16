@@ -15,9 +15,9 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
-  // keyType: attr('string', {
-  //   possibleValues: ['rsa', 'ec'],
-  // }),
+  keyType: attr('string', {
+    possibleValues: ['rsa', 'ec'],
+  }),
   // ttl: attr({
   //   label: 'TTL',
   //   editType: 'ttl',
@@ -124,7 +124,7 @@ export default DS.Model.extend({
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed('backend', function() {
     const groups = [
       { default: ['name', 'keyType'] },
       {
