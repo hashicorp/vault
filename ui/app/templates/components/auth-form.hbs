@@ -103,7 +103,7 @@
     <div class="box is-marginless is-shadowless">
       <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
         {{#if isOIDC}}
-        Sign In via OIDC Provider
+        Sign In via {{or this.role.providerName 'OIDC Provider'}}
         {{else}}
         Sign In
         {{/if}}
