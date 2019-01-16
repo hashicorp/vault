@@ -74,9 +74,13 @@
                     }
                   },
                   "age": {
-                    "type": "number",
+                    "type": "integer",
                     "description": "the age",
-                    "enum": [1, 2, 3]
+                    "enum": [1, 2, 3],
+                    "required": true,
+                    "x-vault-display-name": "Age",
+                    "x-vault-display-value": 7,
+                    "x-vault-display-sensitive": true
                   },
                   "name": {
                     "type": "string",

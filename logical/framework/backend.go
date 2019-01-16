@@ -511,6 +511,12 @@ type FieldSchema struct {
 	// output as part of OpenAPI generation and may effect documentation and
 	// dynamic UI generation.
 	AllowedValues []interface{}
+
+	// Display* members are available to provide hints for UI and documentation
+	// generators. They will be included in OpenAPI output if set.
+	DisplayName      string
+	DisplayValue     interface{}
+	DisplaySensitive bool
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise
