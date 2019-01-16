@@ -26,8 +26,6 @@ const (
 	// CKMS-specific values
 	EnvGCPCKMSSealKeyRing   = "VAULT_GCPCKMS_SEAL_KEY_RING"
 	EnvGCPCKMSSealCryptoKey = "VAULT_GCPCKMS_SEAL_CRYPTO_KEY"
-
-	CloudKMSScope = "https://www.googleapis.com/auth/cloudkms"
 )
 
 // GCPKMSMechanism is the method used to encrypt/decrypt in the autoseal
@@ -276,7 +274,6 @@ func (s *GCPCKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInf
 func (s *GCPCKMSSeal) getClient() (*cloudkms.KeyManagementClient, error) {
 	client, err := cloudkms.NewKeyManagementClient(context.Background(),
 		option.WithCredentialsFile(s.credsPath),
-		option.WithScopes(CloudKMSScope),
 		option.WithUserAgent(useragent.String()),
 	)
 	if err != nil {
