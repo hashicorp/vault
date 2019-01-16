@@ -20,6 +20,6 @@ export default Route.extend({
         },
         { namespace: namespace, path: path }
       );
-    window.opener.postMessage(queryParams);
+    window.localStorage.setItem('oidcState', JSON.stringify(queryParams));
   },
 });
