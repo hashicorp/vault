@@ -692,7 +692,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if numBinds == 0 {
-		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
+		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
 	policiesRaw, ok := data.GetOk("policies")
