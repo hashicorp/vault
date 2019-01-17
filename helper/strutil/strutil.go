@@ -301,6 +301,21 @@ func EquivalentSlices(a, b []string) bool {
 	return true
 }
 
+// EqualStringMaps tests whether two map[string]string objects are equal
+func EqualStringMaps(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k := range a {
+		if a[k] != b[k] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // StrListDelete removes the first occurrence of the given item from the slice
 // of strings if the item exists.
 func StrListDelete(s []string, d string) []string {
