@@ -132,7 +132,7 @@
 /guides/identity/policy-templating.html         https://learn.hashicorp.com/vault/identity-access-management/policy-templating
 /guides/identity/authentication.html            https://learn.hashicorp.com/vault/identity-access-management/iam-authentication
 /guides/identity/approle-trusted-entities.html  https://learn.hashicorp.com/vault/identity-access-management/iam-approle-trusted-entities
-/guides/identity/lease.html                     https://learn.hashicorp.com/vault/secrets-management/sm-lease
+/guides/identity/lease.html                     https://learn.hashicorp.com/vault/secrets-management/tokens
 /guides/identity/identity.html                  https://learn.hashicorp.com/vault/identity-access-management/iam-identity
 /guides/identity/sentinel.html                  https://learn.hashicorp.com/vault/identity-access-management/iam-sentinel
 /guides/identity/control-groups.html            https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups
