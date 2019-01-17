@@ -7,12 +7,16 @@ export default Component.extend({
   onRoleChange() {},
   selectedAuthPath: null,
   roleName: null,
+
   fetchRole: task(function*(roleName) {
-    // debounce
     this.set('roleName', roleName);
+    // debounce
     yield timeout(500);
-    let id = JSON.stringify([this.selectedAuthPath, roleName]);
+    let path = this.selectedAuthPath || 'jwt';
+    let id = JSON.stringify([path, roleName]);
     let role = yield this.store.findRecord('role-jwt', id);
     this.onRoleChange(role);
-  }).restartable(),
+  })
+    .restartable()
+    .on('init'),
 });
