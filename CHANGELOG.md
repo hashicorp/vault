@@ -2,9 +2,13 @@
 
 BUG FIXES:
 
- * physical/postgresql: The `Get` method will now return an Entry object with the
+ * storage/postgresql: The `Get` method will now return an Entry object with the
    `Key` member correctly populated with the full path that was requested instead
-   of just the last path element [GH-6044]
+   of just the last path element [GH-6044].
+   
+IMPROVEMENTS:
+  * auth/jwt: The supported set of signing algorithms is now configurable
+    [JWT plugin GH-16].
 
 ## 1.0.2 (January 15th, 2019)
 
