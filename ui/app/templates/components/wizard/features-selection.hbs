@@ -12,7 +12,7 @@
   <h3 class="feature-header">Walk me through setting up:</h3>
   <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
     {{#each allFeatures as |feature|}}
-    {{#if feature.show}}
+    {{#if (and feature.show (has-permission feature.permission))}}
     <div class="feature-box {{if feature.selected 'is-active'}}">
       <div class="b-checkbox">
         <input
