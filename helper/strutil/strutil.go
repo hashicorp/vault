@@ -308,7 +308,8 @@ func EqualStringMaps(a, b map[string]string) bool {
 	}
 
 	for k := range a {
-		if a[k] != b[k] {
+		v, ok := b[k]
+		if !ok || a[k] != v {
 			return false
 		}
 	}

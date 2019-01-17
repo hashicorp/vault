@@ -542,6 +542,14 @@ func TestStrUtil_EqualStringMaps(t *testing.T) {
 	}
 	var m3 map[string]string
 
+	m4 := map[string]string{
+		"dog": "",
+	}
+
+	m5 := map[string]string{
+		"cat": "",
+	}
+
 	tests := []struct {
 		a      map[string]string
 		b      map[string]string
@@ -554,6 +562,7 @@ func TestStrUtil_EqualStringMaps(t *testing.T) {
 		{m2, m2, true},
 		{m3, m1, false},
 		{m3, m3, true},
+		{m4, m5, false},
 	}
 
 	for i, test := range tests {
