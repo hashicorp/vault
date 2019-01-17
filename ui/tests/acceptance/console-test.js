@@ -55,7 +55,7 @@ module('Acceptance | console', function(hooks) {
       let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
 
       assert.notOk(consoleOut.includes('function(){'));
-      assert.equal(consoleOut, '["root"]', 'Unexpected content:' + consoleOut);
+      assert.equal(consoleOut, '["root"]');
     }, 300);
   });
 
@@ -66,7 +66,7 @@ module('Acceptance | console', function(hooks) {
     // have to wrap in a later so that we can wait for the CSS transition to finish
     await later(() => {
       let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
-      assert.ok(consoleOut.match(/^\d+$/).length == 1, 'Non number content: ' + consoleOut);
+      assert.ok(consoleOut.match(/^\d+$/).length == 1);
     }, 300);
   });
 
@@ -77,7 +77,7 @@ module('Acceptance | console', function(hooks) {
     // have to wrap in a later so that we can wait for the CSS transition to finish
     await later(() => {
       let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
-      assert.ok(consoleOut.match(/^(true|false)$/g).length == 1, 'Non boolean content: ' + consoleOut);
+      assert.ok(consoleOut.match(/^(true|false)$/g).length == 1);
     }, 300);
   });
 });
