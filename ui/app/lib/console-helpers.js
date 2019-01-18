@@ -106,13 +106,16 @@ export function logFromResponse(response, path, method, flags) {
       if (format && format === 'json') {
         return { type: 'json', content: fieldValue };
       }
-      switch (typeof fieldValue) {
-        case 'string':
-          response = { type: 'text', content: fieldValue };
-          break;
-        default:
-          response = { type: 'object', content: fieldValue };
-          break;
+      if (typeof fieldValue == 'string') {
+        response = { type: 'text', content: fieldValue };
+      } else if (typeof fieldValue == 'number') {
+        response = { type: 'text', content: JSON.stringify(fieldValue) };
+      } else if (typeof fieldValue == 'boolean') {
+        response = { type: 'text', content: JSON.stringify(fieldValue) };
+      } else if (Array.isArray(fieldValue)) {
+        response = { type: 'text', content: JSON.stringify(fieldValue) };
+      } else {
+        response = { type: 'object', content: fieldValue };
       }
     } else {
       response = { type: 'error', content: `Field "${field}" not present in secret` };
