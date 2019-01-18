@@ -14,8 +14,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
@@ -64,7 +65,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Scan the storage with the count func set
-	if err = logical.ScanView(context.Background(), exp.idView, countFunc); err != nil {
+	if err = logical.ScanView(namespace.RootContext(nil), exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,12 +76,13 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	// Create a lease entry without a client token in it
 	le := &leaseEntry{
-		LeaseID: "lease/with/no/client/token",
-		Path:    "foo/bar",
+		LeaseID:   "lease/with/no/client/token",
+		Path:      "foo/bar",
+		namespace: namespace.RootNamespace,
 	}
 
 	// Persist the invalid lease entry
-	if err = exp.persistEntry(context.Background(), le); err != nil {
+	if err = exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
 
@@ -96,7 +98,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Run the tidy operation
-	err = exp.Tidy()
+	err = exp.Tidy(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +117,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	le.ClientToken = "invalidtoken"
 
 	// Persist the invalid lease entry
-	if err = exp.persistEntry(context.Background(), le); err != nil {
+	if err = exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
 
@@ -131,7 +133,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Run the tidy operation
-	err = exp.Tidy()
+	err = exp.Tidy(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +149,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Attach an invalid token with 2 leases
-	if err = exp.persistEntry(context.Background(), le); err != nil {
+	if err = exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
 
@@ -157,7 +159,7 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	// Run the tidy operation
-	err = exp.Tidy()
+	err = exp.Tidy(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,6 +180,7 @@ func TestExpiration_Tidy(t *testing.T) {
 			Path:        "invalid/lease/" + fmt.Sprintf("%d", i+1),
 			ClientToken: "invalidtoken",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "invalidtoken", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -188,7 +191,7 @@ func TestExpiration_Tidy(t *testing.T) {
 				"test_key": "test_value",
 			},
 		}
-		_, err := exp.Register(context.Background(), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -211,11 +214,11 @@ func TestExpiration_Tidy(t *testing.T) {
 	// one tidy operation can be in flight at any time. One of these requests
 	// should error out.
 	go func() {
-		errCh1 <- exp.Tidy()
+		errCh1 <- exp.Tidy(namespace.RootContext(nil))
 	}()
 
 	go func() {
-		errCh2 <- exp.Tidy()
+		errCh2 <- exp.Tidy(namespace.RootContext(nil))
 	}()
 
 	var err1, err2 error
@@ -241,12 +244,12 @@ func TestExpiration_Tidy(t *testing.T) {
 	le.ClientToken = root.ID
 
 	// Attach a valid token with the leases
-	if err = exp.persistEntry(context.Background(), le); err != nil {
+	if err = exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
 
 	// Run the tidy operation
-	err = exp.Tidy()
+	err = exp.Tidy(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +321,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 	if err != nil {
 		b.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -378,7 +381,7 @@ func TestExpiration_Restore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,6 +397,7 @@ func TestExpiration_Restore(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobar",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -405,7 +409,7 @@ func TestExpiration_Restore(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(context.Background(), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -450,6 +454,7 @@ func TestExpiration_Register(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -462,7 +467,7 @@ func TestExpiration_Register(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(context.Background(), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -490,12 +495,20 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 		},
 	}
 
-	err = exp.RegisterAuth(context.Background(), "auth/github/login", auth)
+	te := &logical.TokenEntry{
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = exp.RegisterAuth(context.Background(), "auth/github/../login", auth)
+	te = &logical.TokenEntry{
+		Path:        "auth/github/../login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -512,14 +525,24 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 		ClientToken: root.ID,
 	}
 
-	err = exp.RegisterAuth(context.Background(), "auth/github/login", auth)
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should not be able to renew, no expiration
-	resp, err := exp.RenewToken(context.Background(), &logical.Request{}, "auth/github/login", root.ID, 0)
-	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease not found or lease is not renewable")) {
+	te = &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	resp, err := exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease is not renewable")) {
 		t.Fatalf("bad: err:%v resp:%#v", err, resp)
 	}
 	if resp == nil {
@@ -530,7 +553,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	// Verify token does not get revoked
-	out, err := exp.tokenStore.Lookup(context.Background(), root.ID)
+	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), root.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -548,7 +571,7 @@ func TestExpiration_Revoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -558,6 +581,7 @@ func TestExpiration_Revoke(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -570,12 +594,12 @@ func TestExpiration_Revoke(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(context.Background(), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	if err := exp.Revoke(context.Background(), id); err != nil {
+	if err := exp.Revoke(namespace.RootContext(nil), id); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -594,7 +618,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,6 +628,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -616,7 +641,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err = exp.Register(context.Background(), req, resp)
+	_, err = exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -651,7 +676,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -667,6 +692,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobar",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -678,14 +704,14 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(context.Background(), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 	}
 
 	// Should nuke all the keys
-	if err := exp.RevokePrefix(context.Background(), "prod/aws/", true); err != nil {
+	if err := exp.RevokePrefix(namespace.RootContext(nil), "prod/aws/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -719,7 +745,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -735,6 +761,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobarbaz",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobarbaz", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -746,7 +773,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(context.Background(), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -754,9 +781,10 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 
 	// Should nuke all the keys
 	te := &logical.TokenEntry{
-		ID: "foobarbaz",
+		ID:          "foobarbaz",
+		NamespaceID: namespace.RootNamespaceID,
 	}
-	if err := exp.RevokeByToken(context.Background(), te); err != nil {
+	if err := exp.RevokeByToken(namespace.RootContext(nil), te); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -806,7 +834,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -822,6 +850,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 			Path:        path,
 			ClientToken: "foobarbaz",
 		}
+		req.SetTokenEntry(&logical.TokenEntry{ID: "foobarbaz", NamespaceID: "root"})
 		resp := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
@@ -833,7 +862,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(context.Background(), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -841,9 +870,10 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 
 	// Should nuke all the keys
 	te := &logical.TokenEntry{
-		ID: "foobarbaz",
+		ID:          "foobarbaz",
+		NamespaceID: namespace.RootNamespaceID,
 	}
-	if err := exp.RevokeByToken(context.Background(), te); err != nil {
+	if err := exp.RevokeByToken(namespace.RootContext(nil), te); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -898,13 +928,24 @@ func TestExpiration_RenewToken(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/login", auth)
+
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/token/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Renew the token
-	out, err := exp.RenewToken(context.Background(), &logical.Request{}, "auth/token/login", root.ID, 0)
+	te = &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/token/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	out, err := exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -922,8 +963,9 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		DisplayName:  "root",
 		CreationTime: time.Now().Unix(),
 		Period:       time.Minute,
+		NamespaceID:  namespace.RootNamespaceID,
 	}
-	if err := exp.tokenStore.create(context.Background(), root); err != nil {
+	if err := exp.tokenStore.create(namespace.RootContext(nil), root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -936,13 +978,23 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		},
 		Period: time.Minute,
 	}
-	err := exp.RegisterAuth(context.Background(), "auth/token/login", auth)
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/token/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err := exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Renew the token
-	out, err := exp.RenewToken(context.Background(), &logical.Request{}, "auth/token/login", root.ID, 0)
+	te = &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/token/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	out, err := exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -984,7 +1036,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -998,15 +1050,25 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		},
 		Period: 5 * time.Second,
 	}
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/foo/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
 
-	err = exp.RegisterAuth(context.Background(), "auth/foo/login", auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Wait 3 seconds
 	time.Sleep(3 * time.Second)
-	resp, err := exp.RenewToken(context.Background(), &logical.Request{}, "auth/foo/login", root.ID, 0)
+	te = &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/foo/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	resp, err := exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1019,7 +1081,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 
 	// Wait another 3 seconds. If period works correctly, this should not fail
 	time.Sleep(3 * time.Second)
-	resp, err = exp.RenewToken(context.Background(), &logical.Request{}, "auth/foo/login", root.ID, 0)
+	resp, err = exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1046,14 +1108,24 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 			Renewable: false,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/github/login", auth)
+	te := &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/foo/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Attempt to renew the token
-	resp, err := exp.RenewToken(context.Background(), &logical.Request{}, "auth/github/login", root.ID, 0)
-	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease is not renewable")) {
+	te = &logical.TokenEntry{
+		ID:          root.ID,
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	resp, err := exp.RenewToken(namespace.RootContext(nil), &logical.Request{}, te, 0)
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "invalid lease ID")) {
 		t.Fatalf("bad: err:%v resp:%#v", err, resp)
 	}
 	if resp == nil {
@@ -1071,7 +1143,7 @@ func TestExpiration_Renew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1081,6 +1153,7 @@ func TestExpiration_Renew(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1094,7 +1167,7 @@ func TestExpiration_Renew(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(context.Background(), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1111,7 +1184,7 @@ func TestExpiration_Renew(t *testing.T) {
 		},
 	}
 
-	out, err := exp.Renew(context.Background(), id, 0)
+	out, err := exp.Renew(namespace.RootContext(nil), id, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1141,7 +1214,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1151,6 +1224,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1164,12 +1238,12 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(context.Background(), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	_, err = exp.Renew(context.Background(), id, 0)
+	_, err = exp.Renew(namespace.RootContext(nil), id, 0)
 	if err.Error() != "lease is not renewable" {
 		t.Fatalf("err: %v", err)
 	}
@@ -1191,7 +1265,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1201,6 +1275,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: "foobar",
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -1214,7 +1289,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(context.Background(), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1231,7 +1306,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err = exp.Renew(context.Background(), id, 0)
+	_, err = exp.Renew(namespace.RootContext(nil), id, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1267,7 +1342,7 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1285,9 +1360,10 @@ func TestExpiration_revokeEntry(t *testing.T) {
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
+		namespace:  namespace.RootNamespace,
 	}
 
-	err = exp.revokeEntry(context.Background(), le)
+	err = exp.revokeEntry(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1336,17 +1412,18 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		Path:        "foo/bar",
 		IssueTime:   time.Now(),
 		ExpireTime:  time.Now(),
+		namespace:   namespace.RootNamespace,
 	}
 
-	if err := exp.persistEntry(context.Background(), le); err != nil {
+	if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("error persisting entry: %v", err)
 	}
-	if err := exp.createIndexByToken(context.Background(), le.ClientToken, le.LeaseID); err != nil {
+	if err := exp.createIndexByToken(namespace.RootContext(nil), le, le.ClientToken); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
 	exp.updatePending(le, le.Secret.LeaseTotal())
 
-	indexEntry, err := exp.indexByToken(context.Background(), le.ClientToken, le.LeaseID)
+	indexEntry, err := exp.indexByToken(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1354,14 +1431,14 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: should have found a secondary index entry")
 	}
 
-	err = exp.revokeEntry(context.Background(), le)
+	err = exp.revokeEntry(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	time.Sleep(300 * time.Millisecond)
 
-	out, err := exp.tokenStore.Lookup(context.Background(), le.ClientToken)
+	out, err := exp.tokenStore.Lookup(namespace.RootContext(nil), le.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1369,7 +1446,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	indexEntry, err = exp.indexByToken(context.Background(), le.ClientToken, le.LeaseID)
+	indexEntry, err = exp.indexByToken(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1400,7 +1477,7 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1418,9 +1495,10 @@ func TestExpiration_renewEntry(t *testing.T) {
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now(),
+		namespace:  namespace.RootNamespace,
 	}
 
-	resp, err := exp.renewEntry(context.Background(), le, 0)
+	resp, err := exp.renewEntry(namespace.RootContext(nil), le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1465,7 +1543,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1483,14 +1561,15 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now().Add(time.Minute),
+		namespace:  namespace.RootNamespace,
 	}
 
-	err = exp.persistEntry(context.Background(), le)
+	err = exp.persistEntry(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = exp.LazyRevoke(context.Background(), le.LeaseID)
+	err = exp.LazyRevoke(namespace.RootContext(nil), le.LeaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1507,7 +1586,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = core.setupExpiration()
+	err = core.setupExpiration(expireLeaseStrategyRevoke)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1523,7 +1602,7 @@ func TestExpiration_revokeEntry_rejected(t *testing.T) {
 	// Now let the revocation actually process
 	time.Sleep(1 * time.Second)
 
-	le, err = exp.FetchLeaseTimes(context.Background(), le.LeaseID)
+	le, err = exp.FetchLeaseTimes(namespace.RootContext(nil), le.LeaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1551,7 +1630,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1570,9 +1649,10 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 		},
 		IssueTime:  time.Now(),
 		ExpireTime: time.Now().Add(time.Minute),
+		namespace:  namespace.RootNamespace,
 	}
 
-	resp, err := exp.renewAuthEntry(context.Background(), &logical.Request{}, le, 0)
+	resp, err := exp.renewAuthEntry(namespace.RootContext(nil), &logical.Request{}, le, 0)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1613,12 +1693,13 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		IssueTime:       lastTime,
 		ExpireTime:      lastTime,
 		LastRenewalTime: lastTime,
+		namespace:       namespace.RootNamespace,
 	}
-	if err := exp.persistEntry(context.Background(), le); err != nil {
+	if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := exp.loadEntry(context.Background(), "foo/bar/1234")
+	out, err := exp.loadEntry(namespace.RootContext(nil), "foo/bar/1234")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1634,12 +1715,12 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", le, out)
 	}
 
-	err = exp.deleteEntry(context.Background(), "foo/bar/1234")
+	err = exp.deleteEntry(namespace.RootContext(nil), le)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err = exp.loadEntry(context.Background(), "foo/bar/1234")
+	out, err = exp.loadEntry(namespace.RootContext(nil), "foo/bar/1234")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1722,7 +1803,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Accessor: "badrenewaccessor",
 	}
 
-	err := core.mount(context.Background(), me)
+	err := core.mount(namespace.RootContext(nil), me)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1732,8 +1813,9 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1747,13 +1829,13 @@ func TestExpiration_RevokeForce(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	req.Path = "sys/revoke-prefix/badrenew/creds"
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	req.Path = "sys/revoke-force/badrenew/creds"
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("got error: %s", err)
 	}
@@ -1770,7 +1852,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		Accessor: "badrenewaccessor",
 	}
 
-	err := core.mount(context.Background(), me)
+	err := core.mount(namespace.RootContext(nil), me)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1780,8 +1862,9 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 		Path:        "badrenew/creds",
 		ClientToken: root,
 	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1796,7 +1879,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	req.Path = "sys/leases/lookup"
 	req.Data = map[string]interface{}{"lease_id": leaseID}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1809,20 +1892,20 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 
 	req.Path = "sys/revoke-prefix/" + leaseID
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 
 	req.Path = "sys/revoke-force/" + leaseID
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("got error: %s", err)
 	}
 
 	req.Path = "sys/leases/lookup"
 	req.Data = map[string]interface{}{"lease_id": leaseID}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1834,7 +1917,7 @@ func TestExpiration_RevokeForceSingle(t *testing.T) {
 func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	be := &framework.Backend{
 		Paths: []*framework.Path{
-			&framework.Path{
+			{
 				Pattern: "creds",
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
@@ -1860,9 +1943,10 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 				},
 			},
 		},
+		BackendType: logical.TypeLogical,
 	}
 
-	err := be.Setup(context.Background(), conf)
+	err := be.Setup(namespace.RootContext(nil), conf)
 	if err != nil {
 		return nil, err
 	}

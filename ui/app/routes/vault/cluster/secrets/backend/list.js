@@ -1,9 +1,11 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash, all } from 'rsvp';
+import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
-export default Ember.Route.extend({
+export default Route.extend({
   queryParams: {
     page: {
       refreshModel: true,
@@ -29,6 +31,7 @@ export default Ember.Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
+    this.store.unloadAll('capabilities');
   },
 
   getModelType(backend, tab) {
@@ -51,7 +54,7 @@ export default Ember.Route.extend({
     const secret = params.secret ? params.secret : '';
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    return Ember.RSVP.hash({
+    return hash({
       secret,
       secrets: this.store
         .lazyPaginatedQuery(this.getModelType(backend, params.tab), {
@@ -60,16 +63,17 @@ export default Ember.Route.extend({
           responsePath: 'data.keys',
           page: params.page,
           pageFilter: params.pageFilter,
-          size: 100,
         })
         .then(model => {
           this.set('has404', false);
           return model;
         })
         .catch(err => {
+          // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
             return [];
           } else {
+            // else we're throwing and dealing with this in the error action
             throw err;
           }
         }),
@@ -82,23 +86,21 @@ export default Ember.Route.extend({
     if (!tab || tab !== 'certs') {
       return;
     }
-    return Ember.RSVP
-      .all(
-        // these ids are treated specially by vault's api, but it's also
-        // possible that there is no certificate for them in order to know,
-        // we fetch them specifically on the list page, and then unload the
-        // records if there is no `certificate` attribute on the resultant model
-        ['ca', 'crl', 'ca_chain'].map(id => this.store.queryRecord('pki-certificate', { id, backend }))
-      )
-      .then(
-        results => {
-          results.rejectBy('certificate').forEach(record => record.unloadRecord());
-          return model;
-        },
-        () => {
-          return model;
-        }
-      );
+    return all(
+      // these ids are treated specially by vault's api, but it's also
+      // possible that there is no certificate for them in order to know,
+      // we fetch them specifically on the list page, and then unload the
+      // records if there is no `certificate` attribute on the resultant model
+      ['ca', 'crl', 'ca_chain'].map(id => this.store.queryRecord('pki-certificate', { id, backend }))
+    ).then(
+      results => {
+        results.rejectBy('certificate').forEach(record => record.unloadRecord());
+        return model;
+      },
+      () => {
+        return model;
+      }
+    );
   },
 
   setupController(controller, resolvedModel) {
@@ -108,6 +110,11 @@ export default Ember.Route.extend({
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.get('has404');
+    // only clear store cache if this is a new model
+    if (secret !== controller.get('baseKey.id')) {
+      this.store.clearAllDatasets();
+    }
+
     controller.set('hasModel', true);
     controller.setProperties({
       model,
@@ -141,20 +148,27 @@ export default Ember.Route.extend({
 
   actions: {
     error(error, transition) {
-      const { secret } = this.paramsFor(this.routeName);
-      const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let { secret } = this.paramsFor(this.routeName);
+      let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let is404 = error.httpStatus === 404;
+      let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
-      Ember.set(error, 'secret', secret);
-      Ember.set(error, 'isRoot', true);
-      Ember.set(error, 'backend', backend);
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
+      // this will occur if we've deleted something,
+      // and navigate to its parent and the parent doesn't exist -
+      // this if often the case with nested keys in kv-like engines
+      if (transition.data.isDeletion && is404) {
+        throw error;
+      }
+      set(error, 'secret', secret);
+      set(error, 'isRoot', true);
+      set(error, 'backend', backend);
       // only swallow the error if we have a previous model
-      if (hasModel && error.httpStatus === 404) {
+      if (hasModel && is404) {
         this.set('has404', true);
         transition.abort();
-      } else {
-        return true;
+        return false;
       }
+      return true;
     },
 
     willTransition(transition) {
@@ -165,8 +179,8 @@ export default Ember.Route.extend({
       return true;
     },
     reload() {
-      this.refresh();
       this.store.clearAllDatasets();
+      this.refresh();
     },
   },
 });

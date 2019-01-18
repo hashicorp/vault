@@ -20,18 +20,20 @@
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          {{i-con glyph="folder" size=14 class="has-text-grey-light"}}
+          <ToolTip @horizontalPosition="left" as |T|>
+            <T.trigger>
+              <ICon @glyph={{concat "enable/" (or method.methodType "auth")}} @size=24 @class="has-text-grey-light"/>
+            </T.trigger>
+            <T.content @class="tool-tip">
+              <div class="box">
+                {{method.methodType}}
+              </div>
+            </T.content>
+          </ToolTip>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-grey">
             {{method.path}}
           </span>
           <br />
-          <span class="tag">
-            {{#if (eq method.methodType 'plugin')}}
-              {{method.methodType}}: {{method.config.plugin_name}}
-            {{else}}
-              {{method.methodType}}
-            {{/if}}
-          </span>
           <code class="has-text-grey is-size-8">
             {{method.accessor}}
           </code>
@@ -39,7 +41,7 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          {{#popup-menu name="auth-backend-nav" contentClass="is-wide"}}
+          {{#popup-menu name="auth-backend-nav"}}
             <nav class="menu">
               <ul class="menu-list">
                 <li>
@@ -61,9 +63,9 @@
                       confirmButtonClasses="button is-primary"
                       buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
-                      confirmMessage=(concat "Are you sure you want to disable auth via " method.id "?")
-                      showConfirm=(get this (concat "shouldDelete-" method.id))
-                      class=(if (get this (concat "shouldDelete-" method.id)) "message is-block is-warning is-outline")
+                      confirmMessage=(concat "Are you sure you want to disable the " method.id " auth method at " method.path "?")
+                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash method.id)))
+                      class=(if (get this (concat "shouldDelete-" (dot-to-dash method.id))) "message is-block is-warning is-outline")
                       containerClasses="message-body is-block"
                       messageClasses="is-block"
                       confirmButtonText="Disable"

@@ -25,6 +25,7 @@ type AuthTuneCommand struct {
 	flagListingVisibility        string
 	flagMaxLeaseTTL              time.Duration
 	flagOptions                  map[string]string
+	flagTokenType                string
 	flagVersion                  int
 }
 
@@ -112,6 +113,12 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"This can be specified multiple times.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:   flagNameTokenType,
+		Target: &c.flagTokenType,
+		Usage:  "Sets a forced token type for the mount.",
+	})
+
 	f.IntVar(&IntVar{
 		Name:    "version",
 		Target:  &c.flagVersion,
@@ -183,6 +190,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameListingVisibility {
 			mountConfigInput.ListingVisibility = c.flagListingVisibility
+		}
+
+		if fl.Name == flagNameTokenType {
+			mountConfigInput.TokenType = c.flagTokenType
 		}
 	})
 

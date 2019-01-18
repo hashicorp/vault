@@ -117,6 +117,16 @@ _, err := db.ExecContext(ctx, "sp_RunMe",
 )
 ```
 
+## Return Status
+
+To get the procedure return status, pass into the parameters a
+`*mssql.ReturnStatus`. For example:
+```
+var rs mssql.ReturnStatus
+_, err := db.ExecContext(ctx, "theproc", &rs)
+log.Printf("status=%d", rs)
+```
+
 ## Parameters
 
 The `sqlserver` driver uses normal MS SQL Server syntax and expects parameters in

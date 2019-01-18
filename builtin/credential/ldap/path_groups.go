@@ -132,11 +132,17 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List(ctx, "group/")
+	keys, err := logical.CollectKeys(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(groups), nil
+	retKeys := make([]string, 0)
+	for _, key := range keys {
+		if strings.HasPrefix(key, "group/") && !strings.HasPrefix(key, "/") {
+			retKeys = append(retKeys, strings.TrimPrefix(key, "group/"))
+		}
+	}
+	return logical.ListResponse(retKeys), nil
 }
 
 type GroupEntry struct {

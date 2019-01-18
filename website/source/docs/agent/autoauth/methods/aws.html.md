@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth AWS Method"
+sidebar_title: "AWS"
 sidebar_current: "docs-agent-autoauth-methods-aws"
 description: |-
   AWS Method for Vault Agent Auto-Auth
@@ -20,22 +21,35 @@ method, we recommend the `iam` method when possible.
 ## Credentials
 
 Vault will use the AWS SDK's normal credential chain behavior, which means it
-will try to source credentials from the assigned instance profile, a
-credentials file, the environment, or static credentials. Generally it should
-not be required to set the `access_key` and `secret_key` parameters.
+will use the first valid credentials it finds in the following order:
+
+1. A static credential configuration
+2. Environment variables
+3. A file containing credentials
+4. From any identity services available in its physical environment like container environment variables or role-based instance metadata
+ 
+Wherever possible, we recommend using identity services (method 4) for credentials. 
+These rotate regularly and require no effort on your part to provision, making 
+identity services the most secure of the four methods. If using identity services _and_ a custom 
+`credential_poll_interval`, be sure the frequency is set low enough to pick up new credentials
+from the physical environment as they become available.
+
+To use identity services, choose the `iam` type and leave the `access_key`, `secret_key`, and `session_token` 
+parameters unset in your configuration.
 
 ## Configuration
 
-- `type` `(string: required)` - The type of authentication; must be `ec2` or `iam`
+- `type` `(string: required)` - The type of authentication; must be `ec2` or `iam`.
 
-- `role` `(string: required)` - The role to authenticate against on Vault
+- `role` `(string: required)` - The role to authenticate against on Vault.
 
-- `access_key` `(string: optional)` - When using static credentials, the access key to use
+- `credential_poll_interval` `(integer: optional)` - In seconds, how frequently the Vault agent should check for new credentials if using the iam type.
 
-- `secret_key` `(string: optional)` - When using static credentials, the secret key to use
+- `access_key` `(string: optional)` - When using static credentials, the access key to use.
 
-- `session_token` `(string: optional)` - The session token to use for authentication, if needed
+- `secret_key` `(string: optional)` - When using static credentials, the secret key to use.
 
-- `header_value` `(string: optional)` - If configured in Vault, the value to
-  use for
-  [`iam_server_id_header_value`](https://www.vaultproject.io/api/auth/aws/index.html#iam_server_id_header_value)
+- `session_token` `(string: optional)` - The session token to use for authentication, if needed.
+
+- `header_value` `(string: optional)` - If configured in Vault, the value to use for
+  [`iam_server_id_header_value`](https://www.vaultproject.io/api/auth/aws/index.html#iam_server_id_header_value).

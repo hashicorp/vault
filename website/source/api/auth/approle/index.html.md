@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AppRole - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-approle"
+sidebar_title: "AppRole"
+sidebar_current: "api-http-auth-approle"
 description: |-
   This is the API documentation for the Vault AppRole auth method.
 ---
@@ -100,6 +101,9 @@ enabled while creating or updating a role.
 - `enable_local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
+- `token_type` `(string: "")` - The type of token that should be generated via
+  this role. Can be `service`, `batch`, or `default` to use the mount's default
+  (which unless changed will be `service` tokens).
 
 ### Sample Payload
 
@@ -640,3 +644,40 @@ to be able to delegate specific endpoints using Vault's ACL system.
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/period`  | `200/204` |
 
 Refer to `/auth/approle/role/:role_name` endpoint.
+
+## Tidy Tokens
+
+Performs some maintenance tasks to clean up invalid entries that may remain
+in the token store. Generally, running this is not needed unless upgrade
+notes or support personnel suggest it. This may perform a lot of I/O to the
+storage method so should be used sparingly.
+
+| Method   | Path                            | Produces               |
+| :------- | :------------------------------ | :--------------------- |
+| `POST`   | `/auth/approle/tidy/secret-id`  | `204 (empty body)`     |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/auth/approle/tidy/secret-id
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "b20b56e3-4699-5b19-cc6b-e74f7b787bbf",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": [
+    "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs."
+  ],
+  "auth": null
+}
+```

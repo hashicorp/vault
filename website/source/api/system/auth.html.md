@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/auth - HTTP API"
-sidebar_current: "docs-http-system-auth"
+sidebar_title: "<code>/sys/auth</code>"
+sidebar_current: "api-http-system-auth"
 description: |-
   The `/sys/auth` endpoint is used to manage auth methods in Vault.
 ---
@@ -68,6 +69,8 @@ For example, enable the "foo" auth method will make it accessible at
 - `path` `(string: <required>)` – Specifies the path in which to enable the auth
   method. This is part of the request URL.
 
+    !> **NOTE:** Use ASCII printable characters to specify the desired path.
+
 - `description` `(string: "")` – Specifies a human-friendly description of the
   auth method.
 
@@ -83,33 +86,29 @@ For example, enable the "foo" auth method will make it accessible at
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
      string duration like "5s" or "30m".
 
-  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
-     to use.
-
   - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the request data object.
 
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
      in the UI-specific listing endpoint.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
      to whitelist and pass from the request to the backend.
 
-    The plugin_name can be provided in the config map or as a top-level option,
-    with the former taking precedence.
-
-- `plugin_name` `(string: "")` – Specifies the name of the auth plugin to
-  use based from the name in the plugin catalog. Applies only to plugin
-  methods.
-
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the auth method is a local only. Local
+- `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
+
+  ~> ** Warning:** Remember, policies when using replication secondaries are
+  validated by the local cluster. An administrator that can set up a local auth
+  method mount can assign policies to tokens that are valid on the replication
+  primary if a request is forwarded. Never give untrusted administrators the
+  ability to assign policies or configure authentication methods.
 
 ### Sample Payload
 
@@ -221,11 +220,23 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
     to whitelist and pass from the request to the backend.
+
+- `token_type` `(string: "")` – Specifies the type of tokens that should be
+  returned by the mount. The following values are available:
+
+  - `default-service`: Unless the auth method requests a different type, issue
+    service tokens
+  - `default-batch`: Unless the auth method requests a different type, issue
+    batch tokens
+  - `service`: Override any auth method preference and always issue service
+    tokens from this mount
+  - `batch`: Override any auth method preference and always issue batch tokens
+    from this mount
 
 ### Sample Payload
 

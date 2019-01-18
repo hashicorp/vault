@@ -10,19 +10,99 @@
 }}
   <div class="columns is-mobile">
     <div class="column is-10">
-      {{#secret-link
-        mode=(if item.isFolder "list" "show")
-        secret=item.id
-        class="has-text-black has-text-weight-semibold"
-      }}
-        {{i-con
-          glyph=(if item.isFolder 'folder' 'file')
-          size=14
-          class="has-text-grey-light"
-        }}{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
-      {{/secret-link}}
+      <SecretLink
+        @mode={{if item.isFolder "list" "show" }}
+        @secret={{item.id}}
+        @class="has-text-black has-text-weight-semibold"
+      >
+        <ICon
+          @glyph={{if item.isFolder 'folder' 'file' }}
+          @size="14"
+          @class="has-text-grey-light"
+        />{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
+      </SecretLink>
     </div>
     <div class="column has-text-right">
+      <PopupMenu name="secret-menu">
+        <nav class="menu">
+          <ul class="menu-list">
+            {{#if item.isFolder}}
+              <SecretLink
+                @mode="list"
+                @secret={{item.id}}
+                @class="has-text-black has-text-weight-semibold"
+              >
+                Contents
+              </SecretLink>
+            {{else}}
+              {{#if (or item.versionPath.isLoading item.secretPath.isLoading)}}
+                <li class="action">
+                  <button disabled type="button" class="link button is-loading is-transparent">
+                    loading
+                  </button>
+                </li>
+              {{else}}
+                {{#if item.canRead}}
+                  <li class="action">
+                    <SecretLink
+                      @mode="show"
+                      @secret={{item.id}}
+                      @class="has-text-black has-text-weight-semibold"
+                    >
+                      Details
+                    </SecretLink>
+                  </li>
+                  {{#if backendModel.isV2KV}}
+                    <li class="action">
+                      <SecretLink
+                        @mode="versions"
+                        @secret={{item.id}}
+                        @class="has-text-black has-text-weight-semibold"
+                      >
+                        View version history
+                      </SecretLink>
+                    </li>
+                  {{/if}}
+                {{/if}}
+                {{#if item.canEdit}}
+                  <li class="action">
+                    <SecretLink
+                      @mode="edit"
+                      @secret={{item.id}}
+                      @class="has-text-black has-text-weight-semibold"
+                    >
+                      {{if backendModel.isV2KV
+                        "Create New Version"
+                        "Edit"
+                      }}
+                    </SecretLink>
+                  </li>
+                {{/if}}
+                {{#if item.canDelete}}
+                  <li class="action">
+                    {{#confirm-action
+                      confirmButtonClasses="button is-primary"
+                      buttonClasses="link is-destroy"
+                      onConfirmAction=(action "delete" item "secret")
+                      confirmMessage=(concat "Are you sure you want to permanently delete " item.id " and all its versions?")
+                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
+                      class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
+                      containerClasses="message-body is-block"
+                      messageClasses="is-block"
+                      data-test-v2-kv-delete=item.id
+                    }}
+                      {{if backendModel.isV2KV
+                        "Permanently Delete"
+                        "Delete"
+                      }}
+                    {{/confirm-action}}
+                  </li>
+                {{/if}}
+              {{/if}}
+            {{/if}}
+          </ul>
+        </nav>
+      </PopupMenu>
     </div>
   </div>
 {{/linked-block}}

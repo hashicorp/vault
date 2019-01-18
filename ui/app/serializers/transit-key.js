@@ -1,6 +1,6 @@
+import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
 import DS from 'ember-data';
-import Ember from 'ember';
-const { decamelize } = Ember.String;
 
 export default DS.RESTSerializer.extend({
   primaryKey: 'name',
@@ -14,7 +14,7 @@ export default DS.RESTSerializer.extend({
       const secrets = payload.data.keys.map(secret => ({ name: secret }));
       return secrets;
     }
-    Ember.assign(payload, payload.data);
+    assign(payload, payload.data);
     delete payload.data;
     return [payload];
   },

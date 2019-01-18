@@ -14,8 +14,8 @@ import (
 
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
+	hclog "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
 
@@ -377,6 +377,10 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 
 // EscapeLDAPValue is exported because a plugin uses it outside this package.
 func EscapeLDAPValue(input string) string {
+	if input == "" {
+		return ""
+	}
+
 	// RFC4514 forbids un-escaped:
 	// - leading space or hash
 	// - trailing space

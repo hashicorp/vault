@@ -116,7 +116,7 @@ func TestBackend_basic(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -140,7 +140,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -171,7 +171,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			// This will also validate the query
@@ -196,7 +196,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole, false),
@@ -227,7 +227,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 		"connection_url": connURL,
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRoleWithRevocationSQL(t, "web", testRole, defaultRevocationSQL, false),

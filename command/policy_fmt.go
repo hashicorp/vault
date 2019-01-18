@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/hcl/printer"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 	homedir "github.com/mitchellh/go-homedir"
@@ -85,8 +86,9 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Actually parse the policy
-	if _, err := vault.ParseACLPolicy(string(b)); err != nil {
+	// Actually parse the policy. We always use the root namespace here because
+	// we don't want to modify the results.
+	if _, err := vault.ParseACLPolicy(namespace.RootNamespace, string(b)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}

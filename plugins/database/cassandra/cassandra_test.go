@@ -73,7 +73,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 }
 
 func TestCassandra_Initialize(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -118,7 +118,7 @@ func TestCassandra_Initialize(t *testing.T) {
 }
 
 func TestCassandra_CreateUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -158,7 +158,7 @@ func TestCassandra_CreateUser(t *testing.T) {
 }
 
 func TestMyCassandra_RenewUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -203,7 +203,7 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 }
 
 func TestCassandra_RevokeUser(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
@@ -253,6 +253,9 @@ func TestCassandra_RevokeUser(t *testing.T) {
 }
 
 func TestCassandra_RotateRootCredentials(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.SkipNow()
+	}
 	cleanup, address, port := prepareCassandraTestContainer(t)
 	defer cleanup()
 

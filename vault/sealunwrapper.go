@@ -1,7 +1,4 @@
-// +build !ent
-// +build !prem
-// +build !pro
-// +build !hsm
+// +build !enterprise
 
 package vault
 
@@ -72,7 +69,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	var performUnwrap bool
-	se := &physical.SealWrapEntry{}
+	se := &physical.EncryptedBlobInfo{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen := len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {
@@ -109,7 +106,7 @@ func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, e
 	}
 
 	performUnwrap = false
-	se = &physical.SealWrapEntry{}
+	se = &physical.EncryptedBlobInfo{}
 	// If the value ends in our canary value, try to decode the bytes.
 	eLen = len(entry.Value)
 	if eLen > 0 && entry.Value[eLen-1] == 's' {

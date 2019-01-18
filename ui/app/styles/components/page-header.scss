@@ -9,9 +9,15 @@
   .level-right {
     flex-grow: 1;
     flex-shrink: 1;
+
+    @include until($tablet) {
+      margin-top: 0.5rem;
+    }
   }
   .level-right {
-    justify-content: flex-end;
+    @include from($tablet) {
+      justify-content: flex-end;
+    }
   }
 
   .title {
@@ -23,6 +29,7 @@
   }
   .title .icon {
     height: auto;
+    vertical-align: -0.15em;
     width: auto;
   }
 }

@@ -33,10 +33,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// normalize path if configured for stdout
-	if strings.ToLower(path) == "stdout" {
+	if strings.EqualFold(path, "stdout") {
 		path = "stdout"
 	}
-	if strings.ToLower(path) == "discard" {
+	if strings.EqualFold(path, "discard") {
 		path = "discard"
 	}
 

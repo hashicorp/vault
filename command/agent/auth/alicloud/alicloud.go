@@ -10,7 +10,7 @@ import (
 
 	aliCloudAuth "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault-plugin-auth-alicloud/tools"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -60,9 +60,11 @@ func NewAliCloudAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 	// Check for an optional custom frequency at which we should poll for creds.
 	credCheckFreqSec := defaultCredCheckFreqSeconds
-	if checkFreqRaw, ok := conf.Config["cred_check_freq_seconds"]; ok {
+	if checkFreqRaw, ok := conf.Config["credential_poll_interval"]; ok {
 		if credFreq, ok := checkFreqRaw.(int); ok {
 			credCheckFreqSec = credFreq
+		} else {
+			return nil, errors.New("could not convert 'credential_poll_interval' config value to int")
 		}
 	}
 

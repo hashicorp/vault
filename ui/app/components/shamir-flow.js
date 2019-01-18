@@ -1,8 +1,8 @@
-import Ember from 'ember';
-import base64js from 'base64-js';
-
-const { Component, inject, computed, get } = Ember;
-const { camelize } = Ember.String;
+import { inject as service } from '@ember/service';
+import { gt } from '@ember/object/computed';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { get, computed } from '@ember/object';
 
 const DEFAULTS = {
   key: null,
@@ -20,7 +20,7 @@ const DEFAULTS = {
 
 export default Component.extend(DEFAULTS, {
   tagName: '',
-  store: inject.service(),
+  store: service(),
   formText: null,
   fetchOnInit: false,
   buttonText: 'Submit',
@@ -58,21 +58,21 @@ export default Component.extend(DEFAULTS, {
     this.setProperties(DEFAULTS);
   },
 
-  hasProgress: computed.gt('progress', 0),
+  hasProgress: gt('progress', 0),
 
   actionSuccess(resp) {
-    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this.getProperties(
-      'onUpdate',
-      'isComplete',
-      'onShamirSuccess',
-      'thresholdPath'
-    );
+    let { onUpdate, isComplete, onShamirSuccess, thresholdPath } = this;
     let threshold = get(resp, thresholdPath);
     let props = {
       ...resp,
       threshold,
     };
     this.stopLoading();
+    // if we have an OTP, but update doesn't include one,
+    // we don't want to null it out
+    if (this.otp && !props.otp) {
+      delete props.otp;
+    }
     this.setProperties(props);
     onUpdate(props);
     if (isComplete(props)) {
@@ -90,18 +90,10 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
-  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'otp', 'pgp_key', function() {
-    let { generateWithPGP, otp, pgp_key, haveSavedPGPKey } = this.getProperties(
-      'generateWithPGP',
-      'otp',
-      'pgp_key',
-      'haveSavedPGPKey'
-    );
-    if (!generateWithPGP && !pgp_key && !otp) {
+  generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function() {
+    let { generateWithPGP, pgp_key, haveSavedPGPKey } = this;
+    if (!generateWithPGP && !pgp_key) {
       return 'chooseMethod';
-    }
-    if (otp) {
-      return 'beginGenerationWithOTP';
     }
     if (generateWithPGP) {
       if (pgp_key && haveSavedPGPKey) {
@@ -132,7 +124,7 @@ export default Component.extend(DEFAULTS, {
     }
 
     return {
-      otp: data.otp,
+      attempt: data.attempt,
     };
   },
 
@@ -143,6 +135,7 @@ export default Component.extend(DEFAULTS, {
     this.set('loading', true);
     const adapter = this.get('store').adapterFor('cluster');
     const method = adapter[action];
+
     method
       .call(adapter, data, { checkStatus })
       .then(resp => this.actionSuccess(resp), (...args) => this.actionError(...args));
@@ -163,13 +156,10 @@ export default Component.extend(DEFAULTS, {
     },
 
     startGenerate(data) {
+      if (this.generateAction) {
+        data.attempt = true;
+      }
       this.attemptProgress(this.extractData(data));
-    },
-
-    generateOTP() {
-      const bytes = new window.Uint8Array(16);
-      window.crypto.getRandomValues(bytes);
-      this.set('otp', base64js.fromByteArray(bytes));
     },
 
     setKey(_, keyFile) {

@@ -1,14 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
-const { inject } = Ember;
-
-const AuthConfigBase = Ember.Component.extend({
+const AuthConfigBase = Component.extend({
   tagName: '',
   model: null,
 
-  flashMessages: inject.service(),
+  flashMessages: service(),
 
   saveModel: task(function*() {
     try {

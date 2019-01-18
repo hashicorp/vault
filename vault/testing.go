@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -35,13 +36,16 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
-	"github.com/mitchellh/go-testing-interface"
+	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	testing "github.com/mitchellh/go-testing-interface"
 
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
@@ -102,23 +106,55 @@ func TestCoreNewSeal(t testing.T) *Core {
 	return TestCoreWithSeal(t, seal, false)
 }
 
+// TestCoreWithConfig returns a pure in-memory, uninitialized core with the
+// specified core configurations overridden for testing.
+func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
+	return TestCoreWithSealAndUI(t, conf)
+}
+
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
+func TestCoreUI(t testing.T, enableUI bool) *Core {
+	conf := &CoreConfig{
+		EnableUI:        enableUI,
+		EnableRaw:       true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
+func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Start off with base test core config
 	conf := testCoreConfig(t, physicalBackend, logger)
 
-	if enableRaw {
-		conf.EnableRaw = true
-	}
+	// Override config values with ones that gets passed in
+	conf.EnableUI = opts.EnableUI
+	conf.EnableRaw = opts.EnableRaw
+	conf.Seal = opts.Seal
+	conf.LicensingConfig = opts.LicensingConfig
+	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
-	if testSeal != nil {
-		conf.Seal = testSeal
+	for k, v := range opts.LogicalBackends {
+		conf.LogicalBackends[k] = v
+	}
+	for k, v := range opts.CredentialBackends {
+		conf.CredentialBackends[k] = v
 	}
 
 	c, err := NewCore(conf)
@@ -153,6 +189,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 	noopBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		b := new(framework.Backend)
 		b.Setup(ctx, config)
+		b.BackendType = logical.TypeCredential
 		return b, nil
 	}
 	noopBackends["http"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
@@ -184,6 +221,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	return conf
@@ -232,7 +270,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 }
 
 func TestCoreUnsealWithRecoveryKeys(core *Core, key []byte) (bool, error) {
-	return core.UnsealWithRecoveryKeys(context.Background(), key)
+	return core.UnsealWithRecoveryKeys(key)
 }
 
 // TestCoreUnsealed returns a pure in-memory core that is already
@@ -248,6 +286,14 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreRaw(t)
+	return testCoreUnsealed(t, core)
+}
+
+// TestCoreUnsealedWithConfig returns a pure in-memory core that is already
+// initialized, unsealed, with the any provided core config values overridden.
+func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
+	t.Helper()
+	core := TestCoreWithConfig(t, conf)
 	return testCoreUnsealed(t, core)
 }
 
@@ -316,79 +362,49 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 }
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
-// plugin catalog.
-func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
+// plugin catalog. If provided, uses tmpDir as the plugin directory.
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
 
-	hash := sha256.New()
+	dirPath := filepath.Dir(os.Args[0])
+	fileName := filepath.Base(os.Args[0])
 
-	_, err = io.Copy(hash, file)
+	if tempDir != "" {
+		fi, err := file.Stat()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Copy over the file to the temp dir
+		dst := filepath.Join(tempDir, fileName)
+		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer out.Close()
+
+		if _, err = io.Copy(out, file); err != nil {
+			t.Fatal(err)
+		}
+		err = out.Sync()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dirPath = tempDir
+	}
+
+	// Determine plugin directory full path, evaluating potential symlink path
+	fullPath, err := filepath.EvalSymlinks(dirPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sum := hash.Sum(nil)
-
-	// Determine plugin directory path
-	fullPath, err := filepath.EvalSymlinks(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	directoryPath := filepath.Dir(fullPath)
-
-	// Set core's plugin directory and plugin catalog directory
-	c.pluginDirectory = directoryPath
-	c.pluginCatalog.directory = directoryPath
-
-	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
-	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestAddTestPluginTempDir registers the testFunc as part of the plugin command to the
-// plugin catalog. It uses tmpDir as the plugin directory.
-func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir string) {
-	file, err := os.Open(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	fi, err := file.Stat()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Copy over the file to the temp dir
-	dst := filepath.Join(tempDir, filepath.Base(os.Args[0]))
-	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer out.Close()
-
-	if _, err = io.Copy(out, file); err != nil {
-		t.Fatal(err)
-	}
-	err = out.Sync()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Determine plugin directory full path
-	fullPath, err := filepath.EvalSymlinks(tempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reader, err := os.Open(filepath.Join(fullPath, filepath.Base(os.Args[0])))
+	reader, err := os.Open(filepath.Join(fullPath, fileName))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,9 +424,8 @@ func TestAddTestPluginTempDir(t testing.T, c *Core, name, testFunc, tempDir stri
 	c.pluginDirectory = fullPath
 	c.pluginCatalog.directory = fullPath
 
-	command := fmt.Sprintf("%s", filepath.Base(os.Args[0]))
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, command, args, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, pluginType, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +653,7 @@ func (n *rawHTTP) Setup(ctx context.Context, config *logical.BackendConfig) erro
 }
 
 func (n *rawHTTP) Type() logical.BackendType {
-	return logical.TypeUnknown
+	return logical.TypeLogical
 }
 
 func GenerateRandBytes(length int) ([]byte, error) {
@@ -774,18 +789,56 @@ func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	}
 }
 
+func CleanupClusters(clusters []*TestCluster) {
+	wg := &sync.WaitGroup{}
+	for _, cluster := range clusters {
+		wg.Add(1)
+		lc := cluster
+		go func() {
+			defer wg.Done()
+			lc.Cleanup()
+		}()
+	}
+	wg.Wait()
+}
+
 func (c *TestCluster) Cleanup() {
 	// Close listeners
+	wg := &sync.WaitGroup{}
 	for _, core := range c.Cores {
-		if core.Listeners != nil {
-			for _, ln := range core.Listeners {
-				ln.Close()
+		wg.Add(1)
+		lc := core
+
+		go func() {
+			defer wg.Done()
+			if lc.Listeners != nil {
+				for _, ln := range lc.Listeners {
+					ln.Close()
+				}
 			}
-		}
+			if lc.licensingStopCh != nil {
+				close(lc.licensingStopCh)
+				lc.licensingStopCh = nil
+			}
+
+			if err := lc.Shutdown(); err != nil {
+				lc.Logger().Error("error during shutdown; abandoning sealing", "error", err)
+			} else {
+				timeout := time.Now().Add(60 * time.Second)
+				for {
+					if time.Now().After(timeout) {
+						lc.Logger().Error("timeout waiting for core to seal")
+					}
+					if lc.Sealed() {
+						break
+					}
+					time.Sleep(250 * time.Millisecond)
+				}
+			}
+		}()
 	}
 
-	// Seal the cores
-	c.ensureCoresSealed()
+	wg.Wait()
 
 	// Remove any temp dir that exists
 	if c.TempDir != "" {
@@ -835,6 +888,10 @@ func (c *TestCluster) UnsealWithStoredKeys(t testing.T) error {
 	return nil
 }
 
+func SetReplicationFailureMode(core *TestClusterCore, mode uint32) {
+	atomic.StoreUint32(core.Core.replicationFailure, mode)
+}
+
 type TestListener struct {
 	net.Listener
 	Address *net.TCPAddr
@@ -842,6 +899,7 @@ type TestListener struct {
 
 type TestClusterCore struct {
 	*Core
+	CoreConfig        *CoreConfig
 	Client            *api.Client
 	Handler           http.Handler
 	Listeners         []*TestListener
@@ -1134,6 +1192,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		DisableMlock:       true,
 		EnableUI:           true,
 		EnableRaw:          true,
+		BuiltinRegistry:    NewMockBuiltinRegistry(),
 	}
 
 	if base != nil {
@@ -1146,6 +1205,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.Seal = base.Seal
 		coreConfig.DevToken = base.DevToken
 		coreConfig.EnableRaw = base.EnableRaw
+		coreConfig.DisableSealWrap = base.DisableSealWrap
+		coreConfig.DevLicenseDuration = base.DevLicenseDuration
+		coreConfig.DisableCache = base.DisableCache
+		if base.BuiltinRegistry != nil {
+			coreConfig.BuiltinRegistry = base.BuiltinRegistry
+		}
 
 		if !coreConfig.DisableMlock {
 			base.DisableMlock = false
@@ -1208,33 +1273,49 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
+	pubKey, priKey, err := testGenerateCoreKeys()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	cores := []*Core{}
+	coreConfigs := []*CoreConfig{}
 	for i := 0; i < numCores; i++ {
-		coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
-		if coreConfig.ClusterAddr != "" {
-			coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
+		localConfig := *coreConfig
+		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
+		if localConfig.ClusterAddr != "" {
+			localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
 		}
 
 		// if opts.SealFunc is provided, use that to generate a seal for the config instead
 		if opts != nil && opts.SealFunc != nil {
-			coreConfig.Seal = opts.SealFunc()
+			localConfig.Seal = opts.SealFunc()
 		}
 
 		if opts != nil && opts.Logger != nil {
-			coreConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
+			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
-		c, err := NewCore(coreConfig)
+		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+
+		c, err := NewCore(&localConfig)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		cores = append(cores, c)
+		coreConfigs = append(coreConfigs, &localConfig)
 		if opts != nil && opts.HandlerFunc != nil {
 			handlers[i] = opts.HandlerFunc(&HandlerProperties{
 				Core:               c,
 				MaxRequestDuration: DefaultMaxRequestDuration,
 			})
 			servers[i].Handler = handlers[i]
+		}
+
+		// Set this in case the Seal was manually set before the core was
+		// created
+		if localConfig.Seal != nil {
+			localConfig.Seal.SetCore(c)
 		}
 	}
 
@@ -1252,8 +1333,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		return ret
 	}
 
-	if numCores > 1 {
-		for i := 1; i < numCores; i++ {
+	for i := 0; i < numCores; i++ {
+		if coreConfigs[i].ClusterAddr != "" {
 			cores[i].SetClusterListenerAddrs(clusterAddrGen(listeners[i]))
 			cores[i].SetClusterHandler(handlers[i])
 		}
@@ -1392,6 +1473,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		tcc := &TestClusterCore{
 			Core:            cores[i],
+			CoreConfig:      coreConfigs[i],
 			ServerKey:       certInfoSlice[i].key,
 			ServerKeyPEM:    certInfoSlice[i].keyPEM,
 			ServerCert:      certInfoSlice[i].cert,
@@ -1408,9 +1490,69 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		tcc.ReloadFuncsLock.Lock()
 		(*tcc.ReloadFuncs)["listener|tcp"] = []reload.ReloadFunc{certGetters[i].Reload}
 		tcc.ReloadFuncsLock.Unlock()
+
+		testAdjustTestCore(base, tcc)
+
 		ret = append(ret, tcc)
 	}
 
 	testCluster.Cores = ret
+
+	testExtraClusterCoresTestSetup(t, priKey, testCluster.Cores)
+
 	return &testCluster
+}
+
+func NewMockBuiltinRegistry() *mockBuiltinRegistry {
+	return &mockBuiltinRegistry{
+		forTesting: map[string]consts.PluginType{
+			"mysql-database-plugin":      consts.PluginTypeDatabase,
+			"postgresql-database-plugin": consts.PluginTypeDatabase,
+		},
+	}
+}
+
+type mockBuiltinRegistry struct {
+	forTesting map[string]consts.PluginType
+}
+
+func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
+	testPluginType, ok := m.forTesting[name]
+	if !ok {
+		return nil, false
+	}
+	if pluginType != testPluginType {
+		return nil, false
+	}
+	if name == "postgresql-database-plugin" {
+		return dbPostgres.New, true
+	}
+	return dbMysql.New(dbMysql.MetadataLen, dbMysql.MetadataLen, dbMysql.UsernameLen), true
+}
+
+// Keys only supports getting a realistic list of the keys for database plugins.
+func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
+	if pluginType != consts.PluginTypeDatabase {
+		return []string{}
+	}
+	/*
+		This is a hard-coded reproduction of the db plugin keys in helper/builtinplugins/registry.go.
+		The registry isn't directly used because it causes import cycles.
+	*/
+	return []string{
+		"mysql-database-plugin",
+		"mysql-aurora-database-plugin",
+		"mysql-rds-database-plugin",
+		"mysql-legacy-database-plugin",
+		"postgresql-database-plugin",
+		"mssql-database-plugin",
+		"cassandra-database-plugin",
+		"mongodb-database-plugin",
+		"hana-database-plugin",
+		"influxdb-database-plugin",
+	}
+}
+
+func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	return false
 }

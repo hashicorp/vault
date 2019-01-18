@@ -1,4 +1,444 @@
-## 0.11.1 (September 5th, 2018)
+## Next
+
+BUG FIXES:
+
+ * storage/postgresql: The `Get` method will now return an Entry object with the
+   `Key` member correctly populated with the full path that was requested instead
+   of just the last path element [GH-6044].
+   
+IMPROVEMENTS:
+  * auth/jwt: The supported set of signing algorithms is now configurable
+    [JWT plugin GH-16].
+
+## 1.0.2 (January 15th, 2019)
+
+SECURITY:
+
+ * When creating a child token from a parent with `bound_cidrs`, the list of
+   CIDRs would not be propagated to the child token, allowing the child token
+   to be used from any address.
+
+CHANGES:
+
+ * secret/aws: Role now returns `credential_type` instead of `credential_types`
+   to match role input. If a legacy role that can supply more than one
+   credential type, they will be concatenated with a `,`.
+ * physical/dynamodb, autoseal/aws: Instead of Vault performing environment
+   variable handling, and overriding static (config file) values if found, we
+   use the default AWS SDK env handling behavior, which also looks for
+   deprecated values. If you were previously providing both config values and
+   environment values, please ensure the config values are unset if you want to
+   use environment values.
+ * Namespaces (Enterprise): Providing "root" as the header value for
+   `X-Vault-Namespace` will perform the request on the root namespace. This is
+   equivalent to providing an empty value. Creating a namespace called "root" in
+   the root namespace is disallowed.
+
+FEATURES:
+ * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
+   users
+
+IMPROVEMENTS:
+
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   image ID [GH-5846]
+ * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+   [GH-5999]
+ * physical/foundationdb: TLS support added. [GH-5800]  
+
+BUG FIXES:
+
+ * api: Fix a couple of places where we were using the `LIST` HTTP verb
+   (necessary to get the right method into the wrapping lookup function) and
+   not then modifying it to a `GET`; although this is officially the verb Vault
+   uses for listing and it's fully legal to use custom verbs, since many WAFs
+   and API gateways choke on anything outside of RFC-standardized verbs we fall
+   back to `GET` [GH-6026]
+ * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
+   also provided [GH-5965]
+ * command/operator/rekey: Fix help output showing `-delete-backup` when it
+   should show `-backup-delete` [GH-5981]
+ * core: Fix bound_cidrs not being propagated to child tokens
+ * replication: Correctly forward identity entity creation that originates from
+   performance standby nodes (Enterprise)
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
+ * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
+ * secret/pki: Fix reading certificates on windows with the file storage backend [GH-6013]
+ * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
+ * ui - fix disappearing nested secrets and go to the nearest parent when deleting
+   a secret - [GH-5976]
+ * ui - fix error where deleting an item via the context menu would fail if the 
+   item name contained dots [GH-6018]
+ * ui - allow saving of kv secret after an errored save attempt [GH-6022]
+ * ui - fix display of kv-v1 secret containing a key named "keys" [GH-6023]
+
+## 1.0.1 (December 14th, 2018)
+
+SECURITY:
+
+ * Update version of Go to 1.11.3 to fix Go bug
+   https://github.com/golang/go/issues/29233 which corresponds to
+   CVE-2018-16875
+ * Database user revocation: If a client has configured custom revocation
+   statements for a role with a value of `""`, that statement would be executed
+   verbatim, resulting in a lack of actual revocation but success for the
+   operation. Vault will now strip empty statements from any provided; as a
+   result if an empty statement is provided, it will behave as if no statement
+   is provided, falling back to the default revocation statement.
+
+CHANGES:
+
+ * secret/database: On role read, empty statements will be returned as empty
+   slices instead of potentially being returned as JSON null values. This makes
+   it more in line with other parts of Vault and makes it easier for statically
+   typed languages to interpret the values.
+
+IMPROVEMENTS:
+
+ * cli: Strip iTerm extra characters from password manager input [GH-5837]
+ * command/server: Setting default kv engine to v1 in -dev mode can now be
+   specified via -dev-kv-v1 [GH-5919]
+ * core: Add operationId field to OpenAPI output [GH-5876]
+ * ui: Added ability to search for Group and Policy IDs when creating Groups
+   and Entities instead of typing them in manually
+
+BUG FIXES:
+
+ * auth/azure: Cache azure authorizer [15]
+ * auth/gcp: Remove explicit project for service account in GCE authorizer [58]
+ * cli: Show correct stored keys/threshold for autoseals [GH-5910]
+ * cli: Fix backwards compatibility fallback when listing plugins [GH-5913]
+ * core: Fix upgrades when the seal config had been created on early versions
+   of vault [GH-5956]
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
+   mount [GH-5937]
+ * secret/azure: Cache azure authorizer [19]
+ * secret/database: Strip empty statements on user input [GH-5955]
+ * secret/gcpkms: Add path for retrieving the public key [5]
+ * secret/pki: Fix panic that could occur during tidy operation when malformed
+   data was found [GH-5931]
+ * secret/pki: Strip empty line in ca_chain output [GH-5779]
+ * ui: Fixed a bug where the web CLI was not usable via the `fullscreen`
+   command - [GH-5909]
+ * ui: Fix a bug where you couldn't write a jwt auth method config [GH-5936]
+
+## 0.11.6 (December 14th, 2018)
+
+This release contains the three security fixes from 1.0.0 and 1.0.1 and the
+following bug fixes from 1.0.0/1.0.1:
+
+ * namespaces: Correctly reload the proper mount when tuning or reloading the
+   mount [GH-5937]
+ * replication/perfstandby: Fix audit table upgrade on standbys [GH-5811]
+ * replication/perfstandby: Fix redirect on approle update [GH-5820]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded
+   [GH-5809]
+
+It is otherwise identical to 0.11.5.
+
+## 1.0.0 (December 3rd, 2018)
+
+SECURITY:
+
+ * When debugging a customer incident we discovered that in the case of
+   malformed data from an autoseal mechanism, Vault's master key could be
+   logged in Vault's server log. For this to happen, the data would need to be
+   modified by the autoseal mechanism after being submitted to it by Vault but
+   prior to encryption, or after decryption, prior to it being returned to
+   Vault. To put it another way, it requires the data that Vault submits for
+   encryption to not match the data returned after decryption. It is not
+   sufficient for the autoseal mechanism to return an error, and it cannot be
+   triggered by an outside attacker changing the on-disk ciphertext as all
+   autoseal mechanisms use authenticated encryption. We do not believe that
+   this is generally a cause for concern; since it involves the autoseal
+   mechanism returning bad data to Vault but with no error, in a working Vault
+   configuration this code path should never be hit, and if hitting this issue
+   Vault will not be unsealing properly anyways so it will be obvious what is
+   happening and an immediate rekey of the master key can be performed after
+   service is restored. We have filed for a CVE (CVE-2018-19786) and a CVSS V3
+   score of 5.2 has been assigned.
+
+CHANGES:
+
+ * Tokens are now prefixed by a designation to indicate what type of token they
+   are. Service tokens start with `s.` and batch tokens start with `b.`.
+   Existing tokens will still work (they are all of service type and will be
+   considered as such). Prefixing allows us to be more efficient when consuming
+   a token, which keeps the critical path of requests faster.
+ * Paths within `auth/token` that allow specifying a token or accessor in the
+   URL have been removed. These have been deprecated since March 2016 and
+   undocumented, but were retained for backwards compatibility. They shouldn't
+   be used due to the possibility of those paths being logged, so at this point
+   they are simply being removed.
+ * Vault will no longer accept updates when the storage key has invalid UTF-8 
+   character encoding [GH-5819]
+ * Mount/Auth tuning the `options` map on backends will now upsert any provided
+   values, and keep any of the existing values in place if not provided. The
+   options map itself cannot be unset once it's set, but the keypairs within the
+   map can be unset if an empty value is provided, with the exception of the
+   `version` keypair which is handled differently for KVv2 purposes.
+ * Agent no longer automatically reauthenticates when new credentials are
+   detected. It's not strictly necessary and in some cases was causing
+   reauthentication much more often than intended.
+ * HSM Regenerate Key Support Removed: Vault no longer supports destroying and
+   regenerating encryption keys on an HSM; it only supports creating them.
+   Although this has never been a source of a customer incident, it is simply a
+   code path that is too trivial to activate, especially by mistyping
+   `regenerate_key` instead of `generate_key`.
+ * Barrier Config Upgrade (Enterprise): When upgrading from Vault 0.8.x, the
+   seal type in the barrier config storage entry will be upgraded from
+   "hsm-auto" to "awskms" or "pkcs11" upon unseal if using AWSKMS or HSM seals.
+   If performing seal migration, the barrier config should first be upgraded
+   prior to starting migration.
+ * Go API client uses pooled HTTP client: The Go API client now uses a
+   connection-pooling HTTP client by default. For CLI operations this makes no
+   difference but it should provide significant performance benefits for those
+   writing custom clients using the Go API library. As before, this can be
+   changed to any custom HTTP client by the caller.
+ * Builtin Secret Engines and Auth Methods are integrated deeper into the
+   plugin system. The plugin catalog can now override builtin plugins with
+   custom versions of the same name. Additionally the plugin system now
+   requires a plugin `type` field when configuring plugins, this can be "auth",
+   "database", or "secret".
+
+FEATURES:
+
+ * **Auto-Unseal in Open Source**: Cloud-based auto-unseal has been migrated
+   from Enterprise to Open Source. We've created a migrator to allow migrating
+   between Shamir seals and auto unseal methods.
+ * **Batch Tokens**: Batch tokens trade off some features of service tokens for no
+   storage overhead, and in most cases can be used across performance
+   replication clusters.
+ * **Replication Speed Improvements**: We've worked hard to speed up a lot of
+   operations when using Vault Enterprise Replication.
+ * **GCP KMS Secrets Engine**: This new secrets engine provides a Transit-like
+   pattern to keys stored within GCP Cloud KMS.
+ * **AppRole support in Vault Agent Auto-Auth**: You can now use AppRole
+   credentials when having Agent automatically authenticate to Vault
+ * **OpenAPI Support**: Descriptions of mounted backends can be served directly
+   from Vault
+ * **Kubernetes Projected Service Account Tokens**: Projected Service Account
+   Tokens are now supported in Kubernetes auth
+ * **Response Wrapping in UI**: Added ability to wrap secrets and easily copy
+   the wrap token or secret JSON in the UI
+
+IMPROVEMENTS:
+
+ * agent: Support for configuring the location of the kubernetes service account
+   [GH-5725]
+ * auth/token: New tokens are indexed in storage HMAC-SHA256 instead of SHA1
+ * secret/totp: Allow @ character to be part of key name [GH-5652]
+ * secret/consul: Add support for new policy based tokens added in Consul 1.4
+   [GH-5586]
+ * ui: Improve the token auto-renew warning, and automatically begin renewal
+   when a user becomes active again [GH-5662]
+ * ui: The unbundled UI page now has some styling [GH-5665]
+ * ui: Improved banner and popup design [GH-5672]
+ * ui: Added token type to auth method mount config [GH-5723]
+ * ui: Display additonal wrap info when unwrapping. [GH-5664]
+ * ui: Empty states have updated styling and link to relevant actions and 
+   documentation [GH-5758]
+ * ui: Allow editing of KV V2 data when a token doesn't have capabilities to
+   read secret metadata [GH-5879]
+
+BUG FIXES:
+
+ * agent: Fix auth when multiple redirects [GH-5814]
+ * cli: Restore the `-policy-override` flag [GH-5826]
+ * core: Fix rekey progress reset which did not happen under certain
+   circumstances. [GH-5743]
+ * core: Migration from autounseal to shamir will clean up old keys [GH-5671]
+ * identity: Update group memberships when entity is deleted [GH-5786]
+ * replication/perfstandby: Fix audit table upgrade on standbys [GH-5811]
+ * replication/perfstandby: Fix redirect on approle update [GH-5820]
+ * secrets/azure: Fix valid roles being rejected for duplicate ids despite
+   having distinct scopes
+   [[GH-16]](https://github.com/hashicorp/vault-plugin-secrets-azure/pull/16)
+ * storage/gcs: Send md5 of values to GCS to avoid potential corruption
+   [GH-5804]
+ * secrets/kv: Fix issue where storage version would get incorrectly downgraded 
+   [GH-5809]
+ * secrets/kv: Disallow empty paths on a `kv put` while accepting empty paths
+   for all other operations for backwards compatibility
+   [[GH-19]](https://github.com/hashicorp/vault-plugin-secrets-kv/pull/19)
+ * ui: Allow for secret creation in kv v2 when cas_required=true [GH-5823]
+ * ui: Fix dr secondary operation token generation via the ui [GH-5818]
+ * ui: Fix the PKI context menu so that items load [GH-5824]
+ * ui: Update DR Secondary Token generation command [GH-5857]
+ * ui: Fix pagination bug where controls would be rendered once for each
+   item when viewing policies [GH-5866]
+ * ui: Fix bug where `sys/leases/revoke` required 'sudo' capability to show
+   the revoke button in the UI [GH-5647]
+ * ui: Fix issue where certain pages wouldn't render in a namespace [GH-5692]
+
+## 0.11.5 (November 13th, 2018)
+
+BUG FIXES:
+
+ * agent: Fix issue when specifying two file sinks [GH-5610]
+ * auth/userpass: Fix minor timing issue that could leak the presence of a
+   username [GH-5614]
+ * autounseal/alicloud: Fix issue interacting with the API (Enterprise)
+ * autounseal/azure: Fix key version tracking (Enterprise)
+ * cli: Fix panic that could occur if parameters were not provided [GH-5603]
+ * core: Fix buggy behavior if trying to remount into a namespace
+ * identity: Fix duplication of entity alias entity during alias transfer
+   between entities [GH-5733]
+ * namespaces: Fix tuning of auth mounts in a namespace
+ * ui: Fix bug where editing secrets as JSON doesn't save properly [GH-5660]
+ * ui: Fix issue where IE 11 didn't render the UI and also had a broken form
+   when trying to use tool/hash [GH-5714]
+ 
+## 0.11.4 (October 23rd, 2018)
+
+CHANGES:
+
+ * core: HA lock file is no longer copied during `operator migrate` [GH-5503].
+   We've categorized this as a change, but generally this can be considered
+   just a bug fix, and no action is needed.
+
+FEATURES:
+
+ * **Transit Key Trimming**: Keys in transit secret engine can now be trimmed to
+   remove older unused key versions
+ * **Web UI support for KV Version 2**: Browse, delete, undelete and destroy 
+   individual secret versions in the UI
+ * **Azure Existing Service Principal Support**: Credentials can now be generated
+   against an existing service principal
+
+IMPROVEMENTS:
+
+ * core: Add last WAL in leader/health output for easier debugging [GH-5523]
+ * identity: Identity names will now be handled case insensitively by default.
+   This includes names of entities, aliases and groups [GH-5404]
+ * secrets/aws: Added role-option max_sts_ttl to cap TTL for AWS STS
+   credentials [GH-5500]
+ * secret/database: Allow Cassandra user to be non-superuser so long as it has
+   role creation permissions [GH-5402]
+ * secret/radius: Allow setting the NAS Identifier value in the generated
+   packet [GH-5465]
+ * secret/ssh: Allow usage of JSON arrays when setting zero addresses [GH-5528]
+ * secret/transit: Allow trimming unused keys [GH-5388]
+ * ui: Support KVv2 [GH-5547], [GH-5563]
+ * ui: Allow viewing and updating Vault license via the UI
+ * ui: Onboarding will now display your progress through the chosen tutorials
+ * ui: Dynamic secret backends obfuscate sensitive data by default and
+   visibility is toggleable
+
+BUG FIXES:
+
+ * agent: Fix potential hang during agent shutdown [GH-5026]
+ * auth/ldap: Fix listing of users/groups that contain slashes [GH-5537]
+ * core: Fix memory leak during some expiration calls [GH-5505]
+ * core: Fix generate-root operations requiring empty `otp` to be provided
+   instead of an empty body [GH-5495]
+ * identity: Remove lookup check during alias removal from entity [GH-5524]
+ * secret/pki: Fix TTL/MaxTTL check when using `sign-verbatim` [GH-5549]
+ * secret/pki: Fix regression in 0.11.2+ causing the NotBefore value of
+   generated certificates to be set to the Unix epoch if the role value was not
+   set, instead of using the default of 30 seconds [GH-5481]
+ * storage/mysql: Use `varbinary` instead of `varchar` when creating HA tables
+   [GH-5529]
+
+## 0.11.3 (October 8th, 2018)
+
+SECURITY:
+
+ * Revocation: A regression in 0.11.2 (OSS) and 0.11.0 (Enterprise) caused
+   lease IDs containing periods (`.`) to not be revoked properly. Upon startup
+   when revocation is tried again these should now revoke successfully.
+
+IMPROVEMENTS:
+
+ * auth/ldap: Listing of users and groups return absolute paths [GH-5537]
+ * secret/pki: OID SANs can now specify `*` to allow any value [GH-5459]
+
+BUG FIXES:
+
+ * auth/ldap: Fix panic if specific values were given to be escaped [GH-5471] 
+ * cli/auth: Fix panic if `vault auth` was given no parameters [GH-5473]
+ * secret/database/mongodb: Fix panic that could occur at high load [GH-5463]
+ * secret/pki: Fix CA generation not allowing OID SANs [GH-5459]
+
+## 0.11.2 (October 2nd, 2018)
+
+CHANGES:
+
+ * `sys/seal-status` now includes an `initialized` boolean in the output. If
+   Vault is not initialized, it will return a `200` with this value set `false`
+   instead of a `400`.
+ * `passthrough_request_headers` will now deny certain headers from being
+   provided to backends based on a global denylist.
+ * Token Format: Tokens are now represented as a base62 value; tokens in
+   namespaces will have the namespace identifier appended. (This appeared in
+   Enterprise in 0.11.0, but is only in OSS in 0.11.2.)
+
+FEATURES:
+
+ * **AWS Secret Engine Root Credential Rotation**: The credential used by the AWS
+   secret engine can now be rotated, to ensure that only Vault knows the
+   credentials it is using [GH-5140]
+ * **Storage Backend Migrator**: A new `operator migrate` command allows offline
+   migration of data between two storage backends
+ * **AliCloud KMS Auto Unseal and Seal Wrap Support (Enterprise)**: AliCloud KMS can now be used a support seal for 
+   Auto Unseal and Seal Wrapping
+
+BUG FIXES:
+
+ * auth/okta: Fix reading deprecated `token` parameter if a token was
+   previously set in the configuration [GH-5409]
+ * core: Re-add deprecated capabilities information for now [GH-5360]
+ * core: Fix handling of cyclic token relationships [GH-4803]
+ * storage/mysql: Fix locking on MariaDB [GH-5343]
+ * replication: Fix DR API when using a token [GH-5398]
+ * identity: Ensure old group alias is removed when a new one is written [GH-5350]
+ * storage/alicloud: Don't call uname on package init [GH-5358]
+ * secrets/jwt: Fix issue where request context would be canceled too early 
+ * ui: fix need to have update for aws iam creds generation [GF-5294]
+ * ui: fix calculation of token expiry [GH-5435]
+ 
+IMPROVEMENTS:
+
+ * auth/aws: The identity alias name can now configured to be either IAM unique
+   ID of the IAM Principal, or ARN of the caller identity [GH-5247]
+ * auth/cert: Add allowed_organizational_units support [GH-5252]
+ * cli: Format TTLs for non-secret responses [GH-5367] 
+ * identity: Support operating on entities and groups by their names [GH-5355]
+ * plugins: Add `env` parameter when registering plugins to the catalog to allow
+   operators to include environment variables during plugin execution. [GH-5359]
+ * secrets/aws: WAL Rollback improvements [GH-5202]
+ * secrets/aws: Allow specifying STS role-default TTLs [GH-5138]
+ * secrets/pki: Add configuration support for setting NotBefore [GH-5325]
+ * core: Support for passing the Vault token via an Authorization Bearer header [GH-5397]
+ * replication: Reindex process now runs in the background and does not block other 
+   vault operations
+ * storage/zookeeper: Enable TLS based communication with Zookeeper [GH-4856]
+ * ui: you can now init a cluster with a seal config [GH-5428]
+ * ui: added the option to force promote replication clusters [GH-5438]
+ * replication: Allow promotion of a secondary when data is syncing with a "force" flag
+ 
+## 0.11.1.1 (September 17th, 2018) (Enterprise Only)
+
+BUG FIXES:
+
+ * agent: Fix auth handler-based wrapping of output tokens [GH-5316]
+ * core: Properly store the replication checkpoint file if it's larger than the
+   storage engine's per-item limit
+ * core: Improve WAL deletion rate
+ * core: Fix token creation on performance standby nodes
+ * core: Fix unwrapping inside a namespace
+ * core: Always forward tidy operations from performance standby nodes
+
+IMPROVEMENTS:
+
+ * auth/aws: add support for key/value pairs or JSON values for
+   `iam_request_headers` with IAM auth method [GH-5320]
+ * auth/aws, secret/aws: Throttling errors from the AWS API will now be
+   reported as 502 errors by Vault, along with the original error [GH-5270]
+ * replication: Start fetching during a sync from where it previously errored
+
+## 0.11.1 (September 6th, 2018)
 
 SECURITY:
 
@@ -26,10 +466,12 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * core: Ensure we use a background context when stepping down [GH-5290]
  * core: Properly check error return from random byte reading [GH-5277]
  * core: Re-add `sys/` top-route injection for now [GH-5241]
- * core: Properly store the replication checkpoint file if it's larger than the
-   storage engine's per-item limit
+ * core: Policies stored in minified JSON would return an error [GH-5229]
+ * core: Evaluate templated policies in capabilities check [GH-5250]
+ * identity: Update MemDB with identity group alias while loading groups [GH-5289]
  * secrets/database: Fix nil pointer when revoking some leases [GH-5262]
  * secrets/pki: Fix sign-verbatim losing extra Subject attributes [GH-5245]
  * secrets/pki: Remove certificates from store when tidying revoked
@@ -79,6 +521,8 @@ DEPRECATIONS/CHANGES:
    role's configuration has changed in backwards-incompatible ways. Anything
    that depended on reading role data from the AWS secret engine will break
    until it is updated to work with the new format.
+ * Token Format (Enterprise): Tokens are now represented as a base62 value;
+   tokens in namespaces will have the namespace identifier appended.
 
 FEATURES:
 

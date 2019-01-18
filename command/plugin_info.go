@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -22,14 +23,15 @@ func (c *PluginInfoCommand) Synopsis() string {
 
 func (c *PluginInfoCommand) Help() string {
 	helpText := `
-Usage: vault plugin info [options] NAME
+Usage: vault plugin info [options] TYPE NAME
 
   Displays information about a plugin in the catalog with the given name. If
-  the plugin does not exist, an error is returned.
+  the plugin does not exist, an error is returned. The argument of type
+  takes "auth", "database", or "secret".
 
   Get info about a plugin:
 
-      $ vault plugin info mysql-database-plugin
+      $ vault plugin info database mysql-database-plugin
 
 ` + c.Flags().Help()
 
@@ -41,7 +43,7 @@ func (c *PluginInfoCommand) Flags() *FlagSets {
 }
 
 func (c *PluginInfoCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultPlugins()
+	return c.PredictVaultPlugins(consts.PluginTypeUnknown)
 }
 
 func (c *PluginInfoCommand) AutocompleteFlags() complete.Flags {
@@ -56,14 +58,23 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		return 1
 	}
 
+	var pluginNameRaw, pluginTypeRaw string
 	args = f.Args()
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
-	case len(args) > 1:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+	case len(args) > 2:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
+
+	// These cases should come after invalid cases have been checked
+	case len(args) == 1:
+		pluginTypeRaw = "unknown"
+		pluginNameRaw = args[0]
+	case len(args) == 2:
+		pluginTypeRaw = args[0]
+		pluginNameRaw = args[1]
 	}
 
 	client, err := c.Client()
@@ -72,13 +83,24 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		return 2
 	}
 
-	pluginName := strings.TrimSpace(args[0])
+	pluginType, err := consts.ParsePluginType(strings.TrimSpace(pluginTypeRaw))
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	resp, err := client.Sys().GetPlugin(&api.GetPluginInput{
 		Name: pluginName,
+		Type: pluginType,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading plugin named %s: %s", pluginName, err))
+		return 2
+	}
+
+	if resp == nil {
+		c.UI.Error(fmt.Sprintf("No value found for plugin %q", pluginName))
 		return 2
 	}
 

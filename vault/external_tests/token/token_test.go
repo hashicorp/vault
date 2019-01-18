@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -152,7 +153,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// At this point there shouldn't be any identity policy on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +177,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup the token and expect entity policies on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +214,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	}
 
 	// Lookup token and expect both entity and group policies on the token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +277,9 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 
 	// Lookup token and expect entity, group and external group policies on the
 	// token
-	secret, err = client.Logical().Read("auth/token/lookup/" + ldapClientToken)
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
+		"token": ldapClientToken,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,6 +342,12 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 }
 
 func TestTokenStore_CIDRBlocks(t *testing.T) {
+	testPolicy := `
+path "auth/token/create" {
+	capabilities = ["update"]
+}
+`
+
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -346,6 +361,13 @@ func TestTokenStore_CIDRBlocks(t *testing.T) {
 
 	var err error
 	var secret *api.Secret
+
+	_, err = client.Logical().Write("sys/policies/acl/test", map[string]interface{}{
+		"policy": testPolicy,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test normally
 	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
@@ -369,13 +391,14 @@ func TestTokenStore_CIDRBlocks(t *testing.T) {
 	// CIDR blocks, containing localhost
 	client.SetToken(rootToken)
 	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"bound_cidrs": []string{"127.0.0.1/32", "1.2.3.4/8", "5.6.7.8/24"},
+		"bound_cidrs":      []string{"127.0.0.1/32", "1.2.3.4/8", "5.6.7.8/24"},
+		"allowed_policies": "test",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	secret, err = client.Auth().Token().CreateWithRole(&api.TokenCreateRequest{
-		Policies: []string{"default"},
+		Policies: []string{"test", "default"},
 	}, "testrole")
 	if err != nil {
 		t.Fatal(err)
@@ -384,6 +407,27 @@ func TestTokenStore_CIDRBlocks(t *testing.T) {
 	_, err = client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Before moving on, validate that a child token created from this token
+	// inherits the bound cidr blocks
+	client.SetToken(secret.Auth.ClientToken)
+	childSecret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"default"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(childSecret.Auth.ClientToken)
+	childInfo, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(childInfo.Data["bound_cidrs"], []interface{}{"127.0.0.1", "1.2.3.4/8", "5.6.7.8/24"}); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// CIDR blocks, not containing localhost (should fail)
@@ -412,7 +456,8 @@ func TestTokenStore_CIDRBlocks(t *testing.T) {
 	// Root token, no ttl, should work
 	client.SetToken(rootToken)
 	_, err = client.Logical().Write("auth/token/roles/testrole", map[string]interface{}{
-		"bound_cidrs": []string{"1.2.3.4/8", "5.6.7.8/24"},
+		"bound_cidrs":      []string{"1.2.3.4/8", "5.6.7.8/24"},
+		"allowed_policies": "",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -1,18 +1,23 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias, gt } from '@ember/object/computed';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import keyUtils from 'vault/lib/key-utils';
 import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
 
 const { ancestorKeysForKey } = keyUtils;
-const { Component, computed, inject } = Ember;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
 export default Component.extend({
   tagName: '',
-  namespaceService: inject.service('namespace'),
-  auth: inject.service(),
+  namespaceService: service('namespace'),
+  auth: service(),
+  store: service(),
   namespace: null,
+  listCapability: null,
+  canList: alias('listCapability.canList'),
 
   init() {
     this._super(...arguments);
@@ -26,10 +31,23 @@ export default Component.extend({
     let oldNS = this.get('oldNamespace');
     if (!oldNS || ns !== oldNS) {
       this.get('setForAnimation').perform();
+      this.get('fetchListCapability').perform();
     }
     this.set('oldNamespace', ns);
   },
 
+  fetchListCapability: task(function*() {
+    try {
+      if (this.listCapability) {
+        yield this.listCapability.reload();
+        return;
+      }
+      let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.set('listCapability', capability);
+    } catch (e) {
+      //do nothing here
+    }
+  }),
   setForAnimation: task(function*() {
     let leaves = this.get('menuLeaves');
     let lastLeaves = this.get('lastMenuLeaves');
@@ -55,14 +73,14 @@ export default Component.extend({
     this.set('lastMenuLeaves', leaves);
   }).drop(),
 
-  isAnimating: computed.alias('setForAnimation.isRunning'),
+  isAnimating: alias('setForAnimation.isRunning'),
 
-  namespacePath: computed.alias('namespaceService.path'),
+  namespacePath: alias('namespaceService.path'),
 
   // this is an array of namespace paths that the current user
   // has access to
-  accessibleNamespaces: computed.alias('namespaceService.accessibleNamespaces'),
-  inRootNamespace: computed.alias('namespaceService.inRootNamespace'),
+  accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
+  inRootNamespace: alias('namespaceService.inRootNamespace'),
 
   namespaceTree: computed('accessibleNamespaces', function() {
     let nsList = this.get('accessibleNamespaces');
@@ -124,8 +142,8 @@ export default Component.extend({
     return leaves;
   }),
 
-  currentLeaf: computed.alias('lastMenuLeaves.lastObject'),
-  canAccessMultipleNamespaces: computed.gt('accessibleNamespaces.length', 1),
+  currentLeaf: alias('lastMenuLeaves.lastObject'),
+  canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
   isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
     return this.get('auth.authData.userRootNamespace') === this.get('namespacePath');
   }),

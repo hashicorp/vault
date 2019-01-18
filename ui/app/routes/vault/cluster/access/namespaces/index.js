@@ -1,15 +1,16 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
-const { inject } = Ember;
-
-export default Ember.Route.extend(UnloadModel, {
-  version: inject.service(),
+export default Route.extend(UnloadModel, {
+  version: service(),
   beforeModel() {
     this.store.unloadAll('namespace');
-    return this.get('version').fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
+    return this.get('version')
+      .fetchFeatures()
+      .then(() => {
+        return this._super(...arguments);
+      });
   },
   model() {
     return this.get('version.hasNamespaces')

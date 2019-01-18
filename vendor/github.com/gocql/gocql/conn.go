@@ -124,8 +124,10 @@ var TimeoutLimit int64 = 0
 // queries, but users are usually advised to use a more reliable, higher
 // level API.
 type Conn struct {
-	conn          net.Conn
-	r             *bufio.Reader
+	conn net.Conn
+	r    *bufio.Reader
+	w    io.Writer
+
 	timeout       time.Duration
 	cfg           *ConnConfig
 	frameObserver FrameHeaderObserver
@@ -173,6 +175,9 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 	dialer := &net.Dialer{
 		Timeout: cfg.ConnectTimeout,
 	}
+	if cfg.Keepalive > 0 {
+		dialer.KeepAlive = cfg.Keepalive
+	}
 
 	// TODO(zariel): handle ipv6 zone
 	addr := (&net.TCPAddr{IP: ip, Port: port}).String()
@@ -205,10 +210,10 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		streams:       streams.New(cfg.ProtoVersion),
 		host:          host,
 		frameObserver: s.frameObserver,
-	}
-
-	if cfg.Keepalive > 0 {
-		c.setKeepalive(cfg.Keepalive)
+		w: &deadlineWriter{
+			w:       conn,
+			timeout: cfg.Timeout,
+		},
 	}
 
 	var (
@@ -216,46 +221,25 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		cancel func()
 	)
 	if cfg.ConnectTimeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), cfg.ConnectTimeout)
+		ctx, cancel = context.WithTimeout(context.TODO(), cfg.ConnectTimeout)
 	} else {
-		ctx, cancel = context.WithCancel(context.Background())
+		ctx, cancel = context.WithCancel(context.TODO())
 	}
 	defer cancel()
 
-	frameTicker := make(chan struct{}, 1)
-	startupErr := make(chan error)
-	go func() {
-		for range frameTicker {
-			err := c.recv()
-			if err != nil {
-				select {
-				case startupErr <- err:
-				case <-ctx.Done():
-				}
+	startup := &startupCoordinator{
+		frameTicker: make(chan struct{}),
+		conn:        c,
+	}
 
-				return
-			}
-		}
-	}()
+	if err := startup.setupConn(ctx); err != nil {
+		c.close()
+		return nil, err
+	}
 
-	go func() {
-		defer close(frameTicker)
-		err := c.startup(ctx, frameTicker)
-		select {
-		case startupErr <- err:
-		case <-ctx.Done():
-		}
-	}()
-
-	select {
-	case err := <-startupErr:
-		if err != nil {
-			c.Close()
-			return nil, err
-		}
-	case <-ctx.Done():
-		c.Close()
-		return nil, errors.New("gocql: no response to connection startup within timeout")
+	// dont coalesce startup frames
+	if s.cfg.WriteCoalesceWaitTime > 0 {
+		c.w = newWriteCoalescer(c.w, s.cfg.WriteCoalesceWaitTime, c.quit)
 	}
 
 	go c.serve()
@@ -263,12 +247,8 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 	return c, nil
 }
 
-func (c *Conn) Write(p []byte) (int, error) {
-	if c.timeout > 0 {
-		c.conn.SetWriteDeadline(time.Now().Add(c.timeout))
-	}
-
-	return c.conn.Write(p)
+func (c *Conn) Write(p []byte) (n int, err error) {
+	return c.w.Write(p)
 }
 
 func (c *Conn) Read(p []byte) (n int, err error) {
@@ -294,27 +274,98 @@ func (c *Conn) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (c *Conn) startup(ctx context.Context, frameTicker chan struct{}) error {
-	m := map[string]string{
-		"CQL_VERSION": c.cfg.CQLVersion,
-	}
+type startupCoordinator struct {
+	conn        *Conn
+	frameTicker chan struct{}
+}
 
-	if c.compressor != nil {
-		m["COMPRESSION"] = c.compressor.Name()
-	}
+func (s *startupCoordinator) setupConn(ctx context.Context) error {
+	startupErr := make(chan error)
+	go func() {
+		for range s.frameTicker {
+			err := s.conn.recv()
+			if err != nil {
+				select {
+				case startupErr <- err:
+				case <-ctx.Done():
+				}
+
+				return
+			}
+		}
+	}()
+
+	go func() {
+		defer close(s.frameTicker)
+		err := s.options(ctx)
+		select {
+		case startupErr <- err:
+		case <-ctx.Done():
+		}
+	}()
 
 	select {
-	case frameTicker <- struct{}{}:
+	case err := <-startupErr:
+		if err != nil {
+			return err
+		}
 	case <-ctx.Done():
-		return ctx.Err()
+		return errors.New("gocql: no response to connection startup within timeout")
 	}
 
-	framer, err := c.exec(ctx, &writeStartupFrame{opts: m}, nil)
+	return nil
+}
+
+func (s *startupCoordinator) write(ctx context.Context, frame frameWriter) (frame, error) {
+	select {
+	case s.frameTicker <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	framer, err := s.conn.exec(ctx, frame, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return framer.parseFrame()
+}
+
+func (s *startupCoordinator) options(ctx context.Context) error {
+	frame, err := s.write(ctx, &writeOptionsFrame{})
 	if err != nil {
 		return err
 	}
 
-	frame, err := framer.parseFrame()
+	supported, ok := frame.(*supportedFrame)
+	if !ok {
+		return NewErrProtocol("Unknown type of response to startup frame: %T", frame)
+	}
+
+	return s.startup(ctx, supported.supported)
+}
+
+func (s *startupCoordinator) startup(ctx context.Context, supported map[string][]string) error {
+	m := map[string]string{
+		"CQL_VERSION": s.conn.cfg.CQLVersion,
+	}
+
+	if s.conn.compressor != nil {
+		comp := supported["COMPRESSION"]
+		name := s.conn.compressor.Name()
+		for _, compressor := range comp {
+			if compressor == name {
+				m["COMPRESSION"] = compressor
+				break
+			}
+		}
+
+		if _, ok := m["COMPRESSION"]; !ok {
+			s.conn.compressor = nil
+		}
+	}
+
+	frame, err := s.write(ctx, &writeStartupFrame{opts: m})
 	if err != nil {
 		return err
 	}
@@ -325,37 +376,25 @@ func (c *Conn) startup(ctx context.Context, frameTicker chan struct{}) error {
 	case *readyFrame:
 		return nil
 	case *authenticateFrame:
-		return c.authenticateHandshake(ctx, v, frameTicker)
+		return s.authenticateHandshake(ctx, v)
 	default:
 		return NewErrProtocol("Unknown type of response to startup frame: %s", v)
 	}
 }
 
-func (c *Conn) authenticateHandshake(ctx context.Context, authFrame *authenticateFrame, frameTicker chan struct{}) error {
-	if c.auth == nil {
+func (s *startupCoordinator) authenticateHandshake(ctx context.Context, authFrame *authenticateFrame) error {
+	if s.conn.auth == nil {
 		return fmt.Errorf("authentication required (using %q)", authFrame.class)
 	}
 
-	resp, challenger, err := c.auth.Challenge([]byte(authFrame.class))
+	resp, challenger, err := s.conn.auth.Challenge([]byte(authFrame.class))
 	if err != nil {
 		return err
 	}
 
 	req := &writeAuthResponseFrame{data: resp}
-
 	for {
-		select {
-		case frameTicker <- struct{}{}:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-
-		framer, err := c.exec(ctx, req, nil)
-		if err != nil {
-			return err
-		}
-
-		frame, err := framer.parseFrame()
+		frame, err := s.write(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -473,10 +512,10 @@ func (c *Conn) recv() error {
 
 	if c.frameObserver != nil {
 		c.frameObserver.ObserveFrameHeader(context.Background(), ObservedFrameHeader{
-			Version: byte(head.version),
+			Version: protoVersion(head.version),
 			Flags:   head.flags,
 			Stream:  int16(head.stream),
-			Opcode:  byte(head.op),
+			Opcode:  frameOp(head.op),
 			Length:  int32(head.length),
 			Start:   headStartTime,
 			End:     headEndTime,
@@ -583,6 +622,136 @@ type callReq struct {
 	streamID int           // current stream in use
 
 	timer *time.Timer
+}
+
+type deadlineWriter struct {
+	w interface {
+		SetWriteDeadline(time.Time) error
+		io.Writer
+	}
+	timeout time.Duration
+}
+
+func (c *deadlineWriter) Write(p []byte) (int, error) {
+	if c.timeout > 0 {
+		c.w.SetWriteDeadline(time.Now().Add(c.timeout))
+	}
+	return c.w.Write(p)
+}
+
+func newWriteCoalescer(w io.Writer, d time.Duration, quit <-chan struct{}) *writeCoalescer {
+	wc := &writeCoalescer{
+		writeCh: make(chan struct{}), // TODO: could this be sync?
+		cond:    sync.NewCond(&sync.Mutex{}),
+		w:       w,
+		quit:    quit,
+	}
+	go wc.writeFlusher(d)
+	return wc
+}
+
+type writeCoalescer struct {
+	w io.Writer
+
+	quit    <-chan struct{}
+	writeCh chan struct{}
+	running bool
+
+	// cond waits for the buffer to be flushed
+	cond    *sync.Cond
+	buffers net.Buffers
+
+	// result of the write
+	err error
+}
+
+func (w *writeCoalescer) flushLocked() {
+	w.running = false
+	if len(w.buffers) == 0 {
+		return
+	}
+
+	// Given we are going to do a fanout n is useless and according to
+	// the docs WriteTo should return 0 and err or bytes written and
+	// no error.
+	_, w.err = w.buffers.WriteTo(w.w)
+	if w.err != nil {
+		w.buffers = nil
+	}
+	w.cond.Broadcast()
+}
+
+func (w *writeCoalescer) flush() {
+	w.cond.L.Lock()
+	w.flushLocked()
+	w.cond.L.Unlock()
+}
+
+func (w *writeCoalescer) stop() {
+	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
+
+	w.flushLocked()
+	// nil the channel out sends block forever on it
+	// instead of closing which causes a send on closed channel
+	// panic.
+	w.writeCh = nil
+}
+
+func (w *writeCoalescer) Write(p []byte) (int, error) {
+	w.cond.L.Lock()
+
+	if !w.running {
+		select {
+		case w.writeCh <- struct{}{}:
+			w.running = true
+		case <-w.quit:
+			w.cond.L.Unlock()
+			return 0, io.EOF // TODO: better error here?
+		}
+	}
+
+	w.buffers = append(w.buffers, p)
+	for len(w.buffers) != 0 {
+		w.cond.Wait()
+	}
+
+	err := w.err
+	w.cond.L.Unlock()
+
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (w *writeCoalescer) writeFlusher(interval time.Duration) {
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	defer w.stop()
+
+	if !timer.Stop() {
+		<-timer.C
+	}
+
+	for {
+		// wait for a write to start the flush loop
+		select {
+		case <-w.writeCh:
+		case <-w.quit:
+			return
+		}
+
+		timer.Reset(interval)
+
+		select {
+		case <-w.quit:
+			return
+		case <-timer.C:
+		}
+
+		w.flush()
+	}
 }
 
 func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*framer, error) {
@@ -722,6 +891,9 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 	prep := &writePrepareFrame{
 		statement: stmt,
 	}
+	if c.version > protoVersion4 {
+		prep.keyspace = c.currentKeyspace
+	}
 
 	framer, err := c.exec(ctx, prep, tracer)
 	if err != nil {
@@ -806,6 +978,9 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 	if qry.pageSize > 0 {
 		params.pageSize = qry.pageSize
 	}
+	if c.version > protoVersion4 {
+		params.keyspace = c.currentKeyspace
+	}
 
 	var (
 		frame frameWriter
@@ -854,13 +1029,15 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		params.skipMeta = !(c.session.cfg.DisableSkipMetadata || qry.disableSkipMetadata)
 
 		frame = &writeExecuteFrame{
-			preparedID: info.id,
-			params:     params,
+			preparedID:    info.id,
+			params:        params,
+			customPayload: qry.customPayload,
 		}
 	} else {
 		frame = &writeQueryFrame{
-			statement: qry.stmt,
-			params:    params,
+			statement:     qry.stmt,
+			params:        params,
+			customPayload: qry.customPayload,
 		}
 	}
 
@@ -1001,6 +1178,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 		serialConsistency:     batch.serialCons,
 		defaultTimestamp:      batch.defaultTimestamp,
 		defaultTimestampValue: batch.defaultTimestampValue,
+		customPayload:         batch.CustomPayload,
 	}
 
 	stmts := make(map[string]string, len(batch.Entries))
@@ -1093,21 +1271,9 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 	}
 }
 
-func (c *Conn) setKeepalive(d time.Duration) error {
-	if tc, ok := c.conn.(*net.TCPConn); ok {
-		err := tc.SetKeepAlivePeriod(d)
-		if err != nil {
-			return err
-		}
-
-		return tc.SetKeepAlive(true)
-	}
-
-	return nil
-}
-
 func (c *Conn) query(statement string, values ...interface{}) (iter *Iter) {
 	q := c.session.Query(statement, values...).Consistency(One)
+	q.trace = nil
 	return c.executeQuery(q)
 }
 

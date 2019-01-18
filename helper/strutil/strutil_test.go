@@ -363,6 +363,22 @@ func TestTrimStrings(t *testing.T) {
 	}
 }
 
+func TestRemoveEmpty(t *testing.T) {
+	input := []string{"abc", "", "abc", ""}
+	expected := []string{"abc", "abc"}
+	actual := RemoveEmpty(input)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Bad TrimStrings: expected:%#v, got:%#v", expected, actual)
+	}
+
+	input = []string{""}
+	expected = []string{}
+	actual = RemoveEmpty(input)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Bad TrimStrings: expected:%#v, got:%#v", expected, actual)
+	}
+}
+
 func TestStrutil_AppendIfMissing(t *testing.T) {
 	keys := []string{}
 
@@ -457,5 +473,61 @@ func TestStrUtil_MergeSlices(t *testing.T) {
 
 	if !reflect.DeepEqual(res, expect) {
 		t.Fatalf("expected %v, got %v", expect, res)
+	}
+}
+
+func TestDifference(t *testing.T) {
+	testCases := []struct {
+		Name           string
+		SetA           []string
+		SetB           []string
+		Lowercase      bool
+		ExpectedResult []string
+	}{
+		{
+			Name:           "case_sensitive",
+			SetA:           []string{"a", "b", "c"},
+			SetB:           []string{"b", "c"},
+			Lowercase:      false,
+			ExpectedResult: []string{"a"},
+		},
+		{
+			Name:           "case_insensitive",
+			SetA:           []string{"a", "B", "c"},
+			SetB:           []string{"b", "C"},
+			Lowercase:      true,
+			ExpectedResult: []string{"a"},
+		},
+		{
+			Name:           "no_match",
+			SetA:           []string{"a", "b", "c"},
+			SetB:           []string{"d"},
+			Lowercase:      false,
+			ExpectedResult: []string{"a", "b", "c"},
+		},
+		{
+			Name:           "empty_set_a",
+			SetA:           []string{},
+			SetB:           []string{"d", "e"},
+			Lowercase:      false,
+			ExpectedResult: []string{},
+		},
+		{
+			Name:           "empty_set_b",
+			SetA:           []string{"a", "b"},
+			SetB:           []string{},
+			Lowercase:      false,
+			ExpectedResult: []string{"a", "b"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			actualResult := Difference(tc.SetA, tc.SetB, tc.Lowercase)
+
+			if !reflect.DeepEqual(actualResult, tc.ExpectedResult) {
+				t.Fatalf("expected %v, got %v", tc.ExpectedResult, actualResult)
+			}
+		})
 	}
 }

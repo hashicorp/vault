@@ -1,26 +1,33 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import { toolsActions } from 'vault/helpers/tools-actions';
 
-export default Ember.Route.extend({
-  wizard: Ember.inject.service(),
+export default Route.extend({
+  wizard: service(),
 
   beforeModel(transition) {
     const supportedActions = toolsActions();
-    const { selectedAction } = this.paramsFor(this.routeName);
+    const { selected_action: selectedAction } = this.paramsFor(this.routeName);
     if (!selectedAction || !supportedActions.includes(selectedAction)) {
       transition.abort();
       return this.transitionTo(this.routeName, supportedActions[0]);
     }
   },
-  model() {},
+
+  model(params) {
+    return params.selected_action;
+  },
+
+  setupController(controller, model) {
+    this._super(...arguments);
+    controller.set('selectedAction', model);
+  },
+
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);
-      if (this.get('wizard.currentMachine') === 'tools') {
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          params.selectedAction.toUpperCase()
-        );
+      if (this.wizard.currentMachine === 'tools') {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
       }
       this.controller.setProperties(params);
       return true;

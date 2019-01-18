@@ -3,7 +3,6 @@ package namespace
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strings"
 )
 
@@ -26,10 +25,6 @@ var (
 		Path: "",
 	}
 )
-
-var AdjustRequest = func(r *http.Request) (*http.Request, int) {
-	return r.WithContext(ContextWithNamespace(r.Context(), RootNamespace)), 0
-}
 
 func (n *Namespace) HasParent(possibleParent *Namespace) bool {
 	switch {
@@ -80,14 +75,6 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 	return ns, nil
 }
 
-func TestContext() context.Context {
-	return ContextWithNamespace(context.Background(), TestNamespace())
-}
-
-func TestNamespace() *Namespace {
-	return RootNamespace
-}
-
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the
 // provided string
 func Canonicalize(nsPath string) string {
@@ -104,4 +91,37 @@ func Canonicalize(nsPath string) string {
 	}
 
 	return nsPath
+}
+
+func SplitIDFromString(input string) (string, string) {
+	prefix := ""
+	slashIdx := strings.LastIndex(input, "/")
+
+	switch {
+	case strings.HasPrefix(input, "b."):
+		prefix = "b."
+		input = input[2:]
+
+	case strings.HasPrefix(input, "s."):
+		prefix = "s."
+		input = input[2:]
+
+	case slashIdx > 0:
+		// Leases will never have a b./s. to start
+		if slashIdx == len(input)-1 {
+			return input, ""
+		}
+		prefix = input[:slashIdx+1]
+		input = input[slashIdx+1:]
+	}
+
+	idx := strings.LastIndex(input, ".")
+	if idx == -1 {
+		return prefix + input, ""
+	}
+	if idx == len(input)-1 {
+		return prefix + input, ""
+	}
+
+	return prefix + input[:idx], input[idx+1:]
 }

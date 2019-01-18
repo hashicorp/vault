@@ -213,18 +213,6 @@ func (b *backend) getSecretKey(ctx context.Context, s logical.Storage, rs *RoleS
 	return resp, nil
 }
 
-const pathTokenHelpSyn = `Generate an OAuth2 access token under a specific role set.`
-const pathTokenHelpDesc = `
-This path will generate a new OAuth2 access token for accessing GCP APIs.
-A role set, binding IAM roles to specific GCP resources, will be specified 
-by name - for example, if this backend is mounted at "gcp",
-then "gcp/token/deploy" would generate tokens for the "deploy" role set.
-
-On the backend, each roleset is associated with a service account. 
-The token will be associated with this service account. Tokens have a 
-short-term lease (1-hour) associated with them but cannot be renewed.
-`
-
 const pathServiceAccountKeySyn = `Generate an service account private key under a specific role set.`
 const pathServiceAccountKeyDesc = `
 This path will generate a new service account private key for accessing GCP APIs.

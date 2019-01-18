@@ -32,6 +32,26 @@
             Overrides the cluster address that the primary gives to secondary nodes.
           </p>
         </div>
+
+        <div class="field">
+          <div class="b-checkbox">
+            <input type="checkbox"
+            id="forcePromote"
+            class="styled"
+            checked={{force}}
+            onchange={{action (mut force) value="target.checked"}}
+            />
+            <label for="forcePromote" class="is-label">
+              Force promotion of this cluster
+            </label>
+          </div>
+          <AlertInline
+            @class="has-top"
+            @type="warning"
+            @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+            promotes the cluster even if certain safety checks fail."
+          />
+        </div>
       </div>
     {{/if}}
   </div>
@@ -40,7 +60,7 @@
     <div class="control">
       {{#confirm-action
         buttonClasses="button is-primary"
-        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash dr_operation_token=dr_operation_token primary_cluster_addr=primary_cluster_addr))
+        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash dr_operation_token=dr_operation_token primary_cluster_addr=primary_cluster_addr force=force))
         confirmMessage="Are you sure you want to promote this cluster?"
         confirmButtonText="Promote cluster"
         cancelButtonText="Cancel"
@@ -56,10 +76,11 @@
   </h4>
   <div class="content">
     <p>Promote the cluster to primary.</p>
-    <p>
-      <em class="has-text-danger">Caution</em>: Vault replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
-      If the cluster has a primary, be sure to demote it before promoting a secondary.
-    </p>
+    <AlertInline
+      @type="warning"
+      @message="Vault replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
+        If the cluster has a primary, be sure to demote it before promoting a secondary."
+    />
     <div class="field">
       <label for="primary_cluster_addr" class="is-label">
         Primary cluster address <em class="is-optional">(optional)</em>
@@ -71,12 +92,31 @@
         Overrides the cluster address that the primary gives to secondary nodes.
       </p>
     </div>
+    <div class="field">
+      <div class="b-checkbox">
+        <input type="checkbox"
+        id="forcePromote"
+        class="styled"
+        checked={{force}}
+        onchange={{action (mut force) value="target.checked"}}
+        />
+        <label for="forcePromote" class="is-label">
+          Force promotion of this cluster
+        </label>
+      </div>
+      <AlertInline
+        @class="has-top"
+        @type="warning"
+        @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
+          promotes the cluster even if certain safety checks fail."
+      />
+    </div>
   </div>
   <div class="field">
     <div class="control">
       {{#confirm-action
         buttonClasses="button is-primary"
-        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash primary_cluster_addr=primary_cluster_addr))
+        onConfirmAction=(action "onSubmit" "promote" model.replicationAttrs.modeForUrl (hash primary_cluster_addr=primary_cluster_addr force=force))
         confirmMessage="Are you sure you want to promote this cluster?"
         confirmButtonText="Promote cluster"
         cancelButtonText="Cancel"

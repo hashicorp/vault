@@ -143,7 +143,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 		}
 	}
 
-	out := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Replication | Seal Wrap | Options | Description"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | Options | Description"}
 	for _, path := range paths {
 		mount := auths[path]
 
@@ -155,13 +155,18 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			replication = "local"
 		}
 
+		pluginName := mount.Type
+		if pluginName == "plugin" {
+			pluginName = mount.Config.PluginName
+		}
+
 		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s",
 			path,
-			mount.Type,
+			pluginName,
 			mount.Accessor,
-			mount.Config.PluginName,
 			defaultTTL,
 			maxTTL,
+			mount.Config.TokenType,
 			replication,
 			mount.SealWrap,
 			mount.Options,

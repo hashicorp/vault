@@ -13,11 +13,243 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
+	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestTokenStore_CubbyholeDeletion(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 0; i < 10; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%2 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Write data in the token's cubbyhole
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Revoke the token
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Path:        "revoke-self",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// List the cubbyhole keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// There should be no entries
+	if len(cubbyholeKeys) != 0 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 0, actual: %d", len(cubbyholeKeys))
+	}
+}
+
+func TestTokenStore_CubbyholeTidy(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 1; i <= 20; i++ {
+		// Create 20 tokens
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%3 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+
+		// Create 4 junk cubbyhole entries
+		if i%5 == 0 {
+			invalidToken, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err := ts.cubbyholeBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+				ClientToken: invalidToken,
+				Operation:   logical.UpdateOperation,
+				Path:        "cubbyhole/sample/data",
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+				Storage: ts.cubbyholeBackend.storageView,
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+			}
+		}
+
+		// Write into cubbyholes of 10 tokens
+		if i%2 == 0 {
+			continue
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// Tidy cubbyhole storage
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "tidy",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Wait for tidy operation to complete
+	time.Sleep(2 * time.Second)
+
+	// List all the cubbyhole storage keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The junk entries must have been cleaned up
+	if len(cubbyholeKeys) != 10 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 10, actual: %d", len(cubbyholeKeys))
+	}
+}
+
+func TestTokenStore_Salting(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	saltedID, err := ts.SaltID(namespace.RootContext(nil), "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha1 hash; got sha2-256 hmac")
+	}
+
+	saltedID, err = ts.SaltID(namespace.RootContext(nil), "s.foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+
+	nsCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{"testid", "ns1"})
+	saltedID, err = ts.SaltID(nsCtx, "foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+
+	saltedID, err = ts.SaltID(nsCtx, "s.foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(saltedID, "h") {
+		t.Fatalf("expected sha2-256 hmac; got sha1 hash")
+	}
+}
+
+func TestTokenStore_ServiceTokenPrefix(t *testing.T) {
+	c, _, initToken := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	// Ensure that a regular service token has a "s." prefix
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	if !strings.HasPrefix(resp.Auth.ClientToken, "s.") {
+		t.Fatalf("token %q does not have a 's.' prefix", resp.Auth.ClientToken)
+	}
+
+	// Ensure that using a custon token ID results in a warning
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"id": "foobar",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expectedWarning := "Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups."
+	if resp.Warnings[0] != expectedWarning {
+		t.Fatalf("expected warning not present")
+	}
+
+	// Ensure that custom token ID having a "s." prefix fails
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		ClientToken: initToken,
+		Path:        "create",
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"id": "s.foobar",
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+	if resp.Error().Error() != "custom token ID cannot have the 's.' prefix" {
+		t.Fatalf("expected input error not present in error response")
+	}
+}
 
 type TokenEntryOld struct {
 	ID             string
@@ -60,17 +292,16 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedID, err := ts.SaltID(context.Background(), entry.ID)
+	saltedID, err := ts.SaltID(namespace.RootContext(nil), entry.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := lookupPrefix + saltedID
 	le := &logical.StorageEntry{
-		Key:   path,
+		Key:   saltedID,
 		Value: enc,
 	}
 
-	if err := ts.view.Put(context.Background(), le); err != nil {
+	if err := ts.idView(namespace.RootNamespace).Put(namespace.RootContext(nil), le); err != nil {
 		t.Fatal(err)
 	}
 
@@ -86,11 +317,22 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: entry.ID,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), entry.Path, auth); err != nil {
+	// Same as entry from TokenEntryOld, but used for RegisterAuth
+	registryEntry := &logical.TokenEntry{
+		DisplayName:    entry.DisplayName,
+		Path:           entry.Path,
+		Policies:       entry.Policies,
+		CreationTime:   entry.CreationTime,
+		ExplicitMaxTTL: entry.ExplicitMaxTTL,
+		NumUses:        entry.NumUses,
+		NamespaceID:    namespace.RootNamespaceID,
+	}
+
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), registryEntry, auth); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := ts.Lookup(context.Background(), entry.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), entry.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -115,8 +357,9 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		CreationTime:   time.Now().Unix(),
 		ExplicitMaxTTL: 100,
 		NumUses:        10,
+		NamespaceID:    namespace.RootNamespaceID,
 	}
-	if err := ts.create(context.Background(), ent); err != nil {
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	auth = &logical.Auth{
@@ -130,11 +373,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), ent.Path, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err = ts.Lookup(context.Background(), ent.ID)
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -159,8 +402,9 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		CreationTimeDeprecated:   time.Now().Unix(),
 		ExplicitMaxTTLDeprecated: 100,
 		NumUsesDeprecated:        10,
+		NamespaceID:              namespace.RootNamespaceID,
 	}
-	if err := ts.create(context.Background(), ent); err != nil {
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	auth = &logical.Auth{
@@ -174,11 +418,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), ent.Path, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err = ts.Lookup(context.Background(), ent.ID)
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -200,8 +444,9 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		Path:              "test",
 		NumUses:           5,
 		NumUsesDeprecated: 10,
+		NamespaceID:       namespace.RootNamespaceID,
 	}
-	if err := ts.create(context.Background(), ent); err != nil {
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	auth = &logical.Auth{
@@ -215,11 +460,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), ent.Path, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err = ts.Lookup(context.Background(), ent.ID)
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -233,8 +478,9 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		Path:              "test",
 		NumUses:           10,
 		NumUsesDeprecated: 5,
+		NamespaceID:       namespace.RootNamespaceID,
 	}
-	if err := ts.create(context.Background(), ent); err != nil {
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	auth = &logical.Auth{
@@ -248,11 +494,11 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), ent.Path, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
 		t.Fatal(err)
 	}
 
-	out, err = ts.Lookup(context.Background(), ent.ID)
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -271,10 +517,22 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 	}
 }
 
-func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
+func testMakeBatchTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
+	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, true)
+}
+
+func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string) {
+	testMakeTokenViaBackend(t, ts, root, client, ttl, policy, false)
+}
+
+func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
-	req.Data["id"] = client
+	if batch {
+		req.Data["type"] = "batch"
+	} else {
+		req.Data["id"] = client
+	}
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
 	resp := testMakeTokenViaRequest(t, ts, req)
@@ -285,25 +543,52 @@ func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl str
 }
 
 func testMakeTokenViaRequest(t testing.TB, ts *TokenStore, req *logical.Request) *logical.Response {
-	resp, err := ts.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
 	}
-
 	if resp == nil {
 		t.Fatalf("got nil token from create call")
 	}
+	// Let the caller handle the error
+	if resp.IsError() {
+		return resp
+	}
 
-	if err := ts.expiration.RegisterAuth(context.Background(), resp.Auth.CreationPath, resp.Auth); err != nil {
+	te := &logical.TokenEntry{
+		Path:        resp.Auth.CreationPath,
+		NamespaceID: namespace.RootNamespaceID,
+	}
+
+	if resp.Auth.TokenType != logical.TokenTypeBatch {
+		if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, resp.Auth); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	te, err = ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("token entry was nil")
 	}
 
 	return resp
 }
 
 func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry) {
-	if err := ts.create(context.Background(), te); err != nil {
+	if te.NamespaceID == "" {
+		te.NamespaceID = namespace.RootNamespaceID
+	}
+	if te.CreationTime == 0 {
+		te.CreationTime = time.Now().Unix()
+	}
+	if err := ts.create(namespace.RootContext(nil), te); err != nil {
 		t.Fatal(err)
+	}
+	if te.Type == logical.TokenTypeDefault {
+		te.Type = logical.TokenTypeService
 	}
 	auth := &logical.Auth{
 		NumUses:     te.NumUses,
@@ -320,25 +605,51 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 		Period:         te.Period,
 		ExplicitMaxTTL: te.ExplicitMaxTTL,
 		CreationPath:   te.Path,
+		TokenType:      te.Type,
 	}
-	if err := ts.expiration.RegisterAuth(context.Background(), te.Path, auth); err != nil {
-		t.Fatal(err)
+	err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, auth)
+	switch err {
+	case nil:
+		if te.Type == logical.TokenTypeBatch {
+			t.Fatal("expected error from trying to register auth with batch token")
+		}
+	default:
+		if te.Type != logical.TokenTypeBatch {
+			t.Fatal(err)
+		}
 	}
 }
 
-func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
+func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
+	testMakeTokenViaCore(t, c, root, client, ttl, policy, false, nil)
+}
+
+func testMakeBatchTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string) {
+	testMakeTokenViaCore(t, c, root, client, ttl, policy, true, nil)
+}
+
+func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl string, policy []string, batch bool, outAuth *logical.Auth) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
-	req.Data["id"] = client
+	if batch {
+		req.Data["type"] = "batch"
+	} else {
+		req.Data["id"] = client
+	}
 	req.Data["policies"] = policy
 	req.Data["ttl"] = ttl
 
-	resp, err := c.HandleRequest(context.Background(), req)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-	if resp.Auth.ClientToken != client {
-		t.Fatalf("bad: %#v", *resp)
+	if !batch {
+		if resp.Auth.ClientToken != client {
+			t.Fatalf("bad: %#v", *resp)
+		}
+	}
+	if outAuth != nil && resp != nil && resp.Auth != nil {
+		*outAuth = *resp.Auth
 	}
 }
 
@@ -347,13 +658,14 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 	ts := c.tokenStore
 
 	ent := &logical.TokenEntry{
-		Path:     "test",
-		Policies: []string{"dev", "ops"},
-		TTL:      time.Hour,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 
-	out, err := ts.Lookup(context.Background(), ent.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -363,7 +675,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	aEntry, err := ts.lookupByAccessor(context.Background(), out.Accessor, false)
+	aEntry, err := ts.lookupByAccessor(namespace.RootContext(nil), out.Accessor, false, false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -372,14 +684,28 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 	if aEntry.TokenID != ent.ID {
 		t.Fatalf("bad: got\n%s\nexpected\n%s\n", aEntry.TokenID, ent.ID)
 	}
+
+	// Make sure a batch token doesn't get an accessor
+	ent.Type = logical.TokenTypeBatch
+	testMakeTokenDirectly(t, ts, ent)
+
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Ensure that accessor is created
+	if out == nil || out.Accessor != "" {
+		t.Fatalf("bad: %#v", out)
+	}
 }
 
 func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	testMakeTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
-	out, err := ts.Lookup(context.Background(), "tokenid")
+	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
+	out, err := ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -392,7 +718,7 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 		"accessor": out.Accessor,
 	}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -416,19 +742,19 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	testKeys := []string{"token1", "token2", "token3", "token4"}
 	for _, key := range testKeys {
-		testMakeTokenViaBackend(t, ts, root, key, "", []string{"foo"})
+		testMakeServiceTokenViaBackend(t, ts, root, key, "", []string{"foo"})
 	}
 
 	// Revoke root to make the number of accessors match
-	salted, err := ts.SaltID(context.Background(), root)
+	salted, err := ts.SaltID(namespace.RootContext(nil), root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts.revokeSalted(context.Background(), salted, false)
+	ts.revokeInternal(namespace.RootContext(nil), salted, false)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors/")
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -448,26 +774,25 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	// Test upgrade from old struct method of accessor storage (of token id)
 	for _, accessor := range keys {
-		aEntry, err := ts.lookupByAccessor(context.Background(), accessor, false)
+		aEntry, err := ts.lookupByAccessor(namespace.RootContext(nil), accessor, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
 			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
 		}
-		salted, err := ts.SaltID(context.Background(), accessor)
+		saltID, err := ts.SaltID(namespace.RootContext(nil), accessor)
 		if err != nil {
 			t.Fatal(err)
 		}
-		path := accessorPrefix + salted
-		le := &logical.StorageEntry{Key: path, Value: []byte(aEntry.TokenID)}
-		if err := ts.view.Put(context.Background(), le); err != nil {
+		le := &logical.StorageEntry{Key: saltID, Value: []byte(aEntry.TokenID)}
+		if err := ts.accessorView(namespace.RootNamespace).Put(namespace.RootContext(nil), le); err != nil {
 			t.Fatalf("failed to persist accessor index entry: %v", err)
 		}
 	}
 
 	// Do the lookup again, should get same result
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -486,7 +811,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	for _, accessor := range keys2 {
-		aEntry, err := ts.lookupByAccessor(context.Background(), accessor, false)
+		aEntry, err := ts.lookupByAccessor(namespace.RootContext(nil), accessor, false, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -500,10 +825,10 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
-	rootToken, err := ts.rootToken(context.Background())
+	rootToken, err := ts.rootToken(namespace.RootContext(nil))
 	root := rootToken.ID
 
-	testMakeTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
 
 	auth := &logical.Auth{
 		ClientToken: "tokenid",
@@ -512,12 +837,21 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/create", auth)
+
+	te, err := ts.Lookup(namespace.RootContext(nil), "tokenid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("token entry was nil")
+	}
+
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(context.Background(), "tokenid")
+	out, err := ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -530,14 +864,14 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		"accessor": out.Accessor,
 	}
 
-	_, err = ts.HandleRequest(context.Background(), req)
+	_, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	time.Sleep(200 * time.Millisecond)
 
-	out, err = ts.Lookup(context.Background(), "tokenid")
+	out, err = ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -547,8 +881,8 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 	}
 
 	// Now test without registering the token through the expiration manager
-	testMakeTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
-	out, err = ts.Lookup(context.Background(), "tokenid")
+	testMakeServiceTokenViaBackend(t, ts, root, "tokenid", "", []string{"foo"})
+	out, err = ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -561,14 +895,14 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		"accessor": out.Accessor,
 	}
 
-	_, err = ts.HandleRequest(context.Background(), req)
+	_, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	time.Sleep(200 * time.Millisecond)
 
-	out, err = ts.Lookup(context.Background(), "tokenid")
+	out, err = ts.Lookup(namespace.RootContext(nil), "tokenid")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -582,7 +916,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	te, err := ts.rootToken(context.Background())
+	te, err := ts.rootToken(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -590,7 +924,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 		t.Fatalf("missing ID")
 	}
 
-	out, err := ts.Lookup(context.Background(), te.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), te.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -599,21 +933,43 @@ func TestTokenStore_RootToken(t *testing.T) {
 	}
 }
 
+func TestTokenStore_NoRootBatch(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
+	req.ClientToken = root
+	req.Data["type"] = "batch"
+	req.Data["policies"] = "root"
+	req.Data["ttl"] = "5m"
+
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error, got %#v", *resp)
+	}
+}
+
 func TestTokenStore_CreateLookup(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
 	ent := &logical.TokenEntry{
-		Path:     "test",
-		Policies: []string{"dev", "ops"},
-		TTL:      time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+		TTL:         time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 	if ent.ID == "" {
 		t.Fatalf("missing ID")
 	}
 
-	out, err := ts.Lookup(context.Background(), ent.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -622,14 +978,14 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	ts2.SetExpirationManager(c.expiration)
 
 	// Should still match
-	out, err = ts2.Lookup(context.Background(), ent.ID)
+	out, err = ts2.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -643,20 +999,21 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	ts := c.tokenStore
 
 	ent := &logical.TokenEntry{
-		ID:       "foobarbaz",
-		Path:     "test",
-		Policies: []string{"dev", "ops"},
-		TTL:      time.Hour,
+		ID:          "foobarbaz",
+		NamespaceID: namespace.RootNamespaceID,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+		TTL:         time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 	if ent.ID != "foobarbaz" {
 		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
 	}
-	if err := ts.create(context.Background(), ent); err == nil {
+	if err := ts.create(namespace.RootContext(nil), ent); err == nil {
 		t.Fatal("expected error creating token with the same ID")
 	}
 
-	out, err := ts.Lookup(context.Background(), ent.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -665,14 +1022,14 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(context.Background(), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	ts2.SetExpirationManager(c.expiration)
 
 	// Should still match
-	out, err = ts2.Lookup(context.Background(), ent.ID)
+	out, err = ts2.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -685,8 +1042,12 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(context.Background(), ent); err != nil {
+	ent := &logical.TokenEntry{
+		NamespaceID: namespace.RootNamespaceID,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+	}
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID == "" {
@@ -694,7 +1055,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 	}
 
 	// Replace the lease with a lease with an expire time in the past
-	saltedID, err := ts.SaltID(context.Background(), ent.ID)
+	saltedID, err := ts.SaltID(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -707,12 +1068,13 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 		Path:        ent.Path,
 		IssueTime:   time.Now(),
 		ExpireTime:  time.Now().Add(1 * time.Hour),
+		namespace:   namespace.RootNamespace,
 	}
-	if err := ts.expiration.persistEntry(context.Background(), le); err != nil {
+	if err := ts.expiration.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(context.Background(), ent.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -722,7 +1084,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 
 	// Set to expired lease time
 	le.ExpireTime = time.Now().Add(-1 * time.Hour)
-	if err := ts.expiration.persistEntry(context.Background(), le); err != nil {
+	if err := ts.expiration.persistEntry(namespace.RootContext(nil), le); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -739,7 +1101,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 
 	// Test that the token lookup does not return the token entry due to the
 	// expired lease
-	out, err = ts.Lookup(context.Background(), ent.ID)
+	out, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -753,13 +1115,13 @@ func TestTokenStore_UseToken(t *testing.T) {
 	ts := c.tokenStore
 
 	// Lookup the root token
-	ent, err := ts.Lookup(context.Background(), root)
+	ent, err := ts.Lookup(namespace.RootContext(nil), root)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Root is an unlimited use token, should be a no-op
-	te, err := ts.UseToken(context.Background(), ent)
+	te, err := ts.UseToken(namespace.RootContext(nil), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -768,7 +1130,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Lookup the root token again
-	ent2, err := ts.Lookup(context.Background(), root)
+	ent2, err := ts.Lookup(namespace.RootContext(nil), root)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -779,15 +1141,16 @@ func TestTokenStore_UseToken(t *testing.T) {
 
 	// Create a restricted token
 	ent = &logical.TokenEntry{
-		Path:     "test",
-		Policies: []string{"dev", "ops"},
-		NumUses:  2,
-		TTL:      time.Hour,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+		NumUses:     2,
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 
 	// Use the token
-	te, err = ts.UseToken(context.Background(), ent)
+	te, err = ts.UseToken(namespace.RootContext(nil), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -796,7 +1159,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Lookup the token
-	ent2, err = ts.Lookup(context.Background(), ent.ID)
+	ent2, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -807,7 +1170,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Use the token
-	te, err = ts.UseToken(context.Background(), ent)
+	te, err = ts.UseToken(namespace.RootContext(nil), ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -817,10 +1180,10 @@ func TestTokenStore_UseToken(t *testing.T) {
 	if te.NumUses != tokenRevocationPending {
 		t.Fatalf("token entry after use #2 did not have revoke flag")
 	}
-	ts.revokeOrphan(context.Background(), te.ID)
+	ts.revokeOrphan(namespace.RootContext(nil), te.ID)
 
 	// Lookup the token
-	ent2, err = ts.Lookup(context.Background(), ent.ID)
+	ent2, err = ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -835,21 +1198,21 @@ func TestTokenStore_Revoke(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(context.Background(), ent); err != nil {
+	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NamespaceID: namespace.RootNamespaceID}
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err := ts.revokeOrphan(context.Background(), "")
+	err := ts.revokeOrphan(namespace.RootContext(nil), "")
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	err = ts.revokeOrphan(context.Background(), ent.ID)
+	err = ts.revokeOrphan(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(context.Background(), ent.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -866,13 +1229,13 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	err := ts.expiration.router.Mount(noop, "noop/", &MountEntry{UUID: "noopuuid", Accessor: "noopaccessor"}, view)
+	err := ts.expiration.router.Mount(noop, "noop/", &MountEntry{UUID: "noopuuid", Accessor: "noopaccessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
-	if err := ts.create(context.Background(), ent); err != nil {
+	ent := &logical.TokenEntry{Path: "test", Policies: []string{"dev", "ops"}, NamespaceID: namespace.RootNamespaceID}
+	if err := ts.create(namespace.RootContext(nil), ent); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -882,6 +1245,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 		Path:        "noop/foo",
 		ClientToken: ent.ID,
 	}
+	req.SetTokenEntry(ent)
 	resp := &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -893,13 +1257,13 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 			"secret_key": "abcd",
 		},
 	}
-	leaseID, err := ts.expiration.Register(context.Background(), req, resp)
+	leaseID, err := ts.expiration.Register(namespace.RootContext(nil), req, resp)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Revoke the token
-	err = ts.revokeOrphan(context.Background(), ent.ID)
+	err = ts.revokeOrphan(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -907,7 +1271,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Verify the lease is gone
-	out, err := ts.expiration.loadEntry(context.Background(), leaseID)
+	out, err := ts.expiration.loadEntry(namespace.RootContext(nil), leaseID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -921,24 +1285,26 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	ts := c.tokenStore
 
 	ent := &logical.TokenEntry{
-		Path:     "test",
-		Policies: []string{"dev", "ops"},
-		TTL:      time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
+		Path:        "test",
+		Policies:    []string{"dev", "ops"},
+		TTL:         time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent)
 
 	ent2 := &logical.TokenEntry{
-		Parent: ent.ID,
-		TTL:    time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
+		Parent:      ent.ID,
+		TTL:         time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, ent2)
 
-	err := ts.revokeOrphan(context.Background(), ent.ID)
+	err := ts.revokeOrphan(namespace.RootContext(nil), ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	out, err := ts.Lookup(context.Background(), ent2.ID)
+	out, err := ts.Lookup(namespace.RootContext(nil), ent2.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -947,46 +1313,95 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	ent2.Parent = ""
 
 	if !reflect.DeepEqual(out, ent2) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
+		t.Fatalf("bad:\nexpected:%#v\nactual:%#v", ent2, out)
 	}
 }
 
 // This was the original function name, and now it just calls
 // the non recursive version for a variety of depths.
 func TestTokenStore_RevokeTree(t *testing.T) {
-	testTokenStore_RevokeTree_NonRecursive(t, 1)
-	testTokenStore_RevokeTree_NonRecursive(t, 2)
-	testTokenStore_RevokeTree_NonRecursive(t, 10)
+	testTokenStore_RevokeTree_NonRecursive(t, 1, false)
+	testTokenStore_RevokeTree_NonRecursive(t, 2, false)
+	testTokenStore_RevokeTree_NonRecursive(t, 10, false)
+
+	// corrupted trees with cycles
+	testTokenStore_RevokeTree_NonRecursive(t, 1, true)
+	testTokenStore_RevokeTree_NonRecursive(t, 10, true)
 }
 
 // Revokes a given Token Store tree non recursively.
 // The second parameter refers to the depth of the tree.
-func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
+func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCycles bool) {
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	root, children := buildTokenTree(t, ts, depth)
-	err := ts.revokeTree(context.Background(), "")
 
+	var cyclePaths []string
+	if injectCycles {
+		// Make the root the parent of itself
+		saltedRoot, _ := ts.SaltID(namespace.RootContext(nil), root.ID)
+		key := fmt.Sprintf("%s/%s", saltedRoot, saltedRoot)
+		cyclePaths = append(cyclePaths, key)
+		le := &logical.StorageEntry{Key: key}
+
+		if err := ts.parentView(namespace.RootNamespace).Put(namespace.RootContext(nil), le); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		// Make a deep child the parent of a shallow child
+		shallow, _ := ts.SaltID(namespace.RootContext(nil), children[0].ID)
+		deep, _ := ts.SaltID(namespace.RootContext(nil), children[len(children)-1].ID)
+		key = fmt.Sprintf("%s/%s", deep, shallow)
+		cyclePaths = append(cyclePaths, key)
+		le = &logical.StorageEntry{Key: key}
+
+		if err := ts.parentView(namespace.RootNamespace).Put(namespace.RootContext(nil), le); err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	err := ts.revokeTree(namespace.RootContext(nil), &leaseEntry{})
 	if err.Error() != "cannot tree-revoke blank token" {
-		t.Fatalf("err: %v", err)
+		t.Fatal(err)
+	}
+
+	saltCtx := namespace.RootContext(nil)
+	saltedID, err := c.tokenStore.SaltID(saltCtx, root.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokenLeaseID := path.Join(root.Path, saltedID)
+
+	tokenLease, err := ts.expiration.loadEntry(namespace.RootContext(nil), tokenLeaseID)
+	if err != nil || tokenLease == nil {
+		t.Fatalf("err: %v, tokenLease: %#v", err, tokenLease)
 	}
 
 	// Nuke tree non recursively.
-	err = ts.revokeTree(context.Background(), root.ID)
-
+	err = ts.revokeTree(namespace.RootContext(nil), tokenLease)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatal(err)
 	}
 	// Append the root to ensure it was successfully
 	// deleted.
 	children = append(children, root)
 	for _, entry := range children {
-		out, err := ts.Lookup(context.Background(), entry.ID)
+		out, err := ts.Lookup(namespace.RootContext(nil), entry.ID)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 		if out != nil {
 			t.Fatalf("bad: %#v", out)
+		}
+	}
+
+	for _, path := range cyclePaths {
+		entry, err := ts.parentView(namespace.RootNamespace).Get(namespace.RootContext(nil), path)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if entry != nil {
+			t.Fatalf("expected reference to be deleted: %v", entry)
 		}
 	}
 }
@@ -998,7 +1413,7 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				testTokenStore_RevokeTree_NonRecursive(b, depth)
+				testTokenStore_RevokeTree_NonRecursive(b, depth, false)
 			}
 		})
 	}
@@ -1008,7 +1423,8 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 // we may run revoke tests on it.
 func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *logical.TokenEntry, children []*logical.TokenEntry) {
 	root = &logical.TokenEntry{
-		TTL: time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
+		TTL:         time.Hour,
 	}
 	testMakeTokenDirectly(t, ts, root)
 
@@ -1018,14 +1434,16 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *logical.T
 		next := make([]*logical.TokenEntry, 0, 2*len(frontier))
 		for _, node := range frontier {
 			left := &logical.TokenEntry{
-				Parent: node.ID,
-				TTL:    time.Hour,
+				Parent:      node.ID,
+				TTL:         time.Hour,
+				NamespaceID: namespace.RootNamespaceID,
 			}
 			testMakeTokenDirectly(t, ts, left)
 
 			right := &logical.TokenEntry{
-				Parent: node.ID,
-				TTL:    time.Hour,
+				Parent:      node.ID,
+				TTL:         time.Hour,
+				NamespaceID: namespace.RootNamespaceID,
 			}
 			testMakeTokenDirectly(t, ts, right)
 
@@ -1044,32 +1462,36 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	ts := exp.tokenStore
 
 	ent1 := &logical.TokenEntry{
-		TTL: time.Hour,
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent1)
 
 	ent2 := &logical.TokenEntry{
-		Parent: ent1.ID,
-		TTL:    time.Hour,
+		Parent:      ent1.ID,
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent2)
 
 	ent3 := &logical.TokenEntry{
-		Parent: ent2.ID,
-		TTL:    time.Hour,
+		Parent:      ent2.ID,
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent3)
 
 	ent4 := &logical.TokenEntry{
-		Parent: ent2.ID,
-		TTL:    time.Hour,
+		Parent:      ent2.ID,
+		TTL:         time.Hour,
+		NamespaceID: namespace.RootNamespaceID,
 	}
 	testMakeTokenDirectly(t, ts, ent4)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-self")
 	req.ClientToken = ent1.ID
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1079,7 +1501,7 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	for _, id := range lookup {
 		var found bool
 		for i := 0; i < 10; i++ {
-			out, err = ts.Lookup(context.Background(), id)
+			out, err = ts.Lookup(namespace.RootContext(nil), id)
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -1103,14 +1525,27 @@ func TestTokenStore_HandleRequest_NonAssignable(t *testing.T) {
 	req.ClientToken = root
 	req.Data["policies"] = []string{"default", "foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	req.Data["policies"] = []string{"default", "foo", responseWrappingPolicyName}
 
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got a nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error; response is %#v", *resp)
+	}
+
+	// Batch tokens too
+	req.Data["type"] = "batch"
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1130,25 +1565,28 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	req.ClientToken = root
 	req.Data["display_name"] = "foo_bar.baz!"
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		NamespaceID: namespace.RootNamespaceID,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
 		DisplayName: "token-foo-bar-baz",
 		TTL:         0,
+		Type:        logical.TokenTypeService,
 	}
-	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1162,13 +1600,22 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	// Make sure batch tokens can't do limited use counts
+	req.Data["type"] = "batch"
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected error: resp: %#v", resp)
+	}
+
+	delete(req.Data, "type")
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		NamespaceID: namespace.RootNamespaceID,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
@@ -1176,12 +1623,14 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 		DisplayName: "token",
 		NumUses:     1,
 		TTL:         0,
+		Type:        logical.TokenTypeService,
 	}
-	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1195,7 +1644,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
 	req.ClientToken = root
 	req.Data["num_uses"] = "-1"
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1209,14 +1658,14 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
 	req.ClientToken = root
 	req.Data["num_uses"] = "1"
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	// We should NOT be able to use the restricted token to create a new token
 	req.ClientToken = resp.Auth.ClientToken
-	_, err = ts.HandleRequest(context.Background(), req)
+	_, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1229,25 +1678,36 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	// Make sure batch tokens won't automatically assign root
+	req.Data["type"] = "batch"
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected error: resp: %#v", resp)
+	}
+
+	delete(req.Data, "type")
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
 	expected := &logical.TokenEntry{
 		ID:          resp.Auth.ClientToken,
+		NamespaceID: namespace.RootNamespaceID,
 		Accessor:    resp.Auth.Accessor,
 		Parent:      root,
 		Policies:    []string{"root"},
 		Path:        "auth/token/create",
 		DisplayName: "token",
 		TTL:         0,
+		Type:        logical.TokenTypeService,
 	}
-	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	expected.CreationTime = out.CreationTime
+	expected.CubbyholeID = out.CubbyholeID
 	if !reflect.DeepEqual(out, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
@@ -1260,7 +1720,7 @@ func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "random"
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1277,7 +1737,7 @@ func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
 	req.ClientToken = root
 	req.Data["policies"] = []string{"foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1295,27 +1755,47 @@ func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
 	req.Data["id"] = "foobar"
 	req.Data["policies"] = []string{"foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-
 	if resp.Auth.ClientToken != "foobar" {
 		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Retry with batch; batch should not actually accept a custom ID
+	req.Data["type"] = "batch"
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	out, _ := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if out.ID == "foobar" {
+		t.Fatalf("bad: %#v", out)
 	}
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["id"] = "foobar"
 	req.Data["policies"] = []string{"foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v resp: %#v", err, resp)
+	}
+	if resp.Data["error"] != "root or sudo privileges required to specify token id" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Retry with batch
+	req.Data["type"] = "batch"
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1327,13 +1807,29 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
+	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["policies"] = []string{"foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	ent := &logical.TokenEntry{
+		NamespaceID: namespace.RootNamespaceID,
+		Path:        "test",
+		Policies:    []string{"foo", "bar"},
+		TTL:         time.Hour,
+	}
+	testMakeTokenDirectly(t, ts, ent)
+	req.ClientToken = ent.ID
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1345,13 +1841,13 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
+	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["policies"] = []string{"foo", "bar", "baz"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1365,20 +1861,20 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 	ts := core.tokenStore
 	ps := core.policyStore
 
-	policy, _ := ParseACLPolicy(tokenCreationPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test1"
-	if err := ps.SetPolicy(context.Background(), policy); err != nil {
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
 
-	testMakeTokenViaBackend(t, ts, root, "sudoClient", "", []string{"test1"})
+	testMakeServiceTokenViaBackend(t, ts, root, "sudoClient", "", []string{"test1"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "sudoClient"
 	req.MountPoint = "auth/token/"
 	req.Data["policies"] = []string{"root"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v; resp: %#v", err, resp)
 	}
@@ -1400,7 +1896,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 		"ttl": "5m",
 	}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v; resp: %#v", err, resp)
 	}
@@ -1418,7 +1914,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 	req.Data = map[string]interface{}{
 		"ttl": "0",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -1431,7 +1927,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v; resp: %#v", err, resp)
 	}
@@ -1446,14 +1942,14 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "client"
 	req.Data["no_parent"] = true
 	req.Data["policies"] = []string{"foo"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v resp: %#v", err, resp)
 	}
@@ -1476,7 +1972,7 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, _ := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if out.Parent != "" {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -1496,7 +1992,7 @@ func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, _ := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if out.Parent != "" {
 		t.Fatalf("bad: %#v", out)
 	}
@@ -1520,7 +2016,19 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, _ := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, _ := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if !reflect.DeepEqual(out.Meta, meta) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v", meta, out.Meta)
+	}
+
+	// Test with batch tokens
+	req.Data["type"] = "batch"
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	out, _ = ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if !reflect.DeepEqual(out.Meta, meta) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", meta, out.Meta)
 	}
@@ -1566,16 +2074,37 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 	if !resp.Auth.Renewable {
 		t.Fatalf("bad: %#v", resp)
 	}
+
+	// Test batch tokens
+	req.Data["type"] = "batch"
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Auth.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Auth.Renewable {
+		t.Fatalf("bad: %#v", resp)
+	}
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
-	rootToken, err := ts.rootToken(context.Background())
+	rootToken, err := ts.rootToken(namespace.RootContext(nil))
 	root := rootToken.ID
 
-	testMakeTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+
+	te, err := ts.Lookup(namespace.RootContext(nil), "child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("token entry was nil")
+	}
 
 	auth := &logical.Auth{
 		ClientToken: "child",
@@ -1584,12 +2113,20 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/create", auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	testMakeTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+
+	te, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("token entry was nil")
+	}
 
 	auth = &logical.Auth{
 		ClientToken: "sub-child",
@@ -1598,7 +2135,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/create", auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1607,7 +2144,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1617,7 +2154,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	out, err := ts.Lookup(context.Background(), "child")
+	out, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1626,7 +2163,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Sub-child should not exist
-	out, err = ts.Lookup(context.Background(), "sub-child")
+	out, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1635,14 +2172,14 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Now test without registering the tokens through the expiration manager
-	testMakeTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1652,7 +2189,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	out, err = ts.Lookup(context.Background(), "child")
+	out, err = ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1661,7 +2198,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	}
 
 	// Sub-child should not exist
-	out, err = ts.Lookup(context.Background(), "sub-child")
+	out, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1673,15 +2210,15 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
-	testMakeTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"root", "foo"})
+	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = root
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1691,7 +2228,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 
-	out, err := ts.Lookup(context.Background(), "child")
+	out, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1700,11 +2237,11 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 
 	// Check that the parent entry is properly cleaned up
-	saltedID, err := ts.SaltID(context.Background(), "child")
+	saltedID, err := ts.SaltID(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatal(err)
 	}
-	children, err := ts.view.List(context.Background(), parentPrefix+saltedID+"/")
+	children, err := ts.idView(namespace.RootNamespace).List(namespace.RootContext(nil), parentPrefix+saltedID+"/")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1713,7 +2250,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	}
 
 	// Sub-child should exist!
-	out, err = ts.Lookup(context.Background(), "sub-child")
+	out, err = ts.Lookup(namespace.RootContext(nil), "sub-child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1725,9 +2262,9 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaBackend(t, ts, root, "child", "", []string{"foo"})
+	testMakeServiceTokenViaBackend(t, ts, root, "child", "", []string{"foo"})
 
-	out, err := ts.Lookup(context.Background(), "child")
+	out, err := ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1740,7 +2277,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		"token": "child",
 	}
 	req.ClientToken = "child"
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
 	}
@@ -1748,7 +2285,7 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Should still exist
-	out, err = ts.Lookup(context.Background(), "child")
+	out, err = ts.Lookup(namespace.RootContext(nil), "child")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1758,13 +2295,18 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
+	testTokenStore_HandleRequest_Lookup(t, false)
+	testTokenStore_HandleRequest_Lookup(t, true)
+}
+
+func testTokenStore_HandleRequest_Lookup(t *testing.T, batch bool) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	req := logical.TestRequest(t, logical.UpdateOperation, "lookup")
 	req.Data = map[string]interface{}{
 		"token": root,
 	}
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1786,6 +2328,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"explicit_max_ttl": int64(0),
 		"expire_time":      nil,
 		"entity_id":        "",
+		"type":             "service",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1797,65 +2340,22 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
-	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"})
+	outAuth := new(logical.Auth)
+	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"}, batch, outAuth)
 
-	// Test via GET
-	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
-	req.Data = map[string]interface{}{
-		"token": "client",
-	}
-	resp, err = ts.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	exp = map[string]interface{}{
-		"id":               "client",
-		"accessor":         resp.Data["accessor"],
-		"policies":         []string{"default", "foo"},
-		"path":             "auth/token/create",
-		"meta":             map[string]string(nil),
-		"display_name":     "token",
-		"orphan":           false,
-		"num_uses":         0,
-		"creation_ttl":     int64(3600),
-		"ttl":              int64(3600),
-		"explicit_max_ttl": int64(0),
-		"renewable":        true,
-		"entity_id":        "",
-	}
-
-	if resp.Data["creation_time"].(int64) == 0 {
-		t.Fatalf("creation time was zero")
-	}
-	delete(resp.Data, "creation_time")
-	if resp.Data["issue_time"].(time.Time).IsZero() {
-		t.Fatal("issue time is default time")
-	}
-	delete(resp.Data, "issue_time")
-	if resp.Data["expire_time"].(time.Time).IsZero() {
-		t.Fatal("expire time is default time")
-	}
-	delete(resp.Data, "expire_time")
-
-	// Depending on timing of the test this may have ticked down, so accept 3599
-	if resp.Data["ttl"].(int64) == 3599 {
-		resp.Data["ttl"] = int64(3600)
-	}
-
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
+	tokenType := "service"
+	expID := "client"
+	if batch {
+		tokenType = "batch"
+		expID = outAuth.ClientToken
 	}
 
 	// Test via POST
 	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
 	req.Data = map[string]interface{}{
-		"token": "client",
+		"token": expID,
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1864,7 +2364,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"id":               "client",
+		"id":               expID,
 		"accessor":         resp.Data["accessor"],
 		"policies":         []string{"default", "foo"},
 		"path":             "auth/token/create",
@@ -1875,8 +2375,9 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"creation_ttl":     int64(3600),
 		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
-		"renewable":        true,
+		"renewable":        !batch,
 		"entity_id":        "",
+		"type":             tokenType,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1897,16 +2398,80 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		resp.Data["ttl"] = int64(3600)
 	}
 
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Test via POST
+	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
+	req.Data = map[string]interface{}{
+		"token": expID,
+	}
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	exp = map[string]interface{}{
+		"id":               expID,
+		"accessor":         resp.Data["accessor"],
+		"policies":         []string{"default", "foo"},
+		"path":             "auth/token/create",
+		"meta":             map[string]string(nil),
+		"display_name":     "token",
+		"orphan":           false,
+		"num_uses":         0,
+		"creation_ttl":     int64(3600),
+		"ttl":              int64(3600),
+		"explicit_max_ttl": int64(0),
+		"renewable":        !batch,
+		"entity_id":        "",
+		"type":             tokenType,
+	}
+
+	if resp.Data["creation_time"].(int64) == 0 {
+		t.Fatalf("creation time was zero")
+	}
+	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatal("issue time is default time")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatal("expire time is default time")
+	}
+	delete(resp.Data, "expire_time")
+
+	// Depending on timing of the test this may have ticked down, so accept 3599
+	if resp.Data["ttl"].(int64) == 3599 {
+		resp.Data["ttl"] = int64(3600)
+	}
+
+	if diff := deep.Equal(resp.Data, exp); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Test last_renewal_time functionality
 	req = logical.TestRequest(t, logical.UpdateOperation, "renew")
 	req.Data = map[string]interface{}{
-		"token": "client",
+		"token": expID,
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if batch && !resp.IsError() || !batch && resp.IsError() {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	req.Path = "lookup"
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1914,31 +2479,23 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
-	req.Data = map[string]interface{}{
-		"token": "client",
-	}
-	resp, err = ts.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err: %v\nresp: %#v", err, resp)
-	}
-	if resp == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
-
-	if resp.Data["last_renewal_time"].(int64) == 0 {
-		t.Fatalf("last_renewal_time was zero")
+	if !batch {
+		if resp.Data["last_renewal_time"].(int64) == 0 {
+			t.Fatalf("last_renewal_time was zero")
+		}
+	} else if _, ok := resp.Data["last_renewal_time"]; ok {
+		t.Fatal("expected zero last renewal time")
 	}
 }
 
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
-	testMakeTokenViaCore(t, c, root, "client", "3600s", []string{"foo"})
+	testMakeServiceTokenViaCore(t, c, root, "client", "3600s", []string{"foo"})
 
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
 	req.ClientToken = "client"
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -1960,6 +2517,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
 		"entity_id":        "",
+		"type":             "service",
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1990,7 +2548,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken(context.Background())
+	root, err := ts.rootToken(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2003,7 +2561,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/root", auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2019,7 +2577,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	}
 
 	req.Data["increment"] = "3600s"
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2039,7 +2597,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	ts := exp.tokenStore
 
 	// Create new token
-	root, err := ts.rootToken(context.Background())
+	root, err := ts.rootToken(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2052,7 +2610,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/root", auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2064,7 +2622,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "renew-self")
 	req.ClientToken = auth.ClientToken
 	req.Data["increment"] = "3600s"
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2085,7 +2643,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/test")
 	req.ClientToken = root
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2102,7 +2660,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":      "happenin",
 	}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2114,7 +2672,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2132,10 +2690,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"explicit_max_ttl":    int64(0),
 		"renewable":           true,
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Now test updating; this should be set to an UpdateOperation
@@ -2148,7 +2707,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":        false,
 	}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2160,7 +2719,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2177,10 +2736,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"explicit_max_ttl":    int64(0),
 		"renewable":           false,
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	// Now set explicit max ttl and clear the period
@@ -2189,7 +2749,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl": "5",
 		"period":           "0s",
 	}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2197,7 +2757,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	req.Operation = logical.ReadOperation
 	req.Data = map[string]interface{}{}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2214,16 +2774,17 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"path_suffix":         "happenin",
 		"period":              int64(0),
 		"renewable":           false,
+		"token_type":          "default-service",
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	req.Operation = logical.ListOperation
 	req.Path = "auth/token/roles"
 	req.Data = map[string]interface{}{}
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2247,7 +2808,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	req.Operation = logical.DeleteOperation
 	req.Path = "auth/token/roles/test"
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2256,7 +2817,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	req.Operation = logical.ReadOperation
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2281,13 +2842,13 @@ func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
 		},
 		ClientToken: root,
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -2308,21 +2869,21 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	ps := core.policyStore
 
 	// Create 3 different policies
-	policy, _ := ParseACLPolicy(tokenCreationPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test1"
-	if err := ps.SetPolicy(context.Background(), policy); err != nil {
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
 
-	policy, _ = ParseACLPolicy(tokenCreationPolicy)
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test2"
-	if err := ps.SetPolicy(context.Background(), policy); err != nil {
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
 
-	policy, _ = ParseACLPolicy(tokenCreationPolicy)
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "test3"
-	if err := ps.SetPolicy(context.Background(), policy); err != nil {
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2332,7 +2893,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"disallowed_policies": "test1",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -2342,7 +2903,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"disallowed_policies": "test2,test3",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -2352,7 +2913,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"disallowed_policies": "test1,test2,test3",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -2372,21 +2933,21 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test1")
 	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp != nil && !resp.IsError() {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test23")
 	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp != nil && !resp.IsError() {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
 	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp != nil && !resp.IsError() {
 		t.Fatalf("expected an error response, got %#v", resp)
 	}
@@ -2404,14 +2965,14 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"disallowed_policies": "default",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/default")
 	req.ClientToken = parentToken
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp != nil && !resp.IsError() {
 		t.Fatal("expected an error response")
 	}
@@ -2427,7 +2988,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 		"allowed_policies": "test1,test2",
 	}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2439,7 +3000,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 
 	req.Path = "create/test"
 	req.Data["policies"] = []string{"foo"}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -2456,7 +3017,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"allowed_policies": "",
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2484,7 +3045,7 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 
 	req.Path = "create/test"
 	req.Data["policies"] = []string{"foo"}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -2515,7 +3076,7 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 		"orphan": true,
 	}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2524,7 +3085,7 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 	}
 
 	req.Path = "create/test"
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2532,7 +3093,7 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2550,13 +3111,13 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req := logical.TestRequest(t, logical.CreateOperation, "roles/test")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
 		"path_suffix": "happenin",
 	}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2565,7 +3126,8 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 	}
 
 	req.Path = "create/test"
-	resp, err = ts.HandleRequest(context.Background(), req)
+	req.Operation = logical.UpdateOperation
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2573,7 +3135,7 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	out, err := ts.Lookup(context.Background(), resp.Auth.ClientToken)
+	out, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2598,7 +3160,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2615,7 +3177,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"policies": []string{"default"},
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2626,7 +3188,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2640,14 +3202,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2663,14 +3225,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2686,7 +3248,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2703,7 +3265,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2720,14 +3282,14 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2754,7 +3316,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		"explicit_max_ttl": "100h",
 	}
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2764,7 +3326,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 	req.Operation = logical.UpdateOperation
 	req.Path = "auth/token/create/test"
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("expected an error")
 	}
@@ -2779,7 +3341,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		"explicit_max_ttl": "10s",
 	}
 
-	resp, err = core.HandleRequest(context.Background(), req)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2795,7 +3357,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"policies": []string{"default"},
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2806,7 +3368,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2820,14 +3382,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2843,7 +3405,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -2860,7 +3422,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2882,14 +3444,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2906,14 +3468,14 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -2930,7 +3492,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -2939,7 +3501,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if resp != nil && err == nil {
 			t.Fatalf("expected error, response is %#v", *resp)
 		}
@@ -2964,7 +3526,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2977,7 +3539,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2994,7 +3556,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3011,14 +3573,14 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3038,7 +3600,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"period": 5,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3055,7 +3617,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3072,14 +3634,14 @@ func TestTokenStore_Periodic(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3105,7 +3667,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		"period": 5,
 	}
 
-	resp, err := core.HandleRequest(context.Background(), req)
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -3122,7 +3684,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			"period":           5,
 			"explicit_max_ttl": 4,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3139,7 +3701,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3156,14 +3718,14 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 76,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3185,7 +3747,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			"explicit_max_ttl": 4,
 		}
 
-		resp, err := core.HandleRequest(context.Background(), req)
+		resp, err := core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3196,7 +3758,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/create/test"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
@@ -3213,7 +3775,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.ClientToken = resp.Auth.ClientToken
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3230,14 +3792,14 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 1,
 		}
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
 
 		req.Operation = logical.ReadOperation
 		req.Path = "auth/token/lookup-self"
-		resp, err = core.HandleRequest(context.Background(), req)
+		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -3255,9 +3817,9 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 	ts := core.tokenStore
 	ps := core.policyStore
-	policy, _ := ParseACLPolicy(tokenCreationPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, tokenCreationPolicy)
 	policy.Name = "policy1"
-	if err := ps.SetPolicy(context.Background(), policy); err != nil {
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3344,7 +3906,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		Path:        "roles/role1",
 		Operation:   logical.CreateOperation,
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3352,7 +3914,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	tokenReq.Data = map[string]interface{}{
 		"policies": []string{"policy1"},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3367,7 +3929,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	roleReq.Data = map[string]interface{}{
 		"allowed_policies": "policy1",
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3385,7 +3947,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		"allowed_policies":    "policy1",
 		"disallowed_policies": "default",
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3399,7 +3961,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		"allowed_policies":    "",
 		"disallowed_policies": "default",
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3414,13 +3976,13 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		"allowed_policies":    "default",
 		"disallowed_policies": "default",
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 
 	delete(tokenReq.Data, "policies")
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3442,7 +4004,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 			"disallowed_policies": "disallowed1,disallowed2",
 		},
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3455,7 +4017,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 			"policies": []string{"allowed1"},
 		},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3475,7 +4037,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 			"no_default_policy": true,
 		},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3488,7 +4050,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	tokenReq.Data = map[string]interface{}{
 		"policies": []string{"disallowed1"},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
@@ -3498,7 +4060,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 		"allowed_policies":    "allowed1,common",
 		"disallowed_policies": "disallowed1,common",
 	}
-	resp, err = ts.HandleRequest(context.Background(), roleReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
@@ -3506,7 +4068,7 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	tokenReq.Data = map[string]interface{}{
 		"policies": []string{"allowed1", "common"},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}
@@ -3521,7 +4083,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
-	root, _ := exp.tokenStore.rootToken(context.Background())
+	root, _ := exp.tokenStore.rootToken(namespace.RootContext(nil))
 
 	tokenReq := &logical.Request{
 		Path:        "create",
@@ -3531,17 +4093,17 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 			"num_uses": 1,
 		},
 	}
-	resp, err = ts.HandleRequest(context.Background(), tokenReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tokenReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
 	tut := resp.Auth.ClientToken
-	saltTut, err := ts.SaltID(context.Background(), tut)
+	saltTut, err := ts.SaltID(namespace.RootContext(nil), tut)
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(context.Background(), saltTut, false)
+	te, err := ts.lookupInternal(namespace.RootContext(nil), saltTut, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3552,7 +4114,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatalf("bad: %d", te.NumUses)
 	}
 
-	te, err = ts.UseToken(context.Background(), te)
+	te, err = ts.UseToken(namespace.RootContext(nil), te)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3564,7 +4126,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return no entry because it's tainted
-	te, err = ts.lookupSalted(context.Background(), saltTut, false)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3578,7 +4140,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		ClientToken: tut,
 		Operation:   logical.UpdateOperation,
 	}
-	resp, err = ts.HandleRequest(context.Background(), req)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3590,7 +4152,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Should return tainted entries
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3603,17 +4165,17 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	origDestroyCubbyhole := ts.cubbyholeDestroyer
 
-	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *logical.TokenEntry) error {
 		return fmt.Errorf("keep it frosty")
 	}
 
-	err = ts.revokeSalted(context.Background(), saltTut, false)
+	err = ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
 	if err == nil {
 		t.Fatalf("expected err")
 	}
 
 	// Since revocation failed we should still be able to get a token
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3622,7 +4184,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	// Check the race condition situation by making the process sleep
-	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, string) error {
+	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *logical.TokenEntry) error {
 		time.Sleep(1 * time.Second)
 		return fmt.Errorf("keep it frosty")
 	}
@@ -3630,7 +4192,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	go func() {
 		cubbyFuncLock.RLock()
-		err := ts.revokeSalted(context.Background(), saltTut, false)
+		err := ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
 		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
@@ -3639,7 +4201,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 
 	// Give time for the function to start and grab locks
 	time.Sleep(200 * time.Millisecond)
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3655,12 +4217,12 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
-	err = ts.revokeSalted(context.Background(), saltTut, false)
+	err = ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	te, err = ts.lookupSalted(context.Background(), saltTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltTut, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3685,7 +4247,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		Path:        "accessors/",
 		ClientToken: root,
 	}
-	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3711,7 +4273,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		// Creation of another token should end up with incrementing
 		// the number of accessors
 		// the storage
-		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%v", err, resp)
 		}
@@ -3727,30 +4289,29 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 
-		saltedTut, err := ts.SaltID(context.Background(), tut)
+		saltedTut, err := ts.SaltID(namespace.RootContext(nil), tut)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+		te, err := ts.lookupInternal(namespace.RootContext(nil), saltedTut, true, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
 
 		// Destroy the token index
-		path := lookupPrefix + saltedTut
-		if ts.view.Delete(context.Background(), path); err != nil {
+		if ts.idView(namespace.RootNamespace).Delete(namespace.RootContext(nil), saltedTut); err != nil {
 			t.Fatalf("failed to delete token entry: %v", err)
 		}
 
 		// Destroy the cubby space
-		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		err = ts.cubbyholeDestroyer(namespace.RootContext(nil), ts, te)
 		if err != nil {
 			t.Fatalf("failed to destroyCubbyhole: %v", err)
 		}
 
 		// Leaking of accessor should have resulted in no change to the number
 		// of accessors
-		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%v", err, resp)
 		}
@@ -3766,7 +4327,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		Operation:   logical.UpdateOperation,
 		ClientToken: root,
 	}
-	resp, err = ts.HandleRequest(context.Background(), tidyReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tidyReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3781,7 +4342,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Tidy should have removed all the dangling accessor entries
-	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3810,7 +4371,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		Path:        "accessors/",
 		ClientToken: root,
 	}
-	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3846,7 +4407,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 
 		// Creation of another token should end up with incrementing the number of
 		// accessors the storage
-		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%v", err, resp)
 		}
@@ -3862,30 +4423,29 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 
-		saltedTut, err := ts.SaltID(context.Background(), tut)
+		saltedTut, err := ts.SaltID(namespace.RootContext(nil), tut)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = ts.lookupSalted(context.Background(), saltedTut, true)
+		te, err := ts.lookupInternal(namespace.RootContext(nil), saltedTut, true, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
 		}
 
 		// Destroy the token index
-		path := lookupPrefix + saltedTut
-		if ts.view.Delete(context.Background(), path); err != nil {
+		if ts.idView(namespace.RootNamespace).Delete(namespace.RootContext(nil), saltedTut); err != nil {
 			t.Fatalf("failed to delete token entry: %v", err)
 		}
 
 		// Destroy the cubby space
-		err = ts.destroyCubbyhole(context.Background(), saltedTut)
+		err = ts.cubbyholeDestroyer(namespace.RootContext(nil), ts, te)
 		if err != nil {
 			t.Fatalf("failed to destroyCubbyhole: %v", err)
 		}
 
 		// Leaking of accessor should have resulted in no change to the number
 		// of accessors
-		resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%v", err, resp)
 		}
@@ -3901,7 +4461,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 		Operation:   logical.UpdateOperation,
 		ClientToken: root,
 	}
-	resp, err = ts.HandleRequest(context.Background(), tidyReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), tidyReq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3916,7 +4476,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Tidy should have removed all the dangling accessor entries
-	resp, err = ts.HandleRequest(context.Background(), accessorListReq)
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
@@ -3936,7 +4496,7 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 			"accessor": accessor,
 		}
 
-		resp, err := ts.HandleRequest(context.Background(), req)
+		resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -3961,27 +4521,27 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor", namespace: namespace.RootNamespace}, view)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create new token
-	root, err := ts.rootToken(context.Background())
+	root, err := ts.rootToken(namespace.RootContext(nil))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Create a new token
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root.ID
 	req.Data["policies"] = []string{"default"}
 
-	resp, err := ts.HandleRequest(context.Background(), req)
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	// Create a new token
 	auth := &logical.Auth{
 		ClientToken: resp.Auth.ClientToken,
 		LeaseOptions: logical.LeaseOptions{
@@ -3989,9 +4549,24 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(context.Background(), "auth/token/create", auth)
+
+	te := &logical.TokenEntry{
+		Path:        resp.Auth.CreationPath,
+		NamespaceID: namespace.RootNamespaceID,
+	}
+
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	// Verify token entry through lookup
+	testTokenEntry, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if testTokenEntry == nil {
+		t.Fatal("token entry was nil")
 	}
 
 	tut := resp.Auth.ClientToken
@@ -4000,6 +4575,8 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 		Path:        "prod/aws/foo",
 		ClientToken: tut,
 	}
+	req.SetTokenEntry(testTokenEntry)
+
 	resp = &logical.Response{
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
@@ -4011,7 +4588,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	leases := []string{}
 
 	for i := 0; i < 10; i++ {
-		leaseID, err := exp.Register(context.Background(), req, resp)
+		leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -4020,7 +4597,15 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 
 	sort.Strings(leases)
 
-	storedLeases, err := exp.lookupLeasesByToken(context.Background(), tut)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), tut, false, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+	if te == nil {
+		t.Fatal("got nil token entry")
+	}
+
+	storedLeases, err := exp.lookupLeasesByToken(namespace.RootContext(nil), te)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -4030,11 +4615,11 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Now, delete the token entry. The leases should still exist.
-	saltedTut, err := ts.SaltID(context.Background(), tut)
+	saltedTut, err := ts.SaltID(namespace.RootContext(nil), tut)
 	if err != nil {
 		t.Fatal(err)
 	}
-	te, err := ts.lookupSalted(context.Background(), saltedTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltedTut, true, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -4043,11 +4628,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Destroy the token index
-	path := lookupPrefix + saltedTut
-	if ts.view.Delete(context.Background(), path); err != nil {
+	if ts.idView(namespace.RootNamespace).Delete(namespace.RootContext(nil), saltedTut); err != nil {
 		t.Fatalf("failed to delete token entry: %v", err)
 	}
-	te, err = ts.lookupSalted(context.Background(), saltedTut, true)
+	te, err = ts.lookupInternal(namespace.RootContext(nil), saltedTut, true, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)
 	}
@@ -4056,7 +4640,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Verify leases still exist
-	storedLeases, err = exp.lookupLeasesByToken(context.Background(), tut)
+	storedLeases, err = exp.lookupLeasesByToken(namespace.RootContext(nil), testTokenEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -4066,16 +4650,114 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Call tidy
-	ts.handleTidy(context.Background(), &logical.Request{}, nil)
+	ts.handleTidy(namespace.RootContext(nil), &logical.Request{}, nil)
 
 	time.Sleep(200 * time.Millisecond)
 
 	// Verify leases are gone
-	storedLeases, err = exp.lookupLeasesByToken(context.Background(), tut)
+	storedLeases, err = exp.lookupLeasesByToken(namespace.RootContext(nil), testTokenEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(storedLeases) > 0 {
 		t.Fatal("found leases")
+	}
+}
+
+func TestTokenStore_Batch_CannotCreateChildren(t *testing.T) {
+	var resp *logical.Response
+
+	core, _, root := TestCoreUnsealed(t)
+	ts := core.tokenStore
+
+	req := &logical.Request{
+		Path:        "create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": []string{"policy1"},
+			"type":     "batch",
+		},
+	}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy, default]; actual: %s", resp.Auth.Policies)
+	}
+
+	req.ClientToken = resp.Auth.ClientToken
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if !resp.IsError() {
+		t.Fatalf("bad: expected error, got %#v", *resp)
+	}
+}
+
+func TestTokenStore_Batch_CannotRevoke(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	core, _, root := TestCoreUnsealed(t)
+	ts := core.tokenStore
+
+	req := &logical.Request{
+		Path:        "create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": []string{"policy1"},
+			"type":     "batch",
+		},
+	}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy, default]; actual: %s", resp.Auth.Policies)
+	}
+
+	req.Path = "revoke"
+	req.Data["token"] = resp.Auth.ClientToken
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("bad: expected error, got %#v", *resp)
+	}
+}
+
+func TestTokenStore_Batch_NoCubbyhole(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	core, _, root := TestCoreUnsealed(t)
+	ts := core.tokenStore
+
+	req := &logical.Request{
+		Path:        "create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": []string{"policy1"},
+			"type":     "batch",
+		},
+	}
+	resp = testMakeTokenViaRequest(t, ts, req)
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy, default]; actual: %s", resp.Auth.Policies)
+	}
+
+	te, err := ts.Lookup(namespace.RootContext(nil), resp.Auth.ClientToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Path = "cubbyhole/foo"
+	req.Operation = logical.CreateOperation
+	req.ClientToken = te.ID
+	req.SetTokenEntry(te)
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil && !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("bad: expected error, got %#v", *resp)
 	}
 }

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Build Your Own Certificate Authority - Guides"
+sidebar_title: "Build Your Own CA"
 sidebar_current: "guides-secret-mgmt-pki"
 description: |-
   The PKI secrets engine generates dynamic X.509 certificates. With this secrets
@@ -118,7 +119,7 @@ Then you are going to generate an intermediate certificate which is signed by
 the root. Finally, you are going to generate a certificate for
 `test.example.com` domain.
 
-![Overview](/assets/images/vault-pki-4.png)
+![Overview](/img/vault-pki-4.png)
 
 In this guide, you perform the following:
 
@@ -268,7 +269,7 @@ then login.
 1. Click the **URLs** tab, and then set:
     - Issuing certificates: `http://127.0.0.1:8200/v1/pki/ca`
     - CRL Distribution Points: `http://127.0.0.1:8200/v1/pki/crl`
-    ![Configure URL](/assets/images/vault-pki-1.png)
+    ![Configure URL](/img/vault-pki-1.png)
 1. Click **Save**.
 
 <br>
@@ -439,7 +440,7 @@ and then click **Save**.
 1. Enter **`example.com`** in the **Common Name**.
 1. Select **pem_bundle** from the **Format** drop-down list, and then click
 **Save**.
-1. Click **Cooy Certificate** and save the generated certificate in a file, `intermediate.cert.pem`.
+1. Click **Copy Certificate** and save the generated certificate in a file, `intermediate.cert.pem`.
 1. Select **pki_int** from the **Secrets** tab to return to the intermediate CA.
 1. Select **Configure** and then click **Set signed intermediate**.
 1. Paste in the certificate in the **Signed Intermediate Certificate** field and
@@ -509,7 +510,7 @@ hours`**.   Select **Hide Options**.
 1. Select **Domain Handling** to expand, and then select the **Allow
 subdomains** check-box. Enter **`example.com`** in the **Allowed domains**
 field.
-    ![Create Role](/assets/images/vault-pki-2.png)
+    ![Create Role](/img/vault-pki-2.png)
 1. Click **Create role**.
 
 
@@ -598,7 +599,7 @@ serial number.
 1. Enter **`test.example.com`** in the **Common Name** field.
 1. Select **Options** to expand, and then set the **TTL** to **`24 hours`**.  
 1. Select **Hide Options** and then click **Generate**.
-    ![Issue Certificate](/assets/images/vault-pki-3.png)
+    ![Issue Certificate](/img/vault-pki-3.png)
 
     > The response contains the PEM-encoded private key, key type and certificate
     serial number.
@@ -672,7 +673,7 @@ expired and are past a certain buffer period beyond their expiration time.
 To remove revoked certificate and clean the CRL.
 
 ```plaintext
-$ vault write pki_int/tidy tidy_cert_store=true tidy_revocation_list=true
+$ vault write pki_int/tidy tidy_cert_store=true tidy_revoked_certs=true
 ```
 
 #### API call using cURL
@@ -685,7 +686,7 @@ the CRL.
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"tidy_cert_store": true, "tidy_revocation_list": true}' \
+       --data '{"tidy_cert_store": true, "tidy_revoked_certs": true}' \
        https://127.0.0.1:8200/v1/pki_int/tidy
 ```
 

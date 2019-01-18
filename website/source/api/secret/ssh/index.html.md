@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "SSH - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-ssh"
+sidebar_title: "SSH"
+sidebar_current: "api-http-secret-ssh"
 description: |-
   This is the API documentation for the Vault SSH secrets engine.
 ---
@@ -163,7 +164,11 @@ This endpoint creates or updates a named role.
 
 - `allowed_extensions` `(string: "")` – Specifies a comma-separated list of
   extensions that certificates can have when signed. To allow any critical
-  options, set this to an empty string. Will default to allowing any extensions.
+  options, set this to an empty string. Will default to allowing any
+  extensions.  For the list of extensions, take a look at the [sshd
+  manual's](https://man.openbsd.org/sshd#AUTHORIZED_KEYS_FILE_FORMAT)
+  `AUTHORIZED_KEYS FILE FORMAT` section. You should add a `permit-` before the
+  name of extension to allow it.
 
 - `default_critical_options` `(map<string|string>: "")` – Specifies a map of
   critical options certificates should have if none are provided when signing.
@@ -593,6 +598,7 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/ssh/verify
+```
 
 ### Sample Response
 

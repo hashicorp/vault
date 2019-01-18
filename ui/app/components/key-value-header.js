@@ -1,7 +1,8 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
 
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'nav',
   classNames: 'key-value-header breadcrumb',
   ariaLabel: 'breadcrumbs',
@@ -16,7 +17,7 @@ export default Ember.Component.extend({
     return str[str.length - 1] === '/' ? str.slice(0, -1) : str;
   },
 
-  currentPath: Ember.computed('mode', 'path', 'showCurrent', function() {
+  currentPath: computed('mode', 'path', 'showCurrent', function() {
     const mode = this.get('mode');
     const path = this.get('path');
     const showCurrent = this.get('showCurrent');
@@ -26,7 +27,7 @@ export default Ember.Component.extend({
     return `vault.cluster.secrets.backend.${mode}`;
   }),
 
-  secretPath: Ember.computed('baseKey', 'baseKey.display', 'baseKey.id', 'root', 'showCurrent', function() {
+  secretPath: computed('baseKey', 'baseKey.{display,id}', 'root', 'showCurrent', function() {
     let crumbs = [];
     const root = this.get('root');
     const baseKey = this.get('baseKey.display') || this.get('baseKey.id');

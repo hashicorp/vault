@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -38,6 +39,79 @@ func generateCode(key string, period uint, digits otplib.Digits, algorithm otpli
 	return totpToken, err
 }
 
+func TestBackend_KeyName(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		Name    string
+		KeyName string
+		Fail    bool
+	}{
+		{
+			"without @",
+			"sample",
+			false,
+		},
+		{
+			"with @ in the beginning",
+			"@sample.com",
+			true,
+		},
+		{
+			"with @ in the end",
+			"sample.com@",
+			true,
+		},
+		{
+			"with @ in between",
+			"sample@sample.com",
+			false,
+		},
+		{
+			"with multiple @",
+			"sample@sample@@sample.com",
+			false,
+		},
+	}
+	var resp *logical.Response
+	for _, tc := range tests {
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path:      "keys/" + tc.KeyName,
+			Operation: logical.UpdateOperation,
+			Storage:   config.StorageView,
+			Data: map[string]interface{}{
+				"generate":     true,
+				"account_name": "vault",
+				"issuer":       "hashicorp",
+			},
+		})
+		if tc.Fail {
+			if err == nil {
+				t.Fatalf("expected an error for test %q", tc.Name)
+			}
+			continue
+		} else if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: test name: %q\nresp: %#v\nerr: %v", tc.Name, resp, err)
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path:      "code/" + tc.KeyName,
+			Operation: logical.ReadOperation,
+			Storage:   config.StorageView,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: test name: %q\nresp: %#v\nerr: %v", tc.Name, resp, err)
+		}
+		if resp.Data["code"].(string) == "" {
+			t.Fatalf("failed to generate code for test %q", tc.Name)
+		}
+	}
+}
+
 func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -64,7 +138,7 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -102,7 +176,7 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -140,7 +214,7 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -178,7 +252,7 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -216,7 +290,7 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -255,7 +329,7 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 	invalidCode := "12345678"
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -284,7 +358,7 @@ func TestBackend_createKeyMissingKeyValue(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -308,7 +382,7 @@ func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -336,7 +410,7 @@ func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -364,7 +438,7 @@ func TestBackend_createKeyInvalidPeriod(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -392,7 +466,7 @@ func TestBackend_createKeyInvalidDigits(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -426,7 +500,7 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -452,7 +526,7 @@ func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 		},
@@ -485,7 +559,7 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -509,7 +583,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -533,7 +607,7 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -566,7 +640,7 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -600,7 +674,7 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -634,7 +708,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -668,7 +742,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -702,7 +776,7 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
@@ -727,7 +801,7 @@ func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -751,7 +825,7 @@ func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -775,7 +849,7 @@ func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -797,7 +871,7 @@ func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -819,7 +893,7 @@ func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -841,7 +915,7 @@ func TestBackend_invalidURLValue(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -863,7 +937,7 @@ func TestBackend_urlAndGenerateTrue(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -885,7 +959,7 @@ func TestBackend_keyAndGenerateTrue(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, true),
 			testAccStepReadKey(t, "test", nil),
@@ -917,7 +991,7 @@ func TestBackend_generatedKeyExportedFalse(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),

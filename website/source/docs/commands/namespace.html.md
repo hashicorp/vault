@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "namespace - Command"
+sidebar_title: "<code>namespace</code>"
 sidebar_current: "docs-commands-namespace"
 description: |-
   The "namespace" command groups subcommands for interacting with namespaces.
@@ -49,7 +50,7 @@ Subcommands:
     create    Create a new namespace
     delete    Delete an existing namespace
     list      List child namespaces
-    lookup    Create a new namespace
+    lookup    Look up an existing namespace
 ```
 
 For more information, examples, and usage about a subcommand, click on the name

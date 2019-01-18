@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/version"
 )
@@ -19,10 +20,10 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string) (*PluginRunner, error)
+	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
 }
 
-// Wrapper interface defines the functions needed by the runner to wrap the
+// RunnerUtil interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
@@ -31,7 +32,7 @@ type RunnerUtil interface {
 	MlockEnabled() bool
 }
 
-// LookWrapper defines the functions for both Looker and Wrapper
+// LookRunnerUtil defines the functions for both Looker and Wrapper
 type LookRunnerUtil interface {
 	Looker
 	RunnerUtil
@@ -41,8 +42,10 @@ type LookRunnerUtil interface {
 // go-plugin.
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
+	Type           consts.PluginType           `json:"type" structs:"type"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
+	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
@@ -51,24 +54,28 @@ type PluginRunner struct {
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
 // returns a configured plugin.Client with TLS Configured and a wrapping token set
 // on PluginUnwrapTokenEnv for plugin process consumption.
-func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	return r.runCommon(ctx, wrapper, pluginMap, hs, env, logger, false)
+func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginSets map[int]plugin.PluginSet, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(ctx, wrapper, pluginSets, hs, env, logger, false)
 }
 
 // RunMetadataMode returns a configured plugin.Client that will dispense a plugin
 // in metadata mode. The PluginMetadataModeEnv is passed in as part of the Cmd to
 // plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
-func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
-	return r.runCommon(ctx, wrapper, pluginMap, hs, env, logger, true)
+func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, pluginSets map[int]plugin.PluginSet, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
+	return r.runCommon(ctx, wrapper, pluginSets, hs, env, logger, true)
 
 }
 
-func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
+func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, pluginSets map[int]plugin.PluginSet, hs plugin.HandshakeConfig, env []string, logger log.Logger, isMetadataMode bool) (*plugin.Client, error) {
 	cmd := exec.Command(r.Command, r.Args...)
+
+	// `env` should always go last to avoid overwriting internal values that might
+	// have been provided externally.
+	cmd.Env = append(cmd.Env, r.Env...)
 	cmd.Env = append(cmd.Env, env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if wrapper.MlockEnabled() {
+	if wrapper != nil && wrapper.MlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
@@ -110,12 +117,12 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	}
 
 	clientConfig := &plugin.ClientConfig{
-		HandshakeConfig: hs,
-		Plugins:         pluginMap,
-		Cmd:             cmd,
-		SecureConfig:    secureConfig,
-		TLSConfig:       clientTLSConfig,
-		Logger:          logger,
+		HandshakeConfig:  hs,
+		VersionedPlugins: pluginSets,
+		Cmd:              cmd,
+		SecureConfig:     secureConfig,
+		TLSConfig:        clientTLSConfig,
+		Logger:           logger,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC,
 			plugin.ProtocolGRPC,
@@ -127,6 +134,8 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	return client, nil
 }
 
+// APIClientMeta is a helper that plugins can use to configure TLS connections
+// back to Vault.
 type APIClientMeta struct {
 	// These are set by the command line flags.
 	flagCACert     string
@@ -136,6 +145,7 @@ type APIClientMeta struct {
 	flagInsecure   bool
 }
 
+// FlagSet returns the flag set for configuring the TLS connection
 func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
@@ -148,6 +158,7 @@ func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 	return fs
 }
 
+// GetTLSConfig will return a TLSConfig based off the values from the flags
 func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
 	// If we need custom TLS configuration, then set it
 	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
@@ -166,7 +177,7 @@ func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
 	return nil
 }
 
-// CancelIfCanceled takes a context cancel func and a context. If the context is
+// CtxCancelIfCanceled takes a context cancel func and a context. If the context is
 // shutdown the cancelfunc is called. This is useful for merging two cancel
 // functions.
 func CtxCancelIfCanceled(f context.CancelFunc, ctxCanceler context.Context) chan struct{} {

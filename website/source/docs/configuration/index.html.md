@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Server Configuration"
+sidebar_title: "Configuration"
 sidebar_current: "docs-configuration"
 description: |-
   Vault server configuration reference.
@@ -119,6 +120,10 @@ to specify where the configuration is.
 - `max_lease_ttl` `(string: "768h")` – Specifies the maximum possible lease
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
+
+- `default_max_request_duration` `(string: "90s")` – Specifies the default
+  maximum request duration allowed before Vault cancels the request. This can
+  be overridden per listener via the `max_request_duration` value.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security

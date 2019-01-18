@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Secure Multi-Tenancy with Namepaces - Guides"
+sidebar_title: "Multi-Tenant: Namespaces"
 sidebar_current: "guides-operations-multi-tenant"
 description: |-
   This guide provides guidance in creating a multi-tenant environment.
@@ -19,6 +20,8 @@ isolation and ensure teams can self-manage their own environments.
 
 ## Reference Material
 
+- [Namespaces](/docs/enterprise/namespaces/index.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA)
 - [Vault Deployment Reference Architecture](/guides/operations/reference-architecture.html)
 - [Policies](/guides/identity/policies.html) guide
 
@@ -45,7 +48,7 @@ a Service*** model allowing each organization (tenant) to manage their own
 secrets and policies. The most importantly, tenants should be restricted to work
 only within their tenant scope.
 
-![Multi-Tenant](/assets/images/vault-multi-tenant.png)
+![Multi-Tenant](/img/vault-multi-tenant.png)
 
 ## Solution
 
@@ -55,7 +58,8 @@ they can perform all necessary tasks within their tenant namespace.
 Each namespace can have its own:
 
 - Policies
-- Mounts
+- Auth Methods
+- Secret Engines
 - Tokens
 - Identity entities and groups
 
@@ -79,7 +83,7 @@ the Education organization which has Training and Certification teams. Delegate
 operational tasks to the team admins so that the Vault cluster operators won't
 have to be involved.
 
-![Scenario](/assets/images/vault-multi-tenant-2.png)
+![Scenario](/img/vault-multi-tenant-2.png)
 
 In this guide, you are going to perform the following steps:
 
@@ -88,6 +92,7 @@ In this guide, you are going to perform the following steps:
 1. [Setup entities and groups](#step3)
 1. [Test the organization admin user](#step4)
 1. [Test the team admin user](#step5)
+1. [Audit ambient credentials](#step6)
 
 
 ### <a name="step1"></a>Step 1: Create namespaces
@@ -211,7 +216,7 @@ and then login.
 1. To create child namespaces, select the down-arrow on the upper left corner of
 the UI, and select **education** under **CURRENT NAMESPACE**.
 
-    ![NS Selection](/assets/images/vault-multi-tenant-1.png)
+    ![NS Selection](/img/vault-multi-tenant-1.png)
 
 1. Under the **Access** tab, select **Namespaces** and then click **Create a namespace**.
 
@@ -329,6 +334,9 @@ path "sys/mounts" {
 
 Now, let's deploy the policies!
 
+-> Also, refer to the [Additional Discussion](#policy-with-namespaces) section
+to learn more about policy authoring with namespaces.
+
 
 #### CLI command
 
@@ -386,7 +394,7 @@ $ curl --header "X-Vault-Token: ..." \
        --header "X-Vault-Namespace: education" \
        --request PUT \
        --data @edu-payload.json \
-       https://vault.rocks/v1/sys/policies/acl/edu-admin
+       https://127.0.0.1:8200/v1/sys/policies/acl/edu-admin
 
 # Create a request payload
 $ tee training-payload.json <<EOF
@@ -400,7 +408,7 @@ EOF
 $ curl --header "X-Vault-Token: ..." \
        --request PUT \
        --data @training-payload.json \
-       https://vault.rocks/v1/education/training/sys/policies/acl/training-admin
+       https://127.0.0.1:8200/v1/education/training/sys/policies/acl/training-admin
 ```
 
 
@@ -419,7 +427,7 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Set the **CURRENT NAMESPACE** to be **education/training** in the upper left
 menu.
-    ![Namespace](/assets/images/vault-multi-tenant-6.png)
+    ![Namespace](/img/vault-multi-tenant-6.png)
 
 1. In the **Policies** tab, select **Create ACL policy**.
 
@@ -441,7 +449,7 @@ Admin**, and add Bob Smith entity as a group member so that Bob can inherit the
 `training-admin` policy to manage the child namespace if he ever has to take
 over.
 
-![Entities and Groups](/assets/images/vault-multi-tenant-3.png)
+![Entities and Groups](/img/vault-multi-tenant-3.png)
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups.  Refer to the [Identity - Entities and
@@ -511,7 +519,7 @@ following command to create a new user, **`bob`**.
     ```plaintext
     vault write auth/userpass/users/bob password="password"
     ```
-    ![Create Policy](/assets/images/vault-multi-tenant-4.png)
+    ![Create Policy](/img/vault-multi-tenant-4.png)
 
 1. Click the icon (**`>_`**) again to hide the shell.
 
@@ -533,7 +541,7 @@ following command to create a new user, **`bob`**.
 **Details** tab.
 
 1. Now, set the **CURRENT NAMESPACE** to **education/training**.
-    ![Namespace](/assets/images/vault-multi-tenant-6.png)
+    ![Namespace](/img/vault-multi-tenant-6.png)
 
 1. In the **Access** tab, select **Groups**, and select **Create group**.
 
@@ -547,7 +555,7 @@ following command to create a new user, **`bob`**.
 1. Select **Username & Password** from the **Type** drop-down menu.
 
 1. Click **Enable Method**.  Copy the mount accessor value which you will user later.
-    ![Namespace](/assets/images/vault-multi-tenant-8.png)
+    ![Namespace](/img/vault-multi-tenant-8.png)
 
 1. Click the Vault CLI shell icon (**`>_`**) to open a command shell.  Enter the
 following command to create a new user, **`bsmith`**.
@@ -688,7 +696,7 @@ you are already logged in, sign out.
 
 1. Select the **Userpass** tab, and enter **`bob`** in the **Username** field,
 and **`password`** in the **Password** field.
-    ![Login](/assets/images/vault-multi-tenant-5.png)
+    ![Login](/img/vault-multi-tenant-5.png)
 
 1. Click **Sign in**.  Notice that the CURRENT NAMESPACE is set to **education**
 in the upper left corner of the UI.
@@ -840,6 +848,33 @@ field, and **`password`** in the **Password** field.
 
 1. Click **Enable Engine** to finish.
 
+### <a name="step6"></a>Step 6: Audit ambient credentials
+(**Persona:** operator)
+
+Many auth and secrets providers, such as AWS, Azure, GCP, and AliCloud, use ambient
+credentials to authenticate API calls. For example, AWS may:
+
+1. Use an access key and secret key configured in Vault.
+1. If not present, check for environment variables such as "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY".
+1. If not present, load credentials configured in "~/.aws/credentials".
+1. If not present, use instance metadata.
+
+This becomes a problem if these ambient credentials are not intended to be used within
+a particular namespace. 
+
+For example, suppose that your Vault server is running on an 
+AWS EC2 instance. You give the owner of a namespace a particular set of permissions to
+use for AWS. However, that owner _does not_ configure them. So, Vault falls back to using
+the credentials available in instance metadata, leading to a privilege escalation.
+
+To handle this:
+
+- Ensure no environment variables are available that could grant a privilege escalation.
+- Ensure that any privileges granted through instance metadata (in this example) or other 
+ambient identity info represent a _loss_ of privilege.
+- Directly configure the correct credentials in namespaces, and restrict access to that
+endpoint so credentials can't later be edited to use ambient credentials.
+
 <br>
 
 ~> **Summary:** As this guide demonstrated, each namespace you created behaves
@@ -852,12 +887,12 @@ client must acquire a valid token for each namespace to access their secrets.
 ## Additional Discussion
 
 For the simplicity, this guide used the username and password (`userpass`) auth
-method which was enabled at the education namespace.  However, most likely, your
-organization uses LDAP auth method which is enabled in the root namespace
+method which was enabled in the education namespace.  However, most likely, your
+organization uses LDAP auth method which is enabled in the **root** namespace
 instead.
 
-In such as case, here are the steps to create the "Training Admin" group as
-described in this guide.
+Here are the steps to create the "Training Admin" group as described in this
+guide using the LDAP auth method enabled in the root namespace.
 
 1. Enable and configure the desired auth method (e.g. LDAP) in the root
 namespace.
@@ -904,6 +939,72 @@ the external group (`training_admin_root`) as its member.
             policies="training-admin" \
             member_group_ids=$(cat group_id.txt)
     ```
+
+### Policy with namespaces
+
+In this guide, you created policies in each namespace (`education` and
+`education/training`).  Therefore, you did not have to specify the target
+namespace in the policy paths.  
+
+If you want to create policies in the root namespace to control `education` and
+`education/training` namespaces, prepend the namespace in the paths.
+
+For example:
+
+```hcl
+# Manage policies in the 'education' namespace
+path "education/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education' namespace
+path "education/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies under 'education/training' namespace
+path "education/training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage tokens in the 'education/training' namespace
+path "education/training/auth/token/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+In [Step 2](#step2), you deployed the `training-admin` policy in the
+`education/training` namespace. The path is relative to the working namespace.
+So, if you want to create the `training-admin` policy in the **`education`**
+namespace instead, the paths starts with `training/` rather than
+`education/training/`.
+
+```hcl
+# Manage namespaces
+path "training/sys/namespaces/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via API
+path "training/sys/policies/*" {
+   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+
+# Manage policies via CLI
+path "training/sys/policy/*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+...
+```
+
+~> **NOTE:** Important to remember that tokens are local to the namespace.
+Therefore, you need a valid token for the namespace you want to operate in. The
+token created in the `education` namespace is not valid in the
+`education/training` namespace. This is so that each namespace is completely
+isolated from one another to ensure a secure multi-tenant environment.
+
+
 
 ## Next steps
 

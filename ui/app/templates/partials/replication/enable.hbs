@@ -141,9 +141,11 @@
         </select>
       </div>
       {{#if (eq mode 'secondary')}}
-        <p class="help">
-          <em class="has-text-danger">Caution</em>: this will <em>immediately</em> clear <strong>all</strong> data in this cluster!
-        </p>
+          <AlertInline
+            @class="has-top"
+            @type="warning"
+            @message="This will immediately clear all data in this cluster!"
+          />
       {{/if}}
     </div>
     {{#if (eq mode 'primary')}}

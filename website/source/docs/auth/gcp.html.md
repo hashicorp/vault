@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Google Cloud - Auth Methods"
+sidebar_title: "Google Cloud"
 sidebar_current: "docs-auth-gcp"
 description: |-
   The "gcp" auth method allows users and machines to authenticate to Vault using
@@ -9,50 +10,52 @@ description: |-
 
 # Google Cloud Auth Method
 
-The `gcp` auth method allows authentication against Vault using Google
-credentials. It treats Google Cloud Platform (GCP) as a Trusted Third Party and
-expects a [JSON Web Token][jwt] (JWT) signed by Google credentials from the
-authenticating entity. This token can be generated through different GCP APIs
-depending on the type of entity.
+The `gcp` auth method allows Google Cloud Platform entities to authenticate to
+Vault. Vault treats Google Cloud as a trusted third party and verifies
+authenticating entities against the Google Cloud APIs. This backend allows for
+authentication of:
+
+- Google Cloud IAM service accounts
+- Google Compute Engine (GCE) instances
+
+This backend focuses on identities specific to Google _Cloud_ and does not
+support authenticating arbitrary Google or G Suite users or generic OAuth
+against Google.
 
 This plugin is developed in a separate GitHub repository at
-[`hashicorp/vault-plugin-auth-gcp`](https://github.com/hashicorp/vault-plugin-auth-gcp),
+[hashicorp/vault-plugin-auth-gcp][repo],
 but is automatically bundled in Vault releases. Please file all feature
 requests, bugs, and pull requests specific to the GCP plugin under that
 repository.
 
-## Authentication
 
-### Via the CLI
+## Authenticate
 
-The default path is `/gcp`. If this auth method was enabled at a different
-path, specify `-path=/my-path` in the CLI.
+### Via the CLI Helper
+
+Vault includes a CLI helper that obtains a signed JWT locally and sends the
+request to Vault. This helper is only available for IAM-type roles.
 
 ```text
 $ vault login -method=gcp \
+    role="my-role" \
+    service_account="authenticating-account@my-project.iam.gserviceaccounts.com" \
+    project="my-project" \
+    jwt_exp="15m" \
+    credentials=@path/to/signer/credentials.json
+```
+
+For more usage information, run `vault auth help gcp`.
+
+### Via the CLI
+
+```text
+$ vault write -field=token auth/gcp/login \
     role="my-role" \
     jwt="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
-In this example, the "role" is the name of a configured role. The "jwt" is a
-self-signed or Google-signed JWT token obtained using the
-[`signJwt`][signjwt-method] API call.
-
-Because the process to sign a service account JWT can be tedious, Vault includes
-a CLI helper to generate the JWT token given the service account and parameters.
-This process **only applies to `iam`-type roles!**
-
-```text
-$ vault login -method=gcp \
-    role="my-role" \
-    jwt_exp="15m" \
-    credentials=@path/to/credentials.json \
-    project="my-project" \
-    service_account="service-account@my-project.iam.gserviceaccounts.com"
-```
-
-This signs a properly formatted service account JWT and authenticates to Vault
-directly. For details on each field, please run `vault auth help gcp`.
+See [Generating JWTs](#generating-jwts) for ways to obtain the JWT token.
 
 ### Via the API
 
@@ -63,28 +66,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/login
 ```
 
-The response will be in JSON. For example:
-
-```javascript
-{
-  "auth": {
-    "client_token": "f33f8c72-924e-11f8-cb43-ac59d697597c",
-    "accessor": "0e9e354a-520f-df04-6867-ee81cae3d42d",
-    "policies": [
-      "default",
-      "dev",
-      "prod"
-    ],
-    "metadata": {
-      "role": "my-role",
-      "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
-      "service_account_id": "111111111111111111111"
-    },
-    "lease_duration": 2764800,
-    "renewable": true
-  }
-}
-```
+See [API docs][api-docs] for expected response.
 
 ## Configuration
 
@@ -116,7 +98,6 @@ management tool.
     ```text
     $ vault write auth/gcp/role/my-iam-role \
         type="iam" \
-        project_id="my-project" \
         policies="dev,prod" \
         bound_service_accounts="my-service@my-project.iam.gserviceaccount.com"
     ```
@@ -126,8 +107,8 @@ management tool.
     ```text
     $ vault write auth/gcp/role/my-gce-role \
         type="gce" \
-        project_id="my-project" \
         policies="dev,prod" \
+        bound_projects="my-project1,my-project2" \
         bound_zones="us-east1-b" \
         bound_labels="foo:bar,zip:zap"
     ```
@@ -136,7 +117,7 @@ management tool.
     [API documentation][api-docs].
 
 
-### Google Cloud Authentication
+## Authentication
 
 The Google Cloud Vault auth method uses the official Google Cloud Golang SDK.
 This means it supports the common ways of [providing credentials to Google
@@ -153,18 +134,54 @@ default service account credentials are used.
 For more information on service accounts, please see the [Google Cloud Service
 Accounts documentation][service-accounts].
 
-To use this storage backend, the service account must have the following
-minimum scope(s):
+To use this auth method, the service account must have the following minimum
+scope:
 
 ```text
 https://www.googleapis.com/auth/cloud-platform
 ```
 
-## Workflow
+### Required Permissions
+
+The credentials given to Vault must have the following roles:
+
+```text
+roles/iam.serviceAccountKeyAdmin
+roles/browser
+```
+
+Note that this is the permission **given to the Vault servers**. The IAM
+service account or GCE instance that is authenticating _against_ Vault must
+have the following role:
+
+```text
+roles/iam.serviceAccountTokenCreator
+```
+
+
+## Group Aliases
+
+As of Vault 1.0, roles can specify an `add_group_aliases` boolean parameter
+that adds [group aliases][identity-group-aliases] to the auth response. These
+aliases can aid in building reusable policies since they are available as
+interpolated values in Vault's policy engine. Once enabled, the auth response
+will include the following aliases:
+
+```json
+[
+  "project-$PROJECT_ID",
+  "folder-$SUBFOLDER_ID",
+  "folder-$FOLDER_ID",
+  "organization-$ORG_ID"
+]
+```
+
+
+## Implementation Details
 
 This section describes the implementation details for how Vault communicates
 with Google Cloud to authenticate and authorize JWT tokens. This information is
-provided for those who are curious, but these implementation details are not
+provided for those who are curious, but these details are not
 required knowledge for using the auth method.
 
 ### IAM Login
@@ -172,7 +189,7 @@ required knowledge for using the auth method.
 IAM login applies only to roles of type `iam`. The Vault authentication workflow
 for IAM service accounts looks like this:
 
-[![Vault Google Cloud IAM Login Workflow](/assets/images/vault-gcp-iam-auth-workflow.svg)](/assets/images/vault-gcp-iam-auth-workflow.svg)
+[![Vault Google Cloud IAM Login Workflow](/img/vault-gcp-iam-auth-workflow.svg)](/img/vault-gcp-iam-auth-workflow.svg)
 
   1. The client generates a signed JWT using the IAM
   [`projects.serviceAccounts.signJwt`][signjwt-method] method. For examples of
@@ -194,7 +211,7 @@ GCE login only applies to roles of type `gce` and **must be completed on an
 instance running in GCE**. These steps will not work from your local laptop or
 another cloud provider.
 
-[![Vault Google Cloud GCE Login Workflow](/assets/images/vault-gcp-gce-auth-workflow.svg)](/assets/images/vault-gcp-gce-auth-workflow.svg)
+[![Vault Google Cloud GCE Login Workflow](/img/vault-gcp-gce-auth-workflow.svg)](/img/vault-gcp-gce-auth-workflow.svg)
 
   1. The client obtains an [instance identity metadata token][instance-identity]
   on a GCE instance.
@@ -209,30 +226,33 @@ another cloud provider.
   the instance matches the bound zones, regions, or instance groups. If that is
   successful, a Vault token with the proper policies is returned.
 
-## Obtaining JWT Tokens
 
-Vault expects a signed JWT token to verify against. There are a few ways to
-acquire a JWT token.
+## Generating JWTs
 
-### Generating IAM Tokens
+This section details the various methods and examples for obtaining JWT
+tokens.
 
-Vault includes a CLI helper for generating the signed JWT token and submitting
-it to Vault for `iam`-type roles. If you want to generate the JWT token
-yourself, follow this section.
+### IAM
 
-#### Shell Example
+This describes how to use the GCP IAM [API method][signjwt-method] directly
+to generate the signed JWT with the claims that Vault expects. Note the CLI
+does this process for you and is much easier, and that there is very little
+reason to do this yourself.
 
-The expected format of the JWT request payload is:
+#### curl Example
 
-```javascript
+Vault requires the following minimum claim set:
+
+```json
 {
-  "sub": "$SERVICE_ACCOUNT",
+  "sub": "$SERVICE_ACCOUNT_EMAIL_OR_ID",
   "aud": "vault/$ROLE",
-  "exp": "$EXPIRATION" // optional
+  "exp": "$EXPIRATION"
 }
 ```
 
-If specified, the expiration must be a
+For the API method, expiration is optional and will default to an hour.
+If specified, expiration must be a
 [NumericDate](https://tools.ietf.org/html/rfc7519#section-2) value (seconds from
 Epoch). This value must be before the max JWT expiration allowed for a role.
 This defaults to 15 minutes and cannot be more than 1 hour.
@@ -245,21 +265,24 @@ ROLE="my-role"
 PROJECT="my-project"
 SERVICE_ACCOUNT="service-account@my-project.iam.gserviceaccount.com"
 OAUTH_TOKEN="$(oauth2l header cloud-platform)"
+JWT_CLAIM="{\\\"aud\\\":\\\"vault/${ROLE}\\\", \\\"sub\\\": \\\"${SERVICE_ACCOUNT}\\\"}"
 
 curl \
   --header "${OAUTH_TOKEN}" \
   --header "Content-Type: application/json" \
   --request POST \
-  --data "{\"aud\":\"vault/${ROLE}\", \"sub\": \"${SERVICE_ACCOUNT}\"}" \
+  --data "{\"payload\": \"${JWT_CLAIM}\"}" \
   "https://iam.googleapis.com/v1/projects/${PROJECT}/serviceAccounts/${SERVICE_ACCOUNT}:signJwt"
 ```
 
 #### gcloud Example
 
+You can also do this through the (currently beta) gcloud command.
+
 ```text
-gcloud beta iam service-accounts sign-jwt credentials.json - \
-  --iam-account=service-account@my-project.iam.gserviceaccount.com \
-  --project=my-project
+$ gcloud beta iam service-accounts sign-jwt $INPUT_JWT_CLAIMS $OUTPUT_JWT_FILE \
+    --iam-account=service-account@my-project.iam.gserviceaccount.com \
+    --project=my-project
 ```
 
 #### Golang Example
@@ -267,22 +290,23 @@ gcloud beta iam service-accounts sign-jwt credentials.json - \
 Read more on the
 [Google Open Source blog](https://opensource.googleblog.com/2017/08/hashicorp-vault-and-google-cloud-iam.html).
 
-### Generating GCE Tokens
+### GCE
 
-GCE tokens can only be generated from a GCE instance. **You must run these
-commands from the GCE instance.** The JWT token can be obtained from the
-`service-accounts/default/identity` endpoint for a instance's metadata server.
+GCE tokens **can only be generated from a GCE instance**. The JWT token can be
+obtained from the `service-accounts/default/identity` endpoint for a
+instance's metadata server.
+
+#### curl Example
 
 ```text
 ROLE="my-gce-role"
-SERVICE_ACCOUNT="service-account@my-project.iam.gserviceaccount.com"
 
 curl \
   --header "Metadata-Flavor: Google" \
   --get \
-  --data-urlencode "aud=http://vault/${ROLE}" \
+  --data-urlencode "audience=http://vault/${ROLE}" \
   --data-urlencode "format=full" \
-  "http://metadata/computeMetadata/v1/instance/service-accounts/${SERVICE_ACCOUNT}/identity"
+  "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity"
 ```
 
 ## API
@@ -295,4 +319,6 @@ The GCP Auth Plugin has a full HTTP API. Please see the
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
 [service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
 [api-docs]: /api/auth/gcp/index.html
+[identity-group-aliases]: /api/secret/identity/group-alias.html
 [instance-identity]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity
+[repo]: https://github.com/hashicorp/vault-plugin-auth-gcp

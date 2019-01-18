@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/audit - HTTP API"
-sidebar_current: "docs-http-system-audit/"
+sidebar_title: "<code>/sys/audit</code>"
+sidebar_current: "api-http-system-audit/"
 description: |-
   The `/sys/audit` endpoint is used to enable and disable audit devices.
 ---
@@ -40,7 +41,7 @@ $ curl \
     "type": "file",
     "description": "Store logs in a file",
     "options": {
-      "path": "/var/log/vault.log"
+      "file_path": "/var/log/vault.log"
     }
   }
 }
@@ -83,7 +84,7 @@ relevant functionality is only supported in Vault Enterprise:
 {
   "type": "file",
   "options": {
-    "path": "/var/log/vault/log"
+    "file_path": "/var/log/vault/log"
   }
 }
 ```

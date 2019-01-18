@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Cluster Monitoring - Guides"
+sidebar_title: "Vault Cluster Monitoring"
 sidebar_current: "guides-operations-monitoring"
 description: |-
   Learn how to set up and manage Vault Enterprise Performance Replication.
@@ -20,7 +21,7 @@ The guide walks you through:
 - How to configure Vault and Consul to send telemetry to a monitoring agent.
 - Which metrics are important to monitor, and why.
 
-![Dashboard Example](/assets/images/consul_cluster_health.png)
+![Dashboard Example](/img/vault_cluster.png)
 
 
 ## Reference Materials

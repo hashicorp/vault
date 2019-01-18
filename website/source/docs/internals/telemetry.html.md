@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Telemetry"
+sidebar_title: "Telemetry"
 sidebar_current: "docs-internals-telemetry"
 description: |-
   Learn about the telemetry data available in Vault.
@@ -367,6 +368,32 @@ These metrics relate to supported authentication methods.
 ### vault.route.rollback.sys-
 
 **[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the system backend
+
+## Replication Metrics
+
+These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html).
+
+### logshipper.streamWALs.missing_guard
+
+**[C]** Counter (Number of missing guards): Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is not matched/found
+
+### logshipper.streamWALs.guard_found
+
+**[C]** Counter (Number of found guards):
+
+Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is matched/found
+
+### replication.fetchRemoteKeys
+
+**[S]** Summary (Milliseconds): Time taken to fetch keys from a remote cluster participating in replication prior to Merkle Tree based delta generation
+
+### replication.merkleDiff
+
+**[S]** Summary (Milliseconds): Time taken to perform a Merkle Tree based delta generation between the clusters participating in replication
+
+### replication.merkleSync
+
+**[S]** Summary (Milliseconds): Time taken to perform a Merkle Tree based synchronization using the last delta generated between the clusters participating in replication
 
 ## Secrets Engines Metrics
 

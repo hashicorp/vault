@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "lease renew - Command"
+sidebar_title: "<code>renew</code>"
 sidebar_current: "docs-commands-lease-renew"
 description: |-
   The "lease renew" command renews the lease on a secret, extending the time

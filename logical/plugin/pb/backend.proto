@@ -31,7 +31,7 @@ message ProtoError {
 }
 
 // Paths is the structure of special paths that is used for SpecialPaths.
-message  Paths {
+message Paths {
 	// Root are the paths that require a root token to access
 	repeated string root = 1;
 
@@ -198,6 +198,39 @@ message Auth {
 	// If set, restricts usage of the certificates to client IPs falling within
 	// the range of the specified CIDR(s).
 	repeated string bound_cidrs = 13;
+
+	// TokenPolicies and IdentityPolicies break down the list in Policies to
+	// help determine where a policy was sourced
+	repeated string token_policies = 14;
+	repeated string identity_policies = 15;
+
+	// Explicit maximum lifetime for the token. Unlike normal TTLs, the maximum
+	// TTL is a hard limit and cannot be exceeded, also counts for periodic tokens.
+	int64 explicit_max_ttl = 16;
+
+	// TokenType is the type of token being requested
+	uint32 token_type = 17;
+}
+
+message TokenEntry {
+	string id = 1;
+	string accessor = 2;
+	string parent = 3;
+	repeated string policies = 4;
+	string path = 5;
+	map<string, string> meta = 6;
+	string display_name = 7;
+	int64 num_uses = 8;
+	int64 creation_time = 9;
+	int64 ttl = 10;
+	int64 explicit_max_ttl = 11;
+	string role = 12;
+	int64 period = 13;
+	string entity_id = 14;
+	repeated string bound_cidrs = 15;
+	string namespace_id = 16;
+	string cubbyhole_id = 17;
+	uint32 type = 18;
 }
 
 message LeaseOptions {

@@ -5,11 +5,9 @@
     </HomeLink>
   </Nav.home>
   <Nav.items>
-    {{#if (and activeCluster.unsealed version.isEnterprise)}}
-     <div class="navbar-item">
-       <StatusMenu @type="replication-status" @itemTag="p" />
-      </div>
-    {{/if}}
+   <div class="navbar-item status-indicator-button" data-status="{{if activeCluster.unsealed "good" "bad"}}">
+     <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
+   </div>
   </Nav.items>
 </NavHeader>
 <UiWizard>

@@ -23,6 +23,8 @@ func TestBackend_PathListRoles(t *testing.T) {
 	roleData := map[string]interface{}{
 		"role_arns":       []string{"arn:aws:iam::123456789012:role/path/RoleName"},
 		"credential_type": assumedRoleCred,
+		"default_sts_ttl": 3600,
+		"max_sts_ttl":     3600,
 	}
 
 	roleReq := &logical.Request{

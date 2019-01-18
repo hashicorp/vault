@@ -1,0 +1,85 @@
+-
+  title: "Auth Methods"
+  docs:
+    - api/auth/index.html
+    - api/auth/approle/index.html
+    - api/auth/alicloud/index.html
+    - api/auth/aws/index.html
+    - api/auth/azure/index.html
+    - api/auth/github/index.html
+    - api/auth/gcp/index.html
+    - api/auth/jwt/index.html
+    - api/auth/kubernetes/index.html
+    - api/auth/ldap/index.html
+    - api/auth/okta/index.html
+    - api/auth/radius/index.html
+    - api/auth/cert/index.html
+    - api/auth/token/index.html
+    - api/auth/userpass/index.html
+-
+  title: "Secret Engines"
+  docs:
+    - api/secret/index.html
+    - api/secret/ad/index.html
+    - api/secret/alicloud/index.html
+    - api/secret/aws/index.html
+    - api/secret/azure/index.html
+    - api/secret/consul/index.html
+    - api/secret/cubbyhole/index.html
+    - api/secret/databases/index.html
+    - api/secret/gcp/index.html
+    - api/secret/gcpkms/index.html
+    - api/secret/kv/index.html
+    - api/secret/identity/index.html
+    - api/secret/nomad/index.html
+    - api/secret/pki/index.html
+    - api/secret/rabbitmq/index.html
+    - api/secret/ssh/index.html
+    - api/secret/totp/index.html
+    - api/secret/transit/index.html
+-
+  title: "System Backends"
+  docs:
+    - api/system/index.html
+    - api/system/audit.html
+    - api/system/audit-hash.html
+    - api/system/auth.html
+    - api/system/capabilities.html
+    - api/system/capabilities-accessor.html
+    - api/system/capabilities-self.html
+    - api/system/config-auditing.html
+    - api/system/config-control-group.html
+    - api/system/config-cors.html
+    - api/system/config-ui.html
+    - api/system/control-group.html
+    - api/system/generate-root.html
+    - api/system/health.html
+    - api/system/init.html
+    - api/system/internal-specs-openapi.html
+    - api/system/internal-ui-mounts.html
+    - api/system/key-status.html
+    - api/system/leader.html
+    - api/system/leases.html
+    - api/system/license.html
+    - api/system/namespaces.html
+    - api/system/mfa/index.html
+    - api/system/mounts.html
+    - api/system/plugins-reload-backend.html
+    - api/system/plugins-catalog.html
+    - api/system/policy.html
+    - api/system/policies.html
+    - api/system/raw.html
+    - api/system/rekey.html
+    - api/system/rekey-recovery-key.html
+    - api/system/remount.html
+    - api/system/replication/index.html
+    - api/system/rotate.html
+    - api/system/seal.html
+    - api/system/seal-status.html
+    - api/system/step-down.html
+    - api/system/tools.html
+    - api/system/unseal.html
+    - api/system/wrapping-lookup.html
+    - api/system/wrapping-rewrap.html
+    - api/system/wrapping-unwrap.html
+    - api/system/wrapping-wrap.html

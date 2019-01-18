@@ -1,11 +1,25 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { assign } from '@ember/polyfills';
+import { hash, resolve } from 'rsvp';
+import { assert } from '@ember/debug';
+import { pluralize } from 'ember-inflector';
+
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
 
 const { AdapterError } = DS;
-const { assert, inject } = Ember;
 
-const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
+const ENDPOINTS = [
+  'health',
+  'seal-status',
+  'tokens',
+  'token',
+  'seal',
+  'unseal',
+  'init',
+  'capabilities-self',
+  'license',
+];
 
 const REPLICATION_ENDPOINTS = {
   reindex: 'reindex',
@@ -19,11 +33,12 @@ const REPLICATION_ENDPOINTS = {
 
 const REPLICATION_MODES = ['dr', 'performance'];
 export default ApplicationAdapter.extend({
-  version: inject.service(),
-  namespaceService: inject.service('namespace'),
+  version: service(),
+  namespaceService: service('namespace'),
   shouldBackgroundReloadRecord() {
     return true;
   },
+
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
@@ -32,35 +47,41 @@ export default ApplicationAdapter.extend({
     if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
       fetches.replicationStatus = this.replicationStatus().catch(e => e);
     }
-    return Ember.RSVP.hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
+    return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
       let ret = {
         id,
         name: snapshot.attr('name'),
       };
-      ret = Ember.assign(ret, health);
+      ret = assign(ret, health);
       if (sealStatus instanceof AdapterError === false) {
-        ret = Ember.assign(ret, { nodes: [sealStatus] });
+        ret = assign(ret, { nodes: [sealStatus] });
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
-        ret = Ember.assign(ret, replicationStatus.data);
+        ret = assign(ret, replicationStatus.data);
       }
-      return Ember.RSVP.resolve(ret);
+      return resolve(ret);
     });
   },
 
   pathForType(type) {
-    return type === 'cluster' ? 'clusters' : Ember.String.pluralize(type);
+    return type === 'cluster' ? 'clusters' : pluralize(type);
   },
 
   health() {
     return this.ajax(this.urlFor('health'), 'GET', {
-      data: { standbycode: 200, sealedcode: 200, uninitcode: 200, drsecondarycode: 200 },
+      data: {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
       unauthenticated: true,
     });
   },
 
   features() {
-    return this.ajax(`${this.buildURL()}/license/features`, 'GET', {
+    return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
   },
@@ -159,7 +180,7 @@ export default ApplicationAdapter.extend({
   generateDrOperationToken(data, options) {
     const verb = options && options.checkStatus ? 'GET' : 'PUT';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.otp) {
+    if (!data || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {

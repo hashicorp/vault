@@ -1,0 +1,40 @@
+@import 'normalize.css';
+@import '@hashicorp/hashi-global-styles/style';
+
+/* NPM Preact Components */
+@import '@hashicorp/hashi-footer/dist/style.css';
+@import '@hashicorp/hashi-nav/dist/style.css';
+@import '@hashicorp/hashi-newsletter-signup-form/dist/style.css';
+@import '@hashicorp/hashi-button/dist/style.css';
+@import '@hashicorp/hashi-product-subnav/dist/style.css';
+@import '@hashicorp/hashi-content/dist/style.css';
+@import '@hashicorp/hashi-mega-nav/dist/style.css';
+@import '@hashicorp/hashi-docs-sidenav/dist/style.css';
+@import '@hashicorp/hashi-vertical-text-block-list/dist/style.css';
+@import '@hashicorp/hashi-section-header/dist/style.css';
+@import '@hashicorp/hashi-product-downloader/dist/style.css';
+@import '@hashicorp/hashi-hero/dist/style.css';
+@import '@hashicorp/hashi-alert/dist/style.css';
+@import '@hashicorp/hashi-callouts/dist/style.css';
+@import '@hashicorp/hashi-split-cta/dist/style.css';
+@import '@hashicorp/hashi-linked-text-summary-list/dist/style.css';
+@import '@hashicorp/hashi-docs-sitemap/dist/style.css';
+@import '@hashicorp/hashi-consent-manager/dist/style.css';
+@import '@hashicorp/hashi-toggle/dist/style.css';
+
+/* to be removed pending new components */
+@import '_inner';
+@import '_secondary-nav';
+
+/* Pages */
+@import 'pages/_docs';
+@import 'pages/_section_block';
+@import 'pages/_home';
+@import 'pages/_downloads.css';
+
+/* Print styles */
+@import '_print';
+
+h5 {
+  font-weight: 600;
+}

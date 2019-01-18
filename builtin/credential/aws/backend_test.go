@@ -20,6 +20,10 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
+const testVaultHeaderValue = "VaultAcceptanceTesting"
+const testValidRoleName = "valid-role"
+const testInvalidRoleName = "invalid-role"
+
 func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	// create a backend
 	config := logical.TestBackendConfig()
@@ -504,8 +508,8 @@ func TestBackend_ConfigClient(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: false,
-		Backend:        b,
+		AcceptanceTest:    false,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			stepCreate,
 			stepInvalidAccessKey,
@@ -1499,20 +1503,18 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// Test setup largely done
 	// At this point, we're going to:
 	// 1. Configure the client to require our test header value
-	// 2. Configure two different roles:
+	// 2. Configure identity to use the ARN for the alias
+	// 3. Configure two different roles:
 	//    a. One bound to our test user
 	//    b. One bound to a garbage ARN
-	// 3. Pass in a request that doesn't have the signed header, ensure
+	// 4. Pass in a request that doesn't have the signed header, ensure
 	//    we're not allowed to login
-	// 4. Passin a request that has a validly signed header, but the wrong
+	// 5. Passin a request that has a validly signed header, but the wrong
 	//    value, ensure it doesn't allow login
-	// 5. Pass in a request that has a validly signed request, ensure
+	// 6. Pass in a request that has a validly signed request, ensure
 	//    it allows us to login to our role
-	// 6. Pass in a request that has a validly signed request, asking for
+	// 7. Pass in a request that has a validly signed request, asking for
 	//    the other role, ensure it fails
-	const testVaultHeaderValue = "VaultAcceptanceTesting"
-	const testValidRoleName = "valid-role"
-	const testInvalidRoleName = "invalid-role"
 
 	clientConfigData := map[string]interface{}{
 		"iam_server_id_header_value": testVaultHeaderValue,
@@ -1528,6 +1530,23 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	configIdentityData := map[string]interface{}{
+		"iam_alias": identityAliasIAMFullArn,
+	}
+	configIdentityRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+		Data:      configIdentityData,
+	}
+	resp, err := b.HandleRequest(context.Background(), configIdentityRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("received error response when configuring identity: %#v", resp)
+	}
+
 	// configuring the valid role we'll be able to login to
 	roleData := map[string]interface{}{
 		"bound_iam_principal_arn": []string{entity.canonicalArn(), "arn:aws:iam::123456789012:role/FakeRoleArn1*"}, // Fake ARN MUST be wildcard terminated because we're resolving unique IDs, and the wildcard termination prevents unique ID resolution
@@ -1540,7 +1559,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(context.Background(), roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1657,6 +1676,12 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("bad: expected valid login: resp:%#v", resp)
+	}
+	if resp.Auth.Alias == nil {
+		t.Fatalf("bad: nil auth Alias")
+	}
+	if resp.Auth.Alias.Name != *testIdentity.Arn {
+		t.Fatalf("bad: expected identity alias of %q, got %q instead", *testIdentity.Arn, resp.Auth.Alias.Name)
 	}
 
 	renewReq := generateRenewRequest(storage, resp.Auth)

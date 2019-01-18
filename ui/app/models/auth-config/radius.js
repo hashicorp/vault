@@ -1,10 +1,9 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default AuthConfig.extend({
   host: attr('string'),
@@ -28,13 +27,17 @@ export default AuthConfig.extend({
     label: 'NAS Port',
   }),
 
+  nasIdentifier: attr('string', {
+    label: 'NAS Identifier',
+  }),
+
   fieldGroups: computed(function() {
     const groups = [
       {
         default: ['host', 'secret'],
       },
       {
-        'RADIUS Options': ['port', 'nasPort', 'dialTimeout', 'unregisteredUserPolicies'],
+        'RADIUS Options': ['port', 'nasPort', 'nasIdentifier', 'dialTimeout', 'unregisteredUserPolicies'],
       },
     ];
     return fieldToAttrs(this, groups);

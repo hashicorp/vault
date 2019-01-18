@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Consul - Storage Backends - Configuration"
+sidebar_title: "Consul"
 sidebar_current: "docs-configuration-storage-consul"
 description: |-
   The Consul storage backend is used to persist Vault's data in Consul's
@@ -167,6 +168,40 @@ the following will work for most use-cases, assuming that your service name is
 
   },
   "session": {
+    "": {
+      "policy": "write"
+    }
+  }
+}
+```
+
+For Consul 1.4+, the following example takes into account the changed ACL
+language:
+
+```json
+{
+  "key_prefix": {
+    "vault/": {
+      "policy": "write"
+    }
+  },
+  "node_prefix": {
+    "": {
+      "policy": "write"
+    }
+  },
+  "service": {
+    "vault": {
+      "policy": "write"
+    }
+  },
+  "agent_prefix": {
+    "": {
+      "policy": "write"
+    }
+
+  },
+  "session_prefix": {
     "": {
       "policy": "write"
     }

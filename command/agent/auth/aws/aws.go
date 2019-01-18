@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
+	"sync"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
@@ -21,18 +25,36 @@ const (
 	typeEC2          = "ec2"
 	typeIAM          = "iam"
 	identityEndpoint = "http://169.254.169.254/latest/dynamic/instance-identity"
+
+	/*
+
+		IAM creds can be inferred from instance metadata or the container
+		identity service, and those creds expire at varying intervals with
+		new creds becoming available at likewise varying intervals. Let's
+		default to polling once a minute so all changes can be picked up
+		rather quickly. This is configurable, however.
+
+	*/
+	defaultCredentialPollInterval = 60
 )
 
 type awsMethod struct {
-	logger       hclog.Logger
-	authType     string
-	nonce        string
-	mountPath    string
-	role         string
-	headerValue  string
-	accessKey    string
-	secretKey    string
-	sessionToken string
+	logger      hclog.Logger
+	authType    string
+	nonce       string
+	mountPath   string
+	role        string
+	headerValue string
+
+	// These are used to share the latest creds safely across goroutines.
+	credLock  sync.Mutex
+	lastCreds *credentials.Credentials
+
+	// Notifies the outer environment that it should call Authenticate again.
+	credsFound chan struct{}
+
+	// Detects that the outer environment is closing.
+	stopCh chan struct{}
 }
 
 func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
@@ -44,8 +66,10 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}
 
 	a := &awsMethod{
-		logger:    conf.Logger,
-		mountPath: conf.MountPath,
+		logger:     conf.Logger,
+		mountPath:  conf.MountPath,
+		credsFound: make(chan struct{}),
+		stopCh:     make(chan struct{}),
 	}
 
 	typeRaw, ok := conf.Config["type"]
@@ -75,25 +99,28 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'type' value is invalid")
 	}
 
+	accessKey := ""
 	accessKeyRaw, ok := conf.Config["access_key"]
 	if ok {
-		a.accessKey, ok = accessKeyRaw.(string)
+		accessKey, ok = accessKeyRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'access_key' value into string")
 		}
 	}
 
+	secretKey := ""
 	secretKeyRaw, ok := conf.Config["secret_key"]
 	if ok {
-		a.secretKey, ok = secretKeyRaw.(string)
+		secretKey, ok = secretKeyRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'secret_key' value into string")
 		}
 	}
 
+	sessionToken := ""
 	sessionTokenRaw, ok := conf.Config["session_token"]
 	if ok {
-		a.sessionToken, ok = sessionTokenRaw.(string)
+		sessionToken, ok = sessionTokenRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'session_token' value into string")
 		}
@@ -105,6 +132,29 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		if !ok {
 			return nil, errors.New("could not convert 'header_value' value into string")
 		}
+	}
+
+	if a.authType == typeIAM {
+
+		// Check for an optional custom frequency at which we should poll for creds.
+		credentialPollIntervalSec := defaultCredentialPollInterval
+		if credentialPollIntervalRaw, ok := conf.Config["credential_poll_interval"]; ok {
+			if credentialPollInterval, ok := credentialPollIntervalRaw.(int); ok {
+				credentialPollIntervalSec = credentialPollInterval
+			} else {
+				return nil, errors.New("could not convert 'credential_poll_interval' into int")
+			}
+		}
+
+		// Do an initial population of the creds because we want to err right away if we can't
+		// even get a first set.
+		creds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken)
+		if err != nil {
+			return nil, err
+		}
+		a.lastCreds = creds
+
+		go a.pollForCreds(accessKey, secretKey, sessionToken, credentialPollIntervalSec)
 	}
 
 	return a, nil
@@ -173,18 +223,22 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 
 		// Add the reauthentication value, if we have one
 		if a.nonce == "" {
-			uuid, err := uuid.GenerateUUID()
+			uid, err := uuid.GenerateUUID()
 			if err != nil {
 				retErr = errwrap.Wrapf("error generating uuid for reauthentication value: {{err}}", err)
 				return
 			}
-			a.nonce = uuid
+			a.nonce = uid
 		}
 		data["nonce"] = a.nonce
 
 	default:
+		// This is typeIAM.
+		a.credLock.Lock()
+		defer a.credLock.Unlock()
+
 		var err error
-		data, err = awsauth.GenerateLoginData(a.accessKey, a.secretKey, a.sessionToken, a.headerValue)
+		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue)
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return
@@ -197,11 +251,60 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 }
 
 func (a *awsMethod) NewCreds() chan struct{} {
-	return nil
+	return a.credsFound
 }
 
-func (a *awsMethod) CredSuccess() {
-}
+func (a *awsMethod) CredSuccess() {}
 
 func (a *awsMethod) Shutdown() {
+	close(a.credsFound)
+	close(a.stopCh)
+}
+
+func (a *awsMethod) pollForCreds(accessKey, secretKey, sessionToken string, frequencySeconds int) {
+	ticker := time.NewTicker(time.Duration(frequencySeconds) * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-a.stopCh:
+			a.logger.Trace("shutdown triggered, stopping aws auth handler")
+			return
+		case <-ticker.C:
+			if err := a.checkCreds(accessKey, secretKey, sessionToken); err != nil {
+				a.logger.Warn("unable to retrieve current creds, retaining last creds", err)
+			}
+		}
+	}
+}
+
+func (a *awsMethod) checkCreds(accessKey, secretKey, sessionToken string) error {
+	a.credLock.Lock()
+	defer a.credLock.Unlock()
+
+	a.logger.Trace("checking for new credentials")
+	currentCreds, err := awsauth.RetrieveCreds(accessKey, secretKey, sessionToken)
+	if err != nil {
+		return err
+	}
+
+	currentVal, err := currentCreds.Get()
+	if err != nil {
+		return err
+	}
+	lastVal, err := a.lastCreds.Get()
+	if err != nil {
+		return err
+	}
+
+	// These will always have different pointers regardless of whether their
+	// values are identical, hence the use of DeepEqual.
+	if !a.lastCreds.IsExpired() && reflect.DeepEqual(currentVal, lastVal) {
+		a.logger.Trace("credentials are unchanged and still valid")
+		return nil
+	}
+
+	a.lastCreds = currentCreds
+	a.logger.Trace("new credentials detected, triggering Authenticate")
+	a.credsFound <- struct{}{}
+	return nil
 }

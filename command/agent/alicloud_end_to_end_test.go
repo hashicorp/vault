@@ -1,9 +1,7 @@
 package agent
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -14,8 +12,8 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	hclog "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	vaultalicloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -29,13 +27,10 @@ import (
 )
 
 const (
-	envVarRunAccTests = "VAULT_ACC"
-	envVarAccessKey   = "ALICLOUD_TEST_ACCESS_KEY"
-	envVarSecretKey   = "ALICLOUD_TEST_SECRET_KEY"
-	envVarRoleArn     = "ALICLOUD_TEST_ROLE_ARN"
+	envVarAlicloudAccessKey = "ALICLOUD_TEST_ACCESS_KEY"
+	envVarAlicloudSecretKey = "ALICLOUD_TEST_SECRET_KEY"
+	envVarAlicloudRoleArn   = "ALICLOUD_TEST_ROLE_ARN"
 )
-
-var runAcceptanceTests = os.Getenv(envVarRunAccTests) == "1"
 
 func TestAliCloudEndToEnd(t *testing.T) {
 	if !runAcceptanceTests {
@@ -66,7 +61,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 
 	if _, err := client.Logical().Write("auth/alicloud/role/test", map[string]interface{}{
-		"arn": os.Getenv(envVarRoleArn),
+		"arn": os.Getenv(envVarAlicloudRoleArn),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -91,9 +86,9 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		Logger:    logger.Named("auth.alicloud"),
 		MountPath: "auth/alicloud",
 		Config: map[string]interface{}{
-			"role":                    "test",
-			"region":                  "us-west-1",
-			"cred_check_freq_seconds": 1,
+			"role":                     "test",
+			"region":                   "us-west-1",
+			"credential_poll_interval": 1,
 		},
 	})
 	if err != nil {
@@ -162,22 +157,10 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 }
 
-func readToken(fileName string) (*logical.HTTPWrapInfo, error) {
-	b, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return nil, err
-	}
-	wrapper := &logical.HTTPWrapInfo{}
-	if err := json.NewDecoder(bytes.NewReader(b)).Decode(wrapper); err != nil {
-		return nil, err
-	}
-	return wrapper, nil
-}
-
 func setAliCloudEnvCreds() error {
 	config := sdk.NewConfig()
 	config.Scheme = "https"
-	client, err := sts.NewClientWithOptions("us-west-1", config, credentials.NewAccessKeyCredential(os.Getenv(envVarAccessKey), os.Getenv(envVarSecretKey)))
+	client, err := sts.NewClientWithOptions("us-west-1", config, credentials.NewAccessKeyCredential(os.Getenv(envVarAlicloudAccessKey), os.Getenv(envVarAlicloudSecretKey)))
 	if err != nil {
 		return err
 	}
@@ -186,7 +169,7 @@ func setAliCloudEnvCreds() error {
 		return err
 	}
 	assumeRoleReq := sts.CreateAssumeRoleRequest()
-	assumeRoleReq.RoleArn = os.Getenv(envVarRoleArn)
+	assumeRoleReq.RoleArn = os.Getenv(envVarAlicloudRoleArn)
 	assumeRoleReq.RoleSessionName = strings.Replace(roleSessionName, "-", "", -1)
 	assumeRoleResp, err := client.AssumeRole(assumeRoleReq)
 	if err != nil {

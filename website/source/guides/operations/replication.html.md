@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Setting up Vault Enterprise Performance Replication - Guides"
+sidebar_title: "Replication Setup & Guidance"
 sidebar_current: "guides-operations-replication"
 description: |-
   Learn how to set up and manage Vault Enterprise Performance Replication.
@@ -45,7 +46,7 @@ To fetch a secondary bootstrap token, run:
 The value for `id` is opaque to Vault and can be any identifying value you want;
 this can be used later to revoke the secondary and will be listed when you read
 replication status on the primary. You will get back a normal wrapped response,
-except that the token will be a JWT instead of UUID-formatted random bytes.
+except that the token will be JWT-formatted..
 
 ### Activating a Secondary
 
@@ -77,7 +78,16 @@ remove it from rotation (e.g. if using Consul for service discovery), but if a
 standby does not attempt taking over it will throw errors. We hope to make this
 workflow better in a future update.
 
-### Dev-Mode Root Tokens
+### Secondary Tokens
+
+On a production system, after a secondary is activated, the enabled
+auth methods should be used to get tokens with appropriate policies,
+as policies and auth method configuration are replicated.
+
+The generate-root command can also be used to generate a root token local to
+the secondary cluster. After the secondary is activated, it will need to use the unseal or recovery keys from the Primary when generating a new root token or performing other commands that require unseal or recovery keys.
+
+#### Dev-Mode Root Tokens
 
 To ease development and testing, when both the primary and secondary are
 running in development mode, the initial root token created by the primary
@@ -85,13 +95,6 @@ running in development mode, the initial root token created by the primary
 populated into the secondary upon activation. This allows a developer to keep a
 consistent `~/.vault-token` file or `VAULT_TOKEN` environment variable when
 working with both clusters.
-
-On a production system, after a secondary is activated, the enabled
-auth methods should be used to get tokens with appropriate policies,
-as policies and auth method configuration are replicated.
-
-The generate-root command can also be used to generate a root token local to
-the secondary cluster.
 
 ## Managing Vault Performance Replication
 

@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Seal Wrap / FIPS 140-2 - Guides"
+sidebar_title: "Seal Wrap / FIPS 140-2"
 sidebar_current: "guides-operations-seal-wrap"
 description: |-
   In this guide,
@@ -22,7 +23,7 @@ the HSM for encryption rather than splitting into key shares
 allowing for automatic unsealing
 - **Seal Wrapping** to provide FIPS KeyStorage-conforming functionality for Critical Security Parameters
 
-![Unseal with HSM](/assets/images/vault-hsm-autounseal.png)
+![Unseal with HSM](/img/vault-hsm-autounseal.png)
 
 In some large organizations, there is a fair amount of complexity in designating
 key officers, who might be available to unseal Vault installations as the most
@@ -73,7 +74,7 @@ nonce prior to writing them to its persistent storage. By enabling seal wrap,
 Vault wraps your secrets with **an extra layer of encryption** leveraging the
 HSM encryption and decryption.
 
-![Seal Wrap](/assets/images/vault-seal-wrap.png)
+![Seal Wrap](/img/vault-seal-wrap.png)
 
 #### Benefits of the Seal Wrap:
 
@@ -352,8 +353,7 @@ $ curl --header "X-Vault-Token: ..." \
     "config": {
       "default_lease_ttl": 0,
       "force_no_cache": false,
-      "max_lease_ttl": 0,
-      "plugin_name": ""
+      "max_lease_ttl": 0
     },
     "description": "key/value secret storage",
     "local": false,
@@ -403,8 +403,7 @@ $ curl --header "X-Vault-Token: ..." \
     "config": {
       "default_lease_ttl": 0,
       "force_no_cache": false,
-      "max_lease_ttl": 0,
-      "plugin_name": ""
+      "max_lease_ttl": 0
     },
     "description": "",
     "local": false,
@@ -426,7 +425,7 @@ Notice that the `seal_wrap` parameter is set to **`true`** at `secret2/`.
 Open a web browser and launch the Vault UI (e.g. `http://127.0.0.1:8200/ui`) and
 then login.
 
-![Enable Secret Engine](/assets/images/vault-seal-wrap-2.png)
+![Enable Secret Engine](/img/vault-seal-wrap-2.png)
 
 > For the purpose of comparing seal wrapped data against unwrapped data, enable
 additional key/value secret engine at the `secret2/` path.
@@ -437,7 +436,7 @@ Select **Enable new engine**.
 - Select **Version 1** for KV version
 - Select the check box for **Seal Wrap**
 
-![Enable Secret Engine](/assets/images/vault-seal-wrap-3.png)
+![Enable Secret Engine](/img/vault-seal-wrap-3.png)
 
 Click **Enable Engine**.
 
@@ -557,7 +556,7 @@ the seal wrap.
 
 Select **secret** and click **Create secret**.
 
-![Enable Secret Engine](/assets/images/vault-seal-wrap-4.png)
+![Enable Secret Engine](/img/vault-seal-wrap-4.png)
 
 Enter the following:
 
@@ -565,14 +564,14 @@ Enter the following:
 - key: `password`
 - value: `my-long-password`
 
-![Enable Secret Engine](/assets/images/vault-seal-wrap-5.png)
+![Enable Secret Engine](/img/vault-seal-wrap-5.png)
 
 Click **Save**.
 
 Repeat the same step for **secret2** to write the same secret at the
 `secret2/wrapped` path.
 
-![Enable Secret Engine](/assets/images/vault-seal-wrap-6.png)
+![Enable Secret Engine](/img/vault-seal-wrap-6.png)
 Click **Save**.
 
 

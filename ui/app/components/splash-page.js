@@ -1,11 +1,11 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { computed, inject } = Ember;
-
-export default Ember.Component.extend({
-  version: inject.service(),
-  auth: inject.service(),
-  store: inject.service(),
+export default Component.extend({
+  version: service(),
+  auth: service(),
+  store: service(),
   tagName: '',
 
   activeCluster: computed('auth.activeCluster', function() {

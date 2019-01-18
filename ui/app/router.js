@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import EmberRouter from '@ember/routing/router';
 import config from './config/environment';
 
-const Router = Ember.Router.extend({
+const Router = EmberRouter.extend({
   location: config.locationType,
   rootURL: config.rootURL,
 });
@@ -12,6 +12,7 @@ Router.map(function() {
       this.route('auth');
       this.route('init');
       this.route('logout');
+      this.route('license');
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
@@ -28,11 +29,10 @@ Router.map(function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
-        this.route('control-groups');
       });
       this.route('unseal');
       this.route('tools', function() {
-        this.route('tool', { path: '/:selectedAction' });
+        this.route('tool', { path: '/:selected_action' });
       });
       this.route('access', function() {
         this.route('methods', { path: '/' });
@@ -65,6 +65,7 @@ Router.map(function() {
           });
         });
         this.route('control-groups');
+        this.route('control-groups-configure', { path: '/control-groups/configure' });
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
         this.route('namespaces', function() {
           this.route('index', { path: '/' });
@@ -90,6 +91,10 @@ Router.map(function() {
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
+
+          // kv v2 versions
+          this.route('versions-root', { path: '/versions/' });
+          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });

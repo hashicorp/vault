@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import IdentityModel from './_base';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import identityCapabilities from 'vault/macros/identity-capabilities';
 
-const { computed } = Ember;
 const { attr, belongsTo } = DS;
 
 export default IdentityModel.extend({
@@ -36,19 +36,28 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    editType: 'stringArray',
+    label: 'Policies',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['policy/acl', 'policy/rgp'],
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/group'],
   }),
   parentGroupIds: attr({
     label: 'Parent Group IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/group'],
   }),
   memberEntityIds: attr({
     label: 'Member Entity IDs',
-    editType: 'stringArray',
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['identity/entity'],
   }),
   hasMembers: computed(
     'memberEntityIds',
@@ -65,8 +74,8 @@ export default IdentityModel.extend({
 
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
   updatePath: identityCapabilities(),
-  canDelete: computed.alias('updatePath.canDelete'),
-  canEdit: computed.alias('updatePath.canUpdate'),
+  canDelete: alias('updatePath.canDelete'),
+  canEdit: alias('updatePath.canUpdate'),
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
   canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function() {

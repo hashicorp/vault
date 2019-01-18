@@ -4,7 +4,7 @@
       {{#if (eq item.keyType 'otp')}}
         {{#if item.generatePath.isPending}}
           <li class="action">
-            <button disabled=true type="button" class="link button is-loading is-transparent">
+            <button disabled type="button" class="link button is-loading is-transparent">
               loading
             </button>
           </li>
@@ -18,7 +18,7 @@
       {{else if (eq item.keyType 'ca')}}
         {{#if item.signPath.isPending}}
           <li class="action">
-            <button disabled=true type="button" class="link button is-loading is-transparent">
+            <button disabled type="button" class="link button is-loading is-transparent">
               loading
             </button>
           </li>
@@ -32,12 +32,12 @@
       {{/if}}
       {{#if item.updatePath.isPending}}
         <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
+          <button disabled type="button" class="link button is-loading is-transparent">
             loading
           </button>
         </li>
         <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
+          <button disabled type="button" class="link button is-loading is-transparent">
             loading
           </button>
         </li>
@@ -63,8 +63,8 @@
               buttonClasses="link is-destroy"
               onConfirmAction=(action "delete" item)
               confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-              showConfirm=(get this (concat "shouldDelete-" item.id))
-              class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+              showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
+              class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
               containerClasses="message-body is-block"
               messageClasses="is-block"
               data-test-ssh-role-delete=item.id
@@ -74,7 +74,7 @@
           </li>
         {{/if}}
       {{/if}}
-      {{#if backendModel.canEditZeroAddress}}
+      {{#if item.canEditZeroAddress}}
         {{#if item.zeroAddress}}
           <li class="action">
             <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent
@@ -84,7 +84,12 @@
           </li>
         {{else}}
           <li class="action">
-            <button type="button" disabled={{get this (concat "loading-" item.id)}} class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}" {{action "toggleZeroAddress" item backendModel}}>
+            <button
+              type="button"
+              disabled={{get this (concat "loading-" item.id)}}
+              class="link button is-transparent {{if (get this (concat "loading-" item.id)) 'is-loading'}}"
+              {{action "toggleZeroAddress" item backendModel}}
+            >
               Enable Zero Address
             </button>
           </li>

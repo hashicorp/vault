@@ -9,7 +9,7 @@ import (
 // replication goroutines report in newly written entries with Match(), and
 // this notifies on commitCh when the commit index has advanced.
 type commitment struct {
-	// protectes matchIndexes and commitIndex
+	// protects matchIndexes and commitIndex
 	sync.Mutex
 	// notified when commitIndex increases
 	commitCh chan struct{}

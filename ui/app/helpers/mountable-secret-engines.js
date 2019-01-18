@@ -1,10 +1,16 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Active Directory',
     value: 'ad',
     type: 'ad',
+    category: 'cloud',
+  },
+  {
+    displayName: 'AliCloud',
+    value: 'alicloud',
+    type: 'alicloud',
     category: 'cloud',
   },
   {
@@ -35,6 +41,12 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Google Cloud',
     value: 'gcp',
     type: 'gcp',
+    category: 'cloud',
+  },
+  {
+    displayName: 'Google Cloud KMS',
+    value: 'gcpkms',
+    type: 'gcpkms',
     category: 'cloud',
   },
   {
@@ -85,4 +97,4 @@ export function engines() {
   return MOUNTABLE_SECRET_ENGINES.slice();
 }
 
-export default Ember.Helper.helper(engines);
+export default buildHelper(engines);

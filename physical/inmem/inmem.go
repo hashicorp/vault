@@ -3,6 +3,7 @@ package inmem
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -10,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 
-	"github.com/armon/go-radix"
+	radix "github.com/armon/go-radix"
 )
 
 // Verify interfaces are satisfied
@@ -40,6 +41,7 @@ type InmemBackend struct {
 	failPut    *uint32
 	failDelete *uint32
 	failList   *uint32
+	logOps     bool
 }
 
 type TransactionalInmemBackend struct {
@@ -56,6 +58,7 @@ func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) 
 		failPut:    new(uint32),
 		failDelete: new(uint32),
 		failList:   new(uint32),
+		logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
 	}
 	return in, nil
 }
@@ -72,6 +75,7 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 			failPut:    new(uint32),
 			failDelete: new(uint32),
 			failList:   new(uint32),
+			logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
 		},
 	}
 	return in, nil
@@ -89,6 +93,9 @@ func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
 }
 
 func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) error {
+	if i.logOps {
+		i.logger.Trace("put", "key", entry.Key)
+	}
 	if atomic.LoadUint32(i.failPut) != 0 {
 		return PutDisabledError
 	}
@@ -123,6 +130,9 @@ func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 }
 
 func (i *InmemBackend) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
+	if i.logOps {
+		i.logger.Trace("get", "key", key)
+	}
 	if atomic.LoadUint32(i.failGet) != 0 {
 		return nil, GetDisabledError
 	}
@@ -162,6 +172,9 @@ func (i *InmemBackend) Delete(ctx context.Context, key string) error {
 }
 
 func (i *InmemBackend) DeleteInternal(ctx context.Context, key string) error {
+	if i.logOps {
+		i.logger.Trace("delete", "key", key)
+	}
 	if atomic.LoadUint32(i.failDelete) != 0 {
 		return DeleteDisabledError
 	}
@@ -196,6 +209,9 @@ func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error
 }
 
 func (i *InmemBackend) ListInternal(ctx context.Context, prefix string) ([]string, error) {
+	if i.logOps {
+		i.logger.Trace("list", "prefix", prefix)
+	}
 	if atomic.LoadUint32(i.failList) != 0 {
 		return nil, ListDisabledError
 	}

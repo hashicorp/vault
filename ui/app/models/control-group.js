@@ -1,9 +1,8 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr, belongsTo, hasMany } = DS;
-const { computed } = Ember;
 
 export default DS.Model.extend({
   approved: attr('boolean'),
@@ -12,7 +11,7 @@ export default DS.Model.extend({
   authorizations: hasMany('identity/entity', { async: false }),
 
   authorizePath: lazyCapabilities(apiPath`sys/control-group/authorize`),
-  canAuthorize: computed.alias('authorizePath.canUpdate'),
+  canAuthorize: alias('authorizePath.canUpdate'),
   configurePath: lazyCapabilities(apiPath`sys/config/control-group`),
-  canConfigure: computed.alias('configurePath.canUpdate'),
+  canConfigure: alias('configurePath.canUpdate'),
 });

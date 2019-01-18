@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Auth Methods"
+sidebar_title: "Azure"
 sidebar_current: "docs-auth-azure"
 description: |-
   The azure auth method plugin allows automated authentication of Azure Active
@@ -55,7 +56,7 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using bound_service_pricipal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
+The `role` and `jwt` parameters are required. When using bound_service_principal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
 
 ### Via the API
 
@@ -176,15 +177,15 @@ for your server at `path/to/plugins`:
 1. Enable the plugin in the catalog:
 
     ```text
-    $ vault write sys/plugins/catalog/azure-auth \
+    $ vault write sys/plugins/catalog/auth/azure-auth \
         command="vault-plugin-auth-azure" \
-        sha_256="..."
+        sha256="..."
     ```
 
 1. Enable the azure auth method as a plugin:
 
     ```text
-    $ vault auth enable -path=azure -plugin-name=azure-auth plugin
+    $ vault auth enable -path=azure azure-auth
     ```
 
 ## API

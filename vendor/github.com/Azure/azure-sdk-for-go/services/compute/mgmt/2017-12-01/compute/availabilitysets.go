@@ -40,9 +40,10 @@ func NewAvailabilitySetsClientWithBaseURI(baseURI string, subscriptionID string)
 }
 
 // CreateOrUpdate create or update an availability set.
-//
-// resourceGroupName is the name of the resource group. availabilitySetName is the name of the availability set.
-// parameters is parameters supplied to the Create Availability Set operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// availabilitySetName - the name of the availability set.
+// parameters - parameters supplied to the Create Availability Set operation.
 func (client AvailabilitySetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, availabilitySetName string, parameters AvailabilitySet) (result AvailabilitySet, err error) {
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, availabilitySetName, parameters)
 	if err != nil {
@@ -109,8 +110,9 @@ func (client AvailabilitySetsClient) CreateOrUpdateResponder(resp *http.Response
 }
 
 // Delete delete an availability set.
-//
-// resourceGroupName is the name of the resource group. availabilitySetName is the name of the availability set.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// availabilitySetName - the name of the availability set.
 func (client AvailabilitySetsClient) Delete(ctx context.Context, resourceGroupName string, availabilitySetName string) (result OperationStatusResponse, err error) {
 	req, err := client.DeletePreparer(ctx, resourceGroupName, availabilitySetName)
 	if err != nil {
@@ -175,8 +177,9 @@ func (client AvailabilitySetsClient) DeleteResponder(resp *http.Response) (resul
 }
 
 // Get retrieves information about an availability set.
-//
-// resourceGroupName is the name of the resource group. availabilitySetName is the name of the availability set.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// availabilitySetName - the name of the availability set.
 func (client AvailabilitySetsClient) Get(ctx context.Context, resourceGroupName string, availabilitySetName string) (result AvailabilitySet, err error) {
 	req, err := client.GetPreparer(ctx, resourceGroupName, availabilitySetName)
 	if err != nil {
@@ -241,9 +244,10 @@ func (client AvailabilitySetsClient) GetResponder(resp *http.Response) (result A
 }
 
 // List lists all availability sets in a resource group.
-//
-// resourceGroupName is the name of the resource group.
-func (client AvailabilitySetsClient) List(ctx context.Context, resourceGroupName string) (result AvailabilitySetListResult, err error) {
+// Parameters:
+// resourceGroupName - the name of the resource group.
+func (client AvailabilitySetsClient) List(ctx context.Context, resourceGroupName string) (result AvailabilitySetListResultPage, err error) {
+	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx, resourceGroupName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "List", nil, "Failure preparing request")
@@ -252,12 +256,12 @@ func (client AvailabilitySetsClient) List(ctx context.Context, resourceGroupName
 
 	resp, err := client.ListSender(req)
 	if err != nil {
-		result.Response = autorest.Response{Response: resp}
+		result.aslr.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "List", resp, "Failure sending request")
 		return
 	}
 
-	result, err = client.ListResponder(resp)
+	result.aslr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "List", resp, "Failure responding to request")
 	}
@@ -305,10 +309,38 @@ func (client AvailabilitySetsClient) ListResponder(resp *http.Response) (result 
 	return
 }
 
+// listNextResults retrieves the next set of results, if any.
+func (client AvailabilitySetsClient) listNextResults(lastResults AvailabilitySetListResult) (result AvailabilitySetListResult, err error) {
+	req, err := lastResults.availabilitySetListResultPreparer()
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListComplete enumerates all values, automatically crossing page boundaries as required.
+func (client AvailabilitySetsClient) ListComplete(ctx context.Context, resourceGroupName string) (result AvailabilitySetListResultIterator, err error) {
+	result.page, err = client.List(ctx, resourceGroupName)
+	return
+}
+
 // ListAvailableSizes lists all available virtual machine sizes that can be used to create a new virtual machine in an
 // existing availability set.
-//
-// resourceGroupName is the name of the resource group. availabilitySetName is the name of the availability set.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// availabilitySetName - the name of the availability set.
 func (client AvailabilitySetsClient) ListAvailableSizes(ctx context.Context, resourceGroupName string, availabilitySetName string) (result VirtualMachineSizeListResult, err error) {
 	req, err := client.ListAvailableSizesPreparer(ctx, resourceGroupName, availabilitySetName)
 	if err != nil {
@@ -372,10 +404,101 @@ func (client AvailabilitySetsClient) ListAvailableSizesResponder(resp *http.Resp
 	return
 }
 
+// ListBySubscription lists all availability sets in a subscription.
+func (client AvailabilitySetsClient) ListBySubscription(ctx context.Context) (result AvailabilitySetListResultPage, err error) {
+	result.fn = client.listBySubscriptionNextResults
+	req, err := client.ListBySubscriptionPreparer(ctx)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "ListBySubscription", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.ListBySubscriptionSender(req)
+	if err != nil {
+		result.aslr.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "ListBySubscription", resp, "Failure sending request")
+		return
+	}
+
+	result.aslr, err = client.ListBySubscriptionResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "ListBySubscription", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// ListBySubscriptionPreparer prepares the ListBySubscription request.
+func (client AvailabilitySetsClient) ListBySubscriptionPreparer(ctx context.Context) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2017-12-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsGet(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Compute/availabilitySets", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// ListBySubscriptionSender sends the ListBySubscription request. The method will close the
+// http.Response Body if it receives an error.
+func (client AvailabilitySetsClient) ListBySubscriptionSender(req *http.Request) (*http.Response, error) {
+	return autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
+}
+
+// ListBySubscriptionResponder handles the response to the ListBySubscription request. The method always
+// closes the http.Response Body.
+func (client AvailabilitySetsClient) ListBySubscriptionResponder(resp *http.Response) (result AvailabilitySetListResult, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// listBySubscriptionNextResults retrieves the next set of results, if any.
+func (client AvailabilitySetsClient) listBySubscriptionNextResults(lastResults AvailabilitySetListResult) (result AvailabilitySetListResult, err error) {
+	req, err := lastResults.availabilitySetListResultPreparer()
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listBySubscriptionNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListBySubscriptionSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listBySubscriptionNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListBySubscriptionResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.AvailabilitySetsClient", "listBySubscriptionNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListBySubscriptionComplete enumerates all values, automatically crossing page boundaries as required.
+func (client AvailabilitySetsClient) ListBySubscriptionComplete(ctx context.Context) (result AvailabilitySetListResultIterator, err error) {
+	result.page, err = client.ListBySubscription(ctx)
+	return
+}
+
 // Update update an availability set.
-//
-// resourceGroupName is the name of the resource group. availabilitySetName is the name of the availability set.
-// parameters is parameters supplied to the Update Availability Set operation.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// availabilitySetName - the name of the availability set.
+// parameters - parameters supplied to the Update Availability Set operation.
 func (client AvailabilitySetsClient) Update(ctx context.Context, resourceGroupName string, availabilitySetName string, parameters AvailabilitySetUpdate) (result AvailabilitySet, err error) {
 	req, err := client.UpdatePreparer(ctx, resourceGroupName, availabilitySetName, parameters)
 	if err != nil {

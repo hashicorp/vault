@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -179,7 +180,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, cluster.RootToken)
+	req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +209,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				core.Logger().Error("got a panic: %v", err)
+				core.Logger().Error("got a panic", "error", err)
 				t.Fail()
 			}
 			atomic.AddUint32(totalOps, myTotalOps)
@@ -232,7 +233,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 			if err != nil {
 				return nil, err
 			}
-			req.Header.Set(AuthHeaderName, cluster.RootToken)
+			req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 			resp, err := client.Do(req)
 			if err != nil {
 				return nil, err
@@ -472,7 +473,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, cluster.RootToken)
+	req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -494,7 +495,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, cluster.RootToken)
+	req.Header.Set(consts.AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)

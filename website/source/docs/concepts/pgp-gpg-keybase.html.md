@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Using PGP, GPG, and Keybase"
+sidebar_title: "PGP, GPG, and Keybase"
 sidebar_current: "docs-concepts-pgp-gpg-keybase"
 description: |-
   Vault has the ability to integrate with OpenPGP-compatible programs like GPG

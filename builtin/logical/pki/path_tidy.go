@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,9 +32,8 @@ the certificate store`,
 			"tidy_revoked_certs": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `Set to true to expire all revoked
-certificates, even if their duration has not yet passed, removing
-them both from the CRL and from storage. The CRL will be rotated
-if this causes any values to be removed.`,
+and expired certificates, removing them both from the CRL and from storage. The
+CRL will be rotated if this causes any values to be removed.`,
 			},
 
 			"safety_buffer": &framework.FieldSchema{
@@ -56,6 +56,11 @@ Defaults to 72 hours.`,
 }
 
 func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// If we are a performance standby forward the request to the active node
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool)
@@ -105,6 +110,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 							return errwrap.Wrapf(fmt.Sprintf("error deleting nil entry with serial %s: {{err}}", serial), err)
 						}
+						continue
 					}
 
 					if certEntry.Value == nil || len(certEntry.Value) == 0 {

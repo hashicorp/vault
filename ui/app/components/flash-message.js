@@ -1,7 +1,5 @@
-import Ember from 'ember';
+import { getWithDefault, computed } from '@ember/object';
 import FlashMessage from 'ember-cli-flash/components/flash-message';
-
-const { computed, getWithDefault } = Ember;
 
 export default FlashMessage.extend({
   // override alertType to get Bulma specific prefix
@@ -9,7 +7,7 @@ export default FlashMessage.extend({
   alertType: computed('flash.type', {
     get() {
       const flashType = getWithDefault(this, 'flash.type', '');
-      let prefix = 'notification has-border is-';
+      let prefix = 'is-';
 
       return `${prefix}${flashType}`;
     },

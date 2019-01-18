@@ -3,7 +3,7 @@ package dbplugin
 import (
 	"crypto/tls"
 
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
@@ -15,24 +15,34 @@ func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 }
 
 func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.ServeConfig {
-	dbPlugin := &DatabasePlugin{
-		impl: db,
-	}
-
-	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
-		"database": dbPlugin,
+	// pluginSets is the map of plugins we can dispense.
+	pluginSets := map[int]plugin.PluginSet{
+		3: plugin.PluginSet{
+			"database": &DatabasePlugin{
+				GRPCDatabasePlugin: &GRPCDatabasePlugin{
+					Impl: db,
+				},
+			},
+		},
+		4: plugin.PluginSet{
+			"database": &GRPCDatabasePlugin{
+				Impl: db,
+			},
+		},
 	}
 
 	conf := &plugin.ServeConfig{
-		HandshakeConfig: handshakeConfig,
-		Plugins:         pluginMap,
-		TLSProvider:     tlsProvider,
-		GRPCServer:      plugin.DefaultGRPCServer,
+		HandshakeConfig:  handshakeConfig,
+		VersionedPlugins: pluginSets,
+		TLSProvider:      tlsProvider,
+		GRPCServer:       plugin.DefaultGRPCServer,
 	}
 
+	// If we do not have gRPC support fallback to version 3
+	// Remove this block in 0.13
 	if !pluginutil.GRPCSupport() {
 		conf.GRPCServer = nil
+		delete(conf.VersionedPlugins, 4)
 	}
 
 	return conf

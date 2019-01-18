@@ -10,7 +10,12 @@
         @tagName="button"
         @class="button is-transparent namespace-picker-trigger has-current-color"
         >
-        {{yield}} {{#if namespaceDisplay}}<span class="namespace-name">{{namespaceDisplay}}</span>{{/if}}
+        {{yield}}
+        {{#if namespaceDisplay}}
+          <span class="namespace-name">{{namespaceDisplay}}</span>
+        {{else}}
+          <span class="namespace-name is-hidden-tablet">/ (Root)</span>
+        {{/if}}
         <ICon
           @glyph="chevron-down"
           @size=8
@@ -33,7 +38,7 @@
             {{/if}}
           </div>
           <div class="level-right">
-            {{#if namespaceService.canList}}
+            {{#if canList}}
               {{#link-to "vault.cluster.access.namespaces" class="namespace-manage-link"}}
                 Manage
               {{/link-to}}
@@ -41,7 +46,7 @@
           </div>
         </div>
         <header class="current-namespace">
-          <h5 class="namespace-header">Current namespace</h5>
+          <h5 class="list-header">Current namespace</h5>
           <div class="level is-mobile namespace-link">
             <span class="level-left">{{if namespacePath (concat namespacePath "/") "root"}}</span>
             <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
@@ -56,7 +61,7 @@
                 <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
               {{/each~}}</div>
           {{/if}}
-          {{#each lastMenuLeaves as |leaf index|}}
+          {{#each lastMenuLeaves as |leaf|}}
               <div class="leaf-panel
                 {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
                 {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
@@ -69,4 +74,5 @@
       </D.content>
     </BasicDropdown>
   </div>
+  <div class="navbar-separator"></div>
 {{/if}}

@@ -21,19 +21,19 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
-			"oidc_discovery_url": &framework.FieldSchema{
+			"oidc_discovery_url": {
 				Type:        framework.TypeString,
 				Description: `OIDC Discovery URL, without any .well-known component (base path). Cannot be used with "jwt_validation_pubkeys".`,
 			},
-			"oidc_discovery_ca_pem": &framework.FieldSchema{
+			"oidc_discovery_ca_pem": {
 				Type:        framework.TypeString,
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC Discovery URL. If not set, system certificates are used.",
 			},
-			"jwt_validation_pubkeys": &framework.FieldSchema{
+			"jwt_validation_pubkeys": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
 			},
-			"bound_issuer": &framework.FieldSchema{
+			"bound_issuer": {
 				Type:        framework.TypeString,
 				Description: "The value against which to match the 'iss' claim in a JWT. Optional.",
 			},
@@ -121,7 +121,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("exactly one of 'oidc_discovery_url' and 'jwt_validation_pubkeys' must be set"), nil
 
 	case config.OIDCDiscoveryURL != "":
-		_, err := b.createProvider(ctx, config)
+		_, err := b.createProvider(config)
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error checking discovery URL: {{err}}", err).Error()), nil
 		}
@@ -150,7 +150,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) (*oidc.Provider, error) {
+func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, error) {
 	var certPool *x509.CertPool
 	if config.OIDCDiscoveryCAPEM != "" {
 		certPool = x509.NewCertPool()
@@ -168,7 +168,7 @@ func (b *jwtAuthBackend) createProvider(ctx context.Context, config *jwtConfig) 
 	tc := &http.Client{
 		Transport: tr,
 	}
-	oidcCtx := context.WithValue(ctx, oauth2.HTTPClient, tc)
+	oidcCtx := context.WithValue(b.providerCtx, oauth2.HTTPClient, tc)
 
 	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
 	if err != nil {

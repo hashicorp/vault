@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AWS - Auth Methods"
+sidebar_title: "AWS"
 sidebar_current: "docs-auth-aws"
 description: |-
   The aws auth method allows automated authentication of AWS entities.
@@ -8,37 +9,91 @@ description: |-
 
 # AWS Auth Method
 
-The `aws` auth method provides an automated mechanism to retrieve
-a Vault token for AWS EC2 instances and IAM principals. Unlike most Vault
-auth methods, this method does not require manual first-deploying, or
-provisioning security-sensitive credentials (tokens, username/password, client
-certificates, etc), by operators under many circumstances. It treats
-AWS as a Trusted Third Party and uses either
-the cryptographically signed dynamic metadata information that uniquely
-represents each EC2 instance or a special AWS request signed with AWS IAM
-credentials. The metadata information is automatically supplied by AWS to all
-EC2 instances, and IAM credentials are automatically supplied to AWS instances
-in IAM instance profiles, Lambda functions, and others, and it is this
-information already provided by AWS which Vault can use to authenticate
-clients.
+The `aws` auth method provides an automated mechanism to retrieve a Vault token
+for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
+method does not require manual first-deploying, or provisioning
+security-sensitive credentials (tokens, username/password, client certificates,
+etc), by operators under many circumstances.
 
 ## Authentication Workflow
 
-There are two authentication types present in the aws auth method: `ec2` and `iam`.
+There are two authentication types present in the aws auth method: `iam` and
+`ec2`.
+
+With the `iam` method, a special AWS request signed with AWS IAM credentials is
+used for authentication. The IAM credentials are automatically supplied to AWS
+instances in IAM instance profiles, Lambda functions, and others, and it is
+this information already provided by AWS which Vault can use to authenticate
+clients.
+
+With the `ec2` method, AWS is treated as a Trusted Third Party and
+cryptographically signed dynamic metadata information that uniquely represents
+each EC2 instance is used for authentication. This metadata information is
+automatically supplied by AWS to all EC2 instances.
+
 Based on how you attempt to authenticate, Vault will determine if you are
-attempting to use the `ec2` or `iam` type. Each has a different authentication
-workflow, and each can solve different use cases. See the section on comparing
-the two auth methods below to help determine which method is more appropriate
-for your use cases.
+attempting to use the `iam` or `ec2` type. Each has a different authentication
+workflow, and each can solve different use cases. 
+
+Note: The `ec2` method was implemented before the primitives to implement the
+`iam` method were supported by AWS. The `iam` method is the recommended approach
+as it is more flexible and aligns with best practices to perform access
+control and authentication. See the section on comparing the two auth methods
+below for more information.
+
+### IAM auth method
+
+The AWS STS API includes a method,
+[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
+which allows you to validate the identity of a client. The client signs a
+`GetCallerIdentity` query using the [AWS Signature v4
+algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
+submits 4 pieces of information to the Vault server to recreate a valid signed
+request: the request URL, the request body, the request headers, and the
+request method, as the AWS signature is computed over those fields. The Vault
+server then reconstructs the query and forwards it on to the AWS STS service
+and validates the result back. Clients don't need network-level access to talk
+to the AWS STS API endpoint; they merely need access to the credentials to sign
+the request. However, it means that the Vault server does need network-level
+access to send requests to the STS endpoint.
+
+Importantly, the credentials used to sign the GetCallerIdentity request can
+come from the EC2 instance metadata service for an EC2 instance, or from the
+AWS environment variables in an AWS Lambda function execution, which obviates
+the need for an operator to manually provision some sort of identity material
+first.  However, the credentials can, in principle, come from anywhere, not
+just from the locations AWS has provided for you.
+
+Each signed AWS request includes the current timestamp to mitigate the risk of
+replay attacks. In addition, Vault allows you to require an additional header,
+`X-Vault-AWS-IAM-Server-ID`, to be present to mitigate against different types
+of replay attacks (such as a signed `GetCallerIdentity` request stolen from a
+dev Vault instance and used to authenticate to a prod Vault instance). Vault
+further requires that this header be one of the headers included in the AWS
+signature and relies upon AWS to authenticate that signature.
+
+While AWS API endpoints support both signed GET and POST requests, for
+simplicity, the aws auth method supports only POST requests. It also does not
+support `presigned` requests, i.e., requests with `X-Amz-Credential`,
+`X-Amz-Signature`, and `X-Amz-SignedHeaders` GET query parameters containing
+the authenticating information.
+
+It's also important to note that Amazon does NOT appear to include any sort of
+authorization around calls to `GetCallerIdentity`. For example, if you have an
+IAM policy on your credential that requires all access to be MFA authenticated,
+non-MFA authenticated credentials (i.e., raw credentials, not those retrieved
+by calling `GetSessionToken` and supplying an MFA code) will still be able to
+authenticate to Vault using this method. It does not appear possible to enforce
+an IAM principal to be MFA authenticated while authenticating to Vault.
 
 ### EC2 auth method
 
 Amazon EC2 instances have access to metadata which describes the instance. The
-Vault EC2 auth method leverages the components of this metadata to
-authenticate and distribute an initial Vault token to an EC2 instance. The data
-flow (which is also represented in the graphic below) is as follows:
+Vault EC2 auth method leverages the components of this metadata to authenticate
+and distribute an initial Vault token to an EC2 instance. The data flow (which
+is also represented in the graphic below) is as follows:
 
-[![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
+[![Vault AWS EC2 Authentication Flow](/img/vault-aws-ec2-auth-flow.png)](/img/vault-aws-ec2-auth-flow.png)
 
 1. An AWS EC2 instance fetches its [AWS Instance Identity Document][aws-iid]
 from the [EC2 Metadata Service][aws-ec2-mds]. In addition to data itself, AWS
@@ -62,51 +117,6 @@ instance metadata.
 
 There are various modifications to this workflow that provide more or less
 security, as detailed later in this documentation.
-
-### IAM auth method
-
-The AWS STS API includes a method,
-[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
-which allows you to validate the identity of a client. The client signs
-a `GetCallerIdentity` query using the [AWS Signature v4
-algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
-submits 4 pieces of information to the Vault server to recreate a valid signed
-request: the request URL, the request body, the request headers, and the request
-method, as the AWS signature is computed over those fields. The Vault server
-then reconstructs the query and forwards it on to the AWS STS service and
-validates the result back. Clients don't need network-level access to talk to
-the AWS STS API endpoint; they merely need access to the credentials to sign the
-request. However, it means that the Vault server does need network-level access
-to send requests to the STS endpoint.
-
-Importantly, the credentials used to sign the GetCallerIdentity request can come
-from the EC2 instance metadata service for an EC2 instance, or from the AWS
-environment variables in an AWS Lambda function execution, which obviates the
-need for an operator to manually provision some sort of identity material first.
-However, the credentials can, in principle, come from anywhere, not just from
-the locations AWS has provided for you.
-
-Each signed AWS request includes the current timestamp to mitigate the risk of
-replay attacks. In addition, Vault allows you to require an additional header,
-`X-Vault-AWS-IAM-Server-ID`, to be present to mitigate against different types of replay
-attacks (such as a signed `GetCallerIdentity` request stolen from a dev Vault
-instance and used to authenticate to a prod Vault instance). Vault further
-requires that this header be one of the headers included in the AWS signature
-and relies upon AWS to authenticate that signature.
-
-While AWS API endpoints support both signed GET and POST requests, for
-simplicity, the aws auth method supports only POST requests. It also does not
-support `presigned` requests, i.e., requests with `X-Amz-Credential`,
-`X-Amz-Signature`, and `X-Amz-SignedHeaders` GET query parameters containing the
-authenticating information.
-
-It's also important to note that Amazon does NOT appear to include any sort
-of authorization around calls to `GetCallerIdentity`. For example, if you have
-an IAM policy on your credential that requires all access to be MFA authenticated,
-non-MFA authenticated credentials (i.e., raw credentials, not those retrieved
-by calling `GetSessionToken` and supplying an MFA code) will still be able to
-authenticate to Vault using this method. It does not appear possible to enforce
-an IAM principal to be MFA authenticated while authenticating to Vault.
 
 ## Authorization Workflow
 
@@ -223,12 +233,12 @@ role. Some examples of how this works in practice:
    must login using the iam method; the RoleSessionName must be a valid instance
    ID viewable by Vault, and the instance must have come from the bound AMI ID.
 
-## Comparison of the EC2 and IAM Methods
+## Comparison of the IAM and EC2 Methods
 
 The iam and ec2 auth methods serve similar and somewhat overlapping
-functionality, in that both authenticate some type of AWS entity to Vault. To
-help you determine which method is more appropriate for your use case, here is a
-comparison of the two auth methods.
+functionality, in that both authenticate some type of AWS entity to Vault.
+Here are some comparisons that illustrate why `iam` method is preferred over
+`ec2`.
 
 * What type of entity is authenticated:
   * The ec2 auth method authenticates only AWS EC2 instances and is specialized
@@ -551,15 +561,18 @@ instance fails to renew the token on time.
 
 ### Cross Account Access
 
-To allow Vault to authenticate EC2 instances running in other accounts, AWS STS
-(Security Token Service) can be used to retrieve temporary credentials by
-assuming an IAM Role in those accounts. All these accounts should be configured
-at the method using the `auth/aws-ec2/config/sts/<account_id>` endpoint.
+To allow Vault to authenticate IAM principals and EC2 instances in other
+accounts, Vault supports using AWS STS (Security Token Service) to assume AWS
+IAM Roles in other accounts. For each target AWS account ID, you configure the
+IAM Role for Vault to assume using the `auth/aws/config/sts/<account_id>` and
+Vault will use credentials from assuming that role to validate IAM principals
+and EC2 instances in the target account.
 
 The account in which Vault is running (i.e. the master account) must be listed as
 a trusted entity in the IAM Role being assumed on the remote account. The Role itself
-must allow the `ec2:DescribeInstances` action, and `iam:GetInstanceProfile` if IAM Role
-binding is used (see below).
+should allow the permissions specified in the (Recommended Vault IAM
+Policy)(#recommended-vault-iam-policy) except it doesn't need any further
+`sts:AssumeRole` permissions.
 
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
 for the IAM Role to be assumed.
@@ -651,21 +664,21 @@ $ vault write auth/aws/login role=dev-role-iam \
 #### Enable AWS authentication in Vault.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws"}'
 ```
 
 #### Configure the credentials required to make AWS API calls.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
 ```
 
 #### Configure the policies on the role.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
 
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"auth_type":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
+curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"auth_type":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
 ```
 
 #### Perform the login operation

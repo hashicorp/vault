@@ -178,7 +178,7 @@ func (client ServicePrincipalsClient) DeleteResponder(resp *http.Response) (resu
 	return
 }
 
-// Get gets service principal information from the directory.
+// Get gets service principal information from the directory. Query by objectId or pass a filter to query by appId
 // Parameters:
 // objectID - the object ID of the service principal to get.
 func (client ServicePrincipalsClient) Get(ctx context.Context, objectID string) (result ServicePrincipal, err error) {

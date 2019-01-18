@@ -1,11 +1,10 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default AuthConfig.extend({
   url: attr('string', {
@@ -42,6 +41,7 @@ export default AuthConfig.extend({
   bindpass: attr('string', {
     label: 'Password',
     helpText: 'Used along with binddn when performing user search',
+    sensitive: true,
   }),
 
   userdn: attr('string', {

@@ -1,13 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 
-const { inject } = Ember;
-export default Ember.Component.extend({
-  flashMessages: inject.service(),
+export default Component.extend({
+  flashMessages: service(),
   tagName: '',
   linkParams: null,
   componentName: null,
-  hasMenu: false,
+  hasMenu: true,
 
   callMethod: task(function*(method, model, successMessage, failureMessage, successCallback = () => {}) {
     let flash = this.get('flashMessages');

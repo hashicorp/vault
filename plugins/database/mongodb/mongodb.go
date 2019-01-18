@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -165,6 +165,9 @@ func (m *MongoDB) RenewUser(ctx context.Context, statements dbplugin.Statements,
 // RevokeUser drops the specified user from the authentication database. If none is provided
 // in the revocation statement, the default "admin" authentication database will be assumed.
 func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
+	m.Lock()
+	defer m.Unlock()
+
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	session, err := m.getConnection(ctx)

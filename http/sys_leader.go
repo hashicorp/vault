@@ -38,6 +38,8 @@ func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	}
 	if resp.PerfStandby {
 		resp.PerfStandbyLastRemoteWAL = vault.LastRemoteWAL(core)
+	} else if isLeader || !haEnabled {
+		resp.LastWAL = vault.LastWAL(core)
 	}
 
 	respondOk(w, resp)
@@ -50,4 +52,5 @@ type LeaderResponse struct {
 	LeaderClusterAddress     string `json:"leader_cluster_address"`
 	PerfStandby              bool   `json:"performance_standby"`
 	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64 `json:"last_wal,omitempty"`
 }

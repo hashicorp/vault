@@ -1,12 +1,12 @@
 ---
 layout: "guides"
-page_title: "ACL Policy Templating - Guides"
+page_title: "ACL Policy Path Templating - Guides"
 sidebar_current: "guides-identity-policy-templating"
 description: |-
   As of 0.11, ACL policies support templating to allow non-static policy paths.
 ---
 
-# ACL Policy Templating
+# ACL Policy Path Templating
 
 Vault operates on a **secure by default** standard, and as such, an empty policy
 grants **no permissions** in the system. Therefore, policies must be created to
@@ -26,8 +26,13 @@ creation of ACL policies in Vault.
 
 - [Templated Policies](/docs/concepts/policies.html#templated-policies)
 - [Policy API](/api/system/policy.html)
-- [Identity Secrets Engine](/docs/secrets/identity/index.html)
 - [Identity: Entities and Groups](/guides/identity/identity.html)
+- [Streamline Secrets Management with Vault Agent and Vault 0.11](https://youtu.be/zDnIqSB4tyA?t=24m37s)
+
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-policy-templating)
+is also available if you do not have a Vault environment to perform the steps
+described in this guide.
 
 ## Estimated Time to Complete
 
@@ -124,7 +129,7 @@ templating delimiters: `{{<parameter>}}`.
 | `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
 | `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
 | `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
-| `identity.groups.names.<<group id>>.metadata.<<metadata key>>`         | Metadata associated with the group for the given key                         |
+| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                         |
 | `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                         |
 
 
@@ -256,7 +261,7 @@ then login.
 1. Toggle **Upload file**, and click **Choose a file** to select the
    `user-tmpl.hcl` file you wrote at [Step 1](#step1).
 
-    ![Create Policy](/assets/images/vault-ctrl-grp-2.png)
+    ![Create Policy](/img/vault-ctrl-grp-2.png)
 
     This loads the policy and sets the **Name** to `user-tmpl`.
 
@@ -271,7 +276,7 @@ Let's create an entity, **`bob_smith`** with a user **`bob`** as its entity
 alias. Also, create a group, **`education`** and add the **`bob_smith`** entity
 as its group member.
 
-![Entity & Group](/assets/images/vault-acl-templating.png)
+![Entity & Group](/img/vault-acl-templating.png)
 
 -> This step only demonstrates CLI commands and Web UI to create
 entities and groups. Refer to the [Identity - Entities and
@@ -327,7 +332,7 @@ following command to create a new user, **`bob`**.
     ```plaintext
     $ vault write auth/userpass/users/bob password="training"
     ```
-    ![Create Policy](/assets/images/vault-ctrl-grp-3.png)
+    ![Create Policy](/img/vault-ctrl-grp-3.png)
 
 1. Click the icon (**`>_`**) again to hide the shell.
 
@@ -350,7 +355,7 @@ following command to create a new user, **`bob`**.
 **Policies** fields. Under **Metadata**, enter **`region`** as a key and
 **`us-west`** as the key value. Enter the `bob_smith` entity ID in the **Member
 Entity IDs** field.
-    ![Group](/assets/images/vault-acl-templating-2.png)
+    ![Group](/img/vault-acl-templating-2.png)
 
 1. Click **Create**.
 
@@ -565,7 +570,7 @@ version.
 1. Click **Enable Engine**.
 
 1. Now, sign out as the current user so that you can log in as `bob`. ![Sign
-off](/assets/images/vault-acl-templating-3.png)
+off](/img/vault-acl-templating-3.png)
 
 1. In the Vault sign in page, select **Username** and then enter **`bob`** in
 the **Username** field, and **`training`** in the **Password** field.
@@ -577,7 +582,7 @@ the **Username** field, and **`training`** in the **Password** field.
 translates to "**`user-kv/data/bob_smith/*`**". Select **`user-kv`** secrets
 engine, and then select **Create secret**.
 
-1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field, 
+1. Enter **`bob_smith/apikey`** in the **PATH FOR THIS SECRET** field,
 **`webapp`** in the key field, and **`12344567890`** in its value field.
 
 1. Click **Save**. You should be able to perform this successfully.

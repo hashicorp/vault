@@ -57,7 +57,7 @@ func (resolver *LocationResolver) TryResolve(param *ResolveParam) (endpoint stri
 	getEndpointRequest.Product = "Location"
 	getEndpointRequest.Version = "2015-06-12"
 	getEndpointRequest.ApiName = "DescribeEndpoints"
-	getEndpointRequest.Domain = "location.aliyuncs.com"
+	getEndpointRequest.Domain = "location-readonly.aliyuncs.com"
 	getEndpointRequest.Method = "GET"
 	getEndpointRequest.Scheme = requests.HTTPS
 

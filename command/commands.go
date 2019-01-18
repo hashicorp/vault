@@ -6,52 +6,37 @@ import (
 	"os/signal"
 	"syscall"
 
-	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
-	azure "github.com/hashicorp/vault-plugin-secrets-azure"
-	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
-	"github.com/hashicorp/vault/builtin/logical/aws"
-	"github.com/hashicorp/vault/builtin/logical/cassandra"
-	"github.com/hashicorp/vault/builtin/logical/consul"
-	"github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/builtin/logical/mongodb"
-	"github.com/hashicorp/vault/builtin/logical/mssql"
-	"github.com/hashicorp/vault/builtin/logical/mysql"
-	"github.com/hashicorp/vault/builtin/logical/nomad"
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/postgresql"
-	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
-	"github.com/hashicorp/vault/builtin/logical/ssh"
-	"github.com/hashicorp/vault/builtin/logical/totp"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/builtin/plugin"
+	/*
+		The builtinplugins package is initialized here because it, in turn,
+		initializes the database plugins.
+		They register multiple database drivers for the "database/sql" package.
+	*/
+	_ "github.com/hashicorp/vault/helper/builtinplugins"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
-	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
-	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
-	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
-	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
-	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
@@ -91,6 +76,8 @@ const (
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
 	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
+	// flagNameTokenType is the flag name used to force a specific token type
+	flagNameTokenType = "token-type"
 )
 
 var (
@@ -101,44 +88,15 @@ var (
 	}
 
 	credentialBackends = map[string]logical.Factory{
-		"alicloud":   credAliCloud.Factory,
-		"app-id":     credAppId.Factory,
-		"approle":    credAppRole.Factory,
-		"aws":        credAws.Factory,
-		"azure":      credAzure.Factory,
-		"centrify":   credCentrify.Factory,
-		"cert":       credCert.Factory,
-		"gcp":        credGcp.Factory,
-		"github":     credGitHub.Factory,
-		"jwt":        credJWT.Factory,
-		"kubernetes": credKube.Factory,
-		"ldap":       credLdap.Factory,
-		"okta":       credOkta.Factory,
-		"plugin":     plugin.Factory,
-		"radius":     credRadius.Factory,
-		"userpass":   credUserpass.Factory,
+		"plugin": plugin.Factory,
 	}
 
 	logicalBackends = map[string]logical.Factory{
-		"ad":         ad.Factory,
-		"aws":        aws.Factory,
-		"azure":      azure.Factory,
-		"cassandra":  cassandra.Factory,
-		"consul":     consul.Factory,
-		"database":   database.Factory,
-		"gcp":        gcp.Factory,
-		"kv":         kv.Factory,
-		"mongodb":    mongodb.Factory,
-		"mssql":      mssql.Factory,
-		"mysql":      mysql.Factory,
-		"nomad":      nomad.Factory,
-		"pki":        pki.Factory,
-		"plugin":     plugin.Factory,
-		"postgresql": postgresql.Factory,
-		"rabbitmq":   rabbitmq.Factory,
-		"ssh":        ssh.Factory,
-		"totp":       totp.Factory,
-		"transit":    transit.Factory,
+		"plugin":   plugin.Factory,
+		"database": logicalDb.Factory,
+		// This is also available in the plugin catalog, but is here due to the need to
+		// automatically mount it.
+		"kv": logicalKv.Factory,
 	}
 
 	physicalBackends = map[string]physical.Factory{
@@ -198,7 +156,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in Vault 0.12.",
+			"instead. This command will be removed in Vault 1.1.",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
@@ -371,6 +329,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator migrate": func() (cli.Command, error) {
+			return &OperatorMigrateCommand{
+				BaseCommand:      getBaseCommand(),
+				PhysicalBackends: physicalBackends,
+				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {

@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Controller from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
-export default Ember.Controller.extend(BackendCrumbMixin, {
+export default Controller.extend(BackendCrumbMixin, {
   queryParams: {
     selectedAction: 'action',
   },
@@ -11,10 +11,6 @@ export default Ember.Controller.extend(BackendCrumbMixin, {
       // closure actions don't bubble to routes,
       // so we have to manually bubble here
       this.send('refreshModel');
-    },
-
-    hasChanges(hasChanges) {
-      this.send('hasDataChanges', hasChanges);
     },
   },
 });

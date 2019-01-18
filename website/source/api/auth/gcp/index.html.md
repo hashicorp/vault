@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Google Cloud - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-gcp"
+sidebar_title: "Google Cloud"
+sidebar_current: "api-http-auth-gcp"
 description: |-
   This is the API documentation for the Vault Google Cloud authentication
   method.
@@ -41,11 +42,8 @@ to confirm signed JWTs passed in during login.
 
     If this value is empty, Vault will try to use [Application Default
     Credentials][gcp-adc] from the machine on which the Vault server is running.
-
-- `google_certs_endpoint` `(string:
-  "https://www.googleapis.com/oauth2/v3/certs")`: The Google OAuth2 endpoint
-  from which to obtain public certificates. This is used for testing and should
-  generally not be set by end users.
+    
+    The project must have the `iam.googleapis.com` API [enabled](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com).
 
 ### Sample Payload
 
@@ -130,9 +128,6 @@ entities attempting to login.
   correspond to specific roles and will be rejected otherwise. Please see below
   for more information.
 
-- `project_id` `(string: <required>)` - The GCP project ID. Only entities belonging to this
-  project can authenticate with this role.
-
 - `ttl` `(string: "")` - The TTL period of tokens issued using this role. This
   can be specified as an integer number of seconds or as a duration value like
   "5m".
@@ -150,12 +145,21 @@ entities attempting to login.
 - `policies` `(array: [default])` - The list of policies to be set on tokens
   issued using this role.
 
-- `bound_service_accounts` `(array: <required for iam>)` - A comma-separated
-  list of service account emails or IDs that login is restricted to. If set to
-  `*`, all service accounts are allowed (role will still be bound by project).
-  Will be inferred from service account used to issue metadata token for GCE
-  instances.
+- `bound_service_accounts` `(array: <required for iam>)` - An array of 
+   service account emails or IDs that login is restricted to,
+   either directly or through an associated instance. If set to
+  `*`, all service accounts are allowed (you can bind this further using
+  `bound_projects`.)
+  
+- `bound_projects` `(array: [])` - An array of GCP project IDs. Only entities 
+   belonging to this project can authenticate under the role.
 
+- `add_group_aliases` `(bool: false)` - If true, any auth token
+   generated under this token will have associated group aliases, namely
+   `project-$PROJECT_ID`, `folder-$PROJECT_ID`, and `organization-$ORG_ID`
+   for the entities project and all its folder or organization ancestors. This
+   requires Vault to have IAM permission `resourcemanager.projects.get`.
+    
 #### `iam`-only Parameters
 
 The following parameters are only valid when the role is of type `"iam"`:
@@ -371,7 +375,7 @@ $ curl \
       "prod"
     ],
     "project_id": "project-123456",
-    "role_type": "gce",
+    "type": "gce",
     "ttl": 1800
   }
 }
@@ -483,6 +487,7 @@ $ curl \
       "prod"
     ],
     "metadata": {
+      "project_id": "my-project",
       "role": "my-role",
       "service_account_email": "dev1@project-123456.iam.gserviceaccount.com",
       "service_account_id": "111111111111111111111"

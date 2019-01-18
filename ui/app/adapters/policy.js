@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -16,7 +16,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.buildURL(type.modelName, name), 'PUT', { data }).then(() => {
       // doing this to make it like a Vault response - ember data doesn't like 204s if it's not a DELETE
       return {
-        data: Ember.assign({}, snapshot.record.toJSON(), { id: name }),
+        data: assign({}, snapshot.record.toJSON(), { id: name }),
       };
     });
   },
@@ -30,6 +30,8 @@ export default ApplicationAdapter.extend({
   },
 
   query(store, type) {
-    return this.ajax(this.buildURL(type.modelName), 'GET', { data: { list: true } });
+    return this.ajax(this.buildURL(type.modelName), 'GET', {
+      data: { list: true },
+    });
   },
 });

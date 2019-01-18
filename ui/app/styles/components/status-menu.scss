@@ -1,16 +1,31 @@
-.is-status-chevron {
-  line-height: 0;
-  padding: 0.3em 0 0 $size-11;
-}
+.status-indicator-button {
+  &[data-status='good'] {
+    .status-indicator-icon-dot {
+      fill: $green-light;
+    }
 
-.status-menu-user-trigger {
-  height: 1.5em;
-  width: 1.5em;
-  background: $white-bis;
-  box-shadow: 0 0 0 1px $white;
-  margin-right: 0.25rem;
+    .status-indicator-icon-ring {
+      fill: $green-dark;
+    }
+  }
 
-  .icon {
-    min-width: 0;
+  &[data-status='mixed'] {
+    .status-indicator-icon-dot {
+      fill: $yellow;
+    }
+
+    .status-indicator-icon-ring {
+      fill: $yellow-dark;
+    }
+  }
+
+  &[data-status='bad'] {
+    .status-indicator-icon-dot {
+      fill: $red;
+    }
+
+    .status-indicator-icon-ring {
+      fill: $red-dark;
+    }
   }
 }

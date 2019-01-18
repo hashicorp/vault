@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "TLS Certificate - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-cert"
+sidebar_title: "TLS Certificates"
+sidebar_current: "api-http-auth-cert"
 description: |-
   This is the API documentation for the Vault TLS Certificate authentication
   method.
@@ -56,6 +57,11 @@ Sets a CA cert and associated parameters in a role name.
   (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
   a comma-separated list of URI patterns. Authentication requires at least one
   URI matching at least one pattern. If not set, defaults to allowing all URIs.
+- `allowed_organizational_units` `(string: "" or array: [])` - Constrain the
+  Organizational Units (OU) in the client certificate with a [globbed pattern]
+  (https://github.com/ryanuber/go-glob/blob/master/README.md#example). Value is
+  a comma-separated list of OU patterns. Authentication requires at least one
+  OU matching at least one pattern. If not set, defaults to allowing all OUs.
 - `required_extensions` `(string: "" or array: [])` - Require specific Custom
   Extension OIDs to exist and match the pattern. Value is a comma separated
   string or array of `oid:value`. Expects the extension value to be some type
@@ -157,6 +163,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
     http://127.0.0.1:8200/v1/auth/cert/certs
+```
 
 ### Sample Response
 

@@ -1,7 +1,6 @@
-import Ember from 'ember';
+import { assign } from '@ember/polyfills';
+import { decamelize } from '@ember/string';
 import DS from 'ember-data';
-
-const { decamelize } = Ember.String;
 
 export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   keyForAttribute: function(attr) {
@@ -21,7 +20,7 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
 
   nodeFromObject(name, payload) {
     const nodeObj = payload.nodes[name];
-    return Ember.assign(nodeObj, {
+    return assign(nodeObj, {
       name,
       id: name,
     });
@@ -30,7 +29,7 @@ export default DS.RESTSerializer.extend(DS.EmbeddedRecordsMixin, {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nodes = payload.nodes
       ? Object.keys(payload.nodes).map(name => this.nodeFromObject(name, payload))
-      : [Ember.assign(payload, { id: '1' })];
+      : [assign(payload, { id: '1' })];
 
     const transformedPayload = { nodes: nodes };
 

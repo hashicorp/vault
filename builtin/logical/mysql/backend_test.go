@@ -115,7 +115,7 @@ func TestBackend_basic(t *testing.T) {
 
 	// for wildcard based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t, true),
@@ -141,7 +141,7 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 
 	// for host based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t, false),
@@ -166,7 +166,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			// test SQL with wildcard based user
@@ -197,7 +197,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepWriteLease(t),

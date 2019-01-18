@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Transit - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-transit"
+sidebar_title: "Transit"
+sidebar_current: "api-http-secret-transit"
 description: |-
   This is the API documentation for the Vault Transit secrets engine.
 ---
@@ -383,6 +384,12 @@ will be returned.
   "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
 }
 ```
+
+!> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+of service attack. This can be tuned per [`listener`
+block](/docs/configuration/listener/tcp.html) in the Vault server
+configuration.
+
 
 ### Sample Request
 
@@ -962,10 +969,10 @@ This endpoint restores the backup as a named key. This will restore the key
 configurations and all the versions of the named key along with HMAC keys. The
 input to this endpoint should be the output of `/backup` endpoint.
 
- ~> For safety, the backend will refuse to restore to an existing key. If you
- want to reuse a key name, you must delete the key before restoring. It is a
- good idea to attempt restoring to a different key name first to verify that
- the operation successfully completes.
+ ~> For safety, by default the backend will refuse to restore to an existing
+ key. If you want to reuse a key name, it is recommended you delete the key
+ before restoring. It is a good idea to attempt restoring to a different key
+ name first to verify that the operation successfully completes.
 
 | Method   | Path                        | Produces               |
 | :------- | :-------------------------- | :--------------------- |
@@ -978,6 +985,9 @@ input to this endpoint should be the output of `/backup` endpoint.
 
  - `name` `(string: <optional>)` - If set, this will be the name of the
    restored key.
+
+ - `force` `(bool: false)` - If set, force the restore to proceed even if a key
+   by this name already exists.
 
 ### Sample Payload
 
@@ -993,4 +1003,39 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/restore
+```
+
+## Trim Key
+
+This endpoint trims older key versions setting a minimum version for the
+keyring. Once trimmed, previous versions of the key cannot be recovered.
+
+| Method   | Path                       | Produces               |
+| :------- | :------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/trim` | `200 application/json` |
+
+### Parameters
+
+- `min_version` `(int: <required>)` - The minimum version for the key ring. All
+  versions before this version will be permanently deleted. This value can at
+  most be equal to the lesser of `min_decryption_version` and
+  `min_encryption_version`. This is not allowed to be set when either
+  `min_encryption_version` or `min_decryption_version` is set to zero.
+
+### Sample Payload
+
+```json
+{
+    "min_version": 2
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/transit/keys/my-key/trim
 ```

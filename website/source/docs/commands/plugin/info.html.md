@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "plugin info - Command"
+sidebar_title: "<code>info</code>"
 sidebar_current: "docs-commands-plugin-info"
 description: |-
   The "plugin info" command displays information about a plugin in the catalog.
@@ -9,13 +10,14 @@ description: |-
 # plugin info
 
 The `plugin info` displays information about a plugin in the catalog.
+The plugin's type of "auth", "database", or "secret" must be included.
 
 ## Examples
 
 Display information about a plugin
 
 ```text
-$ vault plugin info my-custom-plugin
+$ vault plugin info auth my-custom-plugin
 
 Key        Value
 ---        -----

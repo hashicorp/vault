@@ -177,7 +177,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
-		certificate = []byte(certStr)
+		certificate = []byte(strings.TrimSpace(certStr))
 		goto reply
 	}
 
@@ -239,7 +239,7 @@ reply:
 			}}
 		if retErr != nil {
 			if b.Logger().IsWarn() {
-				b.Logger().Warn("Possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct", "error", retErr)
+				b.Logger().Warn("possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct", "error", retErr)
 			}
 		}
 		retErr = nil

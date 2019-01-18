@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -46,7 +46,7 @@ type Config struct {
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_time"`
+	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
@@ -69,6 +69,9 @@ type Config struct {
 
 	DisableSealWrap    bool        `hcl:"-"`
 	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+
+	DisableIndexing    bool        `hcl:"-"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -135,8 +138,9 @@ func (b *Storage) GoString() string {
 
 // Seal contains Seal configuration for the server
 type Seal struct {
-	Type   string
-	Config map[string]string
+	Type     string
+	Disabled bool
+	Config   map[string]string
 }
 
 func (h *Seal) GoString() string {
@@ -346,6 +350,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableSealWrap = c2.DisableSealWrap
 	}
 
+	result.DisableIndexing = c.DisableIndexing
+	if c2.DisableIndexing {
+		result.DisableIndexing = c2.DisableIndexing
+	}
+
 	return result
 }
 
@@ -451,6 +460,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		}
 	}
 
+	if result.DisableIndexingRaw != nil {
+		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -458,12 +473,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
-		if err := parseStorage(&result, o, "storage"); err != nil {
+		if err := ParseStorage(&result, o, "storage"); err != nil {
 			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
 		}
 	} else {
 		if o := list.Filter("backend"); len(o.Items) > 0 {
-			if err := parseStorage(&result, o, "backend"); err != nil {
+			if err := ParseStorage(&result, o, "backend"); err != nil {
 				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
 			}
 		}
@@ -583,7 +598,7 @@ func isTemporaryFile(name string) bool {
 		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
 }
 
-func parseStorage(result *Config, list *ast.ObjectList, name string) error {
+func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
 		return fmt.Errorf("only one %q block is permitted", name)
 	}
@@ -732,24 +747,25 @@ func parseSeal(result *Config, list *ast.ObjectList, blockName string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	// Valid parameter for the Seal types
-	switch key {
-	case "pkcs11":
-	case "awskms":
-	case "gcpckms":
-	case "azurekeyvault":
-	default:
-		return fmt.Errorf("invalid seal type %q", key)
-	}
-
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 	}
 
+	var disabled bool
+	var err error
+	if v, ok := m["disabled"]; ok {
+		disabled, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+		}
+		delete(m, "disabled")
+	}
+
 	result.Seal = &Seal{
-		Type:   strings.ToLower(key),
-		Config: m,
+		Type:     strings.ToLower(key),
+		Disabled: disabled,
+		Config:   m,
 	}
 
 	return nil

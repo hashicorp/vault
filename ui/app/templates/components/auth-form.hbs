@@ -4,7 +4,7 @@
       {{partial 'svg/vault-loading'}}
     </div>
   {{/if}}
-  <nav class="tabs sub-nav is-marginless">
+  <nav class="tabs is-marginless">
     <ul>
       {{#each methodsToShow as |method|}}
         {{#with (or method.path method.type) as |methodKey|}}
@@ -93,7 +93,7 @@
       {{/unless}}
     </div>
     <div class="box is-marginless is-shadowless">
-      <button data-test-auth-submit=true type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}" id="auth-submit">
+      <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
         Sign In
       </button>
     </div>

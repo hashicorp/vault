@@ -1,0 +1,58 @@
+{{#if shouldUseFallback}}
+  {{component
+    fallbackComponent
+    label=label
+    onChange=(action "onChange")
+    inputValue=inputValue
+    warning=warning
+    helpText=helpText
+  }}
+{{else}}
+  <label for="{{name}}" class="title is-4" data-test-field-label>
+    {{label}}
+    {{#if helpText}}
+      {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
+    {{/if}}
+  </label>
+  {{#power-select
+    options=options
+    onchange=(action "selectOption")
+    placeholderComponent="search-select-placeholder"
+    renderInPlace=true
+    searchField="searchText"
+    verticalPosition="below" as |option|
+  }}
+    {{#if shouldRenderName}}
+      {{option.name}}
+      <small class="search-select-list-key" data-test-smaller-id="true">
+        {{option.id}}
+      </small>
+    {{else}}
+      {{option.id}}
+    {{/if}}
+  {{/power-select}}
+  <ul class="search-select-list">
+    {{#each selectedOptions as |selected|}}
+      <li class="search-select-list-item" data-test-selected-option="true">
+        {{#if shouldRenderName}}
+          {{selected.name}}
+          <small class="search-select-list-key" data-test-smaller-id="true">
+            {{selected.id}}
+          </small>
+        {{else}}
+          {{selected.id}}
+        {{/if}}
+        <div class="control">
+          <button
+            type="button"
+            class="button is-ghost"
+            data-test-selected-list-button="delete"
+            {{action "discardSelection" selected}}
+          >
+            {{i-con size=16 glyph="trash-a" excludeIconClass=true}}
+          </button>
+        </div>
+      </li>
+    {{/each}}
+  </ul>
+{{/if}}

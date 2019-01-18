@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Identity and Access Management - Guides"
+sidebar_title: "Identity and Access Management"
 sidebar_current: "guides-identity"
 description: |-
   Once a Vault instance has been installed, the next step is to configure auth
@@ -20,7 +21,7 @@ Role-Based Access Control (RBAC) by specifying access privileges. Authoring of
 policies is probably the first step the Vault administrator performs. This guide
 walks you through creating example policies for `admin` and `provisioner` users.
 
-- [ACL Policy Templating](/guides/identity/policy-templating.html) guide
+- [ACL Policy Path Templating](/guides/identity/policy-templating.html) guide
 demonstrates templated policy paths to allow non-static paths.
 
 - [AppRole Pull Authentication](/guides/identity/authentication.html) guide

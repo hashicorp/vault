@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -84,6 +84,9 @@ type roleStorageEntry struct {
 	// SecretIDPrefix is the storage prefix for persisting secret IDs. This
 	// differs based on whether the secret IDs are cluster local or not.
 	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix"`
+
+	// TokenType is the type of token to generate
+	TokenType string `json:"token_type" mapstructure:"token_type"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -195,6 +198,11 @@ TTL will be set to the value of this parameter.`,
 					Type: framework.TypeBool,
 					Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
+				},
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "default",
+					Description: `The type of token to generate ("service" or "batch"), or "default" to use the default`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -783,7 +791,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
 		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
-			return fmt.Errorf("failed to delete previous role ID index")
+			return errwrap.Wrapf("failed to delete previous role ID index: {{err}}", err)
 		}
 	}
 
@@ -1007,6 +1015,30 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		role.TokenMaxTTL = time.Second * time.Duration(data.Get("token_max_ttl").(int))
 	}
 
+	tokenType := role.TokenType
+	if tokenTypeRaw, ok := data.GetOk("token_type"); ok {
+		tokenType = tokenTypeRaw.(string)
+		switch tokenType {
+		case "":
+			tokenType = "default"
+		case "service", "batch", "default":
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenType)), nil
+		}
+	} else if req.Operation == logical.CreateOperation {
+		tokenType = data.Get("token_type").(string)
+	}
+	role.TokenType = tokenType
+
+	if role.TokenType == "batch" {
+		if role.Period != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
+		}
+		if role.TokenNumUses != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with limited use count"), nil
+		}
+	}
+
 	// Check that the TokenTTL value provided is less than the TokenMaxTTL.
 	// Sanitizing the TTL and MaxTTL is not required now and can be performed
 	// at credential issue time.
@@ -1061,6 +1093,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		"token_num_uses":        role.TokenNumUses,
 		"token_ttl":             role.TokenTTL / time.Second,
 		"local_secret_ids":      false,
+		"token_type":            role.TokenType,
 	}
 
 	if role.SecretIDPrefix == secretIDLocalPrefix {

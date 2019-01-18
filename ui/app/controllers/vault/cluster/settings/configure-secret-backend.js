@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { isPresent } from '@ember/utils';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const CONFIG_ATTRS = {
   // ssh
@@ -12,10 +14,10 @@ const CONFIG_ATTRS = {
   region: '',
 };
 
-export default Ember.Controller.extend(CONFIG_ATTRS, {
+export default Controller.extend(CONFIG_ATTRS, {
   queryParams: ['tab'],
   tab: '',
-  flashMessages: Ember.inject.service(),
+  flashMessages: service(),
   loading: false,
   reset() {
     this.get('model').rollbackAttributes();
@@ -26,23 +28,25 @@ export default Ember.Controller.extend(CONFIG_ATTRS, {
       const isDelete = options.delete;
       if (this.get('model.type') === 'ssh') {
         this.set('loading', true);
-        this.get('model').saveCA({ isDelete }).then(() => {
-          this.set('loading', false);
-          this.send('refreshRoute');
-          this.set('configured', !isDelete);
-          if (isDelete) {
-            this.get('flashMessages').success('SSH Certificate Authority Configuration deleted!');
-          } else {
-            this.get('flashMessages').success('SSH Certificate Authority Configuration saved!');
-          }
-        });
+        this.get('model')
+          .saveCA({ isDelete })
+          .then(() => {
+            this.set('loading', false);
+            this.send('refreshRoute');
+            this.set('configured', !isDelete);
+            if (isDelete) {
+              this.get('flashMessages').success('SSH Certificate Authority Configuration deleted!');
+            } else {
+              this.get('flashMessages').success('SSH Certificate Authority Configuration saved!');
+            }
+          });
       }
     },
 
     save(method, data) {
       this.set('loading', true);
       const hasData = Object.keys(data).some(key => {
-        return Ember.isPresent(data[key]);
+        return isPresent(data[key]);
       });
       if (!hasData) {
         return;

@@ -1,11 +1,12 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import Controller, { inject as controller } from '@ember/controller';
 import utils from 'vault/lib/key-utils';
 
-const { inject, computed, Controller } = Ember;
 export default Controller.extend({
-  flashMessages: inject.service(),
-  store: inject.service(),
-  clusterController: inject.controller('vault.cluster'),
+  flashMessages: service(),
+  store: service(),
+  clusterController: controller('vault.cluster'),
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -48,6 +49,21 @@ export default Controller.extend({
     return !!utils.keyIsFolder(this.get('filter'));
   }),
 
+  emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function() {
+    let id = this.get('baseKey.id');
+    let filter = this.filter;
+    if (id === '') {
+      return 'There are currently no leases.';
+    }
+    if (this.filterIsFolder) {
+      if (filter === id) {
+        return `There are no leases under &quot;${filter}&quot;.`;
+      } else {
+        return `We couldn't find a prefix matching &quot;${filter}&quot;.`;
+      }
+    }
+  }),
+
   actions: {
     setFilter(val) {
       this.set('filter', val);
@@ -61,8 +77,7 @@ export default Controller.extend({
       const adapter = this.get('store').adapterFor('lease');
       const method = isForce ? 'forceRevokePrefix' : 'revokePrefix';
       const fn = adapter[method];
-      fn
-        .call(adapter, prefix)
+      fn.call(adapter, prefix)
         .then(() => {
           return this.transitionToRoute('vault.cluster.access.leases.list-root').then(() => {
             this.get('flashMessages').success(`All of the leases under ${prefix} will be revoked.`);

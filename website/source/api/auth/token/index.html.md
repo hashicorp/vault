@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Token - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-token"
+sidebar_title: "Tokens"
+sidebar_current: "api-http-auth-token"
 description: |-
   This is the API documentation for the Vault token auth method.
 ---
@@ -68,7 +69,7 @@ during this call.
 ### Parameters
 
 - `id` `(string: "")` – The ID of the client token. Can only be specified by a
-  root token.  Otherwise, the token ID is a randomly generated UUID.
+  root token.  Otherwise, the token ID is a randomly generated value.
 - `role_name` `(string: "")` – The name of the token role.
 - `policies` `(array: "")` – A list of policies for the token. This must be a
   subset of the policies belonging to the token making the request, unless root.
@@ -673,6 +674,12 @@ tokens created against a role to be revoked using the
   current role value at each usage; it is set on the token itself. Root tokens
   with no TTL will not be bound by these CIDRs; root tokens with TTLs will be
   bound by these CIDRs.
+- `token_type` `(string: "")` – Specifies the type of tokens that should be
+  returned by the role. If either `service` or `batch` is specified, that kind
+  of token will always be returned. If `default-service`, `service` tokens will
+  be returned unless the client requests a `batch` type token at token creation
+  time. If `default-batch`, `batch` tokens will be returned unless the client
+  requests a `service` type token at token creation time.
 
 ### Sample Payload
 
@@ -735,4 +742,21 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     http://127.0.0.1:8200/v1/auth/token/tidy
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "84437c7f-36a1-6c1d-381d-14ec99217e94",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": null,
+  "wrap_info": null,
+  "warnings": [
+    "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs."
+  ],
+  "auth": null
+}
 ```

@@ -3,7 +3,6 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -19,7 +18,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 		Pattern: "config/zeroaddress",
 		Fields: map[string]*framework.FieldSchema{
 			"roles": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `[Required] Comma separated list of role names which
 				allows credentials to be requested for any IP address. CIDR blocks
 				previously registered under these roles will be ignored.`,
@@ -60,13 +59,12 @@ func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Re
 }
 
 func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleNames := d.Get("roles").(string)
-	if roleNames == "" {
+	roles := d.Get("roles").([]string)
+	if len(roles) == 0 {
 		return logical.ErrorResponse("Missing roles"), nil
 	}
 
 	// Check if the roles listed actually exist in the backend
-	roles := strings.Split(roleNames, ",")
 	for _, item := range roles {
 		role, err := b.getRole(ctx, req.Storage, item)
 		if err != nil {

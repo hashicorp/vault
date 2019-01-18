@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/mitchellh/cli"
 )
 
@@ -171,8 +173,11 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			}
 		}
 
-		if len(backends) != len(credentialBackends) {
-			t.Fatalf("expected %d credential backends, got %d", len(credentialBackends), len(backends))
+		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
+		// is treated as special and excluded from the registry.
+		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential)) + 1
+		if len(backends) != expected {
+			t.Fatalf("expected %d credential backends, got %d", expected, len(backends))
 		}
 
 		for _, b := range backends {

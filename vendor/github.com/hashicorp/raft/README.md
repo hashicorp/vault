@@ -34,7 +34,7 @@ and `StableStore`.
 
 ## Tagged Releases
 
-As of September 2017, Hashicorp will start using tags for this library to clearly indicate
+As of September 2017, HashiCorp will start using tags for this library to clearly indicate
 major version updates. We recommend you vendor your application's dependency on this library.
 
 * v0.1.0 is the original stable version of the library that was in master and has been maintained

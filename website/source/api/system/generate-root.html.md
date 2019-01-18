@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/generate-root - HTTP API"
-sidebar_current: "docs-http-system-generate-root"
+sidebar_title: "<code>/sys/generate-root</code>"
+sidebar_current: "api-http-system-generate-root"
 description: |-
   The `/sys/generate-root/` endpoints are used to create a new root key for
   Vault.
@@ -51,8 +52,7 @@ encode the final root token, it will never be returned.
 ## Start Root Token Generation
 
 This endpoint initializes a new root generation attempt. Only a single root
-generation attempt can take place at a time. One (and only one) of `otp` or
-`pgp_key` are required.
+generation attempt can take place at a time. 
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -60,28 +60,15 @@ generation attempt can take place at a time. One (and only one) of `otp` or
 
 ### Parameters
 
-- `otp` `(string: <required-unless-pgp>)` – Specifies a base64-encoded 16-byte
-  value. The raw bytes of the token will be XOR'd with this value before being
+- `pgp_key` `(string: <optional>)` – Specifies a base64-encoded PGP public key.
+  The raw bytes of the token will be encrypted with this value before being
   returned to the final unseal key provider.
-
-- `pgp_key` `(string: <required-unless-otp>)` – Specifies a base64-encoded PGP
-  public key. The raw bytes of the token will be encrypted with this value
-  before being returned to the final unseal key provider.
-
-### Sample Payload
-
-```json
-{
-  "otp": "CB23=="
-}
-```
 
 ### Sample Request
 
 ```
 $ curl \
     --request PUT \
-    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/generate-root/attempt    
 ```
 
@@ -94,7 +81,8 @@ $ curl \
   "progress": 1,
   "required": 3,
   "encoded_token": "",
-  "pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
+  "otp": "2vPFYG8gUSW9npwzyvxXMug0",
+  "otp_length" :24,
   "complete": false
 }
 ```

@@ -7,12 +7,12 @@
     </p.levelLeft>
     <p.levelRight>
       {{#link-to 'vault.cluster.access.namespaces.create' class="button has-icon-right is-ghost is-compact"}}
-        Create a namespace
+        Create namespace
         <ICon @glyph="chevron-right" @size=11 />
       {{/link-to}}
     </p.levelRight>
   </PageHeader>
-  <ListView @items={{model}} @itemNoun="namespace" as |list|>
+  <ListView @items={{model}} @itemNoun="namespace" @emptyActions="empty-action-namespaces" as |list|>
     <ListItem as |Item|>
       <Item.content>
         {{list.item.id}}
@@ -43,8 +43,8 @@
               )
             }}
             @confirmMessage={{concat "Are you sure you want to delete " list.item.id "?"}}
-            @showConfirm={{get this (concat "shouldDelete-" list.item.id)}}
-            @class={{if (get this (concat "shouldDelete-" list.item.id)) "message is-block is-warning is-outline"}}
+            @showConfirm={{get this (concat "shouldDelete-" (dot-to-dash list.item.id))}}
+            @class={{if (get this (concat "shouldDelete-" (dot-to-dash list.item.id))) "message is-block is-warning is-outline"}}
             @containerClasses="message-body is-block"
             @messageClasses="is-block"
           >

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/step-down - HTTP API"
-sidebar_current: "docs-http-system-step-down"
+sidebar_title: "<code>/sys/step-down</code>"
+sidebar_current: "api-http-system-step-down"
 description: |-
   The `/sys/step-down` endpoint causes the node to give up active status.
 ---
