@@ -3,6 +3,7 @@ package logical
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -100,7 +101,10 @@ func HelpResponse(text string, seeAlso []string, oapiDoc interface{}) *Response 
 }
 
 // ErrorResponse is used to format an error response
-func ErrorResponse(text string) *Response {
+func ErrorResponse(text string, vargs ...interface{}) *Response {
+	if len(vargs) > 0 {
+		text = fmt.Sprintf(text, vargs...)
+	}
 	return &Response{
 		Data: map[string]interface{}{
 			"error": text,
