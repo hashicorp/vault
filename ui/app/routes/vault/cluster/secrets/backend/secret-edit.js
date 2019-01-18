@@ -37,36 +37,36 @@ export default Route.extend(UnloadModelRoute, {
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
     const { secret } = this.paramsFor(this.routeName);
-    this.buildModel(secret);
-    const parentKey = utils.parentKeyForKey(secret);
-    const mode = this.routeName.split('.').pop();
-    if (mode === 'edit' && utils.keyIsFolder(secret)) {
-      if (parentKey) {
-        return this.transitionTo('vault.cluster.secrets.backend.list', parentKey);
-      } else {
-        return this.transitionTo('vault.cluster.secrets.backend.list-root');
+    return this.buildModel(secret).then(() => {
+      const parentKey = utils.parentKeyForKey(secret);
+      const mode = this.routeName.split('.').pop();
+      if (mode === 'edit' && utils.keyIsFolder(secret)) {
+        if (parentKey) {
+          return this.transitionTo('vault.cluster.secrets.backend.list', parentKey);
+        } else {
+          return this.transitionTo('vault.cluster.secrets.backend.list-root');
+        }
       }
-    }
+    });
   },
 
   buildModel(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, secret);
-    let modelFactory = getOwner(this).factoryFor(`model:${modelType}`);
+    let name = `model:${modelType}`;
     let owner = getOwner(this);
-    this.pathHelp.getAttrs(modelType, backend).then(attrs => {
-      let newModel;
-      if (modelFactory) {
+    return this.pathHelp.getAttrs(modelType, backend).then(attrs => {
+      let newModel = owner.factoryFor(name).class;
+      if (owner.hasRegistration(name) && !newModel.merged) {
         //combine them
-        newModel = modelFactory.class.reopenClass(attrs);
+        // TODO - this doesn't merge attributes
+        newModel = newModel.extend(attrs);
       } else {
         //generate a whole new model
       }
-      newModel = newModel.class.reopenClass({ merged: true });
-      debugger; //eslint-disable-line
-      owner.unregister(newModel.toString());
-      owner.register(newModel.toString(), newModel);
-      this.refresh();
+      newModel.reopenClass({ merged: true });
+      owner.unregister(name);
+      owner.register(name, newModel);
     });
   },
 
