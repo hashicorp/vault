@@ -44,6 +44,7 @@ export default Component.extend({
         steps: ['Enabling a secrets engine', 'Adding a secret'],
         selected: false,
         show: true,
+        permission: 'secrets',
       },
       {
         key: 'authentication',
@@ -51,6 +52,7 @@ export default Component.extend({
         steps: ['Enabling an auth method', 'Managing your auth method'],
         selected: false,
         show: true,
+        permission: 'access',
       },
       {
         key: 'policies',
@@ -63,6 +65,7 @@ export default Component.extend({
         ],
         selected: false,
         show: true,
+        permission: 'policies',
       },
       {
         key: 'replication',
@@ -70,6 +73,7 @@ export default Component.extend({
         steps: ['Setting up replication', 'Your cluster information'],
         selected: false,
         show: true,
+        permission: 'status',
       },
       {
         key: 'tools',
@@ -77,6 +81,7 @@ export default Component.extend({
         steps: ['Wrapping data', 'Lookup wrapped data', 'Rewrapping your data', 'Unwrapping your data'],
         selected: false,
         show: true,
+        permission: 'tools',
       },
     ];
   }),
