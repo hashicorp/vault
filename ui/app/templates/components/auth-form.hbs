@@ -4,23 +4,16 @@
       {{partial 'svg/vault-loading'}}
     </div>
   {{/if}}
+  {{#if hasMethodsWithPath}}
   <nav class="tabs is-marginless">
     <ul>
       {{#each methodsToShow as |method|}}
         {{#with (or method.path method.type) as |methodKey|}}
-          {{#if hasMethodsWithPath}}
             <li class="{{if (and selectedAuthIsPath (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey)) 'is-active' ''}}" data-test-auth-method>
               {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
                 {{or method.id (capitalize method.type)}}
               {{/link-to}}
             </li>
-          {{else}}
-            <li class="{{if (eq (or selectedAuthBackend.path selectedAuthBackend.type) methodKey) 'is-active' ''}}" data-test-auth-method>
-              {{#link-to 'vault.cluster.auth' cluster.name (query-params with=methodKey) data-test-auth-method-link=method.type}}
-                {{or method.id method.typeDisplay}}
-              {{/link-to}}
-            </li>
-          {{/if}}
         {{/with}}
       {{/each}}
       {{#if hasMethodsWithPath}}
@@ -32,17 +25,17 @@
       {{/if}}
     </ul>
   </nav>
+  {{/if}}
   <form
     id="auth-form"
     onsubmit={{action (if isOIDC "startOIDCAuth" "doSubmit")}}
   >
     <div class="box is-marginless is-shadowless">
-      {{#if (and cluster.standby hasCSPError)}}
-        {{message-error errorMessage=cspErrorText data-test-auth-error=true}}
-      {{else}}
-        {{message-error errorMessage=error data-test-auth-error=true}}
-      {{/if}}
-      {{#if (and hasMethodsWithPath (not selectedAuthIsPath))}}
+      <MessageError
+        @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
+        data-test-auth-error
+      />
+      {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
         <div class="field">
           <label for="selectedMethod" class="is-label">
             Method
@@ -74,7 +67,7 @@
       {{else}}
         {{partial providerPartialName}}
       {{/if}}
-      {{#unless (or selectedAuthIsPath (eq selectedAuthBackend.type "token"))}}
+      {{#if (and (not selectedAuthIsPath) (not-eq selectedAuthBackend.type "token"))}}
         <div class="box has-slim-padding is-shadowless">
           {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
           <div class="field">
@@ -98,7 +91,7 @@
             {{/if}}
           </div>
         </div>
-      {{/unless}}
+      {{/if}}
     </div>
     <div class="box is-marginless is-shadowless">
       <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
