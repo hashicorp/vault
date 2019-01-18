@@ -91,12 +91,13 @@ export function logFromResponse(response, path, method, flags) {
   let { format, field } = flags;
   let secret = response && (response.auth || response.data || response.wrap_info);
   if (!secret) {
-    let message =
-      method === 'write'
-        ? `Success! Data written to: ${path}`
-        : `Success! Data deleted (if it existed) at: ${path}`;
-
-    return { type: 'success', content: message };
+    if (method === 'write') {
+      return { type: 'success', content: `Success! Data written to: ${path}` };
+    } else if (method === 'delete') {
+      return { type: 'success', content: `Success! Data deleted (if it existed) at: ${path}` };
+    } else {
+      secret = response;
+    }
   }
 
   if (field) {
