@@ -93,6 +93,22 @@ module('Unit | Service | permissions', function(hooks) {
     assert.equal(service.hasPermission('hi'), true);
   });
 
+  test('it returns true if a policy has the specified capabilities on a path', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
+    service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
+    assert.equal(service.hasPermission('bar/bee', 'create'), true);
+    assert.equal(service.hasPermission('baz/biz', 'read'), true);
+  });
+
+  test('it returns false if a policy does not have the specified capabilities on a path', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
+    service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
+    assert.equal(service.hasPermission('bar/bee', 'delete'), false);
+    assert.equal(service.hasPermission('foo', 'create'), false);
+  });
+
   test('defaults to show all items when policy cannot be found', async function(assert) {
     let service = this.owner.lookup('service:permissions');
     this.server.get('/v1/sys/internal/ui/resultant-acl', () => {
