@@ -129,20 +129,6 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 			LocalStorage: []string{
 				expirationSubPath,
 			},
-			&framework.Path{
-				Pattern: "metrics",
-				Fields: map[string]*framework.FieldSchema{
-					"format": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Format to export metrics into. Currently accept only \"prometheus\"",
-					},
-				},
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMetrics,
-				},
-				HelpSynopsis:    strings.TrimSpace(sysHelp["metrics"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["metrics"][1]),
-			},
 		},
 	}
 
@@ -163,6 +149,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
