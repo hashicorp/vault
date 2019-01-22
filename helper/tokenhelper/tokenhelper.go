@@ -28,9 +28,6 @@ type TokenParams struct {
 
 	Policies []string `json:"policies" mapstructure:"policies"`
 
-	// If set, controls whether created tokens are marked as being renewable
-	Renewable bool `json:"renewable" mapstructure:"renewable"`
-
 	// The type of token this role should issue
 	TokenType logical.TokenType `json:"token_type" mapstructure:"token_type"`
 
@@ -83,12 +80,6 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Description: "Comma-separated list of policies",
 		},
 
-		"renewable": &framework.FieldSchema{
-			Type:        framework.TypeBool,
-			Default:     true,
-			Description: tokenRenewableHelp,
-		},
-
 		"token_type": &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: "The type of token to generate, service or batch",
@@ -134,10 +125,6 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.Policies = policiesRaw.([]string)
 	}
 
-	if renewableRaw, ok := d.GetOk("renewable"); ok {
-		t.Renewable = renewableRaw.(bool)
-	}
-
 	if tokenTypeRaw, ok := d.GetOk("token_type"); ok {
 		var tokenType logical.TokenType
 		tokenTypeStr := tokenTypeRaw.(string)
@@ -164,31 +151,29 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	if t.TTL < 0 {
 		return errors.New("'ttl' cannot be negative")
 	}
-	if t.TTL > 0 && t.MaxTTL > 0 && t.MaxTTL > t.TTL {
+	if t.TTL > 0 && t.MaxTTL > 0 && t.TTL > t.MaxTTL {
 		return errors.New("'ttl' cannot be greater than 'max_ttl'")
 	}
 
 	return nil
 }
 
-func (t TokenParams) PopulateTokenData(m map[string]interface{}) {
+func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["bound_cidrs"] = t.BoundCIDRs
 	m["explicit_max_ttl"] = t.ExplicitMaxTTL.Seconds()
 	m["max_ttl"] = t.MaxTTL.Seconds()
 	m["period"] = t.Period.Seconds()
 	m["policies"] = t.Policies
-	m["renewable"] = t.Renewable
 	m["token_type"] = t.TokenType.String()
 	m["ttl"] = t.TTL.Seconds()
 }
 
-func (t TokenParams) PopulateTokenAuth(auth *logical.Auth) {
+func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.BoundCIDRs = t.BoundCIDRs
 	auth.ExplicitMaxTTL = t.ExplicitMaxTTL
 	auth.MaxTTL = t.MaxTTL
 	auth.Period = t.Period
 	auth.Policies = t.Policies
-	auth.Renewable = t.Renewable
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TTL
 }
@@ -205,7 +190,4 @@ the current maximum TTL values of the role
 and the mount are not checked for changes,
 and any updates to these values will have
 no effect on the token being renewed.`
-	tokenRenewableHelp = `Tokens created via this role will be
-renewable or not according to this value.
-Defaults to "true".`
 )

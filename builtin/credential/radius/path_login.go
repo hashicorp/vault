@@ -98,9 +98,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-		},
 		Alias: &logical.Alias{
 			Name: username,
 		},

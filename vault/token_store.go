@@ -21,8 +21,6 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 
-	metrics "github.com/armon/go-metrics"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -377,6 +375,12 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Default:     "",
 				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 			},
+
+			"renewable": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     true,
+				Description: tokenRenewableHelp,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -390,7 +394,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 	}
 	// Roles in token store handle policies and TTLs differently
 	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields,
-		[]string{"bound_cidrs", "explicit_max_ttl", "period", "renewable", "token_type"})
+		[]string{"bound_cidrs", "explicit_max_ttl", "period", "token_type"})
 	// For this backend default to service
 	rolesPath.Fields["token_type"].Default = "service"
 	p = append(p, rolesPath)
@@ -581,6 +585,9 @@ type tsRoleEntry struct {
 	// If set, a suffix will be set on the token path, making it easier to
 	// revoke using 'revoke-prefix'
 	PathSuffix string `json:"path_suffix" mapstructure:"path_suffix" structs:"path_suffix"`
+
+	// If set, controls whether created tokens are marked as being renewable
+	Renewable bool `json:"renewable" mapstructure:"renewable" structs:"renewable"`
 }
 
 type accessorEntry struct {

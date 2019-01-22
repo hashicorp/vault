@@ -88,9 +88,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		},
 		DisplayName: username,
 		LeaseOptions: logical.LeaseOptions{
-			TTL:       cfg.TTL,
-			MaxTTL:    cfg.MaxTTL,
-			Renewable: true,
+			TTL:    cfg.TTL,
+			MaxTTL: cfg.MaxTTL,
 		},
 		Alias: &logical.Alias{
 			Name: username,
