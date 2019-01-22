@@ -3,7 +3,6 @@ package ldap
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -76,8 +75,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	} else {
 		resp = &logical.Response{}
 	}
-
-	sort.Strings(policies)
 
 	auth := &logical.Auth{
 		Metadata: map[string]string{
