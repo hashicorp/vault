@@ -1183,7 +1183,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	case MarshalingTypeASN1:
 		encoded = base64.StdEncoding.EncodeToString(sig)
 	case MarshalingTypeJWS:
-		encoded = base64.URLEncoding.EncodeToString(sig)
+		encoded = base64.RawURLEncoding.EncodeToString(sig)
 	}
 	res := &SigningResult{
 		Signature: p.getVersionPrefix(ver) + encoded,
@@ -1231,7 +1231,7 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	case MarshalingTypeASN1:
 		sigBytes, err = base64.StdEncoding.DecodeString(splitVerSig[1])
 	case MarshalingTypeJWS:
-		sigBytes, err = base64.URLEncoding.DecodeString(splitVerSig[1])
+		sigBytes, err = base64.RawURLEncoding.DecodeString(splitVerSig[1])
 	default:
 		return false, errutil.UserError{Err: "requested marshaling type is invalid"}
 	}
