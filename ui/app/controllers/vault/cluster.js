@@ -7,6 +7,7 @@ export default Controller.extend({
   store: service(),
   media: service(),
   router: service(),
+  permissions: service(),
   namespaceService: service('namespace'),
 
   vaultVersion: service('version'),

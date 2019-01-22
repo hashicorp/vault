@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/builtin/credential/aws"
+	hclog "github.com/hashicorp/go-hclog"
+	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 )

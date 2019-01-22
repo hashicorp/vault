@@ -11,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
 
-	"github.com/armon/go-radix"
+	radix "github.com/armon/go-radix"
 )
 
 // Verify interfaces are satisfied

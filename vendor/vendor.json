@@ -1,6 +1,6 @@
 {
 	"comment": "",
-	"ignore": "test",
+	"ignore": "test github.com/apple/foundationdb/bindings/go/src/fdb/",
 	"package": [
 		{
 			"path": "appengine",
@@ -371,30 +371,6 @@
 			"path": "github.com/aliyun/alibaba-cloud-sdk-go/services/sts",
 			"revision": "c5825d35a94a5a25d936ebe6bed5779255d02cf4",
 			"revisionTime": "2018-10-12T12:19:43Z"
-		},
-		{
-			"checksumSHA1": "x5pRbco8m4cXGS3u/NnbzIZJ1Hg=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "VxeCD1wWXix+y3N83t8PHmXDTIo=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/directory",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "im/gTxCCpiNchCB6gNYZez+4pYI=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/subspace",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
-		},
-		{
-			"checksumSHA1": "EkxFtJERI529/WjdfgoLGzQ/yJM=",
-			"path": "github.com/apple/foundationdb/bindings/go/src/fdb/tuple",
-			"revision": "c255feb76dedc9ba15e2064bd78465166822c2b5",
-			"revisionTime": "2018-10-15T20:09:47Z"
 		},
 		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
@@ -1503,16 +1479,48 @@
 			"revisionTime": "2018-12-12T18:25:53Z"
 		},
 		{
-			"checksumSHA1": "0Uh543eKwac5M7mSsijM0GNekto=",
+			"checksumSHA1": "yhUUqN5rbEXnfI8WfGUofXToD+o=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "2236f141171e282e0d3d2c5bb6c695e4def5302f",
-			"revisionTime": "2018-11-06T19:05:20Z"
+			"revision": "9dbe04db0e34c9c3c75bedcdb16d8ff78f0c54bd",
+			"revisionTime": "2018-12-19T17:59:33Z"
 		},
 		{
 			"checksumSHA1": "ldkAQ1CpiAaQ9sti0qIch+UyRsI=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "2f1d1f20f75d5404f53b9edf6b53ed5505508675",
 			"revisionTime": "2018-10-12T17:50:58Z"
+		},
+		{
+			"checksumSHA1": "MUEiIhsVEYI4xI2TPCPElVLicEw=",
+			"path": "github.com/influxdata/influxdb/client/v2",
+			"revision": "cb03c542a4054f0f4d3dc13919d31c456bdb5c39",
+			"revisionTime": "2018-11-14T18:54:52Z",
+			"version": "v1.7.1",
+			"versionExact": "v1.7.1"
+		},
+		{
+			"checksumSHA1": "/SC4ZMeKnNqhuYDhWLZp+z4yeG8=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "9dff5f072fb7b0aab643c9e2338b52763f59b7b6",
+			"revisionTime": "2018-12-07T16:01:49Z"
+		},
+		{
+			"checksumSHA1": "Z0Bb5PWa5WL/j5Dm2KJCLGn1l7U=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "9dff5f072fb7b0aab643c9e2338b52763f59b7b6",
+			"revisionTime": "2018-12-07T16:01:49Z"
+		},
+		{
+			"checksumSHA1": "lDHmXNdRAl7aVdjAiPM8Y0SP5Vo=",
+			"path": "github.com/influxdata/platform/models",
+			"revision": "df0b084543160564b4afa50a944d3d20145f3120",
+			"revisionTime": "2018-12-08T01:46:35Z"
+		},
+		{
+			"checksumSHA1": "Z1jNHNivahCME1jnd0nsJ/rUpfc=",
+			"path": "github.com/influxdata/platform/pkg/escape",
+			"revision": "df0b084543160564b4afa50a944d3d20145f3120",
+			"revisionTime": "2018-12-08T01:46:35Z"
 		},
 		{
 			"checksumSHA1": "FHpNxGUqXNu02lBFaei16tXFhU0=",

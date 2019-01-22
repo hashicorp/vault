@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -23,7 +23,7 @@ import (
 )
 
 func connectToFoundationDB(clusterFile string) (*fdb.Database, error) {
-	if err := fdb.APIVersion(510); err != nil {
+	if err := fdb.APIVersion(520); err != nil {
 		return nil, errwrap.Wrapf("failed to set FDB API version: {{err}}", err)
 	}
 
@@ -112,7 +112,7 @@ func TestFoundationDBBackend(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
 	config := map[string]string{
 		"path":         topDir,
-		"api_version":  "510",
+		"api_version":  "520",
 		"cluster_file": clusterFile,
 	}
 

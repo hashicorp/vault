@@ -48,18 +48,17 @@ module('Integration | Component | auth form', function(hooks) {
 
   hooks.beforeEach(function() {
     this.owner.lookup('service:csp-event').attach();
-    component.setContext(this);
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
   });
 
   hooks.afterEach(function() {
     this.owner.lookup('service:csp-event').remove();
-    component.removeContext();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function(assert) {
+    this.owner.unregister('service:auth');
     this.owner.register('service:auth', authService);
     this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
@@ -156,6 +155,7 @@ module('Integration | Component | auth form', function(hooks) {
   });
 
   test('it calls authenticate with the correct path', async function(assert) {
+    this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
     let authSpy = sinon.spy(this.get('auth'), 'authenticate');

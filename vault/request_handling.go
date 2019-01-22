@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
@@ -577,7 +577,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		newCtErr, cgResp, cgAuth, cgRetErr := checkNeedsCG(ctx, c, req, auth, ctErr, nonHMACReqDataKeys)
 		switch {
 		case newCtErr != nil:
-			ctErr = err
+			ctErr = newCtErr
 		case cgResp != nil || cgAuth != nil:
 			if cgRetErr != nil {
 				retErr = multierror.Append(retErr, cgRetErr)

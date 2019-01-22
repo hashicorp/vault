@@ -76,7 +76,7 @@ func (s *Secret) HandleRenew(ctx context.Context, req *logical.Request) (*logica
 	return s.Renew(ctx, req, data)
 }
 
-// HandleRevoke is the request handler for renewing this secret.
+// HandleRevoke is the request handler for revoking this secret.
 func (s *Secret) HandleRevoke(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	data := &FieldData{
 		Raw:    req.Data,

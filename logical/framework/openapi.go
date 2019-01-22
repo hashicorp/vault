@@ -154,6 +154,7 @@ type OASSchema struct {
 	Items       *OASSchema            `json:"items,omitempty"`
 	Format      string                `json:"format,omitempty"`
 	Pattern     string                `json:"pattern,omitempty"`
+	Enum        []interface{}         `json:"enum,omitempty"`
 	Example     interface{}           `json:"example,omitempty"`
 	Deprecated  bool                  `json:"deprecated,omitempty"`
 }
@@ -257,6 +258,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				Schema: &OASSchema{
 					Type:    t.baseType,
 					Pattern: t.pattern,
+					Enum:    field.AllowedValues,
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -311,6 +313,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						Description: cleanString(field.Description),
 						Format:      openapiField.format,
 						Pattern:     openapiField.pattern,
+						Enum:        field.AllowedValues,
 						Deprecated:  field.Deprecated,
 					}
 					if openapiField.baseType == "array" {

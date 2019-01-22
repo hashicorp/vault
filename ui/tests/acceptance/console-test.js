@@ -45,4 +45,39 @@ module('Acceptance | console', function(hooks) {
       assert.equal(consoleEle.offsetTop, 0, 'fullscreen is aligned to the top of window');
     }, 300);
   });
+
+  test('array output is correctly formatted', async function(assert) {
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
+
+    // have to wrap in a later so that we can wait for the CSS transition to finish
+    await later(() => {
+      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
+
+      assert.notOk(consoleOut.includes('function(){'));
+      assert.equal(consoleOut, '["root"]');
+    }, 300);
+  });
+
+  test('number output is correctly formatted', async function(assert) {
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
+
+    // have to wrap in a later so that we can wait for the CSS transition to finish
+    await later(() => {
+      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
+      assert.ok(consoleOut.match(/^\d+$/).length == 1);
+    }, 300);
+  });
+
+  test('boolean output is correctly formatted', async function(assert) {
+    await consoleComponent.toggle();
+    await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
+
+    // have to wrap in a later so that we can wait for the CSS transition to finish
+    await later(() => {
+      let consoleOut = document.querySelector('.console-ui-output>pre').innerText;
+      assert.ok(consoleOut.match(/^(true|false)$/g).length == 1);
+    }, 300);
+  });
 });

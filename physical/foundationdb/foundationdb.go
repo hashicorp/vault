@@ -14,19 +14,22 @@ import (
 	"encoding/binary"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/physical"
 )
 
 const (
+	// The minimum acceptable API version
+	minAPIVersion = 520
+
 	// The namespace under our top directory containing keys only for list operations
 	metaKeysNamespace = "_meta-keys"
 
@@ -137,6 +140,22 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	dirPath := strings.Split(strings.Trim(path, "/"), "/")
 
+	// TLS support
+	tlsCertFile, hasCertFile := conf["tls_cert_file"]
+	tlsKeyFile, hasKeyFile := conf["tls_key_file"]
+	tlsCAFile, hasCAFile := conf["tls_ca_file"]
+
+	tlsEnabled := hasCertFile && hasKeyFile && hasCAFile
+
+	if (hasCertFile || hasKeyFile || hasCAFile) && !tlsEnabled {
+		return nil, fmt.Errorf("FoundationDB TLS requires all 3 of tls_cert_file, tls_key_file, and tls_ca_file")
+	}
+
+	tlsVerifyPeers, ok := conf["tls_verify_peers"]
+	if !ok && tlsEnabled {
+		return nil, fmt.Errorf("Required option tls_verify_peers not set in configuration")
+	}
+
 	// FoundationDB API version
 	fdbApiVersionStr, ok := conf["api_version"]
 	if !ok {
@@ -147,6 +166,12 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to parse fdb_api_version parameter: {{err}}", err)
 	}
+
+	// Check requested FDB API version against minimum required API version
+	if fdbApiVersionInt < minAPIVersion {
+		return nil, fmt.Errorf("Configured FoundationDB API version lower than minimum required version: %d < %d", fdbApiVersionInt, minAPIVersion)
+	}
+
 	logger.Debug("FoundationDB API version set", "fdb_api_version", fdbApiVersionInt)
 
 	// FoundationDB cluster file
@@ -172,6 +197,38 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	if err := fdb.APIVersion(fdbApiVersionInt); err != nil {
 		return nil, errwrap.Wrapf("failed to set FDB API version: {{err}}", err)
+	}
+
+	if tlsEnabled {
+		opts := fdb.Options()
+
+		tlsPassword, ok := conf["tls_password"]
+		if ok {
+			err := opts.SetTLSPassword(tlsPassword)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to set TLS password: {{err}}", err)
+			}
+		}
+
+		err := opts.SetTLSCaPath(tlsCAFile)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to set TLS CA bundle path: {{err}}", err)
+		}
+
+		err = opts.SetTLSCertPath(tlsCertFile)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to set TLS certificate path: {{err}}", err)
+		}
+
+		err = opts.SetTLSKeyPath(tlsKeyFile)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to set TLS key path: {{err}}", err)
+		}
+
+		err = opts.SetTLSVerifyPeers([]byte(tlsVerifyPeers))
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to set TLS peer verification criteria: {{err}}", err)
+		}
 	}
 
 	db, err := fdb.Open(fdbClusterFile, []byte("DB"))

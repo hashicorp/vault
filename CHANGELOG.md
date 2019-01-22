@@ -1,10 +1,77 @@
-## 1.0.2 (Unreleased)
+## Next
+
+BUG FIXES:
+
+ * storage/postgresql: The `Get` method will now return an Entry object with the
+   `Key` member correctly populated with the full path that was requested instead
+   of just the last path element [GH-6044].
+   
+IMPROVEMENTS:
+  * auth/jwt: The supported set of signing algorithms is now configurable
+    [JWT plugin GH-16].
+
+## 1.0.2 (January 15th, 2019)
+
+SECURITY:
+
+ * When creating a child token from a parent with `bound_cidrs`, the list of
+   CIDRs would not be propagated to the child token, allowing the child token
+   to be used from any address.
 
 CHANGES:
 
  * secret/aws: Role now returns `credential_type` instead of `credential_types`
    to match role input. If a legacy role that can supply more than one
    credential type, they will be concatenated with a `,`.
+ * physical/dynamodb, autoseal/aws: Instead of Vault performing environment
+   variable handling, and overriding static (config file) values if found, we
+   use the default AWS SDK env handling behavior, which also looks for
+   deprecated values. If you were previously providing both config values and
+   environment values, please ensure the config values are unset if you want to
+   use environment values.
+ * Namespaces (Enterprise): Providing "root" as the header value for
+   `X-Vault-Namespace` will perform the request on the root namespace. This is
+   equivalent to providing an empty value. Creating a namespace called "root" in
+   the root namespace is disallowed.
+
+FEATURES:
+ * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
+   users
+
+IMPROVEMENTS:
+
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   image ID [GH-5846]
+ * autoseal/gcpckms: Reduce the required permissions for the GCPCKMS autounseal 
+   [GH-5999]
+ * physical/foundationdb: TLS support added. [GH-5800]  
+
+BUG FIXES:
+
+ * api: Fix a couple of places where we were using the `LIST` HTTP verb
+   (necessary to get the right method into the wrapping lookup function) and
+   not then modifying it to a `GET`; although this is officially the verb Vault
+   uses for listing and it's fully legal to use custom verbs, since many WAFs
+   and API gateways choke on anything outside of RFC-standardized verbs we fall
+   back to `GET` [GH-6026]
+ * autoseal/aws: Fix reading session tokens when AWS access key/secret key are
+   also provided [GH-5965]
+ * command/operator/rekey: Fix help output showing `-delete-backup` when it
+   should show `-backup-delete` [GH-5981]
+ * core: Fix bound_cidrs not being propagated to child tokens
+ * replication: Correctly forward identity entity creation that originates from
+   performance standby nodes (Enterprise)
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
+ * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
+ * secret/pki: Fix reading certificates on windows with the file storage backend [GH-6013]
+ * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
+ * ui - fix disappearing nested secrets and go to the nearest parent when deleting
+   a secret - [GH-5976]
+ * ui - fix error where deleting an item via the context menu would fail if the 
+   item name contained dots [GH-6018]
+ * ui - allow saving of kv secret after an errored save attempt [GH-6022]
+ * ui - fix display of kv-v1 secret containing a key named "keys" [GH-6023]
 
 ## 1.0.1 (December 14th, 2018)
 
@@ -30,7 +97,8 @@ CHANGES:
 IMPROVEMENTS:
 
  * cli: Strip iTerm extra characters from password manager input [GH-5837]
- * command/server: Setting default kv engine to v1 in -dev mode can now be specified via -dev-kv-v1 [GH-5919]
+ * command/server: Setting default kv engine to v1 in -dev mode can now be
+   specified via -dev-kv-v1 [GH-5919]
  * core: Add operationId field to OpenAPI output [GH-5876]
  * ui: Added ability to search for Group and Policy IDs when creating Groups
    and Entities instead of typing them in manually

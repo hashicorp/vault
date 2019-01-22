@@ -167,7 +167,6 @@ If the client ID or secret are not present and Vault is running on and Azure VM,
 The following Azure roles and Azure Active Directory (AAD) permissions are required, regardless of which authentication method is used:
 
 - "Owner" role for the subscription scope
-- "Read and write directory data" permission in AAD
 - "Read and write all applications" permission in AAD
 
 These permissions can be configured through the Azure Portal, CLI tool, or PowerShell.

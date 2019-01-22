@@ -12,7 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	"github.com/joyent/triton-go"
+	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	tt "github.com/joyent/triton-go/errors"
 	"github.com/joyent/triton-go/storage"
