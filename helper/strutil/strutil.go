@@ -301,7 +301,9 @@ func EquivalentSlices(a, b []string) bool {
 	return true
 }
 
-// EqualStringMaps tests whether two map[string]string objects are equal
+// EqualStringMaps tests whether two map[string]string objects are equal.
+// Equal means both maps have the same sets of keys and values. This function
+// is 6-10x faster than a call to reflect.DeepEqual().
 func EqualStringMaps(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false

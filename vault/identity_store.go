@@ -435,7 +435,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	if err != nil {
 		return nil, err
 	}
-	if entity != nil && findAliasChanged(entity, alias) == -1 {
+	if entity != nil && changedAliasIndex(entity, alias) == -1 {
 		return entity, nil
 	}
 
@@ -452,7 +452,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, err
 	}
 	if entity != nil {
-		idx := findAliasChanged(entity, alias)
+		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
 			return entity, nil
 		}
@@ -504,11 +504,11 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	return entity, nil
 }
 
-// findAliasChanged searches an entity for changed alias metadata.
+// changedAliasIndex searches an entity for changed alias metadata.
 //
 // If a match is found, the changed alias's index is returned. If no alias
 // names match or no metadata is different, -1 is returned.
-func findAliasChanged(entity *identity.Entity, alias *logical.Alias) int {
+func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
 	for i, a := range entity.Aliases {
 		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
 			return i
