@@ -164,6 +164,9 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	if t.TTL < 0 {
 		return errors.New("'ttl' cannot be negative")
 	}
+	if t.TTL > 0 && t.MaxTTL > 0 && t.MaxTTL > t.TTL {
+		return errors.New("'ttl' cannot be greater than 'max_ttl'")
+	}
 
 	return nil
 }
