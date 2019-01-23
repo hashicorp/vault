@@ -10,6 +10,9 @@ IMPROVEMENTS:
 
  * auth/jwt: The supported set of signing algorithms is now configurable [JWT
    plugin GH-16]
+ * core: When starting from an uninitialized state, HA nodes will now attempt
+   to auto-unseal using a configured auto-unseal mechanism after the active
+   node initializes Vault [GH-6039]
  * secret/transit: ECDSA signatures can now be marshaled in JWS-compatible
    fashion [GH-6077]
  * storage/etcd: Support SRV service names [GH-6087]
