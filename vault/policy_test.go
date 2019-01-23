@@ -108,7 +108,7 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	expect := []*PathRules{
-		&PathRules{
+		{
 			Path:   "",
 			Policy: "deny",
 			Capabilities: []string{
@@ -117,7 +117,7 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{CapabilitiesBitmap: DenyCapabilityInt},
 			IsPrefix:    true,
 		},
-		&PathRules{
+		{
 			Path:   "stage/",
 			Policy: "sudo",
 			Capabilities: []string{
@@ -133,7 +133,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: true,
 		},
-		&PathRules{
+		{
 			Path:   "prod/version",
 			Policy: "read",
 			Capabilities: []string{
@@ -143,7 +143,7 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
 			IsPrefix:    false,
 		},
-		&PathRules{
+		{
 			Path:   "foo/bar",
 			Policy: "read",
 			Capabilities: []string{
@@ -159,7 +159,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -175,7 +175,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -189,7 +189,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "baz/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -203,7 +203,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "biz/bar",
 			Policy: "",
 			Capabilities: []string{
@@ -219,7 +219,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "test/types",
 			Policy: "",
 			Capabilities: []string{
@@ -235,7 +235,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "test/req",
 			Policy: "",
 			Capabilities: []string{
@@ -249,7 +249,7 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			IsPrefix: false,
 		},
-		&PathRules{
+		{
 			Path:   "test/mfa",
 			Policy: "",
 			Capabilities: []string{
