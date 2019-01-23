@@ -109,7 +109,7 @@ func TestPolicy_Parse(t *testing.T) {
 
 	expect := []*PathRules{
 		&PathRules{
-			Prefix: "",
+			Path:   "",
 			Policy: "deny",
 			Capabilities: []string{
 				"deny",
@@ -118,7 +118,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix:    true,
 		},
 		&PathRules{
-			Prefix: "stage/",
+			Path:   "stage/",
 			Policy: "sudo",
 			Capabilities: []string{
 				"create",
@@ -134,7 +134,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: true,
 		},
 		&PathRules{
-			Prefix: "prod/version",
+			Path:   "prod/version",
 			Policy: "read",
 			Capabilities: []string{
 				"read",
@@ -144,7 +144,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix:    false,
 		},
 		&PathRules{
-			Prefix: "foo/bar",
+			Path:   "foo/bar",
 			Policy: "read",
 			Capabilities: []string{
 				"read",
@@ -160,7 +160,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "foo/bar",
+			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -176,7 +176,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "foo/bar",
+			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -190,7 +190,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "baz/bar",
+			Path:   "baz/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -204,7 +204,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "biz/bar",
+			Path:   "biz/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -220,7 +220,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "test/types",
+			Path:   "test/types",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -236,7 +236,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "test/req",
+			Path:   "test/req",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -250,7 +250,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		&PathRules{
-			Prefix: "test/mfa",
+			Path:   "test/mfa",
 			Policy: "",
 			Capabilities: []string{
 				"create",
