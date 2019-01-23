@@ -373,6 +373,12 @@
 			"revisionTime": "2018-10-12T12:19:43Z"
 		},
 		{
+			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
+			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
+			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
+			"revisionTime": "2018-06-15T12:55:16Z"
+		},
+		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "f0300d1749da6fa982027e449ec0c7a145510c3c",
@@ -2233,12 +2239,6 @@
 			"path": "github.com/tv42/httpunix",
 			"revision": "b75d8614f926c077e48d85f1f8f7885b758c6225",
 			"revisionTime": "2015-04-27T01:28:21Z"
-		},
-		{
-			"checksumSHA1": "q8085xZyD5NbnWnP16jVxjT/ia8=",
-			"path": "github.com/tyrannosaurus-becks/aliyun-oss-go-sdk/oss",
-			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
-			"revisionTime": "2018-06-15T12:55:16Z"
 		},
 		{
 			"checksumSHA1": "2itAnNmxls3SdlIGdm22djyp9IY=",
