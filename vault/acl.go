@@ -22,8 +22,8 @@ type ACL struct {
 	// exactRules contains the path policies that are exact
 	exactRules *radix.Tree
 
-	// globRules contains the path policies that glob
-	globRules *radix.Tree
+	// prefixRules contains the path policies that are a prefix
+	prefixRules *radix.Tree
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -58,9 +58,9 @@ type ACLResults struct {
 func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
-		exactRules: radix.New(),
-		globRules:  radix.New(),
-		root:       false,
+		exactRules:  radix.New(),
+		prefixRules: radix.New(),
+		root:        false,
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -102,8 +102,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		for _, pc := range policy.Paths {
 			// Check which tree to use
 			tree := a.exactRules
-			if pc.Glob {
-				tree = a.globRules
+			if pc.IsPrefix {
+				tree = a.prefixRules
 			}
 
 			// Check for an existing policy
@@ -335,7 +335,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 
 	// Find a glob rule, default deny if no match
-	_, raw, ok = a.globRules.LongestPrefix(path)
+	_, raw, ok = a.prefixRules.LongestPrefix(path)
 	if !ok {
 		return
 	}
