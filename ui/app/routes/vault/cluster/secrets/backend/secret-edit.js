@@ -5,6 +5,7 @@ import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import { combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
@@ -55,11 +56,12 @@ export default Route.extend(UnloadModelRoute, {
     let modelType = this.modelType(backend, secret);
     let name = `model:${modelType}`;
     let owner = getOwner(this);
-    return this.pathHelp.getAttrs(modelType, backend).then(attrs => {
+    return this.pathHelp.getProps(modelType, backend).then(props => {
       let newModel = owner.factoryFor(name).class;
       if (owner.hasRegistration(name) && !newModel.merged) {
         //combine them
-        // TODO - this doesn't merge attributes
+        let attrs = combineAttributes(newModel.attributes, props);
+        debugger; //eslint-disable-line
         newModel = newModel.extend(attrs);
       } else {
         //generate a whole new model
