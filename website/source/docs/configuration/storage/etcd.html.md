@@ -41,6 +41,10 @@ storage "etcd" {
   query for SRV records describing cluster endpoints. This can also be provided
   via the environment variable `ETCD_DISCOVERY_SRV`.
 
+- `discovery_srv_name` `(string: "vault")` - Specifies the service name to use
+  when querying for SRV records describing cluster endpoints. This can also be
+  provided via the environment variable `ETCD_DISCOVERY_SRV_NAME`.
+
 - `etcd_api` `(string: "<varies>")` – Specifies the version of the API to
   communicate with. By default, this is derived automatically. If the cluster
   version is 3.1+ and there has been no data written using the v2 API, the
