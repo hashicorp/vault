@@ -233,6 +233,8 @@ export default Component.extend(DEFAULTS, {
     }
     let { namespace, path, state, code } = JSON.parse(event.newValue);
     this.getWindow().localStorage.removeItem('oidcState');
+    yield timeout(1000);
+    window.focus();
     this.closeWindow(oidcWindow);
     if (!path || !state || !code) {
       return this.handleOIDCError('missingParams');
