@@ -107,13 +107,13 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 
 			// Check for an existing policy
-			raw, ok := tree.Get(pc.Prefix)
+			raw, ok := tree.Get(pc.Path)
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
 					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
 				}
-				tree.Insert(pc.Prefix, clonedPerms)
+				tree.Insert(pc.Path, clonedPerms)
 				continue
 			}
 
@@ -242,7 +242,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 
 		INSERT:
-			tree.Insert(pc.Prefix, existingPerms)
+			tree.Insert(pc.Path, existingPerms)
 		}
 	}
 	return a, nil
