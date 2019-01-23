@@ -825,6 +825,12 @@ supports signing.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also change the output encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Payload
 
@@ -900,6 +906,13 @@ data.
 
     - `pss`
     - `pkcs1v15`
+
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature was originally marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also expect the input encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Payload
 
