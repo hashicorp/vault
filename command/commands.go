@@ -244,6 +244,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"browse": func() (cli.Command, error) {
+			return &BrowseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
 				BaseCommand: getBaseCommand(),
