@@ -47,8 +47,8 @@ create the database credential:
     ```text
     $ vault write database/roles/my-role \
         db_name=my-influxdb-database \
-        creation_statements=CREATE USER "{{username}}" WITH PASSWORD '{{password}}'; \
-             GRANT ALL ON "vault" TO "{{username}}";" \
+        creation_statements="CREATE USER \"{{username}}\" WITH PASSWORD '{{password}}'; \
+             GRANT ALL ON \"vault\" TO \"{{username}}\";" \
         default_ttl="1h" \
         max_ttl="24h"
     Success! Data written to: database/roles/my-role

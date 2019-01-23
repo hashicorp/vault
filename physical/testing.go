@@ -103,6 +103,15 @@ func ExerciseBackend(t testing.TB, b Backend) {
 		t.Fatalf("nested put failed: %v", err)
 	}
 
+	// Get should work
+	out, err = b.Get(context.Background(), "foo/bar")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if !reflect.DeepEqual(out, e) {
+		t.Errorf("bad: %v expected: %v", out, e)
+	}
+
 	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("list multi failed: %v", err)

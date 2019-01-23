@@ -2846,7 +2846,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, ns.Path+me.Path)
+			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
 		}
 
 		return false
@@ -2854,7 +2854,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				secretMounts[entry.Path] = mountInfo(entry)
@@ -2871,7 +2871,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				authMounts[entry.Path] = mountInfo(entry)

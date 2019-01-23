@@ -373,6 +373,12 @@
 			"revisionTime": "2018-10-12T12:19:43Z"
 		},
 		{
+			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
+			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
+			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
+			"revisionTime": "2018-06-15T12:55:16Z"
+		},
+		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "f0300d1749da6fa982027e449ec0c7a145510c3c",
@@ -1479,10 +1485,10 @@
 			"revisionTime": "2018-12-12T18:25:53Z"
 		},
 		{
-			"checksumSHA1": "0Uh543eKwac5M7mSsijM0GNekto=",
+			"checksumSHA1": "yhUUqN5rbEXnfI8WfGUofXToD+o=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "2236f141171e282e0d3d2c5bb6c695e4def5302f",
-			"revisionTime": "2018-11-06T19:05:20Z"
+			"revision": "9dbe04db0e34c9c3c75bedcdb16d8ff78f0c54bd",
+			"revisionTime": "2018-12-19T17:59:33Z"
 		},
 		{
 			"checksumSHA1": "ldkAQ1CpiAaQ9sti0qIch+UyRsI=",
@@ -2233,12 +2239,6 @@
 			"path": "github.com/tv42/httpunix",
 			"revision": "b75d8614f926c077e48d85f1f8f7885b758c6225",
 			"revisionTime": "2015-04-27T01:28:21Z"
-		},
-		{
-			"checksumSHA1": "q8085xZyD5NbnWnP16jVxjT/ia8=",
-			"path": "github.com/tyrannosaurus-becks/aliyun-oss-go-sdk/oss",
-			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
-			"revisionTime": "2018-06-15T12:55:16Z"
 		},
 		{
 			"checksumSHA1": "2itAnNmxls3SdlIGdm22djyp9IY=",

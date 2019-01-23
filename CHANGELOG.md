@@ -1,4 +1,22 @@
-## 1.0.2 (Unreleased)
+## Next
+
+BUG FIXES:
+
+ * storage/postgresql: The `Get` method will now return an Entry object with the
+   `Key` member correctly populated with the full path that was requested instead
+   of just the last path element [GH-6044].
+   
+IMPROVEMENTS:
+  * auth/jwt: The supported set of signing algorithms is now configurable
+    [JWT plugin GH-16].
+
+## 1.0.2 (January 15th, 2019)
+
+SECURITY:
+
+ * When creating a child token from a parent with `bound_cidrs`, the list of
+   CIDRs would not be propagated to the child token, allowing the child token
+   to be used from any address.
 
 CHANGES:
 
@@ -40,11 +58,13 @@ BUG FIXES:
    also provided [GH-5965]
  * command/operator/rekey: Fix help output showing `-delete-backup` when it
    should show `-backup-delete` [GH-5981]
- * secret/aws: Make input `credential_type` match the output type (string, not
-   array) [GH-5972]
+ * core: Fix bound_cidrs not being propagated to child tokens
  * replication: Correctly forward identity entity creation that originates from
    performance standby nodes (Enterprise)
+ * secret/aws: Make input `credential_type` match the output type (string, not
+   array) [GH-5972]
  * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
+ * secret/pki: Fix reading certificates on windows with the file storage backend [GH-6013]
  * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
  * ui - fix disappearing nested secrets and go to the nearest parent when deleting
    a secret - [GH-5976]

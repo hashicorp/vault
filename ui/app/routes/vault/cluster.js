@@ -13,6 +13,7 @@ const POLL_INTERVAL_MS = 10000;
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   namespaceService: service('namespace'),
   version: service(),
+  permissions: service(),
   store: service(),
   auth: service(),
   currentCluster: service(),
@@ -58,6 +59,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const id = this.getClusterId(params);
     if (id) {
       this.get('auth').setCluster(id);
+      this.get('permissions').getPaths.perform();
       return this.get('version').fetchFeatures();
     } else {
       return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });

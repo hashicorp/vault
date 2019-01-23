@@ -63,7 +63,8 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin. Both of these will be run in metadata mode.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+
 	{
 		// Attempt to run as database plugin
 		client, err := dbplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
@@ -71,6 +72,8 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 			// Close the client and cleanup the plugin process
 			client.Close()
 			return consts.PluginTypeDatabase, nil
+		} else {
+			logger.Warn(fmt.Sprintf("received %s attempting as db plugin, attempting as auth/secret plugin", err))
 		}
 	}
 
@@ -92,6 +95,9 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pl
 			case logical.TypeLogical:
 				return consts.PluginTypeSecrets, nil
 			}
+			logger.Warn(fmt.Sprintf("unknown backendType of %s", backendType))
+		} else {
+			logger.Warn(fmt.Sprintf("received %s attempting as an auth/secret plugin, continuing", err))
 		}
 	}
 
@@ -141,7 +147,7 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		cmdOld := plugin.Command
 		plugin.Command = filepath.Join(c.directory, plugin.Command)
 
-		pluginType, err := c.getPluginTypeFromUnknown(ctx, plugin)
+		pluginType, err := c.getPluginTypeFromUnknown(ctx, logger, plugin)
 		if err != nil {
 			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
 			continue
@@ -269,8 +275,11 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 			Builtin: false,
 		}
 
-		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
-		if err != nil || pluginType == consts.PluginTypeUnknown {
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+		if err != nil {
+			return err
+		}
+		if pluginType == consts.PluginTypeUnknown {
 			return ErrPluginBadType
 		}
 	}

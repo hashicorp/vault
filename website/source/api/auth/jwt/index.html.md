@@ -34,6 +34,7 @@ set.
 - `oidc_discovery_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.
 - `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with `oidc_discovery_url`.
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
+- `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7))
 
 ### Sample Payload
 
