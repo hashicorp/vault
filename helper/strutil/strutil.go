@@ -301,6 +301,24 @@ func EquivalentSlices(a, b []string) bool {
 	return true
 }
 
+// EqualStringMaps tests whether two map[string]string objects are equal.
+// Equal means both maps have the same sets of keys and values. This function
+// is 6-10x faster than a call to reflect.DeepEqual().
+func EqualStringMaps(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k := range a {
+		v, ok := b[k]
+		if !ok || a[k] != v {
+			return false
+		}
+	}
+
+	return true
+}
+
 // StrListDelete removes the first occurrence of the given item from the slice
 // of strings if the item exists.
 func StrListDelete(s []string, d string) []string {
