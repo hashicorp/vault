@@ -105,6 +105,7 @@ func (p *Policy) ShallowClone() *Policy {
 		Paths:          p.Paths,
 		Raw:            p.Raw,
 		Type:           p.Type,
+		Templated:      p.Templated,
 		namespace:      p.namespace,
 	}
 }
