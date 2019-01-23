@@ -6,6 +6,7 @@ import { FEATURE_MACHINE_TIME } from 'vault/helpers/wizard-constants';
 export default Component.extend({
   wizard: service(),
   version: service(),
+  permissions: service(),
 
   init() {
     this._super(...arguments);
@@ -13,11 +14,50 @@ export default Component.extend({
   },
 
   maybeHideFeatures() {
+    let features = this.get('allFeatures');
+    features.forEach(feat => {
+      feat.disabled = !this.get(`has${feat.name}Permission`);
+    });
+
     if (this.get('showReplication') === false) {
       let feature = this.get('allFeatures').findBy('key', 'replication');
       feature.show = false;
     }
   },
+
+  hasSecretsPermission: computed(function() {
+    return this.permissions.hasPermission('sys/mounts/example', 'update');
+  }),
+
+  hasAuthenticationPermission: computed(function() {
+    const canRead = this.permissions.hasPermission('sys/auth', 'read');
+
+    const capabilities = ['update', 'sudo'];
+    const canUpdateOrCreate = capabilities.every(capability => {
+      return this.permissions.hasPermission('sys/auth/example', capability);
+    });
+
+    return canRead && canUpdateOrCreate;
+  }),
+
+  hasPoliciesPermission: computed(function() {
+    return this.permissions.hasPermission('sys/policies/acl', 'list');
+  }),
+
+  hasReplicationPermission: computed(function() {
+    const PATHS = ['sys/replication/performance/primary/enable', 'sys/replication/dr/primary/enable'];
+    return PATHS.every(path => {
+      return this.permissions.hasPermission(path, 'update');
+    });
+  }),
+
+  hasToolsPermission: computed(function() {
+    const PATHS = ['sys/wrapping/wrap', 'sys/wrapping/lookup', 'sys/wrapping/unwrap', 'sys/wrapping/rewrap'];
+    return PATHS.every(path => {
+      return this.permissions.hasPermission(path, 'update');
+    });
+  }),
+
   estimatedTime: computed('selectedFeatures', function() {
     let time = 0;
     for (let feature of Object.keys(FEATURE_MACHINE_TIME)) {
@@ -44,7 +84,7 @@ export default Component.extend({
         steps: ['Enabling a secrets engine', 'Adding a secret'],
         selected: false,
         show: true,
-        permission: 'secrets',
+        disabled: false,
       },
       {
         key: 'authentication',
@@ -52,7 +92,7 @@ export default Component.extend({
         steps: ['Enabling an auth method', 'Managing your auth method'],
         selected: false,
         show: true,
-        permission: 'access',
+        disabled: false,
       },
       {
         key: 'policies',
@@ -65,7 +105,7 @@ export default Component.extend({
         ],
         selected: false,
         show: true,
-        permission: 'policies',
+        disabled: false,
       },
       {
         key: 'replication',
@@ -73,7 +113,7 @@ export default Component.extend({
         steps: ['Setting up replication', 'Your cluster information'],
         selected: false,
         show: true,
-        permission: 'status',
+        disabled: false,
       },
       {
         key: 'tools',
@@ -81,7 +121,7 @@ export default Component.extend({
         steps: ['Wrapping data', 'Lookup wrapped data', 'Rewrapping your data', 'Unwrapping your data'],
         selected: false,
         show: true,
-        permission: 'tools',
+        disabled: false,
       },
     ];
   }),
@@ -94,6 +134,10 @@ export default Component.extend({
     return this.get('allFeatures')
       .filterBy('selected')
       .mapBy('key');
+  }),
+
+  cannotStartWizard: computed('selectedFeatures', function() {
+    return !this.get('selectedFeatures').length;
   }),
 
   actions: {
