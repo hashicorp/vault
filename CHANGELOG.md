@@ -12,6 +12,7 @@ IMPROVEMENTS:
    plugin GH-16]
  * secret/transit: ECDSA signatures can now be marshaled in JWS-compatible
    fashion [GH-6077]
+ * storage/etcd: Support SRV service names [GH-6087]
 
 ## 1.0.2 (January 15th, 2019)
 
