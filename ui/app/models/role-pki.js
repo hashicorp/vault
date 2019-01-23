@@ -167,7 +167,7 @@ export default DS.Model.extend({
         ],
       },
       {
-        Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCA', 'policyIdentifiers'],
+        Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
 

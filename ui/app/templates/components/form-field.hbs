@@ -1,7 +1,12 @@
 {{#unless
   (or
-    (and attr.options.editType (not-eq attr.options.editType "textarea"))
     (eq attr.type "boolean")
+    (contains
+      attr.options.editType
+      (array
+        "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json"
+      )
+    )
   )
 }}
   <label for="{{attr.name}}" class="is-label">
@@ -16,6 +21,7 @@
   </label>
 {{/unless}}
 {{#if attr.options.possibleValues}}
+  {{log attr}}
   <div class="control is-expanded">
     <div class="select is-fullwidth">
       <select
@@ -124,9 +130,10 @@
   <MaskedInput
     @value={{or (get model valuePath) attr.options.defaultValue}}
     @placeholder=""
-    @allowCopy=true
-  />
-{{else if (or (eq attr.type 'number') (eq attr.type 'string'))}}
+    @allowCopy="true"
+   />
+
+{{else if (or (eq attr.type "number") (eq attr.type "string"))}}
   <div class="control">
     {{#if (eq attr.options.editType "textarea")}}
       <textarea
