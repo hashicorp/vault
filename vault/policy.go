@@ -115,7 +115,7 @@ type PathRules struct {
 	Prefix       string
 	Policy       string
 	Permissions  *ACLPermissions
-	Glob         bool
+	IsPrefix     bool
 	Capabilities []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
@@ -341,7 +341,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Strip the glob character if found
 		if strings.HasSuffix(pc.Prefix, "*") {
 			pc.Prefix = strings.TrimSuffix(pc.Prefix, "*")
-			pc.Glob = true
+			pc.IsPrefix = true
 		}
 
 		// Map old-style policies into capabilities
