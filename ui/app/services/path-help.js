@@ -20,11 +20,11 @@ export default Service.extend({
     });
   },
 
-  getAttrs(modelType, backend) {
+  getProps(modelType, backend) {
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
     let helpUrl = `/v1/${backend}/${path}/example?help=1`;
-    let wildcard = { roles: 'name', mounts: 'config' }[path];
+    let wildcard = { roles: 'name', mounts: 'config', sign: 'role', issue: 'role' }[path];
     return this.ajax(helpUrl, backend).then(help => {
       let props =
         help.openapi.paths[`/${path}/{${wildcard}}`].post.requestBody.content['application/json'].schema

@@ -5,9 +5,6 @@ import Route from '@ember/routing/route';
 export default Route.extend({
   flashMessages: service(),
   oldModel: null,
-  beforeModel(params) {
-    debugger; //eslint-disable-line
-  },
   model(params) {
     let { backend } = params;
     return this.store

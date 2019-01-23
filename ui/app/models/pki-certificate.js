@@ -36,24 +36,24 @@ export default DS.Model.extend({
     label: 'Common Name',
   }),
 
-  altNames: attr('string', {
-    label: 'DNS/Email Subject Alternative Names (SANs)',
-  }),
+  // altNames: attr('string', {
+  //   label: 'DNS/Email Subject Alternative Names (SANs)',
+  // }),
 
-  ipSans: attr('string', {
-    label: 'IP Subject Alternative Names (SANs)',
-  }),
-  otherSans: attr({
-    editType: 'stringArray',
-    label: 'Other SANs',
-    helpText:
-      'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
-  }),
+  // ipSans: attr('string', {
+  //   label: 'IP Subject Alternative Names (SANs)',
+  // }),
+  // otherSans: attr({
+  //   editType: 'stringArray',
+  //   label: 'Other SANs',
+  //   helpText:
+  //     'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
+  // }),
 
-  ttl: attr({
-    label: 'TTL',
-    editType: 'ttl',
-  }),
+  // ttl: attr({
+  //   label: 'TTL',
+  //   editType: 'ttl',
+  // }),
 
   format: attr('string', {
     defaultValue: 'pem',
