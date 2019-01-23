@@ -805,6 +805,12 @@
 			"revisionTime": "2018-10-03T07:59:58Z"
 		},
 		{
+			"checksumSHA1": "pop9HdnuvjAqCLhFZVmkrffixg4=",
+			"path": "github.com/coreos/etcd/pkg/transport",
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
+		},
+		{
 			"checksumSHA1": "3fbao10aFaGLkTcNIYanekXqO+g=",
 			"path": "github.com/coreos/go-oidc",
 			"revision": "1180514eaf4d9f38d0d19eef639a1d695e066e72",
