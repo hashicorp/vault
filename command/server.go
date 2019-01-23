@@ -949,10 +949,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 
 			if vault.IsFatalError(err) {
-				c.logger.Error(fmt.Sprintf("Error unsealing core", "error", err))
+				c.logger.Error("error unsealing core", "error", err)
 				return
 			} else {
-				c.logger.Warn(fmt.Sprintf("Failed to unseal core", "error" err))
+				c.logger.Warn("failed to unseal core", "error", err)
 			}
 
 			select {
