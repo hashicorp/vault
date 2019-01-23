@@ -365,28 +365,12 @@ func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 
 	blobInfo := &physical.EncryptedBlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
+		return errwrap.Wrapf("failed to proto decode recovery keys: {{err}}", err)
 	}
 
 	pt, err := d.Decrypt(ctx, blobInfo)
 	if err != nil {
-		return errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
-	}
-
-	// Check if provided key is same as the decrypted key
-	if subtle.ConstantTimeCompare(key, pt) != 1 {
-		// We may need to upgrade if the key is barrier-wrapped, so check
-		barrierDec, err := d.core.BarrierEncryptorAccess().Decrypt(ctx, recoveryKeyPath, pt)
-		if err == nil {
-			// If we hit this, it got barrier-wrapped, so we need to re-set the
-			// recovery key after unwrapping
-			err := d.SetRecoveryKey(ctx, barrierDec)
-			if err != nil {
-				return err
-			}
-		}
-		// Set pt to barrierDec for re-checking
-		pt = barrierDec
+		return errwrap.Wrapf("failed to decrypt encrypted recovery keys: {{err}}", err)
 	}
 
 	if subtle.ConstantTimeCompare(key, pt) != 1 {
