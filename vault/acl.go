@@ -341,6 +341,8 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 	path := ns.Path + req.Path
 
+	// The request path should take care of this already but this is useful for
+	// tests and as defense in depth
 	for {
 		if len(path) > 0 && path[0] == '/' {
 			path = path[1:]
@@ -375,16 +377,6 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 
 	for k := range a.globPaths {
-		parts := strings.SplitN(k, "*", 2)
-		if len(parts) < 2 {
-			// This should never happen because we only mark something as a
-			// glob path if there are at least two * chars
-			return
-		}
-		// If parts[0] is "" then it started with a glob
-		if parts[0] != "" && !strings.HasPrefix(path, parts[0]) {
-			continue
-		}
 		if glob.Glob(k, path) {
 			permissions = a.globPaths[k].(*ACLPermissions)
 			capabilities = permissions.CapabilitiesBitmap
