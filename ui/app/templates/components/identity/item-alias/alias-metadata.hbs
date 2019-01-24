@@ -6,26 +6,15 @@
           {{key}}
         </span>
       </div>
-      <div class="column is-5">
+      <div class="column is-flex">
         {{value}}
       </div>
       <div class="column has-text-right">
-        {{#if model.canEdit}}
-          {{identity/popup-metadata params=(array model key)}}
-        {{/if}}
       </div>
     </div>
   </div>
 {{else}}
   <EmptyState
-    @title="No metadata for {{model.name}} yet"
-    @message="You can store custom data that you want to associate with a {{lowercase (humanize model.identityType)}}. Edit this {{lowercase (humanize model.identityType)}} to get started."
-  >
-    {{#link-to "vault.cluster.access.identity.aliases.edit" model.id tagName="button" class="link"}}
-      Edit {{lowercase (humanize model.identityType)}}
-    {{/link-to}}
-    <LearnLink @path="/vault/identity-access-management/iam-identity">
-      Learn More
-    </LearnLink>
-  </EmptyState>
+    @title="No metadata associated with {{model.name}} yet"
+  />
 {{/each-in}}
