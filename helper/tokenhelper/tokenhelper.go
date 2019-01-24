@@ -22,6 +22,8 @@ type TokenParams struct {
 
 	MaxTTL time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
 
+	NoDefaultPolicy bool `json:"no_default_policy" mapstructure:"no_default_policy"`
+
 	// If non-zero, tokens created using this role will be able to be renewed
 	// forever, but will have a fixed renewal period of this value
 	Period time.Duration `json:"period" mapstructure:"period"`
@@ -70,6 +72,11 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Description: "The maximum lifetime of the generated token",
 		},
 
+		"no_default_policy": &framework.FieldSchema{
+			Type:        framework.TypeBool,
+			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+		},
+
 		"period": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
@@ -112,6 +119,10 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	}
 	if t.MaxTTL < 0 {
 		return errors.New("'max_ttl' cannot be negative")
+	}
+
+	if noDefaultRaw, ok := d.GetOk("no_default_policy"); ok {
+		t.NoDefaultPolicy = noDefaultRaw.(bool)
 	}
 
 	if periodRaw, ok := d.GetOk("period"); ok {
@@ -162,6 +173,7 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["bound_cidrs"] = t.BoundCIDRs
 	m["explicit_max_ttl"] = t.ExplicitMaxTTL.Seconds()
 	m["max_ttl"] = t.MaxTTL.Seconds()
+	m["no_default_policy"] = t.NoDefaultPolicy
 	m["period"] = t.Period.Seconds()
 	m["policies"] = t.Policies
 	m["token_type"] = t.TokenType.String()
@@ -172,6 +184,7 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.BoundCIDRs = t.BoundCIDRs
 	auth.ExplicitMaxTTL = t.ExplicitMaxTTL
 	auth.MaxTTL = t.MaxTTL
+	auth.NoDefaultPolicy = t.NoDefaultPolicy
 	auth.Period = t.Period
 	auth.Policies = t.Policies
 	auth.TokenType = t.TokenType
