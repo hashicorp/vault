@@ -34,6 +34,10 @@ export default ApplicationAdapter.extend({
     return url;
   },
 
+  pathForType() {
+    return 'mounts';
+  },
+
   optionsForQuery(id, action, wrapTTL) {
     let data = {};
     if (action === 'query') {

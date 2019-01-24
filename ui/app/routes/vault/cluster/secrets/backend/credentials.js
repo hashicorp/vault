@@ -29,7 +29,6 @@ export default Route.extend({
   },
 
   buildModel(action) {
-    debugger; //eslint-disable-line
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(action);
     let name = `model:${modelType}`;
@@ -39,7 +38,6 @@ export default Route.extend({
       if (owner.hasRegistration(name) && !newModel.merged) {
         //combine them
         let attrs = combineAttributes(newModel.attributes, props);
-        debugger; //eslint-disable-line
         newModel = newModel.extend(attrs);
       } else {
         //generate a whole new model

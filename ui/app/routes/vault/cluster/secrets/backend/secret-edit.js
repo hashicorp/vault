@@ -54,22 +54,30 @@ export default Route.extend(UnloadModelRoute, {
   buildModel(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, secret);
+    if (modelType in ['secret', 'secret-v2']) {
+      return;
+    }
     let name = `model:${modelType}`;
     let owner = getOwner(this);
-    return this.pathHelp.getProps(modelType, backend).then(props => {
-      let newModel = owner.factoryFor(name).class;
-      if (owner.hasRegistration(name) && !newModel.merged) {
-        //combine them
-        let attrs = combineAttributes(newModel.attributes, props);
+    return this.pathHelp
+      .getProps(modelType, backend)
+      .then(props => {
+        let newModel = owner.factoryFor(name).class;
+        if (owner.hasRegistration(name) && !newModel.merged) {
+          //combine them
+          debugger; //eslint-disable-line
+          let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+          newModel = newModel.extend(attrs, { newFields });
+        } else {
+          //generate a whole new model
+        }
+        newModel.reopenClass({ merged: true });
+        owner.unregister(name);
+        owner.register(name, newModel);
+      })
+      .catch(e => {
         debugger; //eslint-disable-line
-        newModel = newModel.extend(attrs);
-      } else {
-        //generate a whole new model
-      }
-      newModel.reopenClass({ merged: true });
-      owner.unregister(name);
-      owner.register(name, newModel);
-    });
+      });
   },
 
   modelType(backend, secret) {

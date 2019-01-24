@@ -40,26 +40,26 @@ export default DS.Model.extend({
     defaultValue: 'iam_user',
     possibleValues: CREDENTIAL_TYPES,
   }),
-  roleArns: attr({
-    editType: 'stringArray',
-    label: 'Role ARNs',
-  }),
-  policyArns: attr({
-    editType: 'stringArray',
-    label: 'Policy ARNs',
-  }),
+  // roleArns: attr({
+  //   editType: 'stringArray',
+  //   label: 'Role ARNs',
+  // }),
+  // policyArns: attr({
+  //   editType: 'stringArray',
+  //   label: 'Policy ARNs',
+  // }),
   policyDocument: attr('string', {
     editType: 'json',
   }),
-  fields: computed('credentialType', function() {
+  fields: computed('credentialType', 'newFields', function() {
     let keys;
-    let credentialType = this.get('credentialType');
+    let credentialType = this.credentialType;
     let keysForType = {
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
     };
-    keys = keysForType[credentialType];
+    keys = keysForType[credentialType].concat(this.newFields || []);
     return expandAttributeMeta(this, keys);
   }),
 
