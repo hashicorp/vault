@@ -1,0 +1,165 @@
+#page-home {
+  // Override the main header
+  #header {
+    background: $home-header-background-color;
+
+    .navbar-toggle {
+      .icon-bar {
+        border: 1px solid $home-header-link-color;
+      }
+    }
+
+    .navbar-brand {
+      a {
+        svg.logo {
+          @extend svg.logo.color;
+        }
+      }
+    }
+
+    ul.nav {
+      li {
+        a {
+          color: $home-header-link-color;
+
+          &:hover, &:focus, &:active {
+            background-color: transparent;
+            color: $home-header-link-color-hover;
+
+            svg {
+              fill: $home-header-link-color-hover;
+            }
+          }
+
+          svg {
+            fill: $home-header-link-color;
+          }
+        }
+      }
+    }
+  }
+
+  .button {
+    &.terminal {
+      padding-left: 52px;
+      padding-right: 30px;
+      margin-left: 12px;
+      background-image: image-url('icon-terminal.png');
+      background-position: 16px center;
+      background-repeat: no-repeat;
+      @include img-retina("icon-terminal.png", "icon-terminal@2x.png", 26px, 25px);
+    }
+
+    &.started {
+      margin-bottom: 12px;
+    }
+  }
+
+  #container {
+    margin-top: 140px;
+    position: relative;
+    text-align: center;
+    z-index: 1;
+
+    #tag-line {
+      display: block;
+      font-size: 24px;
+      font-weight: 300;
+      margin: 15px 0 40px 0;
+    }
+
+    #diagram {
+      background-image: image-url("hero@2x.png");
+      background-origin: content-box;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      display: block;
+      margin: 60px 0;
+      padding: 15px;
+
+      height: 193px;
+      width: 100%;
+    }
+
+    h2.features-header {
+      color: $vault-blue;
+      display: inline-block;
+      font-size: 44px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin: 120px auto 40px auto;
+      text-transform: uppercase;
+    }
+
+    h3.feature-header {
+      color: $black;
+      font-size: 36px;
+      font-weight: 300;
+      margin: 30px 0;
+      text-transform: none;
+    }
+
+    p {
+      font-size: 18px;
+      font-weight: 300;
+      line-height: 36px;
+      margin: 25px 0;
+      padding: 15px;
+      text-align: left;
+    }
+
+    .feature {
+      margin-bottom: 150px;
+
+      .graphic {
+        background-origin: content-box;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        display: block;
+        margin: 60px 0;
+        padding: 15px;
+
+        height: 160px;
+        width: 100%;
+      }
+
+      &#crud {
+        .graphic {
+          background-image: image-url("graphic-crud@2x.png");
+        }
+      }
+
+      &#key {
+        .graphic {
+          background-image: image-url("graphic-key@2x.png");
+        }
+      }
+
+      &#audit {
+        .graphic {
+          background-image: image-url("graphic-audit@2x.png");
+        }
+      }
+    }
+
+    #cta {
+      @include img-retina("bg-icons.png", "bg-icons@2x.png", 669px, 260px);
+      background: image-url("bg-icons.png") center center no-repeat;
+      background-position: center center;
+      border-top: 1px solid $gray-darker;
+      border-bottom: 1px solid $gray-darker;
+      padding: 140px 0;
+
+      p {
+        margin-top: 10px;
+        color: $black;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.5esm;
+        text-align: center;
+      }
+    }
+  }
+}

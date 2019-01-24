@@ -1,39 +1,30 @@
-set :product_name, "Vault"
 set :base_url, "https://www.vaultproject.io/"
-
-# Middleware for rendering preact components
-use ReshapeMiddleware, component_file: "assets/reshape.js"
 
 activate :hashicorp do |h|
   h.name         = "vault"
-  h.version      = "1.0.2"
+  h.version      = "0.11.3"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
-  h.releases_enabled = true
-  h.datocms_api_key = '78d2968c99a076419fbb'
 end
 
-# Netlify redirects/headers
-proxy '_redirects', 'netlify-redirects', ignore: true
-
 helpers do
-  # Formats and filters a category of docs for the sidebar component
-  def get_sidebar_data(category)
-    sitemap.resources.select { |resource|
-      !!Regexp.new("^#{category}").match(resource.path)
-    }.map { |resource|
-      {
-        path: resource.path,
-        data: resource.data.to_hash.tap { |a| a.delete 'description'; a }
-      }
-    }
+  # Returns a segment tracking ID such that local development is not
+  # tracked to production systems.
+  def segmentId()
+    if (ENV['ENV'] == 'production')
+      'OdSFDq9PfujQpmkZf03dFpcUlywme4sC'
+    else
+      '0EXTgkNx0Ydje2PGXVbRhpKKoe5wtzcE'
+    end
   end
 
   # Returns the FQDN of the image URL.
+  #
   # @param [String] path
+  #
   # @return [String]
   def image_url(path)
-    File.join(config[:base_url], "/img/#{path}")
+    File.join(base_url, image_path(path))
   end
 
   # Get the title for the page.
@@ -56,7 +47,6 @@ helpers do
   # @return [String]
   def description_for(page)
     description = (page.data.description || "")
-      .gsub('"', '')
       .gsub(/\n+/, ' ')
       .squeeze(' ')
 
