@@ -306,6 +306,12 @@ func TestLoadConfigDir(t *testing.T) {
 		DisableCache: true,
 		DisableMlock: true,
 
+		DisableClustering:    false,
+		DisableClusteringRaw: false,
+
+		APIAddr:     "https://vault.local",
+		ClusterAddr: "https://127.0.0.1:444",
+
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
@@ -320,7 +326,9 @@ func TestLoadConfigDir(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
-			DisableClustering: true,
+			RedirectAddr:      "https://vault.local",
+			ClusterAddr:       "https://127.0.0.1:444",
+			DisableClustering: false,
 		},
 
 		EnableUI: true,

@@ -142,7 +142,7 @@ func (s *GCPCKMSSeal) SetConfig(config map[string]string) (map[string]string, er
 		// Make sure user has permissions to encrypt (also checks if key exists)
 		ctx := context.Background()
 		if _, err := s.Encrypt(ctx, []byte("vault-gcpckms-test")); err != nil {
-			return nil, errwrap.Wrapf("failed to encryot with GCP CKMS - ensure the "+
+			return nil, errwrap.Wrapf("failed to encrypt with GCP CKMS - ensure the "+
 				"key exists and the service account has at least "+
 				"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: {{err}}", err)
 		}

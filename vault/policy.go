@@ -105,16 +105,17 @@ func (p *Policy) ShallowClone() *Policy {
 		Paths:          p.Paths,
 		Raw:            p.Raw,
 		Type:           p.Type,
+		Templated:      p.Templated,
 		namespace:      p.namespace,
 	}
 }
 
 // PathRules represents a policy for a path in the namespace.
 type PathRules struct {
-	Prefix       string
+	Path         string
 	Policy       string
 	Permissions  *ACLPermissions
-	Glob         bool
+	IsPrefix     bool
 	Capabilities []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
@@ -323,24 +324,24 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// allocate memory so that DecodeObject can initialize the ACLPermissions struct
 		pc.Permissions = new(ACLPermissions)
 
-		pc.Prefix = key
+		pc.Path = key
 
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
 		// Strip a leading '/' as paths in Vault start after the / in the API path
-		if len(pc.Prefix) > 0 && pc.Prefix[0] == '/' {
-			pc.Prefix = pc.Prefix[1:]
+		if len(pc.Path) > 0 && pc.Path[0] == '/' {
+			pc.Path = pc.Path[1:]
 		}
 
 		// Ensure we are using the full request path internally
-		pc.Prefix = result.namespace.Path + pc.Prefix
+		pc.Path = result.namespace.Path + pc.Path
 
 		// Strip the glob character if found
-		if strings.HasSuffix(pc.Prefix, "*") {
-			pc.Prefix = strings.TrimSuffix(pc.Prefix, "*")
-			pc.Glob = true
+		if strings.HasSuffix(pc.Path, "*") {
+			pc.Path = strings.TrimSuffix(pc.Path, "*")
+			pc.IsPrefix = true
 		}
 
 		// Map old-style policies into capabilities
