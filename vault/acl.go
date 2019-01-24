@@ -373,7 +373,8 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 			// glob path if there are at least two * chars
 			return
 		}
-		if parts[0] == "" || !strings.HasPrefix(path, parts[0]) {
+		// If parts[0] is "" then it started with a glob
+		if parts[0] != "" && !strings.HasPrefix(path, parts[0]) {
 			continue
 		}
 		if glob.Glob(k, path) {

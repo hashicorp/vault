@@ -350,16 +350,11 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				// Strip the glob character if found
 				pc.Path = strings.TrimSuffix(pc.Path, "*")
 				pc.IsPrefix = true
-			case strings.HasPrefix(pc.Path, "*"):
-				return fmt.Errorf("path %q: paths cannot start with a glob", key)
 			default:
 				pc.HasGlobs = true
 			}
 
 		default:
-			if strings.HasPrefix(pc.Path, "*") {
-				return fmt.Errorf("path %q: paths cannot start with a glob", key)
-			}
 			pc.HasGlobs = true
 		}
 

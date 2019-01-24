@@ -239,9 +239,13 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.CreateOperation, "foo/bar", true, true},
 
 		{logical.ReadOperation, "prod/az/foo", true, false},
-		{logical.ReadOperation, "goop/ns1/ns2/az/boo", false, false},
+		{logical.ReadOperation, "goop/ns1/ns2/az/doo", false, false},
 		{logical.ReadOperation, "goop/ns1/ns2/az/foo", true, false},
 		{logical.ReadOperation, "goob/ns1/ns2/az/foo", false, false},
+		{logical.ReadOperation, "ns1/ns2/azdoo", false, false},
+		{logical.ReadOperation, "ns1/ns2/azboo", true, false},
+		{logical.ReadOperation, "ns1/ns2/azhoo", false, false},
+		{logical.ReadOperation, "ns1/ns2/az/hoo", true, false},
 	}
 
 	for _, tc := range tcases {
@@ -652,6 +656,12 @@ path "goop/*/foo" {
 	capabilities = ["read"]
 }
 path "g*p*f*o" {
+	capabilities = ["read"]
+}
+path "*boo" {
+	capabilities = ["read"]
+}
+path "*/hoo" {
 	capabilities = ["read"]
 }
 `

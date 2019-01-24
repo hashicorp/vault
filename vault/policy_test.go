@@ -372,19 +372,3 @@ path "/" {
 		t.Errorf("bad error: %s", err)
 	}
 }
-
-func TestPolicy_ParseFrontalGlob(t *testing.T) {
-	// The wrong spelling is intended here
-	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
-path "*glob*/" {
-	capabilities = ["read"]
-}
-`))
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-
-	if !strings.Contains(err.Error(), `paths cannot start with a glob`) {
-		t.Errorf("bad error: %s", err)
-	}
-}
