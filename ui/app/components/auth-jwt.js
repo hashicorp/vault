@@ -8,6 +8,14 @@ export default Component.extend({
   selectedAuthPath: null,
   roleName: null,
 
+  didReceiveAttrs() {
+    let { oldSelectedAuthPath, selectedAuthPath } = this;
+    if (oldSelectedAuthPath !== selectedAuthPath) {
+      this.fetchRole.perform();
+    }
+    this.set('oldSelectedAuthPath', selectedAuthPath);
+  },
+
   fetchRole: task(function*(roleName) {
     this.set('roleName', roleName);
     // debounce
@@ -16,7 +24,5 @@ export default Component.extend({
     let id = JSON.stringify([path, roleName]);
     let role = yield this.store.findRecord('role-jwt', id);
     this.onRoleChange(role);
-  })
-    .restartable()
-    .on('init'),
+  }).restartable(),
 });
