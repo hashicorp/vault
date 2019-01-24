@@ -1,4 +1,4 @@
-package priorityqueue
+package queue
 
 import (
         "container/heap"
@@ -38,6 +38,7 @@ type Item struct {
 
 //////
 // begin heap.Interface methods
+// TODO: extract into a generic Queue type
 //////
 
 // Len returns the count of items in the queue.
