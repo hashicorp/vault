@@ -1,11 +1,11 @@
 package vault
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -95,6 +95,12 @@ path "test/mfa" {
 	capabilities = ["create", "sudo"]
 	mfa_methods = ["my_totp", "my_totp2"]
 }
+path "test*glob" {
+	capabilities = ["create", "sudo"]
+}
+path "test*globatendtoo*" {
+	capabilities = ["create", "sudo"]
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
@@ -141,7 +147,6 @@ func TestPolicy_Parse(t *testing.T) {
 				"list",
 			},
 			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			IsPrefix:    false,
 		},
 		{
 			Path:   "foo/bar",
@@ -157,11 +162,9 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "foo/bar",
-			Policy: "",
+			Path: "foo/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -173,11 +176,9 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "foo/bar",
-			Policy: "",
+			Path: "foo/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -187,11 +188,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "baz/bar",
-			Policy: "",
+			Path: "baz/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -201,11 +200,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "biz/bar",
-			Policy: "",
+			Path: "biz/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -217,7 +214,6 @@ func TestPolicy_Parse(t *testing.T) {
 				AllowedParameters:  map[string][]interface{}{"zim": {}, "zam": {}},
 				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			IsPrefix: false,
 		},
 		{
 			Path:   "test/types",
@@ -236,8 +232,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		{
-			Path:   "test/req",
-			Policy: "",
+			Path: "test/req",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -247,11 +242,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "test/mfa",
-			Policy: "",
+			Path: "test/mfa",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -267,12 +260,33 @@ func TestPolicy_Parse(t *testing.T) {
 					"my_totp2",
 				},
 			},
-			IsPrefix: false,
+		},
+		{
+			Path: "test*glob",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasGlobs: true,
+		},
+		{
+			Path: "test*globatendtoo*",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasGlobs: true,
 		},
 	}
 
-	if !reflect.DeepEqual(p.Paths, expect) {
-		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)
+	if diff := deep.Equal(p.Paths, expect); diff != nil {
+		t.Error(diff)
 	}
 }
 
@@ -355,6 +369,22 @@ path "/" {
 	}
 
 	if !strings.Contains(err.Error(), `path "/": invalid capability "banana"`) {
+		t.Errorf("bad error: %s", err)
+	}
+}
+
+func TestPolicy_ParseFrontalGlob(t *testing.T) {
+	// The wrong spelling is intended here
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+path "*glob*/" {
+	capabilities = ["read"]
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `paths cannot start with a glob`) {
 		t.Errorf("bad error: %s", err)
 	}
 }

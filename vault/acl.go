@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
+	glob "github.com/ryanuber/go-glob"
 )
 
 // ACL is used to wrap a set of policies to provide
@@ -24,6 +25,8 @@ type ACL struct {
 
 	// prefixRules contains the path policies that are a prefix
 	prefixRules *radix.Tree
+
+	globPaths map[string]interface{}
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -60,6 +63,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	a := &ACL{
 		exactRules:  radix.New(),
 		prefixRules: radix.New(),
+		globPaths:   make(map[string]interface{}, len(policies)),
 		root:        false,
 	}
 
@@ -100,20 +104,35 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		}
 
 		for _, pc := range policy.Paths {
-			// Check which tree to use
-			tree := a.exactRules
-			if pc.IsPrefix {
-				tree = a.prefixRules
+			var raw interface{}
+			var ok bool
+			var tree *radix.Tree
+
+			switch {
+			case pc.HasGlobs:
+				raw, ok = a.globPaths[pc.Path]
+			default:
+				// Check which tree to use
+				tree = a.exactRules
+				if pc.IsPrefix {
+					tree = a.prefixRules
+				}
+
+				// Check for an existing policy
+				raw, ok = tree.Get(pc.Path)
 			}
 
-			// Check for an existing policy
-			raw, ok := tree.Get(pc.Path)
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
 					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
 				}
-				tree.Insert(pc.Path, clonedPerms)
+				switch {
+				case pc.HasGlobs:
+					a.globPaths[pc.Path] = clonedPerms
+				default:
+					tree.Insert(pc.Path, clonedPerms)
+				}
 				continue
 			}
 
@@ -242,7 +261,12 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 
 		INSERT:
-			tree.Insert(pc.Path, existingPerms)
+			switch {
+			case pc.HasGlobs:
+				a.globPaths[pc.Path] = existingPerms
+			default:
+				tree.Insert(pc.Path, existingPerms)
+			}
 		}
 	}
 	return a, nil
@@ -317,7 +341,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 	path := ns.Path + req.Path
 
-	// Find an exact matching rule, look for glob if no match
+	// Find an exact matching rule, look for prefix if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
@@ -334,13 +358,33 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
-	// Find a glob rule, default deny if no match
+	// Find a prefix rule, default deny if no match
 	_, raw, ok = a.prefixRules.LongestPrefix(path)
-	if !ok {
-		return
+	if ok {
+		permissions = raw.(*ACLPermissions)
+		capabilities = permissions.CapabilitiesBitmap
+		goto CHECK
 	}
-	permissions = raw.(*ACLPermissions)
-	capabilities = permissions.CapabilitiesBitmap
+
+	for k := range a.globPaths {
+		parts := strings.SplitN(k, "*", 2)
+		if len(parts) < 2 {
+			// This should never happen because we only mark something as a
+			// glob path if there are at least two * chars
+			return
+		}
+		if parts[0] == "" || !strings.HasPrefix(path, parts[0]) {
+			continue
+		}
+		if glob.Glob(k, path) {
+			permissions = a.globPaths[k].(*ACLPermissions)
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
+	}
+
+	// No exact, prefix, or glob paths found, return without setting allowed
+	return
 
 CHECK:
 	// Check if the minimum permissions are met

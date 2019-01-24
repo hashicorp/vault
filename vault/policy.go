@@ -116,6 +116,7 @@ type PathRules struct {
 	Policy       string
 	Permissions  *ACLPermissions
 	IsPrefix     bool
+	HasGlobs     bool
 	Capabilities []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
@@ -338,10 +339,28 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Ensure we are using the full request path internally
 		pc.Path = result.namespace.Path + pc.Path
 
-		// Strip the glob character if found
-		if strings.HasSuffix(pc.Path, "*") {
-			pc.Path = strings.TrimSuffix(pc.Path, "*")
-			pc.IsPrefix = true
+		// If it has more than one * it needs to be treated as a glob for sure
+		switch strings.Count(pc.Path, "*") {
+		case 0:
+			// Nothing, no globs
+		case 1:
+			// Need to figure out if it's at the end, so a prefix, or elsewhere
+			switch {
+			case strings.HasSuffix(pc.Path, "*"):
+				// Strip the glob character if found
+				pc.Path = strings.TrimSuffix(pc.Path, "*")
+				pc.IsPrefix = true
+			case strings.HasPrefix(pc.Path, "*"):
+				return fmt.Errorf("path %q: paths cannot start with a glob", key)
+			default:
+				pc.HasGlobs = true
+			}
+
+		default:
+			if strings.HasPrefix(pc.Path, "*") {
+				return fmt.Errorf("path %q: paths cannot start with a glob", key)
+			}
+			pc.HasGlobs = true
 		}
 
 		// Map old-style policies into capabilities
