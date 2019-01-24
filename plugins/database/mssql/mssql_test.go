@@ -11,11 +11,64 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/ory/dockertest"
 )
 
 var (
 	testMSQLImagePull sync.Once
 )
+
+func TestWorks(t *testing.T) {
+	prepareMSSQLTestContainer(t)
+}
+
+func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if os.Getenv("MSSQL_URL") != "" {
+		return func() {}, os.Getenv("MSSQL_URL")
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	ro := &dockertest.RunOptions{
+		Repository: "mcr.microsoft.com/mssql/server",
+		Tag:        "latest",
+		Env:        []string{"ACCEPT_EULA=Y", "SA_PASSWORD=pa$$w0rd!"},
+	}
+	resource, err := pool.RunWithOptions(ro)
+	if err != nil {
+		t.Fatalf("Could not start local mssql docker container: %s", err)
+	}
+
+	cleanup = func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	conn := fmt.Sprintf("sqlserver://SA:pa$$w0rd!@localhost:%s", resource.GetPort("1433/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		db, err := sql.Open("sqlserver", conn)
+		if err != nil {
+			return err
+		}
+		if pingErr := db.Ping(); pingErr != nil {
+			return pingErr
+		}
+		return nil
+
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to mssql docker container: %s", err)
+	}
+
+	return
+}
 
 func TestMSSQL_Initialize(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
