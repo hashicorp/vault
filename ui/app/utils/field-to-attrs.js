@@ -39,7 +39,6 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
   let fields = [];
   // expand all attributes
   attributeNames.forEach(field => expandProperties(field, x => fields.push(x)));
-  debugger; //eslint-disable-line
   let attributeMap = map || new Map();
   modelClass.eachAttribute((name, meta) => {
     let fieldName = namePrefix ? namePrefix + name : name;

@@ -1,6 +1,7 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
@@ -23,6 +24,7 @@ export const expandOpenApiProps = function(props) {
 
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
+  let newFields = [];
   oldAttrs.forEach(function(value, name) {
     if (newProps[name]) {
       newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
@@ -35,7 +37,8 @@ export const combineAttributes = function(oldAttrs, newProps) {
       continue;
     } else {
       newAttrs[prop] = attr(newProps[prop].type, newProps[prop]);
+      newFields.push(prop);
     }
   }
-  return newAttrs;
+  return { attrs: newAttrs, newFields };
 };
