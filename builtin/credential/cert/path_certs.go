@@ -313,6 +313,7 @@ type CertEntry struct {
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
 
+// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
 	OldPolicies   []string                      `json:"Policies"`
 	OldTTL        time.Duration                 `json:"TTL"`
 	OldMaxTTL     time.Duration                 `json:"MaxTTL"`
