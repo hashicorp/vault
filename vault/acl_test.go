@@ -246,6 +246,9 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ReadOperation, "ns1/ns2/azboo", true, false},
 		{logical.ReadOperation, "ns1/ns2/azhoo", false, false},
 		{logical.ReadOperation, "ns1/ns2/az/hoo", true, false},
+		{logical.ReadOperation, "*/ns1/auth/ldap/config", true, false},
+		{logical.ReadOperation, "/auth/ldap/config", false, false},
+		{logical.ReadOperation, "auth/ldap/config", false, false},
 	}
 
 	for _, tc := range tcases {
@@ -662,6 +665,9 @@ path "*boo" {
 	capabilities = ["read"]
 }
 path "*/hoo" {
+	capabilities = ["read"]
+}
+path "*/auth/ldap/config" {
 	capabilities = ["read"]
 }
 `

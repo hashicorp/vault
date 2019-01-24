@@ -341,6 +341,14 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 	path := ns.Path + req.Path
 
+	for {
+		if len(path) > 0 && path[0] == '/' {
+			path = path[1:]
+		} else {
+			break
+		}
+	}
+
 	// Find an exact matching rule, look for prefix if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
