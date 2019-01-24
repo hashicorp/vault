@@ -205,7 +205,7 @@ type UserEntry struct {
 	// used instead of the actual password in Vault 0.2+.
 	PasswordHash []byte
 
-// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
+	// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
 	OldPolicies []string `json:"Policies"`
 
 	// Duration after which the user will be revoked unless renewed
