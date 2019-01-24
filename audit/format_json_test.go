@@ -38,11 +38,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}{
 		"auth, request": {
 			&logical.Auth{
-				ClientToken: "foo",
-				Accessor:    "bar",
-				DisplayName: "testtoken",
-				Policies:    []string{"root"},
-				TokenType:   logical.TokenTypeService,
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
 			},
 			&logical.Request{
 				Operation: logical.UpdateOperation,
