@@ -55,7 +55,7 @@ func (l *ListPanel) draw(curserY int) error {
 	label := fmt.Sprintf("Vault path: %s", l.path)
 
 	for j, ch := range label {
-		termbox.SetCell(j, 0, ch, termbox.ColorGreen | termbox.AttrBold, defaultBgColor)
+		termbox.SetCell(j, 0, ch, termbox.ColorGreen|termbox.AttrBold, defaultBgColor)
 	}
 
 	for i := 0; i < len(l.entries); i++ {

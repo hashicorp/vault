@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/command/tui"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"github.com/hashicorp/vault/command/tui"
 )
 
 var _ cli.Command = (*BrowseCommand)(nil)

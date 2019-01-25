@@ -101,7 +101,7 @@ mainloop:
 	return nil
 }
 
-func (t *TerminalUI) navigateUp()  {
+func (t *TerminalUI) navigateUp() {
 	if t.selectionY > 0 {
 		t.selectionY--
 	}
@@ -146,29 +146,29 @@ func (t *TerminalUI) draw(err error) {
 		footerBgColor := termbox.ColorRed
 
 		for i := 0; i < bbw; i++ {
-			termbox.SetCell(i, bbh - 1, 0, 0,  footerBgColor)
+			termbox.SetCell(i, bbh-1, 0, 0, footerBgColor)
 		}
 
 		for i, c := range err.Error() {
-			termbox.SetCell(1 + i, bbh - 1, c, footerFgColor, footerBgColor)
+			termbox.SetCell(1+i, bbh-1, c, footerFgColor, footerBgColor)
 		}
 
-	} else{
+	} else {
 		footerFgColor := termbox.ColorWhite
 		footerBgColor := termbox.ColorBlue
 
 		for i := 0; i < bbw; i++ {
-			termbox.SetCell(i, bbh - 1, 0, 0,  footerBgColor)
+			termbox.SetCell(i, bbh-1, 0, 0, footerBgColor)
 		}
 
 		addressLabel := fmt.Sprintf("Address: %s", t.client.Address())
 		for i, c := range addressLabel {
-			termbox.SetCell(bbw - len(addressLabel) - 1 + i, bbh - 1, c, footerFgColor | termbox.AttrBold, footerBgColor)
+			termbox.SetCell(bbw-len(addressLabel)-1+i, bbh-1, c, footerFgColor|termbox.AttrBold, footerBgColor)
 		}
 
 		hintLabel := "Press 'q' or 'ESC' to quit"
 		for i, c := range hintLabel {
-			termbox.SetCell(1 + i, bbh - 1, c, footerFgColor, footerBgColor)
+			termbox.SetCell(1+i, bbh-1, c, footerFgColor, footerBgColor)
 		}
 	}
 
