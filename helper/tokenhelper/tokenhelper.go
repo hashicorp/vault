@@ -20,19 +20,23 @@ type TokenParams struct {
 	// than deferring to role/mount values
 	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl"`
 
+	// The max TTL to use for the token
 	MaxTTL time.Duration `json:"max_ttl" mapstructure:"max_ttl"`
 
+	// If set, core will not automatically add default to the policy list
 	NoDefaultPolicy bool `json:"no_default_policy" mapstructure:"no_default_policy"`
 
 	// If non-zero, tokens created using this role will be able to be renewed
 	// forever, but will have a fixed renewal period of this value
 	Period time.Duration `json:"period" mapstructure:"period"`
 
+	// The policies to set
 	Policies []string `json:"policies" mapstructure:"policies"`
 
 	// The type of token this role should issue
 	TokenType logical.TokenType `json:"token_type" mapstructure:"token_type"`
 
+	// The TTL to user for the token
 	TTL time.Duration `json:"ttl" mapstructure:"ttl"`
 }
 

@@ -73,7 +73,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		InternalData: map[string]interface{}{
 			"token": token,
 		},
-		Policies: verifyResp.Policies,
 		Metadata: map[string]string{
 			"username": *verifyResp.User.Login,
 			"org":      *verifyResp.Org.Login,
