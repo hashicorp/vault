@@ -1,4 +1,3 @@
-{{log model}}
 {{#each-in model.metadata as |key value|}}
   <div class="info-table-row is-mobile">
     <div class="is-flex is-fullwidth">
@@ -22,7 +21,7 @@
     @title="No metadata for {{model.name}}"
     @message="You can store custom data that you want to associate with a {{lowercase (humanize model.identityType)}}. Edit this {{lowercase (humanize model.identityType)}} to get started."
   >
-    {{#link-to "vault.cluster.access.identity.aliases.edit" model.id tagName="button" class="link"}}
+    {{#link-to "vault.cluster.access.identity.edit" model.id tagName="button" class="link"}}
       Edit {{lowercase (humanize model.identityType)}}
     {{/link-to}}
     <LearnLink @path="/vault/identity-access-management/iam-identity">
