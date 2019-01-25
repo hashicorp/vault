@@ -26,35 +26,33 @@ export default Component.extend({
   },
 
   hasSecretsPermission: computed(function() {
-    return this.permissions.hasPermission('sys/mounts/example', 'update');
+    return this.permissions.hasPermission('sys/mounts/example', ['update']);
   }),
 
   hasAuthenticationPermission: computed(function() {
-    const canRead = this.permissions.hasPermission('sys/auth', 'read');
+    const canRead = this.permissions.hasPermission('sys/auth', ['read']);
 
     const capabilities = ['update', 'sudo'];
-    const canUpdateOrCreate = capabilities.every(capability => {
-      return this.permissions.hasPermission('sys/auth/example', capability);
-    });
+    const canUpdateOrCreate = this.permissions.hasPermission('sys/auth/example', capabilities);
 
     return canRead && canUpdateOrCreate;
   }),
 
   hasPoliciesPermission: computed(function() {
-    return this.permissions.hasPermission('sys/policies/acl', 'list');
+    return this.permissions.hasPermission('sys/policies/acl', ['list']);
   }),
 
   hasReplicationPermission: computed(function() {
     const PATHS = ['sys/replication/performance/primary/enable', 'sys/replication/dr/primary/enable'];
     return PATHS.every(path => {
-      return this.permissions.hasPermission(path, 'update');
+      return this.permissions.hasPermission(path, ['update']);
     });
   }),
 
   hasToolsPermission: computed(function() {
     const PATHS = ['sys/wrapping/wrap', 'sys/wrapping/lookup', 'sys/wrapping/unwrap', 'sys/wrapping/rewrap'];
     return PATHS.every(path => {
-      return this.permissions.hasPermission(path, 'update');
+      return this.permissions.hasPermission(path, ['update']);
     });
   }),
 
