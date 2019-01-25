@@ -112,12 +112,13 @@ func (p *Policy) ShallowClone() *Policy {
 
 // PathRules represents a policy for a path in the namespace.
 type PathRules struct {
-	Path         string
-	Policy       string
-	Permissions  *ACLPermissions
-	IsPrefix     bool
-	HasGlobs     bool
-	Capabilities []string
+	Path                string
+	Policy              string
+	Permissions         *ACLPermissions
+	IsPrefix            bool
+	HasGlobs            bool
+	HasSegmentWildcards bool
+	Capabilities        []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
@@ -339,6 +340,10 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Ensure we are using the full request path internally
 		pc.Path = result.namespace.Path + pc.Path
 
+		if strings.Count(pc.Path, "/+") > 0 {
+			pc.HasSegmentWildcards = true
+		}
+
 		// If it has more than one * it needs to be treated as a glob for sure
 		switch strings.Count(pc.Path, "*") {
 		case 0:
@@ -347,15 +352,23 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			// Need to figure out if it's at the end, so a prefix, or elsewhere
 			switch {
 			case strings.HasSuffix(pc.Path, "*"):
-				// Strip the glob character if found
-				pc.Path = strings.TrimSuffix(pc.Path, "*")
-				pc.IsPrefix = true
+				// If there are segment wildcards, don't actually strip the
+				// trailing asterisk, but don't want to hit the default case
+				if !pc.HasSegmentWildcards {
+					// Strip the glob character if found
+					pc.Path = strings.TrimSuffix(pc.Path, "*")
+					pc.IsPrefix = true
+				}
 			default:
 				pc.HasGlobs = true
 			}
 
 		default:
 			pc.HasGlobs = true
+		}
+
+		if pc.HasSegmentWildcards && pc.HasGlobs {
+			return fmt.Errorf("path %q: segment wildcards ('+') and globs ('*') cannot be used together", pc.Path)
 		}
 
 		// Map old-style policies into capabilities

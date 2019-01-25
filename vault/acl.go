@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	radix "github.com/armon/go-radix"
@@ -26,7 +27,8 @@ type ACL struct {
 	// prefixRules contains the path policies that are a prefix
 	prefixRules *radix.Tree
 
-	globPaths map[string]interface{}
+	segmentWildcardPaths map[string]interface{}
+	globPaths            map[string]interface{}
 
 	// root is enabled if the "root" named policy is present.
 	root bool
@@ -61,10 +63,11 @@ type ACLResults struct {
 func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
-		exactRules:  radix.New(),
-		prefixRules: radix.New(),
-		globPaths:   make(map[string]interface{}, len(policies)),
-		root:        false,
+		exactRules:           radix.New(),
+		prefixRules:          radix.New(),
+		segmentWildcardPaths: make(map[string]interface{}, len(policies)),
+		globPaths:            make(map[string]interface{}, len(policies)),
+		root:                 false,
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -109,6 +112,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			var tree *radix.Tree
 
 			switch {
+			case pc.HasSegmentWildcards:
+				raw, ok = a.segmentWildcardPaths[pc.Path]
 			case pc.HasGlobs:
 				raw, ok = a.globPaths[pc.Path]
 			default:
@@ -128,6 +133,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
 				}
 				switch {
+				case pc.HasSegmentWildcards:
+					a.segmentWildcardPaths[pc.Path] = clonedPerms
 				case pc.HasGlobs:
 					a.globPaths[pc.Path] = clonedPerms
 				default:
@@ -262,6 +269,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 
 		INSERT:
 			switch {
+			case pc.HasSegmentWildcards:
+				a.segmentWildcardPaths[pc.Path] = existingPerms
 			case pc.HasGlobs:
 				a.globPaths[pc.Path] = existingPerms
 			default:
@@ -376,11 +385,93 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		goto CHECK
 	}
 
-	for k := range a.globPaths {
-		if glob.Glob(k, path) {
-			permissions = a.globPaths[k].(*ACLPermissions)
-			capabilities = permissions.CapabilitiesBitmap
-			goto CHECK
+	if len(a.segmentWildcardPaths) > 0 {
+		pathParts := strings.Split(path, "/")
+		for k := range a.segmentWildcardPaths {
+			if k == "" {
+				continue
+			}
+
+			var isPrefix bool
+			var invalid bool
+			origK := k
+
+			if k[len(k)-1] == '*' {
+				isPrefix = true
+				k = k[0 : len(k)-1]
+			}
+			splitK := strings.Split(k, "/")
+			if len(pathParts) < len(splitK) {
+				// The path coming in is shorter; it can't match
+				continue
+			}
+			if !isPrefix && len(splitK) != len(pathParts) {
+				// If it's not a prefix we expect the same number of segments
+				continue
+			}
+			// We key off splitK here since it might be less than pathParts
+			for i, aclPart := range splitK {
+				if aclPart == "+" {
+					// Matches anything in the segment, so keep checking
+					continue
+				}
+				if i == len(splitK)-1 && isPrefix {
+					// In this case we may have foo* or just * depending on if
+					// originally it was foo* or foo/*.
+					if aclPart == "" {
+						// Ended in /*, so at this point we're at the final
+						// glob which will match anything, so return success
+						break
+					}
+					if !strings.HasPrefix(pathParts[i], aclPart) {
+						// E.g., the final part of the acl is foo* and the
+						// final part of the path is boofar
+						invalid = true
+						break
+					}
+					// Final prefixed matched and the rest is a wildcard,
+					// matches
+					break
+				}
+				if aclPart != pathParts[i] {
+					// Mismatch, exit out
+					invalid = true
+					break
+				}
+			}
+			// If invalid isn't set then we got through the full segmented path
+			// without finding a mismatch, so it's valid
+			if !invalid {
+				permissions = a.segmentWildcardPaths[origK].(*ACLPermissions)
+				capabilities = permissions.CapabilitiesBitmap
+				goto CHECK
+			}
+		}
+	}
+
+	if len(a.globPaths) > 0 {
+		keySlice := make([]string, 0, len(a.globPaths))
+		for k := range a.globPaths {
+			keySlice = append(keySlice, k)
+		}
+		sort.Slice(keySlice, func(i, j int) bool {
+			ci := strings.Count(keySlice[i], "*")
+			cj := strings.Count(keySlice[j], "*")
+			switch {
+			case ci < cj:
+				return true
+			case ci > cj:
+				return false
+			default:
+				return keySlice[i] < keySlice[j]
+			}
+		})
+		for _, k := range keySlice {
+			if glob.Glob(k, path) {
+				permissions = a.globPaths[k].(*ACLPermissions)
+				capabilities = permissions.CapabilitiesBitmap
+				goto CHECK
+			}
 		}
 	}
 

@@ -238,6 +238,7 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.UpdateOperation, "foo/bar", false, true},
 		{logical.CreateOperation, "foo/bar", true, true},
 
+		// Globbing
 		{logical.ReadOperation, "prod/az/foo", true, false},
 		{logical.ReadOperation, "goop/ns1/ns2/az/doo", false, false},
 		{logical.ReadOperation, "goop/ns1/ns2/az/foo", true, false},
@@ -249,6 +250,18 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ReadOperation, "*/ns1/auth/ldap/config", true, false},
 		{logical.ReadOperation, "/auth/ldap/config", false, false},
 		{logical.ReadOperation, "auth/ldap/config", false, false},
+
+		// Path segment wildcards
+		{logical.ReadOperation, "test/foo/bar/segment", false, false},
+		{logical.ReadOperation, "test/foo/segment", true, false},
+		{logical.ReadOperation, "test/bar/segment", true, false},
+		{logical.ReadOperation, "test/segment/at/end/foo", true, false},
+		{logical.ReadOperation, "test/segment/at/end/foo/", false, false},
+		{logical.ReadOperation, "test/segment/at/end/v2/foo/", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/foo/", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/end", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/end/", true, false},
+		{logical.ReadOperation, "test/segment/wildcardglob/at/nope", false, false},
 	}
 
 	for _, tc := range tcases {
@@ -668,6 +681,21 @@ path "*/hoo" {
 	capabilities = ["read"]
 }
 path "*/auth/ldap/config" {
+	capabilities = ["read"]
+}
+path "test/+/segment" {
+	capabilities = ["read"]
+}
+path "test/segment/at/end/+" {
+	capabilities = ["read"]
+}
+path "test/segment/at/end/v2/+/" {
+	capabilities = ["read"]
+}
+path "test/+/wildcard/+/*" {
+	capabilities = ["read"]
+}
+path "test/+/wildcardglob/+/end*" {
 	capabilities = ["read"]
 }
 `

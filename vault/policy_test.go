@@ -101,6 +101,21 @@ path "test*glob" {
 path "test*globatendtoo*" {
 	capabilities = ["create", "sudo"]
 }
+path "test/+/segment" {
+	capabilities = ["create", "sudo"]
+}
+path "test/segment/at/end/+" {
+	capabilities = ["create", "sudo"]
+}
+path "test/segment/at/end/v2/+/" {
+	capabilities = ["create", "sudo"]
+}
+path "test/+/wildcard/+/*" {
+	capabilities = ["create", "sudo"]
+}
+path "test/+/wildcard/+/end*" {
+	capabilities = ["create", "sudo"]
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
@@ -283,6 +298,61 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 			HasGlobs: true,
 		},
+		{
+			Path: "test/+/segment",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/segment/at/end/+",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/segment/at/end/v2/+/",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/+/wildcard/+/*",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/+/wildcard/+/end*",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
 	}
 
 	if diff := deep.Equal(p.Paths, expect); diff != nil {
@@ -369,6 +439,21 @@ path "/" {
 	}
 
 	if !strings.Contains(err.Error(), `path "/": invalid capability "banana"`) {
+		t.Errorf("bad error: %s", err)
+	}
+}
+
+func TestPolicy_ParseMixedSegmentGlobbing(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+path "/mixed/+/segment/*/globbing" {
+	capabilities = ["read"]
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `path "mixed/+/segment/*/globbing": segment wildcards ('+') and globs ('*') cannot be used together`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
