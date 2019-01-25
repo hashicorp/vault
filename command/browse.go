@@ -2,55 +2,35 @@ package command
 
 import (
 	"fmt"
-	"github.com/posener/complete"
 	"strings"
 
 	"github.com/mitchellh/cli"
-	"github.com/nsf/termbox-go"
+	"github.com/posener/complete"
+	"github.com/hashicorp/vault/command/tui"
 )
 
 var _ cli.Command = (*BrowseCommand)(nil)
-
-// back buffer width and height
-var bbw, bbh int
-
-// back buffer
-var backbuf []termbox.Cell
 
 type BrowseCommand struct {
 	*BaseCommand
 }
 
 func (c *BrowseCommand) Synopsis() string {
-	return "Interact with Vault's Key-Value storage"
+	return "Interactively browse Vault's Key-Value storage"
 }
 
 func (c *BrowseCommand) Help() string {
 	helpText := `
-Usage: vault browse
+Usage: vault browse [options] PATH
 
-  This command has subcommands for interacting with Vault's key-value
-  store. Here are some simple examples, and more detailed examples are
-  available in the subcommands or the documentation.
+  This command opens a terminal UI for interacting with Vault's key-value
+  store. You can browse through the store by using the arrow keys or vim
+  keybindings. Quit browsing by pressing ESC or q.
 
-  Create or update the key named "foo" in the "secret" mount with the value
-  "bar=baz":
+  List values under the "my-app" folder of the generic secret engine:
 
-      $ vault browse
+      $ vault browse secret/my-app/
 
-  Read this value back:
-
-      $ vault browse
-
-  Get metadata for the key:
-
-      $ vault browse
-	  
-  Get a specific version of the key:
-
-      $ vault browse
-
-  Please see the individual subcommand help for detailed usage information.
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
@@ -94,45 +74,17 @@ func (c *BrowseCommand) Run(args []string) int {
 
 	path := ensureTrailingSlash(sanitizePath(args[0]))
 
-	tui, err := NewTerminalUI(client, path)
+	t, err := tui.New(client, path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Could not initialize terminal UI at %s: %s", path, err.Error()))
 		return 2
 	}
 
-	err = termbox.Init()
+	err = t.Start()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Could not initialize termbox %s", err.Error()))
+		c.UI.Error(fmt.Sprintf("The Terminal UI encountered an error: %s", err.Error()))
 		return 2
-	}
-	defer termbox.Close()
-
-	termbox.SetInputMode(termbox.InputEsc)
-	reallocBackBuffer(termbox.Size())
-
-	tui.draw()
-
-mainloop:
-	for {
-
-		switch ev := termbox.PollEvent(); ev.Type {
-		case termbox.EventKey:
-			if ev.Key == termbox.KeyEsc {
-				break mainloop
-			}
-
-			tui.handleInput(ev.Key)
-		case termbox.EventResize:
-			reallocBackBuffer(ev.Width, ev.Height)
-		}
-
-		tui.draw()
 	}
 
 	return 0
-}
-
-func reallocBackBuffer(w, h int) {
-	bbw, bbh = w, h
-	backbuf = make([]termbox.Cell, w*h)
 }

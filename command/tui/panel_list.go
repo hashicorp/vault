@@ -1,4 +1,4 @@
-package command
+package tui
 
 import (
 	"fmt"
@@ -55,19 +55,19 @@ func (l *ListPanel) draw(curserY int) error {
 	label := fmt.Sprintf("Vault path: %s", l.path)
 
 	for j, ch := range label {
-		termbox.SetCell(j, 0, ch, termbox.ColorGreen, termbox.ColorDefault)
+		termbox.SetCell(j, 0, ch, termbox.ColorGreen | termbox.AttrBold, backgroundColor)
 	}
 
 	for i := 0; i < len(l.entries); i++ {
 		entry := fmt.Sprintf("%s", l.entries[i])
 
-		c := termbox.ColorDefault
+		c := backgroundColor
 		if i == curserY {
-			c = termbox.AttrReverse
+			c |= termbox.AttrReverse
 		}
 
 		for j, ch := range entry {
-			termbox.SetCell(j+1, i+2, ch, termbox.ColorDefault, c)
+			termbox.SetCell(j+1, i+2, ch, foregroundColor, c)
 		}
 	}
 
@@ -93,7 +93,12 @@ func listActionGenerator(client *api.Client, base, entry string) panelAction {
 	} else {
 
 		return func() (TerminalPanel, error) {
-			return nil, nil
+
+			r, err := NewReadPanel(client, path.Join(base, entry))
+			if err != nil {
+				return nil, err
+			}
+			return r, nil
 		}
 	}
 }

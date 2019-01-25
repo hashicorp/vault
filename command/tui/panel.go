@@ -1,4 +1,4 @@
-package command
+package tui
 
 type panelAction func() (TerminalPanel, error)
 

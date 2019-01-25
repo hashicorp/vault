@@ -1,4 +1,4 @@
-package command
+package tui
 
 type (
 	PanelStack struct {
