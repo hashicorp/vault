@@ -27,4 +27,7 @@ type PriorityQueue interface {
         // Find searches and returns item from the queue, if found. This does not
         // remove the item. If no item is found, returns ErrNoItemFound
         Find()
+
+        // Size reports the number of items in the queue
+        Size() int
 }

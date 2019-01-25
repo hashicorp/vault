@@ -2,10 +2,27 @@ package queue
 
 import (
         "container/heap"
+
+        "github.com/y0ssar1an/q"
 )
 
+// NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
+func NewTimeQueue(items []*Item) PriorityQueue {
+        tq := TimeQueue{
+                data:    make([]*Item, len(items)),
+                dataMap: make(map[string]*Item),
+        }
+        for i, v := range items {
+                tq.data[i] = v
+        }
+        q.Q("pre-heap:", tq)
+        heap.Init(&tq)
+        q.Q("post-heap:", tq)
+        return &tq
+}
+
 // TimeQueue is a priority queue who's ordering is determined by the time in
-// nanoseconds of the item
+// Unix of the item (nanoseconds elapsed since January 1, 1970 UTC)
 type TimeQueue struct {
         // data is the internal structure that holds the queue, and is operated on by
         // heap functions
@@ -26,6 +43,11 @@ func (tq *TimeQueue) Pluck() {}
 // Find searches the queue for an item by index and returns it if found,
 // otherwise ErrNotFound
 func (tq *TimeQueue) Find() {}
+
+// Size reports the size of the queue, e.g. number of items in data
+func (tq *TimeQueue) Size() int {
+        return len(tq.data)
+}
 
 //////
 // begin heap.Interface methods
@@ -77,7 +99,7 @@ func (tq *TimeQueue) Pop() interface{} {
 //////
 
 // update modifies the priority and value of an Item
-func (tq *TimeQueue) update(item *Item, value string, priority int) {
+func (tq *TimeQueue) update(item *Item, value string, priority int64) {
         item.value = value
         item.priority = priority
         heap.Fix(tq, item.index)
