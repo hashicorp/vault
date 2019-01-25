@@ -2,13 +2,16 @@ package tui
 
 import (
 	"fmt"
+	"sort"
+	
 	"github.com/hashicorp/vault/api"
 	"github.com/nsf/termbox-go"
 )
 
 type ReadPanel struct {
-	path    string
-	kv map[string]interface{}
+	path       string
+	kv         map[string]interface{}
+	sortedKeys []string
 }
 
 func NewReadPanel(client *api.Client, path string) (*ReadPanel, error) {
@@ -21,10 +24,16 @@ func NewReadPanel(client *api.Client, path string) (*ReadPanel, error) {
 		return nil, fmt.Errorf("no value found at %s", path)
 	}
 
+	var keys []string
+	for k := range secret.Data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
 	l := &ReadPanel{
-		kv: secret.Data,
-		path:    path,
+		kv:         secret.Data,
+		path:       path,
+		sortedKeys: keys,
 	}
 
 	return l, nil
@@ -39,19 +48,16 @@ func (r *ReadPanel) draw(curserY int) error {
 	label := fmt.Sprintf("Vault path: %s", r.path)
 
 	for j, ch := range label {
-		termbox.SetCell(j, 0, ch, termbox.ColorGreen | termbox.AttrBold, defaultBgColor)
+		termbox.SetCell(j, 0, ch, termbox.ColorGreen|termbox.AttrBold, defaultBgColor)
 	}
 
-	i := 0
-	for k, v := range r.kv { // this loop is not stable it's just a POC ;)
+	for idx, key := range r.sortedKeys {
 
-		entry := fmt.Sprintf("%s: %s", k, v)
+		entry := fmt.Sprintf("%s: %s", key, r.kv[key])
 
 		for j, ch := range entry {
-			termbox.SetCell(j+1, i+2, ch, defaultFgColor, defaultBgColor)
+			termbox.SetCell(j+1, idx+2, ch, defaultFgColor, defaultBgColor)
 		}
-
-		i++
 	}
 
 	return nil
