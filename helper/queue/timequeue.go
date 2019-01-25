@@ -38,7 +38,8 @@ type Item struct {
 
 //////
 // begin heap.Interface methods
-// TODO: extract into a generic Queue type
+// TODO: extract into a generic Queue type, and other structs can embed new type
+// and either override the Less method or supply a LessFunc or something
 //////
 
 // Len returns the count of items in the queue.
