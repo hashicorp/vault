@@ -108,23 +108,16 @@ export default Service.extend({
     }
   },
 
-  hasPermission(pathName, capabilities = []) {
+  hasPermission(pathName, capabilities = [null]) {
     const path = this.pathNameWithNamespace(pathName);
 
     if (this.canViewAll) {
       return true;
     }
 
-    if (capabilities.length) {
-      return capabilities.every(capability => {
-        if (this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)) {
-          return true;
-        }
-        return false;
-      });
-    }
-
-    return this.hasMatchingExactPath(path) || this.hasMatchingGlobPath(path);
+    return capabilities.every(
+      capability => this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
+    );
   },
 
   hasMatchingExactPath(pathName, capability) {

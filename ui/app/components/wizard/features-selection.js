@@ -16,7 +16,7 @@ export default Component.extend({
   maybeHideFeatures() {
     let features = this.get('allFeatures');
     features.forEach(feat => {
-      feat.disabled = !this.get(`has${feat.name}Permission`);
+      feat.disabled = this.doesNotHavePermission(feat.requiredPermissions);
     });
 
     if (this.get('showReplication') === false) {
@@ -25,36 +25,13 @@ export default Component.extend({
     }
   },
 
-  hasSecretsPermission: computed(function() {
-    return this.permissions.hasPermission('sys/mounts/example', ['update']);
-  }),
-
-  hasAuthenticationPermission: computed(function() {
-    const canRead = this.permissions.hasPermission('sys/auth', ['read']);
-
-    const capabilities = ['update', 'sudo'];
-    const canUpdateOrCreate = this.permissions.hasPermission('sys/auth/example', capabilities);
-
-    return canRead && canUpdateOrCreate;
-  }),
-
-  hasPoliciesPermission: computed(function() {
-    return this.permissions.hasPermission('sys/policies/acl', ['list']);
-  }),
-
-  hasReplicationPermission: computed(function() {
-    const PATHS = ['sys/replication/performance/primary/enable', 'sys/replication/dr/primary/enable'];
-    return PATHS.every(path => {
-      return this.permissions.hasPermission(path, ['update']);
+  doesNotHavePermission(requiredPermissions) {
+    return !Object.keys(requiredPermissions).every(path => {
+      return requiredPermissions[path].every(capability => {
+        return this.permissions.hasPermission(path, [capability]);
+      });
     });
-  }),
-
-  hasToolsPermission: computed(function() {
-    const PATHS = ['sys/wrapping/wrap', 'sys/wrapping/lookup', 'sys/wrapping/unwrap', 'sys/wrapping/rewrap'];
-    return PATHS.every(path => {
-      return this.permissions.hasPermission(path, ['update']);
-    });
-  }),
+  },
 
   estimatedTime: computed('selectedFeatures', function() {
     let time = 0;
@@ -83,6 +60,9 @@ export default Component.extend({
         selected: false,
         show: true,
         disabled: false,
+        requiredPermissions: {
+          'sys/mounts/example': ['update'],
+        },
       },
       {
         key: 'authentication',
@@ -91,6 +71,10 @@ export default Component.extend({
         selected: false,
         show: true,
         disabled: false,
+        requiredPermissions: {
+          'sys/auth': ['read'],
+          'sys/auth/foo': ['update', 'sudo'],
+        },
       },
       {
         key: 'policies',
@@ -104,6 +88,9 @@ export default Component.extend({
         selected: false,
         show: true,
         disabled: false,
+        requiredPermissions: {
+          'sys/policies/acl': ['list'],
+        },
       },
       {
         key: 'replication',
@@ -112,6 +99,10 @@ export default Component.extend({
         selected: false,
         show: true,
         disabled: false,
+        requiredPermissions: {
+          'sys/replication/performance/primary/enable': ['update'],
+          'sys/replication/dr/primary/enable': ['update'],
+        },
       },
       {
         key: 'tools',
@@ -120,6 +111,12 @@ export default Component.extend({
         selected: false,
         show: true,
         disabled: false,
+        requiredPermissions: {
+          'sys/wrapping/wrap': ['update'],
+          'sys/wrapping/lookup': ['update'],
+          'sys/wrapping/unwrap': ['update'],
+          'sys/wrapping/rewrap': ['update'],
+        },
       },
     ];
   }),

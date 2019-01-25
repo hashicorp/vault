@@ -10,7 +10,7 @@ const PERMISSIONS_RESPONSE = {
         capabilities: ['read'],
       },
       'bar/bee': {
-        capabilities: ['create'],
+        capabilities: ['create', 'list'],
       },
       boo: {
         capabilities: ['deny'],
@@ -97,7 +97,7 @@ module('Unit | Service | permissions', function(hooks) {
     let service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
-    assert.equal(service.hasPermission('bar/bee', ['create']), true);
+    assert.equal(service.hasPermission('bar/bee', ['create', 'list']), true);
     assert.equal(service.hasPermission('baz/biz', ['read']), true);
   });
 
@@ -105,7 +105,7 @@ module('Unit | Service | permissions', function(hooks) {
     let service = this.owner.lookup('service:permissions');
     service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
-    assert.equal(service.hasPermission('bar/bee', ['delete']), false);
+    assert.equal(service.hasPermission('bar/bee', ['create', 'delete']), false);
     assert.equal(service.hasPermission('foo', ['create']), false);
   });
 

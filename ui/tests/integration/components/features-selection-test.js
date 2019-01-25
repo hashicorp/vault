@@ -20,9 +20,7 @@ module('Integration | Component | features-selection', function(hooks) {
 
   test('it disables and enables wizard items according to user permissions', async function(assert) {
     const enabled = { Secrets: true, Authentication: false, Policies: true, Tools: false };
-    await render(
-      hbs`{{wizard/features-selection hasSecretsPermission=true hasAuthenticationPermission=false hasPoliciesPermission=true}}`
-    );
+    await render(hbs`{{wizard/features-selection allFeatures=}}`);
 
     component.wizardItems.forEach(i => {
       assert.equal(
