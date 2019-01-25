@@ -153,7 +153,7 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 		result.BoundCIDRs = result.OldBoundCIDRs
 		result.OldBoundCIDRs = nil
 	}
-	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("cert/"+n, result)
 		if err != nil {
 			return nil, err
@@ -313,7 +313,7 @@ type CertEntry struct {
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
 
-// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
+	// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
 	OldPolicies   []string                      `json:"Policies"`
 	OldTTL        time.Duration                 `json:"TTL"`
 	OldMaxTTL     time.Duration                 `json:"MaxTTL"`

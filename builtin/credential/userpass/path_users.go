@@ -107,7 +107,7 @@ func (b *backend) user(ctx context.Context, s logical.Storage, username string) 
 		result.BoundCIDRs = result.OldBoundCIDRs
 		result.OldBoundCIDRs = nil
 	}
-	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		if err := b.setUser(ctx, s, strings.ToLower(username), &result); err != nil {
 			return nil, err
 		}
