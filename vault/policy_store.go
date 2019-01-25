@@ -84,6 +84,15 @@ path "sys/capabilities-self" {
     capabilities = ["update"]
 }
 
+# Allow a token to look up its own entity by name or id
+path "identity/entity/name/{{identity.entity.name}}" {
+  capabilities = ["read"]
+}
+path "identity/entity/id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+
+
 # Allow a token to look up its resultant ACL from all policies. This is useful
 # for UIs. It is an internal path because the format may change at any time
 # based on how the internal ACL features and capabilities change.
