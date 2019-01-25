@@ -561,7 +561,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 // request is a helper to perform a request and properly exit in the
 // case of an error.
-func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
+func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
 	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
 		if resp == nil {
@@ -571,14 +571,17 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
-		return resp, false
+		return resp, false, false
+	}
+	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
+		return nil, false, true
 	}
 
 	if respondErrorCommon(w, r, resp, err) {
-		return resp, false
+		return resp, false, false
 	}
 
-	return resp, true
+	return resp, true, false
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
