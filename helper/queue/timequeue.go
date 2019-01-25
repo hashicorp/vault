@@ -2,7 +2,6 @@ package queue
 
 import (
         "container/heap"
-        "time"
 )
 
 // TimeQueue is a priority queue who's ordering is determined by the time in
@@ -27,14 +26,6 @@ func (tq *TimeQueue) Pluck() {}
 // Find searches the queue for an item by index and returns it if found,
 // otherwise ErrNotFound
 func (tq *TimeQueue) Find() {}
-
-// Item is something managed in the priority queue
-type Item struct {
-        value     string
-        priority  int // priority of item in queue
-        index     int // index is needed by update and maintained by heap package
-        createdAt time.Time
-}
 
 //////
 // begin heap.Interface methods
