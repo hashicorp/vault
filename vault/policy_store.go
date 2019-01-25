@@ -84,8 +84,11 @@ path "sys/capabilities-self" {
     capabilities = ["update"]
 }
 
-# Allow a token to look up its own entity by id
+# Allow a token to look up its own entity by id or name
 path "identity/entity/id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+path "identity/entity/name/{{identity.entity.name}}" {
   capabilities = ["read"]
 }
 
