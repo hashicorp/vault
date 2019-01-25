@@ -1,12 +1,13 @@
 package tui
 
 import (
+	"fmt"
 	"github.com/hashicorp/vault/api"
 	"github.com/nsf/termbox-go"
 )
 
-const foregroundColor = termbox.ColorDefault
-const backgroundColor = termbox.ColorBlack
+const defaultFgColor = termbox.ColorDefault
+const defaultBgColor = termbox.ColorBlack
 
 type TerminalUI struct {
 	client     *api.Client
@@ -14,7 +15,7 @@ type TerminalUI struct {
 	selectionY int
 }
 
-// New initializes a new terminal user interface by listing the
+// New initializes a new terminal user interface by listing
 // Vault's data at the given path.
 func New(client *api.Client, path string) (*TerminalUI, error) {
 
@@ -30,10 +31,10 @@ func New(client *api.Client, path string) (*TerminalUI, error) {
 
 	tui.panels.Push(l)
 
-	return tui, err
+	return tui, nil
 }
 
-// Starts will initialize termbox and start the event loop for handling key events
+// Start will initialize termbox and start the event loop for handling key events
 func (t *TerminalUI) Start() error {
 
 	err := termbox.Init()
@@ -45,10 +46,12 @@ func (t *TerminalUI) Start() error {
 	termbox.SetInputMode(termbox.InputEsc)
 	reallocBackBuffer(termbox.Size())
 
-	t.draw()
+	t.draw(nil)
 
 mainloop:
 	for {
+
+		err = nil
 
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
@@ -90,14 +93,9 @@ mainloop:
 
 		case termbox.EventResize:
 			reallocBackBuffer(ev.Width, ev.Height)
-
 		}
 
-		if err != nil {
-			return err
-		}
-
-		t.draw()
+		t.draw(err)
 	}
 
 	return nil
@@ -138,20 +136,41 @@ func (t *TerminalUI) navigateRight() error {
 	return nil
 }
 
-func (t *TerminalUI) draw() error {
-	termbox.Clear(foregroundColor, backgroundColor)
+func (t *TerminalUI) draw(err error) {
+	termbox.Clear(defaultFgColor, defaultBgColor)
 
 	t.panels.Peek().draw(t.selectionY)
 
-	for i := 0; i < bbw; i++ {
-		termbox.SetCell(i, bbh - 1, 0, 0, termbox.ColorWhite)
-	}
+	if err != nil {
+		footerFgColor := termbox.ColorWhite
+		footerBgColor := termbox.ColorRed
 
-	for i, c := range t.client.Address() {
-		termbox.SetCell(bbw - len(t.client.Address()) - 1 + i, bbh - 1, c, termbox.ColorBlack | termbox.AttrBold, termbox.ColorWhite)
+		for i := 0; i < bbw; i++ {
+			termbox.SetCell(i, bbh - 1, 0, 0,  footerBgColor)
+		}
+
+		for i, c := range err.Error() {
+			termbox.SetCell(1 + i, bbh - 1, c, footerFgColor, footerBgColor)
+		}
+
+	} else{
+		footerFgColor := termbox.ColorWhite
+		footerBgColor := termbox.ColorBlue
+
+		for i := 0; i < bbw; i++ {
+			termbox.SetCell(i, bbh - 1, 0, 0,  footerBgColor)
+		}
+
+		addressLabel := fmt.Sprintf("Address: %s", t.client.Address())
+		for i, c := range addressLabel {
+			termbox.SetCell(bbw - len(addressLabel) - 1 + i, bbh - 1, c, footerFgColor | termbox.AttrBold, footerBgColor)
+		}
+
+		hintLabel := "Press 'q' or 'ESC' to quit"
+		for i, c := range hintLabel {
+			termbox.SetCell(1 + i, bbh - 1, c, footerFgColor, footerBgColor)
+		}
 	}
 
 	termbox.Flush()
-
-	return nil
 }

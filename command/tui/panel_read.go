@@ -39,7 +39,7 @@ func (r *ReadPanel) draw(curserY int) error {
 	label := fmt.Sprintf("Vault path: %s", r.path)
 
 	for j, ch := range label {
-		termbox.SetCell(j, 0, ch, termbox.ColorGreen | termbox.AttrBold, backgroundColor)
+		termbox.SetCell(j, 0, ch, termbox.ColorGreen | termbox.AttrBold, defaultBgColor)
 	}
 
 	i := 0
@@ -48,7 +48,7 @@ func (r *ReadPanel) draw(curserY int) error {
 		entry := fmt.Sprintf("%s: %s", k, v)
 
 		for j, ch := range entry {
-			termbox.SetCell(j+1, i+2, ch, foregroundColor, backgroundColor)
+			termbox.SetCell(j+1, i+2, ch, defaultFgColor, defaultBgColor)
 		}
 
 		i++
