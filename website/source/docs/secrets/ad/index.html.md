@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Active Directory - Secrets Engines"
 sidebar_title: "Active Directory"
-sidebar_current: "docs-secrets-active-directory"
+sidebar_current: "docs-secrets-ad"
 description: |-
   The Active Directory secrets engine for Vault generates passwords dynamically based on
   roles.
@@ -15,11 +15,11 @@ The Active Directory (AD) secrets engine is a plugin residing [here](https://git
 The AD secrets engine rotates AD passwords dynamically,
 and is designed for a high-load environment where many instances may be accessing
 a shared password simultaneously. With a simple set up and a simple creds API,
-it doesn't require instances to be manually registered in advance to gain access. 
-As long as access has been granted to the creds path via a method like 
+it doesn't require instances to be manually registered in advance to gain access.
+As long as access has been granted to the creds path via a method like
 [AppRole](https://www.vaultproject.io/api/auth/approle/index.html), they're available.
 
-Passwords are lazily rotated based on preset TTLs and can have a length configured to meet 
+Passwords are lazily rotated based on preset TTLs and can have a length configured to meet
 your needs.
 
 ## A Note on Lazy Rotation
@@ -36,7 +36,7 @@ was next requested. "Lazy" rotation means passwords are rotated when all of the 
 - They are over their TTL
 - They are requested
 
-Therefore, the AD TTL can be considered a soft contract. It's fulfilled when the given password is next requested. 
+Therefore, the AD TTL can be considered a soft contract. It's fulfilled when the given password is next requested.
 
 To ensure your passwords are rotated as expected, we'd recommend you configure services to request each password at least
 twice as often as its TTL.
@@ -67,7 +67,7 @@ Directory](http://social.technet.microsoft.com/wiki/contents/articles/5312.activ
 Most secrets engines must be configured in advance before they can perform their
 functions. These steps are usually completed by an operator or configuration
 management tool.
-    
+
 1. Enable the Active Directory secrets engine:
 
     ```text
@@ -78,7 +78,7 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-2. Configure the credentials that Vault uses to communicate with Active Directory 
+2. Configure the credentials that Vault uses to communicate with Active Directory
 to generate passwords:
 
     ```text
@@ -93,9 +93,9 @@ to generate passwords:
     for the given account. It is possible to delegate access to change
     passwords for these accounts to the one Vault is in control of, and this is
     usually the highest-security solution.
-    
+
     If you'd like to do a quick, insecure evaluation, also set `insecure_tls` to true. However, this is NOT RECOMMENDED
-    in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid 
+    in a production environment. In production, we recommend `insecure_tls` is false (its default) and is used with a valid
     `certificate`.
 
 3. Configure a role that maps a name in Vault to an account in Active Directory.
@@ -107,7 +107,7 @@ this role.
         service_account_name="my-application@example.com"
     ```
 
-4. Grant "my-application" access to its creds at `ad/creds/my-application` using an 
+4. Grant "my-application" access to its creds at `ad/creds/my-application` using an
 auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.html).
 
 ## FAQ
@@ -116,7 +116,7 @@ auth method like [AppRole](https://www.vaultproject.io/api/auth/approle/index.ht
 
 If an administrator at your company rotates a password that Vault is managing,
 the next time an application asks _Vault_ for that password, Vault won't know
-it. 
+it.
 
 To maintain that application's up-time, Vault will need to return to a state of
 knowing the password. Vault will generate a new password, update it, and return
@@ -126,7 +126,7 @@ human intervention.
 Thus, we wouldn't recommend that administrators directly rotate the passwords
 for accounts that Vault is managing. This may lead to behavior the
 administrator wouldn't expect, like finding very quickly afterwards that their
-new password has already been changed. 
+new password has already been changed.
 
 The password `ttl` on a role can be updated at any time to ensure that the
 responsibility of updating passwords can be left to Vault, rather than

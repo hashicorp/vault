@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Performance Standby Nodes - Vault Enterprise"
 sidebar_title: "Performance Standbys"
-sidebar_current: "docs-vault-enterprise-perf-standbys"
+sidebar_current: "docs-vault-enterprise-performance-standbys"
 description: |-
   Performance Standby Nodes - Vault Enterprise
 ---

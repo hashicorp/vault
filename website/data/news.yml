@@ -1,6 +1,13 @@
 default_link_text: "Read more"
 posts:
   -
+    title: "Vault 1.0 released"
+    body: >-
+      We are proud to announce the release of HashiCorp Vault 1.0. This
+      version includes batch tokens, open source cloud auto-unseal,
+      an updated UI, OpenAPI support, a new GCP Cloud KMS secrets engine, and much more!
+    link_url: "https://www.hashicorp.com/blog/vault-1-0/"
+  -
     title: "Vault 0.10 released"
     body: >-
       We are proud to announce the release of HashiCorp Vault 0.10. This

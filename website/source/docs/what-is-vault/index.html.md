@@ -2,7 +2,7 @@
 layout: "docs"
 page_title: "Introduction"
 sidebar_title: "What is Vault?"
-sidebar_current: "what"
+sidebar_current: "docs-what"
 description: |-
   Welcome to the intro guide to Vault! This guide is the best place to start with Vault. We cover what Vault is, what problems it can solve, how it compares to existing software, and contains a quick start for using Vault.
 ---

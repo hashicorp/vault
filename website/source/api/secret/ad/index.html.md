@@ -2,7 +2,7 @@
 layout: "api"
 page_title: "Active Directory - Secrets Engines - HTTP API"
 sidebar_title: "Active Directory"
-sidebar_current: "api-http-secret-active-directory"
+sidebar_current: "api-http-secret-ad"
 description: |-
   This is the API documentation for the Vault Active Directory secrets engine.
 ---
@@ -28,7 +28,7 @@ The `config` endpoint configures the LDAP connection and binding parameters, as 
 * `length` (string, optional) - The desired password length. Defaults to 64. Minimum is 14.
 * `formatter` (string, optional) - Text into which the base64 password should be inserted, formatted like so: `mycustom{{PASSWORD}}`.
 
-To meet Microsoft's password complexity requirements, all passwords begin with "?@09AZ" unless a `formatter` is provided. 
+To meet Microsoft's password complexity requirements, all passwords begin with "?@09AZ" unless a `formatter` is provided.
 The `formatter` is for organizations with different, custom password requirements. It allows an organization to supply
 text that fulfills those requirements. `{{PASSWORD}}` must appear exactly once and can be anywhere in the text.
 
