@@ -1,4 +1,4 @@
-import { next } from '@ember/runloop';
+import { next, later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -233,8 +233,9 @@ export default Component.extend(DEFAULTS, {
     }
     let { namespace, path, state, code } = JSON.parse(event.newValue);
     this.getWindow().localStorage.removeItem('oidcState');
-    yield timeout(500);
-    this.closeWindow(oidcWindow);
+    later(() => {
+      this.closeWindow(oidcWindow);
+    }, 500);
     if (!path || !state || !code) {
       return this.handleOIDCError('missingParams');
     }
