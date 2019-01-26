@@ -86,10 +86,11 @@ type Config struct {
 	Limiter *rate.Limiter
 
 	// DebugCurl causes the actual request to return an error of type
-	// *DebugCurlError. Fetching the error message will return an string that
+	// *DebugCurlError. Fetching the error message will return a string that
 	// contains, among other things, a cURL-compatible string
 	//
 	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
 	DebugCurl bool
 }
 
@@ -588,7 +589,6 @@ func (c *Client) Clone() (*Client, error) {
 		Timeout:    config.Timeout,
 		Backoff:    config.Backoff,
 		Limiter:    config.Limiter,
-		DebugCurl:  config.DebugCurl,
 	}
 	config.modifyLock.RUnlock()
 
