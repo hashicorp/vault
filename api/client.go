@@ -85,13 +85,13 @@ type Config struct {
 	// is equivalent blocking all events.
 	Limiter *rate.Limiter
 
-	// DebugCurl causes the actual request to return an error of type
-	// *DebugCurlError. Fetching the error message will return a string that
-	// contains, among other things, a cURL-compatible string
+	// OutputCurlString causes the actual request to return an error of type
+	// *OutputStringError. Type asserting the error message will allow
+	// fetching a cURL-compatible string for the operation.
 	//
 	// Note: It is not thread-safe to set this and make concurrent requests
 	// with the same client. Cloning a client will not clone this value.
-	DebugCurl bool
+	OutputCurlString bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -446,22 +446,22 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.config.Timeout = timeout
 }
 
-func (c *Client) DebugCurl() bool {
+func (c *Client) OutputCurlString() bool {
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
 	defer c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	return c.config.DebugCurl
+	return c.config.OutputCurlString
 }
 
-func (c *Client) SetDebugCurl(curl bool) {
+func (c *Client) SetOutputCurlString(curl bool) {
 	c.modifyLock.RLock()
 	c.config.modifyLock.Lock()
 	defer c.config.modifyLock.Unlock()
 	c.modifyLock.RUnlock()
 
-	c.config.DebugCurl = curl
+	c.config.OutputCurlString = curl
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
@@ -688,8 +688,8 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
+	outputCurlString := c.config.OutputCurlString
 	c.config.modifyLock.RUnlock()
-	debugCurl := c.config.DebugCurl
 
 	c.modifyLock.RUnlock()
 
@@ -715,9 +715,9 @@ START:
 		return nil, fmt.Errorf("nil request created")
 	}
 
-	if debugCurl {
-		LastDebugCurlError = &DebugCurlError{Request: req}
-		return nil, LastDebugCurlError
+	if outputCurlString {
+		LastOutputStringError = &OutputStringError{Request: req}
+		return nil, LastOutputStringError
 	}
 
 	if timeout != 0 {

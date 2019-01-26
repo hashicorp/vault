@@ -24,7 +24,7 @@ type VaultUI struct {
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, debugCurl bool) {
+func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool) {
 	var nextArgFormat bool
 
 	for _, arg := range args {
@@ -43,8 +43,8 @@ func setupEnv(args []string) (retArgs []string, format string, debugCurl bool) {
 			break
 		}
 
-		if arg == "-debug-curl" {
-			debugCurl = true
+		if arg == "-output-curl-string" {
+			outputCurlString = true
 			continue
 		}
 
@@ -72,7 +72,7 @@ func setupEnv(args []string) (retArgs []string, format string, debugCurl bool) {
 		format = "table"
 	}
 
-	return args, format, debugCurl
+	return args, format, outputCurlString
 }
 
 type RunOptions struct {
@@ -95,8 +95,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	var format string
-	var debugCurl bool
-	args, format, debugCurl = setupEnv(args)
+	var outputCurlString bool
+	args, format, outputCurlString = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -125,7 +125,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	uiErrWriter := runOpts.Stderr
-	if debugCurl {
+	if outputCurlString {
 		uiErrWriter = ioutil.Discard
 	}
 
@@ -180,12 +180,12 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	exitCode, err := cli.Run()
-	if debugCurl {
+	if outputCurlString {
 		if exitCode == 0 {
 			fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
 			return 1
 		} else {
-			if api.LastDebugCurlError == nil {
+			if api.LastOutputStringError == nil {
 				if exitCode == 127 {
 					// Usage, just pass it through
 					return exitCode
@@ -193,11 +193,11 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -debug-curl to see the generated error\n")
 				return exitCode
 			}
-			if api.LastDebugCurlError.Error() != api.ErrDebugCurl {
-				runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating cURL string: %s\n", api.LastDebugCurlError.Error())))
+			if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
+				runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
 				return 1
 			}
-			runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastDebugCurlError.CurlString())))
+			runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
 			return 0
 		}
 	} else if err != nil {
