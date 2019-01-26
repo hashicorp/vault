@@ -445,6 +445,24 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.config.Timeout = timeout
 }
 
+func (c *Client) DebugCurl() bool {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.DebugCurl
+}
+
+func (c *Client) SetDebugCurl(curl bool) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.DebugCurl = curl
+}
+
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
@@ -698,7 +716,7 @@ START:
 	}
 
 	if debugCurl {
-		LastDebugCurlError = &DebugCurlError{Request: req.Request}
+		LastDebugCurlError = &DebugCurlError{Request: req}
 		return nil, LastDebugCurlError
 	}
 

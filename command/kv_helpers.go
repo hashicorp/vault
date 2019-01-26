@@ -46,6 +46,9 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
 	client.SetWrappingLookupFunc(nil)
 	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
+	currentDebugCurl := client.DebugCurl()
+	client.SetDebugCurl(false)
+	defer client.SetDebugCurl(currentDebugCurl)
 
 	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)

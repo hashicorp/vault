@@ -186,8 +186,12 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 			return 1
 		} else {
 			if api.LastDebugCurlError == nil {
-				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation")
-				return 1
+				if exitCode == 127 {
+					// Usage, just pass it through
+					return exitCode
+				}
+				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -debug-curl to see the generated error\n")
+				return exitCode
 			}
 			if api.LastDebugCurlError.Error() != api.ErrDebugCurl {
 				runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating cURL string: %s\n", api.LastDebugCurlError.Error())))
