@@ -84,6 +84,13 @@ type Config struct {
 	// then that limiter will be used. Note that an empty Limiter
 	// is equivalent blocking all events.
 	Limiter *rate.Limiter
+
+	// DebugCurl causes the actual request to return an error of type
+	// *DebugCurlError. Fetching the error message will return an string that
+	// contains, among other things, a cURL-compatible string
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	DebugCurl bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -563,6 +570,7 @@ func (c *Client) Clone() (*Client, error) {
 		Timeout:    config.Timeout,
 		Backoff:    config.Backoff,
 		Limiter:    config.Limiter,
+		DebugCurl:  config.DebugCurl,
 	}
 	config.modifyLock.RUnlock()
 
@@ -663,6 +671,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
 	c.config.modifyLock.RUnlock()
+	debugCurl := c.config.DebugCurl
 
 	c.modifyLock.RUnlock()
 
@@ -686,6 +695,11 @@ START:
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request created")
+	}
+
+	if debugCurl {
+		LastDebugCurlError = &DebugCurlError{Request: req.Request}
+		return nil, LastDebugCurlError
 	}
 
 	if timeout != 0 {

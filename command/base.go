@@ -50,8 +50,9 @@ type BaseCommand struct {
 	flagTLSSkipVerify  bool
 	flagWrapTTL        time.Duration
 
-	flagFormat string
-	flagField  string
+	flagFormat    string
+	flagField     string
+	flagDebugCurl bool
 
 	flagMFA []string
 
@@ -76,6 +77,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
+	}
+
+	if c.flagDebugCurl {
+		config.DebugCurl = c.flagDebugCurl
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -325,6 +330,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictAnything,
 				Usage:      "Supply MFA credentials as part of X-Vault-MFA header.",
 			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "debug-curl",
+				Target:  &c.flagDebugCurl,
+				Default: false,
+				Usage: "Instead of executing the request, print an equivalent cURL " +
+					"command and exit.",
+			})
+
 		}
 
 		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
