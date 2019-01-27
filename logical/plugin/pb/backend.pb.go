@@ -5,10 +5,11 @@ package pb
 
 import (
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	logical "github.com/hashicorp/vault/logical"
-	math "math"
 )
 
 import (

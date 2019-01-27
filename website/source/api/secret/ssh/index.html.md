@@ -598,6 +598,7 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/ssh/verify
+```
 
 ### Sample Response
 

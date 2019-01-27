@@ -25,7 +25,7 @@
       </div>
       <div class="message is-list has-copy-button" tabindex="-1">
         {{#let
-            (concat 'vault operator generate-root -otp="' otp '" -decode="' encoded_token '"')
+            (concat 'vault operator generate-root -dr-token -otp="' otp '" -decode="' encoded_token '"')
         as |cmd|}}
           <HoverCopyButton @copyValue={{cmd}} />
           <div class="message-body">

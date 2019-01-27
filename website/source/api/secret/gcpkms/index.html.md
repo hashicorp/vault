@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "Google Cloud KMS - Secrets Engines - HTTP API"
-sidebar_title: "Google Cloud KMS <sup>1.0 BETA</sup>"
+sidebar_title: "Google Cloud KMS"
 sidebar_current: "api-http-secret-gcpkms"
 description: |-
   This is the API documentation for the Vault Google Cloud KMS secrets engine.

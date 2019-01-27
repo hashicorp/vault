@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure Key Vault - Seals - Configuration"
-sidebar_title: "Azure Key Vault <sup>1.0 BETA</sup>"
+sidebar_title: "Azure Key Vault"
 sidebar_current: "docs-configuration-seal-azurekeyvault"
 description: |-
   The Azure Key Vault seal configures Vault to use Azure Key Vault as the seal wrapping

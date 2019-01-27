@@ -7,12 +7,9 @@
       <ul class="menu-list">
         {{#if canExpire}}
           <li class="action">
-            <AlertBanner 
-              @type="warning"
-              @message="We've stopped auto-renewing your token due to inactivity.
-                It will expire in {{moment-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
-                on {{moment-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}"
-            />
+            <AlertBanner @type="warning" @message="We've stopped auto-renewing your token due to inactivity.
+                It will expire in {{date-from-now auth.tokenExpirationDate interval=1000 hideSuffix=true}}.
+                on {{date-format auth.tokenExpirationDate 'MMMM Do YYYY, h:mm:ss a'}}" />
           </li>
         {{/if}}
         {{#if (is-before (now interval=1000) auth.tokenExpirationDate)}}
@@ -55,6 +52,11 @@
             </li>
           {{/if}}
         {{/if}}
+        <li class="action">
+          <CopyButton @clipboardText={{auth.currentToken}} class="link button" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
+            Copy token
+          </CopyButton>
+        </li>
         <li class="action">
           <button type="button" class="button link" onclick={{action "restartGuide"}}>
             Restart guide

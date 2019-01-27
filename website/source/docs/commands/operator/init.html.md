@@ -44,6 +44,15 @@ $ vault operator init \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
 ```
 
+Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
+
+```text
+$ vault operator init \
+    -recovery-shares=1 \
+    -recovery-threshold=1 \
+    -recovery-pgp-keys="keybase:grahamhashicorp"
+```
+
 Encrypt the initial root token using a pgp key:
 
 ```text
@@ -102,7 +111,7 @@ flags](/docs/commands/index.html) included on all commands.
 - `-consul-service` `(string: "vault")` - Name of the service in Consul under
   which the Vault servers are registered.
 
-### HSM Options
+### HSM and KMS Options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
   recovery key shares. This is only used in HSM mode.

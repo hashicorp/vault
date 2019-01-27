@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
@@ -45,7 +45,7 @@ import (
 	"github.com/hashicorp/vault/physical"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/mitchellh/go-testing-interface"
+	testing "github.com/mitchellh/go-testing-interface"
 
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
@@ -149,6 +149,13 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
+
+	for k, v := range opts.LogicalBackends {
+		conf.LogicalBackends[k] = v
+	}
+	for k, v := range opts.CredentialBackends {
+		conf.CredentialBackends[k] = v
+	}
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -1542,6 +1549,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
 		"hana-database-plugin",
+		"influxdb-database-plugin",
 	}
 }
 

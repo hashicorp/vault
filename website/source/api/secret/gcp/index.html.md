@@ -125,7 +125,7 @@ generated under this roleset.**
 See [bindings format docs](/docs/secrets/gcp/index.html#roleset-bindings) for more information.
 
 ```hcl
-resource "//cloudresourcemanager.googleapis.com/project/mygcpproject" {
+resource "//cloudresourcemanager.googleapis.com/projects/mygcpproject" {
   roles = [
     "roles/viewer"
   ],

@@ -34,7 +34,7 @@ access the Kubernetes API.
  - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
     API to validate other JWTs during login. If not set
     the JWT used for login will be used to access the API.
- - `pem_keys` `(array: [])` - Optional list of PEM-formated public keys or certificates
+ - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
     used to verify the signatures of Kubernetes service account
     JWTs. If a certificate is given, its public key will be
     extracted. Not every installation of Kubernetes exposes these

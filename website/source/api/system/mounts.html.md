@@ -70,6 +70,8 @@ This endpoint enables a new secrets engine at the given path.
 - `path` `(string: <required>)` – Specifies the path where the secrets engine
   will be mounted. This is specified as part of the URL.
 
+    !> **NOTE:** Use ASCII printable characters to specify the desired path.
+
 - `type` `(string: <required>)` – Specifies the type of the backend, such as
   "aws".
 
@@ -93,7 +95,7 @@ This endpoint enables a new secrets engine at the given path.
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
      that will not be HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`.  If not set, behaves like `"hidden"`.
 
@@ -110,8 +112,8 @@ This endpoint enables a new secrets engine at the given path.
     `pki` backends. This is only available in Vault Enterprise.
 
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
-  that are passed to the backend. 
-  
+  that are passed to the backend.
+
     *Key/Value (KV)*  
     - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
       KV v2.
@@ -220,7 +222,7 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount in
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 

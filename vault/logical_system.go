@@ -20,8 +20,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/go-uuid"
+	memdb "github.com/hashicorp/go-memdb"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -1411,7 +1411,11 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		// Reload the backend to kick off the upgrade process. It should only apply to KV backend so we
 		// trigger based on the version logic above.
 		if kvUpgraded {
-			b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+			err = b.Core.reloadBackendCommon(ctx, mountEntry, strings.HasPrefix(path, credentialRoutePrefix))
+			if err != nil {
+				b.Core.logger.Error("mount tuning of options: could not reload backend", "error", err, "path", path, "options", options)
+			}
+
 		}
 	}
 
@@ -2789,7 +2793,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
-		acl.globRules.WalkPrefix(path, walkFn)
+		acl.prefixRules.WalkPrefix(path, walkFn)
 	}
 
 	return aclCapabilitiesGiven
@@ -2820,10 +2824,6 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		// Load the ACL policies so we can walk the prefix for this mount
 		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 		if err != nil {
-			if errwrap.ContainsType(err, new(TemplateError)) {
-				b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-				err = logical.ErrPermissionDenied
-			}
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
@@ -2842,7 +2842,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, ns.Path+me.Path)
+			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
 		}
 
 		return false
@@ -2850,7 +2850,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				secretMounts[entry.Path] = mountInfo(entry)
@@ -2867,7 +2867,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				authMounts[entry.Path] = mountInfo(entry)
@@ -2894,6 +2894,11 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 
 	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	me := b.Core.router.MatchingMountEntry(ctx, path)
 	if me == nil {
 		// Return a permission denied error here so this path cannot be used to
@@ -2905,14 +2910,13 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		Data: mountInfo(me),
 	}
 	resp.Data["path"] = me.Path
+	if ns.ID != me.Namespace().ID {
+		resp.Data["path"] = me.Namespace().Path + me.Path
+	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
@@ -2922,11 +2926,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if te != nil && te.EntityID != "" && entity == nil {
 		b.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
-	}
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	if !hasMountAccess(ctx, acl, ns.Path+me.Path) {
@@ -2944,10 +2943,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 
@@ -3041,7 +3036,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	}
 
 	acl.exactRules.Walk(exactWalkFn)
-	acl.globRules.Walk(globWalkFn)
+	acl.prefixRules.Walk(globWalkFn)
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
@@ -3056,6 +3051,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	if err != nil {
 		return nil, err
 	}
+
+	context := d.Get("context").(string)
 
 	// Set up target document and convert to map[string]interface{} which is what will
 	// be received from plugin backends.
@@ -3136,6 +3133,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	if err := procMountGroup("auth", "auth/"); err != nil {
 		return nil, err
 	}
+
+	doc.CreateOperationIDs(context)
 
 	buf, err := json.Marshal(doc)
 	if err != nil {

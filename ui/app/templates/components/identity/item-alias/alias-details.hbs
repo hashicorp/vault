@@ -19,11 +19,11 @@
 {{/info-table-row}}
 {{#info-table-row label="Created" value=model.creationTime}}
   <time datetime={{model.creationTime}} title={{model.creationTime}}>
-    {{moment-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
+    {{date-format model.creationTime 'MMM DD, YYYY [at] h:mm a'}}
   </time>
 {{/info-table-row}}
 {{#info-table-row label="Last Updated" value=model.lastUpdateTime}}
   <time datetime={{model.lastUpdateTime}} title={{model.lastUpdateTime}}>
-    {{moment-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
+    {{date-format model.lastUpdateTime 'MMM DD, YYYY [at] h:mm a'}}
   </time>
 {{/info-table-row}}

@@ -18,7 +18,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"

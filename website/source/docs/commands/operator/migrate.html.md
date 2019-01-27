@@ -14,7 +14,8 @@ description: |-
 The `operator migrate` command copies data between storage backends to facilitate
 migrating Vault between configurations. It operates directly at the storage
 level, with no decryption involved. Keys in the destination storage backend will
-be overwritten. The source data is not modified, with the exception of a small lock
+be overwritten, and the destination should _not_ be initialized prior to the
+migrate operation. The source data is not modified, with the exception of a small lock
 key added during migration.
 
 This is intended to be an offline operation to ensure data consistency, and Vault

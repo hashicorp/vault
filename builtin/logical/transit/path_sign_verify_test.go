@@ -83,6 +83,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	}
 
 	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
+		t.Helper()
 		req.Path = "sign/foo" + postpath
 		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
@@ -108,6 +109,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	}
 
 	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
+		t.Helper()
 		req.Path = "verify/foo" + postpath
 		req.Data["signature"] = sig
 		resp, err := b.HandleRequest(context.Background(), req)
@@ -165,6 +167,22 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 	delete(req.Data, "prehashed")
+
+	// Test marshaling selection
+	// Bad value
+	req.Data["marshaling_algorithm"] = "asn2"
+	sig = signRequest(req, true, "")
+	// Use the default, verify we can't validate with jws
+	req.Data["marshaling_algorithm"] = "asn1"
+	sig = signRequest(req, false, "")
+	req.Data["marshaling_algorithm"] = "jws"
+	verifyRequest(req, true, "", sig)
+	// Sign with jws, verify we can validate
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+	// If we change marshaling back to asn1 we shouldn't be able to verify
+	delete(req.Data, "marshaling_algorithm")
+	verifyRequest(req, true, "", sig)
 
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set

@@ -4,22 +4,22 @@
   </div>
 
   {{#unless navDrawerOpen}}
-    <div class="navbar-drawer-toggle is-hidden-tablet" onclick={{action "toggleNavDrawer"}}>
+  <button class="navbar-drawer-toggle is-hidden-tablet" {{action "toggleNavDrawer"}}>
       <ICon @glyph="more-vertical" @size="16" /> Menu
-    </div>
+    </button>
   {{/unless}}
 
   <div class="navbar-drawer{{if navDrawerOpen ' is-active'}}">
     <div class="navbar-drawer-scroll">
       <div data-test-navheader-main>
-        {{yield (hash 
+        {{yield (hash
           main=(component 'nav-header/main')
           closeDrawer=(action "toggleNavDrawer" false)
           )
         }}
       </div>
       <div class="navbar-end" data-test-navheader-items>
-        {{yield (hash 
+        {{yield (hash
           items=(component 'nav-header/items')
           closeDrawer=(action "toggleNavDrawer" false)
           )
@@ -34,5 +34,6 @@
     {{/if}}
   </div>
 
-  <div class="navbar-drawer-overlay{{if navDrawerOpen ' is-active'}}" onclick={{action "toggleNavDrawer"}}></div>
+  <div class="navbar-drawer-overlay{{if navDrawerOpen ' is-active'}}" onclick={{action "toggleNavDrawer" (not navDrawerOpen)}}></div>
 </nav>
+{{console/ui-panel isFullscreen=consoleFullscreen}}

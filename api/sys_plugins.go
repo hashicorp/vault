@@ -42,27 +42,29 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 	}
 
 	req := c.c.NewRequest(method, path)
+	if method == "LIST" {
+		// Set this for broader compatibility, but we use LIST above to be able
+		// to handle the wrapping lookup function
+		req.Method = "GET"
+		req.Params.Set("list", "true")
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	resp, err := c.c.RawRequestWithContext(ctx, req)
-	if err != nil {
+	if err != nil && resp == nil {
 		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if secret == nil || secret.Data == nil {
-		return nil, errors.New("data from server response is empty")
-	}
-
-	if resp.StatusCode == 405 && req.Method == "GET" {
-		// We received an Unsupported Operation response from Vault, indicating
-		// Vault of an older version that doesn't support the READ method yet.
-		req.Method = "LIST"
+	// We received an Unsupported Operation response from Vault, indicating
+	// Vault of an older version that doesn't support the GET method yet;
+	// switch it to a LIST.
+	if resp.StatusCode == 405 {
+		req.Params.Set("list", "true")
 		resp, err := c.c.RawRequestWithContext(ctx, req)
 		if err != nil {
 			return nil, err
@@ -77,6 +79,14 @@ func (c *Sys) ListPlugins(i *ListPluginsInput) (*ListPluginsResponse, error) {
 			return nil, err
 		}
 		return &ListPluginsResponse{Names: result.Data.Keys}, nil
+	}
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
 	}
 
 	result := &ListPluginsResponse{

@@ -41,7 +41,7 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          {{#popup-menu name="auth-backend-nav" contentClass="is-wide"}}
+          {{#popup-menu name="auth-backend-nav"}}
             <nav class="menu">
               <ul class="menu-list">
                 <li>
@@ -64,8 +64,8 @@
                       buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
                       confirmMessage=(concat "Are you sure you want to disable the " method.id " auth method at " method.path "?")
-                      showConfirm=(get this (concat "shouldDelete-" method.id))
-                      class=(if (get this (concat "shouldDelete-" method.id)) "message is-block is-warning is-outline")
+                      showConfirm=(get this (concat "shouldDelete-" (dot-to-dash method.id)))
+                      class=(if (get this (concat "shouldDelete-" (dot-to-dash method.id))) "message is-block is-warning is-outline")
                       containerClasses="message-body is-block"
                       messageClasses="is-block"
                       confirmButtonText="Disable"

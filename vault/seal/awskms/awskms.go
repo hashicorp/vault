@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -38,11 +39,12 @@ const (
 // AWSKMSSeal represents credentials and Key information for the KMS Key used to
 // encryption and decryption
 type AWSKMSSeal struct {
-	accessKey string
-	secretKey string
-	region    string
-	keyID     string
-	endpoint  string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	keyID        string
+	endpoint     string
 
 	currentKeyID *atomic.Value
 
@@ -83,7 +85,7 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 	case config["kms_key_id"] != "":
 		k.keyID = config["kms_key_id"]
 	default:
-		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS sealconfiguration")
+		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
 	// Check and set region
@@ -97,22 +99,27 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		k.region = region
 	default:
 		k.region = "us-east-1"
+
+		// If available, get the region from EC2 instance metadata
+		sess, err := session.NewSession(nil)
+		if err != nil {
+			k.logger.Warn(fmt.Sprintf("unable to begin session: %s, defaulting region to %s", err, k.region))
+			break
+		}
+
+		// This will hang for ~10 seconds if the agent isn't running on an EC2 instance
+		region, err := ec2metadata.New(sess).Region()
+		if err != nil {
+			k.logger.Warn(fmt.Sprintf("unable to retrieve region from ec2 instance metadata: %s, defaulting region to %s", err, k.region))
+			break
+		}
+		k.region = region
 	}
 
-	// Check and set AWS access key and secret key
-	k.accessKey = os.Getenv("AWS_ACCESS_KEY_ID")
-	if k.accessKey == "" {
-		if accessKey, ok := config["access_key"]; ok {
-			k.accessKey = accessKey
-		}
-	}
-
-	k.secretKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if k.secretKey == "" {
-		if secretKey, ok := config["secret_key"]; ok {
-			k.secretKey = secretKey
-		}
-	}
+	// Check and set AWS access key, secret key, and session token
+	k.accessKey = config["access_key"]
+	k.secretKey = config["secret_key"]
+	k.sessionToken = config["session_token"]
 
 	k.endpoint = os.Getenv("AWS_KMS_ENDPOINT")
 	if k.endpoint == "" {
@@ -281,6 +288,7 @@ func (k *AWSKMSSeal) getAWSKMSClient() (*kms.KMS, error) {
 
 	credsConfig.AccessKey = k.accessKey
 	credsConfig.SecretKey = k.secretKey
+	credsConfig.SessionToken = k.sessionToken
 	credsConfig.Region = k.region
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()

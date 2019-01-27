@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
