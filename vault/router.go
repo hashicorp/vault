@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	denylistHeaders = []string{
+	deniedPassthroughRequestHeaders = []string{
 		"Authorization",
 		consts.AuthHeaderName,
 	}
@@ -593,13 +593,21 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Cache the headers
 	headers := req.Headers
+	req.Headers = nil
 
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		passthroughRequestHeaders = rawVal.([]string)
 	}
-	req.Headers = filteredPassthroughHeaders(headers, passthroughRequestHeaders)
+	var allowedResponseHeaders []string
+	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		allowedResponseHeaders = rawVal.([]string)
+	}
+
+	if len(passthroughRequestHeaders) > 0 {
+		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
+	}
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
@@ -690,6 +698,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 					}
 				}
 			}
+		}
+
+		if len(allowedResponseHeaders) > 0 {
+			resp.Headers = filteredHeaders(resp.Headers, allowedResponseHeaders, nil)
 		}
 
 		return resp, false, false, err
@@ -787,34 +799,37 @@ func pathsToRadix(paths []string) *radix.Tree {
 	return tree
 }
 
-// filteredPassthroughHeaders returns a headers map[string][]string that
-// contains the filtered values contained in passthroughHeaders. Filtering of
-// passthroughHeaders from the origHeaders is done is a case-insensitive manner.
-// Headers that match values from denylistHeaders will be ignored.
-func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
-	retHeaders := make(map[string][]string)
-
+// filteredHeaders returns a headers map[string][]string that
+// contains the filtered values contained in candidateHeaders. Filtering of
+// candidateHeaders from the origHeaders is done is a case-insensitive manner.
+// Headers that match values from deniedHeaders will be ignored.
+func filteredHeaders(origHeaders map[string][]string, candidateHeaders, deniedHeaders []string) map[string][]string {
 	// Short-circuit if there's nothing to filter
-	if len(passthroughHeaders) == 0 {
-		return retHeaders
+	if len(candidateHeaders) == 0 {
+		return nil
 	}
 
-	// Filter passthroughHeaders values through denyListHeaders first. Returns the
-	// lowercased the complement set.
-	passthroughHeadersSubset := strutil.Difference(passthroughHeaders, denylistHeaders, true)
+	retHeaders := make(map[string][]string, len(origHeaders))
+
+	allowedCandidateHeaders := candidateHeaders
+	if len(deniedHeaders) > 0 {
+		// Filter candidateHeaders values through deniedHeaders first. Returns the
+		// lowercased complement set.
+		allowedCandidateHeaders = strutil.Difference(candidateHeaders, deniedHeaders, true)
+	}
 
 	// Create a map that uses lowercased header values as the key and the original
 	// header naming as the value for comparison down below.
-	lowerHeadersRef := make(map[string]string, len(origHeaders))
+	lowerOrigHeaderKeys := make(map[string]string, len(origHeaders))
 	for key := range origHeaders {
-		lowerHeadersRef[strings.ToLower(key)] = key
+		lowerOrigHeaderKeys[strings.ToLower(key)] = key
 	}
 
 	// Case-insensitive compare of passthrough headers against originating
 	// headers. The returned headers will be the same casing as the originating
 	// header name.
-	for _, ph := range passthroughHeadersSubset {
-		if header, ok := lowerHeadersRef[ph]; ok {
+	for _, ch := range allowedCandidateHeaders {
+		if header, ok := lowerOrigHeaderKeys[ch]; ok {
 			retHeaders[header] = origHeaders[header]
 		}
 	}

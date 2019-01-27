@@ -679,6 +679,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		entryConfig["passthrough_request_headers"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		entryConfig["allowed_response_headers"] = rawVal.([]string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -858,6 +861,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
+	}
+	if len(apiConfig.AllowedResponseHeaders) > 0 {
+		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
 
 	// Create the mount entry
@@ -1049,6 +1055,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		resp.Data["passthrough_request_headers"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		resp.Data["allowed_response_headers"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -1331,6 +1341,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of passthrough_request_headers successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
+		headers := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AllowedResponseHeaders
+		mountEntry.Config.AllowedResponseHeaders = headers
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AllowedResponseHeaders = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of allowed_response_headers successful", "path", path)
 		}
 	}
 
@@ -1736,6 +1772,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
+	}
+	if len(apiConfig.AllowedResponseHeaders) > 0 {
+		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
 
 	// Create the mount entry
@@ -3816,7 +3855,11 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"passthrough_request_headers": {
-		"A list of headers to whitelist and pass from the request to the backend.",
+		"A list of headers to whitelist and pass from the request to the plugin.",
+		"",
+	},
+	"allowed_response_headers": {
+		"A list of headers to whitelist and allow a plugin to set on responses.",
 		"",
 	},
 	"token_type": {
