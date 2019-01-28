@@ -190,7 +190,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 					// Usage, just pass it through
 					return exitCode
 				}
-				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -debug-curl to see the generated error\n")
+				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
 				return exitCode
 			}
 			if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
