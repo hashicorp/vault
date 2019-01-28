@@ -329,14 +329,14 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signRequest := func(req *logical.Request, expectOk bool, postpath string) []string {
+	signRequest := func(req *logical.Request, errExpected bool, postpath string) []string {
 		t.Helper()
 		// Delete any key that exists in the request
 		delete(req.Data, "public_key")
 		req.Path = "sign/" + postpath
 		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
-			if expectOk {
+			if !errExpected {
 				t.Fatal(err)
 			}
 			return nil
@@ -344,11 +344,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
-		if !expectOk {
-			if !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+		if errExpected {
+			if resp.IsError() {
+				return nil
 			}
-			return nil
+			t.Fatalf("bad: got error response: %#v", *resp)
 		}
 		if resp.IsError() {
 			t.Fatalf("bad: got error response: %#v", *resp)
@@ -387,7 +387,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		return []string{value.(string)}
 	}
 
-	verifyRequest := func(req *logical.Request, expectOk bool, outcome []signOutcome, postpath string, sig []string) {
+	verifyRequest := func(req *logical.Request, errExpected bool, outcome []signOutcome, postpath string, sig []string) {
 		t.Helper()
 		req.Path = "verify/" + postpath
 		if _, ok := req.Data["batch_input"]; ok {
@@ -402,10 +402,10 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			req.Data["signature"] = sig[0]
 		}
 		resp, err := b.HandleRequest(context.Background(), req)
-		if err != nil && expectOk {
+		if err != nil && !errExpected {
 			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
-		if !expectOk {
+		if errExpected {
 			if resp != nil && !resp.IsError() {
 				t.Fatalf("bad: got error response: %#v\n%#v", *resp, req)
 			}
@@ -478,26 +478,26 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 
 	outcome := []signOutcome{{requestOk: true, valid: true, keyValid: true}}
 	// Test defaults
-	sig := signRequest(req, true, "foo")
-	verifyRequest(req, true, outcome, "foo", sig)
+	sig := signRequest(req, false, "foo")
+	verifyRequest(req, false, outcome, "foo", sig)
 
-	sig = signRequest(req, true, "bar")
-	verifyRequest(req, true, outcome, "bar", sig)
+	sig = signRequest(req, false, "bar")
+	verifyRequest(req, false, outcome, "bar", sig)
 
 	// Verify with incorrect key
 	outcome[0].valid = false
-	verifyRequest(req, true, outcome, "foo", sig)
+	verifyRequest(req, false, outcome, "foo", sig)
 
 	// Test a bad signature
 	badsig := sig[0]
 	badsig = badsig[:len(badsig)-2]
-	verifyRequest(req, false, outcome, "bar", []string{badsig})
+	verifyRequest(req, true, outcome, "bar", []string{badsig})
 
 	v1sig := sig
 
 	// Test a missing context
 	delete(req.Data, "context")
-	sig = signRequest(req, false, "bar")
+	sig = signRequest(req, true, "bar")
 
 	// Rotate and set min decryption version
 	err = fooP.Rotate(context.Background(), storage)
@@ -531,16 +531,16 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	}
 
 	// Make sure signing still works fine
-	sig = signRequest(req, true, "foo")
+	sig = signRequest(req, false, "foo")
 	outcome[0].valid = true
-	verifyRequest(req, true, outcome, "foo", sig)
+	verifyRequest(req, false, outcome, "foo", sig)
 	// Now try the v1
-	verifyRequest(req, false, outcome, "foo", v1sig)
+	verifyRequest(req, true, outcome, "foo", v1sig)
 
 	// Repeat with the other key
-	sig = signRequest(req, true, "bar")
-	verifyRequest(req, true, outcome, "bar", sig)
-	verifyRequest(req, false, outcome, "bar", v1sig)
+	sig = signRequest(req, false, "bar")
+	verifyRequest(req, false, outcome, "bar", sig)
+	verifyRequest(req, true, outcome, "bar", v1sig)
 
 	// Test Batch Signing
 	batchInput := []batchRequestSignItem{
@@ -554,16 +554,16 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 
 	outcome = []signOutcome{{requestOk: true, valid: true, keyValid: true}, {requestOk: true, valid: true, keyValid: true}}
 
-	sig = signRequest(req, true, "foo")
-	verifyRequest(req, true, outcome, "foo", sig)
+	sig = signRequest(req, false, "foo")
+	verifyRequest(req, false, outcome, "foo", sig)
 
-	goodsig := signRequest(req, true, "bar")
-	verifyRequest(req, true, outcome, "bar", goodsig)
+	goodsig := signRequest(req, false, "bar")
+	verifyRequest(req, false, outcome, "bar", goodsig)
 
 	// key doesn't match signatures
 	outcome[0].valid = false
 	outcome[1].valid = false
-	verifyRequest(req, true, outcome, "foo", goodsig)
+	verifyRequest(req, false, outcome, "foo", goodsig)
 
 	// Test a bad signature
 	badsig = sig[0]
@@ -571,7 +571,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	// matching key, but first signature is corrupted
 	outcome[0].requestOk = false
 	outcome[1].valid = true
-	verifyRequest(req, true, outcome, "bar", []string{badsig, goodsig[1]})
+	verifyRequest(req, false, outcome, "bar", []string{badsig, goodsig[1]})
 
 	// Test missing context
 	batchInput = []batchRequestSignItem{
@@ -583,12 +583,12 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		"batch_input": batchInput,
 	}
 
-	sig = signRequest(req, true, "bar")
+	sig = signRequest(req, false, "bar")
 
 	outcome[0].requestOk = true
 	outcome[0].valid = true
 	outcome[1].requestOk = false
-	verifyRequest(req, true, outcome, "bar", goodsig)
+	verifyRequest(req, false, outcome, "bar", goodsig)
 
 	// Test incorrect context
 	batchInput = []batchRequestSignItem{
@@ -603,5 +603,5 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	outcome[0].valid = false
 	outcome[1].requestOk = true
 	outcome[1].valid = false
-	verifyRequest(req, true, outcome, "bar", goodsig)
+	verifyRequest(req, false, outcome, "bar", goodsig)
 }
