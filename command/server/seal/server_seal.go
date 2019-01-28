@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ConfigureSeal func(*server.Seal, *[]string, *map[string]string, log.Logger, vault.Seal) (vault.Seal, error) = configureSeal
+	ConfigureSeal = configureSeal
 )
 
 func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (outseal vault.Seal, err error) {
