@@ -124,7 +124,7 @@ export default DS.Model.extend({
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
-  fieldGroups: computed('backend', function() {
+  fieldGroups: computed('backend', 'merged', function() {
     const groups = [
       { default: ['name', 'keyType'] },
       {
@@ -170,6 +170,20 @@ export default DS.Model.extend({
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
+
+    if (this.newFields) {
+      let allFields = [];
+      for (let group in groups) {
+        let fieldName = Object.keys(groups[group])[0];
+        allFields.concat(groups[group][fieldName]);
+      }
+      let otherFields = this.newFields.filter(field => {
+        !allFields.includes(field);
+      });
+      if (otherFields.length) {
+        groups.default.concat(otherFields);
+      }
+    }
 
     return fieldToAttrs(this, groups);
   }),

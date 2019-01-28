@@ -80,11 +80,24 @@ export default DS.Model.extend({
     return fieldToAttrs(this, fieldGroups);
   },
 
-  fieldDefinition: computed(function() {
+  fieldDefinition: computed('newFields', function() {
     const groups = [
       { default: ['commonName', 'format'] },
       { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] },
     ];
+    if (this.newFields) {
+      let allFields = [];
+      for (let group in groups) {
+        let type = Object.keys(groups[group])[0];
+        allFields.concat(groups[group]);
+      }
+      let otherFields = this.newFields.filter(field => {
+        !allFields.includes(field);
+      });
+      if (otherFields.length) {
+        groups.push({ Other: otherFields });
+      }
+    }
     return groups;
   }),
 

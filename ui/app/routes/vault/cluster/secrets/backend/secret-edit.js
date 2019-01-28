@@ -65,7 +65,6 @@ export default Route.extend(UnloadModelRoute, {
         let newModel = owner.factoryFor(name).class;
         if (owner.hasRegistration(name) && !newModel.merged) {
           //combine them
-          debugger; //eslint-disable-line
           let { attrs, newFields } = combineAttributes(newModel.attributes, props);
           newModel = newModel.extend(attrs, { newFields });
         } else {

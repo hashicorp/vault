@@ -37,8 +37,8 @@ export default Route.extend({
       let newModel = owner.factoryFor(name).class;
       if (owner.hasRegistration(name) && !newModel.merged) {
         //combine them
-        let attrs = combineAttributes(newModel.attributes, props);
-        newModel = newModel.extend(attrs);
+        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+        newModel = newModel.extend(attrs, { newFields });
       } else {
         //generate a whole new model
       }

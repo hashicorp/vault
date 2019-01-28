@@ -25,6 +25,7 @@ export const expandOpenApiProps = function(props) {
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
+  debugger; //eslint-disable-line
   oldAttrs.forEach(function(value, name) {
     if (newProps[name]) {
       newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
