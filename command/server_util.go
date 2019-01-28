@@ -62,7 +62,6 @@ func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.
 	case vaultseal.Shamir:
 		// The value reflected in config is what we're going to
 		existSeal = vault.NewDefaultSeal()
-		existSeal.SetCore(core)
 		newSeal = barrierSeal
 		newBarrierSealConfig := &vault.SealConfig{
 			Type:            newSeal.BarrierType(),
@@ -82,7 +81,6 @@ func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.
 		// in the config and disabled.
 		existSeal = unwrapSeal
 		newSeal = barrierSeal
-		newSeal.SetCore(core)
 		newSeal.SetCachedBarrierConfig(existRecoverySealConfig)
 	}
 
