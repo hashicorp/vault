@@ -23,12 +23,7 @@ module('Integration | Component | features-selection', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
-    component.setContext(this);
     this.owner.register('service:permissions', permissionsService);
-  });
-
-  hooks.afterEach(function() {
-    component.removeContext();
   });
 
   test('it disables and enables wizard items according to user permissions', async function(assert) {

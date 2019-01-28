@@ -26,10 +26,14 @@ export default Component.extend({
   },
 
   doesNotHavePermission(requiredPermissions) {
+    // requiredPermissions is an object of paths and capabilities defined within allFeatures.
+    // the expected shape is:
+    // {
+    //   'example/path': ['capability'],
+    //   'second/example/path': ['update', 'sudo'],
+    // }
     return !Object.keys(requiredPermissions).every(path => {
-      return requiredPermissions[path].every(capability => {
-        return this.permissions.hasPermission(path, [capability]);
-      });
+      return this.permissions.hasPermission(path, requiredPermissions[path]);
     });
   },
 
