@@ -264,6 +264,15 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			}
 			ret = injector
 		}
+
+		if len(resp.Headers) > 0 {
+			header := w.Header()
+			for k, v := range resp.Headers {
+				for _, h := range v {
+					header.Add(k, h)
+				}
+			}
+		}
 	}
 
 	// Respond
