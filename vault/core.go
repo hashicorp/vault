@@ -1719,19 +1719,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 func (c *Core) SetSealsForMigration(migrationSeal, newSeal, unwrapSeal Seal) {
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
-	if unwrapSeal != nil {
-		unwrapSeal.SetCore(c)
-	}
 	c.unwrapSeal = unwrapSeal
+	if c.unwrapSeal != nil {
+		c.unwrapSeal.SetCore(c)
+	}
 	if newSeal != nil && migrationSeal != nil {
-		if migrationSeal != nil {
-			migrationSeal.SetCore(c)
-		}
 		c.migrationSeal = migrationSeal
+		c.migrationSeal.SetCore(c)
 		c.seal = newSeal
-		if newSeal != nil {
-			newSeal.SetCore(c)
-		}
+		c.seal.SetCore(c)
 		c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationSeal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
 	}
 }
