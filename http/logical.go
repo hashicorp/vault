@@ -234,6 +234,17 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 			return
 		}
 
+		// Set this here so it will take effect regardless of respondRaw or
+		// respondOk
+		if len(resp.Headers) > 0 {
+			header := w.Header()
+			for k, v := range resp.Headers {
+				for _, h := range v {
+					header.Add(k, h)
+				}
+			}
+		}
+
 		// Check if this is a raw response
 		if _, ok := resp.Data[logical.HTTPStatusCode]; ok {
 			respondRaw(w, r, resp)
@@ -263,15 +274,6 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 				Response: httpResp,
 			}
 			ret = injector
-		}
-
-		if len(resp.Headers) > 0 {
-			header := w.Header()
-			for k, v := range resp.Headers {
-				for _, h := range v {
-					header.Add(k, h)
-				}
-			}
 		}
 	}
 
