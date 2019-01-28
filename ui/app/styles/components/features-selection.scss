@@ -19,6 +19,11 @@
   &.is-active {
     box-shadow: 0 0 0 1px $grey-light;
   }
+
+  &.is-disabled {
+    background-color: $ui-gray-010;
+    color: $ui-gray-300;
+  }
 }
 
 .feature-box label {
