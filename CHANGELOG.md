@@ -10,6 +10,8 @@ IMPROVEMENTS:
  * secret/transit: ECDSA signatures can now be marshaled in JWS-compatible
    fashion [GH-6077]
  * storage/etcd: Support SRV service names [GH-6087]
+ * storage/aws: Support specifying a KMS key ID for server-side encryption
+   [GH-5996]
 
 BUG FIXES:
 
