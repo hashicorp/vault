@@ -59,7 +59,15 @@ export default DS.Model.extend({
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
     };
-    keys = keysForType[credentialType].concat(this.newFields || []);
+    keys = keysForType[credentialType];
+    //TODO: distinguish behind fields intentionally exluded
+    //and fields we need to add in
+    if (this.newFields) {
+      let otherFields = this.newFields.filter(field => !keys.includes(field));
+      if (otherFields.length) {
+        keys = keys.concat(otherFields);
+      }
+    }
     return expandAttributeMeta(this, keys);
   }),
 
