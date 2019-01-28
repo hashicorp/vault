@@ -5,6 +5,7 @@ import { computed, set } from '@ember/object';
 import { alias, or } from '@ember/object/computed';
 import { task, waitForEvent } from 'ember-concurrency';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import keys from 'vault/lib/keycodes';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
@@ -13,7 +14,7 @@ const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
-export default Component.extend(FocusOnInsertMixin, {
+export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   wizard: service(),
   router: service(),
   store: service(),
@@ -133,14 +134,7 @@ export default Component.extend(FocusOnInsertMixin, {
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  buttonDisabled: or(
-    'requestInFlight',
-    'model.isFolder',
-    'model.isError',
-    'model.flagsIsInvalid',
-    'hasLintError',
-    'error'
-  ),
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
   modelForData: computed('isV2', 'model', function() {
     return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
@@ -163,7 +157,7 @@ export default Component.extend(FocusOnInsertMixin, {
   }),
 
   transitionToRoute() {
-    this.router.transitionTo(...arguments);
+    return this.router.transitionTo(...arguments);
   },
 
   onEscape(e) {
@@ -304,8 +298,9 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     deleteKey() {
+      let { id } = this.model;
       this.model.destroyRecord().then(() => {
-        this.transitionToRoute(LIST_ROOT_ROUTE);
+        this.navToNearestAncestor.perform(id);
       });
     },
 

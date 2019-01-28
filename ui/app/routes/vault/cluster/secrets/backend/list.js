@@ -148,15 +148,22 @@ export default Route.extend({
 
   actions: {
     error(error, transition) {
-      const { secret } = this.paramsFor(this.routeName);
-      const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let { secret } = this.paramsFor(this.routeName);
+      let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let is404 = error.httpStatus === 404;
+      let hasModel = this.controllerFor(this.routeName).get('hasModel');
 
+      // this will occur if we've deleted something,
+      // and navigate to its parent and the parent doesn't exist -
+      // this if often the case with nested keys in kv-like engines
+      if (transition.data.isDeletion && is404) {
+        throw error;
+      }
       set(error, 'secret', secret);
       set(error, 'isRoot', true);
       set(error, 'backend', backend);
-      const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
-      if (hasModel && error.httpStatus === 404) {
+      if (hasModel && is404) {
         this.set('has404', true);
         transition.abort();
         return false;

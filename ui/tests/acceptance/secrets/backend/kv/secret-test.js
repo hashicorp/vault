@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName } from '@ember/test-helpers';
+import { settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -77,6 +77,76 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  // https://github.com/hashicorp/vault/issues/5960
+  test('version 1: nested paths creation maintains ability to navigate the tree', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = '1/2/3/4';
+    // mount version 1 engine
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await withFlash(
+      mountSecrets
+        .next()
+        .path(enginePath)
+        .version(1)
+        .submit()
+    );
+
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+
+    // setup an ancestor for when we delete
+    await listPage.visitRoot({ backend: enginePath });
+    await listPage.secrets.filterBy('text', '1/')[0].click();
+    await listPage.create();
+    await editPage.createSecret('1/2', 'foo', 'bar');
+
+    // lol we have to do this because ember-cli-page-object doesn't like *'s in visitable
+    await listPage.visitRoot({ backend: enginePath });
+    await listPage.secrets.filterBy('text', '1/')[0].click();
+    await listPage.secrets.filterBy('text', '2/')[0].click();
+    await listPage.secrets.filterBy('text', '3/')[0].click();
+    await listPage.create();
+
+    await editPage.createSecret(secretPath + 'a', 'foo', 'bar');
+    await listPage.visitRoot({ backend: enginePath });
+    await listPage.secrets.filterBy('text', '1/')[0].click();
+    await listPage.secrets.filterBy('text', '2/')[0].click();
+    let secretLink = listPage.secrets.filterBy('text', '3/')[0];
+    assert.ok(secretLink, 'link to the 3/ branch displays properly');
+
+    await listPage.secrets.filterBy('text', '3/')[0].click();
+    await listPage.secrets[0].menuToggle();
+    await settled();
+    await listPage.delete();
+    await listPage.confirmDelete();
+    await settled();
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.equal(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+
+    await listPage.secrets[0].menuToggle();
+    await listPage.delete();
+    await listPage.confirmDelete();
+    await settled();
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${enginePath}/list/1/`,
+      'navigates to the ancestor created earlier'
+    );
+  });
+
+  // https://github.com/hashicorp/vault/issues/5994
+  test('version 1: key named keys', async function(assert) {
+    await consoleComponent.runCommands([
+      'vault write sys/mounts/test type=kv',
+      'refresh',
+      'vault write test/a keys=a keys=b',
+    ]);
+    await showPage.visit({ backend: 'test', id: 'a' });
+    assert.ok(showPage.editIsPresent, 'renders the page properly');
   });
 
   test('it redirects to the path ending in / for list pages', async function(assert) {

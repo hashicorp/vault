@@ -29,11 +29,13 @@
           "description": "a header value",
           "in": "header",
           "schema": {
-            "type": "string"
+            "type": "string",
+            "enum": ["a", "b", "c"]
           }
         }
       ],
       "get": {
+        "operationId": "getFooId",
         "tags": ["secrets"],
         "summary": "My Summary",
         "description": "My Description",
@@ -54,6 +56,7 @@
         ]
       },
       "post": {
+        "operationId": "postFooId",
         "tags": ["secrets"],
         "summary": "Update Summary",
         "description": "Update Description",
@@ -69,6 +72,11 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "age": {
+                    "type": "number",
+                    "description": "the age",
+                    "enum": [1, 2, 3]
                   },
                   "name": {
                     "type": "string",

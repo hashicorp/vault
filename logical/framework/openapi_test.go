@@ -328,9 +328,15 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Type:        TypeNameString,
 					Description: "the name",
 				},
+				"age": {
+					Type:          TypeInt,
+					Description:   "the age",
+					AllowedValues: []interface{}{1, 2, 3},
+				},
 				"x-abc-token": {
-					Type:        TypeHeader,
-					Description: "a header value",
+					Type:          TypeHeader,
+					Description:   "a header value",
+					AllowedValues: []interface{}{"a", "b", "c"},
 				},
 			},
 			HelpSynopsis:    "Synopsis",
@@ -399,6 +405,60 @@ func TestOpenAPI_Paths(t *testing.T) {
 	})
 }
 
+func TestOpenAPI_OperationID(t *testing.T) {
+	path1 := &Path{
+		Pattern: "foo/" + GenericNameRegex("id"),
+		Fields: map[string]*FieldSchema{
+			"id": {Type: TypeString},
+		},
+		Operations: map[logical.Operation]OperationHandler{
+			logical.ReadOperation:   &PathOperation{},
+			logical.UpdateOperation: &PathOperation{},
+			logical.DeleteOperation: &PathOperation{},
+		},
+	}
+
+	path2 := &Path{
+		Pattern: "Foo/" + GenericNameRegex("id"),
+		Fields: map[string]*FieldSchema{
+			"id": {Type: TypeString},
+		},
+		Operations: map[logical.Operation]OperationHandler{
+			logical.ReadOperation: &PathOperation{},
+		},
+	}
+
+	for _, context := range []string{"", "bar"} {
+		doc := NewOASDocument()
+		documentPath(path1, nil, logical.TypeLogical, doc)
+		documentPath(path2, nil, logical.TypeLogical, doc)
+		doc.CreateOperationIDs(context)
+
+		tests := []struct {
+			path string
+			op   string
+			opID string
+		}{
+			{"/Foo/{id}", "get", "getFooId"},
+			{"/foo/{id}", "get", "getFooId_2"},
+			{"/foo/{id}", "post", "postFooId"},
+			{"/foo/{id}", "delete", "deleteFooId"},
+		}
+
+		for _, test := range tests {
+			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
+			expected := test.opID
+			if context != "" {
+				expected += "_" + context
+			}
+
+			if actual != expected {
+				t.Fatalf("expected %v, got %v", expected, actual)
+			}
+		}
+	}
+}
+
 func TestOpenAPI_CustomDecoder(t *testing.T) {
 	p := &Path{
 		Pattern:      "foo",
@@ -452,6 +512,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 
 	doc := NewOASDocument()
 	documentPath(path, sp, logical.TypeLogical, doc)
+	doc.CreateOperationIDs("")
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -471,6 +532,19 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	if diff := deep.Equal(actual, expected); diff != nil {
 		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
+	}
+}
+
+func getPathOp(pi *OASPathItem, op string) *OASOperation {
+	switch op {
+	case "get":
+		return pi.Get
+	case "post":
+		return pi.Post
+	case "delete":
+		return pi.Delete
+	default:
+		panic("unexpected operation: " + op)
 	}
 }
 

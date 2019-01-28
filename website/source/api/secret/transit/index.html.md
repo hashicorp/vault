@@ -385,6 +385,12 @@ will be returned.
 }
 ```
 
+!> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+of service attack. This can be tuned per [`listener`
+block](/docs/configuration/listener/tcp.html) in the Vault server
+configuration.
+
+
 ### Sample Request
 
 ```
@@ -819,6 +825,12 @@ supports signing.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also change the output encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Payload
 
@@ -895,6 +907,13 @@ data.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature was originally marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also expect the input encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
+
 ### Sample Payload
 
 ```json
@@ -966,7 +985,7 @@ input to this endpoint should be the output of `/backup` endpoint.
  ~> For safety, by default the backend will refuse to restore to an existing
  key. If you want to reuse a key name, it is recommended you delete the key
  before restoring. It is a good idea to attempt restoring to a different key
- name first to verify that the operation successfully completes. 
+ name first to verify that the operation successfully completes.
 
 | Method   | Path                        | Produces               |
 | :------- | :-------------------------- | :--------------------- |

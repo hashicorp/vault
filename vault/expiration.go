@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -1051,7 +1051,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	}
 
 	// Create a lease entry
-	leaseRand, err := base62.Random(TokenLength, true)
+	leaseRand, err := base62.Random(TokenLength)
 	if err != nil {
 		return "", err
 	}

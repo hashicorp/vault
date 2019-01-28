@@ -139,7 +139,7 @@ to GCP APIs:
 
 ```sh
 $ curl -H "Authorization: Bearer ya29.c.ElodBmNPwHUNY5gcBpnXcE4ywG4w1k..."
-```    
+```
 
 ### Service Account Keys
 
@@ -288,7 +288,6 @@ minimum scope(s):
 
 ```text
 https://www.googleapis.com/auth/cloud-platform
-https://www.googleapis.com/auth/iam
 ```
 
 ### Required Permissions

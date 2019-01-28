@@ -20,18 +20,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-sockaddr"
+	multierror "github.com/hashicorp/go-multierror"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	serverseal "github.com/hashicorp/vault/command/server/seal"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/helper/gated-writer"
+	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/mlock"
@@ -750,7 +750,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
-		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
+		if vault.IsFatalError(newCoreError) {
 			c.UI.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
@@ -946,12 +946,31 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		return 1
 	}
 
-	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-		if !errwrap.ContainsType(err, new(vault.NonFatalError)) {
-			c.UI.Error(fmt.Sprintf("Error initializing core: %s", err))
-			return 1
+	// Attempt unsealing in a background goroutine. This is needed for when a
+	// Vault cluster with multiple servers is configured with auto-unseal but is
+	// uninitialized. Once one server initializes the storage backend, this
+	// goroutine will pick up the unseal keys and unseal this instance.
+	go func() {
+		for {
+			err := core.UnsealWithStoredKeys(context.Background())
+			if err == nil {
+				return
+			}
+
+			if vault.IsFatalError(err) {
+				c.logger.Error("error unsealing core", "error", err)
+				return
+			} else {
+				c.logger.Warn("failed to unseal core", "error", err)
+			}
+
+			select {
+			case <-c.ShutdownCh:
+				return
+			case <-time.After(5 * time.Second):
+			}
 		}
-	}
+	}()
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
@@ -1017,13 +1036,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			sort.Strings(plugins)
 		}
 
-		export := "export"
-		quote := "'"
-		if runtime.GOOS == "windows" {
-			export = "set"
-			quote = ""
-		}
-
 		// Print the big dev mode warning!
 		c.UI.Warn(wrapAtLength(
 			"WARNING! dev mode is enabled! In this mode, Vault runs entirely " +
@@ -1033,8 +1045,16 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("")
 		c.UI.Warn("You may need to set the following environment variable:")
 		c.UI.Warn("")
-		c.UI.Warn(fmt.Sprintf("    $ %s VAULT_ADDR=%s%s%s",
-			export, quote, "http://"+config.Listeners[0].Config["address"].(string), quote))
+
+		endpointURL := "http://" + config.Listeners[0].Config["address"].(string)
+		if runtime.GOOS == "windows" {
+			c.UI.Warn("PowerShell:")
+			c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
+			c.UI.Warn("cmd.exe:")
+			c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
+		} else {
+			c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+		}
 
 		// Unseal key is not returned if stored shares is supported
 		if len(init.SecretShares) > 0 {

@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"sync"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/xor"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -146,7 +146,7 @@ func WaitForReplicationState(t testing.T, c *vault.Core, state consts.Replicatio
 	}
 }
 
-func GetClusterAndCore(t testing.T, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.HandlerProperties) http.Handler) (*vault.TestCluster, *vault.TestClusterCore) {
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func GetClusterAndCore(t testing.T, logger log.Logger) (*vault.TestCluster, *vau
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
+		HandlerFunc: handlerFunc,
 		Logger:      logger,
 	})
 	cluster.Start()
@@ -175,7 +175,7 @@ func GetClusterAndCore(t testing.T, logger log.Logger) (*vault.TestCluster, *vau
 	return cluster, core
 }
 
-func GetFourReplicatedClusters(t testing.T) *ReplicatedTestClusters {
+func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
 	logger := log.New(&log.LoggerOptions{
@@ -185,13 +185,13 @@ func GetFourReplicatedClusters(t testing.T) *ReplicatedTestClusters {
 	// Set this lower so that state populates quickly to standby nodes
 	vault.HeartbeatInterval = 2 * time.Second
 
-	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"))
+	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
 
-	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"))
+	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"), handlerFunc)
 
-	ret.PerfPrimaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri-dr"))
+	ret.PerfPrimaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri-dr"), handlerFunc)
 
-	ret.PerfSecondaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec-dr"))
+	ret.PerfSecondaryDRCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec-dr"), handlerFunc)
 
 	SetupFourClusterReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster, ret.PerfPrimaryDRCluster, ret.PerfSecondaryDRCluster)
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -692,7 +692,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if numBinds == 0 {
-		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
+		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
 	policiesRaw, ok := data.GetOk("policies")

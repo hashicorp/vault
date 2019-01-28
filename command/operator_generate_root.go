@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/password"
@@ -286,7 +286,7 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, drToken bo
 		return base64.StdEncoding.EncodeToString(buf), 0
 
 	default:
-		otp, err := base62.Random(status.OTPLength, true)
+		otp, err := base62.Random(status.OTPLength)
 		if err != nil {
 			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
 			return "", 2

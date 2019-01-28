@@ -63,7 +63,7 @@ types also generate separate HMAC keys):
 * `ecdsa-p256`: ECDSA using curve P256; supports signing and signature
   verification
 * `rsa-2048`: 2048-bit RSA key; supports encryption, decryption, signing, and
-  signature verification 
+  signature verification
 * `rsa-4096`: 4096-bit RSA key; supports encryption, decryption, signing, and
   signature verification
 
@@ -143,6 +143,11 @@ the proper permission, it can use this secrets engine.
     Note that Vault does not _store_ any of this data. The caller is responsible
     for storing the encrypted ciphertext. When the caller wants the plaintext,
     it must provide the ciphertext back to Vault to decrypt the value.
+
+    !> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+    of service attack. This can be tuned per [`listener`
+    block](/docs/configuration/listener/tcp.html) in the Vault server
+    configuration.
 
 1. Decrypt a piece of data using the `/decrypt` endpoint with a named key:
 

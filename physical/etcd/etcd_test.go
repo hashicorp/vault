@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
 
-	"github.com/coreos/etcd/client"
+	"go.etcd.io/etcd/client"
 )
 
 func TestEtcdBackend(t *testing.T) {

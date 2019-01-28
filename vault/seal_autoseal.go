@@ -358,22 +358,6 @@ func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 		return err
 	}
 
-	// Check if provided key is same as the decrypted key
-	if subtle.ConstantTimeCompare(key, pt) != 1 {
-		// We may need to upgrade if the key is barrier-wrapped, so check
-		barrierDec, err := d.core.BarrierEncryptorAccess().Decrypt(ctx, recoveryKeyPath, pt)
-		if err == nil {
-			// If we hit this, it got barrier-wrapped, so we need to re-set the
-			// recovery key after unwrapping
-			err := d.SetRecoveryKey(ctx, barrierDec)
-			if err != nil {
-				return err
-			}
-		}
-		// Set pt to barrierDec for re-checking
-		pt = barrierDec
-	}
-
 	if subtle.ConstantTimeCompare(key, pt) != 1 {
 		return fmt.Errorf("recovery key does not match submitted values")
 	}

@@ -758,7 +758,7 @@ func (c *OperatorRekeyCommand) printUnsealKeys(client *api.Client, status *api.R
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
 			"The encrypted unseal keys are backed up to \"core/unseal-keys-backup\"" +
 				"in the storage backend. Remove these keys at any time using " +
-				"\"vault operator rekey -delete-backup\". Vault does not automatically " +
+				"\"vault operator rekey -backup-delete\". Vault does not automatically " +
 				"remove these keys.",
 		)))
 	}

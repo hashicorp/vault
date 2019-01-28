@@ -205,11 +205,8 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"hash_algorithm": "invalid",
 	}
 	resp, err = b.HandleRequest(context.Background(), signReq)
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatal("expected an error response")
 	}
 
 	signReq.Data = map[string]interface{}{
