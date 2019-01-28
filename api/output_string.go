@@ -44,6 +44,9 @@ func (d *OutputStringError) parseRequest() {
 	d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
 	for k, v := range d.Request.Header {
 		for _, h := range v {
+			if strings.ToLower(k) == "x-vault-token" {
+				h = `$(vault print token)`
+			}
 			d.parsedCurlString = fmt.Sprintf("%s-H \"%s: %s\" ", d.parsedCurlString, k, h)
 		}
 	}
