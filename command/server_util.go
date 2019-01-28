@@ -13,7 +13,7 @@ var (
 	onEnterprise = false
 )
 
-func adjustCoreForSealMigration(ctx context.Context, core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
+func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.Seal) error {
 	existBarrierSealConfig, existRecoverySealConfig, err := core.PhysicalSealConfigs(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error checking for existing seal: %s", err)

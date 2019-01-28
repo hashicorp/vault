@@ -113,7 +113,7 @@ func TestSealMigration(t *testing.T) {
 		newSeal := vault.NewAutoSeal(seal.NewTestSeal(logger))
 		newSeal.SetCore(core)
 		autoSeal = newSeal
-		if err := adjustCoreForSealMigration(ctx, core, newSeal, nil); err != nil {
+		if err := adjustCoreForSealMigration(core, newSeal, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -210,7 +210,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(ctx, core, altSeal, autoSeal); err != nil {
+		if err := adjustCoreForSealMigration(core, altSeal, autoSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -248,7 +248,7 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		if err := adjustCoreForSealMigration(ctx, core, shamirSeal, altSeal); err != nil {
+		if err := adjustCoreForSealMigration(core, shamirSeal, altSeal); err != nil {
 			t.Fatal(err)
 		}
 

@@ -941,7 +941,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(context.Background(), core, barrierSeal, unwrapSeal); err != nil {
+	if err := adjustCoreForSealMigration(core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
