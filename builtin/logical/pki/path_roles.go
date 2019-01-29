@@ -186,7 +186,12 @@ protection use. Defaults to false.`,
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
 				DisplayName: "Key Type",
+<<<<<<< HEAD
 				DisplayValue: "rsa"
+=======
+				DisplayValue: "rsa",
+				AllowedValues: []interface{}{"rsa", "ec"},
+>>>>>>> 13172fd06e938881b7c68fc249ca21f497be7d25
 			},
 
 			"key_bits": &framework.FieldSchema{
@@ -209,7 +214,11 @@ https://golang.org/pkg/crypto/x509/#KeyUsage
 To remove all key usages from being set, set
 this value to an empty list.`,
 				DisplayName: "Key Usage",
+<<<<<<< HEAD
 				DisplayValue: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+=======
+				DisplayValue: "DigitalSignature,KeyAgreement,KeyEncipherment",
+>>>>>>> 13172fd06e938881b7c68fc249ca21f497be7d25
 			},
 
 			"ext_key_usage": &framework.FieldSchema{
@@ -221,7 +230,10 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 To remove all key usages from being set, set
 this value to an empty list.`,
 				DisplayName: "Extended Key Usage",
+<<<<<<< HEAD
 				DisplayValue: []string{},
+=======
+>>>>>>> 13172fd06e938881b7c68fc249ca21f497be7d25
 			},
 
 			"ext_key_usage_oids": &framework.FieldSchema{

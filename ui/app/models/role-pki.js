@@ -170,6 +170,20 @@ export default DS.Model.extend({
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
+    let excludedFields = ['extKeyUsage'];
+    if (this.newFields) {
+      let allFields = [];
+      for (let group in groups) {
+        let fieldName = Object.keys(groups[group])[0];
+        allFields.concat(groups[group][fieldName]);
+      }
+      let otherFields = this.newFields.filter(field => {
+        !allFields.includes(field) && !excludedFields.includes(field);
+      });
+      if (otherFields.length) {
+        groups.default.concat(otherFields);
+      }
+    }
 
     if (this.newFields) {
       let allFields = [];

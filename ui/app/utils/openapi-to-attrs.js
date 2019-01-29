@@ -8,6 +8,9 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (let prop in props) {
     let details = props[prop];
+    if (details.type === 'integer') {
+      details.type = 'number';
+    }
     let editType = details.type;
     if (details.format === 'seconds') {
       editType = 'ttl';
@@ -18,15 +21,18 @@ export const expandOpenApiProps = function(props) {
     attrs[prop.camelize()] = {
       editType: editType,
       type: details.type,
-      label: details['x-vault-displayName'],
-      possibleValues: details['x-vault-allowed-values'],
-      defaultValue: details['x-vault-displayValue'],
     };
 
-    if (props[prop]['x-vault-displayName']) {
-      attrs[prop.camelize()].label = props[prop]['x-vault-displayName'];
+    if (details['x-vault-displayName']) {
+      attrs[prop.camelize()].label = details['x-vault-displayName'];
     }
-    // todo: add label, possibleValues, and defaultValue only if they exist
+    if (details['enum']) {
+      debugger; //eslint-disable-line
+      attrs[prop.camelize()].possibleValues = details['enum'];
+    }
+    if (details['x-vault-displayValue']) {
+      attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
+    }
   }
   return attrs;
 };
