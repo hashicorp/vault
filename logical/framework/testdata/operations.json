@@ -12,7 +12,7 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-create-supported": true,
+      "x-vault-createSupported": true,
       "x-vault-sudo": true,
       "parameters": [
         {
@@ -78,9 +78,9 @@
                     "description": "the age",
                     "enum": [1, 2, 3],
                     "required": true,
-                    "x-vault-display-name": "Age",
-                    "x-vault-display-value": 7,
-                    "x-vault-display-sensitive": true
+                    "x-vault-displayName": "Age",
+                    "x-vault-displayValue": 7,
+                    "x-vault-displaySensitive": true
                   },
                   "name": {
                     "type": "string",

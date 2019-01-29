@@ -102,7 +102,7 @@ type OASPathItem struct {
 	Parameters      []OASParameter `json:"parameters,omitempty"`
 	Sudo            bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
 	Unauthenticated bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported bool           `json:"x-vault-create-supported,omitempty" mapstructure:"x-vault-create-supported"`
+	CreateSupported bool           `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -158,9 +158,9 @@ type OASSchema struct {
 	Example          interface{}           `json:"example,omitempty"`
 	Deprecated       bool                  `json:"deprecated,omitempty"`
 	Required         bool                  `json:"required,omitempty"`
-	DisplayName      string                `json:"x-vault-display-name,omitempty" mapstructure:"x-vault-display-name,omitempty"`
-	DisplayValue     interface{}           `json:"x-vault-display-value,omitempty" mapstructure:"x-vault-display-value,omitempty"`
-	DisplaySensitive bool                  `json:"x-vault-display-sensitive,omitempty" mapstructure:"x-vault-display-sensitive,omitempty"`
+	DisplayName      string                `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	DisplayValue     interface{}           `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
+	DisplaySensitive bool                  `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
 }
 
 type OASResponse struct {
