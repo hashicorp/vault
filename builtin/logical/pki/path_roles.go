@@ -63,7 +63,8 @@ the value of max_ttl.`,
 				Default: true,
 				Description: `Whether to allow "localhost" as a valid common
 name in a request`,
-				DisplayName: "Allow Localhost",
+				DisplayName:  "Allow Localhost",
+				DisplayValue: true,
 			},
 
 			"allowed_domains": &framework.FieldSchema{
@@ -115,7 +116,8 @@ information.`,
 				Default: true,
 				Description: `If set, only valid host names are allowed for
 CN and SANs. Defaults to true.`,
-				DisplayName: "Allow Bare Domains",
+				DisplayName:  "Allow Bare Domains",
+				DisplayValue: true,
 			},
 
 			"allow_ip_sans": &framework.FieldSchema{
@@ -123,7 +125,8 @@ CN and SANs. Defaults to true.`,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted.`,
-				DisplayName: "Allow IP Subject Alternative Names",
+				DisplayName:  "Allow IP Subject Alternative Names",
+				DisplayValue: true,
 			},
 
 			"allowed_uri_sans": &framework.FieldSchema{
@@ -150,7 +153,8 @@ Any valid URI is accepted, these values support globbing.`,
 				Default: true,
 				Description: `If set, certificates are flagged for server auth use.
 Defaults to true.`,
-				DisplayName: "Server Flag",
+				DisplayName:  "Server Flag",
+				DisplayValue: true,
 			},
 
 			"client_flag": &framework.FieldSchema{
@@ -158,7 +162,8 @@ Defaults to true.`,
 				Default: true,
 				Description: `If set, certificates are flagged for client auth use.
 Defaults to true.`,
-				DisplayName: "Client Flag",
+				DisplayName:  "Client Flag",
+				DisplayValue: true,
 			},
 
 			"code_signing_flag": &framework.FieldSchema{
@@ -181,6 +186,7 @@ protection use. Defaults to false.`,
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
 				DisplayName: "Key Type",
+				DisplayValue: "rsa"
 			},
 
 			"key_bits": &framework.FieldSchema{
@@ -190,6 +196,7 @@ and "ec" are the only valid values.`,
 certainly want to change this if you adjust
 the key_type.`,
 				DisplayName: "Key Bits",
+				DisplayValue: 2048,
 			},
 
 			"key_usage": &framework.FieldSchema{
@@ -202,6 +209,7 @@ https://golang.org/pkg/crypto/x509/#KeyUsage
 To remove all key usages from being set, set
 this value to an empty list.`,
 				DisplayName: "Key Usage",
+				DisplayValue: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 			},
 
 			"ext_key_usage": &framework.FieldSchema{
@@ -213,6 +221,7 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 To remove all key usages from being set, set
 this value to an empty list.`,
 				DisplayName: "Extended Key Usage",
+				DisplayValue: []string{},
 			},
 
 			"ext_key_usage_oids": &framework.FieldSchema{
@@ -229,6 +238,7 @@ the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 				DisplayName: "Use CSR Common Name",
+				DisplayValue: true,
 			},
 
 			"use_csr_sans": &framework.FieldSchema{
@@ -238,6 +248,7 @@ Names. Defaults to true.`,
 the SANs in the CSR will be used. This does *not*
 include the Common Name (cn). Defaults to true.`,
 				DisplayName: "Use CSR Subject Alternative Names",
+				DisplayValue: true,
 			},
 
 			"ou": &framework.FieldSchema{
@@ -316,10 +327,11 @@ for "generate_lease".`,
 			},
 
 			"require_cn": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
-				DisplayName: "Use CSR Common Name",
+				Type:         framework.TypeBool,
+				Default:      true,
+				Description:  `If set to false, makes the 'common_name' field optional while generating a certificate.`,
+				DisplayName:  "Use CSR Common Name",
+				DisplayValue: true,
 			},
 
 			"policy_identifiers": &framework.FieldSchema{
@@ -334,10 +346,11 @@ for "generate_lease".`,
 				DisplayName: "Basic Constraints Valid for Non-CA",
 			},
 			"not_before_duration": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Default:     30,
-				Description: `The duration before now the cert needs to be created / signed.`,
-				DisplayName: "Not Before Duration",
+				Type:         framework.TypeDurationSecond,
+				Default:      30,
+				Description:  `The duration before now the cert needs to be created / signed.`,
+				DisplayName:  "Not Before Duration",
+				DisplayValue: 30,
 			},
 		},
 
