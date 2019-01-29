@@ -18,11 +18,15 @@ export const expandOpenApiProps = function(props) {
     attrs[prop.camelize()] = {
       editType: editType,
       type: details.type,
+      label: details['x-vault-displayName'],
+      possibleValues: details['x-vault-allowed-values'],
+      defaultValue: details['x-vault-displayValue'],
     };
 
-    if (props[prop]['x-vault-display-name']) {
-      attrs[prop.camelize()].label = props[prop]['x-vault-display-name'];
+    if (props[prop]['x-vault-displayName']) {
+      attrs[prop.camelize()].label = props[prop]['x-vault-displayName'];
     }
+    // todo: add label, possibleValues, and defaultValue only if they exist
   }
   return attrs;
 };
@@ -30,7 +34,6 @@ export const expandOpenApiProps = function(props) {
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
-  debugger; //eslint-disable-line
   oldAttrs.forEach(function(value, name) {
     if (newProps[name]) {
       newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
