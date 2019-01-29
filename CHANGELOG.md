@@ -19,6 +19,8 @@ BUG FIXES:
    a performance standby very quickly, before an associated entity has been
    replicated. If the entity is not found in this scenario, the request will
    forward to the active node.
+ * replication: Fix a "failed to register lease" error when using performance
+   standbys
  * storage/postgresql: The `Get` method will now return an Entry object with
    the `Key` member correctly populated with the full path that was requested
    instead of just the last path element [GH-6044]
