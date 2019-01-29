@@ -1,23 +1,20 @@
 package gcpckms
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"sync/atomic"
 
+	cloudkms "cloud.google.com/go/kms/apiv1"
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	context "golang.org/x/net/context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	cloudkms "google.golang.org/api/cloudkms/v1"
+	"google.golang.org/api/option"
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 const (
@@ -55,7 +52,7 @@ type GCPCKMSSeal struct {
 
 	currentKeyID *atomic.Value
 
-	client *cloudkms.Service
+	client *cloudkms.KeyManagementClient
 	logger log.Logger
 }
 
@@ -145,9 +142,9 @@ func (s *GCPCKMSSeal) SetConfig(config map[string]string) (map[string]string, er
 		// Make sure user has permissions to encrypt (also checks if key exists)
 		ctx := context.Background()
 		if _, err := s.Encrypt(ctx, []byte("vault-gcpckms-test")); err != nil {
-			return nil, errwrap.Wrapf("failed to encryot with GCP CKMS - ensure the "+
+			return nil, errwrap.Wrapf("failed to encrypt with GCP CKMS - ensure the "+
 				"key exists and the service account has at least "+
-				"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: {{err}", err)
+				"roles/cloudkms.cryptoKeyEncrypterDecrypter permission: {{err}}", err)
 		}
 	}
 
@@ -185,7 +182,7 @@ func (s *GCPCKMSSeal) KeyID() string {
 // Encrypt is used to encrypt the master key using the the AWS CMK.
 // This returns the ciphertext, and/or any errors from this
 // call. This should be called after s.client has been instantiated.
-func (s *GCPCKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (s *GCPCKMSSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
 	if plaintext == nil {
 		return nil, errors.New("given plaintext for encryption is nil")
 	}
@@ -195,16 +192,10 @@ func (s *GCPCKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.En
 		return nil, errwrap.Wrapf("error wrapping data: {{err}}", err)
 	}
 
-	req := &cloudkms.EncryptRequest{
-		Plaintext: base64.StdEncoding.EncodeToString(env.Key),
-	}
-
-	resp, err := s.client.Projects.Locations.KeyRings.CryptoKeys.Encrypt(s.parentName, req).Do()
-	if err != nil {
-		return nil, err
-	}
-
-	ct, err := base64.StdEncoding.DecodeString(resp.Ciphertext)
+	resp, err := s.client.Encrypt(ctx, &kmspb.EncryptRequest{
+		Name:      s.parentName,
+		Plaintext: env.Key,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +212,7 @@ func (s *GCPCKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.En
 			// to know exactly what version was used in encryption in case we
 			// want to rewrap older entries
 			KeyID:      resp.Name,
-			WrappedKey: ct,
+			WrappedKey: resp.Ciphertext,
 		},
 	}
 
@@ -229,7 +220,7 @@ func (s *GCPCKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.En
 }
 
 // Decrypt is used to decrypt the ciphertext.
-func (s *GCPCKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (s *GCPCKMSSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
 	if in.Ciphertext == nil {
 		return nil, fmt.Errorf("given ciphertext for decryption is nil")
 	}
@@ -244,41 +235,33 @@ func (s *GCPCKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo)
 	var plaintext []byte
 	switch in.KeyInfo.Mechanism {
 	case GCPKMSEncrypt:
-		req := &cloudkms.DecryptRequest{
-			Ciphertext: base64.StdEncoding.EncodeToString(in.Ciphertext),
+		resp, err := s.client.Decrypt(ctx, &kmspb.DecryptRequest{
+			Name:       s.parentName,
+			Ciphertext: in.Ciphertext,
+		})
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to decrypt data: {{err}}", err)
 		}
 
-		resp, err := s.client.Projects.Locations.KeyRings.CryptoKeys.Decrypt(s.parentName, req).Do()
-		if err != nil {
-			return nil, err
-		}
-		plaintext, err = base64.StdEncoding.DecodeString(resp.Plaintext)
-		if err != nil {
-			return nil, errwrap.Wrapf("error decoding decrypt response: {{err}}", err)
-		}
+		plaintext = resp.Plaintext
 
 	case GCPKMSEnvelopeAESGCMEncrypt:
-		req := &cloudkms.DecryptRequest{
-			Ciphertext: base64.StdEncoding.EncodeToString(in.KeyInfo.WrappedKey),
-		}
-
-		resp, err := s.client.Projects.Locations.KeyRings.CryptoKeys.Decrypt(s.parentName, req).Do()
+		resp, err := s.client.Decrypt(ctx, &kmspb.DecryptRequest{
+			Name:       s.parentName,
+			Ciphertext: in.KeyInfo.WrappedKey,
+		})
 		if err != nil {
-			return nil, err
-		}
-		keyPlaintext, err := base64.StdEncoding.DecodeString(resp.Plaintext)
-		if err != nil {
-			return nil, errwrap.Wrapf("error decoding decrypt response: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to decrypt envelope: {{err}}", err)
 		}
 
 		envInfo := &seal.EnvelopeInfo{
-			Key:        keyPlaintext,
+			Key:        resp.Plaintext,
 			IV:         in.IV,
 			Ciphertext: in.Ciphertext,
 		}
 		plaintext, err = seal.NewEnvelope().Decrypt(envInfo)
 		if err != nil {
-			return nil, errwrap.Wrapf("error decrypting data: {{err}}", err)
+			return nil, errwrap.Wrapf("error decrypting data with envelope: {{err}}", err)
 		}
 
 	default:
@@ -288,36 +271,14 @@ func (s *GCPCKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo)
 	return plaintext, nil
 }
 
-func (s *GCPCKMSSeal) getClient() (*cloudkms.Service, error) {
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, cleanhttp.DefaultPooledClient())
-
-	var client *http.Client
-	// If the credentials path was provided explicitly then use that
-	if s.credsPath != "" {
-		creds, err := ioutil.ReadFile(s.credsPath)
-		if err != nil {
-			return nil, err
-		}
-
-		conf, err := google.JWTConfigFromJSON(creds, cloudkms.CloudPlatformScope)
-		if err != nil {
-			return nil, err
-		}
-
-		client = conf.Client(ctx)
-	} else {
-		// Otherwise use application default credentials
-		var err error
-		client, err = google.DefaultClient(ctx, cloudkms.CloudPlatformScope)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	kmsClient, err := cloudkms.New(client)
+func (s *GCPCKMSSeal) getClient() (*cloudkms.KeyManagementClient, error) {
+	client, err := cloudkms.NewKeyManagementClient(context.Background(),
+		option.WithCredentialsFile(s.credsPath),
+		option.WithUserAgent(useragent.String()),
+	)
 	if err != nil {
-		return nil, err
+		return nil, errwrap.Wrapf("failed to create KMS client: {{err}}", err)
 	}
 
-	return kmsClient, nil
+	return client, nil
 }

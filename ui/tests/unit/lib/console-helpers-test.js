@@ -125,6 +125,30 @@ module('Unit | Lib | console helpers', function() {
       },
     },
     {
+      name: 'read, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', {}],
+      expectedData: {
+        type: 'object',
+        content: { foo: 'bar', one: 'two' },
+      },
+    },
+    {
+      name: 'read with -format=json flag, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', { format: 'json' }],
+      expectedData: {
+        type: 'json',
+        content: { foo: 'bar', one: 'two' },
+      },
+    },
+    {
+      name: 'read with -field flag, no data, auth, wrap_info',
+      args: [{ foo: 'bar', one: 'two' }, 'foo/bar', 'read', { field: 'one' }],
+      expectedData: {
+        type: 'text',
+        content: 'two',
+      },
+    },
+    {
       name: 'write, with content',
       args: [{ data: { one: 'two' } }, 'foo/bar', 'write', {}],
       expectedData: {
