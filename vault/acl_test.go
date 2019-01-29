@@ -239,15 +239,17 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.CreateOperation, "foo/bar", true, true},
 
 		// Globbing
-		{logical.ReadOperation, "prod/az/foo", true, false},
+		// Ones that should work, with globbing allowed:
+		{logical.ReadOperation, "*/ns1/auth/ldap/config", false, false},
+		{logical.ReadOperation, "goop/ns1/ns2/az/foo", false, false},
+		{logical.ReadOperation, "ns1/ns2/azboo", false, false},
+		{logical.ReadOperation, "ns1/ns2/az/hoo", false, false},
+		// And ones that should not:
+		{logical.ReadOperation, "test/segment/wildcardglob/at/nope", false, false},
 		{logical.ReadOperation, "goop/ns1/ns2/az/doo", false, false},
-		{logical.ReadOperation, "goop/ns1/ns2/az/foo", true, false},
 		{logical.ReadOperation, "goob/ns1/ns2/az/foo", false, false},
 		{logical.ReadOperation, "ns1/ns2/azdoo", false, false},
-		{logical.ReadOperation, "ns1/ns2/azboo", true, false},
 		{logical.ReadOperation, "ns1/ns2/azhoo", false, false},
-		{logical.ReadOperation, "ns1/ns2/az/hoo", true, false},
-		{logical.ReadOperation, "*/ns1/auth/ldap/config", true, false},
 		{logical.ReadOperation, "/auth/ldap/config", false, false},
 		{logical.ReadOperation, "auth/ldap/config", false, false},
 
@@ -255,13 +257,14 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ReadOperation, "test/foo/bar/segment", false, false},
 		{logical.ReadOperation, "test/foo/segment", true, false},
 		{logical.ReadOperation, "test/bar/segment", true, false},
+		{logical.ReadOperation, "test/segment/at/frond", false, false},
+		{logical.ReadOperation, "test/segment/at/front", true, false},
 		{logical.ReadOperation, "test/segment/at/end/foo", true, false},
 		{logical.ReadOperation, "test/segment/at/end/foo/", false, false},
 		{logical.ReadOperation, "test/segment/at/end/v2/foo/", true, false},
 		{logical.ReadOperation, "test/segment/wildcard/at/foo/", true, false},
 		{logical.ReadOperation, "test/segment/wildcard/at/end", true, false},
 		{logical.ReadOperation, "test/segment/wildcard/at/end/", true, false},
-		{logical.ReadOperation, "test/segment/wildcardglob/at/nope", false, false},
 	}
 
 	for _, tc := range tcases {
@@ -668,22 +671,25 @@ path "sys/*" {
 path "foo/bar" {
 	capabilities = ["read", "create", "sudo"]
 }
-path "goop/*/foo" {
-	capabilities = ["read"]
-}
-path "g*p*f*o" {
-	capabilities = ["read"]
-}
-path "*boo" {
-	capabilities = ["read"]
-}
-path "*/hoo" {
-	capabilities = ["read"]
-}
-path "*/auth/ldap/config" {
-	capabilities = ["read"]
-}
+#path "goop/*/foo" {
+#	capabilities = ["read"]
+#}
+#path "g*p*f*o" {
+#	capabilities = ["read"]
+#}
+#path "*boo" {
+#	capabilities = ["read"]
+#}
+#path "*/hoo" {
+#	capabilities = ["read"]
+#}
+#path "*/auth/ldap/config" {
+#	capabilities = ["read"]
+#}
 path "test/+/segment" {
+	capabilities = ["read"]
+}
+path "+/segment/at/front" {
 	capabilities = ["read"]
 }
 path "test/segment/at/end/+" {
