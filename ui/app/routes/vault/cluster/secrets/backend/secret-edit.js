@@ -59,10 +59,14 @@ export default Route.extend(UnloadModelRoute, {
     }
     let name = `model:${modelType}`;
     let owner = getOwner(this);
+    let newModel = owner.factoryFor(name).class;
+    if (newModel.merged || newModel.useOpenAPI === false) {
+      return resolve();
+    }
+
     return this.pathHelp
       .getProps(modelType, backend)
       .then(props => {
-        let newModel = owner.factoryFor(name).class;
         if (owner.hasRegistration(name) && !newModel.merged) {
           //combine them
           let { attrs, newFields } = combineAttributes(newModel.attributes, props);

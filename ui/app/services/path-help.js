@@ -24,7 +24,6 @@ export default Service.extend({
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
     let helpUrl = `/v1/${backend}/${path}/example?help=1`;
-    debugger; //eslint-disable-line
     let wildcard;
     switch (path) {
       case 'roles':
@@ -46,8 +45,8 @@ export default Service.extend({
         wildcard = 'role';
         break;
     }
+
     return this.ajax(helpUrl, backend).then(help => {
-      debugger; //eslint-disable-line
       let props =
         help.openapi.paths[`/${path}/{${wildcard}}`].post.requestBody.content['application/json'].schema
           .properties;

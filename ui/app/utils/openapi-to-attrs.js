@@ -14,10 +14,15 @@ export const expandOpenApiProps = function(props) {
     } else if (details.items) {
       editType = details.items.type + details.type.capitalize();
     }
+
     attrs[prop.camelize()] = {
       editType: editType,
       type: details.type,
     };
+
+    if (props[prop]['x-vault-display-name']) {
+      attrs[prop.camelize()].label = props[prop]['x-vault-display-name'];
+    }
   }
   return attrs;
 };
