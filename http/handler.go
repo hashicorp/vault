@@ -577,6 +577,34 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 		return nil, false, true
 	}
 
+	if resp != nil && len(resp.Headers) > 0 {
+		// Set this here so it will take effect regardless of any other type of
+		// response processing
+		if len(resp.Headers) > 0 {
+			header := w.Header()
+			for k, v := range resp.Headers {
+				for _, h := range v {
+					header.Add(k, h)
+				}
+			}
+		}
+
+		switch {
+		case resp.Secret != nil,
+			resp.Auth != nil,
+			len(resp.Data) > 0,
+			resp.Redirect != "",
+			len(resp.Warnings) > 0,
+			resp.WrapInfo != nil:
+			// Nothing, resp has data
+
+		default:
+			// We have an otherwise totally empty response except for headers,
+			// so nil out the response now that the headers are written out
+			resp = nil
+		}
+	}
+
 	if respondErrorCommon(w, r, resp, err) {
 		return resp, false, false
 	}

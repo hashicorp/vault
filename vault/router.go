@@ -658,50 +658,53 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(ctx, req)
-		if resp != nil &&
-			resp.Auth != nil {
-			// When a token gets renewed, the request hits this path and
-			// reaches token store. Token store delegates the renewal to the
-			// expiration manager. Expiration manager in-turn creates a
-			// different logical request and forwards the request to the auth
-			// backend that had initially authenticated the login request. The
-			// forwarding to auth backend will make this code path hit for the
-			// second time for the same renewal request. The accessors in the
-			// Alias structs should be of the auth backend and not of the token
-			// store. Therefore, avoiding the overwriting of accessors by
-			// having a check for path prefix having "renew". This gets applied
-			// for "renew" and "renew-self" requests.
-			if !strings.HasPrefix(req.Path, "renew") {
-				if resp.Auth.Alias != nil {
-					resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
-				}
-				for _, alias := range resp.Auth.GroupAliases {
-					alias.MountAccessor = re.mountEntry.Accessor
-				}
+		if resp != nil {
+			if len(allowedResponseHeaders) > 0 {
+				resp.Headers = filteredHeaders(resp.Headers, allowedResponseHeaders, nil)
+			} else {
+				resp.Headers = nil
 			}
 
-			switch re.mountEntry.Type {
-			case "token", "ns_token":
-				// Nothing; we respect what the token store is telling us and
-				// we don't allow tuning
-			default:
-				switch re.mountEntry.Config.TokenType {
-				case logical.TokenTypeService, logical.TokenTypeBatch:
-					resp.Auth.TokenType = re.mountEntry.Config.TokenType
-				case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
-					if resp.Auth.TokenType == logical.TokenTypeDefault {
-						resp.Auth.TokenType = logical.TokenTypeService
+			if resp.Auth != nil {
+				// When a token gets renewed, the request hits this path and
+				// reaches token store. Token store delegates the renewal to the
+				// expiration manager. Expiration manager in-turn creates a
+				// different logical request and forwards the request to the auth
+				// backend that had initially authenticated the login request. The
+				// forwarding to auth backend will make this code path hit for the
+				// second time for the same renewal request. The accessors in the
+				// Alias structs should be of the auth backend and not of the token
+				// store. Therefore, avoiding the overwriting of accessors by
+				// having a check for path prefix having "renew". This gets applied
+				// for "renew" and "renew-self" requests.
+				if !strings.HasPrefix(req.Path, "renew") {
+					if resp.Auth.Alias != nil {
+						resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
 					}
-				case logical.TokenTypeDefaultBatch:
-					if resp.Auth.TokenType == logical.TokenTypeDefault {
-						resp.Auth.TokenType = logical.TokenTypeBatch
+					for _, alias := range resp.Auth.GroupAliases {
+						alias.MountAccessor = re.mountEntry.Accessor
+					}
+				}
+
+				switch re.mountEntry.Type {
+				case "token", "ns_token":
+					// Nothing; we respect what the token store is telling us and
+					// we don't allow tuning
+				default:
+					switch re.mountEntry.Config.TokenType {
+					case logical.TokenTypeService, logical.TokenTypeBatch:
+						resp.Auth.TokenType = re.mountEntry.Config.TokenType
+					case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
+						if resp.Auth.TokenType == logical.TokenTypeDefault {
+							resp.Auth.TokenType = logical.TokenTypeService
+						}
+					case logical.TokenTypeDefaultBatch:
+						if resp.Auth.TokenType == logical.TokenTypeDefault {
+							resp.Auth.TokenType = logical.TokenTypeBatch
+						}
 					}
 				}
 			}
-		}
-
-		if len(allowedResponseHeaders) > 0 {
-			resp.Headers = filteredHeaders(resp.Headers, allowedResponseHeaders, nil)
 		}
 
 		return resp, false, false, err
@@ -811,12 +814,10 @@ func filteredHeaders(origHeaders map[string][]string, candidateHeaders, deniedHe
 
 	retHeaders := make(map[string][]string, len(origHeaders))
 
-	allowedCandidateHeaders := candidateHeaders
-	if len(deniedHeaders) > 0 {
-		// Filter candidateHeaders values through deniedHeaders first. Returns the
-		// lowercased complement set.
-		allowedCandidateHeaders = strutil.Difference(candidateHeaders, deniedHeaders, true)
-	}
+	// Filter candidateHeaders values through deniedHeaders first. Returns the
+	// lowercased complement set. We call even if no denied headers to get the
+	// values lowercased.
+	allowedCandidateHeaders := strutil.Difference(candidateHeaders, deniedHeaders, true)
 
 	// Create a map that uses lowercased header values as the key and the original
 	// header naming as the value for comparison down below.
