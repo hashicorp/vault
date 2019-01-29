@@ -38,6 +38,7 @@ export default Route.extend({
       if (owner.hasRegistration(name) && !newModel.merged) {
         //combine them
         let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+        debugger; //eslint-disable-line
         newModel = newModel.extend(attrs, { newFields });
       } else {
         //generate a whole new model

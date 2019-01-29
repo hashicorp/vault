@@ -15,9 +15,9 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
-  keyType: attr('string', {
-    possibleValues: ['rsa', 'ec'],
-  }),
+  // keyType: attr('string', {
+  //   possibleValues: ['rsa', 'ec'],
+  // }),
   // ttl: attr({
   //   label: 'TTL',
   //   editType: 'ttl',
@@ -170,7 +170,7 @@ export default DS.Model.extend({
         Advanced: ['generateLease', 'noStore', 'basicConstraintsValidForNonCa', 'policyIdentifiers'],
       },
     ];
-
+    let excludedFields = ['extKeyUsage'];
     if (this.newFields) {
       let allFields = [];
       for (let group in groups) {
@@ -178,7 +178,7 @@ export default DS.Model.extend({
         allFields.concat(groups[group][fieldName]);
       }
       let otherFields = this.newFields.filter(field => {
-        !allFields.includes(field);
+        !allFields.includes(field) && !excludedFields.includes(field);
       });
       if (otherFields.length) {
         groups.default.concat(otherFields);

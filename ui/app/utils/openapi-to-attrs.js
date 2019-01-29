@@ -8,6 +8,9 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (let prop in props) {
     let details = props[prop];
+    if (details.type === 'integer') {
+      details.type = 'number';
+    }
     let editType = details.type;
     if (details.format === 'seconds') {
       editType = 'ttl';
@@ -20,8 +23,15 @@ export const expandOpenApiProps = function(props) {
       type: details.type,
     };
 
-    if (props[prop]['x-vault-display-name']) {
-      attrs[prop.camelize()].label = props[prop]['x-vault-display-name'];
+    if (details['x-vault-display-name']) {
+      attrs[prop.camelize()].label = details['x-vault-display-name'];
+    }
+    if (details['enum']) {
+      debugger; //eslint-disable-line
+      attrs[prop.camelize()].possibleValues = details['enum'];
+    }
+    if (details['x-vault-display-value']) {
+      attrs[prop.camelize()].defaultValue = details['x-vault-display-value'];
     }
   }
   return attrs;
@@ -30,7 +40,6 @@ export const expandOpenApiProps = function(props) {
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
-  debugger; //eslint-disable-line
   oldAttrs.forEach(function(value, name) {
     if (newProps[name]) {
       newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
