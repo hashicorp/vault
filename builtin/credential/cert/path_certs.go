@@ -143,12 +143,12 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 		result.Period = result.OldPeriod
 		result.OldPeriod = 0
 	}
-	if len(result.OldPolicies) != 0 {
+	if len(result.OldPolicies) > 0 {
 		needsUpgrade = true
 		result.Policies = result.OldPolicies
 		result.OldPolicies = nil
 	}
-	if result.OldBoundCIDRs != nil {
+	if len(result.OldBoundCIDRs) > 0 {
 		needsUpgrade = true
 		result.BoundCIDRs = result.OldBoundCIDRs
 		result.OldBoundCIDRs = nil
