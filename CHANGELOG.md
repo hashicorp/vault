@@ -1,5 +1,10 @@
 ## Next
 
+CHANGES:
+
+ * The default policy now allows a token to look up its associated identity
+   entity either by name or by id [GH-6105]
+
 IMPROVEMENTS:
 
  * auth/jwt: The supported set of signing algorithms is now configurable [JWT
