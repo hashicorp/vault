@@ -30,17 +30,25 @@ govendor init
 
 ## Fetch deps
 echo "Fetching deps, will take some time..."
-govendor fetch +missing
+govendor fetch -v +missing
 
 # Clean up after the logrus mess
-govendor remove github.com/Sirupsen/logrus
+govendor remove -v github.com/Sirupsen/logrus
 cd vendor
 find -type f | grep '.go' | xargs sed -i -e 's/Sirupsen/sirupsen/'
 
 # Need the v2 branch for Azure
-govendor fetch github.com/coreos/go-oidc@v2
+govendor fetch -v github.com/coreos/go-oidc@v2
 
 # Need the v3 branch for dockertest
-govendor fetch github.com/ory/dockertest@v3
+govendor fetch -v github.com/ory/dockertest@v3
+
+# Current influx master is alpha, pin to v1.7.3
+govendor fetch github.com/influxdata/influxdb/client/v2@v1.7.3
+govendor fetch github.com/influxdata/influxdb/models@v1.7.3
+govendor fetch github.com/influxdata/influxdb/pkg/escape@v1.7.3
+
+# Current circonus needs v3
+grep circonus-gometrics vendor/vendor.json | cut -d '"' -f 4 | while read -r i; do govendor fetch $i@v2; done
 
 echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"

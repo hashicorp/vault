@@ -214,7 +214,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	acl, err := c.policyStore.ACL(tokenCtx, entity, policies)
 	if err != nil {
 		if errwrap.ContainsType(err, new(TemplateError)) {
-			return nil, nil, nil, nil, err
+			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		c.logger.Error("failed to construct ACL", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
@@ -241,10 +242,6 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		// unauth, we just have no information to attach to the request, so
 		// ignore errors...this was best-effort anyways
 		if err != nil && !unauth {
-			if errwrap.ContainsType(err, new(TemplateError)) {
-				c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor")
-				err = logical.ErrPermissionDenied
-			}
 			return nil, te, err
 		}
 	}
@@ -254,6 +251,9 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, te, logical.ErrPermissionDenied
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
+		if c.perfStandby {
+			return nil, nil, logical.ErrPerfStandbyPleaseForward
+		}
 		c.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, te, logical.ErrPermissionDenied
 	}
@@ -532,7 +532,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
-	// We run this logic first because we want to decrement the use count even in the case of an error
+	if ctErr == logical.ErrPerfStandbyPleaseForward {
+		return nil, nil, ctErr
+	}
+
+	// We run this logic first because we want to decrement the use count even
+	// in the case of an error (assuming we can successfully look up; if we
+	// need to forward, we exit before now)
 	if te != nil && !isControlGroupRun(req) {
 		// Attempt to use the token (decrement NumUses)
 		var err error
@@ -857,6 +863,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Do an unauth check. This will cause EGP policies to be checked
 	var ctErr error
 	auth, _, ctErr = c.checkToken(ctx, req, true)
+	if ctErr == logical.ErrPerfStandbyPleaseForward {
+		return nil, nil, ctErr
+	}
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
