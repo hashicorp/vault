@@ -38,6 +38,9 @@ func (t *TestSeal) KeyID() string {
 func (t *TestSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
 	return &physical.EncryptedBlobInfo{
 		Ciphertext: ReverseBytes(plaintext),
+		KeyInfo: &physical.SealKeyInfo{
+			KeyID: t.KeyID(),
+		},
 	}, nil
 }
 

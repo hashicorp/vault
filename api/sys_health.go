@@ -30,6 +30,7 @@ type HealthResponse struct {
 	Initialized                bool   `json:"initialized"`
 	Sealed                     bool   `json:"sealed"`
 	Standby                    bool   `json:"standby"`
+	PerformanceStandby         bool   `json:"performance_standby"`
 	ReplicationPerformanceMode string `json:"replication_performance_mode"`
 	ReplicationDRMode          string `json:"replication_dr_mode"`
 	ServerTimeUTC              int64  `json:"server_time_utc"`

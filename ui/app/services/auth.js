@@ -18,6 +18,7 @@ const BACKENDS = supportedAuthBackends();
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
+  permissions: service(),
   namespace: service(),
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
@@ -308,7 +309,15 @@ export default Service.extend({
     const adapter = this.clusterAdapter();
 
     return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
+      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path')).then(
+        authData => {
+          return this.get('permissions')
+            .getPaths.perform()
+            .then(() => {
+              return authData;
+            });
+        }
+      );
     });
   },
 

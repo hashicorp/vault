@@ -108,17 +108,17 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	expect := []*PathRules{
-		&PathRules{
-			Prefix: "",
+		{
+			Path:   "",
 			Policy: "deny",
 			Capabilities: []string{
 				"deny",
 			},
 			Permissions: &ACLPermissions{CapabilitiesBitmap: DenyCapabilityInt},
-			Glob:        true,
+			IsPrefix:    true,
 		},
-		&PathRules{
-			Prefix: "stage/",
+		{
+			Path:   "stage/",
 			Policy: "sudo",
 			Capabilities: []string{
 				"create",
@@ -131,20 +131,20 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt | DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt),
 			},
-			Glob: true,
+			IsPrefix: true,
 		},
-		&PathRules{
-			Prefix: "prod/version",
+		{
+			Path:   "prod/version",
 			Policy: "read",
 			Capabilities: []string{
 				"read",
 				"list",
 			},
 			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			Glob:        false,
+			IsPrefix:    false,
 		},
-		&PathRules{
-			Prefix: "foo/bar",
+		{
+			Path:   "foo/bar",
 			Policy: "read",
 			Capabilities: []string{
 				"read",
@@ -157,10 +157,10 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "foo/bar",
+		{
+			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -173,10 +173,10 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "foo/bar",
+		{
+			Path:   "foo/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -187,10 +187,10 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "baz/bar",
+		{
+			Path:   "baz/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -201,10 +201,10 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "biz/bar",
+		{
+			Path:   "biz/bar",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -217,10 +217,10 @@ func TestPolicy_Parse(t *testing.T) {
 				AllowedParameters:  map[string][]interface{}{"zim": {}, "zam": {}},
 				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "test/types",
+		{
+			Path:   "test/types",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -233,10 +233,10 @@ func TestPolicy_Parse(t *testing.T) {
 				AllowedParameters:  map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
 				DeniedParameters:   map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "test/req",
+		{
+			Path:   "test/req",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -247,10 +247,10 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
-		&PathRules{
-			Prefix: "test/mfa",
+		{
+			Path:   "test/mfa",
 			Policy: "",
 			Capabilities: []string{
 				"create",
@@ -267,7 +267,7 @@ func TestPolicy_Parse(t *testing.T) {
 					"my_totp2",
 				},
 			},
-			Glob: false,
+			IsPrefix: false,
 		},
 	}
 
