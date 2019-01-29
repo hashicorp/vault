@@ -20,7 +20,7 @@ const CREDENTIAL_TYPES = [
     displayName: 'Federation Token',
   },
 ];
-export default DS.Model.extend({
+const roleAWSModel = DS.Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
@@ -40,37 +40,27 @@ export default DS.Model.extend({
     defaultValue: 'iam_user',
     possibleValues: CREDENTIAL_TYPES,
   }),
-  // roleArns: attr({
-  //   editType: 'stringArray',
-  //   label: 'Role ARNs',
-  // }),
-  // policyArns: attr({
-  //   editType: 'stringArray',
-  //   label: 'Policy ARNs',
-  // }),
+  roleArns: attr({
+    editType: 'stringArray',
+    label: 'Role ARNs',
+  }),
+  policyArns: attr({
+    editType: 'stringArray',
+    label: 'Policy ARNs',
+  }),
   policyDocument: attr('string', {
     editType: 'json',
   }),
-  fields: computed('credentialType', 'newFields', function() {
-    let keys;
+  fields: computed('credentialType', function() {
     let credentialType = this.credentialType;
     let keysForType = {
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
     };
-    keys = keysForType[credentialType];
-    //TODO: distinguish behind fields intentionally exluded
-    //and fields we need to add in
-    if (this.newFields) {
-      let otherFields = this.newFields.filter(field => !keys.includes(field));
-      if (otherFields.length) {
-        keys = keys.concat(otherFields);
-      }
-    }
-    return expandAttributeMeta(this, keys);
-  }),
 
+    return expandAttributeMeta(this, keysForType[credentialType]);
+  }),
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
@@ -79,3 +69,5 @@ export default DS.Model.extend({
   generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   canGenerate: alias('generatePath.canUpdate'),
 });
+roleAWSModel.reopenClass({ useOpenAPI: false });
+export default roleAWSModel;
