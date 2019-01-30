@@ -36,6 +36,10 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 
 	clusterConfig.Timeout = time.Duration(cfg.ConnectTimeout) * time.Second
 
+	if cfg.LocalDatacenter != "" {
+		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(cfg.LocalDatacenter)
+	}
+
 	if cfg.TLS {
 		var tlsConfig *tls.Config
 		if len(cfg.Certificate) > 0 || len(cfg.IssuingCA) > 0 {
