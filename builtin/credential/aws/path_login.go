@@ -825,9 +825,8 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 				"ami_id":           identityDocParsed.AmiID,
 			},
 			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       roleEntry.TTL,
-				MaxTTL:    shortestMaxTTL,
+				TTL:    roleEntry.TTL,
+				MaxTTL: shortestMaxTTL,
 			},
 			Alias: &logical.Alias{
 				Name: identityAlias,
@@ -1338,9 +1337,8 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			},
 			DisplayName: entity.FriendlyName,
 			LeaseOptions: logical.LeaseOptions{
-				Renewable: true,
-				TTL:       roleEntry.TTL,
-				MaxTTL:    roleEntry.MaxTTL,
+				TTL:    roleEntry.TTL,
+				MaxTTL: roleEntry.MaxTTL,
 			},
 			Alias: &logical.Alias{
 				Name: identityAlias,

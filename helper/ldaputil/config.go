@@ -9,6 +9,7 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical/framework"
 
 	"github.com/hashicorp/errwrap"
@@ -16,8 +17,8 @@ import (
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
 // Not all fields will be used by every integration.
-func ConfigFields() map[string]*framework.FieldSchema {
-	return map[string]*framework.FieldSchema{
+func ConfigFields(tokenFields bool) map[string]*framework.FieldSchema {
+	ret := map[string]*framework.FieldSchema{
 		"url": {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
@@ -122,6 +123,12 @@ Default: cn`,
 			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
 		},
 	}
+
+	if tokenFields {
+		tokenhelper.AddTokenFields(ret)
+	}
+
+	return ret
 }
 
 /*
@@ -246,6 +253,8 @@ func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 }
 
 type ConfigEntry struct {
+	tokenhelper.TokenParams
+
 	Url            string `json:"url"`
 	UserDN         string `json:"userdn"`
 	GroupDN        string `json:"groupdn"`
