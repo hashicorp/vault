@@ -2,6 +2,9 @@
 
 CHANGES:
 
+ * New AWS authentication plugin mounts will default to using the generated
+   role ID as the Identity alias name.  This applies to both EC2 and IAM auth.
+   Existing mounts will not be affected.
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
 
