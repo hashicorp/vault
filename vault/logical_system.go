@@ -3104,10 +3104,8 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 	}
 
 	relpath := strings.TrimPrefix(path, mountEntry.Path)
-	// b.logger.Info("storage mount", "entry", mountEntry, "relpath", relpath)
 	unfiltered, err := storage.List(ctx, relpath)
 	if err != nil {
-		// TODO do we need to wrap the error?
 		return nil, err
 	}
 
@@ -3126,10 +3124,7 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 		if hasNonDeny || (isSubTree && containsNonDenyCapability(ctx, acl, fullPath)) {
 			filtered = append(filtered, key)
 		}
-
 	}
-	//b.logger.Debug("storage list", "mountpath", mountEntry.Path,
-	//	"relpath", relpath, "unfiltered", unfiltered, "filtered", filtered)
 
 	return logical.ListResponse(filtered), nil
 }
