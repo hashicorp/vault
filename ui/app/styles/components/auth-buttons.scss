@@ -1,0 +1,14 @@
+.tile-auth-button {
+  height: 39px;
+  width: 39px;
+}
+.auth-button-google {
+  position: relative;
+  top: -10px;
+  left: -14px;
+}
+[class^='auth-button-'] {
+  .text {
+    padding-left: $spacing-m;
+  }
+}

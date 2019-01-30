@@ -71,7 +71,11 @@
 {{/if}}
   <button data-test-auth-submit=true type="submit" disabled={{@disabled}} class="button is-primary {{if @disabled 'is-loading'}}" id="auth-submit">
     {{#if this.isOIDC}}
+      {{#if this.role.providerButtonComponent}}
+        {{component this.role.providerButtonComponent}}
+      {{else}}
       Sign In via {{or this.role.providerName 'OIDC Provider'}}
+      {{/if}}
     {{else}}
       Sign In
     {{/if}}
