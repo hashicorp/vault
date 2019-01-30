@@ -27,7 +27,6 @@ export const expandOpenApiProps = function(props) {
       attrs[prop.camelize()].label = details['x-vault-displayName'];
     }
     if (details['enum']) {
-      debugger; //eslint-disable-line
       attrs[prop.camelize()].possibleValues = details['enum'];
     }
     if (details['x-vault-displayValue']) {
