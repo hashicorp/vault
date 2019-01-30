@@ -580,12 +580,10 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	if resp != nil && len(resp.Headers) > 0 {
 		// Set this here so it will take effect regardless of any other type of
 		// response processing
-		if len(resp.Headers) > 0 {
-			header := w.Header()
-			for k, v := range resp.Headers {
-				for _, h := range v {
-					header.Add(k, h)
-				}
+		header := w.Header()
+		for k, v := range resp.Headers {
+			for _, h := range v {
+				header.Add(k, h)
 			}
 		}
 
