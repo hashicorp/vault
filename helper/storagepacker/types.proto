@@ -14,26 +14,23 @@ message Item {
 	google.protobuf.Any message = 2;
 }
 
-// BucketV2 is a construct to hold multiple items within itself. This
+// Bucket is a construct to hold multiple items within itself. This
 // abstraction contains multiple buckets of the same kind within itself and
 // shares amont them the items that get inserted. When the bucket as a whole
 // gets too big to hold more items, the contained buckets gets pushed out only
 // to become independent buckets. Hence, this can grow infinitely in terms of
 // storage space for items that get inserted.
-message BucketV2{
+message Bucket {
 	// Key is the storage path where the bucket gets stored
 	string key = 1;
 	// Items holds the items contained within this bucket
-	map <string, Item> items = 2;
+	repeated Item items = 2;
 	// Buckets are the buckets contained within this bucket
-	map <string, BucketV2> buckets = 3;
+	map <string, Bucket> buckets = 3;
 	// Sharded indicates if the contained buckets are pushed out or not
 	bool sharded = 4;
+	// The number of shards created in this bucket
+	uint32 shard_count = 5;
 	// Size of this bucket in number of bytes
-	int64 size = 5;
-}
-
-message Bucket {
-	string key = 1;
-	repeated Item items = 2;
+	uint32 size = 6;
 }

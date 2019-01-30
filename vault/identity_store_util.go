@@ -75,13 +75,35 @@ func (i *IdentityStore) sanitizeName(name string) string {
 
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
-	existing, err := i.groupPacker.View().List(ctx, groupBucketsPrefix)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
-	}
-	i.logger.Debug("groups collected", "num_existing", len(existing))
 
-	for _, key := range existing {
+	allBuckets := make([]string, 0, 257)
+
+	var walkPrefixes func(in string) error
+	walkPrefixes = func(in string) error {
+		existing, err := i.groupPacker.StorageView().List(ctx, in)
+		if err != nil {
+			return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
+		}
+		for _, key := range existing {
+			if key == "config" {
+				continue
+			}
+			if key[len(key)-1] == '/' {
+				if err := walkPrefixes(key); err != nil {
+					return err
+				}
+			} else {
+				allBuckets = append(allBuckets, key)
+			}
+		}
+		return nil
+	}
+	if err := walkPrefixes(groupBucketsPrefix); err != nil {
+		return err
+	}
+
+	i.logger.Debug("group buckets collected", "num_existing", len(allBuckets))
+	for _, key := range allBuckets {
 		bucket, err := i.groupPacker.GetBucket(i.groupPacker.BucketPath(key))
 		if err != nil {
 			return err
@@ -154,19 +176,46 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("loading entities")
-	existing, err := i.entityPacker.View().List(ctx, storagepacker.DefaultStoragePackerBucketsPrefix)
+	existing, err := i.entityPacker.StorageView().List(ctx, storagepacker.DefaultStoragePackerBucketsPrefix)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
 	}
-	i.logger.Debug("entities collected", "num_existing", len(existing))
+
+	allBuckets := make([]string, 0, 257)
+
+	var walkPrefixes func(in string) error
+	walkPrefixes = func(in string) error {
+		existing, err := i.entityPacker.StorageView().List(ctx, in)
+		if err != nil {
+			return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
+		}
+		for _, key := range existing {
+			if key == "config" {
+				continue
+			}
+			if key[len(key)-1] == '/' {
+				if err := walkPrefixes(key); err != nil {
+					return err
+				}
+			} else {
+				allBuckets = append(allBuckets, key)
+			}
+		}
+		return nil
+	}
+	if err := walkPrefixes(entityBucketsPrefix); err != nil {
+		return err
+	}
+
+	i.logger.Debug("entity buckets collected", "num_existing", len(allBuckets))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
 	quit := make(chan bool)
 
 	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan *storagepacker.Bucket, len(existing))
+	errs := make(chan error, len(allBuckets))
+	result := make(chan *storagepacker.Bucket, len(allBuckets))
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}

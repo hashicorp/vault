@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	groupBucketsPrefix = "packer/group/buckets/"
+	entityBucketsPrefix = "packer/buckets/"
+	groupBucketsPrefix  = "packer/group/buckets/"
 )
 
 var (
@@ -61,12 +62,35 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	core.AddLogger(entitiesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
-	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(iStore.view, entitiesPackerLogger, "")
+
+	// If we find buckets, we've already written values so we fall back to md5
+	// at the top level for compatibility. If we don't, this is a fresh install
+	// and we use Blake at the top level.
+	baseHashType := storagepacker.HashTypeBlake2b256
+	vals, err := iStore.view.List(ctx, entityBucketsPrefix)
+	if err != nil {
+		return nil, err
+	}
+	if len(vals) > 0 {
+		baseHashType = storagepacker.HashTypeMD5
+	}
+	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
+		View:         iStore.view,
+		ViewPrefix:   entityBucketsPrefix,
+		Logger:       entitiesPackerLogger,
+		BaseHashType: baseHashType,
+	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(iStore.view, groupsPackerLogger, groupBucketsPrefix)
+	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
+		View:         iStore.view,
+		ViewPrefix:   groupBucketsPrefix,
+		Logger:       groupsPackerLogger,
+		BaseHashType: baseHashType,
+	})
+
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}

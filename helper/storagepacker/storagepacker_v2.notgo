@@ -6,117 +6,14 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"sync"
 
-	radix "github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/logical"
 )
-
-const (
-	defaultBucketBaseCount  = 256
-	defaultBucketShardCount = 16
-	// Larger size of the bucket size adversely affects the performance of the
-	// storage packer. Also, some of the backends impose a maximum size limit
-	// on the objects that gets persisted. For example, Consul imposes 256KB if using transactions
-	// and DynamoDB imposes 400KB. Going forward, if there exists storage
-	// backends that has more constrained limits, this will have to become more
-	// flexible. For now, 240KB seems like a decent value.
-	defaultBucketMaxSize = 240 * 1024
-)
-
-type Config struct {
-	// View is the storage to be used by all the buckets
-	View logical.Storage
-
-	// ViewPrefix is the prefix to be used for the buckets in the view
-	ViewPrefix string
-
-	// Logger for output
-	Logger log.Logger
-
-	// BucketBaseCount is the number of buckets to create at the base level.
-	// The value should be a power of 2.
-	BucketBaseCount int
-
-	// BucketShardCount is the number of sub-buckets a bucket gets sharded into
-	// when it reaches the maximum threshold. The value should be a power of 2.
-	BucketShardCount int
-
-	// BucketMaxSize (in bytes) is the maximum allowed size per bucket. When
-	// the size of the bucket reaches a threshold relative to this limit, it
-	// gets sharded into the configured number of pieces incrementally.
-	BucketMaxSize int64
-}
-
-// StoragePackerV2 packs many items into abstractions called buckets. The goal
-// is to employ a reduced number of storage entries for a relatively huge
-// number of items. This is the second version of the utility which supports
-// indefinitely expanding the capacity of the storage by sharding the buckets
-// when they exceed the imposed limit.
-type StoragePackerV2 struct {
-	config       *Config
-	bucketsCache *radix.Tree
-}
-
-// LockedBucket embeds a bucket and its corresponding lock to ensure thread
-// safety
-type LockedBucket struct {
-	*BucketV2
-	lock sync.RWMutex
-}
-
-// NewStoragePackerV2 creates a new storage packer for a given view
-func NewStoragePackerV2(config *Config) (*StoragePackerV2, error) {
-	if config.View == nil {
-		return nil, fmt.Errorf("nil view")
-	}
-
-	if config.ViewPrefix == "" {
-		config.ViewPrefix = DefaultStoragePackerBucketsPrefix
-	}
-
-	if !strings.HasSuffix(config.ViewPrefix, "/") {
-		config.ViewPrefix = config.ViewPrefix + "/"
-	}
-
-	if config.BucketBaseCount == 0 {
-		config.BucketBaseCount = defaultBucketBaseCount
-	}
-
-	if config.BucketShardCount == 0 {
-		config.BucketShardCount = defaultBucketShardCount
-	}
-
-	if config.BucketMaxSize == 0 {
-		config.BucketMaxSize = defaultBucketMaxSize
-	}
-
-	if !isPowerOfTwo(config.BucketBaseCount) {
-		return nil, fmt.Errorf("bucket base count of %d is not a power of two", config.BucketBaseCount)
-	}
-
-	if !isPowerOfTwo(config.BucketShardCount) {
-		return nil, fmt.Errorf("bucket shard count of %d is not a power of two", config.BucketShardCount)
-	}
-
-	if config.BucketShardCount < 2 {
-		return nil, fmt.Errorf("bucket shard count should at least be 2")
-	}
-
-	// Create a new packer object for the given view
-	packer := &StoragePackerV2{
-		config:       config,
-		bucketsCache: radix.New(),
-	}
-
-	return packer, nil
-}
 
 // Clone creates a replica of the bucket
 func (b *BucketV2) Clone() (*BucketV2, error) {
