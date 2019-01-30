@@ -1,0 +1,31 @@
+<div class="box has-slim-padding is-shadowless">
+  <ToggleButton
+    @toggleTarget={{this}}
+    @toggleAttr="isOpen"
+    />
+  {{#if this.isOpen}}
+    {{#if hasBlock}}
+      {{yield}}
+    {{/if}}
+    {{#if (not this.selectedAuthIsPath)}}
+      <div class="field">
+        <label for="custom-path" class="is-label">
+          Mount path
+        </label>
+        <div class="control">
+          <input
+             type="text"
+             name="custom-path"
+             id="custom-path"
+             class="input"
+             value={{@customPath}}
+             oninput={{action @onPathChange value="target.value"}}
+          />
+        </div>
+          <p class="help has-text-grey-dark">
+          If this backend was mounted using a non-default path, enter it here.
+          </p>
+      </div>
+    {{/if}}
+  {{/if}}
+</div>

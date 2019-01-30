@@ -1,4 +1,4 @@
-import { next, later } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -6,7 +6,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task, timeout, waitForEvent } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
 const DEFAULTS = {
@@ -14,7 +14,6 @@ const DEFAULTS = {
   username: null,
   password: null,
   customPath: null,
-  role: null,
 };
 
 export default Component.extend(DEFAULTS, {
@@ -72,10 +71,6 @@ export default Component.extend(DEFAULTS, {
     }
   },
 
-  getWindow() {
-    return window;
-  },
-
   firstMethod() {
     let firstMethod = this.get('methodsToShow.firstObject');
     if (!firstMethod) return;
@@ -127,10 +122,6 @@ export default Component.extend(DEFAULTS, {
       BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
     );
     return shownMethods.length ? shownMethods : BACKENDS;
-  }),
-
-  isOIDC: computed('role', 'selectedAuthBackend.type', function() {
-    return this.role && this.role.authUrl && this.selectedAuthBackend.type === 'jwt';
   }),
 
   unwrapToken: task(function*(token) {
@@ -203,52 +194,6 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
-  handleOIDCError(err) {
-    this.set('error', err);
-  },
-
-  prepareForOIDC: task(function*(oidcWindow) {
-    this.waitForClose.perform(oidcWindow);
-    let storageEvent = yield waitForEvent(this.getWindow(), 'storage');
-    this.exchangeOIDC.perform(storageEvent, oidcWindow);
-  }),
-
-  waitForClose: task(function*(oidcWindow) {
-    while (true) {
-      yield timeout(500);
-      if (!oidcWindow || oidcWindow.closed) {
-        return this.handleOIDCError('windowClosed');
-      }
-    }
-  }),
-
-  closeWindow(oidcWindow) {
-    this.waitForClose.cancelAll();
-    oidcWindow.close();
-  },
-
-  exchangeOIDC: task(function*(event, oidcWindow) {
-    if (event.key !== 'oidcState') {
-      return;
-    }
-    let { namespace, path, state, code } = JSON.parse(event.newValue);
-    this.getWindow().localStorage.removeItem('oidcState');
-    later(() => {
-      this.closeWindow(oidcWindow);
-    }, 500);
-    if (!path || !state || !code) {
-      return this.handleOIDCError('missingParams');
-    }
-    let adapter = this.store.adapterFor('auth-method');
-    // this might be bad to mutate the outer state
-    this.set('namespace', namespace);
-    let resp = yield adapter.exchangeOIDC(path, state, code);
-    let token = resp.auth.client_token;
-    this.set('selectedAuth', 'token');
-    this.set('token', token);
-    yield this.send('doSubmit');
-  }),
-
   actions: {
     doSubmit(e) {
       if (e) {
@@ -268,24 +213,7 @@ export default Component.extend(DEFAULTS, {
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }
-      return this.authenticate.perform(backend.type, data);
-    },
-
-    startOIDCAuth(e) {
-      e.preventDefault();
-      if (!this.isOIDC) {
-        return;
-      }
-      let win = this.getWindow();
-
-      let left = win.screen.width / 2 - 250;
-      let top = win.screen.height / 2 - 300;
-      let oidcWindow = win.open(
-        this.role.authUrl,
-        'vaultOIDCWindow',
-        `width=500,height=600,resizable,scrollbars=yes,top=${top},left=${left}`
-      );
-      this.prepareForOIDC.perform(oidcWindow);
+      return this.authenticate.unlinked().perform(backend.type, data);
     },
   },
 });

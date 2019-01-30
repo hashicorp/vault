@@ -26,81 +26,65 @@
     </ul>
   </nav>
   {{/if}}
-  <form
-    id="auth-form"
-    onsubmit={{action (if isOIDC "startOIDCAuth" "doSubmit")}}
-  >
-    <div class="box is-marginless is-shadowless">
-      <MessageError
-        @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
-        data-test-auth-error
-      />
-      {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
-        <div class="field">
-          <label for="selectedMethod" class="is-label">
-            Method
-          </label>
-          <div class="control is-expanded" >
-            <div class="select is-fullwidth">
-              <select
-                name="selectedMethod"
-                id="selectedMethod"
-                onchange={{action (mut selectedAuth) value="target.value"}}
-                data-test-method-select
-              >
-                {{#each (supported-auth-backends) as |method|}}
-                  <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
-                    {{capitalize method.type}}
-                  </option>
-                {{/each}}
-              </select>
-            </div>
+  <div class="box is-marginless is-shadowless">
+    <MessageError
+      @errorMessage={{if (and cluster.standby hasCSPError) cspErrorText error}}
+      data-test-auth-error
+    />
+    {{#if (or (not hasMethodsWithPath) (not selectedAuthIsPath))}}
+      <div class="field">
+        <label for="selectedMethod" class="is-label">
+          Method
+        </label>
+        <div class="control is-expanded" >
+          <div class="select is-fullwidth">
+            <select
+              name="selectedMethod"
+              id="selectedMethod"
+              onchange={{action (mut selectedAuth) value="target.value"}}
+              data-test-method-select
+            >
+              {{#each (supported-auth-backends) as |method|}}
+                <option selected={{eq selectedAuthBackend.type method.type}} value={{method.type}}>
+                  {{method.typeDisplay}}
+                </option>
+              {{/each}}
+            </select>
           </div>
         </div>
-      {{/if}}
-      {{#if (eq this.selectedAuthBackend.type "jwt")}}
-      <AuthJwt
-        @selectedAuthPath={{or this.selectedAuthBackend.id this.customPath}}
-        @onRoleChange={{action (mut this.role)}}
-        @isOIDC={{this.isOIDC}}
-      />
-      {{else}}
+      </div>
+    {{/if}}
+  {{#if (eq this.selectedAuthBackend.type "jwt")}}
+    <AuthJwt
+      @onError={{action (mut this.error)}}
+      @onLoading={{action (mut this.isLoading)}}
+      @onToken={{action (mut this.token)}}
+      @onNamespace={{action (mut this.namespace)}}
+      @onSelectedAuth={{action (mut this.selectedAuth)}}
+      @onSubmit={{action "doSubmit"}}
+      @onRoleName={{action (mut this.roleName)}}
+      @roleName={{this.roleName}}
+      @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
+      @disabled={{authenticate.isRunning}}
+      @form={{hash options=(component 'auth-form-options' customPath=this.customPath onPathChange=(action (mut this.customPath))  selectedAuthIsPath=this.selectedAuthIsPath )}}
+    />
+  {{else}}
+    <form
+      id="auth-form"
+      onsubmit={{action "doSubmit"}}
+    >
         {{partial providerPartialName}}
-      {{/if}}
-      {{#if (and (not selectedAuthIsPath) (not-eq selectedAuthBackend.type "token"))}}
-        <div class="box has-slim-padding is-shadowless">
-          {{toggle-button toggleTarget=this toggleAttr="useCustomPath"}}
-          <div class="field">
-            {{#if useCustomPath}}
-              <label for="custom-path" class="is-label">
-                Mount path
-              </label>
-              <div class="control">
-                <input
-                   type="text"
-                   name="custom-path"
-                   id="custom-path"
-                   class="input"
-                   value={{customPath}}
-                   oninput={{action (mut customPath) value="target.value"}}
-                />
-              </div>
-                <p class="help has-text-grey-dark">
-                If this backend was mounted using a non-default path, enter it here.
-                </p>
-            {{/if}}
-          </div>
-        </div>
-      {{/if}}
-    </div>
-    <div class="box is-marginless is-shadowless">
-      <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
-        {{#if isOIDC}}
-        Sign In via {{or this.role.providerName 'OIDC Provider'}}
-        {{else}}
-        Sign In
+        {{#if (not-eq selectedAuthBackend.type "token")}}
+          <AuthFormOptions
+            @customPath={{this.customPath}}
+            @onPathChange={{action (mut this.customPath)}}
+            @selectedAuthIsPath={{this.selectedAuthIsPath}}
+          />
         {{/if}}
-      </button>
-    </div>
-  </form>
+        <button data-test-auth-submit=true type="submit" disabled={{authenticate.isRunning}} class="button is-primary {{if authenticate.isRunning 'is-loading'}}" id="auth-submit">
+          Sign In
+        </button>
+    </form>
+  {{/if}}
+</div>
 </div>

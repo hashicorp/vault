@@ -1,30 +1,79 @@
-<div class="field">
-  <label for="role" class="is-label">Role</label>
-  <div class="control">
-    <input
-      value={{@roleName}}
-      placeholder="Role"
-      oninput={{perform this.fetchRole value="target.value"}}
-      autocomplete="off"
-      name="role"
-      id="role"
-      class="input"
-      type="text"
-    />
-  </div>
-</div>
-{{#unless @isOIDC}}
+<form
+  id="auth-form"
+  onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit)}}
+>
+{{#if this.isDefaultRole}}
+  {{#let @form.options as |FormOptions|}}
+    {{#unless this.isOIDC}}
+      <div class="field">
+        <label for="token" class="is-label">JWT Token</label>
+        <div class="control">
+          {{input
+            type="password"
+            value=jwt
+            name="jwt"
+            class="input"
+            autocomplete="off"
+            data-test-token=true
+          }}
+        </div>
+      </div>
+    {{/unless}}
+    <FormOptions>
+      <div class="field">
+        <label for="role" class="is-label">Role</label>
+        <div class="control">
+          <input
+            value={{@roleName}}
+            placeholder="Role"
+            oninput={{perform this.fetchRole value="target.value"}}
+            autocomplete="off"
+            name="role"
+            id="role"
+            class="input"
+            type="text"
+          />
+        </div>
+      </div>
+    </FormOptions>
+  {{/let}}
+{{else}}
   <div class="field">
-    <label for="token" class="is-label">JWT Token</label>
+    <label for="role" class="is-label">Role</label>
     <div class="control">
-      {{input
-        type="password"
-        value=token
-        name="token"
-        class="input"
+      <input
+        value={{@roleName}}
+        placeholder="Role"
+        oninput={{perform this.fetchRole value="target.value"}}
         autocomplete="off"
-        data-test-token=true
-      }}
+        name="role"
+        id="role"
+        class="input"
+        type="text"
+      />
     </div>
   </div>
-{{/unless}}
+  {{#unless this.isOIDC}}
+    <div class="field">
+      <label for="token" class="is-label">JWT Token</label>
+      <div class="control">
+        {{input
+          type="password"
+          value=jwt
+          name="jwt"
+          class="input"
+          autocomplete="off"
+          data-test-token=true
+        }}
+      </div>
+    </div>
+  {{/unless}}
+{{/if}}
+  <button data-test-auth-submit=true type="submit" disabled={{@disabled}} class="button is-primary {{if @disabled 'is-loading'}}" id="auth-submit">
+    {{#if this.isOIDC}}
+      Sign In via {{or this.role.providerName 'OIDC Provider'}}
+    {{else}}
+      Sign In
+    {{/if}}
+  </button>
+</form>

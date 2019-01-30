@@ -39,7 +39,7 @@ const SUPPORTED_AUTH_BACKENDS = [
     description: 'Token authentication.',
     tokenPath: 'client_token',
     displayNamePath: 'display_name',
-    formAttributes: ['token'],
+    formAttributes: ['role', 'jwt'],
   },
   {
     type: 'github',
