@@ -4,10 +4,14 @@ import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import { getOwner } from '@ember/application';
+import { combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
   wizard: service(),
+  pathHelp: service('path-help'),
+
   modelType(backendType, section) {
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
@@ -23,6 +27,42 @@ export default Route.extend(UnloadModelRoute, {
       'radius-configuration': 'auth-config/radius',
     };
     return MODELS[`${backendType}-${section}`];
+  },
+
+  beforeModel() {
+    const { section_name } = this.paramsFor(this.routeName);
+    return this.buildModel(section_name);
+  },
+
+  buildModel(section) {
+    const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
+    let modelType = this.modelType(method, section);
+
+    let name = `model:${modelType}`;
+    let owner = getOwner(this);
+    let newModel = owner.factoryFor(name).class;
+    if (newModel.merged || newModel.useOpenAPI === false) {
+      return RSVP.resolve();
+    }
+
+    return this.pathHelp
+      .getProps(modelType, method)
+      .then(props => {
+        if (owner.hasRegistration(name) && !newModel.merged) {
+          //combine them
+          let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+          newModel = newModel.extend(attrs, { newFields });
+        } else {
+          //generate a whole new model
+        }
+        newModel.reopenClass({ merged: true });
+        owner.unregister(name);
+        owner.register(name, newModel);
+        debugger; //eslint-disable-line
+      })
+      .catch(e => {
+        debugger; //eslint-disable-line
+      });
   },
 
   model(params) {
