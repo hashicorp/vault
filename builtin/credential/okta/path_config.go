@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"time"
-
 	"github.com/chrismalek/oktasdk-go/okta"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -19,7 +18,7 @@ const (
 )
 
 func pathConfig(b *backend) *framework.Path {
-	return &framework.Path{
+	ret := &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
@@ -46,14 +45,6 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Description: `(DEPRECATED) Use base_url.`,
 			},
-			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: `Duration after which authentication will be expired`,
-			},
-			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: `Maximum duration after which authentication will be expired`,
-			},
 			"bypass_okta_mfa": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
@@ -70,6 +61,9 @@ func pathConfig(b *backend) *framework.Path {
 
 		HelpSynopsis: pathConfigHelp,
 	}
+	tokenhelper.AddTokenFields(ret.Fields)
+
+	return ret
 }
 
 // Config returns the configuration for this backend.
@@ -101,15 +95,17 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"organization":    cfg.Org,
-			"org_name":        cfg.Org,
-			"ttl":             cfg.TTL.Seconds(),
-			"max_ttl":         cfg.MaxTTL.Seconds(),
-			"bypass_okta_mfa": cfg.BypassOktaMFA,
-		},
+	data := map[string]interface{}{
+		"organization":    cfg.Org,
+		"org_name":        cfg.Org,
+		"bypass_okta_mfa": cfg.BypassOktaMFA,
 	}
+	cfg.PopulateTokenData(data)
+
+	resp := &logical.Response{
+		Data: data,
+	}
+
 	if cfg.BaseURL != "" {
 		resp.Data["base_url"] = cfg.BaseURL
 	}
@@ -185,18 +181,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		cfg.BypassOktaMFA = bypass.(bool)
 	}
 
-	ttl, ok := d.GetOk("ttl")
-	if ok {
-		cfg.TTL = time.Duration(ttl.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		cfg.TTL = time.Duration(d.Get("ttl").(int)) * time.Second
-	}
-
-	maxTTL, ok := d.GetOk("max_ttl")
-	if ok {
-		cfg.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		cfg.MaxTTL = time.Duration(d.Get("max_ttl").(int)) * time.Second
+	if err := cfg.ParseTokenFields(req, d); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
@@ -244,13 +230,13 @@ func (c *ConfigEntry) OktaClient() *okta.Client {
 
 // ConfigEntry for Okta
 type ConfigEntry struct {
-	Org           string        `json:"organization"`
-	Token         string        `json:"token"`
-	BaseURL       string        `json:"base_url"`
-	Production    *bool         `json:"is_production,omitempty"`
-	TTL           time.Duration `json:"ttl"`
-	MaxTTL        time.Duration `json:"max_ttl"`
-	BypassOktaMFA bool          `json:"bypass_okta_mfa"`
+	tokenhelper.TokenParams
+
+	Org           string `json:"organization"`
+	Token         string `json:"token"`
+	BaseURL       string `json:"base_url"`
+	Production    *bool  `json:"is_production,omitempty"`
+	BypassOktaMFA bool   `json:"bypass_okta_mfa"`
 }
 
 const pathConfigHelp = `
