@@ -1330,9 +1330,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				"inferred_entity_id":   inferredEntityID,
 				"inferred_aws_region":  roleEntry.InferredAWSRegion,
 				"account_id":           entity.AccountNumber,
+				"role_id":              roleEntry.RoleID,
 			},
 			InternalData: map[string]interface{}{
 				"role_name": roleName,
+				"role_id":   roleEntry.RoleID,
 			},
 			DisplayName: entity.FriendlyName,
 			LeaseOptions: logical.LeaseOptions{
