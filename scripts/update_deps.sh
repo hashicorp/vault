@@ -48,4 +48,7 @@ govendor fetch github.com/influxdata/influxdb/client/v2@v1.7.3
 govendor fetch github.com/influxdata/influxdb/models@v1.7.3
 govendor fetch github.com/influxdata/influxdb/pkg/escape@v1.7.3
 
+# Current circonus needs v3
+grep circonus-gometrics vendor/vendor.json | cut -d '"' -f 4 | while read -r i; do govendor fetch $i@v2; done
+
 echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"

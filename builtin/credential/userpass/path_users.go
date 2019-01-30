@@ -7,8 +7,8 @@ import (
 	"time"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,7 +27,7 @@ func pathUsersList(b *backend) *framework.Path {
 }
 
 func pathUsers(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
 			"username": &framework.FieldSchema{
@@ -38,27 +38,6 @@ func pathUsers(b *backend) *framework.Path {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
-			},
-
-			"policies": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: "Comma-separated list of policies",
-			},
-
-			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: "Duration after which authentication will be expired",
-			},
-
-			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: "Maximum duration after which authentication will be expired",
-			},
-
-			"bound_cidrs": &framework.FieldSchema{
-				Type: framework.TypeCommaStringSlice,
-				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
 			},
 		},
 
@@ -74,6 +53,10 @@ IP addresses which can perform the login operation.`,
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 	}
+
+	tokenhelper.AddTokenFields(p.Fields)
+
+	return p
 }
 
 func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
@@ -101,6 +84,33 @@ func (b *backend) user(ctx context.Context, s logical.Storage, username string) 
 	var result UserEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	var needsUpgrade bool
+	if result.OldTTL != 0 {
+		needsUpgrade = true
+		result.TTL = result.OldTTL
+		result.OldTTL = 0
+	}
+	if result.OldMaxTTL != 0 {
+		needsUpgrade = true
+		result.MaxTTL = result.OldMaxTTL
+		result.OldMaxTTL = 0
+	}
+	if len(result.OldPolicies) != 0 {
+		needsUpgrade = true
+		result.Policies = result.OldPolicies
+		result.OldPolicies = nil
+	}
+	if result.OldBoundCIDRs != nil {
+		needsUpgrade = true
+		result.BoundCIDRs = result.OldBoundCIDRs
+		result.OldBoundCIDRs = nil
+	}
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+		if err := b.setUser(ctx, s, strings.ToLower(username), &result); err != nil {
+			return nil, err
+		}
 	}
 
 	return &result, nil
@@ -141,13 +151,10 @@ func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *fra
 		return nil, nil
 	}
 
+	data := map[string]interface{}{}
+	user.PopulateTokenData(data)
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"policies":    user.Policies,
-			"ttl":         user.TTL.Seconds(),
-			"max_ttl":     user.MaxTTL.Seconds(),
-			"bound_cidrs": user.BoundCIDRs,
-		},
+		Data: data,
 	}, nil
 }
 
@@ -172,25 +179,9 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	if policiesRaw, ok := d.GetOk("policies"); ok {
-		userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
-	}
-
-	ttl, ok := d.GetOk("ttl")
-	if ok {
-		userEntry.TTL = time.Duration(ttl.(int)) * time.Second
-	}
-
-	maxTTL, ok := d.GetOk("max_ttl")
-	if ok {
-		userEntry.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
-	}
-
-	boundCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
-	if err != nil {
+	if err := userEntry.ParseTokenFields(req, d); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	userEntry.BoundCIDRs = boundCIDRs
 
 	return nil, b.setUser(ctx, req.Storage, username, userEntry)
 }
@@ -204,6 +195,8 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 type UserEntry struct {
+	tokenhelper.TokenParams
+
 	// Password is deprecated in Vault 0.2 in favor of
 	// PasswordHash, but is retained for backwards compatibility.
 	Password string
@@ -212,15 +205,16 @@ type UserEntry struct {
 	// used instead of the actual password in Vault 0.2+.
 	PasswordHash []byte
 
-	Policies []string
+	// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
+	OldPolicies []string `json:"Policies"`
 
 	// Duration after which the user will be revoked unless renewed
-	TTL time.Duration
+	OldTTL time.Duration `json:"TTL"`
 
 	// Maximum duration for which user can be valid
-	MaxTTL time.Duration
+	OldMaxTTL time.Duration `json:"MaxTTL"`
 
-	BoundCIDRs []*sockaddr.SockAddrMarshaler
+	OldBoundCIDRs []*sockaddr.SockAddrMarshaler `json:"BoundCIDRs"`
 }
 
 const pathUserHelpSyn = `

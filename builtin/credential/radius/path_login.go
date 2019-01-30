@@ -12,6 +12,7 @@ import (
 	. "layeh.com/radius/rfc2865"
 
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -76,6 +77,14 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("password cannot be empty"), nil
 	}
 
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("radius backend not configured"), nil
+	}
+
 	policies, resp, err := b.RadiusLogin(ctx, req, username, password)
 	// Handle an internal error
 	if err != nil {
@@ -88,8 +97,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		}
 	}
 
-	resp.Auth = &logical.Auth{
-		Policies: policies,
+	auth := &logical.Auth{
 		Metadata: map[string]string{
 			"username": username,
 			"policies": strings.Join(policies, ","),
@@ -98,13 +106,16 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
-		LeaseOptions: logical.LeaseOptions{
-			Renewable: true,
-		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
 	}
+	cfg.PopulateTokenAuth(auth)
+	auth.Policies = append(auth.Policies, policies...)
+	auth.Policies = strutil.RemoveDuplicates(auth.Policies, false)
+
+	resp.Auth = auth
+
 	return resp, nil
 }
 

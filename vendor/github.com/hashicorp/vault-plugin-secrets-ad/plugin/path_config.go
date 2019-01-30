@@ -54,7 +54,7 @@ func (b *backend) pathConfig() *framework.Path {
 }
 
 func (b *backend) configFields() map[string]*framework.FieldSchema {
-	fields := ldaputil.ConfigFields()
+	fields := ldaputil.ConfigFields(false)
 	fields["ttl"] = &framework.FieldSchema{
 		Type:        framework.TypeDurationSecond,
 		Description: "In seconds, the default password time-to-live.",
