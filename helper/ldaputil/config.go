@@ -34,7 +34,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 		"binddn": {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
-			DisplayName: "binddn"
+			DisplayName: "Name of Object to bind (binddn)",
 		},
 
 		"bindpass": {
@@ -42,13 +42,12 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Description: "LDAP password for searching for the user DN (optional)",
 			DisplayName: "Password",
 			DisplaySensitive: true,
-
 		},
 
 		"groupdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
-			DisplayName: "Group DN"
+			DisplayName: "Group DN",
 		},
 
 		"groupfilter": {
@@ -59,7 +58,6 @@ The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
 			DisplayName: "Group Filter",
-			DisplayValue: "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))",
 		},
 
 		"groupattr": {
@@ -76,7 +74,7 @@ Default: cn`,
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
-			DisplayName: "User Principal (UPN) Domain"
+			DisplayName: "User Principal (UPN) Domain",
 		},
 
 		"userattr": {
@@ -84,8 +82,7 @@ Default: cn`,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
 			DisplayName: "User Attribute",
-			DisplayValue: "cn"
-
+			DisplayValue: "cn",
 		},
 
 		"certificate": {
@@ -111,7 +108,7 @@ Default: cn`,
 		"starttls": {
 			Type:         framework.TypeBool,
 			Description:  "Issue a StartTLS command after establishing unencrypted connection (optional)",
-			DisplayName:  "StartTLS",
+			DisplayName:  "Issue StartTLS command after establishing an unencrypted connection",
 			DisplayValue: false,
 		},
 
@@ -144,6 +141,7 @@ Default: cn`,
 		"case_sensitive_names": {
 			Type:        framework.TypeBool,
 			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
+			DisplayName: "Case Sensitive Names",
 		},
 
 		"use_token_groups": {

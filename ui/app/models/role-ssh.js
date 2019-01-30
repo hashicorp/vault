@@ -46,92 +46,69 @@ export default DS.Model.extend({
     readOnly: true,
   }),
   name: attr('string', {
-    label: 'Role name',
+    label: 'Role Name',
     fieldValue: 'id',
     readOnly: true,
   }),
-  keyType: attr('string', {
-    possibleValues: ['ca', 'otp'],
+  adminUser: attr('string', {
+    helpText: 'Username of the admin user at the remote host',
   }),
-  // adminUser: attr('string', {
-  //   helpText: 'Username of the admin user at the remote host',
-  // }),
-  // defaultUser: attr('string', {
-  //   helpText: "Username to use when one isn't specified",
-  // }),
-  // allowedUsers: attr('string', {
-  //   helpText:
-  //     'Create a whitelist of users that can use this key (e.g. `admin, dev`, or use `*` to allow all)',
-  // }),
-  // allowedDomains: attr('string', {
-  //   helpText:
-  //     'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
-  // }),
-  // cidrList: attr('string', {
-  //   label: 'CIDR list',
-  //   helpText: 'List of CIDR blocks for which this role is applicable',
-  // }),
-  // excludeCidrList: attr('string', {
-  //   label: 'Exclude CIDR list',
-  //   helpText: 'List of CIDR blocks that are not accepted by this role',
-  // }),
+  defaultUser: attr('string', {
+    helpText: "Username to use when one isn't specified",
+  }),
+  allowedUsers: attr('string', {
+    helpText:
+      'Create a whitelist of users that can use this key (e.g. `admin, dev`, or use `*` to allow all)',
+  }),
+  allowedDomains: attr('string', {
+    helpText:
+      'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
+  }),
+  cidrList: attr('string', {
+    helpText: 'List of CIDR blocks for which this role is applicable',
+  }),
+  excludeCidrList: attr('string', {
+    helpText: 'List of CIDR blocks that are not accepted by this role',
+  }),
   port: attr('number', {
-    defaultValue: 22,
     helpText: 'Port number for the SSH connection (default is `22`)',
   }),
-  // ttl: attr({
-  //   label: 'TTL',
-  //   editType: 'ttl',
-  // }),
-  // maxTtl: attr({
-  //   label: 'Max TTL',
-  //   editType: 'ttl',
-  // }),
-  // allowedCriticalOptions: attr('string', {
-  //   helpText: 'List of critical options that certificates have when signed',
-  // }),
-  // defaultCriticalOptions: attr('object', {
-  //   helpText: 'Map of critical options certificates should have if none are provided when signing',
-  // }),
-  // allowedExtensions: attr('string', {
-  //   helpText: 'List of extensions that certificates can have when signed',
-  // }),
-  // defaultExtensions: attr('object', {
-  //   helpText: 'Map of extensions certificates should have if none are provided when signing',
-  // }),
-  // allowUserCertificates: attr('boolean', {
-  //   helpText: 'Specifies if certificates are allowed to be signed for us as a user',
-  // }),
-  // allowHostCertificates: attr('boolean', {
-  //   helpText: 'Specifies if certificates are allowed to be signed for us as a host',
-  // }),
-  // allowBareDomains: attr('boolean', {
-  //   helpText:
-  //     'Specifies if host certificates that are requested are allowed to use the base domains listed in Allowed Domains',
-  // }),
-  // allowSubdomains: attr('boolean', {
-  //   helpText:
-  //     'Specifies if host certificates that are requested are allowed to be subdomains of those listed in Allowed Domains',
-  // }),
-  // allowUserKeyIds: attr('boolean', {
-  //   label: 'Allow user key IDs',
-  //   helpText: 'Specifies if users can override the key ID for a signed certificate with the "key_id" field',
-  // }),
-  // keyIdFormat: attr('string', {
-  //   label: 'Key ID format',
-  //   helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
-  // }),
+  allowedCriticalOptions: attr('string', {
+    helpText: 'List of critical options that certificates have when signed',
+  }),
+  defaultCriticalOptions: attr('object', {
+    helpText: 'Map of critical options certificates should have if none are provided when signing',
+  }),
+  allowedExtensions: attr('string', {
+    helpText: 'List of extensions that certificates can have when signed',
+  }),
+  defaultExtensions: attr('object', {
+    helpText: 'Map of extensions certificates should have if none are provided when signing',
+  }),
+  allowUserCertificates: attr('boolean', {
+    helpText: 'Specifies if certificates are allowed to be signed for us as a user',
+  }),
+  allowHostCertificates: attr('boolean', {
+    helpText: 'Specifies if certificates are allowed to be signed for us as a host',
+  }),
+  allowBareDomains: attr('boolean', {
+    helpText:
+      'Specifies if host certificates that are requested are allowed to use the base domains listed in Allowed Domains',
+  }),
+  allowSubdomains: attr('boolean', {
+    helpText:
+      'Specifies if host certificates that are requested are allowed to be subdomains of those listed in Allowed Domains',
+  }),
+  allowUserKeyIds: attr('boolean', {
+    helpText: 'Specifies if users can override the key ID for a signed certificate with the "key_id" field',
+  }),
+  keyIdFormat: attr('string', {
+    helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
+  }),
 
   attrsForKeyType: computed('keyType', function() {
     const keyType = this.get('keyType');
     let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
-    debugger; //eslint-disable-line
-    // if (this.newFields) {
-    //   let otherFields = this.newFields.filter(field => !keys.includes(field));
-    //   if (otherFields.length) {
-    //     keys = keys.concat(otherFields);
-    //   }
-    // }
     return expandAttributeMeta(this, keys);
   }),
 
