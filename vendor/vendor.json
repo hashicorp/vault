@@ -1077,6 +1077,24 @@
 			"revisionTime": "2018-11-15T01:20:43Z"
 		},
 		{
+			"checksumSHA1": "oLBV7th4sxzxzmf1b91NVVbdOfI=",
+			"path": "github.com/google/go-cmp/cmp/internal/diff",
+			"revision": "2248b49eaa8e1c8c0963ee77b40841adbc19d4ca",
+			"revisionTime": "2018-11-15T01:20:43Z"
+		},
+		{
+			"checksumSHA1": "kYtvRhMjM0X4bvEjR3pqEHLw1qo=",
+			"path": "github.com/google/go-cmp/cmp/internal/function",
+			"revision": "2248b49eaa8e1c8c0963ee77b40841adbc19d4ca",
+			"revisionTime": "2018-11-15T01:20:43Z"
+		},
+		{
+			"checksumSHA1": "FLgIRNmxNGpYuHemKzoSzaPrqiQ=",
+			"path": "github.com/google/go-cmp/cmp/internal/value",
+			"revision": "2248b49eaa8e1c8c0963ee77b40841adbc19d4ca",
+			"revisionTime": "2018-11-15T01:20:43Z"
+		},
+		{
 			"checksumSHA1": "lorBQlh3HnsHpNN91mPGXgje1Ow=",
 			"path": "github.com/google/go-github/github",
 			"revision": "aa7423eb79707e88352b2af2ff5fa5a4493f88c6",
