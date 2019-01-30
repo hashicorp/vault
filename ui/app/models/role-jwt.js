@@ -11,10 +11,17 @@ const DOMAIN_STRINGS = {
 };
 export default DS.Model.extend({
   authUrl: attr('string'),
-  providerName: computed('authUrl', function() {
+  providerMatch: computed('authUrl', function() {
     let { hostname } = parseURL(this.authUrl);
-    let firstMatch = Object.keys(DOMAIN_STRINGS).find(name => hostname.includes(name));
+    return Object.keys(DOMAIN_STRINGS).find(name => hostname.includes(name));
+  }),
 
-    return DOMAIN_STRINGS[firstMatch] || null;
+  providerName: computed('providerMatch', function() {
+    return DOMAIN_STRINGS[this.providerMatch] || null;
+  }),
+
+  providerButtonComponent: computed('providerName', function() {
+    let { providerMatch } = this;
+    return providerMatch ? `auth-button-${providerMatch}` : null;
   }),
 });
