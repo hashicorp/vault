@@ -231,7 +231,7 @@ This path configures the connection information used to connect to Cassandra.
 
 "local_datacenter" if set, enables host selection policy which will prioritize and
 use hosts which are in the local datacenter before hosts in all
-other datercenters.
+other datacenters.
 
 "username" and "password" are self-explanatory, although the given user
 must have superuser access within Cassandra. Note that since this backend
