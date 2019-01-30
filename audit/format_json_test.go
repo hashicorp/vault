@@ -38,11 +38,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}{
 		"auth, request": {
 			&logical.Auth{
-				ClientToken: "foo",
-				Accessor:    "bar",
-				DisplayName: "testtoken",
-				Policies:    []string{"root"},
-				TokenType:   logical.TokenTypeService,
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
 			},
 			&logical.Request{
 				Operation: logical.UpdateOperation,
@@ -63,11 +64,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		},
 		"auth, request with prefix": {
 			&logical.Auth{
-				ClientToken: "foo",
-				Accessor:    "bar",
-				DisplayName: "testtoken",
-				Policies:    []string{"root"},
-				TokenType:   logical.TokenTypeService,
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
 			},
 			&logical.Request{
 				Operation: logical.UpdateOperation,
@@ -139,5 +141,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStrFmt = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"client_token":"%s","accessor":"bar","display_name":"testtoken","policies":["root"],"metadata":null,"entity_id":"","token_type":"service"},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1","headers":{"foo":["bar"]}},"error":"this is an error"}
+const testFormatJSONReqBasicStrFmt = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"client_token":"%s","accessor":"bar","display_name":"testtoken","policies":["root"],"no_default_policy":true,"metadata":null,"entity_id":"","token_type":"service"},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1","headers":{"foo":["bar"]}},"error":"this is an error"}
 `
