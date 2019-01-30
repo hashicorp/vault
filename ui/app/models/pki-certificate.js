@@ -31,10 +31,10 @@ export default DS.Model.extend({
     readOnly: true,
   }),
 
-  revocationTime: attr('number'),
-  commonName: attr('string', {
-    label: 'Common Name',
-  }),
+  // revocationTime: attr('number'),
+  // commonName: attr('string', {
+  //   label: 'Common Name',
+  // }),
 
   // altNames: attr('string', {
   //   label: 'DNS/Email Subject Alternative Names (SANs)',
@@ -43,38 +43,38 @@ export default DS.Model.extend({
   // ipSans: attr('string', {
   //   label: 'IP Subject Alternative Names (SANs)',
   // }),
-  // otherSans: attr({
-  //   editType: 'stringArray',
-  //   label: 'Other SANs',
-  //   helpText:
-  //     'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
-  // }),
+  otherSans: attr({
+    // editType: 'stringArray',
+    // label: 'Other SANs',
+    helpText:
+      'The format is the same as OpenSSL: <oid>;<type>:<value> where the only current valid type is UTF8',
+  }),
 
   // ttl: attr({
   //   label: 'TTL',
   //   editType: 'ttl',
   // }),
 
-  format: attr('string', {
-    defaultValue: 'pem',
-    possibleValues: ['pem', 'der', 'pem_bundle'],
-  }),
+  // format: attr('string', {
+  //   defaultValue: 'pem',
+  //   possibleValues: ['pem', 'der', 'pem_bundle'],
+  // }),
 
-  excludeCnFromSans: attr('boolean', {
-    label: 'Exclude Common Name from Subject Alternative Names (SANs)',
-    defaultValue: false,
-  }),
+  // excludeCnFromSans: attr('boolean', {
+  //   label: 'Exclude Common Name from Subject Alternative Names (SANs)',
+  //   defaultValue: false,
+  // }),
 
-  certificate: attr('string'),
-  issuingCa: attr('string', {
-    label: 'Issuing CA',
-  }),
-  caChain: attr('string', {
-    label: 'CA chain',
-  }),
-  privateKey: attr('string'),
-  privateKeyType: attr('string'),
-  serialNumber: attr('string'),
+  // certificate: attr('string'),
+  // issuingCa: attr('string', {
+  //   label: 'Issuing CA',
+  // }),
+  // caChain: attr('string', {
+  //   label: 'CA chain',
+  // }),
+  // privateKey: attr('string'),
+  // privateKeyType: attr('string'),
+  // serialNumber: attr('string'),
 
   fieldsToAttrs(fieldGroups) {
     return fieldToAttrs(this, fieldGroups);
@@ -95,7 +95,7 @@ export default DS.Model.extend({
         !allFields.includes(field);
       });
       if (otherFields.length) {
-        groups.push({ Other: otherFields });
+        groups.default.concat(otherFields);
       }
     }
     return groups;
