@@ -2755,6 +2755,11 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 // hasMountAccess returns true if path has a non-deny capability in acl,
 // or if there exist any non-deny capability beneath that path in acl.
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
+	return hasNonDenyCapability(ctx, acl, path) || containsNonDenyCapability(ctx, acl, path)
+}
+
+// hasNonDenyCapability returns true if path has a non-deny capability in acl.
+func hasNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return false
@@ -2763,10 +2768,12 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	// If an earlier policy is giving us access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
-	if !strutil.StrListContains(capabilities, DenyCapability) {
-		return true
-	}
+	return !strutil.StrListContains(capabilities, DenyCapability)
+}
 
+// containsNonDenyCapability returns true if there exist any non-deny capability
+// beneath that path in acl.
+func containsNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
 	var aclCapabilitiesGiven bool
 	walkFn := func(s string, v interface{}) bool {
 		if v == nil {
@@ -3101,16 +3108,18 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 		return logical.ListResponse(unfiltered), nil
 	}
 
-	// Filter out keys for which we have no non-deny capabilities, either on the
-	// key or something below it.
 	filtered := make([]string, 0, len(unfiltered))
 	for _, key := range unfiltered {
-		if hasMountAccess(ctx, acl, ns.Path+filepath.Join(path, key)) {
+		isSubTree := strings.HasSuffix(key, "/")
+		fullPath := ns.Path + filepath.Join(path, key)
+		hasNonDeny := hasNonDenyCapability(ctx, acl, fullPath)
+		if hasNonDeny || (isSubTree && containsNonDenyCapability(ctx, acl, fullPath)) {
 			filtered = append(filtered, key)
 		}
+
 	}
-	b.logger.Debug("storage list", "mountpath", mountEntry.Path,
-		"relpath", relpath, "unfiltered", unfiltered, "filtered", filtered)
+	//b.logger.Debug("storage list", "mountpath", mountEntry.Path,
+	//	"relpath", relpath, "unfiltered", unfiltered, "filtered", filtered)
 
 	return logical.ListResponse(filtered), nil
 }

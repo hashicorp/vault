@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -2577,6 +2577,10 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	testCreateSecret(t, core, rootToken, "secret/foo/3", "k", "v")
 	testCreateSecret(t, core, rootToken, "secret/bar/1", "k", "v")
 	testCreateSecret(t, core, rootToken, "secret/bar/2", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/baz/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/10", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/2", "k", "v")
 
 	policyName := "test"
 	policyBody := `
@@ -2592,7 +2596,7 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 			capabilities = ["deny"]
 		}
 		path "secret/foo" {
-			capabilities = ["read"]
+			capabilities = ["deny"]
 		}
 		path "secret/foo/1" {
 			capabilities = ["delete"]
@@ -2601,17 +2605,30 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 		path "secret/foo/2" {
 			capabilities = ["deny"]
 		}
+		path "secret/qux/1*" {
+			capabilities = ["update"]
+		}
 	`
-
 	testCreatePolicy(t, core, policyName, policyBody)
 
 	// Create a non-root token
 	token := "tokenid"
 	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, token, "", []string{policyName})
 
+	// Expect root has full access regardless of policy
+	checkFunc(t, rootToken, filteredPath+"secret/foo", []string{"1", "2", "3"})
+
+	// Expect 2 hidden because it only has deny, 3 hidden because it has nothing.
 	checkFunc(t, token, filteredPath+"secret/foo", []string{"1"})
+
+	// Expect full access to bar because bar has list, even though 2 has deny.
 	checkFunc(t, token, filteredPath+"secret/bar", []string{"1", "2"})
-	checkFunc(t, token, filteredPath+"secret", []string{"foo", "foo/", "bar/"})
+
+	// Expect 2 hidden because only 1* has anything.
+	checkFunc(t, token, filteredPath+"secret/qux", []string{"1", "10"})
+
+	// Expect foo hidden because it has deny, baz hidden because it has nothing.
+	checkFunc(t, token, filteredPath+"secret", []string{"foo/", "bar/", "qux/"})
 }
 
 func testCreatePolicy(t *testing.T, core *Core, name, body string) {
