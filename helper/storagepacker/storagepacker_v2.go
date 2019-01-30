@@ -23,11 +23,11 @@ const (
 	defaultBucketShardCount = 16
 	// Larger size of the bucket size adversely affects the performance of the
 	// storage packer. Also, some of the backends impose a maximum size limit
-	// on the objects that gets persisted. For example, Consul imposes 512KB
+	// on the objects that gets persisted. For example, Consul imposes 256KB if using transactions
 	// and DynamoDB imposes 400KB. Going forward, if there exists storage
 	// backends that has more constrained limits, this will have to become more
-	// flexible. For now, 380KB seems like a decent bargain.
-	defaultBucketMaxSize = 380 * 1024
+	// flexible. For now, 240KB seems like a decent value.
+	defaultBucketMaxSize = 240 * 1024
 )
 
 type Config struct {
