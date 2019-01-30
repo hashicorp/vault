@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -2531,5 +2533,101 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	if doc.Paths["/rotate"] == nil {
 		t.Fatalf("expected to find path '/rotate'")
+	}
+}
+
+func testCreateSecret(t *testing.T, core *Core, token, path, key, value string) {
+	t.Helper()
+	req := logical.TestRequest(t, logical.UpdateOperation, path)
+	req.Data[key] = value
+	req.ClientToken = token
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
+	core, b, rootToken := testCoreSystemBackend(t)
+
+	less := func(s1, s2 string) bool { return s1 < s2 }
+	ignoreOrder := []cmp.Option{cmpopts.EquateEmpty(), cmpopts.SortSlices(less)}
+	filteredPath := "internal/ui/filtered-path/"
+	checkFunc := func(t *testing.T, token, path string, expectedKeys []string) {
+		t.Helper()
+		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path:        path,
+			Operation:   logical.ListOperation,
+			ClientToken: token,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		if diff := cmp.Diff(expectedKeys, resp.Data["keys"], ignoreOrder...); diff != "" {
+			t.Errorf("bad: filtered-path differs; (-want +got)\n%s", diff)
+		}
+	}
+
+	testCreateSecret(t, core, rootToken, "secret/foo", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/2", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/3", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/bar/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/bar/2", "k", "v")
+
+	policyName := "test"
+	policyBody := `
+		name = "test"
+		path "sys/internal/ui/filtered-path" {
+			capabilities = ["list"]
+		}
+		path "secret/bar" {
+			capabilities = ["list"]
+		}
+		// The deny on bar/2 is irrelevant since we give list on bar/.
+		path "secret/bar/2" {
+			capabilities = ["deny"]
+		}
+		path "secret/foo" {
+			capabilities = ["read"]
+		}
+		path "secret/foo/1" {
+			capabilities = ["delete"]
+		}
+        // We do not give list on foo/, so this deny is equivalent to no caps.
+		path "secret/foo/2" {
+			capabilities = ["deny"]
+		}
+	`
+
+	testCreatePolicy(t, core, policyName, policyBody)
+
+	// Create a non-root token
+	token := "tokenid"
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, token, "", []string{policyName})
+
+	checkFunc(t, token, filteredPath+"secret/foo", []string{"1"})
+	checkFunc(t, token, filteredPath+"secret/bar", []string{"1", "2"})
+	checkFunc(t, token, filteredPath+"secret", []string{"foo", "foo/", "bar/"})
+}
+
+func testCreatePolicy(t *testing.T, core *Core, name, body string) {
+	t.Helper()
+
+	var testPolicy = fmt.Sprintf(`
+		name = "%s"
+	`, name) + body
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, testPolicy)
+	if err != nil {
+		t.Fatalf("err parsing policy: %v", err)
+	}
+
+	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
+	if err != nil {
+		t.Fatalf("err storing policy: %v", err)
 	}
 }

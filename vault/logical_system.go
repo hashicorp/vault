@@ -2752,6 +2752,8 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
+// hasMountAccess returns true if path has a non-deny capability in acl,
+// or if there exist any non-deny capability beneath that path in acl.
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -3042,6 +3044,75 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	resp.Data["glob_paths"] = glob
 
 	return resp, nil
+}
+
+func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	path := d.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
+	}
+	path = sanitizeMountPath(path)
+
+	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the ACL policies so we can walk the prefix for this mount
+	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if entity != nil && entity.Disabled {
+		b.logger.Warn("permission denied as the entity on the token is disabled")
+		return errResp, logical.ErrPermissionDenied
+	}
+	if te != nil && te.EntityID != "" && entity == nil {
+		b.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, logical.ErrPermissionDenied
+	}
+
+	if !hasMountAccess(ctx, acl, ns.Path+path) {
+		return errResp, logical.ErrPermissionDenied
+	}
+
+	storage, mountEntry := b.Core.router.MatchingStorageAndMountByApiPath(ctx, path)
+	if storage == nil {
+		// Return a permission denied error here so this path cannot be used to
+		// brute force a list of mounts.
+		return errResp, logical.ErrPermissionDenied
+	}
+
+	relpath := strings.TrimPrefix(path, mountEntry.Path)
+	// b.logger.Info("storage mount", "entry", mountEntry, "relpath", relpath)
+	unfiltered, err := storage.List(ctx, relpath)
+	if err != nil {
+		// TODO do we need to wrap the error?
+		return nil, err
+	}
+
+	// Return early if we have list access to the path.
+	newreq := *req
+	newreq.Path = path
+	if acl.AllowOperation(ctx, &newreq, false).Allowed {
+		return logical.ListResponse(unfiltered), nil
+	}
+
+	// Filter out keys for which we have no non-deny capabilities, either on the
+	// key or something below it.
+	filtered := make([]string, 0, len(unfiltered))
+	for _, key := range unfiltered {
+		if hasMountAccess(ctx, acl, ns.Path+filepath.Join(path, key)) {
+			filtered = append(filtered, key)
+		}
+	}
+	b.logger.Debug("storage list", "mountpath", mountEntry.Path,
+		"relpath", relpath, "unfiltered", unfiltered, "filtered", filtered)
+
+	return logical.ListResponse(filtered), nil
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -3839,6 +3910,10 @@ This path responds to the following HTTP methods.
 	},
 	"internal-ui-resultant-acl": {
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"internal-ui-filtered-path": {
+		"Elements under the specified path which are either accessible, or whose subtree contains accessible elements",
 		"",
 	},
 }

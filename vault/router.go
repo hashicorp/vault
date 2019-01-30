@@ -340,6 +340,14 @@ func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) 
 	return r.matchingStorage(ctx, path, false)
 }
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
+	re := r.getRouteEntry(ctx, path, apiPath)
+	return re.storageView
+}
+func (r *Router) MatchingStorageAndMountByApiPath(ctx context.Context, path string) (logical.Storage, *MountEntry) {
+	re := r.getRouteEntry(ctx, path, true)
+	return re.storageView, re.mountEntry
+}
+func (r *Router) getRouteEntry(ctx context.Context, path string, apiPath bool) *routeEntry {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil
@@ -358,7 +366,7 @@ func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool)
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).storageView
+	return raw.(*routeEntry)
 }
 
 // MatchingMountEntry returns the MountEntry used for a path
