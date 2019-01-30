@@ -10,6 +10,8 @@ CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   role ID [GH-6133]
  * auth/jwt: The supported set of signing algorithms is now configurable [JWT
    plugin GH-16]
  * core: When starting from an uninitialized state, HA nodes will now attempt
