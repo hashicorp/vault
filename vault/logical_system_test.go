@@ -2631,6 +2631,30 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	checkFunc(t, token, filteredPath+"secret", []string{"foo/", "bar/", "qux/"})
 }
 
+func BenchmarkHasNonDenyCapability(b *testing.B) {
+	b.ReportAllocs()
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, `
+name = "dev"
+path "foo/bar" {
+	policy = "write"
+}
+`)
+
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		hasNonDenyCapability(ctx, acl, "/foo/bar")
+	}
+}
+
 func testCreatePolicy(t *testing.T, core *Core, name, body string) {
 	t.Helper()
 

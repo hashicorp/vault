@@ -415,6 +415,36 @@ func TestACL_AllowOperation(t *testing.T) {
 	})
 }
 
+func BenchmarkACLAllowOperation(b *testing.B) {
+	b.ReportAllocs()
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, `
+name = "dev"
+path "foo/bar" {
+	policy = "write"
+}
+`)
+
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	request := &logical.Request{
+		Path:      "/foo/bar",
+		Data:      make(map[string]interface{}),
+		Operation: logical.ListOperation,
+	}
+
+	for i := 0; i < b.N; i++ {
+		acl.AllowOperation(ctx, request, true)
+	}
+}
+
 func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 	policy, err := ParseACLPolicy(ns, permissionsPolicy)
 	if err != nil {

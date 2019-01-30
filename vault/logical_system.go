@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -2765,10 +2764,21 @@ func hasNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
 		return false
 	}
 
-	// If an earlier policy is giving us access to the mount path then we can do
-	// a fast return.
-	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
-	return !strutil.StrListContains(capabilities, DenyCapability)
+	req := &logical.Request{
+		Path: ns.TrimmedPath(path),
+		// doesn't matter, but use List to trigger fallback behavior so we can
+		// model real behavior
+		Operation: logical.ListOperation,
+	}
+
+	res := acl.AllowOperation(ctx, req, true)
+	if res.IsRoot {
+		return true
+	}
+	if res.CapabilitiesBitmap&DenyCapabilityInt > 0 {
+		return false
+	}
+	return res.CapabilitiesBitmap > 0
 }
 
 // containsNonDenyCapability returns true if there exist any non-deny capability
