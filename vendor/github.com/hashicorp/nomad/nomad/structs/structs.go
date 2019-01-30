@@ -24,6 +24,9 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
+	"container/heap"
+	"math"
+
 	"github.com/gorhill/cronexpr"
 	"github.com/hashicorp/consul/api"
 	multierror "github.com/hashicorp/go-multierror"
@@ -32,10 +35,9 @@ import (
 	"github.com/hashicorp/nomad/helper"
 	"github.com/hashicorp/nomad/helper/args"
 	"github.com/hashicorp/nomad/helper/uuid"
+	"github.com/hashicorp/nomad/lib/kheap"
 	"github.com/mitchellh/copystructure"
 	"github.com/ugorji/go/codec"
-
-	"math"
 
 	hcodec "github.com/hashicorp/go-msgpack/codec"
 )
@@ -133,6 +135,13 @@ const (
 	// MaxRetainedNodeEvents is the maximum number of node events that will be
 	// retained for a single node
 	MaxRetainedNodeEvents = 10
+
+	// MaxRetainedNodeScores is the number of top scoring nodes for which we
+	// retain scoring metadata
+	MaxRetainedNodeScores = 5
+
+	// Normalized scorer name
+	NormScorerName = "normalized-score"
 )
 
 // Context defines the scope in which a search for Nomad object operates, and
@@ -1416,6 +1425,13 @@ type Node struct {
 	// "docker.runtime=1.8.3"
 	Attributes map[string]string
 
+	// NodeResources captures the available resources on the client.
+	NodeResources *NodeResources
+
+	// ReservedResources captures the set resources on the client that are
+	// reserved from scheduling.
+	ReservedResources *NodeReservedResources
+
 	// Resources is the available resources on the client.
 	// For example 'cpu=2' 'memory=2048'
 	Resources *Resources
@@ -1513,6 +1529,8 @@ func (n *Node) Copy() *Node {
 	nn.Attributes = helper.CopyMapStringString(nn.Attributes)
 	nn.Resources = nn.Resources.Copy()
 	nn.Reserved = nn.Reserved.Copy()
+	nn.NodeResources = nn.NodeResources.Copy()
+	nn.ReservedResources = nn.ReservedResources.Copy()
 	nn.Links = helper.CopyMapStringString(nn.Links)
 	nn.Meta = helper.CopyMapStringString(nn.Meta)
 	nn.Events = copyNodeEvents(n.Events)
@@ -1560,19 +1578,77 @@ func (n *Node) TerminalStatus() bool {
 	}
 }
 
+// COMPAT(0.11): Remove in 0.11
+// ComparableReservedResources returns the reserved resouces on the node
+// handling upgrade paths. Reserved networks must be handled separately. After
+// 0.11 calls to this should be replaced with:
+// node.ReservedResources.Comparable()
+func (n *Node) ComparableReservedResources() *ComparableResources {
+	// See if we can no-op
+	if n.Reserved == nil && n.ReservedResources == nil {
+		return nil
+	}
+
+	// Node already has 0.9+ behavior
+	if n.ReservedResources != nil {
+		return n.ReservedResources.Comparable()
+	}
+
+	// Upgrade path
+	return &ComparableResources{
+		Flattened: AllocatedTaskResources{
+			Cpu: AllocatedCpuResources{
+				CpuShares: uint64(n.Reserved.CPU),
+			},
+			Memory: AllocatedMemoryResources{
+				MemoryMB: uint64(n.Reserved.MemoryMB),
+			},
+		},
+		Shared: AllocatedSharedResources{
+			DiskMB: uint64(n.Reserved.DiskMB),
+		},
+	}
+}
+
+// COMPAT(0.11): Remove in 0.11
+// ComparableResources returns the resouces on the node
+// handling upgrade paths. Networking must be handled separately. After 0.11
+// calls to this should be replaced with: node.NodeResources.Comparable()
+func (n *Node) ComparableResources() *ComparableResources {
+	// Node already has 0.9+ behavior
+	if n.NodeResources != nil {
+		return n.NodeResources.Comparable()
+	}
+
+	// Upgrade path
+	return &ComparableResources{
+		Flattened: AllocatedTaskResources{
+			Cpu: AllocatedCpuResources{
+				CpuShares: uint64(n.Resources.CPU),
+			},
+			Memory: AllocatedMemoryResources{
+				MemoryMB: uint64(n.Resources.MemoryMB),
+			},
+		},
+		Shared: AllocatedSharedResources{
+			DiskMB: uint64(n.Resources.DiskMB),
+		},
+	}
+}
+
 // Stub returns a summarized version of the node
 func (n *Node) Stub() *NodeListStub {
 
 	addr, _, _ := net.SplitHostPort(n.HTTPAddr)
 
 	return &NodeListStub{
-		Address:    addr,
-		ID:         n.ID,
-		Datacenter: n.Datacenter,
-		Name:       n.Name,
-		NodeClass:  n.NodeClass,
-		Version:    n.Attributes["nomad.version"],
-		Drain:      n.Drain,
+		Address:               addr,
+		ID:                    n.ID,
+		Datacenter:            n.Datacenter,
+		Name:                  n.Name,
+		NodeClass:             n.NodeClass,
+		Version:               n.Attributes["nomad.version"],
+		Drain:                 n.Drain,
 		SchedulingEligibility: n.SchedulingEligibility,
 		Status:                n.Status,
 		StatusDescription:     n.StatusDescription,
@@ -1600,26 +1676,6 @@ type NodeListStub struct {
 	ModifyIndex           uint64
 }
 
-// Networks defined for a task on the Resources struct.
-type Networks []*NetworkResource
-
-// Port assignment and IP for the given label or empty values.
-func (ns Networks) Port(label string) (string, int) {
-	for _, n := range ns {
-		for _, p := range n.ReservedPorts {
-			if p.Label == label {
-				return n.IP, p.Value
-			}
-		}
-		for _, p := range n.DynamicPorts {
-			if p.Label == label {
-				return n.IP, p.Value
-			}
-		}
-	}
-	return "", 0
-}
-
 // Resources is used to define the resources available
 // on a client
 type Resources struct {
@@ -1628,6 +1684,7 @@ type Resources struct {
 	DiskMB   int
 	IOPS     int
 	Networks Networks
+	Devices  []*RequestedDevice
 }
 
 const (
@@ -1681,6 +1738,9 @@ func (r *Resources) Merge(other *Resources) {
 	if len(other.Networks) != 0 {
 		r.Networks = other.Networks
 	}
+	if len(other.Devices) != 0 {
+		r.Devices = other.Devices
+	}
 }
 
 func (r *Resources) Canonicalize() {
@@ -1688,6 +1748,9 @@ func (r *Resources) Canonicalize() {
 	// problems since we use reflect DeepEquals.
 	if len(r.Networks) == 0 {
 		r.Networks = nil
+	}
+	if len(r.Devices) == 0 {
+		r.Devices = nil
 	}
 
 	for _, n := range r.Networks {
@@ -1726,6 +1789,8 @@ func (r *Resources) Copy() *Resources {
 	}
 	newR := new(Resources)
 	*newR = *r
+
+	// Copy the network objects
 	if r.Networks != nil {
 		n := len(r.Networks)
 		newR.Networks = make([]*NetworkResource, n)
@@ -1733,17 +1798,22 @@ func (r *Resources) Copy() *Resources {
 			newR.Networks[i] = r.Networks[i].Copy()
 		}
 	}
+
+	// Copy the devices
+	if r.Devices != nil {
+		n := len(r.Devices)
+		newR.Devices = make([]*RequestedDevice, n)
+		for i := 0; i < n; i++ {
+			newR.Devices[i] = r.Devices[i].Copy()
+		}
+	}
+
 	return newR
 }
 
 // NetIndex finds the matching net index using device name
 func (r *Resources) NetIndex(n *NetworkResource) int {
-	for idx, net := range r.Networks {
-		if net.Device == n.Device {
-			return idx
-		}
-	}
-	return -1
+	return r.Networks.NetIndex(n)
 }
 
 // Superset checks if one set of resources is a superset
@@ -1918,6 +1988,511 @@ func (n *NetworkResource) PortLabels() map[string]int {
 	return labelValues
 }
 
+// Networks defined for a task on the Resources struct.
+type Networks []*NetworkResource
+
+// Port assignment and IP for the given label or empty values.
+func (ns Networks) Port(label string) (string, int) {
+	for _, n := range ns {
+		for _, p := range n.ReservedPorts {
+			if p.Label == label {
+				return n.IP, p.Value
+			}
+		}
+		for _, p := range n.DynamicPorts {
+			if p.Label == label {
+				return n.IP, p.Value
+			}
+		}
+	}
+	return "", 0
+}
+
+func (ns Networks) NetIndex(n *NetworkResource) int {
+	for idx, net := range ns {
+		if net.Device == n.Device {
+			return idx
+		}
+	}
+	return -1
+}
+
+// RequestedDevice is used to request a device for a task.
+type RequestedDevice struct {
+	// Name is the request name. The possible values are as follows:
+	// * <type>: A single value only specifies the type of request.
+	// * <vendor>/<type>: A single slash delimiter assumes the vendor and type of device is specified.
+	// * <vendor>/<type>/<name>: Two slash delimiters assume vendor, type and specific model are specified.
+	//
+	// Examples are as follows:
+	// * "gpu"
+	// * "nvidia/gpu"
+	// * "nvidia/gpu/GTX2080Ti"
+	Name string
+
+	// Count is the number of requested devices
+	Count uint64
+
+	// TODO validate
+	// Constraints are a set of constraints to apply when selecting the device
+	// to use.
+	Constraints []*Constraint
+
+	// Affinities are a set of affinites to apply when selecting the device
+	// to use.
+	Affinities []*Affinity
+}
+
+func (r *RequestedDevice) Copy() *RequestedDevice {
+	if r == nil {
+		return nil
+	}
+
+	nr := *r
+	nr.Constraints = CopySliceConstraints(nr.Constraints)
+	nr.Affinities = CopySliceAffinities(nr.Affinities)
+
+	return &nr
+}
+
+// NodeResources is used to define the resources available on a client node.
+type NodeResources struct {
+	Cpu      NodeCpuResources
+	Memory   NodeMemoryResources
+	Disk     NodeDiskResources
+	Networks Networks
+}
+
+func (n *NodeResources) Copy() *NodeResources {
+	if n == nil {
+		return nil
+	}
+	newN := new(NodeResources)
+	*newN = *n
+	if n.Networks != nil {
+		networks := len(n.Networks)
+		newN.Networks = make([]*NetworkResource, networks)
+		for i := 0; i < networks; i++ {
+			newN.Networks[i] = n.Networks[i].Copy()
+		}
+	}
+	return newN
+}
+
+// Comparable returns a comparable version of the nodes resources. This
+// conversion can be lossy so care must be taken when using it.
+func (n *NodeResources) Comparable() *ComparableResources {
+	if n == nil {
+		return nil
+	}
+
+	c := &ComparableResources{
+		Flattened: AllocatedTaskResources{
+			Cpu: AllocatedCpuResources{
+				CpuShares: n.Cpu.CpuShares,
+			},
+			Memory: AllocatedMemoryResources{
+				MemoryMB: n.Memory.MemoryMB,
+			},
+			Networks: n.Networks,
+		},
+		Shared: AllocatedSharedResources{
+			DiskMB: n.Disk.DiskMB,
+		},
+	}
+	return c
+}
+
+func (n *NodeResources) Merge(o *NodeResources) {
+	if o == nil {
+		return
+	}
+
+	n.Cpu.Merge(&o.Cpu)
+	n.Memory.Merge(&o.Memory)
+	n.Disk.Merge(&o.Disk)
+
+	if len(o.Networks) != 0 {
+		n.Networks = o.Networks
+	}
+}
+
+func (n *NodeResources) Equals(o *NodeResources) bool {
+	if o == nil && n == nil {
+		return true
+	} else if o == nil {
+		return false
+	} else if n == nil {
+		return false
+	}
+
+	if !n.Cpu.Equals(&o.Cpu) {
+		return false
+	}
+	if !n.Memory.Equals(&o.Memory) {
+		return false
+	}
+	if !n.Disk.Equals(&o.Disk) {
+		return false
+	}
+
+	if len(n.Networks) != len(o.Networks) {
+		return false
+	}
+	for i, n := range n.Networks {
+		if !n.Equals(o.Networks[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// NodeCpuResources captures the CPU resources of the node.
+type NodeCpuResources struct {
+	// CpuShares is the CPU shares available. This is calculated by number of
+	// cores multiplied by the core frequency.
+	CpuShares uint64
+}
+
+func (n *NodeCpuResources) Merge(o *NodeCpuResources) {
+	if o == nil {
+		return
+	}
+
+	if o.CpuShares != 0 {
+		n.CpuShares = o.CpuShares
+	}
+}
+
+func (n *NodeCpuResources) Equals(o *NodeCpuResources) bool {
+	if o == nil && n == nil {
+		return true
+	} else if o == nil {
+		return false
+	} else if n == nil {
+		return false
+	}
+
+	if n.CpuShares != o.CpuShares {
+		return false
+	}
+
+	return true
+}
+
+// NodeMemoryResources captures the memory resources of the node
+type NodeMemoryResources struct {
+	// MemoryMB is the total available memory on the node
+	MemoryMB uint64
+}
+
+func (n *NodeMemoryResources) Merge(o *NodeMemoryResources) {
+	if o == nil {
+		return
+	}
+
+	if o.MemoryMB != 0 {
+		n.MemoryMB = o.MemoryMB
+	}
+}
+
+func (n *NodeMemoryResources) Equals(o *NodeMemoryResources) bool {
+	if o == nil && n == nil {
+		return true
+	} else if o == nil {
+		return false
+	} else if n == nil {
+		return false
+	}
+
+	if n.MemoryMB != o.MemoryMB {
+		return false
+	}
+
+	return true
+}
+
+// NodeDiskResources captures the disk resources of the node
+type NodeDiskResources struct {
+	// DiskMB is the total available disk space on the node
+	DiskMB uint64
+}
+
+func (n *NodeDiskResources) Merge(o *NodeDiskResources) {
+	if o == nil {
+		return
+	}
+	if o.DiskMB != 0 {
+		n.DiskMB = o.DiskMB
+	}
+}
+
+func (n *NodeDiskResources) Equals(o *NodeDiskResources) bool {
+	if o == nil && n == nil {
+		return true
+	} else if o == nil {
+		return false
+	} else if n == nil {
+		return false
+	}
+
+	if n.DiskMB != o.DiskMB {
+		return false
+	}
+
+	return true
+}
+
+// NodeReservedResources is used to capture the resources on a client node that
+// should be reserved and not made available to jobs.
+type NodeReservedResources struct {
+	Cpu      NodeReservedCpuResources
+	Memory   NodeReservedMemoryResources
+	Disk     NodeReservedDiskResources
+	Networks NodeReservedNetworkResources
+}
+
+func (n *NodeReservedResources) Copy() *NodeReservedResources {
+	if n == nil {
+		return nil
+	}
+	newN := new(NodeReservedResources)
+	*newN = *n
+	return newN
+}
+
+// Comparable returns a comparable version of the node's reserved resources. The
+// returned resources doesn't contain any network information. This conversion
+// can be lossy so care must be taken when using it.
+func (n *NodeReservedResources) Comparable() *ComparableResources {
+	if n == nil {
+		return nil
+	}
+
+	c := &ComparableResources{
+		Flattened: AllocatedTaskResources{
+			Cpu: AllocatedCpuResources{
+				CpuShares: n.Cpu.CpuShares,
+			},
+			Memory: AllocatedMemoryResources{
+				MemoryMB: n.Memory.MemoryMB,
+			},
+		},
+		Shared: AllocatedSharedResources{
+			DiskMB: n.Disk.DiskMB,
+		},
+	}
+	return c
+}
+
+// NodeReservedCpuResources captures the reserved CPU resources of the node.
+type NodeReservedCpuResources struct {
+	CpuShares uint64
+}
+
+// NodeReservedMemoryResources captures the reserved memory resources of the node.
+type NodeReservedMemoryResources struct {
+	MemoryMB uint64
+}
+
+// NodeReservedDiskResources captures the reserved disk resources of the node.
+type NodeReservedDiskResources struct {
+	DiskMB uint64
+}
+
+// NodeReservedNetworkResources captures the reserved network resources of the node.
+type NodeReservedNetworkResources struct {
+	// ReservedHostPorts is the set of ports reserved on all host network
+	// interfaces. Its format is a comma separate list of integers or integer
+	// ranges. (80,443,1000-2000,2005)
+	ReservedHostPorts string
+}
+
+// ParsePortHostPorts returns the reserved host ports.
+func (n *NodeReservedNetworkResources) ParseReservedHostPorts() ([]uint64, error) {
+	return ParsePortRanges(n.ReservedHostPorts)
+}
+
+// AllocatedResources is the set of resources to be used by an allocation.
+type AllocatedResources struct {
+	// Tasks is a mapping of task name to the resources for the task.
+	Tasks map[string]*AllocatedTaskResources
+
+	// Shared is the set of resource that are shared by all tasks in the group.
+	Shared AllocatedSharedResources
+}
+
+func (a *AllocatedResources) Copy() *AllocatedResources {
+	if a == nil {
+		return nil
+	}
+	newA := new(AllocatedResources)
+	*newA = *a
+
+	if a.Tasks != nil {
+		tr := make(map[string]*AllocatedTaskResources, len(newA.Tasks))
+		for task, resource := range newA.Tasks {
+			tr[task] = resource.Copy()
+		}
+		newA.Tasks = tr
+	}
+
+	return newA
+}
+
+// Comparable returns a comparable version of the allocations allocated
+// resources. This conversion can be lossy so care must be taken when using it.
+func (a *AllocatedResources) Comparable() *ComparableResources {
+	if a == nil {
+		return nil
+	}
+
+	c := &ComparableResources{
+		Shared: a.Shared,
+	}
+	for _, r := range a.Tasks {
+		c.Flattened.Add(r)
+	}
+	return c
+}
+
+// OldTaskResources returns the pre-0.9.0 map of task resources
+func (a *AllocatedResources) OldTaskResources() map[string]*Resources {
+	m := make(map[string]*Resources, len(a.Tasks))
+	for name, res := range a.Tasks {
+		m[name] = &Resources{
+			CPU:      int(res.Cpu.CpuShares),
+			MemoryMB: int(res.Memory.MemoryMB),
+			Networks: res.Networks,
+		}
+	}
+
+	return m
+}
+
+// AllocatedTaskResources are the set of resources allocated to a task.
+type AllocatedTaskResources struct {
+	Cpu      AllocatedCpuResources
+	Memory   AllocatedMemoryResources
+	Networks Networks
+}
+
+func (a *AllocatedTaskResources) Copy() *AllocatedTaskResources {
+	if a == nil {
+		return nil
+	}
+	newA := new(AllocatedTaskResources)
+	*newA = *a
+	if a.Networks != nil {
+		n := len(a.Networks)
+		newA.Networks = make([]*NetworkResource, n)
+		for i := 0; i < n; i++ {
+			newA.Networks[i] = a.Networks[i].Copy()
+		}
+	}
+	return newA
+}
+
+// NetIndex finds the matching net index using device name
+func (a *AllocatedTaskResources) NetIndex(n *NetworkResource) int {
+	return a.Networks.NetIndex(n)
+}
+
+func (a *AllocatedTaskResources) Add(delta *AllocatedTaskResources) {
+	if delta == nil {
+		return
+	}
+
+	a.Cpu.Add(&delta.Cpu)
+	a.Memory.Add(&delta.Memory)
+
+	for _, n := range delta.Networks {
+		// Find the matching interface by IP or CIDR
+		idx := a.NetIndex(n)
+		if idx == -1 {
+			a.Networks = append(a.Networks, n.Copy())
+		} else {
+			a.Networks[idx].Add(n)
+		}
+	}
+}
+
+// AllocatedSharedResources are the set of resources allocated to a task group.
+type AllocatedSharedResources struct {
+	DiskMB uint64
+}
+
+func (a *AllocatedSharedResources) Add(delta *AllocatedSharedResources) {
+	if delta == nil {
+		return
+	}
+
+	a.DiskMB += delta.DiskMB
+}
+
+// AllocatedCpuResources captures the allocated CPU resources.
+type AllocatedCpuResources struct {
+	CpuShares uint64
+}
+
+func (a *AllocatedCpuResources) Add(delta *AllocatedCpuResources) {
+	if delta == nil {
+		return
+	}
+
+	a.CpuShares += delta.CpuShares
+}
+
+// AllocatedMemoryResources captures the allocated memory resources.
+type AllocatedMemoryResources struct {
+	MemoryMB uint64
+}
+
+func (a *AllocatedMemoryResources) Add(delta *AllocatedMemoryResources) {
+	if delta == nil {
+		return
+	}
+
+	a.MemoryMB += delta.MemoryMB
+}
+
+// ComparableResources is the set of resources allocated to a task group but
+// not keyed by Task, making it easier to compare.
+type ComparableResources struct {
+	Flattened AllocatedTaskResources
+	Shared    AllocatedSharedResources
+}
+
+func (c *ComparableResources) Add(delta *ComparableResources) {
+	if delta == nil {
+		return
+	}
+
+	c.Flattened.Add(&delta.Flattened)
+	c.Shared.Add(&delta.Shared)
+}
+
+// Superset checks if one set of resources is a superset of another. This
+// ignores network resources, and the NetworkIndex should be used for that.
+func (c *ComparableResources) Superset(other *ComparableResources) (bool, string) {
+	if c.Flattened.Cpu.CpuShares < other.Flattened.Cpu.CpuShares {
+		return false, "cpu"
+	}
+	if c.Flattened.Memory.MemoryMB < other.Flattened.Memory.MemoryMB {
+		return false, "memory"
+	}
+	if c.Shared.DiskMB < other.Shared.DiskMB {
+		return false, "disk"
+	}
+	return true, ""
+}
+
+// allocated finds the matching net index using device name
+func (c *ComparableResources) NetIndex(n *NetworkResource) int {
+	return c.Flattened.Networks.NetIndex(n)
+}
+
 const (
 	// JobTypeNomad is reserved for internal system tasks and is
 	// always handled by the CoreScheduler.
@@ -2003,6 +2578,14 @@ type Job struct {
 	// Constraints can be specified at a job level and apply to
 	// all the task groups and tasks.
 	Constraints []*Constraint
+
+	// Affinities can be specified at the job level to express
+	// scheduling preferences that apply to all groups and tasks
+	Affinities []*Affinity
+
+	// Spread can be specified at the job level to express spreading
+	// allocations across a desired attribute, such as datacenter
+	Spreads []*Spread
 
 	// TaskGroups are the collections of task groups that this job needs
 	// to run. Each task group is an atomic unit of scheduling and placement.
@@ -2112,6 +2695,7 @@ func (j *Job) Copy() *Job {
 	*nj = *j
 	nj.Datacenters = helper.CopySliceString(nj.Datacenters)
 	nj.Constraints = CopySliceConstraints(nj.Constraints)
+	nj.Affinities = CopySliceAffinities(nj.Affinities)
 
 	if j.TaskGroups != nil {
 		tgs := make([]*TaskGroup, len(nj.TaskGroups))
@@ -2165,6 +2749,31 @@ func (j *Job) Validate() error {
 		if err := constr.Validate(); err != nil {
 			outer := fmt.Errorf("Constraint %d validation failed: %s", idx+1, err)
 			mErr.Errors = append(mErr.Errors, outer)
+		}
+	}
+	if j.Type == JobTypeSystem {
+		if j.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range j.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
+	}
+
+	if j.Type == JobTypeSystem {
+		if j.Spreads != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have a spread stanza"))
+		}
+	} else {
+		for idx, spread := range j.Spreads {
+			if err := spread.Validate(); err != nil {
+				outer := fmt.Errorf("Spread %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
 		}
 	}
 
@@ -3315,6 +3924,14 @@ type TaskGroup struct {
 	// ReschedulePolicy is used to configure how the scheduler should
 	// retry failed allocations.
 	ReschedulePolicy *ReschedulePolicy
+
+	// Affinities can be specified at the task group level to express
+	// scheduling preferences.
+	Affinities []*Affinity
+
+	// Spread can be specified at the task group level to express spreading
+	// allocations across a desired attribute, such as datacenter
+	Spreads []*Spread
 }
 
 func (tg *TaskGroup) Copy() *TaskGroup {
@@ -3327,6 +3944,8 @@ func (tg *TaskGroup) Copy() *TaskGroup {
 	ntg.Constraints = CopySliceConstraints(ntg.Constraints)
 	ntg.RestartPolicy = ntg.RestartPolicy.Copy()
 	ntg.ReschedulePolicy = ntg.ReschedulePolicy.Copy()
+	ntg.Affinities = CopySliceAffinities(ntg.Affinities)
+	ntg.Spreads = CopySliceSpreads(ntg.Spreads)
 
 	if tg.Tasks != nil {
 		tasks := make([]*Task, len(ntg.Tasks))
@@ -3374,19 +3993,6 @@ func (tg *TaskGroup) Canonicalize(job *Job) {
 	for _, task := range tg.Tasks {
 		task.Canonicalize(job, tg)
 	}
-
-	// Add up the disk resources to EphemeralDisk. This is done so that users
-	// are not required to move their disk attribute from resources to
-	// EphemeralDisk section of the job spec in Nomad 0.5
-	// COMPAT 0.4.1 -> 0.5
-	// Remove in 0.6
-	var diskMB int
-	for _, task := range tg.Tasks {
-		diskMB += task.Resources.DiskMB
-	}
-	if diskMB > 0 {
-		tg.EphemeralDisk.SizeMB = diskMB
-	}
 }
 
 // Validate is used to sanity check a task group
@@ -3407,6 +4013,18 @@ func (tg *TaskGroup) Validate(j *Job) error {
 			mErr.Errors = append(mErr.Errors, outer)
 		}
 	}
+	if j.Type == JobTypeSystem {
+		if tg.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range tg.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
+	}
 
 	if tg.RestartPolicy != nil {
 		if err := tg.RestartPolicy.Validate(); err != nil {
@@ -3414,6 +4032,19 @@ func (tg *TaskGroup) Validate(j *Job) error {
 		}
 	} else {
 		mErr.Errors = append(mErr.Errors, fmt.Errorf("Task Group %v should have a restart policy", tg.Name))
+	}
+
+	if j.Type == JobTypeSystem {
+		if tg.Spreads != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have a spread stanza"))
+		}
+	} else {
+		for idx, spread := range tg.Spreads {
+			if err := spread.Validate(); err != nil {
+				outer := fmt.Errorf("Spread %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
+		}
 	}
 
 	if j.Type == JobTypeSystem {
@@ -3504,7 +4135,7 @@ func (tg *TaskGroup) Validate(j *Job) error {
 
 	// Validate the tasks
 	for _, task := range tg.Tasks {
-		if err := task.Validate(tg.EphemeralDisk); err != nil {
+		if err := task.Validate(tg.EphemeralDisk, j.Type); err != nil {
 			outer := fmt.Errorf("Task %s validation failed: %v", task.Name, err)
 			mErr.Errors = append(mErr.Errors, outer)
 		}
@@ -3542,17 +4173,6 @@ func (tg *TaskGroup) LookupTask(name string) *Task {
 
 func (tg *TaskGroup) GoString() string {
 	return fmt.Sprintf("*%#v", *tg)
-}
-
-// CombinedResources returns the combined resources for the task group
-func (tg *TaskGroup) CombinedResources() *Resources {
-	r := &Resources{
-		DiskMB: tg.EphemeralDisk.SizeMB,
-	}
-	for _, task := range tg.Tasks {
-		r.Add(task.Resources)
-	}
-	return r
 }
 
 // CheckRestart describes if and when a task should be restarted based on
@@ -4007,6 +4627,10 @@ type Task struct {
 	// the particular task.
 	Constraints []*Constraint
 
+	// Affinities can be specified at the task level to express
+	// scheduling preferences
+	Affinities []*Affinity
+
 	// Resources is the resources needed by this task
 	Resources *Resources
 
@@ -4060,6 +4684,7 @@ func (t *Task) Copy() *Task {
 	}
 
 	nt.Constraints = CopySliceConstraints(nt.Constraints)
+	nt.Affinities = CopySliceAffinities(nt.Affinities)
 
 	nt.Vault = nt.Vault.Copy()
 	nt.Resources = nt.Resources.Copy()
@@ -4135,7 +4760,7 @@ func (t *Task) GoString() string {
 }
 
 // Validate is used to sanity check a task
-func (t *Task) Validate(ephemeralDisk *EphemeralDisk) error {
+func (t *Task) Validate(ephemeralDisk *EphemeralDisk, jobType string) error {
 	var mErr multierror.Error
 	if t.Name == "" {
 		mErr.Errors = append(mErr.Errors, errors.New("Missing task name"))
@@ -4186,6 +4811,19 @@ func (t *Task) Validate(ephemeralDisk *EphemeralDisk) error {
 		case ConstraintDistinctHosts, ConstraintDistinctProperty:
 			outer := fmt.Errorf("Constraint %d has disallowed Operand at task level: %s", idx+1, constr.Operand)
 			mErr.Errors = append(mErr.Errors, outer)
+		}
+	}
+
+	if jobType == JobTypeSystem {
+		if t.Affinities != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("System jobs may not have an affinity stanza"))
+		}
+	} else {
+		for idx, affinity := range t.Affinities {
+			if err := affinity.Validate(); err != nil {
+				outer := fmt.Errorf("Affinity %d validation failed: %s", idx+1, err)
+				mErr.Errors = append(mErr.Errors, outer)
+			}
 		}
 	}
 
@@ -5165,6 +5803,8 @@ const (
 	ConstraintRegex            = "regexp"
 	ConstraintVersion          = "version"
 	ConstraintSetContains      = "set_contains"
+	ConstraintSetContainsAll   = "set_contains_all"
+	ConstraintSetContaintsAny  = "set_contains_any"
 )
 
 // Constraints are used to restrict placement options.
@@ -5249,6 +5889,180 @@ func (c *Constraint) Validate() error {
 	}
 
 	return mErr.ErrorOrNil()
+}
+
+// Affinity is used to score placement options based on a weight
+type Affinity struct {
+	LTarget string  // Left-hand target
+	RTarget string  // Right-hand target
+	Operand string  // Affinity operand (<=, <, =, !=, >, >=), set_contains_all, set_contains_any
+	Weight  float64 // Weight applied to nodes that match the affinity. Can be negative
+	str     string  // Memoized string
+}
+
+// Equal checks if two affinities are equal
+func (a *Affinity) Equal(o *Affinity) bool {
+	return a.LTarget == o.LTarget &&
+		a.RTarget == o.RTarget &&
+		a.Operand == o.Operand &&
+		a.Weight == o.Weight
+}
+
+func (a *Affinity) Copy() *Affinity {
+	if a == nil {
+		return nil
+	}
+	na := new(Affinity)
+	*na = *a
+	return na
+}
+
+func (a *Affinity) String() string {
+	if a.str != "" {
+		return a.str
+	}
+	a.str = fmt.Sprintf("%s %s %s %v", a.LTarget, a.Operand, a.RTarget, a.Weight)
+	return a.str
+}
+
+func (a *Affinity) Validate() error {
+	var mErr multierror.Error
+	if a.Operand == "" {
+		mErr.Errors = append(mErr.Errors, errors.New("Missing affinity operand"))
+	}
+
+	// Perform additional validation based on operand
+	switch a.Operand {
+	case ConstraintSetContainsAll, ConstraintSetContaintsAny, ConstraintSetContains:
+		if a.RTarget == "" {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Set contains operators require an RTarget"))
+		}
+	case ConstraintRegex:
+		if _, err := regexp.Compile(a.RTarget); err != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Regular expression failed to compile: %v", err))
+		}
+	case ConstraintVersion:
+		if _, err := version.NewConstraint(a.RTarget); err != nil {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Version affinity is invalid: %v", err))
+		}
+	case "=", "==", "is", "!=", "not", "<", "<=", ">", ">=":
+		if a.RTarget == "" {
+			mErr.Errors = append(mErr.Errors, fmt.Errorf("Operator %q requires an RTarget", a.Operand))
+		}
+	default:
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Unknown affinity operator %q", a.Operand))
+	}
+
+	// Ensure we have an LTarget
+	if a.LTarget == "" {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("No LTarget provided but is required"))
+	}
+
+	// Ensure that weight is between -100 and 100, and not zero
+	if a.Weight == 0 {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Affinity weight cannot be zero"))
+	}
+
+	if a.Weight > 100 || a.Weight < -100 {
+		mErr.Errors = append(mErr.Errors, fmt.Errorf("Affinity weight must be within the range [-100,100]"))
+	}
+
+	return mErr.ErrorOrNil()
+}
+
+// Spread is used to specify desired distribution of allocations according to weight
+type Spread struct {
+	// Attribute is the node attribute used as the spread criteria
+	Attribute string
+
+	// Weight is the relative weight of this spread, useful when there are multiple
+	// spread and affinities
+	Weight int
+
+	// SpreadTarget is used to describe desired percentages for each attribute value
+	SpreadTarget []*SpreadTarget
+
+	// Memoized string representation
+	str string
+}
+
+func (s *Spread) Copy() *Spread {
+	if s == nil {
+		return nil
+	}
+	ns := new(Spread)
+	*ns = *s
+
+	ns.SpreadTarget = CopySliceSpreadTarget(s.SpreadTarget)
+	return ns
+}
+
+func (s *Spread) String() string {
+	if s.str != "" {
+		return s.str
+	}
+	s.str = fmt.Sprintf("%s %s %v", s.Attribute, s.SpreadTarget, s.Weight)
+	return s.str
+}
+
+func (s *Spread) Validate() error {
+	var mErr multierror.Error
+	if s.Attribute == "" {
+		mErr.Errors = append(mErr.Errors, errors.New("Missing spread attribute"))
+	}
+	if s.Weight <= 0 || s.Weight > 100 {
+		mErr.Errors = append(mErr.Errors, errors.New("Spread stanza must have a positive weight from 0 to 100"))
+	}
+	seen := make(map[string]struct{})
+	sumPercent := uint32(0)
+
+	for _, target := range s.SpreadTarget {
+		// Make sure there are no duplicates
+		_, ok := seen[target.Value]
+		if !ok {
+			seen[target.Value] = struct{}{}
+		} else {
+			mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Spread target value %q already defined", target.Value)))
+		}
+		if target.Percent < 0 || target.Percent > 100 {
+			mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Spread target percentage for value %q must be between 0 and 100", target.Value)))
+		}
+		sumPercent += target.Percent
+	}
+	if sumPercent > 100 {
+		mErr.Errors = append(mErr.Errors, errors.New(fmt.Sprintf("Sum of spread target percentages must not be greater than 100%%; got %d%%", sumPercent)))
+	}
+	return mErr.ErrorOrNil()
+}
+
+// SpreadTarget is used to specify desired percentages for each attribute value
+type SpreadTarget struct {
+	// Value is a single attribute value, like "dc1"
+	Value string
+
+	// Percent is the desired percentage of allocs
+	Percent uint32
+
+	// Memoized string representation
+	str string
+}
+
+func (s *SpreadTarget) Copy() *SpreadTarget {
+	if s == nil {
+		return nil
+	}
+
+	ns := new(SpreadTarget)
+	*ns = *s
+	return ns
+}
+
+func (s *SpreadTarget) String() string {
+	if s.str != "" {
+		return s.str
+	}
+	s.str = fmt.Sprintf("%q %v%%", s.Value, s.Percent)
+	return s.str
 }
 
 // EphemeralDisk is an ephemeral disk object
@@ -5760,17 +6574,23 @@ type Allocation struct {
 	// TaskGroup is the name of the task group that should be run
 	TaskGroup string
 
+	// COMPAT(0.11): Remove in 0.11
 	// Resources is the total set of resources allocated as part
 	// of this allocation of the task group.
 	Resources *Resources
 
+	// COMPAT(0.11): Remove in 0.11
 	// SharedResources are the resources that are shared by all the tasks in an
 	// allocation
 	SharedResources *Resources
 
+	// COMPAT(0.11): Remove in 0.11
 	// TaskResources is the set of resources allocated to each
 	// task. These should sum to the total Resources.
 	TaskResources map[string]*Resources
+
+	// AllocatedResources is the total resources allocated for the task group.
+	AllocatedResources *AllocatedResources
 
 	// Metrics associated with this allocation
 	Metrics *AllocMetric
@@ -5865,6 +6685,7 @@ func (a *Allocation) copyImpl(job bool) *Allocation {
 		na.Job = na.Job.Copy()
 	}
 
+	na.AllocatedResources = na.AllocatedResources.Copy()
 	na.Resources = na.Resources.Copy()
 	na.SharedResources = na.SharedResources.Copy()
 
@@ -6021,6 +6842,10 @@ func (a *Allocation) NextRescheduleTime() (time.Time, bool) {
 // It is calculated according to the delay function and previous reschedule attempts.
 func (a *Allocation) NextDelay() time.Duration {
 	policy := a.ReschedulePolicy()
+	// Can be nil if the task group was updated to remove its reschedule policy
+	if policy == nil {
+		return 0
+	}
 	delayDur := policy.Delay
 	if a.RescheduleTracker == nil || a.RescheduleTracker.Events == nil || len(a.RescheduleTracker.Events) == 0 {
 		return delayDur
@@ -6125,6 +6950,43 @@ func (a *Allocation) SetEventDisplayMessages() {
 	setDisplayMsg(a.TaskStates)
 }
 
+// COMPAT(0.11): Remove in 0.11
+// ComparableResources returns the resouces on the allocation
+// handling upgrade paths. After 0.11 calls to this should be replaced with:
+// alloc.AllocatedResources.Comparable()
+func (a *Allocation) ComparableResources() *ComparableResources {
+	// ALloc already has 0.9+ behavior
+	if a.AllocatedResources != nil {
+		return a.AllocatedResources.Comparable()
+	}
+
+	var resources *Resources
+	if a.Resources != nil {
+		resources = a.Resources
+	} else if a.TaskResources != nil {
+		resources = new(Resources)
+		resources.Add(a.SharedResources)
+		for _, taskResource := range a.TaskResources {
+			resources.Add(taskResource)
+		}
+	}
+
+	// Upgrade path
+	return &ComparableResources{
+		Flattened: AllocatedTaskResources{
+			Cpu: AllocatedCpuResources{
+				CpuShares: uint64(resources.CPU),
+			},
+			Memory: AllocatedMemoryResources{
+				MemoryMB: uint64(resources.MemoryMB),
+			},
+		},
+		Shared: AllocatedSharedResources{
+			DiskMB: uint64(resources.DiskMB),
+		},
+	}
+}
+
 // Stub returns a list stub for the allocation
 func (a *Allocation) Stub() *AllocListStub {
 	return &AllocListStub{
@@ -6226,7 +7088,19 @@ type AllocMetric struct {
 
 	// Scores is the scores of the final few nodes remaining
 	// for placement. The top score is typically selected.
+	// Deprecated: Replaced by ScoreMetaData in Nomad 0.9
 	Scores map[string]float64
+
+	// ScoreMetaData is a slice of top scoring nodes displayed in the CLI
+	ScoreMetaData []*NodeScoreMeta
+
+	// nodeScoreMeta is used to keep scores for a single node id. It is cleared out after
+	// we receive normalized score during the last step of the scoring stack.
+	nodeScoreMeta *NodeScoreMeta
+
+	// topScores is used to maintain a heap of the top K nodes with
+	// the highest normalized score
+	topScores *kheap.ScoreHeap
 
 	// AllocationTime is a measure of how long the allocation
 	// attempt took. This can affect performance and SLAs.
@@ -6252,6 +7126,7 @@ func (a *AllocMetric) Copy() *AllocMetric {
 	na.DimensionExhausted = helper.CopyMapStringInt(na.DimensionExhausted)
 	na.QuotaExhausted = helper.CopySliceString(na.QuotaExhausted)
 	na.Scores = helper.CopyMapStringFloat64(na.Scores)
+	na.ScoreMetaData = CopySliceNodeScoreMeta(na.ScoreMetaData)
 	return na
 }
 
@@ -6299,12 +7174,77 @@ func (a *AllocMetric) ExhaustQuota(dimensions []string) {
 	a.QuotaExhausted = append(a.QuotaExhausted, dimensions...)
 }
 
+// ScoreNode is used to gather top K scoring nodes in a heap
 func (a *AllocMetric) ScoreNode(node *Node, name string, score float64) {
-	if a.Scores == nil {
-		a.Scores = make(map[string]float64)
+	// Create nodeScoreMeta lazily if its the first time or if its a new node
+	if a.nodeScoreMeta == nil || a.nodeScoreMeta.NodeID != node.ID {
+		a.nodeScoreMeta = &NodeScoreMeta{
+			NodeID: node.ID,
+			Scores: make(map[string]float64),
+		}
 	}
-	key := fmt.Sprintf("%s.%s", node.ID, name)
-	a.Scores[key] = score
+	if name == NormScorerName {
+		a.nodeScoreMeta.NormScore = score
+		// Once we have the normalized score we can push to the heap
+		// that tracks top K by normalized score
+
+		// Create the heap if its not there already
+		if a.topScores == nil {
+			a.topScores = kheap.NewScoreHeap(MaxRetainedNodeScores)
+		}
+		heap.Push(a.topScores, a.nodeScoreMeta)
+
+		// Clear out this entry because its now in the heap
+		a.nodeScoreMeta = nil
+	} else {
+		a.nodeScoreMeta.Scores[name] = score
+	}
+}
+
+// PopulateScoreMetaData populates a map of scorer to scoring metadata
+// The map is populated by popping elements from a heap of top K scores
+// maintained per scorer
+func (a *AllocMetric) PopulateScoreMetaData() {
+	if a.topScores == nil {
+		return
+	}
+
+	if a.ScoreMetaData == nil {
+		a.ScoreMetaData = make([]*NodeScoreMeta, a.topScores.Len())
+	}
+	heapItems := a.topScores.GetItemsReverse()
+	for i, item := range heapItems {
+		a.ScoreMetaData[i] = item.(*NodeScoreMeta)
+	}
+}
+
+// NodeScoreMeta captures scoring meta data derived from
+// different scoring factors.
+type NodeScoreMeta struct {
+	NodeID    string
+	Scores    map[string]float64
+	NormScore float64
+}
+
+func (s *NodeScoreMeta) Copy() *NodeScoreMeta {
+	if s == nil {
+		return nil
+	}
+	ns := new(NodeScoreMeta)
+	*ns = *s
+	return ns
+}
+
+func (s *NodeScoreMeta) String() string {
+	return fmt.Sprintf("%s %f %v", s.NodeID, s.NormScore, s.Scores)
+}
+
+func (s *NodeScoreMeta) Score() float64 {
+	return s.NormScore
+}
+
+func (s *NodeScoreMeta) Data() interface{} {
+	return s
 }
 
 // AllocDeploymentStatus captures the status of the allocation as part of the
@@ -6397,6 +7337,7 @@ const (
 	EvalTriggerFailedFollowUp    = "failed-follow-up"
 	EvalTriggerMaxPlans          = "max-plan-attempts"
 	EvalTriggerRetryFailedAlloc  = "alloc-failure"
+	EvalTriggerQueuedAllocs      = "queued-allocs"
 )
 
 const (
@@ -6528,8 +7469,11 @@ type Evaluation struct {
 	LeaderACL string
 
 	// SnapshotIndex is the Raft index of the snapshot used to process the
-	// evaluation. As such it will only be set once it has gone through the
-	// scheduler.
+	// evaluation. The index will either be set when it has gone through the
+	// scheduler or if a blocked evaluation is being created. The index is set
+	// in this case so we can determine if an early unblocking is required since
+	// capacity has changed since the evaluation was created. This can result in
+	// the SnapshotIndex being less than the CreateIndex.
 	SnapshotIndex uint64
 
 	// Raft Indexes
@@ -6659,7 +7603,7 @@ func (e *Evaluation) CreateBlockedEval(classEligibility map[string]bool,
 		Namespace:            e.Namespace,
 		Priority:             e.Priority,
 		Type:                 e.Type,
-		TriggeredBy:          e.TriggeredBy,
+		TriggeredBy:          EvalTriggerQueuedAllocs,
 		JobID:                e.JobID,
 		JobModifyIndex:       e.JobModifyIndex,
 		Status:               EvalStatusBlocked,
@@ -6784,6 +7728,10 @@ func (p *Plan) PopUpdate(alloc *Allocation) {
 func (p *Plan) AppendAlloc(alloc *Allocation) {
 	node := alloc.NodeID
 	existing := p.NodeAllocation[node]
+
+	// Normalize the job
+	alloc.Job = nil
+
 	p.NodeAllocation[node] = append(existing, alloc)
 }
 

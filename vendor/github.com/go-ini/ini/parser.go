@@ -100,7 +100,7 @@ func cleanComment(in []byte) ([]byte, bool) {
 	return in[i:], true
 }
 
-func readKeyName(in []byte) (string, int, error) {
+func readKeyName(delimiters string, in []byte) (string, int, error) {
 	line := string(in)
 
 	// Check if key name surrounded by quotes.
@@ -127,7 +127,7 @@ func readKeyName(in []byte) (string, int, error) {
 		pos += startIdx
 
 		// Find key-value delimiter
-		i := strings.IndexAny(line[pos+startIdx:], "=:")
+		i := strings.IndexAny(line[pos+startIdx:], delimiters)
 		if i < 0 {
 			return "", -1, ErrDelimiterNotFound{line}
 		}
@@ -135,7 +135,7 @@ func readKeyName(in []byte) (string, int, error) {
 		return strings.TrimSpace(line[startIdx:pos]), endIdx + startIdx + 1, nil
 	}
 
-	endIdx = strings.IndexAny(line, "=:")
+	endIdx = strings.IndexAny(line, delimiters)
 	if endIdx < 0 {
 		return "", -1, ErrDelimiterNotFound{line}
 	}
@@ -339,8 +339,7 @@ func (f *File) parse(reader io.Reader) (err error) {
 
 	// NOTE: Iterate and increase `currentPeekSize` until
 	// the size of the parser buffer is found.
-	// TODO: When Golang 1.10 is the lowest version supported,
-	// replace with `parserBufferSize := p.buf.Size()`.
+	// TODO(unknwon): When Golang 1.10 is the lowest version supported, replace with `parserBufferSize := p.buf.Size()`.
 	parserBufferSize := 0
 	// NOTE: Peek 1kb at a time.
 	currentPeekSize := 1024
@@ -390,8 +389,7 @@ func (f *File) parse(reader io.Reader) (err error) {
 		// Section
 		if line[0] == '[' {
 			// Read to the next ']' (TODO: support quoted strings)
-			// TODO(unknwon): use LastIndexByte when stop supporting Go1.4
-			closeIdx := bytes.LastIndex(line, []byte("]"))
+			closeIdx := bytes.LastIndexByte(line, ']')
 			if closeIdx == -1 {
 				return fmt.Errorf("unclosed section: %s", line)
 			}
@@ -430,28 +428,34 @@ func (f *File) parse(reader io.Reader) (err error) {
 			continue
 		}
 
-		kname, offset, err := readKeyName(line)
+		kname, offset, err := readKeyName(f.options.KeyValueDelimiters, line)
 		if err != nil {
 			// Treat as boolean key when desired, and whole line is key name.
-			if IsErrDelimiterNotFound(err) && f.options.AllowBooleanKeys {
-				kname, err := p.readValue(line,
-					parserBufferSize,
-					f.options.IgnoreContinuation,
-					f.options.IgnoreInlineComment,
-					f.options.UnescapeValueDoubleQuotes,
-					f.options.UnescapeValueCommentSymbols,
-					f.options.AllowPythonMultilineValues,
-					f.options.SpaceBeforeInlineComment)
-				if err != nil {
-					return err
+			if IsErrDelimiterNotFound(err) {
+				switch {
+				case f.options.AllowBooleanKeys:
+					kname, err := p.readValue(line,
+						parserBufferSize,
+						f.options.IgnoreContinuation,
+						f.options.IgnoreInlineComment,
+						f.options.UnescapeValueDoubleQuotes,
+						f.options.UnescapeValueCommentSymbols,
+						f.options.AllowPythonMultilineValues,
+						f.options.SpaceBeforeInlineComment)
+					if err != nil {
+						return err
+					}
+					key, err := section.NewBooleanKey(kname)
+					if err != nil {
+						return err
+					}
+					key.Comment = strings.TrimSpace(p.comment.String())
+					p.comment.Reset()
+					continue
+
+				case f.options.SkipUnrecognizableLines:
+					continue
 				}
-				key, err := section.NewBooleanKey(kname)
-				if err != nil {
-					return err
-				}
-				key.Comment = strings.TrimSpace(p.comment.String())
-				p.comment.Reset()
-				continue
 			}
 			return err
 		}

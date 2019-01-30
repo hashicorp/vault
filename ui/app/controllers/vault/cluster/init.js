@@ -1,4 +1,6 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
 const DEFAULTS = {
   keyData: null,
@@ -9,7 +11,9 @@ const DEFAULTS = {
   loading: false,
 };
 
-export default Ember.Controller.extend(DEFAULTS, {
+export default Controller.extend(DEFAULTS, {
+  wizard: service(),
+
   reset() {
     this.setProperties(DEFAULTS);
   },
@@ -17,6 +21,9 @@ export default Ember.Controller.extend(DEFAULTS, {
   initSuccess(resp) {
     this.set('loading', false);
     this.set('keyData', resp);
+    this.model.reload();
+    this.get('wizard').set('initEvent', 'SAVE');
+    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOSAVE');
   },
 
   initError(e) {
@@ -28,21 +35,35 @@ export default Ember.Controller.extend(DEFAULTS, {
     }
   },
 
-  keyFilename: Ember.computed('model.name', function() {
+  keyFilename: computed('model.name', function() {
     return `vault-cluster-${this.get('model.name')}`;
   }),
 
   actions: {
     initCluster(data) {
+      let isCloudSeal = !!this.model.sealType && this.model.sealType !== 'shamir';
       if (data.secret_shares) {
-        data.secret_shares = parseInt(data.secret_shares);
+        let shares = parseInt(data.secret_shares, 10);
+        data.secret_shares = shares;
+        if (isCloudSeal) {
+          data.stored_shares = 1;
+          data.recovery_shares = shares;
+        }
       }
       if (data.secret_threshold) {
-        data.secret_threshold = parseInt(data.secret_threshold);
+        let threshold = parseInt(data.secret_threshold, 10);
+        data.secret_threshold = threshold;
+        if (isCloudSeal) {
+          data.recovery_threshold = threshold;
+        }
       }
       if (!data.use_pgp) {
         delete data.pgp_keys;
       }
+      if (data.use_pgp && isCloudSeal) {
+        data.recovery_pgp_keys = data.pgp_keys;
+      }
+
       if (!data.use_pgp_for_root) {
         delete data.root_token_pgp_key;
       }

@@ -1,6 +1,7 @@
 ---
 layout: "intro"
 page_title: "Authentication - Getting Started"
+sidebar_title: "Authentication"
 sidebar_current: "gettingstarted-auth"
 description: |-
   Authentication to Vault gives a user access to use Vault. Vault can authenticate using multiple methods.
@@ -79,7 +80,7 @@ $ vault token revoke 463763ae-0c3b-ff77-e137-af668941465c
 Success! Revoked token (if it existed)
 ```
 
-In a previous section, we use the `vault lease revoke` command. This command
+In a [previous section](/intro/getting-started/dynamic-secrets.html#revoking-the-secret), we use the `vault lease revoke` command. This command
 is only used for revoking _leases_. For revoking _tokens_, use
 `vault token revoke`.
 

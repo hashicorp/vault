@@ -41,7 +41,7 @@ Usage: vault metadata kv put [options] KEY
 
   Require Check-and-Set for this key: 
 
-      $ vault kv metadata put -require-cas secret/foo
+      $ vault kv metadata put -cas-required secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

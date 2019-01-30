@@ -18,7 +18,6 @@ package spanner
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"sync/atomic"
 	"time"
@@ -69,9 +68,12 @@ func validDatabaseName(db string) error {
 // client is safe to use concurrently, except for its Close method.
 type Client struct {
 	// rr must be accessed through atomic operations.
-	rr       uint32
-	conns    []*grpc.ClientConn
-	clients  []sppb.SpannerClient
+	rr uint32
+	// TODO(deklerk): we should not keep multiple ClientConns / SpannerClients. Instead, we should
+	// have a single ClientConn that has many connections: https://github.com/googleapis/google-api-go-client/blob/003c13302b3ea5ae44344459ba080364bd46155f/internal/pool.go
+	conns   []*grpc.ClientConn
+	clients []sppb.SpannerClient
+
 	database string
 	// Metadata to be sent with each request.
 	md           metadata.MD
@@ -252,26 +254,12 @@ func (c *Client) BatchReadOnlyTransaction(ctx context.Context, tb TimestampBound
 	)
 	defer func() {
 		if err != nil && sh != nil {
-			e := runRetryable(ctx, func(ctx context.Context) error {
-				_, e := s.client.DeleteSession(ctx, &sppb.DeleteSessionRequest{Name: s.getID()})
-				return e
-			})
-			if e != nil {
-				log.Printf("Failed to delete session %v. Error: %v", s.getID(), e)
-			}
+			s.delete(ctx)
 		}
 	}()
 	// create session
 	sc := c.rrNext()
-	err = runRetryable(ctx, func(ctx context.Context) error {
-		sid, e := sc.CreateSession(ctx, &sppb.CreateSessionRequest{Database: c.database, Session: &sppb.Session{Labels: c.sessionLabels}})
-		if e != nil {
-			return e
-		}
-		// If no error, construct the new session.
-		s = &session{valid: true, client: sc, id: sid.Name, createTime: time.Now(), md: c.md}
-		return nil
-	})
+	s, err = createSession(ctx, sc, c.database, c.sessionLabels, c.md)
 	if err != nil {
 		return nil, err
 	}

@@ -1,34 +1,55 @@
-import Ember from 'ember';
-import SecretAdapter from './secret';
+/* eslint-disable */
+import { isEmpty } from '@ember/utils';
+import ApplicationAdapter from './application';
 
-export default SecretAdapter.extend({
-  createOrUpdate(store, type, snapshot) {
-    const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
-    const { id } = snapshot;
-
-    return this.ajax(this.urlForSecret(snapshot.attr('backend'), id), 'POST', {
-      data: { data },
-    });
-  },
-
-  urlForSecret(backend, id, infix = 'data') {
-    let url = `${this.buildURL()}/${backend}/${infix}/`;
-    if (!Ember.isEmpty(id)) {
+export default ApplicationAdapter.extend({
+  namespace: 'v1',
+  _url(backend, id) {
+    let url = `${this.buildURL()}/${backend}/metadata/`;
+    if (!isEmpty(id)) {
       url = url + id;
     }
     return url;
   },
 
-  fetchByQuery(query, methodCall) {
-    let { id, backend } = query;
-    let args = [backend, id];
-    if (methodCall === 'query') {
-      args.push('metadata');
-    }
-    return this.ajax(this.urlForSecret(...args), 'GET', this.optionsForQuery(id, methodCall)).then(resp => {
+  // we override query here because the query object has a bunch of client-side
+  // concerns and we only want to send "list" to the server
+  query(store, type, query) {
+    let { backend, id } = query;
+    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } }).then(resp => {
       resp.id = id;
+      resp.backend = backend;
       return resp;
     });
+  },
+
+  urlForQueryRecord(query) {
+    let { id, backend } = query;
+    return this._url(backend, id);
+  },
+
+  queryRecord(store, type, query) {
+    let { backend, id } = query;
+    return this.ajax(this._url(backend, id), 'GET').then(resp => {
+      resp.id = id;
+      resp.backend = backend;
+      return resp;
+    });
+  },
+
+  detailURL(snapshot) {
+    let backend = snapshot.belongsTo('engine', { id: true }) || snapshot.attr('engineId');
+    let { id } = snapshot;
+    return this._url(backend, id);
+  },
+
+  urlForUpdateRecord(store, type, snapshot) {
+    return this.detailURL(snapshot);
+  },
+  urlForCreateRecord(modelName, snapshot) {
+    return this.detailURL(snapshot);
+  },
+  urlForDeleteRecord(store, type, snapshot) {
+    return this.detailURL(snapshot);
   },
 });

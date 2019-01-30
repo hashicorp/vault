@@ -1,6 +1,8 @@
-import Ember from 'ember';
+import { schedule } from '@ember/runloop';
+import { on } from '@ember/object/evented';
+import Mixin from '@ember/object/mixin';
 
-export default Ember.Mixin.create({
+export default Mixin.create({
   // selector passed to `this.$()` to find the element to focus
   // defaults to `'input'`
   focusOnInsertSelector: null,
@@ -8,8 +10,8 @@ export default Ember.Mixin.create({
 
   // uses Ember.on so that we don't have to worry about calling _super if
   // didInsertElement is overridden
-  focusOnInsert: Ember.on('didInsertElement', function() {
-    Ember.run.schedule('afterRender', this, 'focusOnInsertFocus');
+  focusOnInsert: on('didInsertElement', function() {
+    schedule('afterRender', this, 'focusOnInsertFocus');
   }),
 
   focusOnInsertFocus() {
@@ -20,9 +22,9 @@ export default Ember.Mixin.create({
   },
 
   forceFocus() {
-    var $selector = this.$(this.get('focusOnInsertSelector') || 'input').first();
-    if (!$selector.is(':focus')) {
-      $selector.focus();
+    var $targ = this.element.querySelectorAll(this.get('focusOnInsertSelector') || 'input[type="text"]')[0];
+    if ($targ && $targ !== document.activeElement) {
+      $targ.focus();
     }
   },
 });

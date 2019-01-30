@@ -1,0 +1,19 @@
+<WizardContent @headerText="Replication" @glyph="tour">
+  <WizardSection
+    @headerText="Your cluster information"
+    @docText="Docs: Replication"
+    @docPath="/docs/internals/replication.html"
+  >
+    <p>
+      Here you can see the details about your new replication cluster, manage or disable replication, and handle secondary clusters. You can also get a quick status by hovering over the "Replication" link at the top.
+    </p>
+  </WizardSection>
+  <div class="wizard-details">
+    <h3 class="title is-6">
+      Ready to move on?
+    </h3>
+    <button type="button" class="button next-feature-step" {{action onAdvance}}>
+      {{nextFeature}} <ICon @glyph="chevron-right"  @size=10 />
+    </button>
+  </div>
+</WizardContent>

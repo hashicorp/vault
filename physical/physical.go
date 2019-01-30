@@ -39,7 +39,7 @@ type Backend interface {
 	// Delete is used to permanently delete an entry
 	Delete(ctx context.Context, key string) error
 
-	// List is used ot list all the keys under a given
+	// List is used to list all the keys under a given
 	// prefix, up to the next prefix.
 	List(ctx context.Context, prefix string) ([]string, error)
 }
@@ -75,6 +75,7 @@ type RedirectDetect interface {
 // Callback signatures for RunServiceDiscovery
 type ActiveFunction func() bool
 type SealedFunction func() bool
+type PerformanceStandbyFunction func() bool
 
 // ServiceDiscovery is an optional interface that an HABackend can implement.
 // If they do, the state of a backend is advertised to the service discovery
@@ -90,9 +91,14 @@ type ServiceDiscovery interface {
 	// status to sealed or unsealed.
 	NotifySealedStateChange() error
 
+	// NotifyPerformanceStandbyStateChange is used by Core to notify a backend
+	// capable of ServiceDiscovery that this Vault instance has changed it
+	// status to performance standby or standby.
+	NotifyPerformanceStandbyStateChange() error
+
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
-	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc ActiveFunction, sealedFunc SealedFunction) error
+	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc ActiveFunction, sealedFunc SealedFunction, perfStandbyFunc PerformanceStandbyFunction) error
 }
 
 type Lock interface {
@@ -107,13 +113,6 @@ type Lock interface {
 
 	// Returns the value of the lock and if it is held
 	Value() (bool, string, error)
-}
-
-// Entry is used to represent data stored by the physical backend
-type Entry struct {
-	Key      string
-	Value    []byte
-	SealWrap bool `json:"seal_wrap,omitempty"`
 }
 
 // Factory is the factory function to create a physical backend.

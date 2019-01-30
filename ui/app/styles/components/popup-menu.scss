@@ -1,4 +1,5 @@
-.popup-menu-content {
+.popup-menu-content,
+.ember-power-select-options {
   border-radius: 2px;
   margin: -2px 0 0 0;
 
@@ -7,69 +8,89 @@
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
-    width: 175px;
+    width: 200px;
   }
 
   &.is-wide > .box {
-    width: 300px;
+    width: $drawer-width;
   }
 
   .confirm-action span .button {
     display: block;
-    margin: .25rem auto;
+    margin: 0.25rem auto;
     width: 95%;
   }
 
   .menu {
     padding: $size-11 0;
 
-    button.link,
-    a {
-      background: transparent;
-      box-shadow: none;
-      border: none;
-      display: block;
-      height: auto;
-      font-size: $size-7;
-      font-weight: $font-weight-semibold;
-      padding: $size-9 $size-8;
-      text-align: left;
-      text-decoration: none;
-      width: 100%;
+    small code {
+      margin-left: $spacing-xs;
+    }
+  }
+
+  button.link,
+  a,
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
+  .menu-item {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    display: block;
+    height: auto;
+    font-size: $size-7;
+    font-weight: $font-weight-semibold;
+    padding: $size-9 $size-8;
+    text-align: left;
+    text-decoration: none;
+    width: 100%;
+  }
+  
+  button.link,
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'],
+  a {
+    background-color: $white;
+    color: $menu-item-color;
+
+    &:hover {
+      background-color: $menu-item-hover-background-color;
+      color: $menu-item-hover-color;
     }
 
-    button.link,
-    a {
-      color: $menu-item-color;
+    &.is-active {
+      background-color: $menu-item-active-background-color;
+      color: $menu-item-active-color;
+    }
+
+    &.is-destroy {
+      color: $red;
+
       &:hover {
-        background-color: $menu-item-hover-background-color;
-        color: $menu-item-hover-color;
+        background-color: $red;
+        color: $white;
       }
+    }
 
-      &.is-active {
-        background-color: $menu-item-active-background-color;
-        color: $menu-item-active-color;
-      }
+    &.disabled {
+      opacity: 0.5;
 
-      &.is-destroy {
-        color: $red;
-
-        &:hover {
-          background-color: $red;
-          color: $white;
-        }
+      &:hover {
+        background: transparent;
+        cursor: default;
       }
     }
   }
 
   .menu-label {
     color: $grey-dark;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
+    font-size: $size-9;
+    font-weight: $font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 $size-11;
-    text-transform: none;
+    padding: $size-10 $size-8 0;
+    text-transform: uppercase;
   }
 
   .menu-content {
@@ -77,8 +98,8 @@
   }
 
   hr {
-    background-color: $grey-light;
-    margin: $size-11 0;
+    background-color: $ui-gray-200;
+    margin: 0;
   }
 }
 
@@ -99,6 +120,12 @@
 
 .status-menu-content {
   margin-top: 8px;
+
+  .box {
+    @include until($mobile) {
+      width: $drawer-width - ($spacing-xs * 2);
+    }
+  }
 }
 
 .ember-basic-dropdown-content {
@@ -108,21 +135,21 @@
 
   &--below {
     &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-above .15s;
+      animation: drop-fade-above 0.15s;
     }
 
     &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-above .15s reverse;
+      animation: drop-fade-above 0.15s reverse;
     }
   }
 
   &--above {
     &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-below .15s;
+      animation: drop-fade-below 0.15s;
     }
 
     &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-below .15s reverse;
+      animation: drop-fade-below 0.15s reverse;
     }
   }
 }

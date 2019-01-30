@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/seal-status - HTTP API"
-sidebar_current: "docs-http-system-seal-status"
+sidebar_title: "<code>/sys/seal-status</code>"
+sidebar_current: "api-http-system-seal-status"
 description: |-
   The `/sys/seal-status` endpoint is used to check the seal status of a Vault.
 ---

@@ -1,0 +1,124 @@
+.ember-power-select-dropdown {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+
+  &.ember-power-select-dropdown.ember-basic-dropdown-content--below {
+    border: 0;
+  }
+}
+
+.ember-power-select-trigger {
+  border: 0;
+  border-radius: $radius;
+  padding-right: 0;
+
+  &--active {
+    outline-width: 3px;
+    outline-offset: -2px;
+  }
+}
+
+.ember-power-select-trigger:focus,
+.ember-power-select-trigger--active {
+  border: 0;
+}
+
+.ember-power-select-status-icon {
+  display: none;
+}
+
+.ember-power-select-search {
+  left: 0;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-100%);
+  z-index: -1;
+
+  &::after {
+    background: $white;
+    bottom: $spacing-xxs;
+    content: '';
+    left: $spacing-xxs + $spacing-l;
+    position: absolute;
+    right: $spacing-xxs;
+    top: $spacing-xxs;
+    z-index: -1;
+  }
+}
+
+.ember-power-select-search-input {
+  background: transparent;
+  border: 0;
+  padding: $spacing-xxs $spacing-s;
+  padding-left: $spacing-xxs + $spacing-l;
+}
+
+.ember-power-select-options {
+  background: $white;
+  border: $base-border;
+  box-shadow: $box-shadow-middle;
+  margin: -4px $spacing-xs 0;
+  padding: $spacing-xxs 0;
+
+  .ember-power-select-option,
+  .ember-power-select-option[aria-current='true'] {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ember-power-select-option[aria-current='true'] {
+    @extend .ember-power-select-option:hover;
+  }
+
+  .ember-power-select-option--no-matches-message {
+    color: $grey;
+    font-size: $size-8;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+
+    &:hover,
+    &:focus {
+      background: transparent;
+      color: $grey;
+    }
+  }
+}
+
+.search-select-list-item {
+  align-items: center;
+  display: flex;
+  margin: 0 $spacing-m;
+  padding: $spacing-xxs;
+  justify-content: space-between;
+
+  &:not(:last-child) {
+    border-bottom: $light-border;
+  }
+
+  .control .button {
+    color: $grey-light;
+    min-width: auto;
+
+    &:hover,
+    &:focus {
+      color: $blue;
+    }
+  }
+}
+
+.search-select-list-key {
+  color: $grey;
+  font-size: $size-8;
+}
+
+.ember-power-select-dropdown.ember-basic-dropdown-content {
+  animation: none;
+
+  .ember-power-select-options {
+    animation: drop-fade-above 0.15s;
+  }
+}

@@ -1,6 +1,7 @@
-import Ember from 'ember';
-
-const { get } = Ember;
+import { inject as service } from '@ember/service';
+import { get } from '@ember/object';
+import Mixin from '@ember/object/mixin';
+import RSVP from 'rsvp';
 const INIT = 'vault.cluster.init';
 const UNSEAL = 'vault.cluster.unseal';
 const AUTH = 'vault.cluster.auth';
@@ -9,15 +10,16 @@ const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
 
 export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
 
-export default Ember.Mixin.create({
-  auth: Ember.inject.service(),
+export default Mixin.create({
+  auth: service(),
 
   transitionToTargetRoute() {
     const targetRoute = this.targetRouteName();
     if (targetRoute && targetRoute !== this.routeName) {
       return this.transitionTo(targetRoute);
     }
-    return Ember.RSVP.resolve();
+
+    return RSVP.resolve();
   },
 
   beforeModel() {

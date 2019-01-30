@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Static Secrets - Guides"
+sidebar_title: "Static Secrets"
 sidebar_current: "guides-secret-mgmt-static-secrets"
 description: |-
   Vault supports generating new unseal keys as well as rotating the underlying
@@ -124,7 +125,7 @@ You will perform the following:
 1. [Generate a token for apps](#step4)
 1. [Retrieve the secrets](#step5)
 
-![Personas Introduction](/assets/images/vault-static-secrets.png)
+![Personas Introduction](/img/vault-static-secrets.png)
 
 Step 1 through 4 are performed by `devops` persona.  Step 5 describes the
 commands that `apps` persona runs to read secrets from Vault.
@@ -328,7 +329,7 @@ save it as `cert.pem`.
 The command is basically the same as the Google API key example. Now, the path
 convention for certificates is **`secret/<ENVIRONMENT>/cert/<SYSTEM>`**. To
 store the root certificate for production MySQL, the path becomes
-`secret/staging/cert/postgres`.
+`secret/prod/cert/mysql`.
 
 **Example:**
 
@@ -457,7 +458,7 @@ consumer of the API key may be different from the consumer of the root
 certificate. Then each persona would have a policy based on what it needs to
 access.
 
-![Personas Introduction](/assets/images/vault-static-secrets2.png)
+![Personas Introduction](/img/vault-static-secrets2.png)
 
 
 
@@ -517,7 +518,7 @@ MIIEowIBAAKCAQEA6E2Uq0XqreZISgVMUu9pnoMsq+OoK1PI54rsA9vtDE6wiRk0GWhf5vD4DGf1
 Use `secret/` endpoint to retrieve secrets from key/value secret engine:
 
 ```plaintext
-$ curl --header "X-Vault-Token: <TOKEN_FROM_STEP3>" \
+$ curl --header "X-Vault-Token: <TOKEN_FROM_STEP4>" \
        --request Get \
        <VAULT_ADDRESS>/v1/secret/data/<PATH>
 ```

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Userpass - Auth Methods"
+sidebar_title: "Username &amp; Password"
 sidebar_current: "docs-auth-userpass"
 description: |-
   The "userpass" auth method allows users to authenticate with Vault using a username and password.
@@ -24,8 +25,8 @@ same entry.
 
 ```text
 $ vault login -method=userpass \
-    username=foo \
-    password=bar
+    username=mitchellh \
+    password=foo
 ```
 
 ### Via the API
@@ -85,6 +86,5 @@ management tool.
 
 ## API
 
-The Userpass auth method has a full HTTP API. Please see the
-[Userpass auth method API](/api/auth/userpass/index.html) for more
-details.
+The Userpass auth method has a full HTTP API. Please see the [Userpass auth
+method API](/api/auth/userpass/index.html) for more details.

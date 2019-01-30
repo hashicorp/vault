@@ -3,10 +3,12 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -33,12 +35,19 @@ expiration, before it is removed from the backend storage.`,
 }
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
-func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, safetyBuffer int) (*logical.Response, error) {
+func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
+	// If we are a performance standby forward the request to the active node
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	if !atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
 		return resp, nil
 	}
+
+	s := req.Storage
 
 	go func() {
 		defer atomic.StoreUint32(b.tidyBlacklistCASGuard, 0)
@@ -93,12 +102,12 @@ func (b *backend) tidyBlacklistRoleTag(ctx context.Context, s logical.Storage, s
 
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	return resp, nil
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 // pathTidyRoletagBlacklistUpdate is used to clean-up the entries in the role tag blacklist.
 func (b *backend) pathTidyRoletagBlacklistUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return b.tidyBlacklistRoleTag(ctx, req.Storage, data.Get("safety_buffer").(int))
+	return b.tidyBlacklistRoleTag(ctx, req, data.Get("safety_buffer").(int))
 }
 
 const pathTidyRoletagBlacklistSyn = `

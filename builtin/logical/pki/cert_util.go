@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/ryanuber/go-glob"
+	glob "github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
@@ -87,6 +87,9 @@ type creationParameters struct {
 
 	// The maximum path length to encode
 	MaxPathLength int
+
+	// The duration the certificate will use NotBefore
+	NotBeforeDuration time.Duration
 }
 
 type caInfoBundle struct {
@@ -259,11 +262,11 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 		return nil, nil
 	}
 
-	// Retrieve the old-style path
-	certEntry, err = req.Storage.Get(ctx, legacyPath)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
-	}
+	// Retrieve the old-style path.  We disregard errors here because they
+	// always manifest on windows, and thus the initial check for a revoked
+	// cert fails would return an error when the cert isn't revoked, preventing
+	// the happy path from working.
+	certEntry, _ = req.Storage.Get(ctx, legacyPath)
 	if certEntry == nil {
 		return nil, nil
 	}
@@ -462,6 +465,12 @@ func validateNames(data *dataBundle, names []string) string {
 // allowed, it will be returned as the second string. Empty strings + error
 // means everything is okay.
 func validateOtherSANs(data *dataBundle, requested map[string][]string) (string, string, error) {
+	for _, val := range data.role.AllowedOtherSANs {
+		if val == "*" {
+			// Anything is allowed
+			return "", "", nil
+		}
+	}
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
 		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
@@ -501,7 +510,10 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 		if len(splitType) != 2 {
 			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
 		}
-		if strings.ToLower(splitType[0]) != "utf8" {
+		switch {
+		case strings.EqualFold(splitType[0], "utf8"):
+		case strings.EqualFold(splitType[0], "utf-8"):
+		default:
 			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
 		}
 		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
@@ -556,7 +568,6 @@ func generateCert(ctx context.Context,
 
 	if isCA {
 		data.params.IsCA = isCA
-
 		data.params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.signingBundle == nil {
@@ -1020,6 +1031,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
+		NotBeforeDuration:             data.role.NotBeforeDuration,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1176,6 +1188,9 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		IPAddresses:    data.params.IPAddresses,
 		URIs:           data.params.URIs,
 	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
+	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
 		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
@@ -1216,11 +1231,6 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 		caCert := data.signingBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
-
-		err = checkPermittedDNSDomains(certTemplate, caCert)
-		if err != nil {
-			return nil, errutil.UserError{Err: err.Error()}
-		}
 
 		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.signingBundle.PrivateKey)
 	} else {
@@ -1376,6 +1386,9 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
 	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
+	}
 
 	switch data.signingBundle.PrivateKeyType {
 	case certutil.RSAPrivateKey:
@@ -1386,6 +1399,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 
 	if data.params.UseCSRValues {
 		certTemplate.Subject = data.csr.Subject
+		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
 
 		certTemplate.DNSNames = data.csr.DNSNames
 		certTemplate.EmailAddresses = data.csr.EmailAddresses
@@ -1443,10 +1457,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
-	err = checkPermittedDNSDomains(certTemplate, caCert)
-	if err != nil {
-		return nil, errutil.UserError{Err: err.Error()}
-	}
 
 	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.csr.PublicKey, data.signingBundle.PrivateKey)
 
@@ -1463,42 +1473,6 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	result.CAChain = data.signingBundle.GetCAChain()
 
 	return result, nil
-}
-
-func checkPermittedDNSDomains(template, ca *x509.Certificate) error {
-	if len(ca.PermittedDNSDomains) == 0 {
-		return nil
-	}
-
-	namesToCheck := map[string]struct{}{
-		template.Subject.CommonName: struct{}{},
-	}
-	for _, name := range template.DNSNames {
-		namesToCheck[name] = struct{}{}
-	}
-
-	var badName string
-NameCheck:
-	for name := range namesToCheck {
-		for _, perm := range ca.PermittedDNSDomains {
-			switch {
-			case strings.HasPrefix(perm, ".") && strings.HasSuffix(name, perm):
-				// .example.com matches my.host.example.com and
-				// host.example.com but does not match example.com
-				break NameCheck
-			case perm == name:
-				break NameCheck
-			}
-		}
-		badName = name
-		break
-	}
-
-	if badName == "" {
-		return nil
-	}
-
-	return fmt.Errorf("name %q disallowed by CA's permitted DNS domains", badName)
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {

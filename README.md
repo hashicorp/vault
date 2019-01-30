@@ -47,8 +47,8 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
-For more information, see the [introduction section](https://www.vaultproject.io/intro)
-of the Vault website.
+For more information, see the [getting started guide](https://learn.hashicorp.com/vault/)
+on Hashicorp's learning platform.
 
 Getting Started & Documentation
 -------------------------------
@@ -60,7 +60,7 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine (version
-1.10.1+ is *required*).
+1.11+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Next, clone this repository

@@ -63,6 +63,14 @@ func RawField(secret *api.Secret, field string) interface{} {
 
 	default:
 		switch field {
+		case "lease_duration":
+			val = secret.LeaseDuration
+		case "lease_id":
+			val = secret.LeaseID
+		case "request_id":
+			val = secret.RequestID
+		case "renewable":
+			val = secret.Renewable
 		case "refresh_interval":
 			val = secret.LeaseDuration
 		case "data":

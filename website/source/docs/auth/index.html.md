@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Auth Methods"
+sidebar_title: "Auth Methods"
 sidebar_current: "docs-auth"
 description: |-
   Auth methods are mountable methods that perform authentication for Vault.

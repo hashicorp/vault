@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Azure - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-azure"
+sidebar_title: "Azure"
+sidebar_current: "api-http-auth-azure"
 description: |-
   This is the API documentation for the Vault Azure authentication
   method plugin.
@@ -31,6 +32,7 @@ virtual machine.
 
 - `tenant_id` `(string: <required>)` - The tenant id for the Azure Active Directory organization.
 - `resource` `(string: <required>)` - The configured URL for the application registered in Azure Active Directory.
+- `environment` `(string: 'AzurePublicCloud')` - The Azure cloud environment. Valid values: AzurePublicCloud, AzureUSGovernmentCloud, AzureChinaCloud, AzureGermanCloud.
 - `client_id` `(string: '')` - The client id for credentials to query the Azure APIs.  Currently read permissions to query compute resources are required.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs. 
 
@@ -52,7 +54,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/azure/config
+    https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
 # Read Config
@@ -68,7 +70,7 @@ Returns the previously configured config, including credentials.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/azure/config
+    https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
 ### Sample Response
@@ -100,7 +102,7 @@ Deletes the previously configured Azure config and credentials.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/azure/config
+    https://127.0.0.1:8200/v1/auth/azure/config
 ```
 
 ## Create Role
@@ -135,6 +137,8 @@ entities attempting to login.
   is restricted to.
 - `bound_resource_group_names` `(array: [])` - The list of resource groups that 
   login is restricted to. 
+- `bound_scale_sets` `(array: [])` - The list of scale set names that the 
+  login is restricted to. 
 
 ### Sample Payload
 
@@ -162,7 +166,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/azure/role/dev-role
+    https://127.0.0.1:8200/v1/auth/azure/role/dev-role
 ```
 
 ## Read Role
@@ -182,7 +186,7 @@ Returns the previously registered role configuration.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/auth/azure/role/dev-role
+    https://127.0.0.1:8200/v1/auth/azure/role/dev-role
 ```
 
 ### Sample Response
@@ -222,7 +226,7 @@ Lists all the roles that are registered with the plugin.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    https://vault.rocks/v1/auth/azure/roles
+    https://127.0.0.1:8200/v1/auth/azure/roles
 ```
 
 ### Sample Response
@@ -257,7 +261,7 @@ Deletes the previously registered role.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    https://vault.rocks/v1/auth/azure/role/dev-role
+    https://127.0.0.1:8200/v1/auth/azure/role/dev-role
 ```
 
 ## Login
@@ -283,6 +287,9 @@ entity and then authorizes the entity for the given role.
   metadata.
 - `vm_name` `(string: "")` - The virtual machine name for the machine that
   generated the MSI token.  This information can be obtained through instance
+  metadata.  If vmss_name is provided, this value is ignored.
+- `vmss_name` `(string: "")` - The virtual machine scale set name for the machine 
+  that generated the MSI token.  This information can be obtained through instance
   metadata.
 
 ### Sample Payload
@@ -300,7 +307,7 @@ entity and then authorizes the entity for the given role.
 $ curl \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/auth/azure/login
+    https://127.0.0.1:8200/v1/auth/azure/login
 ```
 
 ### Sample Response

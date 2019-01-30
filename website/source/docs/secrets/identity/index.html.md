@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Identity - Secrets Engines"
+sidebar_title: "Identity"
 sidebar_current: "docs-secrets-identity"
 description: |-
   The Identity secrets engine for Vault manages client identities.
@@ -13,8 +14,8 @@ Name: `identity`
 The Identity secrets engine is the identity management solution for Vault. It
 internally maintains the clients who are recognized by Vault. Each client is
 internally termed as an `Entity`. An entity can have multiple `Aliases`. For
-example, a single user who has accounts in both Github and LDAP, can be mapped
-to a single entity in Vault that has 2 aliases, one of type Github and one of
+example, a single user who has accounts in both GitHub and LDAP, can be mapped
+to a single entity in Vault that has 2 aliases, one of type GitHub and one of
 type LDAP. When a client authenticates via any of the credential backend
 (except the Token backend), Vault creates a new entity and attaches a new
 alias to it, if a corresponding entity doesn't already exist. The entity identifier will

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "login - Command"
+sidebar_title: "<code>login</code>"
 sidebar_current: "docs-commands-login"
 description: |-
   The "login" command authenticates users or machines to Vault using the
@@ -39,15 +40,20 @@ the returned token is automatically unwrapped unless:
 By default, login uses a "token" method:
 
 ```text
-$ vault login 10862232-fd55-701c-9013-d764b5bc3953
-Success! You are now authenticated. The token information below is already
-stored in the token helper. You do NOT need to run "vault login" again. Future
-requests will use this token automatically.
+$ vault login s.3jnbMAKl1i4YS3QoKdbHzGXq
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
 
-token: 10862232-fd55-701c-9013-d764b5bc3953
-accessor: 121533e1-20e7-0b4e-04d6-a8c18b8566d5
-renewable: true
-policies: [my-policy]
+Key                  Value
+---                  -----
+token                s.3jnbMAKl1i4YS3QoKdbHzGXq
+token_accessor       7Uod1Rm0ejUAz77Oh7SxpAM0
+token_duration       767h59m49s
+token_renewable      true
+token_policies       ["admin" "default"]
+identity_policies    []
+policies             ["admin" "default"]
 ```
 
 To login with a different method, use `-method`:
@@ -59,12 +65,20 @@ Success! You are now authenticated. The token information below is already
 stored in the token helper. You do NOT need to run "vault login" again. Future
 requests will use this token automatically.
 
-token: a700ded8-28ed-907d-abf4-23514b783d52
-accessor: e0857619-3912-9981-4e03-8d6c4b2f6c56
-duration: 768h
-renewable: true
-policies: [default]
+Key                    Value
+---                    -----
+token                  s.2y4SU3Sk46dK3p2Y8q2jSBwL
+token_accessor         8J125x9SZyB76MI9uF2jSJZf
+token_duration         768h
+token_renewable        true
+token_policies         ["default"]
+identity_policies      []
+policies               ["default"]
+token_meta_username    my-username
 ```
+
+~> Notice that the command option (`-method=userpass`) precedes the command
+argument (`username=my-username`).
 
 If a github auth method was enabled at the path "github-ent":
 
@@ -74,10 +88,17 @@ Success! You are now authenticated. The token information below is already
 stored in the token helper. You do NOT need to run "vault login" again. Future
 requests will use this token automatically.
 
-token: 7eab2aba-b476-af57-e0af-dfcab7c541f6
-accessor: 2ae9b1cd-6d17-3428-bd44-986e97f6d2f3
-renewable: 22bc4d76-aa3b-1c53-4349-b230b459b56b
-policies: [root]
+Key                    Value
+---                    -----
+token                  s.2f3c5L1MHtnqbuNCbx90utmC
+token_accessor         JLUIXJ6ltUftTt2UYRl2lTAC
+token_duration         768h
+token_renewable        true
+token_policies         ["default"]
+identity_policies      []
+policies               ["default"]
+token_meta_org         hashicorp
+token_meta_username    my-username
 ```
 
 ## Usage

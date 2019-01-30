@@ -1,14 +1,5 @@
 .linked-block {
   cursor: pointer;
-  transition: box-shadow $speed;
-  will-change: box-shadow;
-
-  &:hover,
-  &:focus,
-  &:active {
-    position: relative;
-    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow, $box-shadow-middle;
-  }
 }
 
 .linked-block .columns {

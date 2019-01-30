@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/remount - HTTP API"
-sidebar_current: "docs-http-system-remount"
+sidebar_title: "<code>/sys/remount</code>"
+sidebar_current: "api-http-system-remount"
 description: |-
   The '/sys/remount' endpoint is used remount a mounted backend to a new endpoint.
 ---

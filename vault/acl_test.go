@@ -1,62 +1,165 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestACL_Capabilities(t *testing.T) {
-	// Create the root policy ACL
+func TestACL_NewACL(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testNewACL(t, namespace.RootNamespace)
+	})
+}
+
+func testNewACL(t *testing.T, ns *namespace.Namespace) {
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
 	policy := []*Policy{&Policy{Name: "root"}}
-	acl, err := NewACL(policy)
+	_, err := NewACL(ctx, policy)
+	switch ns.ID {
+	case namespace.RootNamespaceID:
+		if err != nil {
+			t.Fatal(err)
+		}
+	default:
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+	}
+}
+
+func TestACL_MFAMethods(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLMFAMethods(t, namespace.RootNamespace)
+	})
+}
+
+func testACLMFAMethods(t *testing.T, ns *namespace.Namespace) {
+	mfaRules := `
+path "secret/foo/*" {
+	mfa_methods = ["mfa_method_1", "mfa_method_2", "mfa_method_3"]
+}
+path "secret/exact/path" {
+	mfa_methods = ["mfa_method_4", "mfa_method_5"]
+}
+path "secret/split/definition" {
+	mfa_methods = ["mfa_method_6", "mfa_method_7"]
+}
+path "secret/split/definition" {
+	mfa_methods = ["mfa_method_7", "mfa_method_8", "mfa_method_9"]
+}
+	`
+
+	policy, err := ParseACLPolicy(ns, mfaRules)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/foo/testing/glob/pattern",
+	}
+
+	actual := acl.AllowOperation(ctx, request, false).MFAMethods
+	expected := []string{"mfa_method_1", "mfa_method_2", "mfa_method_3"}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: MFA methods; expected: %#v\n actual: %#v\n", expected, actual)
+	}
+
+	request.Path = "secret/exact/path"
+	actual = acl.AllowOperation(ctx, request, false).MFAMethods
+	expected = []string{"mfa_method_4", "mfa_method_5"}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: MFA methods; expected: %#v\n actual: %#v\n", expected, actual)
+	}
+
+	request.Path = "secret/split/definition"
+	actual = acl.AllowOperation(ctx, request, false).MFAMethods
+	expected = []string{"mfa_method_6", "mfa_method_7", "mfa_method_8", "mfa_method_9"}
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: MFA methods; expected: %#v\n actual: %#v\n", expected, actual)
+	}
+}
+
+func TestACL_Capabilities(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		policy := []*Policy{&Policy{Name: "root"}}
+		ctx := namespace.RootContext(nil)
+		acl, err := NewACL(ctx, policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		actual := acl.Capabilities(ctx, "any/path")
+		expected := []string{"root"}
+		if !reflect.DeepEqual(actual, expected) {
+			t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+		}
+		testACLCapabilities(t, namespace.RootNamespace)
+	})
+}
+
+func testACLCapabilities(t *testing.T, ns *namespace.Namespace) {
+	// Create the root policy ACL
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	policy, err := ParseACLPolicy(ns, aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	actual := acl.Capabilities("any/path")
-	expected := []string{"root"}
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual := acl.Capabilities(ctx, "dev")
+	expected := []string{"deny"}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+		t.Fatalf("bad: path: %s\ngot\n%#v\nexpected\n%#v\n", "deny", actual, expected)
 	}
 
-	policies, err := ParseACLPolicy(aclPolicy)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	acl, err = NewACL([]*Policy{policies})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	actual = acl.Capabilities("dev")
-	expected = []string{"deny"}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "deny", actual, expected)
-	}
-
-	actual = acl.Capabilities("dev/")
+	actual = acl.Capabilities(ctx, "dev/")
 	expected = []string{"sudo", "read", "list", "update", "delete", "create"}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "dev/", actual, expected)
+		t.Fatalf("bad: path: %s\ngot\n%#v\nexpected\n%#v\n", "dev/", actual, expected)
 	}
 
-	actual = acl.Capabilities("stage/aws/test")
+	actual = acl.Capabilities(ctx, "stage/aws/test")
 	expected = []string{"sudo", "read", "list", "update"}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: path:%s\ngot\n%#v\nexpected\n%#v\n", "stage/aws/test", actual, expected)
+		t.Fatalf("bad: path: %s\ngot\n%#v\nexpected\n%#v\n", "stage/aws/test", actual, expected)
 	}
-
 }
 
 func TestACL_Root(t *testing.T) {
-	// Create the root policy ACL
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLRoot(t, namespace.RootNamespace)
+	})
+}
+
+func testACLRoot(t *testing.T, ns *namespace.Namespace) {
+	// Create the root policy ACL. Always create on root namespace regardless of
+	// which namespace to ACL check on.
 	policy := []*Policy{&Policy{Name: "root"}}
-	acl, err := NewACL(policy)
+	acl, err := NewACL(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -64,7 +167,9 @@ func TestACL_Root(t *testing.T) {
 	request := new(logical.Request)
 	request.Operation = logical.UpdateOperation
 	request.Path = "sys/mount/foo"
-	authResults := acl.AllowOperation(request)
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	authResults := acl.AllowOperation(ctx, request, false)
 	if !authResults.RootPrivs {
 		t.Fatalf("expected root")
 	}
@@ -74,22 +179,32 @@ func TestACL_Root(t *testing.T) {
 }
 
 func TestACL_Single(t *testing.T) {
-	policy, err := ParseACLPolicy(aclPolicy)
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLSingle(t, namespace.RootNamespace)
+	})
+}
+
+func testACLSingle(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, aclPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	acl, err := NewACL([]*Policy{policy})
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
+	ctx = namespace.ContextWithNamespace(context.Background(), ns)
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	authResults := acl.AllowOperation(request)
+
+	authResults := acl.AllowOperation(ctx, request, false)
 	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -125,10 +240,12 @@ func TestACL_Single(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		ctx := namespace.ContextWithNamespace(context.Background(), ns)
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		authResults := acl.AllowOperation(request)
+
+		authResults := acl.AllowOperation(ctx, request, false)
 		if authResults.Allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
@@ -139,30 +256,34 @@ func TestACL_Single(t *testing.T) {
 }
 
 func TestACL_Layered(t *testing.T) {
-	policy1, err := ParseACLPolicy(aclPolicy)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		policy1, err := ParseACLPolicy(namespace.RootNamespace, aclPolicy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	policy2, err := ParseACLPolicy(aclPolicy2)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	acl, err := NewACL([]*Policy{policy1, policy2})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	testLayeredACL(t, acl)
+		policy2, err := ParseACLPolicy(namespace.RootNamespace, aclPolicy2)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		acl, err := NewACL(namespace.RootContext(nil), []*Policy{policy1, policy2})
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		testLayeredACL(t, acl, namespace.RootNamespace)
+	})
 }
 
-func testLayeredACL(t *testing.T, acl *ACL) {
+func testLayeredACL(t *testing.T, acl *ACL, ns *namespace.Namespace) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
 	request := new(logical.Request)
 	request.Operation = logical.ReadOperation
 	request.Path = "sys/mount/foo"
-	authResults := acl.AllowOperation(request)
+
+	authResults := acl.AllowOperation(ctx, request, false)
 	if authResults.RootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -203,10 +324,12 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 
 	for _, tc := range tcases {
+		ctx := namespace.ContextWithNamespace(context.Background(), ns)
 		request := new(logical.Request)
 		request.Operation = tc.op
 		request.Path = tc.path
-		authResults := acl.AllowOperation(request)
+
+		authResults := acl.AllowOperation(ctx, request, false)
 		if authResults.Allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, authResults.Allowed, authResults.RootPrivs)
 		}
@@ -217,11 +340,19 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 }
 
 func TestACL_PolicyMerge(t *testing.T) {
-	policy, err := ParseACLPolicy(mergingPolicies)
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLPolicyMerge(t, namespace.RootNamespace)
+	})
+}
+
+func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, mergingPolicies)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	acl, err := NewACL([]*Policy{policy})
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -252,9 +383,10 @@ func TestACL_PolicyMerge(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		raw, ok := acl.exactRules.Get(tc.path)
+		policyPath := ns.Path + tc.path
+		raw, ok := acl.exactRules.Get(policyPath)
 		if !ok {
-			t.Fatalf("Could not find acl entry for path %s", tc.path)
+			t.Fatalf("Could not find acl entry for path %s", policyPath)
 		}
 
 		p := raw.(*ACLPermissions)
@@ -277,11 +409,19 @@ func TestACL_PolicyMerge(t *testing.T) {
 }
 
 func TestACL_AllowOperation(t *testing.T) {
-	policy, err := ParseACLPolicy(permissionsPolicy)
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLAllowOperation(t, namespace.RootNamespace)
+	})
+}
+
+func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, permissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	acl, err := NewACL([]*Policy{policy})
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -328,7 +468,11 @@ func TestACL_AllowOperation(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		request := &logical.Request{
+			Path: tc.path,
+			Data: make(map[string]interface{}),
+		}
+
 		for _, parameter := range tc.parameters {
 			request.Data[parameter] = ""
 		}
@@ -339,7 +483,8 @@ func TestACL_AllowOperation(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			authResults := acl.AllowOperation(&request)
+			ctx := namespace.ContextWithNamespace(context.Background(), ns)
+			authResults := acl.AllowOperation(ctx, request, false)
 			if authResults.Allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
@@ -348,12 +493,20 @@ func TestACL_AllowOperation(t *testing.T) {
 }
 
 func TestACL_ValuePermissions(t *testing.T) {
-	policy, err := ParseACLPolicy(valuePermissionsPolicy)
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLValuePermissions(t, namespace.RootNamespace)
+	})
+}
+
+func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	acl, err := NewACL([]*Policy{policy})
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -408,13 +561,18 @@ func TestACL_ValuePermissions(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		request := &logical.Request{
+			Path: tc.path,
+			Data: make(map[string]interface{}),
+		}
+		ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
 		for i, parameter := range tc.parameters {
 			request.Data[parameter] = tc.values[i]
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			authResults := acl.AllowOperation(&request)
+			authResults := acl.AllowOperation(ctx, request, false)
 			if authResults.Allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
@@ -424,7 +582,7 @@ func TestACL_ValuePermissions(t *testing.T) {
 
 // NOTE: this test doesn't catch any races ATM
 func TestACL_CreationRace(t *testing.T) {
-	policy, err := ParseACLPolicy(valuePermissionsPolicy)
+	policy, err := ParseACLPolicy(namespace.RootNamespace, valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -440,7 +598,7 @@ func TestACL_CreationRace(t *testing.T) {
 				if time.Now().After(stopTime) {
 					return
 				}
-				_, err := NewACL([]*Policy{policy})
+				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
 				if err != nil {
 					t.Fatalf("err: %v", err)
 				}

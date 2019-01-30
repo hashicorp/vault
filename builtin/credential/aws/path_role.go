@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -568,7 +568,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 			if !strings.HasSuffix(principalARN, "*") {
 				principalID, err := b.resolveArnToUniqueIDFunc(ctx, req.Storage, principalARN)
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", principalARN, err)), nil
+					return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %s", principalARN, err.Error())), nil
 				}
 				roleEntry.BoundIamPrincipalIDs = append(roleEntry.BoundIamPrincipalIDs, principalID)
 			}
@@ -692,7 +692,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if numBinds == 0 {
-		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
+		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
 	policiesRaw, ok := data.GetOk("policies")
@@ -860,11 +860,11 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"resolve_aws_unique_ids":         r.ResolveAWSUniqueIDs,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
-		"ttl":                       r.TTL / time.Second,
-		"max_ttl":                   r.MaxTTL / time.Second,
-		"policies":                  r.Policies,
-		"disallow_reauthentication": r.DisallowReauthentication,
-		"period":                    r.Period / time.Second,
+		"ttl":                            r.TTL / time.Second,
+		"max_ttl":                        r.MaxTTL / time.Second,
+		"policies":                       r.Policies,
+		"disallow_reauthentication":      r.DisallowReauthentication,
+		"period":                         r.Period / time.Second,
 	}
 
 	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
@@ -891,12 +891,12 @@ Create a role and associate policies to it.
 
 const pathRoleDesc = `
 A precondition for login is that a role should be created in the backend.
-The login endpoint takes in the role name against which the instance
-should be validated. After authenticating the instance, the authorization
-for the instance to access Vault's resources is determined by the policies
-that are associated to the role though this endpoint.
+The login endpoint takes in the role name against which the client
+should be validated. After authenticating the client, the authorization
+to access Vault's resources is determined by the policies that are
+associated to the role though this endpoint.
 
-When the instances require only a subset of policies on the role, then
+When an EC2 instance requires only a subset of policies on the role, then
 'role_tag' option on the role can be enabled to create a role tag via the
 endpoint 'role/<role>/tag'. This tag then needs to be applied on the
 instance before it attempts a login. The policies on the tag should be a

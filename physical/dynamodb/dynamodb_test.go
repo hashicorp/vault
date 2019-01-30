@@ -13,7 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -147,24 +147,27 @@ func TestDynamoDBHABackend(t *testing.T) {
 	}()
 
 	logger := logging.NewVaultLogger(log.Debug)
-	b, err := NewDynamoDBBackend(map[string]string{
+	config := map[string]string{
 		"access_key":    creds.AccessKeyID,
 		"secret_key":    creds.SecretAccessKey,
 		"session_token": creds.SessionToken,
 		"table":         table,
 		"region":        region,
 		"endpoint":      endpoint,
-	}, logger)
+	}
+
+	b, err := NewDynamoDBBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("dynamodb does not implement HABackend")
+	b2, err := NewDynamoDBBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	physical.ExerciseHABackend(t, ha, ha)
-	testDynamoDBLockTTL(t, ha)
+
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
+	testDynamoDBLockTTL(t, b.(physical.HABackend))
 }
 
 // Similar to testHABackend, but using internal implementation details to
@@ -311,6 +314,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 		}
 		return nil
 	}); err != nil {
+		cleanup()
 		t.Fatalf("Could not connect to docker: %s", err)
 	}
 	return cleanup, retAddress, credentials.NewStaticCredentials("fake", "fake", "")

@@ -3,7 +3,7 @@ package cidrutil
 import (
 	"testing"
 
-	"github.com/hashicorp/go-sockaddr"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
 func TestCIDRUtil_IPBelongsToCIDR(t *testing.T) {

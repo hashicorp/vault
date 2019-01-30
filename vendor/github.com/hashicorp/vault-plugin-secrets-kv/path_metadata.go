@@ -3,7 +3,6 @@ package kv
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -15,8 +14,12 @@ import (
 // metadata endpoint
 func pathMetadata(b *versionedKVBackend) *framework.Path {
 	return &framework.Path{
-		Pattern: "metadata/.*",
+		Pattern: "metadata/" + framework.MatchAllRegex("path"),
 		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: "Location of the secret.",
+			},
 			"cas_required": {
 				Type: framework.TypeBool,
 				Description: `
@@ -47,7 +50,7 @@ version is used.`,
 
 func (b *versionedKVBackend) metadataExistenceCheck() framework.ExistenceFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
@@ -60,7 +63,7 @@ func (b *versionedKVBackend) metadataExistenceCheck() framework.ExistenceFunc {
 
 func (b *versionedKVBackend) pathMetadataList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		// Get an encrypted key storage object
 		wrapper, err := b.getKeyEncryptor(ctx, req.Storage)
@@ -78,7 +81,7 @@ func (b *versionedKVBackend) pathMetadataList() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
@@ -113,7 +116,10 @@ func (b *versionedKVBackend) pathMetadataRead() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
+		if key == "" {
+			return logical.ErrorResponse("missing path"), nil
+		}
 
 		maxRaw, mOk := data.GetOk("max_versions")
 		casRaw, cOk := data.GetOk("cas_required")
@@ -166,7 +172,7 @@ func (b *versionedKVBackend) pathMetadataWrite() framework.OperationFunc {
 
 func (b *versionedKVBackend) pathMetadataDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		key := strings.TrimPrefix(req.Path, "metadata/")
+		key := data.Get("path").(string)
 
 		lock := locksutil.LockForKey(b.locks, key)
 		lock.Lock()

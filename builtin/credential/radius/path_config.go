@@ -46,6 +46,11 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     10,
 				Description: "RADIUS NAS port field (default: 10)",
 			},
+			"nas_identifier": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "RADIUS NAS Identifier field (optional)",
+			},
 		},
 
 		ExistenceCheck: b.configExistenceCheck,
@@ -104,12 +109,13 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"host": cfg.Host,
-			"port": cfg.Port,
+			"host":                       cfg.Host,
+			"port":                       cfg.Port,
 			"unregistered_user_policies": cfg.UnregisteredUserPolicies,
 			"dial_timeout":               cfg.DialTimeout,
 			"read_timeout":               cfg.ReadTimeout,
 			"nas_port":                   cfg.NasPort,
+			"nas_identifier":             cfg.NasIdentifier,
 		},
 	}
 	return resp, nil
@@ -190,6 +196,13 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 		cfg.NasPort = d.Get("nas_port").(int)
 	}
 
+	nasIdentifier, ok := d.GetOk("nas_identifier")
+	if ok {
+		cfg.NasIdentifier = nasIdentifier.(string)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.NasIdentifier = d.Get("nas_identifier").(string)
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -209,6 +222,7 @@ type ConfigEntry struct {
 	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort                  int      `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
+	NasIdentifier            string   `json:"nas_identifier" structs:"nas_identifier" mapstructure:"nas_identifier"`
 }
 
 const pathConfigHelpSyn = `

@@ -19,11 +19,11 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login$`,
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "The role to log in against.",
 			},
-			"token": &framework.FieldSchema{
+			"jwt": {
 				Type:        framework.TypeString,
 				Description: "The signed JWT to validate.",
 			},
@@ -40,7 +40,7 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 }
 
 func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	token := d.Get("token").(string)
+	token := d.Get("jwt").(string)
 	if len(token) == 0 {
 		return logical.ErrorResponse("missing token"), nil
 	}
@@ -70,7 +70,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
-	// Here is where things diverge. If it is using OIDC discovery, validate
+	// Here is where things diverge. If it is using OIDC Discovery, validate
 	// that way; otherwise validate against the locally configured keys. Once
 	// things are validated, we re-unify the request path when evaluating the
 	// claims.
@@ -114,6 +114,10 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			}
 		}
 
+		if len(claims.Audience) > 0 && len(role.BoundAudiences) == 0 {
+			return logical.ErrorResponse("audience claim found in JWT but no audiences bound to the role"), nil
+		}
+
 		expected := jwt.Expected{
 			Issuer:   config.BoundIssuer,
 			Subject:  role.BoundSubject,
@@ -125,7 +129,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
 		}
 
-	case config.OIDCIssuerURL != "":
+	case config.OIDCDiscoveryURL != "":
 		provider, err := b.getProvider(ctx, config)
 		if err != nil {
 			return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
@@ -175,7 +179,32 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 
 	var groupAliases []*logical.Alias
 	if role.GroupsClaim != "" {
-		groupsClaimRaw, ok := allClaims[role.GroupsClaim]
+		mapPath, err := parseClaimWithDelimiters(role.GroupsClaim, role.GroupsClaimDelimiterPattern)
+		if err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error parsing delimiters for groups claim: {{err}}", err).Error()), nil
+		}
+		if len(mapPath) < 1 {
+			return logical.ErrorResponse("unexpected length 0 of claims path after parsing groups claim against delimiters"), nil
+		}
+		var claimKey string
+		claimMap := allClaims
+		for i, key := range mapPath {
+			if i == len(mapPath)-1 {
+				claimKey = key
+				break
+			}
+			nextMapRaw, ok := claimMap[key]
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("map via key %q not found while navigating group claim delimiters", key)), nil
+			}
+			nextMap, ok := nextMapRaw.(map[string]interface{})
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("key %q does not reference a map while navigating group claim delimiters", key)), nil
+			}
+			claimMap = nextMap
+		}
+
+		groupsClaimRaw, ok := claimMap[claimKey]
 		if !ok {
 			return logical.ErrorResponse(fmt.Sprintf("%q claim not found in token", role.GroupsClaim)), nil
 		}

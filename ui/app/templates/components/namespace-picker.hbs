@@ -1,0 +1,78 @@
+{{#if (and (not accessibleNamespaces.length) inRootNamespace)}}
+  <div class="namespace-picker no-namespaces">
+    {{!-- Just yield the logo if they're in the root namespace and only have access to it --}}
+    {{yield}}
+  </div>
+{{else}}
+  <div class="namespace-picker">
+    <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
+      <D.trigger
+        @tagName="button"
+        @class="button is-transparent namespace-picker-trigger has-current-color"
+        >
+        {{yield}}
+        {{#if namespaceDisplay}}
+          <span class="namespace-name">{{namespaceDisplay}}</span>
+        {{else}}
+          <span class="namespace-name is-hidden-tablet">/ (Root)</span>
+        {{/if}}
+        <ICon
+          @glyph="chevron-down"
+          @size=8
+          @class="has-text-white auto-width is-status-chevron"
+          aria-hidden="true"
+        />
+      </D.trigger>
+      <D.content @class="namespace-picker-content">
+        <div class="namespace-header-bar level is-mobile">
+          <div class="level-left">
+            {{#if (not isUserRootNamespace)}}
+              <NamespaceLink @targetNamespace={{or (object-at (dec 2 menuLeaves.length) lastMenuLeaves) auth.authData.userRootNamespace}} @class="namespace-link button is-ghost icon">
+                <ICon
+                  @glyph="chevron-left"
+                  @size=12
+                  @class="has-text-info"
+                  aria-hidden="true"
+                />
+              </NamespaceLink>
+            {{/if}}
+          </div>
+          <div class="level-right">
+            {{#if canList}}
+              {{#link-to "vault.cluster.access.namespaces" class="namespace-manage-link"}}
+                Manage
+              {{/link-to}}
+            {{/if}}
+          </div>
+        </div>
+        <header class="current-namespace">
+          <h5 class="list-header">Current namespace</h5>
+          <div class="level is-mobile namespace-link">
+            <span class="level-left">{{if namespacePath (concat namespacePath "/") "root"}}</span>
+            <ICon @glyph="checkmark-circled-outline" @size="16" @class="has-text-success level-right" />
+          </div>
+        </header>
+        <div class="namespace-list {{if isAnimating "animated-list"}}">
+          {{#if (contains '' lastMenuLeaves)}}
+            {{!-- leaf is '' which is the root namespace, and then we need to iterate the root leaves --}}
+            <div class="leaf-panel
+              {{if (eq '' currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
+            ">{{~#each rootLeaves as |rootLeaf|}}
+                <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
+              {{/each~}}</div>
+          {{/if}}
+          {{#each lastMenuLeaves as |leaf|}}
+              <div class="leaf-panel
+                {{if (eq leaf currentLeaf) "leaf-panel-current" "leaf-panel-left"}}
+                {{if (and isAdding (eq leaf changedLeaf)) "leaf-panel-adding"}}
+                {{if (and (not isAdding) (eq leaf changedLeaf)) "leaf-panel-exiting"}}
+              ">{{~#each-in (get namespaceTree leaf) as |leafName|}}
+                  <NamespaceLink @targetNamespace={{concat leaf "/" leafName}} @class="namespace-link" @showLastSegment={{true}} />
+                {{/each-in~}}</div>
+          {{/each}}
+        </div>
+      </D.content>
+    </BasicDropdown>
+  </div>
+  <div class="navbar-separator"></div>
+{{/if}}

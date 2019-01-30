@@ -61,7 +61,7 @@ Usage: vault operator init [options]
   key shares must come together to regenerate the master key. These keys are
   often called "unseal keys" in Vault's documentation.
 
-  This command cannot be run against already-initialized Vault cluster.
+  This command cannot be run against an already-initialized Vault cluster.
 
   Start initialization with the default options:
 
@@ -246,15 +246,14 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	if c.flagAuto {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
-				"-consul-auto instead. This will be removed in Vault 0.11 " +
-				"(or later)."))
+				"-consul-auto instead. This will be removed in Vault 1.1."))
 		}
 		c.flagConsulAuto = true
 	}
 	if c.flagCheck {
 		if Format(c.UI) == "table" {
 			c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
-				"-status instead. This will be removed in Vault 0.11 (or later)."))
+				"-status instead. This will be removed in Vault 1.1."))
 		}
 		c.flagStatus = true
 	}
@@ -550,8 +549,15 @@ func newMachineInit(req *api.InitRequest, resp *api.InitResponse) *machineInit {
 		init.UnsealKeysB64[i] = v
 	}
 
-	init.UnsealShares = req.SecretShares
-	init.UnsealThreshold = req.SecretThreshold
+	// If we don't get a set of keys back, it means that we are storing the keys,
+	// so the key shares and threshold has been set to 1.
+	if len(resp.Keys) == 0 {
+		init.UnsealShares = 1
+		init.UnsealThreshold = 1
+	} else {
+		init.UnsealShares = req.SecretShares
+		init.UnsealThreshold = req.SecretThreshold
+	}
 
 	init.RecoveryKeysHex = make([]string, len(resp.RecoveryKeys))
 	for i, v := range resp.RecoveryKeys {

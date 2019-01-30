@@ -36,6 +36,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			LeaseDuration:    int(input.Auth.TTL.Seconds()),
 			Renewable:        input.Auth.Renewable,
 			EntityID:         input.Auth.EntityID,
+			TokenType:        input.Auth.TokenType.String(),
 		}
 	}
 
@@ -68,6 +69,12 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
+		switch input.Auth.TokenType {
+		case "service":
+			logicalResp.Auth.TokenType = TokenTypeService
+		case "batch":
+			logicalResp.Auth.TokenType = TokenTypeBatch
+		}
 	}
 
 	return logicalResp
@@ -94,6 +101,7 @@ type HTTPAuth struct {
 	LeaseDuration    int               `json:"lease_duration"`
 	Renewable        bool              `json:"renewable"`
 	EntityID         string            `json:"entity_id"`
+	TokenType        string            `json:"token_type"`
 }
 
 type HTTPWrapInfo struct {
@@ -114,19 +122,15 @@ func (h HTTPSysInjector) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	// Fast path no data or empty data
 	if h.Response.Data == nil || len(h.Response.Data) == 0 {
 		return j, nil
 	}
-
 	// Marshaling a response will always be a JSON object, meaning it will
 	// always start with '{', so we hijack this to prepend necessary values
-
 	// Make a guess at the capacity, and write the object opener
 	buf := bytes.NewBuffer(make([]byte, 0, len(j)*2))
 	buf.WriteRune('{')
-
 	for k, v := range h.Response.Data {
 		// Marshal each key/value individually
 		mk, err := json.Marshal(k)
@@ -141,9 +145,7 @@ func (h HTTPSysInjector) MarshalJSON() ([]byte, error) {
 		// without any fields so we can unconditionally add a comma after each.
 		buf.WriteString(fmt.Sprintf("%s: %s, ", mk, mv))
 	}
-
 	// Add the rest, without the first '{'
 	buf.Write(j[1:])
-
 	return buf.Bytes(), nil
 }

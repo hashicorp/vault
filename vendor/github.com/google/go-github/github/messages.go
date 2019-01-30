@@ -41,40 +41,43 @@ const (
 var (
 	// eventTypeMapping maps webhooks types to their corresponding go-github struct types.
 	eventTypeMapping = map[string]string{
-		"commit_comment":              "CommitCommentEvent",
-		"create":                      "CreateEvent",
-		"delete":                      "DeleteEvent",
-		"deployment":                  "DeploymentEvent",
-		"deployment_status":           "DeploymentStatusEvent",
-		"fork":                        "ForkEvent",
-		"gollum":                      "GollumEvent",
-		"installation":                "InstallationEvent",
-		"installation_repositories":   "InstallationRepositoriesEvent",
-		"issue_comment":               "IssueCommentEvent",
-		"issues":                      "IssuesEvent",
-		"label":                       "LabelEvent",
-		"marketplace_purchase":        "MarketplacePurchaseEvent",
-		"member":                      "MemberEvent",
-		"membership":                  "MembershipEvent",
-		"milestone":                   "MilestoneEvent",
-		"organization":                "OrganizationEvent",
-		"org_block":                   "OrgBlockEvent",
-		"page_build":                  "PageBuildEvent",
-		"ping":                        "PingEvent",
-		"project":                     "ProjectEvent",
-		"project_card":                "ProjectCardEvent",
-		"project_column":              "ProjectColumnEvent",
-		"public":                      "PublicEvent",
-		"pull_request_review":         "PullRequestReviewEvent",
-		"pull_request_review_comment": "PullRequestReviewCommentEvent",
-		"pull_request":                "PullRequestEvent",
-		"push":                        "PushEvent",
-		"repository":                  "RepositoryEvent",
-		"release":                     "ReleaseEvent",
-		"status":                      "StatusEvent",
-		"team":                        "TeamEvent",
-		"team_add":                    "TeamAddEvent",
-		"watch":                       "WatchEvent",
+		"check_run":                      "CheckRunEvent",
+		"check_suite":                    "CheckSuiteEvent",
+		"commit_comment":                 "CommitCommentEvent",
+		"create":                         "CreateEvent",
+		"delete":                         "DeleteEvent",
+		"deployment":                     "DeploymentEvent",
+		"deployment_status":              "DeploymentStatusEvent",
+		"fork":                           "ForkEvent",
+		"gollum":                         "GollumEvent",
+		"installation":                   "InstallationEvent",
+		"installation_repositories":      "InstallationRepositoriesEvent",
+		"issue_comment":                  "IssueCommentEvent",
+		"issues":                         "IssuesEvent",
+		"label":                          "LabelEvent",
+		"marketplace_purchase":           "MarketplacePurchaseEvent",
+		"member":                         "MemberEvent",
+		"membership":                     "MembershipEvent",
+		"milestone":                      "MilestoneEvent",
+		"organization":                   "OrganizationEvent",
+		"org_block":                      "OrgBlockEvent",
+		"page_build":                     "PageBuildEvent",
+		"ping":                           "PingEvent",
+		"project":                        "ProjectEvent",
+		"project_card":                   "ProjectCardEvent",
+		"project_column":                 "ProjectColumnEvent",
+		"public":                         "PublicEvent",
+		"pull_request_review":            "PullRequestReviewEvent",
+		"pull_request_review_comment":    "PullRequestReviewCommentEvent",
+		"pull_request":                   "PullRequestEvent",
+		"push":                           "PushEvent",
+		"repository":                     "RepositoryEvent",
+		"repository_vulnerability_alert": "RepositoryVulnerabilityAlertEvent",
+		"release":                        "ReleaseEvent",
+		"status":                         "StatusEvent",
+		"team":                           "TeamEvent",
+		"team_add":                       "TeamAddEvent",
+		"watch":                          "WatchEvent",
 	}
 )
 
@@ -173,19 +176,19 @@ func ValidatePayload(r *http.Request, secretKey []byte) (payload []byte, err err
 	}
 
 	sig := r.Header.Get(signatureHeader)
-	if err := validateSignature(sig, body, secretKey); err != nil {
+	if err := ValidateSignature(sig, body, secretKey); err != nil {
 		return nil, err
 	}
 	return payload, nil
 }
 
-// validateSignature validates the signature for the given payload.
+// ValidateSignature validates the signature for the given payload.
 // signature is the GitHub hash signature delivered in the X-Hub-Signature header.
 // payload is the JSON payload sent by GitHub Webhooks.
 // secretKey is the GitHub Webhook secret message.
 //
 // GitHub API docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
-func validateSignature(signature string, payload, secretKey []byte) error {
+func ValidateSignature(signature string, payload, secretKey []byte) error {
 	messageMAC, hashFunc, err := messageMAC(signature)
 	if err != nil {
 		return err

@@ -74,12 +74,14 @@ func (lm *LockManager) CacheActive() bool {
 }
 
 func (lm *LockManager) InvalidatePolicy(name string) {
-	lm.cache.Delete(name)
+	if lm.useCache {
+		lm.cache.Delete(name)
+	}
 }
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string) error {
+func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return err
@@ -103,25 +105,52 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	lock.Lock()
 	defer lock.Unlock()
 
-	// If the policy is in cache, error out. Anywhere that would put it in the
-	// cache will also be protected by the mutex above, so we don't need to
-	// re-check the cache later.
-	_, ok := lm.cache.Load(name)
-	if ok {
-		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+	var ok bool
+	var pRaw interface{}
+
+	// If the policy is in cache and 'force' is not specified, error out. Anywhere
+	// that would put it in the cache will also be protected by the mutex above,
+	// so we don't need to re-check the cache later.
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(name)
+		if ok && !force {
+			return fmt.Errorf("key %q already exists", name)
+		}
 	}
 
-	// If the policy exists in storage, error out
-	p, err := lm.getPolicyFromStorage(ctx, storage, name)
-	if err != nil {
-		return err
+	// Conditionally look up the policy from storage, depending on the use of
+	// 'force' and if the policy was found in cache.
+	//
+	// - If was not found in cache and we are not using 'force', look for it in
+	// storage. If found, error out.
+	//
+	// - If it was found in cache and we are using 'force', pRaw will not be nil
+	// and we do not look the policy up from storage
+	//
+	// - If it was found in cache and we are not using 'force', we should have
+	// returned above wih error
+	var p *Policy
+	if pRaw == nil {
+		p, err = lm.getPolicyFromStorage(ctx, storage, name)
+		if err != nil {
+			return err
+		}
+		if p != nil && !force {
+			return fmt.Errorf("key %q already exists", name)
+		}
+	}
+
+	// If both pRaw and p above are nil and 'force' is specified, we don't need to
+	// grab policy locks as we have ensured it doesn't already exist, so there
+	// will be no races as nothing else has this pointer. If 'force' was not used,
+	// an error would have been returned by now if the policy already existed
+	if pRaw != nil {
+		p = pRaw.(*Policy)
 	}
 	if p != nil {
-		return fmt.Errorf(fmt.Sprintf("key %q already exists", name))
+		p.l.Lock()
+		defer p.l.Unlock()
 	}
-
-	// We don't need to grab policy locks as we have ensured it doesn't already
-	// exist, so there will be no races as nothing else has this pointer.
 
 	// Restore the archived keys
 	if keyData.ArchivedKeys != nil {
@@ -146,7 +175,9 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	keyData.Policy.l = new(sync.RWMutex)
 
 	// Update the cache to contain the restored policy
-	lm.cache.Store(name, keyData.Policy)
+	if lm.useCache {
+		lm.cache.Store(name, keyData.Policy)
+	}
 
 	return nil
 }
@@ -161,7 +192,12 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	lock.Lock()
 	defer lock.Unlock()
 
-	pRaw, ok := lm.cache.Load(name)
+	var ok bool
+	var pRaw interface{}
+
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(name)
+	}
 	if ok {
 		p = pRaw.(*Policy)
 		p.l.Lock()
@@ -194,9 +230,13 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *Policy, retUpserted bool, retErr error) {
 	var p *Policy
 	var err error
+	var ok bool
+	var pRaw interface{}
 
 	// Check if it's in our cache. If so, return right away.
-	pRaw, ok := lm.cache.Load(req.Name)
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(req.Name)
+	}
 	if ok {
 		p = pRaw.(*Policy)
 		if atomic.LoadUint32(&p.deleted) == 1 {
@@ -219,15 +259,18 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *
 		// themselves
 		case lm.useCache:
 			lock.Unlock()
-			// If not using the cache, if we aren't returning a policy the caller
-			// doesn't have a lock, so we must unlock
+
+		// If not using the cache, if we aren't returning a policy the caller
+		// doesn't have a lock, so we must unlock
 		case retP == nil:
 			lock.Unlock()
 		}
 	}
 
 	// Check the cache again
-	pRaw, ok = lm.cache.Load(req.Name)
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(req.Name)
+	}
 	if ok {
 		p = pRaw.(*Policy)
 		if atomic.LoadUint32(&p.deleted) == 1 {
@@ -356,6 +399,8 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest) (retP *
 func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage, name string) error {
 	var p *Policy
 	var err error
+	var ok bool
+	var pRaw interface{}
 
 	// We may be writing to disk, so grab an exclusive lock. This prevents bad
 	// behavior when the cache is turned off. We also lock the shared policy
@@ -364,7 +409,9 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 	lock.Lock()
 	defer lock.Unlock()
 
-	pRaw, ok := lm.cache.Load(name)
+	if lm.useCache {
+		pRaw, ok = lm.cache.Load(name)
+	}
 	if ok {
 		p = pRaw.(*Policy)
 		p.l.Lock()
@@ -387,7 +434,9 @@ func (lm *LockManager) DeletePolicy(ctx context.Context, storage logical.Storage
 
 	atomic.StoreUint32(&p.deleted, 1)
 
-	lm.cache.Delete(name)
+	if lm.useCache {
+		lm.cache.Delete(name)
+	}
 
 	err = storage.Delete(ctx, "policy/"+name)
 	if err != nil {

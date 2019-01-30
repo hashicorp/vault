@@ -14,32 +14,47 @@ EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.10
+GO_VERSION_MIN=1.11
+CGO_ENABLED=0
+ifneq ($(FDB_ENABLED), )
+	CGO_ENABLED=1
+	BUILD_TAGS+=foundationdb
+endif
 
 default: dev
 
 # bin generates the releasable binaries for Vault
 bin: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 dev: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-ui: prep
-	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
-testtravis: BUILD_TAGS=travis
+# *-mem variants will enable memory profiling which will write snapshots of heap usage
+# to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
+# Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
+dev-mem: BUILD_TAGS+=memprofiler
+dev-mem: dev
+dev-ui-mem: BUILD_TAGS+=memprofiler
+dev-ui-mem: dev-ui
+dev-dynamic-mem: BUILD_TAGS+=memprofiler
+dev-dynamic-mem: dev-dynamic
+
+testtravis: BUILD_TAGS+=travis
 testtravis: test
 
-testracetravis: BUILD_TAGS=travis
+testracetravis: BUILD_TAGS+=travis
 testracetravis: testrace
 
 # test runs the unit tests and vets the code
 test: prep
-	@CGO_ENABLED=0 \
+	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
 	VAULT_DEV_ROOT_TOKEN_ID= \
@@ -86,7 +101,7 @@ vet:
 # source files.
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	go generate $(go list ./... | grep -v /vendor/)
+	@go generate $(go list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools
@@ -109,13 +124,13 @@ static-assets:
 
 test-ember:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
 ember-dist:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
@@ -123,7 +138,7 @@ ember-dist:
 
 ember-dist-dev:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn
+	@cd ui && yarn --ignore-optional
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build-dev
@@ -137,14 +152,17 @@ proto:
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
 	protoc logical/*.proto --go_out=plugins=grpc:../../..
 	protoc physical/types.proto --go_out=plugins=grpc:../../..
+	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
 	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
 	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/protobuf:"/sentinel:"" protobuf:"/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go
+	sed -i '1s;^;// +build !enterprise\n;' helper/identity/mfa/types.pb.go
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go logical/identity.pb.go
 	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
 
 fmtcheck:
-	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@true
+#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
@@ -162,6 +180,9 @@ mysql-legacy-database-plugin:
 cassandra-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/cassandra-database-plugin ./plugins/database/cassandra/cassandra-database-plugin
 
+influxdb-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/influxdb-database-plugin ./plugins/database/influxdb/influxdb-database-plugin
+
 postgresql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
 
@@ -174,4 +195,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev
+
+.NOTPARALLEL: ember-dist ember-dist-dev static-assets

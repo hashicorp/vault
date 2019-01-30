@@ -1,0 +1,29 @@
+.list-item-row {
+  @extend .box;
+  @extend .is-sideless;
+  @extend .is-marginless;
+  padding-left: 0;
+  padding-right: 0;
+
+  .ember-basic-dropdown-trigger {
+    display: inline-block;
+  }
+}
+
+a.list-item-row,
+.linked-block.list-item-row {
+  transition: box-shadow $speed, margin $speed, padding $speed;
+  will-change: box-shadow, margin, padding;
+
+  &:hover,
+  &:focus,
+  &:active {
+    margin-left: #{-$column-gap} !important;
+    margin-right: #{-$column-gap} !important;
+    padding-left: $column-gap;
+    padding-right: $column-gap;
+    position: relative;
+    box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light, $box-link-hover-shadow,
+      $box-shadow-middle;
+  }
+}

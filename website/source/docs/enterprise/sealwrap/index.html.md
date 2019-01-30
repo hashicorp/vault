@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Seal Wrap"
+sidebar_title: "Seal Wrap / FIPS 140-2"
 sidebar_current: "docs-vault-enterprise-sealwrap"
 description: |-
   Vault Enterprise features a mechanism to wrap values with an extra layer of

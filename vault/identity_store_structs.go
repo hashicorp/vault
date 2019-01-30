@@ -7,7 +7,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -52,9 +51,8 @@ type IdentityStore struct {
 	// to enable richer queries based on multiple indexes.
 	db *memdb.MemDB
 
-	// entityLocks are a set of 256 locks to which all the entities will be
-	// categorized to while performing storage modifications.
-	entityLocks []*locksutil.LockEntry
+	// A lock to make sure things are consistent
+	lock sync.RWMutex
 
 	// groupLock is used to protect modifications to group entries
 	groupLock sync.RWMutex
@@ -72,6 +70,10 @@ type IdentityStore struct {
 
 	// core is the pointer to Vault's core
 	core *Core
+
+	// disableLowerCaseNames indicates whether or not identity artifacts are
+	// operated case insensitively
+	disableLowerCasedNames bool
 }
 
 type groupDiff struct {

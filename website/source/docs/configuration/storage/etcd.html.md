@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Etcd - Storage Backends - Configuration"
+sidebar_title: "Etcd"
 sidebar_current: "docs-configuration-storage-etcd"
 description: |-
   The Etcd storage backend is used to persist Vault's data in Etcd. It supports
@@ -40,6 +41,10 @@ storage "etcd" {
   query for SRV records describing cluster endpoints. This can also be provided
   via the environment variable `ETCD_DISCOVERY_SRV`.
 
+- `discovery_srv_name` `(string: "vault")` - Specifies the service name to use
+  when querying for SRV records describing cluster endpoints. This can also be
+  provided via the environment variable `ETCD_DISCOVERY_SRV_NAME`.
+
 - `etcd_api` `(string: "<varies>")` – Specifies the version of the API to
   communicate with. By default, this is derived automatically. If the cluster
   version is 3.1+ and there has been no data written using the v2 API, the
@@ -49,7 +54,7 @@ storage "etcd" {
   enabled. This can also be provided via the environment variable
   `ETCD_HA_ENABLED`.
 
-- `path` `(string: "vault/")` – Specifies the path in Etcd where Vault data will
+- `path` `(string: "/vault/")` – Specifies the path in Etcd where Vault data will
   be stored.
 
 - `sync` `(string: "true")` – Specifies whether to sync the list of available

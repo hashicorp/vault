@@ -1,5 +1,10 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias, or } from '@ember/object/computed';
+import Component from '@ember/component';
+import { getOwner } from '@ember/application';
+import { run } from '@ember/runloop';
 import { task } from 'ember-concurrency';
+import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
   extractDataAndFlags,
@@ -9,17 +14,18 @@ import {
   executeUICommand,
 } from 'vault/lib/console-helpers';
 
-const { inject, computed, getOwner, run } = Ember;
+export default Component.extend({
+  console: service(),
+  router: service(),
+  controlGroup: service(),
+  store: service(),
+  'data-test-component': 'console/ui-panel',
 
-export default Ember.Component.extend({
-  classNames: 'console-ui-panel-scroller',
+  classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],
   isFullscreen: false,
-  console: inject.service(),
-  router: inject.service(),
-  store: inject.service(),
   inputValue: null,
-  log: computed.alias('console.log'),
+  log: alias('console.log'),
 
   didRender() {
     this._super(...arguments);
@@ -31,7 +37,7 @@ export default Ember.Component.extend({
     run.schedule('afterRender', () => this.scrollToBottom());
   },
 
-  isRunning: computed.or('executeCommand.isRunning', 'refreshRoute.isRunning'),
+  isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),
 
   executeCommand: task(function*(command, shouldThrow = false) {
     this.set('inputValue', '');
@@ -77,6 +83,9 @@ export default Ember.Component.extend({
       let resp = yield service[method].call(service, path, data, flags.wrapTTL);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
+      if (error instanceof ControlGroupError) {
+        return this.logAndOutput(command, this.get('controlGroup').logFromError(error));
+      }
       this.logAndOutput(command, logFromError(error, path, method));
     }
   }),
@@ -106,6 +115,9 @@ export default Ember.Component.extend({
   },
 
   actions: {
+    closeConsole() {
+      this.set('console.isOpen', false);
+    },
     toggleFullscreen() {
       this.toggleProperty('isFullscreen');
     },

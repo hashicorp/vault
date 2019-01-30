@@ -11,9 +11,9 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 	"github.com/ncw/swift"
@@ -85,6 +85,27 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		projectDomain = conf["project-domain"]
 	}
 
+	region := os.Getenv("OS_REGION_NAME")
+	if region == "" {
+		region = conf["region"]
+	}
+	tenantID := os.Getenv("OS_TENANT_ID")
+	if tenantID == "" {
+		tenantID = conf["tenant_id"]
+	}
+	trustID := os.Getenv("OS_TRUST_ID")
+	if trustID == "" {
+		trustID = conf["trust_id"]
+	}
+	storageUrl := os.Getenv("OS_STORAGE_URL")
+	if storageUrl == "" {
+		storageUrl = conf["storage_url"]
+	}
+	authToken := os.Getenv("OS_AUTH_TOKEN")
+	if authToken == "" {
+		authToken = conf["auth_token"]
+	}
+
 	c := swift.Connection{
 		Domain:       domain,
 		UserName:     username,
@@ -92,6 +113,11 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		AuthUrl:      authUrl,
 		Tenant:       project,
 		TenantDomain: projectDomain,
+		Region:       region,
+		TenantId:     tenantID,
+		TrustId:      trustID,
+		StorageUrl:   storageUrl,
+		AuthToken:    authToken,
 		Transport:    cleanhttp.DefaultPooledTransport(),
 	}
 

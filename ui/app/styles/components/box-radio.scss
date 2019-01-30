@@ -1,0 +1,61 @@
+.box-radio-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+.title.box-radio-header {
+  font-size: $size-6;
+  color: $grey;
+  margin: $size-7 0 0 0;
+}
+.box-radio {
+  box-sizing: border-box;
+  flex-basis: 7rem;
+  width: 7rem;
+  height: 7.5rem;
+  padding: $size-10 $size-6 $size-10;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  display: flex;
+  border-radius: $radius;
+  box-shadow: $box-shadow;
+  text-align: center;
+  color: $grey;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
+  margin: $size-6 $size-3 $size-6 0;
+  font-size: 12px;
+  transition: box-shadow ease-in-out $speed;
+  will-change: box-shadow;
+
+  &.is-selected {
+    box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
+  }
+
+  input[type='radio'].radio {
+    position: absolute;
+    z-index: 1;
+    opacity: 0;
+  }
+
+  input[type='radio'].radio + label {
+    border: 1px solid $grey-light;
+    border-radius: 50%;
+    cursor: pointer;
+    display: block;
+    margin: 1rem auto 0;
+    height: 1rem;
+    width: 1rem;
+    flex-shrink: 0;
+    flex-grow: 0;
+  }
+
+  input[type='radio'].radio:checked + label {
+    background: $blue;
+    border: 1px solid $blue;
+    box-shadow: inset 0 0 0 0.15rem $white;
+  }
+  input[type='radio'].radio:focus + label {
+    box-shadow: 0 0 10px 1px rgba($blue, 0.4), inset 0 0 0 0.15rem $white;
+  }
+}

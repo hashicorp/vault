@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { later } from '@ember/runloop';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 
-const { computed } = Ember;
-
-export default Ember.Component.extend({
-  modalContainer: computed(function() {
+export default Component.extend({
+  modalContainer: computed('isActive', function() {
     return document.getElementById('modal-wormhole');
   }),
   isAnimated: false,
@@ -20,7 +20,7 @@ export default Ember.Component.extend({
   actions: {
     openOverlay() {
       this.set('isActive', true);
-      Ember.run.later(
+      later(
         this,
         function() {
           this.set('isAnimated', true);
@@ -30,7 +30,7 @@ export default Ember.Component.extend({
     },
     closeOverlay() {
       this.set('isAnimated', false);
-      Ember.run.later(
+      later(
         this,
         function() {
           this.set('isActive', false);

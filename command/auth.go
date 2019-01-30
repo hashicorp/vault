@@ -62,6 +62,10 @@ func (c *AuthCommand) Run(args []string) int {
 	// Deprecation
 	// TODO: remove in 0.9.0
 
+	if len(args) == 0 {
+		return cli.RunResultHelp
+	}
+
 	// Parse the args for our deprecations and defer to the proper areas.
 	for _, arg := range args {
 		switch {
@@ -70,7 +74,7 @@ func (c *AuthCommand) Run(args []string) int {
 				c.UI.Warn(wrapAtLength(
 					"WARNING! The -methods flag is deprecated. Please use "+
 						"\"vault auth list\" instead. This flag will be removed in "+
-						"Vault 0.11 (or later).") + "\n")
+						"Vault 1.1.") + "\n")
 			}
 			return (&AuthListCommand{
 				BaseCommand: &BaseCommand{
@@ -83,7 +87,7 @@ func (c *AuthCommand) Run(args []string) int {
 				c.UI.Warn(wrapAtLength(
 					"WARNING! The -method-help flag is deprecated. Please use "+
 						"\"vault auth help\" instead. This flag will be removed in "+
-						"Vault 0.11 (or later).") + "\n")
+						"Vault 1.1.") + "\n")
 			}
 			// Parse the args to pull out the method, suppressing any errors because
 			// there could be other flags that we don't care about.
@@ -110,7 +114,7 @@ func (c *AuthCommand) Run(args []string) int {
 			"WARNING! The \"vault auth ARG\" command is deprecated and is now a "+
 				"subcommand for interacting with auth methods. To authenticate "+
 				"locally to Vault, use \"vault login\" instead. This backwards "+
-				"compatibility will be removed in Vault 0.11 (or later).") + "\n")
+				"compatibility will be removed in Vault 1.1.") + "\n")
 	}
 	return (&LoginCommand{
 		BaseCommand: &BaseCommand{

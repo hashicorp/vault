@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 var (
@@ -78,7 +78,7 @@ func prepareCassandraTestContainer(t *testing.T) (func(), string, int) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()
@@ -92,7 +92,7 @@ func TestBackend_basic(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, hostname),
 			testAccStepRole(t),
@@ -102,7 +102,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv("TRAVIS") != "true" {
+	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
 	config := logical.TestBackendConfig()
@@ -116,7 +116,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, hostname),
 			testAccStepRole(t),

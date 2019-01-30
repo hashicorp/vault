@@ -1,0 +1,32 @@
+{{#if componentName}}
+  {{component componentName item=item}}
+{{else if linkParams}}
+  <LinkedBlock @params={{linkParams}} @class="list-item-row">
+    <div class="level is-mobile">
+      <div class="level-left is-flex-1">
+        {{#link-to params=linkParams class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"}}
+          {{yield (hash content=(component "list-item/content"))}}
+        {{/link-to}}
+    </div>
+      <div class="level-right">
+        <div class="level-item">
+          {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu" item=item hasMenu=hasMenu))}}
+        </div>
+      </div>
+    </div>
+  </LinkedBlock>
+{{else}}
+  <div class="list-item-row">
+    <div class="level is-mobile">
+      <div class="level-left is-flex-1 has-text-weight-semibold">
+        {{yield (hash content=(component "list-item/content"))}}
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+            {{yield (hash callMethod=callMethod menu=(component "list-item/popup-menu" item=item hasMenu=hasMenu))}}
+        </div>
+      </div>
+    </div>
+  </div>
+{{/if}}
+

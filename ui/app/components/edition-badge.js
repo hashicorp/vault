@@ -1,15 +1,18 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 
-export default Ember.Component.extend({
+export default Component.extend({
   tagName: 'span',
-  classNames: 'badge edition-badge',
-  abbreviation: Ember.computed('edition', function() {
+  classNames: 'tag is-outlined edition-badge',
+  attributeBindings: ['edition:aria-label'],
+  icon: computed('edition', function() {
     const edition = this.get('edition');
-    if (edition == 'Enterprise') {
-      return 'Ent';
+    const entEditions = ['Enterprise', 'Premium', 'Pro'];
+
+    if (entEditions.includes(edition)) {
+      return 'edition-enterprise';
     } else {
-      return edition;
+      return 'edition-oss';
     }
   }),
-  attributeBindings: ['edition:aria-label'],
 });

@@ -16,9 +16,10 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-rootcerts"
+	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -120,7 +121,7 @@ type TLSConfig struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: cleanhttp.DefaultClient(),
+		HttpClient: cleanhttp.DefaultPooledClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
 
@@ -464,6 +465,19 @@ func (c *Client) SetMFACreds(creds []string) {
 	c.mfaCreds = creds
 }
 
+// SetNamespace sets the namespace supplied either via the environment
+// variable or via the command line.
+func (c *Client) SetNamespace(namespace string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	if c.headers == nil {
+		c.headers = make(http.Header)
+	}
+
+	c.headers.Set(consts.NamespaceHeaderName, namespace)
+}
+
 // Token returns the access token being used by this client. It will
 // return the empty string if there is no token set.
 func (c *Client) Token() string {
@@ -490,6 +504,26 @@ func (c *Client) ClearToken() {
 	c.token = ""
 }
 
+// Headers gets the current set of headers used for requests. This returns a
+// copy; to modify it make modifications locally and use SetHeaders.
+func (c *Client) Headers() http.Header {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+
+	if c.headers == nil {
+		return nil
+	}
+
+	ret := make(http.Header)
+	for k, v := range c.headers {
+		for _, val := range v {
+			ret[k] = append(ret[k], val)
+		}
+	}
+
+	return ret
+}
+
 // SetHeaders sets the headers to be used for future requests.
 func (c *Client) SetHeaders(headers http.Header) {
 	c.modifyLock.Lock()
@@ -512,6 +546,10 @@ func (c *Client) SetBackoff(backoff retryablehttp.Backoff) {
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
 // clone.
+//
+// Also, only the client's config is currently copied; this means items not in
+// the api.Config struct, such as policy override and wrapping function
+// behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
 	c.modifyLock.RLock()
 	c.config.modifyLock.RLock()
@@ -608,6 +646,13 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
+	return c.RawRequestWithContext(context.Background(), r)
+}
+
+// RawRequestWithContext performs the raw request given. This request may be against
+// a Vault server not configured with this client. This is an advanced operation
+// that generally won't need to be called externally.
+func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	c.modifyLock.RLock()
 	token := c.token
 
@@ -622,7 +667,7 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 	c.modifyLock.RUnlock()
 
 	if limiter != nil {
-		limiter.Wait(context.Background())
+		limiter.Wait(ctx)
 	}
 
 	// Sanity check the token before potentially erroring from the API
@@ -643,13 +688,10 @@ START:
 		return nil, fmt.Errorf("nil request created")
 	}
 
-	// Set the timeout, if any
-	var cancelFunc context.CancelFunc
 	if timeout != 0 {
-		var ctx context.Context
-		ctx, cancelFunc = context.WithTimeout(context.Background(), timeout)
-		req.Request = req.Request.WithContext(ctx)
+		ctx, _ = context.WithTimeout(ctx, timeout)
 	}
+	req.Request = req.Request.WithContext(ctx)
 
 	if backoff == nil {
 		backoff = retryablehttp.LinearJitterBackoff
@@ -667,9 +709,6 @@ START:
 
 	var result *Response
 	resp, err := client.Do(req)
-	if cancelFunc != nil {
-		cancelFunc()
-	}
 	if resp != nil {
 		result = &Response{Response: resp}
 	}

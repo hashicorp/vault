@@ -4,28 +4,39 @@
       <HoverCopyButton @copyValue={{encoded_token}} />
       <div class="message-body">
         <h4 class="title is-7 is-marginless">
-          Encoded Operation Token
+          {{#if otp}}
+            Encoded Operation Token
+          {{else}}
+            Encrypted Operation Token
+          {{/if}}
         </h4>
         <code class="is-word-break">{{encoded_token}}</code>
       </div>
     </div>
-    <p>
-      If you entered a One Time Password, you can use the Vault CLI to decode the Token:
-    </p>
-    <div class="message is-list has-copy-button" tabindex="-1">
-      {{#with (if otp
-        (concat 'vault operator generate-root -otp="' otp '" -decode="' encoded_token '"')
-        (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' encoded_token '"')
-      ) as |cmd|}}
-        <HoverCopyButton @copyValue={{cmd}} />
+    {{#if otp}}
+      <div class="message is-list has-copy-button" tabindex="-1">
+        <HoverCopyButton @copyValue={{otp}} />
         <div class="message-body">
           <h4 class="title is-7 is-marginless">
-            DR Operation Token Command
+            One Time Password (otp)
           </h4>
-          <code class="is-word-break">{{cmd}}</code>
+          <code class="is-word-break">{{otp}}</code>
         </div>
-      {{/with}}
-    </div>
+      </div>
+      <div class="message is-list has-copy-button" tabindex="-1">
+        {{#let
+            (concat 'vault operator generate-root -dr-token -otp="' otp '" -decode="' encoded_token '"')
+        as |cmd|}}
+          <HoverCopyButton @copyValue={{cmd}} />
+          <div class="message-body">
+            <h4 class="title is-7 is-marginless">
+              DR Operation Token Command
+            </h4>
+            <code class="is-word-break">{{cmd}}</code>
+          </div>
+        {{/let}}
+      </div>
+    {{/if}}
   </div>
   <div class="box is-marginless is-shadowless">
     <button type="button" class="button" {{action 'reset'}}>
@@ -33,131 +44,99 @@
     </button>
   </div>
 {{else if (and generateAction (not started))}}
-  <form {{action 'startGenerate' (hash otp=otp pgp_key=pgp_key) on="submit"}} id="shamir">
-      {{message-error errors=errors}}
-      {{#if (eq generateStep 'chooseMethod')}}
-        <div class="box is-marginless is-shadowless">
-          <p>
-          Updating or promoting this cluster requires an operation token. Let's generate one by 
-          inputting the master key shares. To get started you'll need to generate a One Time Password
-          (OTP) or provide a PGP Key to encrypt the resultant operation token.
-          </p>
+  <form {{action 'startGenerate' (hash pgp_key=pgp_key) on="submit"}} id="shamir">
+    {{message-error errors=errors}}
+    {{#if (eq generateStep 'chooseMethod')}}
+      <div class="box is-marginless is-shadowless">
+        <p>
+        Updating or promoting this cluster requires an operation token. Let's generate one by
+        inputting the master key shares. If you'd like to encrypt the token with a PGP Key, please click "Provide PGP Key" below, otherwise we can begin generation of the Operation Token.
+        </p>
+      </div>
+      <div class="box is-shadowless field is-grouped is-grouped-centered">
+        <div class="control">
+          <button type="button" class="button is-primary" {{action (mut generateWithPGP) true}}>
+            Provide PGP Key
+          </button>
         </div>
-        <div class="box is-shadowless field is-grouped is-grouped-centered">
-          <div class="control">
-            <button type="button" class="button is-primary" {{action (mut generateWithPGP) true}}>
-              Provide PGP Key
-            </button>
-          </div>
-          <div class="control">
-            <span class="button is-white is-static">
-              or
-            </span>
-          </div>
-          <div class="control">
-            <button type="button" class="button is-primary" {{action "generateOTP"}}>
-              Generate OTP
-            </button>
-          </div>
+        <div class="control">
+          <span class="button auto-width is-white is-static">
+            or
+          </span>
         </div>
-      {{/if}}
-
-      {{#if (eq generateStep 'providePGPKey')}}
-
-        <div class="box is-marginless is-shadowless">
+        <div class="control">
+          <button type="submit" class="button is-primary">
+            Generate Operation Token
+          </button>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (eq generateStep 'providePGPKey')}}
+      <div class="box is-marginless is-shadowless">
         <p>
           Choose a PGP Key from your computer or paste the contents of one in the form below.
           This key will be used to Encrypt the generated Operation Token.
         </p>
         {{pgp-file index='' key=pgpKeyFile onChange=(action 'setKey')}}
+      </div>
+      <div class="field is-grouped box is-marginless is-shadowless">
+        <div class="control">
+          <button type="button" class="button" {{action "reset"}}>
+            Back
+          </button>
         </div>
-
-        <div class="field is-grouped box is-marginless is-shadowless">
-          <div class="control">
-            <button type="button" class="button" {{action "reset"}}>
-              Back
-            </button>
-          </div>
-          <div class="control">
-            <button type="button" disabled={{not pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
-              Use PGP Key
-            </button>
-          </div>
+        <div class="control">
+          <button type="button" disabled={{not pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
+            Use PGP Key
+          </button>
         </div>
-      {{/if}}
-      {{#if (eq generateStep 'beginGenerationWithPGP')}}
-        <div class="box is-marginless is-shadowless">
-          <p>
-            Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
-            Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
-          </p>
-          <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{pgp_key}} />
-            <div class="message-body">
-              <h4 class="title is-7 is-marginless">
-                PGP Key {{pgpKeyFile.fileName}}
-              </h4>
-              <code class="is-word-break">{{pgp_key}}</code>
-            </div>
+      </div>
+    {{/if}}
+    {{#if (eq generateStep 'beginGenerationWithPGP')}}
+      <div class="box is-marginless is-shadowless">
+        <p>
+          Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token.
+          Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+        </p>
+        <div class="message is-list has-copy-button" tabindex="-1">
+          <HoverCopyButton @copyValue={{pgp_key}} />
+          <div class="message-body">
+            <h4 class="title is-7 is-marginless">
+              PGP Key {{pgpKeyFile.fileName}}
+            </h4>
+            <code class="is-word-break">{{pgp_key}}</code>
           </div>
         </div>
-        <div class="field is-grouped box is-marginless is-shadowless">
-          <div class="control">
-            <button type="button" class="button" {{action "reset"}}>
-              Back
-            </button>
-          </div>
-          <div class="control">
-            <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
-              Generate Operation Token
-            </button>
-          </div>
+      </div>
+      <div class="field is-grouped box is-marginless is-shadowless">
+        <div class="control">
+          <button type="button" class="button" {{action "reset"}}>
+            Back
+          </button>
         </div>
-      {{/if}}
-      {{#if (eq generateStep 'beginGenerationWithOTP')}}
-        <div class="box is-marginless is-shadowless">
-          <p>
-            Below is the generated OTP. This will be used to encrypt the generated Operation Token.
-            <em class="has-text-danger has-text-weight-semibold">
-              Make sure to save this, as you will need it later to decrypt the Operation Token.
-            </em>
-            Next we'll enter portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
-          </p>
-          <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{otp}} />
-            <div class="message-body">
-              <h4 class="title is-7 is-marginless">
-                One Time Password
-              </h4>
-              <code class="is-word-break">{{otp}}</code>
-            </div>
-          </div>
+        <div class="control">
+          <button type="submit" disabled={{and (not pgp_key)}} class="button is-primary">
+            Generate Operation Token
+          </button>
         </div>
-        <div class="field is-grouped box is-marginless is-shadowless">
-          <div class="control">
-            <button type="button" class="button" {{action "reset"}}>
-              Back
-            </button>
-          </div>
-          <div class="control">
-            <button type="submit" disabled={{and (not pgp_key) (not otp)}} class="button is-primary">
-              Generate Operation Token
-            </button>
-          </div>
-        </div>
-      {{/if}}
+      </div>
+    {{/if}}
   </form>
 {{else}}
   <form {{action 'onSubmit' (hash key=key) on="submit"}} id="shamir">
-    <div class="box is-shadowless no-padding-bottom is-marginless">
-      {{message-error errors=errors}}
-      {{#if hasBlock}}
-        {{yield}}
-      {{else}}
-        <p>{{formText}}</p>
-      {{/if}}
-    </div>
     <div class="box is-marginless is-shadowless">
+      {{#if errors}}
+        <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
+          {{message-error errors=errors}}
+        </div>
+      {{/if}}
+      <div class="box is-shadowless is-marginless no-padding-top is-fullwidth" data-test-form-text>
+        {{#if hasBlock}}
+          {{yield}}
+        {{else if formText}}
+          {{formText}}
+        {{/if}}
+      </div>
       <div class="field">
         <label for="key" class="is-label">
           Master Key Portion

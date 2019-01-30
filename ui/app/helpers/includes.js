@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export function includes([haystack, needle]) {
   return haystack.includes(needle);
 }
 
-export default Ember.Helper.helper(includes);
+export default buildHelper(includes);

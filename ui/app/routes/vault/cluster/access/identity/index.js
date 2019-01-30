@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Route from '@ember/routing/route';
 import ListRoute from 'vault/mixins/list-route';
 
-export default Ember.Route.extend(ListRoute, {
+export default Route.extend(ListRoute, {
   model(params) {
     let itemType = this.modelFor('vault.cluster.access.identity');
     let modelType = `identity/${itemType}`;
@@ -10,7 +10,6 @@ export default Ember.Route.extend(ListRoute, {
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
-        size: 100,
       })
       .catch(err => {
         if (err.httpStatus === 404) {

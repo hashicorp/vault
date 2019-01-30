@@ -7,9 +7,10 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 // mockRollback returns a mock rollback manager
@@ -17,20 +18,24 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 	backend := new(NoopBackend)
 	mounts := new(MountTable)
 	router := NewRouter()
+	core, _, _ := TestCoreUnsealed(t)
 
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
 
 	mounts.Entries = []*MountEntry{
 		&MountEntry{
-			Path: "foo",
+			Path:        "foo",
+			NamespaceID: namespace.RootNamespaceID,
+			namespace:   namespace.RootNamespace,
 		},
 	}
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor"}, view); err != nil {
+
+	if err := router.Mount(backend, "foo", &MountEntry{UUID: meUUID, Accessor: "noopaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -40,7 +45,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 
 	logger := logging.NewVaultLogger(log.Trace)
 
-	rb := NewRollbackManager(logger, mountsFunc, router, context.Background())
+	rb := NewRollbackManager(context.Background(), logger, mountsFunc, router, core)
 	rb.period = 10 * time.Millisecond
 	return rb, backend
 }
@@ -85,7 +90,7 @@ func TestRollbackManager_Join(t *testing.T) {
 	errCh := make(chan error, 3)
 	go func() {
 		defer wg.Done()
-		err := m.Rollback("foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}
@@ -93,7 +98,7 @@ func TestRollbackManager_Join(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := m.Rollback("foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}
@@ -101,7 +106,7 @@ func TestRollbackManager_Join(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := m.Rollback("foo")
+		err := m.Rollback(namespace.RootContext(nil), "foo")
 		if err != nil {
 			errCh <- err
 		}

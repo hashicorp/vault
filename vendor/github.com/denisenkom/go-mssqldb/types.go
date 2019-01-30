@@ -1115,6 +1115,8 @@ func makeDecl(ti typeInfo) string {
 		return "nvarchar(1)"
 	case typeInt1:
 		return "tinyint"
+	case typeBigBinary:
+		return fmt.Sprintf("binary(%d)", ti.Size)
 	case typeInt2:
 		return "smallint"
 	case typeInt4:

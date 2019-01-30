@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Disaster Recovery Replication Setup - Guides"
+sidebar_title: "Disaster Recovery Setup"
 sidebar_current: "guides-operations-dr"
 description: |-
   This guide demonstrates step-by-step instruction of setting up a disaster
@@ -21,7 +22,7 @@ leader-follower model. A leader cluster is referred to as the **primary**
 cluster and is considered the _system of record_. Data is streamed from the
 primary cluster to all **secondary** (follower) clusters.
 
-![Replication Pattern](/assets/images/vault-ref-arch-8.png)
+![Replication Pattern](/img/vault-ref-arch-8.png)
 
 ~> **Important:** In DR replication, secondary clusters ***do not forward***
 service read or write requests until they are promoted and become a new primary
@@ -55,7 +56,7 @@ knowledge of Vault.
 You need two Vault Enterprise clusters: one behaves as the **primary cluster**,
 and another becomes the **secondary**.
 
-![DR Prerequisites](/assets/images/vault-dr-0.png)
+![DR Prerequisites](/img/vault-dr-0.png)
 
 ## Steps
 
@@ -165,18 +166,18 @@ Open a web browser and launch the Vault UI (e.g.
 https://cluster-A.example.com:8200/ui) and then login.
 
 1. Select **Replication** and check the **Disaster Recovery (DR)** radio button.
-  ![DR Replication - primary](/assets/images/vault-dr-1.png)
+  ![DR Replication - primary](/img/vault-dr-1.png)
 
 1. Click **Enable replication**.
 
 1. Select the **Secondaries** tab, and then click **Add**.
-  ![DR Replication - primary](/assets/images/vault-dr-2.png)
+  ![DR Replication - primary](/img/vault-dr-2.png)
 
 1. Populate the **Secondary ID** field, and click **Generate token**.
-  ![DR Replication - primary](/assets/images/vault-dr-3.png)
+  ![DR Replication - primary](/img/vault-dr-3.png)
 
 1. Click **Copy** to copy the token which you will need to enable the DR secondary cluster.
-  ![DR Replication - primary](/assets/images/vault-dr-4.png)
+  ![DR Replication - primary](/img/vault-dr-4.png)
 
 
 <br>
@@ -248,10 +249,10 @@ The following operations must be performed on the DR secondary cluster.
 1. Now, launch the Vault UI for the **secondary** cluster (e.g. https://cluster-B.example.com:8200/ui) and click **Replication**.
 
 1. Check the **Disaster Recovery (DR)** radio button and select **secondary** under the **Cluster mode**. Paste the token you copied from the primary in the **Secondary activation token** field.
-  ![DR Replication - secondary](/assets/images/vault-dr-5.png)
+  ![DR Replication - secondary](/img/vault-dr-5.png)
 
 1. Click **Enable replication**.
-  ![DR Replication - secondary](/assets/images/vault-dr-5.2.png)
+  ![DR Replication - secondary](/img/vault-dr-5.2.png)
 
   !> **NOTE:** This will immediately clear all data in the secondary cluster.
 
@@ -274,7 +275,7 @@ secondary cluster. The process, outlined below using API calls, is the similar t
 1. Generate an one time password (OTP) to use:
 
     ```plaintext
-    $ vault operator generate-root -generate-otp
+    $ vault operator generate-root -dr-token -generate-otp
     HenFLWmt0AgrjWJp/RECzQ==
     ```
 
@@ -361,7 +362,7 @@ entered by each key holder via **`/sys/replication/dr/secondary/generate-operati
     **Example:**
 
     ```plaintext
-    $ vault operator generate-root \
+    $ vault operator generate-root -dr-token \
             -decode="dKNQqNmh3JfJcSZdGlkttQ==" \
             -otp="HenFLWmt0AgrjWJp/RECzQ=="
 
@@ -404,21 +405,21 @@ contains the DR operation token.
 #### Web UI
 
 1. Click on **Generate OTP** to generate an OTP.  Then click **Copy OTP**.
-    ![DR Replication - secondary](/assets/images/vault-dr-6.png)
+    ![DR Replication - secondary](/img/vault-dr-6.png)
 
 1. Click **Generate Operation Token**.
 
 1. A quorum of unseal keys must be entered to create a new operation token for
 the DR secondary.
 
-    ![DR Replication - secondary](/assets/images/vault-dr-7.png)
+    ![DR Replication - secondary](/img/vault-dr-7.png)
 
     -> This operation must be performed by each unseal-key holder.
 
 
 1. Once the quorum has been reached, the output displays the encoded DR operation token.  Click **Copy CLI command**.
 
-    ![DR Replication - secondary](/assets/images/vault-dr-8.png)
+    ![DR Replication - secondary](/img/vault-dr-8.png)
 
 1. Execute the CLI command from a terminal to generate a DR operation token
 using the OTP generated earlier. (Be sure to enter your OTP in the command.)
@@ -426,7 +427,7 @@ using the OTP generated earlier. (Be sure to enter your OTP in the command.)
     **Example:**
 
     ```
-    $ vault operator generate-root \
+    $ vault operator generate-root -dr-token \
             -otp="vZpZZf5UI1nvB3A5/7Xq9A==" \          
             -decode="cuplaFGYduDEY6ZVC5IfaA=="
 
@@ -435,13 +436,13 @@ using the OTP generated earlier. (Be sure to enter your OTP in the command.)
 
 1. Now, click **Promote** tab, and then enter the generated DR operation token.
 
-    ![DR Replication - secondary](/assets/images/vault-dr-9-1.png)
+    ![DR Replication - secondary](/img/vault-dr-9-1.png)
 
 1. Click **Promote cluster**.
 
     When you prompted, "_Are you sure you want to promote this cluster?_", click **Promote cluster** again to complete.
 
-    ![DR Replication - secondary](/assets/images/vault-dr-9.png)
+    ![DR Replication - secondary](/img/vault-dr-9.png)
 
 <br>
 
@@ -511,12 +512,12 @@ reconnected to the same DR replication set without wiping local storage.
 
 Select **Replication** and click **Demote cluster**.
 
-![DR Replication - demotion](/assets/images/vault-dr-10.png)
+![DR Replication - demotion](/img/vault-dr-10.png)
 
 When you prompted, "_Are you sure you want to demote this cluster?_", click
 **Demote cluster** again to complete.
 
-![DR Replication - demotion](/assets/images/vault-dr-12.png)
+![DR Replication - demotion](/img/vault-dr-12.png)
 
 
 ### <a name="step5"></a>Step 5: Disable DR Primary
@@ -575,12 +576,12 @@ Any secondaries will no longer be able to connect.
 
 Select **Replication** and click **Disable replication**.
 
-![DR Replication - demotion](/assets/images/vault-dr-11.png)
+![DR Replication - demotion](/img/vault-dr-11.png)
 
 When you prompted, "_Are you sure you want to disable replication on this
 cluster?_", click **Disable** again to complete.
 
-![DR Replication - demotion](/assets/images/vault-dr-13.png)
+![DR Replication - demotion](/img/vault-dr-13.png)
 
 Any secondaries will no longer be able to connect.
 

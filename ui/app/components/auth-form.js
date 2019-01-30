@@ -1,60 +1,49 @@
-import Ember from 'ember';
+import { run } from '@ember/runloop';
+import { inject as service } from '@ember/service';
+import { match, alias, or } from '@ember/object/computed';
+import { assign } from '@ember/polyfills';
+import { dasherize } from '@ember/string';
+import Component from '@ember/component';
+import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
-const { computed, inject, get } = Ember;
 
 const DEFAULTS = {
   token: null,
   username: null,
   password: null,
+  customPath: null,
 };
 
-export default Ember.Component.extend(DEFAULTS, {
-  classNames: ['auth-form'],
-  router: inject.service(),
-  auth: inject.service(),
-  flashMessages: inject.service(),
-  store: inject.service(),
-  csp: inject.service('csp-event'),
+export default Component.extend(DEFAULTS, {
+  router: service(),
+  auth: service(),
+  flashMessages: service(),
+  store: service(),
+  csp: service('csp-event'),
 
   // set during init and potentially passed in via a query param
   selectedAuth: null,
   methods: null,
   cluster: null,
   redirectTo: null,
-
-  didRender() {
-    this._super(...arguments);
-    // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
-    let activeEle = this.element.querySelector('li.is-active');
-    if (activeEle) {
-      activeEle.scrollIntoView();
-    }
-    // this is here because we're changing the `with` attr and there's no way to short-circuit rendering,
-    // so we'll just nav -> get new attrs -> re-render
-    if (!this.get('selectedAuth') || (this.get('selectedAuth') && !this.get('selectedAuthBackend'))) {
-      this.get('router').replaceWith('vault.cluster.auth', this.get('cluster.name'), {
-        queryParams: {
-          with: this.firstMethod(),
-          wrappedToken: this.get('wrappedToken'),
-        },
-      });
-    }
-  },
-
-  firstMethod() {
-    let firstMethod = this.get('methodsToShow.firstObject');
-    // prefer backends with a path over those with a type
-    return get(firstMethod, 'path') || get(firstMethod, 'type');
-  },
-
+  namespace: null,
+  wrappedToken: null,
+  // internal
+  oldNamespace: null,
   didReceiveAttrs() {
     this._super(...arguments);
     let token = this.get('wrappedToken');
     let newMethod = this.get('selectedAuth');
     let oldMethod = this.get('oldSelectedAuth');
 
+    let ns = this.get('namespace');
+    let oldNS = this.get('oldNamespace');
+    if (oldNS === null || oldNS !== ns) {
+      this.get('fetchMethods').perform();
+    }
+    this.set('oldNamespace', ns);
     if (oldMethod && oldMethod !== newMethod) {
       this.resetDefaults();
     }
@@ -65,31 +54,56 @@ export default Ember.Component.extend(DEFAULTS, {
     }
   },
 
+  didRender() {
+    this._super(...arguments);
+    let firstMethod = this.firstMethod();
+    // on very narrow viewports the active tab may be overflowed, so we scroll it into view here
+    let activeEle = this.element.querySelector('li.is-active');
+    if (activeEle) {
+      activeEle.scrollIntoView();
+    }
+    // set `with` to the first method
+    if (
+      (this.get('fetchMethods.isIdle') && firstMethod && !this.get('selectedAuth')) ||
+      (this.get('selectedAuth') && !this.get('selectedAuthBackend'))
+    ) {
+      this.set('selectedAuth', firstMethod);
+    }
+  },
+
+  firstMethod() {
+    let firstMethod = this.get('methodsToShow.firstObject');
+    if (!firstMethod) return;
+    // prefer backends with a path over those with a type
+    return get(firstMethod, 'path') || get(firstMethod, 'type');
+  },
+
   resetDefaults() {
     this.setProperties(DEFAULTS);
   },
 
-  selectedAuthIsPath: computed.match('selectedAuth', /\/$/),
-  selectedAuthBackend: Ember.computed(
-    'allSupportedMethods',
-    'selectedAuth',
-    'selectedAuthIsPath',
-    function() {
-      let methods = this.get('allSupportedMethods');
-      let keyIsPath = this.get('selectedAuthIsPath');
-      let findKey = keyIsPath ? 'path' : 'type';
-      return methods.findBy(findKey, this.get('selectedAuth'));
+  selectedAuthIsPath: match('selectedAuth', /\/$/),
+  selectedAuthBackend: computed('methods', 'methods.[]', 'selectedAuth', 'selectedAuthIsPath', function() {
+    let methods = this.get('methods');
+    let selectedAuth = this.get('selectedAuth');
+    let keyIsPath = this.get('selectedAuthIsPath');
+    if (!methods) {
+      return {};
     }
-  ),
+    if (keyIsPath) {
+      return methods.findBy('path', selectedAuth);
+    }
+    return BACKENDS.findBy('type', selectedAuth);
+  }),
 
   providerPartialName: computed('selectedAuthBackend', function() {
     let type = this.get('selectedAuthBackend.type') || 'token';
     type = type.toLowerCase();
-    let templateName = Ember.String.dasherize(type);
+    let templateName = dasherize(type);
     return `partials/auth-form/${templateName}`;
   }),
 
-  hasCSPError: computed.alias('csp.connectionViolations.firstObject'),
+  hasCSPError: alias('csp.connectionViolations.firstObject'),
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
@@ -102,7 +116,7 @@ export default Ember.Component.extend(DEFAULTS, {
   hasMethodsWithPath: computed('methodsToShow', function() {
     return this.get('methodsToShow').isAny('path');
   }),
-  methodsToShow: computed('methods', 'methods.[]', function() {
+  methodsToShow: computed('methods', function() {
     let methods = this.get('methods') || [];
     let shownMethods = methods.filter(m =>
       BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
@@ -123,8 +137,30 @@ export default Ember.Component.extend(DEFAULTS, {
     }
   }),
 
+  fetchMethods: task(function*() {
+    let store = this.get('store');
+    try {
+      let methods = yield store.findAll('auth-method', {
+        adapterOptions: {
+          unauthenticated: true,
+        },
+      });
+      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+      run.next(() => {
+        store.unloadAll('auth-method');
+      });
+    } catch (e) {
+      this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
+    }
+  }),
+
+  showLoading: or('authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
+
   handleError(e) {
     this.set('loading', false);
+    if (!e.errors) {
+      return e;
+    }
     let errors = e.errors.map(error => {
       if (error.detail) {
         return error.detail;
@@ -134,40 +170,45 @@ export default Ember.Component.extend(DEFAULTS, {
     this.set('error', `Authentication failed: ${errors.join('.')}`);
   },
 
+  authenticate: task(function*(backendType, data) {
+    let clusterId = this.cluster.id;
+    let targetRoute = this.redirectTo || 'vault.cluster';
+    try {
+      let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+
+      let { isRoot, namespace } = authResponse;
+      let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
+      // returning this w/then because if we keep it
+      // in the task, it will get cancelled when the component in un-rendered
+      return transition.followRedirects().then(() => {
+        if (isRoot) {
+          this.flashMessages.warning(
+            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+          );
+        }
+      });
+    } catch (e) {
+      this.handleError(e);
+    }
+  }),
+
   actions: {
     doSubmit() {
       let data = {};
       this.setProperties({
-        loading: true,
         error: null,
       });
-      let targetRoute = this.get('redirectTo') || 'vault.cluster';
       let backend = this.get('selectedAuthBackend') || {};
-      let path = get(backend, 'path') || this.get('customPath');
       let backendMeta = BACKENDS.find(
-        b => get(b, 'type').toLowerCase() === get(backend, 'type').toLowerCase()
+        b => (get(b, 'type') || '').toLowerCase() === (get(backend, 'type') || '').toLowerCase()
       );
-      let attributes = get(backendMeta, 'formAttributes');
+      let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
-      data = Ember.assign(data, this.getProperties(...attributes));
-      if (get(backend, 'path') || (this.get('useCustomPath') && path)) {
-        data.path = path;
+      data = assign(data, this.getProperties(...attributes));
+      if (this.get('customPath') || get(backend, 'id')) {
+        data.path = this.get('customPath') || get(backend, 'id');
       }
-      const clusterId = this.get('cluster.id');
-      this.get('auth').authenticate({ clusterId, backend: get(backend, 'type'), data }).then(
-        ({ isRoot }) => {
-          this.set('loading', false);
-          const transition = this.get('router').transitionTo(targetRoute);
-          if (isRoot) {
-            transition.followRedirects().then(() => {
-              this.get('flashMessages').warning(
-                'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-              );
-            });
-          }
-        },
-        (...errArgs) => this.handleError(...errArgs)
-      );
+      this.authenticate.perform(backend.type, data);
     },
   },
 });

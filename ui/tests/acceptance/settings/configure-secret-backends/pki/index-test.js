@@ -1,18 +1,21 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/index';
+import authPage from 'vault/tests/pages/auth';
+import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-moduleForAcceptance('Acceptance | settings/configure/secrets/pki', {
-  beforeEach() {
-    return authLogin();
-  },
-});
+module('Acceptance | settings/configure/secrets/pki', function(hooks) {
+  setupApplicationTest(hooks);
 
-test('it redirects to the cert section', function(assert) {
-  const path = `pki-${new Date().getTime()}`;
-  mountSupportedSecretBackend(assert, 'pki', path);
-  page.visit({ backend: path });
-  andThen(() => {
+  hooks.beforeEach(function() {
+    return authPage.login();
+  });
+
+  test('it redirects to the cert section', async function(assert) {
+    const path = `pki-${new Date().getTime()}`;
+    await enablePage.enable('pki', path);
+    await page.visit({ backend: path });
     assert.equal(
       currentRouteName(),
       'vault.cluster.settings.configure-secret-backend.section',

@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "/identity/groups - HTTP API"
-sidebar_current: "docs-http-secret-identity-groups"
+sidebar_current: "api-http-secret-identity-groups"
 description: |-
   This is the API documentation for the identity groups.
 ---

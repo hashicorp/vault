@@ -24,10 +24,13 @@
 #   go-tests = true
 #   unused-packages = true
 
+[[constraint]]
+  name = "github.com/briankassouf/jose"
+  branch = "master"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/SermoDigital/jose"
+  name = "github.com/hashicorp/errwrap"
 
 [[constraint]]
   branch = "master"
@@ -64,7 +67,3 @@
 [prune]
   go-tests = true
   unused-packages = true
-
-[[constraint]]
-  name = "github.com/briankassouf/jose"
-  branch = "master"

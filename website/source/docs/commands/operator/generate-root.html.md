@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator generate-root - Command"
+sidebar_title: "<code>generate-root</code>"
 sidebar_current: "docs-commands-operator-generate-root"
 description: |-
   The "operator generate-root" command generates a new root token by combining a
@@ -82,7 +83,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-pgp-key` `(keybase or pgp)`- Path to a file on disk containing a binary or
   base64-encoded public GPG key. This can also be specified as a Keybase
-  username using the format "keybase:<username>". When supplied, the generated
+  username using the format `keybase:<username>`. When supplied, the generated
   root token will be encrypted and base64-encoded with the given public key.
 
 - `-status` `(bool: false)` - Print the status of the current attempt without

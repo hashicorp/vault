@@ -28,7 +28,7 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 			time.Sleep(15 * time.Millisecond)
 
 			if atomic.LoadUint32(b.upgrading) == 1 {
-				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
 			}
 		}
 
@@ -55,7 +55,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 
 	// If we are a replication secondary, wait until the primary has finished
 	// upgrading.
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("upgrade not running on performace replication secondary")
 
 		go func() {

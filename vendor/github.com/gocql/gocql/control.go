@@ -121,7 +121,7 @@ func hostInfo(addr string, defaultPort int) ([]*HostInfo, error) {
 	}
 
 	// Look up host in DNS
-	ips, err := net.LookupIP(host)
+	ips, err := LookupIP(host)
 	if err != nil {
 		return nil, err
 	} else if len(ips) == 0 {
@@ -453,7 +453,7 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 			Logger.Printf("control: error executing %q: %v\n", statement, iter.err)
 		}
 
-		q.attempts++
+		q.AddAttempts(1, c.getConn().host)
 		if iter.err == nil || !c.retry.Attempt(q) {
 			break
 		}

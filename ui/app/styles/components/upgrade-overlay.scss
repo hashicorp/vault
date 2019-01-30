@@ -11,8 +11,7 @@
   }
 
   .modal-background {
-    background-image: url("/ui/vault-hex.svg"),
-      linear-gradient(90deg, #191a1c, #1b212d);
+    background-image: url('/ui/vault-hex.svg'), linear-gradient(90deg, #191a1c, #1b212d);
     opacity: 0.97;
   }
 
@@ -33,11 +32,14 @@
   .upgrade-overlay-title {
     border-bottom: 1px solid $grey;
     padding-bottom: $size-10;
-  }
 
-  .upgrade-overlay-icon svg {
-    height: 24px;
-    width: auto;
+    .icon {
+      width: 32px;
+
+      #edition-enterprise-hexagon {
+        fill: $white;
+      }
+    }
   }
 
   .columns {

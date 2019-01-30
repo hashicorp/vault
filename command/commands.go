@@ -6,51 +6,39 @@ import (
 	"os/signal"
 	"syscall"
 
-	ad "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
-	gcp "github.com/hashicorp/vault-plugin-secrets-gcp/plugin"
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 
-	"github.com/hashicorp/vault/builtin/logical/aws"
-	"github.com/hashicorp/vault/builtin/logical/cassandra"
-	"github.com/hashicorp/vault/builtin/logical/consul"
-	"github.com/hashicorp/vault/builtin/logical/database"
-	"github.com/hashicorp/vault/builtin/logical/mongodb"
-	"github.com/hashicorp/vault/builtin/logical/mssql"
-	"github.com/hashicorp/vault/builtin/logical/mysql"
-	"github.com/hashicorp/vault/builtin/logical/nomad"
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/builtin/logical/postgresql"
-	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
-	"github.com/hashicorp/vault/builtin/logical/ssh"
-	"github.com/hashicorp/vault/builtin/logical/totp"
-	"github.com/hashicorp/vault/builtin/logical/transit"
-	"github.com/hashicorp/vault/builtin/plugin"
+	/*
+		The builtinplugins package is initialized here because it, in turn,
+		initializes the database plugins.
+		They register multiple database drivers for the "database/sql" package.
+	*/
+	_ "github.com/hashicorp/vault/helper/builtinplugins"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 
-	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
+	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
-	credJWT "github.com/hashicorp/vault-plugin-auth-jwt"
-	credKube "github.com/hashicorp/vault-plugin-auth-kubernetes"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
-	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
-	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+
+	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
 	physCockroachDB "github.com/hashicorp/vault/physical/cockroachdb"
@@ -59,6 +47,7 @@ import (
 	physDynamoDB "github.com/hashicorp/vault/physical/dynamodb"
 	physEtcd "github.com/hashicorp/vault/physical/etcd"
 	physFile "github.com/hashicorp/vault/physical/file"
+	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
@@ -81,10 +70,14 @@ const (
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACResponseKeys = "audit-non-hmac-response-keys"
+	// flagNameDescription is the flag name used for tuning the secret and auth mount description parameter
+	flagNameDescription = "description"
 	// flagListingVisibility is the flag to toggle whether to show the mount in the UI-specific listing endpoint
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
 	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
+	// flagNameTokenType is the flag name used to force a specific token type
+	flagNameTokenType = "token-type"
 )
 
 var (
@@ -95,45 +88,19 @@ var (
 	}
 
 	credentialBackends = map[string]logical.Factory{
-		"app-id":     credAppId.Factory,
-		"approle":    credAppRole.Factory,
-		"aws":        credAws.Factory,
-		"azure":      credAzure.Factory,
-		"centrify":   credCentrify.Factory,
-		"cert":       credCert.Factory,
-		"gcp":        credGcp.Factory,
-		"github":     credGitHub.Factory,
-		"jwt":        credJWT.Factory,
-		"kubernetes": credKube.Factory,
-		"ldap":       credLdap.Factory,
-		"okta":       credOkta.Factory,
-		"plugin":     plugin.Factory,
-		"radius":     credRadius.Factory,
-		"userpass":   credUserpass.Factory,
+		"plugin": plugin.Factory,
 	}
 
 	logicalBackends = map[string]logical.Factory{
-		"ad":         ad.Factory,
-		"aws":        aws.Factory,
-		"cassandra":  cassandra.Factory,
-		"consul":     consul.Factory,
-		"database":   database.Factory,
-		"gcp":        gcp.Factory,
-		"kv":         kv.Factory,
-		"mongodb":    mongodb.Factory,
-		"mssql":      mssql.Factory,
-		"mysql":      mysql.Factory,
-		"nomad":      nomad.Factory,
-		"pki":        pki.Factory,
-		"plugin":     plugin.Factory,
-		"postgresql": postgresql.Factory,
-		"rabbitmq":   rabbitmq.Factory,
-		"ssh":        ssh.Factory,
-		"totp":       totp.Factory,
-		"transit":    transit.Factory,
+		"plugin":   plugin.Factory,
+		"database": logicalDb.Factory,
+		// This is also available in the plugin catalog, but is here due to the need to
+		// automatically mount it.
+		"kv": logicalKv.Factory,
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
 		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
@@ -144,6 +111,7 @@ var (
 		"etcd":                   physEtcd.NewEtcdBackend,
 		"file_transactional":     physFile.NewTransactionalFileBackend,
 		"file":                   physFile.NewFileBackend,
+		"foundationdb":           physFoundationDB.NewFDBBackend,
 		"gcs":                    physGCS.NewBackend,
 		"inmem_ha":               physInmem.NewInmemHA,
 		"inmem_transactional_ha": physInmem.NewTransactionalInmemHA,
@@ -188,7 +156,7 @@ func (c *DeprecatedCommand) Run(args []string) int {
 func (c *DeprecatedCommand) warn() {
 	c.UI.Warn(wrapAtLength(fmt.Sprintf(
 		"WARNING! The \"vault %s\" command is deprecated. Please use \"vault %s\" "+
-			"instead. This command will be removed in Vault 0.11 (or later).",
+			"instead. This command will be removed in Vault 1.1.",
 		c.Old,
 		c.New)))
 	c.UI.Warn("")
@@ -200,6 +168,7 @@ var DeprecatedCommands map[string]cli.CommandFactory
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	loginHandlers := map[string]LoginHandler{
+		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
 		"cert":     &credCert.CLIHandler{},
@@ -226,6 +195,14 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 	}
 
 	Commands = map[string]cli.CommandFactory{
+		"agent": func() (cli.Command, error) {
+			return &AgentCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+			}, nil
+		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
@@ -309,6 +286,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				Handlers:    loginHandlers,
 			}, nil
 		},
+		"namespace": func() (cli.Command, error) {
+			return &NamespaceCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace list": func() (cli.Command, error) {
+			return &NamespaceListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace lookup": func() (cli.Command, error) {
+			return &NamespaceLookupCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace create": func() (cli.Command, error) {
+			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace delete": func() (cli.Command, error) {
+			return &NamespaceDeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
 				BaseCommand: getBaseCommand(),
@@ -327,6 +329,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator migrate": func() (cli.Command, error) {
+			return &OperatorMigrateCommand{
+				BaseCommand:      getBaseCommand(),
+				PhysicalBackends: physicalBackends,
+				ShutdownCh:       MakeShutdownCh(),
 			}, nil
 		},
 		"operator rekey": func() (cli.Command, error) {
@@ -356,6 +365,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin": func() (cli.Command, error) {
+			return &PluginCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin deregister": func() (cli.Command, error) {
+			return &PluginDeregisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin info": func() (cli.Command, error) {
+			return &PluginInfoCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin list": func() (cli.Command, error) {
+			return &PluginListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin register": func() (cli.Command, error) {
+			return &PluginRegisterCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

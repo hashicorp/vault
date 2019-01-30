@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -8,9 +9,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-rootcerts"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	multierror "github.com/hashicorp/go-multierror"
+	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/hclutil"
@@ -207,7 +208,9 @@ func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
 		return nil, err
 	}
 
-	resp, err := c.c.RawRequest(r)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	resp, err := c.c.RawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

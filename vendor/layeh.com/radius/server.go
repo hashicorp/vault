@@ -69,6 +69,8 @@ type ResponseWriter interface {
 // authorizing and decrypting packets.
 //
 // ctx is canceled if the server's Shutdown method is called.
+//
+// Returning an empty secret will discard the incoming packet.
 type SecretSource interface {
 	RADIUSSecret(ctx context.Context, remoteAddr net.Addr) ([]byte, error)
 }

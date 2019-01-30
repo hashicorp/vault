@@ -136,6 +136,13 @@ type ClusterConfig struct {
 	// Default idempotence for queries
 	DefaultIdempotence bool
 
+	// The time to wait for frames before flushing the frames connection to Cassandra.
+	// Can help reduce syscall overhead by making less calls to write. Set to 0 to
+	// disable.
+	//
+	// (default: 200 microseconds)
+	WriteCoalesceWaitTime time.Duration
+
 	// internal config for testing
 	disableControlConn bool
 }
@@ -166,6 +173,7 @@ func NewCluster(hosts ...string) *ClusterConfig {
 		ReconnectInterval:      60 * time.Second,
 		ConvictionPolicy:       &SimpleConvictionPolicy{},
 		ReconnectionPolicy:     &ConstantReconnectionPolicy{MaxRetries: 3, Interval: 1 * time.Second},
+		WriteCoalesceWaitTime:  200 * time.Microsecond,
 	}
 	return cfg
 }

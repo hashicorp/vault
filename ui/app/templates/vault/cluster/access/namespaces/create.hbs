@@ -1,0 +1,24 @@
+{{#if (has-feature "Namespaces")}}
+  <PageHeader as |p|>
+    <p.top>
+      <div class="breadcrumb">
+        {{#link-to "vault.cluster.access.namespaces.index"}}
+          <span class="sep">&#x0002f;</span>
+          Namespaces
+        {{/link-to}}
+      </div>
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        Add a namespace
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <EditForm
+    @model={{model}}
+    @onSave={{action "onSave"}}
+    @cancelLinkParams={{array "vault.cluster.access.namespaces.index"}}
+  />
+{{else}}
+  <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />
+{{/if}}

@@ -253,7 +253,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -285,7 +285,7 @@ func TestSSHBackend_RoleList(t *testing.T) {
 		},
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleList(t, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -309,7 +309,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccUserPrecheckFunc(t),
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -332,7 +332,7 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
@@ -362,7 +362,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -376,7 +376,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysDelete(t),
@@ -396,7 +396,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
@@ -413,7 +413,7 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -451,7 +451,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -483,7 +483,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
 			testCredsWrite(t, testOTPRoleName, data, true),
@@ -512,7 +512,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccUserPrecheckFunc(t),
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
@@ -535,7 +535,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -571,7 +571,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -609,7 +609,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -652,7 +652,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -700,7 +700,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -749,7 +749,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 

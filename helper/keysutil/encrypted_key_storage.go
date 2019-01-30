@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -141,6 +141,8 @@ func ensureTailingSlash(path string) string {
 // in a path prefix. This can only operate on full folder structures so the
 // prefix should end in a "/".
 func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string, error) {
+	var decoder big.Int
+
 	encPrefix, err := s.encryptPath(prefix)
 	if err != nil {
 		return nil, err
@@ -174,7 +176,8 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 			k = strings.TrimSuffix(k, "/")
 		}
 
-		decoded := Base62Decode(k)
+		decoder.SetString(k, 62)
+		decoded := decoder.Bytes()
 		if len(decoded) == 0 {
 			return nil, errors.New("could not decode key")
 		}
@@ -248,6 +251,8 @@ func (s *encryptedKeyStorage) Delete(ctx context.Context, path string) error {
 // by "/") with the object's key policy. The context for each encryption is the
 // plaintext path prefix for the key.
 func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
+	var encoder big.Int
+
 	if path == "" || path == "/" {
 		return s.prefix, nil
 	}
@@ -268,23 +273,10 @@ func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
 			return "", err
 		}
 
-		encPath = paths.Join(encPath, Base62Encode([]byte(ciphertext)))
+		encoder.SetBytes([]byte(ciphertext))
+		encPath = paths.Join(encPath, encoder.Text(62))
 		context = paths.Join(context, p)
 	}
 
 	return encPath, nil
-}
-
-func Base62Encode(buf []byte) string {
-	encoder := &big.Int{}
-
-	encoder.SetBytes(buf)
-	return encoder.Text(62)
-}
-
-func Base62Decode(input string) []byte {
-	decoder := &big.Int{}
-
-	decoder.SetString(input, 62)
-	return decoder.Bytes()
 }

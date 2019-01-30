@@ -1,7 +1,6 @@
 package logical
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -52,6 +51,8 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 // by the router after policy checks; the token namespace would be the right
 // place to access them via Sentinel
 type Request struct {
+	entReq
+
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
 
@@ -140,6 +141,10 @@ type Request struct {
 	// attached. Useful in some situations where the client token is not made
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
+
+	// MFACreds holds the parsed MFA information supplied over the API as part of
+	// X-Vault-MFA header
+	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
 
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token
@@ -274,22 +279,4 @@ const (
 	RollbackOperation           = "rollback"
 )
 
-var (
-	// ErrUnsupportedOperation is returned if the operation is not supported
-	// by the logical backend.
-	ErrUnsupportedOperation = errors.New("unsupported operation")
-
-	// ErrUnsupportedPath is returned if the path is not supported
-	// by the logical backend.
-	ErrUnsupportedPath = errors.New("unsupported path")
-
-	// ErrInvalidRequest is returned if the request is invalid
-	ErrInvalidRequest = errors.New("invalid request")
-
-	// ErrPermissionDenied is returned if the client is not authorized
-	ErrPermissionDenied = errors.New("permission denied")
-
-	// ErrMultiAuthzPending is returned if the the request needs more
-	// authorizations
-	ErrMultiAuthzPending = errors.New("request needs further approval")
-)
+type MFACreds map[string][]string

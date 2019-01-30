@@ -151,8 +151,8 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -178,8 +178,8 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
+		LogicalBackend: b,
+		Steps:          []logicaltest.TestStep{},
 	}
 
 	intdata := map[string]interface{}{}
@@ -208,7 +208,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -249,7 +249,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -290,7 +290,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -331,7 +331,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -422,14 +422,6 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
 			return nil, fmt.Errorf("bad extended key usage")
 		}
-	}
-
-	// 40 seconds since we add 30 second slack for clock skew
-	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 40 {
-		return nil, fmt.Errorf("validity period starts out of range")
-	}
-	if !cert.NotBefore.Before(time.Now().Add(-10 * time.Second)) {
-		return nil, fmt.Errorf("validity period not far enough in the past")
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
@@ -976,6 +968,29 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	getNotBeforeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			actualDiff := time.Now().Sub(cert.NotBefore)
+			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
+			// These times get truncated, so give a 1 second buffer on each side
+			if certRoleDiff >= -1*time.Second && certRoleDiff <= 1*time.Second {
+				return nil
+			}
+			return fmt.Errorf("validity period out of range diff: %v", certRoleDiff)
+		}
+	}
+
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
 	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
@@ -1323,6 +1338,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.PostalCode = []string{"f00", "b4r"}
 		addTests(getPostalCodeCheck(roleVals))
+	}
+	// NotBefore tests
+	{
+		roleVals.NotBeforeDuration = 10 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 30 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 0
 	}
 	// IP SAN tests
 	{
@@ -1810,182 +1835,6 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
-func TestBackend_Permitted_DNS_Domains(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = client.Sys().Mount("int", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "4h",
-			MaxLeaseTTL:     "20h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Direct issuing from root
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
-		"ttl":                   "40h",
-		"common_name":           "myvault.com",
-		"permitted_dns_domains": []string{"foobar.com", ".zipzap.com"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	clientKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path := "root/"
-	checkIssue := func(valid bool, args ...interface{}) {
-		argMap := map[string]interface{}{}
-		var currString string
-		for i, arg := range args {
-			if i%2 == 0 {
-				currString = arg.(string)
-			} else {
-				argMap[currString] = arg
-			}
-		}
-		// We do this to ensure writing a key type of any is invalid when
-		// issuing and valid when signing
-		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
-			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-			"allow_subdomains":   true,
-			"allow_bare_domains": true,
-			"max_ttl":            "2h",
-			"key_type":           "any",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = client.Logical().Write(path+"issue/example", argMap)
-		if err == nil {
-			t.Fatal("expected err from key_type any")
-		}
-		// Now put it back
-		_, err = client.Logical().Write(path+"roles/example", map[string]interface{}{
-			"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
-			"allow_subdomains":   true,
-			"allow_bare_domains": true,
-			"max_ttl":            "2h",
-			"key_type":           "rsa",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = client.Logical().Write(path+"issue/example", argMap)
-		switch {
-		case valid && err != nil:
-			t.Fatal(err)
-		case !valid && err == nil:
-			t.Fatal("expected error")
-		}
-
-		csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-			Subject: pkix.Name{
-				CommonName: argMap["common_name"].(string),
-			},
-		}, clientKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		delete(argMap, "common_name")
-		argMap["csr"] = strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE REQUEST",
-			Bytes: csr,
-		})))
-
-		_, err = client.Logical().Write(path+"sign/example", argMap)
-		switch {
-		case valid && err != nil:
-			t.Fatal(err)
-		case !valid && err == nil:
-			t.Fatal("expected error")
-		}
-	}
-
-	// Check issuing and signing against root's permitted domains
-	checkIssue(false, "common_name", "zipzap.com")
-	checkIssue(false, "common_name", "host.foobar.com")
-	checkIssue(true, "common_name", "host.zipzap.com")
-	checkIssue(true, "common_name", "foobar.com")
-
-	// Verify that root also won't issue an intermediate outside of its permitted domains
-	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
-		"common_name": "issuer.abc.com",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"common_name": "issuer.abc.com",
-		"csr":         resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
-	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	_, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"use_csr_values": true,
-		"csr":            resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
-	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	// Sign a valid intermediate
-	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
-		"common_name": "issuer.zipzap.com",
-		"csr":         resp.Data["csr"],
-		"permitted_dns_domains": []string{"abc.com", ".xyz.com"},
-		"ttl": "5h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp, err = client.Logical().Write("int/intermediate/set-signed", map[string]interface{}{
-		"certificate": resp.Data["certificate"],
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Check enforcement with the intermediate's set values
-	path = "int/"
-	checkIssue(false, "common_name", "host.abc.com")
-	checkIssue(false, "common_name", "xyz.com")
-	checkIssue(true, "common_name", "abc.com")
-	checkIssue(true, "common_name", "host.xyz.com")
-}
-
 func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -2137,8 +1986,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber: big.NewInt(1234),
-		IsCA:         false,
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2168,8 +2017,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber: big.NewInt(2345),
-		IsCA:         true,
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2749,10 +2598,9 @@ func setCerts() {
 		DNSNames:              []string{"root.localhost"},
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 		SerialNumber:          big.NewInt(mathrand.Int63()),
-		NotBefore:             time.Now().Add(-30 * time.Second),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {

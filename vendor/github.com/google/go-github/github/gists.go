@@ -114,9 +114,6 @@ func (s *GistsService) List(ctx context.Context, user string, opt *GistListOptio
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	var gists []*Gist
 	resp, err := s.client.Do(ctx, req, &gists)
 	if err != nil {
@@ -139,9 +136,6 @@ func (s *GistsService) ListAll(ctx context.Context, opt *GistListOptions) ([]*Gi
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	var gists []*Gist
 	resp, err := s.client.Do(ctx, req, &gists)
@@ -166,9 +160,6 @@ func (s *GistsService) ListStarred(ctx context.Context, opt *GistListOptions) ([
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	var gists []*Gist
 	resp, err := s.client.Do(ctx, req, &gists)
 	if err != nil {
@@ -187,9 +178,6 @@ func (s *GistsService) Get(ctx context.Context, id string) (*Gist, *Response, er
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	gist := new(Gist)
 	resp, err := s.client.Do(ctx, req, gist)
@@ -210,9 +198,6 @@ func (s *GistsService) GetRevision(ctx context.Context, id, sha string) (*Gist, 
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	gist := new(Gist)
 	resp, err := s.client.Do(ctx, req, gist)
 	if err != nil {
@@ -232,9 +217,6 @@ func (s *GistsService) Create(ctx context.Context, gist *Gist) (*Gist, *Response
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	g := new(Gist)
 	resp, err := s.client.Do(ctx, req, g)
 	if err != nil {
@@ -253,9 +235,6 @@ func (s *GistsService) Edit(ctx context.Context, id string, gist *Gist) (*Gist, 
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	g := new(Gist)
 	resp, err := s.client.Do(ctx, req, g)
@@ -280,9 +259,6 @@ func (s *GistsService) ListCommits(ctx context.Context, id string, opt *ListOpti
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	var gistCommits []*GistCommit
 	resp, err := s.client.Do(ctx, req, &gistCommits)
@@ -353,9 +329,6 @@ func (s *GistsService) Fork(ctx context.Context, id string) (*Gist, *Response, e
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
-
 	g := new(Gist)
 	resp, err := s.client.Do(ctx, req, g)
 	if err != nil {
@@ -374,9 +347,6 @@ func (s *GistsService) ListForks(ctx context.Context, id string) ([]*GistFork, *
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeGraphQLNodeIDPreview)
 
 	var gistForks []*GistFork
 	resp, err := s.client.Do(ctx, req, &gistForks)

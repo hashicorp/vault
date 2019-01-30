@@ -1159,6 +1159,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
 		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // returned for backwards compatibility
 		"token_bound_cidrs":     []string{},
+		"token_type":            "default",
 	}
 
 	var expectedStruct roleStorageEntry
@@ -1637,6 +1638,7 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 		"token_bound_cidrs":     []string{"127.0.0.1/32", "127.0.0.1/16"},
 		"secret_id_bound_cidrs": []string{"127.0.0.1/32", "127.0.0.1/16"},
 		"bound_cidr_list":       []string{"127.0.0.1/32", "127.0.0.1/16"}, // provided for backwards compatibility
+		"token_type":            "default",
 	}
 
 	var expectedStruct roleStorageEntry

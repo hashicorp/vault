@@ -130,6 +130,16 @@ func (c *KVGetCommand) Run(args []string) int {
 		if v2 {
 			// This is a v2, pass in the data field
 			if data, ok := secret.Data["data"]; ok && data != nil {
+				// If they requested a literal "data" see if they meant actual
+				// value or the data block itself
+				if c.flagField == "data" {
+					if dataMap, ok := data.(map[string]interface{}); ok {
+						if _, ok := dataMap["data"]; ok {
+							return PrintRawField(c.UI, dataMap, c.flagField)
+						}
+					}
+					return PrintRawField(c.UI, secret, c.flagField)
+				}
 				return PrintRawField(c.UI, data, c.flagField)
 			} else {
 				c.UI.Error(fmt.Sprintf("No data found at %s", path))

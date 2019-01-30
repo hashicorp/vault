@@ -11,9 +11,9 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
-	"github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 const (
@@ -82,8 +82,8 @@ func TestBackend_basic(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),
@@ -104,8 +104,8 @@ func TestBackend_roleCrud(t *testing.T) {
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: testAccPreCheckFunc(t, uri),
-		Backend:  b,
+		PreCheck:       testAccPreCheckFunc(t, uri),
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, uri),
 			testAccStepRole(t),

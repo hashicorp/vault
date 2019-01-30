@@ -1,15 +1,13 @@
-import Ember from 'ember';
+import { alias } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import { fragment } from 'ember-data-model-fragments/attributes';
 import { queryRecord } from 'ember-computed-query';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const { attr, hasMany } = DS;
-const { computed } = Ember;
-
-const METHODS = methods();
 
 const configPath = function configPath(strings, key) {
   return function(...values) {
@@ -18,21 +16,27 @@ const configPath = function configPath(strings, key) {
 };
 export default DS.Model.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
-  path: attr('string', {
-    defaultValue: METHODS[0].value,
-  }),
+  path: attr('string'),
   accessor: attr('string'),
   name: attr('string'),
-  type: attr('string', {
-    defaultValue: METHODS[0].value,
-    possibleValues: METHODS,
+  type: attr('string'),
+  // namespaces introduced types with a `ns_` prefix for built-in engines
+  // so we need to strip that to normalize the type
+  methodType: computed('type', function() {
+    return this.get('type').replace(/^ns_/, '');
   }),
   description: attr('string', {
     editType: 'textarea',
   }),
   config: fragment('mount-config', { defaultValue: {} }),
-  local: attr('boolean'),
-  sealWrap: attr('boolean'),
+  local: attr('boolean', {
+    helpText:
+      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+  }),
+  sealWrap: attr('boolean', {
+    helpText:
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+  }),
 
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
@@ -46,7 +50,7 @@ export default DS.Model.extend({
   tuneAttrs: computed(function() {
     return expandAttributeMeta(this, [
       'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
     ]);
   }),
 
@@ -57,28 +61,32 @@ export default DS.Model.extend({
     urlType: 'updateRecord',
   }),
 
-  formFields: [
-    'type',
-    'path',
-    'description',
-    'accessor',
-    'local',
-    'sealWrap',
-    'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-  ],
+  formFields: computed(function() {
+    return [
+      'type',
+      'path',
+      'description',
+      'accessor',
+      'local',
+      'sealWrap',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+    ];
+  }),
 
-  formFieldGroups: [
-    { default: ['type', 'path'] },
-    {
-      'Method Options': [
-        'description',
-        'config.listingVisibility',
-        'local',
-        'sealWrap',
-        'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
-      ],
-    },
-  ],
+  formFieldGroups: computed(function() {
+    return [
+      { default: ['path'] },
+      {
+        'Method Options': [
+          'description',
+          'config.listingVisibility',
+          'local',
+          'sealWrap',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+        ],
+      },
+    ];
+  }),
 
   attrs: computed('formFields', function() {
     return expandAttributeMeta(this, this.get('formFields'));
@@ -108,17 +116,8 @@ export default DS.Model.extend({
     'id',
     'configPathTmpl'
   ),
-  deletePath: queryRecord(
-    'capabilities',
-    context => {
-      const { id } = context.get('id');
-      return {
-        id: `sys/auth/${id}`,
-      };
-    },
-    'id'
-  ),
-  canDisable: computed.alias('deletePath.canDelete'),
 
-  canEdit: computed.alias('configPath.canUpdate'),
+  deletePath: lazyCapabilities(apiPath`sys/auth/${'id'}`, 'id'),
+  canDisable: alias('deletePath.canDelete'),
+  canEdit: alias('configPath.canUpdate'),
 });

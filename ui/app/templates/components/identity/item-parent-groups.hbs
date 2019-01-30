@@ -5,17 +5,17 @@
       "groups"
       gid
       details
-      class="box is-sideless is-marginless"
+      class="list-item-row"
     }}
       <div class="columns is-mobile">
         <div class="column is-10">
-          <a href={{href-to "vault.cluster.access.identity.show" "groups" gid "details" }}
+          {{#link-to "vault.cluster.access.identity.show" "groups" gid "details"
             class="is-block has-text-black has-text-weight-semibold"
-            >{{i-con
+          }}{{i-con
               glyph='folder'
               size=14
               class="has-text-grey-light"
-              }}{{gid}}</a>
+              }}{{gid}}{{/link-to}}
         </div>
         <div class="column has-text-right">
         </div>
@@ -23,15 +23,7 @@
     {{/linked-block}}
   {{/each}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            This group has no parent groups.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="This group has no parent groups yet"
+  />
 {{/if}}

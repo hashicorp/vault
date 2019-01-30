@@ -5,10 +5,6 @@ This plugin allows for JWTs (including OIDC tokens) to authenticate with Vault.
 
 **Please note**: We take Vault's security and our users' trust very seriously. If you believe you have found a security issue in Vault, _please responsibly disclose_ by contacting us at [security@hashicorp.com](mailto:security@hashicorp.com).
 
-## IMPORTANT
-
-This plugin is in pre-release state. It is not well tested (in fact, not tested at all) and there is no documentation currently available.
-
 ## Quick Links
     - Vault Website: https://www.vaultproject.io
     - JWT Auth Docs: https://www.vaultproject.io/docs/auth/jwt.html

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/physical"

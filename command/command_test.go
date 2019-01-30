@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -74,6 +75,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 		CredentialBackends: credentialBackends,
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
 }
@@ -90,6 +92,25 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
+	})
+}
+
+// testVaultServerUnseal creates a test vault cluster and returns a configured
+// API client, list of unseal keys (as strings), and a closer function
+// configured with the given plugin directory.
+func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []string, func()) {
+	tb.Helper()
+
+	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
+		DisableMlock:       true,
+		DisableCache:       true,
+		Logger:             defaultVaultLogger,
+		CredentialBackends: defaultVaultCredentialBackends,
+		AuditBackends:      defaultVaultAuditBackends,
+		LogicalBackends:    defaultVaultLogicalBackends,
+		PluginDirectory:    pluginDir,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 }
 
@@ -139,6 +160,7 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	if err != nil {
 		tb.Fatal(err)

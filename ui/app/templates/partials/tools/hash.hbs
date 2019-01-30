@@ -34,6 +34,7 @@
   </div>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
+    {{message-error errors=errors}}
     <div class="field">
       <label for="input" class="is-label">
         Input
@@ -87,7 +88,7 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
-         type="sumbit"
+         type="submit"
          class="button is-primary"
          data-test-tools-submit="true"
          >

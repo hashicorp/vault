@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Cubbyhole Response Wrapping - Guides"
+sidebar_title: "Cubbyhole Response Wrapping"
 sidebar_current: "guides-secret-mgmt-cubbyhole"
 description: |-
   Vault provides a capability to wrap Vault response and store it in a
@@ -25,6 +26,11 @@ long as its policy allows it.
 
 - [Cubbyhole](/docs/secrets/cubbyhole/index.html)
 - [Response Wrapping](/docs/concepts/response-wrapping.html)
+
+~> **NOTE:** An [interactive
+tutorial](https://www.katacoda.com/hashicorp/scenarios/vault-cubbyhole) is
+also available if you do not have a Vault environment to perform the steps
+described in this guide.
 
 ## Estimated Time to Complete
 
@@ -104,7 +110,7 @@ Think of a scenario where apps read secrets from Vault. The `apps` need:
 - Policy granting "read" permission on the specific path (`secret/dev`)
 - Valid tokens to interact with Vault
 
-![Response Wrapping Scenario](/assets/images/vault-cubbyhole.png)
+![Response Wrapping Scenario](/img/vault-cubbyhole.png)
 
 Setting the appropriate policies and token generation are done by the `admin`
 persona. For the `admin` to distribute the initial token to the app securely, it

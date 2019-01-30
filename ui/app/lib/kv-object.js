@@ -1,13 +1,18 @@
-import Ember from 'ember';
+import ArrayProxy from '@ember/array/proxy';
+import { typeOf } from '@ember/utils';
+import { guidFor } from '@ember/object/internals';
 
-export default Ember.ArrayProxy.extend({
+export default ArrayProxy.extend({
   fromJSON(json) {
-    const contents = Object.keys(json || []).map(key => {
+    if (json && typeOf(json) !== 'object') {
+      throw new Error('Vault expects data to be formatted as an JSON object.');
+    }
+    let contents = Object.keys(json || []).map(key => {
       let obj = {
         name: key,
         value: json[key],
       };
-      Ember.guidFor(obj);
+      guidFor(obj);
       return obj;
     });
     this.setObjects(
@@ -33,7 +38,8 @@ export default Ember.ArrayProxy.extend({
       if (!includeBlanks && item.value === '' && item.name === '') {
         return obj;
       }
-      obj[item.name || ''] = item.value || '';
+      let val = typeof item.value === 'undefined' ? '' : item.value;
+      obj[item.name || ''] = val;
       return obj;
     }, {});
   },

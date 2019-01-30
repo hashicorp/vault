@@ -29,6 +29,25 @@ $gutter-grey: #2a2f36;
   padding: 7px 8px 9px;
 }
 
+.cm-s-hashi-read-only {
+  &.CodeMirror {
+    background-color: $grey-lighter;
+    border: none;
+    color: #626873;
+    font-family: $family-monospace;
+    -webkit-font-smoothing: auto;
+    line-height: 1.4;
+  }
+
+  span.cm-string,
+  span.cm-string-2 {
+    color: $packer;
+  }
+  span.cm-property {
+    color: lighten($consul, 20%);
+  }
+}
+
 .cm-s-hashi {
   &.CodeMirror {
     background-color: $black !important;
@@ -53,20 +72,24 @@ $gutter-grey: #2a2f36;
     color: #6d8a88;
   }
 
+  div.CodeMirror-selected {
+    background: rgb(33, 66, 131);
+  }
+
   &.CodeMirror-focused div.CodeMirror-selected {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   .CodeMirror-line::selection,
   .CodeMirror-line > span::selection,
   .CodeMirror-line > span > span::selection {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   .CodeMirror-line::-moz-selection,
   .CodeMirror-line > span::-moz-selection,
   .CodeMirror-line > span > span::-moz-selection {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgb(33, 66, 131);
   }
 
   span.cm-comment {

@@ -6,8 +6,49 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
+type TokenType uint8
+
+const (
+	// TokenTypeDefault means "use the default, if any, that is currently set
+	// on the mount". If not set, results in a Service token.
+	TokenTypeDefault TokenType = iota
+
+	// TokenTypeService is a "normal" Vault token for long-lived services
+	TokenTypeService
+
+	// TokenTypeBatch is a batch token
+	TokenTypeBatch
+
+	// TokenTypeDefaultService, configured on a mount, means that if
+	// TokenTypeDefault is sent back by the mount, create Service tokens
+	TokenTypeDefaultService
+
+	// TokenTypeDefaultBatch, configured on a mount, means that if
+	// TokenTypeDefault is sent back by the mount, create Batch tokens
+	TokenTypeDefaultBatch
+)
+
+func (t TokenType) String() string {
+	switch t {
+	case TokenTypeDefault:
+		return "default"
+	case TokenTypeService:
+		return "service"
+	case TokenTypeBatch:
+		return "batch"
+	case TokenTypeDefaultService:
+		return "default-service"
+	case TokenTypeDefaultBatch:
+		return "default-batch"
+	default:
+		panic("unreachable")
+	}
+}
+
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
+	Type TokenType `json:"type" mapstructure:"type" structs:"type" sentinel:""`
+
 	// ID of this entry, generally a random UUID
 	ID string `json:"id" mapstructure:"id" structs:"id" sentinel:""`
 
@@ -65,6 +106,15 @@ type TokenEntry struct {
 
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// NamespaceID is the identifier of the namespace to which this token is
+	// confined to. Do not return this value over the API when the token is
+	// being looked up.
+	NamespaceID string `json:"namespace_id" mapstructure:"namespace_id" structs:"namespace_id" sentinel:""`
+
+	// CubbyholeID is the identifier of the cubbyhole storage belonging to this
+	// token
+	CubbyholeID string `json:"cubbyhole_id" mapstructure:"cubbyhole_id" structs:"cubbyhole_id" sentinel:""`
 }
 
 func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
@@ -98,6 +148,17 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 
 	case "meta", "metadata":
 		return te.Meta, nil
+
+	case "type":
+		teType := te.Type
+		switch teType {
+		case TokenTypeBatch, TokenTypeService:
+		case TokenTypeDefault:
+			teType = TokenTypeService
+		default:
+			return "unknown", nil
+		}
+		return teType.String(), nil
 	}
 
 	return nil, nil
@@ -115,5 +176,6 @@ func (te *TokenEntry) SentinelKeys() []string {
 		"creation_time_unix",
 		"meta",
 		"metadata",
+		"type",
 	}
 }

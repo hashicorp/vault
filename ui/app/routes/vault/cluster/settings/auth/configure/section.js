@@ -1,10 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { set } from '@ember/object';
+import Route from '@ember/routing/route';
+import RSVP from 'rsvp';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
-const { RSVP } = Ember;
-export default Ember.Route.extend(UnloadModelRoute, {
+export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
+  wizard: service(),
   modelType(backendType, section) {
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
@@ -13,6 +16,7 @@ export default Ember.Route.extend(UnloadModelRoute, {
       'azure-configuration': 'auth-config/azure',
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
+      'jwt-configuration': 'auth-config/jwt',
       'kubernetes-configuration': 'auth-config/kubernetes',
       'ldap-configuration': 'auth-config/ldap',
       'okta-configuration': 'auth-config/okta',
@@ -25,6 +29,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const { section_name: section } = params;
     if (section === 'options') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'EDIT',
+        backend.get('type')
+      );
       return RSVP.hash({
         model: backend,
         section,
@@ -33,11 +42,16 @@ export default Ember.Route.extend(UnloadModelRoute, {
     const modelType = this.modelType(backend.get('type'), section);
     if (!modelType) {
       const error = new DS.AdapterError();
-      Ember.set(error, 'httpStatus', 404);
+      set(error, 'httpStatus', 404);
       throw error;
     }
     const model = this.store.peekRecord(modelType, backend.id);
     if (model) {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'EDIT',
+        backend.get('type')
+      );
       return RSVP.hash({
         model,
         section,
@@ -46,6 +60,11 @@ export default Ember.Route.extend(UnloadModelRoute, {
     return this.store
       .findRecord(modelType, backend.id)
       .then(config => {
+        this.get('wizard').transitionFeatureMachine(
+          this.get('wizard.featureState'),
+          'EDIT',
+          backend.get('type')
+        );
         config.set('backend', backend);
         return RSVP.hash({
           model: config,

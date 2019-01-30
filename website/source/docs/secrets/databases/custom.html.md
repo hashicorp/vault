@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Custom - Database - Secrets Engines"
+sidebar_title: "Custom"
 sidebar_current: "docs-secrets-databases-custom"
 description: |-
   The database secrets engine allows new functionality to be added through a
@@ -101,10 +102,10 @@ You should now be able to register your plugin into the vault catalog. To do
 this your token will need sudo permissions.
 
 ```text
-$ vault write sys/plugins/catalog/myplugin-database-plugin \
-    sha_256="..." \
+$ vault write sys/plugins/catalog/database/myplugin-database-plugin \
+    sha256="..." \
     command="myplugin"
-Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
+Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 ```
 
 Now you should be able to configure your plugin like any other:

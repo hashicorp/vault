@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Cassandra - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-cassandra"
+sidebar_title: "Cassandra"
+sidebar_current: "api-http-secret-databases-cassandra"
 description: |-
   The Cassandra plugin for Vault's database secrets engine generates database credentials to access Cassandra servers.
 ---
@@ -114,19 +115,19 @@ list the plugin does not support that statement type.
   statements executed to create and configure a user. Must be a
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
-  array. The '{{name}}' and '{{password}}' values will be substituted. If not
+  array. The '{{username}}' and '{{password}}' values will be substituted. If not
   provided, defaults to a generic create user statements that creates a
   non-superuser.
 
 - `revocation_statements` `(list: [])` – Specifies the database statements to
   be executed to revoke a user. Must be a semicolon-separated string, a
   base64-encoded semicolon-separated string, a serialized JSON string array, or
-  a base64-encoded serialized JSON string array. The '{{name}}' value will be
+  a base64-encoded serialized JSON string array. The '{{username}}' value will be
   substituted. If not provided defaults to a generic drop user statement.
 
 - `rollback_statements` `(list: [])` – Specifies the database statements to be
   executed to rollback a create operation in the event of an error. Must be a
   semicolon-separated string, a base64-encoded semicolon-separated string, a
   serialized JSON string array, or a base64-encoded serialized JSON string
-  array. The '{{name}}' value will be substituted. If not provided, defaults to
+  array. The '{{username}}' value will be substituted. If not provided, defaults to
   a generic drop user statement

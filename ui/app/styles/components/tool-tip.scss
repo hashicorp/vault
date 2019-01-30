@@ -12,23 +12,35 @@
   }
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, 20px);
   &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
-    animation: drop-fade-above .15s;
+    animation: drop-fade-above 0.15s;
   }
   &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-out {
-    animation: drop-fade-above .15s reverse;
+    animation: drop-fade-above 0.15s reverse;
   }
   &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-in {
-    animation: drop-fade-below .15s;
+    animation: drop-fade-below 0.15s;
   }
   &.ember-basic-dropdown-content--above.ember-basic-dropdown--transitioning-out {
-    animation: drop-fade-below .15s reverse;
+    animation: drop-fade-below 0.15s reverse;
   }
 }
 
 .ember-basic-dropdown-content--left.tool-tip {
-  margin: 8px 0 0 -11px;
+  margin: 8px 0 0 -2px;
+
+  &::before,
+  &::after {
+    right: auto;
+    left: $spacing-s;
+  }
+}
+.ember-basic-dropdown-content--right.tool-tip {
+  margin: 8px -11px;
 }
 
+.ember-basic-dropdown-content--below.ember-basic-dropdown-content--left.tool-tip {
+  @include css-top-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
+}
 .ember-basic-dropdown-content--below.ember-basic-dropdown-content--right.tool-tip {
   @include css-top-arrow(8px, $grey, 1px, $grey-dark, calc(100% - 20px));
 }
@@ -47,7 +59,7 @@
   box-shadow: none;
   cursor: pointer;
   padding: 0;
-  olor: $grey-dark;
+  color: $grey-dark;
   margin-left: 8px;
 }
 

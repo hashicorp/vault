@@ -27,6 +27,7 @@
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
+      <NamespaceReminder @mode="perform" @noun="encryption" />
       {{key-version-select
         key=key
         onVersionChange=(action (mut key_version))
@@ -74,7 +75,7 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" class="button is-primary">
+        <button type="submit" class="button is-primary" data-test-button-encrypt>
           Encrypt
         </button>
       </div>

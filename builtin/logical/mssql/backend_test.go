@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	"github.com/ory/dockertest"
 )
 
 func prepareMSSQLTestContainer(t *testing.T) (func(), string) {
@@ -116,7 +116,7 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepRole(t),
@@ -138,7 +138,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepRole(t),
@@ -162,7 +162,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepWriteLease(t),

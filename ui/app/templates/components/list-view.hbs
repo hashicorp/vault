@@ -1,0 +1,13 @@
+{{#if items.length}}
+  <div class="box is-fullwidth is-bottomless is-sideless is-paddingless">
+    {{#each items as |item|}}
+      {{yield (hash deleteItem=deleteItem saveItem=saveItem item=item)}}
+    {{/each}}
+  </div>
+{{else}}
+  <EmptyState
+    @title={{this.emptyTitle}}
+    @message={{this.emptyMessage}}
+    @emptyActions={{this.emptyActions}}
+  />
+{{/if}}

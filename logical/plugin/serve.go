@@ -2,16 +2,19 @@ package plugin
 
 import (
 	"crypto/tls"
+	"math"
 	"os"
 
+	"google.golang.org/grpc"
+
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 // BackendPluginName is the name of the plugin that can be
-// dispensed rom the plugin server.
+// dispensed from the plugin server.
 const BackendPluginName = "backend"
 
 type TLSProviderFunc func() (*tls.Config, error)
@@ -35,10 +38,20 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
-		"backend": &BackendPlugin{
-			Factory: opts.BackendFactoryFunc,
-			Logger:  logger,
+	pluginSets := map[int]plugin.PluginSet{
+		3: plugin.PluginSet{
+			"backend": &BackendPlugin{
+				GRPCBackendPlugin: &GRPCBackendPlugin{
+					Factory: opts.BackendFactoryFunc,
+					Logger:  logger,
+				},
+			},
+		},
+		4: plugin.PluginSet{
+			"backend": &GRPCBackendPlugin{
+				Factory: opts.BackendFactoryFunc,
+				Logger:  logger,
+			},
 		},
 	}
 
@@ -48,20 +61,26 @@ func Serve(opts *ServeOpts) error {
 	}
 
 	serveOpts := &plugin.ServeConfig{
-		HandshakeConfig: handshakeConfig,
-		Plugins:         pluginMap,
-		TLSProvider:     opts.TLSProviderFunc,
-		Logger:          logger,
+		HandshakeConfig:  handshakeConfig,
+		VersionedPlugins: pluginSets,
+		TLSProvider:      opts.TLSProviderFunc,
+		Logger:           logger,
 
 		// A non-nil value here enables gRPC serving for this plugin...
-		GRPCServer: plugin.DefaultGRPCServer,
+		GRPCServer: func(opts []grpc.ServerOption) *grpc.Server {
+			opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
+			opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
+			return plugin.DefaultGRPCServer(opts)
+		},
 	}
 
+	// If we do not have gRPC support fallback to version 3
+	// Remove this block in 0.13
 	if !pluginutil.GRPCSupport() {
 		serveOpts.GRPCServer = nil
+		delete(pluginSets, 4)
 	}
 
-	// If FetchMetadata is true, run without TLSProvider
 	plugin.Serve(serveOpts)
 
 	return nil
@@ -72,7 +91,7 @@ func Serve(opts *ServeOpts) error {
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  3,
+	ProtocolVersion:  4,
 	MagicCookieKey:   "VAULT_BACKEND_PLUGIN",
 	MagicCookieValue: "6669da05-b1c8-4f49-97d9-c8e5bed98e20",
 }

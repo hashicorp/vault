@@ -85,6 +85,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	metadata := make(map[string]string)
+	var entry *secretIDStorageEntry
 	if role.BindSecretID {
 		secretID := strings.TrimSpace(data.Get("secret_id").(string))
 		if secretID == "" {
@@ -111,10 +112,11 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			unlockFunc()
 		}()
 
-		entry, err := b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
+		entry, err = b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 		if err != nil {
 			return nil, err
-		} else if entry == nil {
+		}
+		if entry == nil {
 			return logical.ErrorResponse("invalid secret id"), nil
 		}
 
@@ -130,7 +132,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			secretIDLock.Lock()
 			unlockFunc = secretIDLock.Unlock
 
-			entry, err := b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
+			entry, err = b.nonLockedSecretIDStorageEntry(ctx, req.Storage, role.SecretIDPrefix, roleNameHMAC, secretIDHMAC)
 			if err != nil {
 				return nil, err
 			}
@@ -262,7 +264,14 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Parse the CIDRs we should be binding the token to.
-	tokenBoundCIDRs, err := parseutil.ParseAddrs(role.TokenBoundCIDRs)
+	var tokenBoundCIDRStrings []string
+	if entry != nil {
+		tokenBoundCIDRStrings = entry.TokenBoundCIDRs
+	}
+	if len(tokenBoundCIDRStrings) == 0 {
+		tokenBoundCIDRStrings = role.TokenBoundCIDRs
+	}
+	tokenBoundCIDRs, err := parseutil.ParseAddrs(tokenBoundCIDRStrings)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -293,6 +302,15 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			Name: role.RoleID,
 		},
 		BoundCIDRs: tokenBoundCIDRs,
+	}
+
+	switch role.TokenType {
+	case "default":
+		auth.TokenType = logical.TokenTypeDefault
+	case "batch":
+		auth.TokenType = logical.TokenTypeBatch
+	case "service":
+		auth.TokenType = logical.TokenTypeService
 	}
 
 	return &logical.Response{

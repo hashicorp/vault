@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
-const { computed } = Ember;
 
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-field': true,
   classNames: ['field'],
 
@@ -42,7 +42,7 @@ export default Ember.Component.extend({
    * Computed property used in the label element next to the form element
    *
    */
-  labelString: computed('attr.name', 'attr.options.label', function() {
+  labelString: computed('attr.{name,options.label}', function() {
     const label = this.get('attr.options.label');
     const name = this.get('attr.name');
     if (label) {
@@ -61,7 +61,7 @@ export default Ember.Component.extend({
    * Computed property used to set values on the passed model
    *
    */
-  valuePath: computed('attr.name', 'attr.options.fieldValue', function() {
+  valuePath: computed('attr.{name,options.fieldValue}', function() {
     return this.get('attr.options.fieldValue') || this.get('attr.name');
   }),
 
@@ -80,7 +80,9 @@ export default Ember.Component.extend({
    *
    * Used by the pgp-file component when an attr is editType of 'file'
    */
-  file: { value: '' },
+  file: computed(function() {
+    return { value: '' };
+  }),
   emptyData: '{\n}',
 
   actions: {
@@ -102,13 +104,14 @@ export default Ember.Component.extend({
       this.send('setAndBroadcast', path, valueToSet);
     },
 
-    codemirrorUpdated(path, value, codemirror) {
+    codemirrorUpdated(path, isString, value, codemirror) {
       codemirror.performLint();
       const hasErrors = codemirror.state.lint.marked.length > 0;
+      let valToSet = isString ? value : JSON.parse(value);
 
       if (!hasErrors) {
-        this.get('model').set(path, JSON.parse(value));
-        this.get('onChange')(path, JSON.parse(value));
+        this.get('model').set(path, valToSet);
+        this.get('onChange')(path, valToSet);
       }
     },
   },

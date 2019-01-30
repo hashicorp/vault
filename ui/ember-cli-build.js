@@ -1,29 +1,14 @@
-/*jshint node:true*/
-/* global require, module */
-var EmberApp = require('ember-cli/lib/broccoli/ember-app');
+/* eslint-env node */
+'use strict';
+
+const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+
+const environment = EmberApp.env();
+const isProd = environment === 'production';
+const isTest = environment === 'test';
 
 module.exports = function(defaults) {
-  var config = defaults.project.config(EmberApp.env());
   var app = new EmberApp(defaults, {
-    favicons: {
-      faviconsConfig: {
-        appName: 'Vault Enterprise',
-        path: config.rootURL,
-        url: null,
-        icons: {
-          android: false,
-          appleIcon: false,
-          appleStartup: false,
-          coast: false,
-          favicons: true,
-          firefox: false,
-          opengraph: false,
-          twitter: false,
-          windows: false,
-          yandex: false,
-        },
-      },
-    },
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
@@ -31,34 +16,48 @@ module.exports = function(defaults) {
     babel: {
       plugins: ['transform-object-rest-spread'],
     },
+    'ember-cli-babel': {
+      includePolyfill: isTest || isProd,
+    },
+    hinting: isTest,
+    tests: isTest,
+    sourcemaps: {
+      enabled: !isProd,
+    },
+    sassOptions: {
+      sourceMap: false,
+      onlyIncluded: true,
+      implementation: require('node-sass'),
+    },
     autoprefixer: {
+      enabled: isTest || isProd,
       grid: true,
       browsers: ['defaults', 'ie 11'],
+    },
+    autoImport: {
+      webpack: {
+        // this makes `unsafe-eval` CSP unnecessary
+        // see https://github.com/ef4/ember-auto-import/issues/50
+        // and https://github.com/webpack/webpack/issues/5627
+        devtool: 'inline-source-map',
+      },
+    },
+    'ember-test-selectors': {
+      strip: isProd,
     },
   });
 
   app.import('vendor/string-includes.js');
   app.import('node_modules/string.prototype.endswith/endswith.js');
   app.import('node_modules/string.prototype.startswith/startswith.js');
-  app.import('node_modules/autosize/dist/autosize.js');
-  app.import('vendor/shims/autosize.js');
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/codemirror/addon/lint/lint.css');
   app.import('node_modules/codemirror/addon/lint/lint.js');
   app.import('node_modules/codemirror/addon/lint/json-lint.js');
-  app.import('node_modules/base64-js/base64js.min.js');
   app.import('node_modules/text-encoder-lite/index.js');
-  app.import('node_modules/Duration.js/duration.js');
 
-  app.import('node_modules/columnify/columnify.js', {
-    using: [{ transformation: 'cjs', as: 'columnify' }],
-  });
-
-  app.import('node_modules/yargs-parser/lib/tokenize-arg-string.js', {
-    using: [{ transformation: 'cjs', as: 'yargs-parser-tokenizer' }],
-  });
-
+  app.import('app/styles/bulma/bulma-radio-checkbox.css');
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

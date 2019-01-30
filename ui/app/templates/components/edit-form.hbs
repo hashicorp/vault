@@ -1,0 +1,37 @@
+<form {{action (perform save model) on="submit"}}>
+  <MessageError @model={{model}} data-test-edit-form-error />
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" />
+    {{#each model.fields as |attr|}}
+      {{form-field data-test-field attr=attr model=model}}
+    {{/each}}
+  </div>
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <div class="field is-grouped">
+      <div class="control">
+        <button type="submit" data-test-edit-form-submit class="button is-primary {{if save.isRunning 'loading'}}" disabled={{save.isRunning}}>
+          {{saveButtonText}}
+        </button>
+      </div>
+      {{#if cancelLinkParams}}
+        <div class="control">
+          {{#link-to params=cancelLinkParams class="button"}}
+            Cancel
+          {{/link-to}}
+        </div>
+      {{/if}}
+    </div>
+    {{#if model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="button is-ghost"
+        @onConfirmAction={{action (perform save model (hash method="destroyRecord"))}}
+        @confirmMessage="Are you sure you want to delete this config?"
+        data-test-edit-delete
+        >
+        <span data-test-edit-delete-text>
+          {{deleteButtonText}}
+        </span>
+      </ConfirmAction>
+    {{/if}}
+  </div>
+</form>

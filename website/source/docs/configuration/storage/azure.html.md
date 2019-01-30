@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Azure - Storage Backends - Configuration"
+sidebar_title: "Azure"
 sidebar_current: "docs-configuration-storage-azure"
 description: |-
   The Azure storage backend is used to persist Vault's data in an Azure Storage
@@ -28,6 +29,7 @@ storage "azure" {
   accountName = "my-storage-account"
   accountKey  = "abcd1234"
   container   = "container-efgh5678"
+  environment = "AzurePublicCloud"
 }
 ```
 
@@ -42,6 +44,10 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 
 - `container` `(string: <required>)` – Specifies the Azure Storage Blob
   container name.
+
+- `environment` `(string: "AzurePublicCloud")` - Specifies the cloud
+   environment the storage account belongs to by way of the case-insensitive
+   name defined in the [Azure Go SDK][azure-environment].
 
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
@@ -61,3 +67,4 @@ storage "azure" {
 ```
 
 [azure-storage]: https://azure.microsoft.com/en-us/services/storage/
+[azure-environment]: https://godoc.org/github.com/Azure/go-autorest/autorest/azure#pkg-variables

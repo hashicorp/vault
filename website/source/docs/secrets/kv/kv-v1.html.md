@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "KV - Secrets Engines"
+sidebar_title: "K/V Version 1"
 sidebar_current: "docs-secrets-kv-v1"
 description: |-
   The KV secrets engine can store arbitrary secrets.
@@ -17,7 +18,7 @@ not merged together.
 Key names must always be strings. If you write non-string values directly via
 the CLI, they will be converted into strings. However, you can preserve
 non-string values by writing the key/value pairs to Vault from a JSON file or
-using the HTTP API. 
+using the HTTP API.
 
 This secrets engine honors the distinction between the `create` and `update`
 capabilities inside ACL policies.
@@ -60,7 +61,7 @@ allows for writing keys with arbitrary values.
 1. List the keys:
 
     ```text
-    $ vault kv list kv/my-secret
+    $ vault kv list kv/
     Keys
     ----
     my-secret
@@ -88,7 +89,7 @@ $ vault kv put kv/my-secret ttl=30m my-value=s3cr3t
 Success! Data written to: kv/my-secret
 ```
 
-Even will a `ttl` set, the secrets engine _never_ removes data on its own. The
+Even with a `ttl` set, the secrets engine _never_ removes data on its own. The
 `ttl` key is merely advisory.
 
 When reading a value with a `ttl`, both the `ttl` key _and_ the refresh interval

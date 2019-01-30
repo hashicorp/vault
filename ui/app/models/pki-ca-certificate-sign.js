@@ -1,9 +1,9 @@
-import Ember from 'ember';
+import { copy } from 'ember-copy';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
 import Certificate from './pki-certificate-sign';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default Certificate.extend({
   backend: attr('string', {
@@ -72,6 +72,6 @@ export default Certificate.extend({
       groups = groups.concat(options);
     }
 
-    return this.fieldsToAttrs(Ember.copy(groups, true));
+    return this.fieldsToAttrs(copy(groups, true));
   }),
 });

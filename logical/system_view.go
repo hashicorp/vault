@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -46,13 +47,16 @@ type SystemView interface {
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
 
+	// HasFeature returns true if the feature is currently enabled
+	HasFeature(feature license.Features) bool
+
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(context.Context, string) (*pluginutil.PluginRunner, error)
+	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
 
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
@@ -61,6 +65,9 @@ type SystemView interface {
 	// EntityInfo returns a subset of information related to the identity entity
 	// for the given entity id
 	EntityInfo(entityID string) (*Entity, error)
+
+	// PluginEnv returns Vault environment information used by plugins
+	PluginEnv(context.Context) (*PluginEnvironment, error)
 }
 
 type StaticSystemView struct {
@@ -74,6 +81,9 @@ type StaticSystemView struct {
 	LocalMountVal       bool
 	ReplicationStateVal consts.ReplicationState
 	EntityVal           *Entity
+	Features            license.Features
+	VaultVersion        string
+	PluginEnvironment   *PluginEnvironment
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -108,7 +118,7 @@ func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]in
 	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) LookupPlugin(_ context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (d StaticSystemView) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 
@@ -118,4 +128,12 @@ func (d StaticSystemView) MlockEnabled() bool {
 
 func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {
 	return d.EntityVal, nil
+}
+
+func (d StaticSystemView) HasFeature(feature license.Features) bool {
+	return d.Features.HasFeature(feature)
+}
+
+func (d StaticSystemView) PluginEnv(_ context.Context) (*PluginEnvironment, error) {
+	return d.PluginEnvironment, nil
 }

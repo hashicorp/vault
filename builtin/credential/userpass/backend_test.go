@@ -101,7 +101,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepUser(t, "web2", "password", "foo"),
@@ -125,7 +125,7 @@ func TestBackend_userCrud(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -148,7 +148,7 @@ func TestBackend_userCreateOperation(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testUserCreateOperation(t, "web", "password", "foo"),
 			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
@@ -169,7 +169,7 @@ func TestBackend_passwordUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),
@@ -194,7 +194,7 @@ func TestBackend_policiesUpdate(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "web", "password", "foo"),
 			testAccStepReadUser(t, "web", "foo"),

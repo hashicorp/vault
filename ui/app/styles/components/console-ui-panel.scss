@@ -1,27 +1,42 @@
-.console-ui-panel-scroller {
+.console-ui-panel {
   background: linear-gradient(to right, #191a1c, #1b212d);
   height: 0;
   left: 0;
-  overflow: auto;
-  position: absolute;
+  position: fixed;
   min-height: 0;
+  overflow: scroll;
   right: 0;
-  transform: translate3d(0, -400px, 0);
+  top: $header-height;
   transition: min-height $speed ease-out, transform $speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
+  width: 100vw;
   z-index: 199;
+
+  .button {
+    background: transparent;
+    border: none;
+    color: $grey;
+    min-width: 0;
+    padding: 0 $size-8;
+
+    &.active,
+    &:hover {
+      background: $blue;
+      color: $white;
+    }
+  }
 }
 
-.console-ui-panel {
+.console-ui-panel-content {
+  color: $white;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: $size-8 $size-8 $size-4;
-  min-height: 100%;
-  color: $white;
   font-size: $body-size;
   font-weight: $font-weight-semibold;
+  justify-content: flex-end;
+  min-height: 100%;
+  padding: $size-8 $size-8 $size-4;
   transition: justify-content $speed ease-in;
 
   pre,
@@ -30,6 +45,7 @@
     color: inherit;
     font-size: $body-size;
     min-height: 2rem;
+    padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
       padding-left: $console-spacing;
@@ -42,24 +58,10 @@
     margin-left: $console-spacing;
     padding: $size-8 $size-4;
   }
-
-  .button {
-    background: transparent;
-    border: none;
-    color: $grey-dark;
-    min-width: 0;
-    padding: 0 $size-8;
-
-    &.active,
-    &:hover {
-      background: $blue;
-      color: $white;
-    }
-  }
 }
 
-.console-ui-panel .hover-copy-button,
-.console-ui-panel .hover-copy-button-static {
+.console-ui-panel-content.hover-copy-button,
+.console-ui-panel-content.hover-copy-button-static {
   top: auto;
   bottom: 0;
   right: 0;
@@ -74,7 +76,7 @@
     border: 0;
     caret-color: $white;
     color: $white;
-    flex: 1;
+    flex: 1 1 auto;
     font-family: $family-monospace;
     font-size: 16px;
     font-weight: $font-weight-bold;
@@ -111,17 +113,15 @@
   }
 }
 
-.panel-open .console-ui-panel-scroller {
+.panel-open .console-ui-panel {
   box-shadow: $box-shadow-highest;
-  transform: translate3d(0, 0, 0);
   min-height: 400px;
 }
 
-.panel-open .console-ui-panel-scroller.fullscreen {
+.panel-open .console-ui-panel.fullscreen {
   bottom: 0;
   top: 0;
-  position: fixed;
-  min-height: 100%;
+  min-height: 100vh;
 }
 
 .panel-open {
@@ -134,32 +134,41 @@
 .panel-open.panel-fullscreen {
   .navbar,
   .navbar-sections {
-    transform: translate3d(0, -100px, 0);
+    @include from($mobile) {
+      transform: translateY(-100px);
+    }
   }
-}
-
-.page-container > header:not(.page-header) {
-  background: linear-gradient(to right, #191a1c, #1b212d);
 }
 
 header .navbar,
 header .navbar-sections {
   z-index: 200;
-  transform: translate3d(0, 0, 0);
+  transform: translateY(0);
   will-change: transform;
 }
 
 .console-spinner.control {
   height: 21px;
   width: 21px;
-  transform: scale(.75);
+  transform: scale(0.75);
   transform-origin: center;
   &::after {
     height: auto;
     width: auto;
-    right: .25rem;
-    left: .25rem;
-    top: .25rem;
-    bottom: .25rem;
+    right: 0.25rem;
+    left: 0.25rem;
+    top: 0.25rem;
+    bottom: 0.25rem;
+  }
+}
+
+.console-close-button {
+  position: absolute;
+  top: -3.25rem;
+  right: $spacing-xs;
+  z-index: 210;
+
+  @include from($mobile) {
+    display: none;
   }
 }

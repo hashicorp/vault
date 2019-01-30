@@ -165,7 +165,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	if err == nil {
 		t.Fatal("should not be allowed to renew root token")
 	}
-	if !strings.Contains(err.Error(), "lease is not renewable") {
+	if !strings.Contains(err.Error(), "invalid lease ID") {
 		t.Fatalf("wrong error; got %v", err)
 	}
 

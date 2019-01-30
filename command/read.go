@@ -2,6 +2,8 @@ package command
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -13,6 +15,8 @@ var _ cli.CommandAutocomplete = (*ReadCommand)(nil)
 
 type ReadCommand struct {
 	*BaseCommand
+
+	testStdin io.Reader // for tests
 }
 
 func (c *ReadCommand) Synopsis() string {
@@ -63,9 +67,6 @@ func (c *ReadCommand) Run(args []string) int {
 	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
 		return 1
-	case len(args) > 1:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
-		return 1
 	}
 
 	client, err := c.Client()
@@ -74,9 +75,21 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
+	// Pull our fake stdin if needed
+	stdin := (io.Reader)(os.Stdin)
+	if c.testStdin != nil {
+		stdin = c.testStdin
+	}
+
 	path := sanitizePath(args[0])
 
-	secret, err := client.Logical().Read(path)
+	data, err := parseArgsDataStringLists(stdin, args[1:])
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
+		return 1
+	}
+
+	secret, err := client.Logical().ReadWithData(path, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
 		return 2

@@ -11,53 +11,56 @@
       </h1>
     </p.levelLeft>
     <p.levelRight>
-      <a href="{{href-to 'vault.cluster.policies.create'}}" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true>
+      {{#link-to "vault.cluster.policies.create" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true}}
         Create {{uppercase policyType}} policy
         {{i-con glyph="chevron-right" size=11}}
-      </a>
+      {{/link-to}}
     </p.levelRight>
   </PageHeader>
-  <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-    <div class="level">
-      <div class="level-left">
-        {{navigate-input
-          filterFocusDidChange=(action "setFilterFocus")
-          filterDidChange=(action "setFilter")
-          filter=filter
-          filterMatchesKey=filterMatchesKey
-          firstPartialMatch=firstPartialMatch
-          extraNavParams=policyType
-          placeholder="Filter policies"
-          mode="policy"
-        }}
-        {{#if filterFocused}}
-          {{#if filterMatchesKey}}
-            <p class="input-hint">
-              <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
-            </p>
+  {{#if model.meta.total}}
+    <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
+      <div class="level">
+        <div class="level-left">
+          {{navigate-input
+            filterFocusDidChange=(action "setFilterFocus")
+            filterDidChange=(action "setFilter")
+            filter=filter
+            filterMatchesKey=filterMatchesKey
+            firstPartialMatch=firstPartialMatch
+            extraNavParams=policyType
+            placeholder="Filter policies"
+            mode="policy"
+          }}
+          {{#if filterFocused}}
+            {{#if filterMatchesKey}}
+              <p class="input-hint">
+                <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
+              </p>
+            {{/if}}
+            {{#if firstPartialMatch}}
+              <p class="input-hint">
+                <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+              </p>
+            {{/if}}
           {{/if}}
-          {{#if firstPartialMatch}}
-            <p class="input-hint">
-              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
-            </p>
-          {{/if}}
-        {{/if}}
+        </div>
       </div>
     </div>
-  </div>
-  {{#if model.meta.total}}
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
-        <div class="is-flex box is-sideless is-marginless" data-test-policy-item>
+        <div class="list-item-row is-flex" data-test-policy-item>
           {{i-con
             glyph='file'
             size=14
             class="has-text-grey-light"
           }}
           <div>
-            <span class="has-text-weight-semibold" data-test-policy-name>{{item.id}}</span>
+            <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
+              {{item.id}}
+            </span>
             <p class="help has-text-grey">
-            The <code>root</code> policy does not contain any rules but can do anything within Vault. It should be used with extreme care.
+              The <code>root</code> policy does not contain any rules but can
+              do anything within Vault. It should be used with extreme care.
             </p>
           </div>
         </div>
@@ -66,21 +69,20 @@
           "vault.cluster.policy.show"
           policyType
           item.id
-          class="box is-sideless is-marginless"
+          class="list-item-row"
           data-test-policy-link=item.id
         }}
           <div class="columns is-mobile">
             <div class="column is-10">
-              <a href={{href-to "vault.cluster.policy.show" item.id}}
+              {{#link-to "vault.cluster.policy.show" policyType item.id
                 class="has-text-black has-text-weight-semibold"
-                data-test-policy-item
-                >
-                {{i-con
+                data-test-policy-item=true
+              }}{{i-con
                   glyph='file'
                   size=14
                   class="has-text-grey-light"
                 }}<span class="is-underline" data-test-policy-name>{{item.id}}</span>
-              </a>
+              {{/link-to}}
             </div>
             <div class="column has-text-right">
               {{#popup-menu name="policy-nav"}}
@@ -88,28 +90,28 @@
                   <ul class="menu-list">
                     {{#if item.updatePath.isPending}}
                       <li class="action">
-                        <button disabled=true type="button" class="link button is-loading is-transparent">
+                        <button disabled type="button" class="link button is-loading is-transparent">
                           loading
                         </button>
                       </li>
                       <li class="action">
-                        <button disabled=true type="button" class="link button is-loading is-transparent">
+                        <button disabled type="button" class="link button is-loading is-transparent">
                           loading
                         </button>
                       </li>
                     {{else}}
                       {{#if item.canRead}}
                         <li class="action">
-                          <a href={{href-to "vault.cluster.policy.show" policyType item.id}} data-test-policy-link="show">
+                          {{#link-to "vault.cluster.policy.show" policyType item.id data-test-policy-link="show"}}
                             Details
-                          </a>
+                          {{/link-to}}
                         </li>
                       {{/if}}
                       {{#if item.canEdit}}
                         <li class="action">
-                          <a href={{href-to "vault.cluster.policy.edit" policyType item.id}} data-test-policy-link="edit">
+                          {{#link-to "vault.cluster.policy.edit" policyType item.id data-test-policy-link="edit"}}
                             Edit
-                          </a>
+                          {{/link-to}}
                         </li>
                       {{/if}}
                       {{#if item.canDelete}}
@@ -119,8 +121,8 @@
                             buttonClasses="link is-destroy"
                             onConfirmAction=(action "deletePolicy" item)
                             confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-                            showConfirm=(get this (concat "shouldDelete-" item.id))
-                            class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+                            showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
+                            class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
                             containerClasses="message-body is-block"
                             messageClasses="is-block"
                             data-test-policy-delete=item.id
@@ -138,29 +140,29 @@
         {{/linked-block}}
       {{/if}}
     {{else}}
-      <div class="box is-sideless">
-        <p> There are no policies matching <code>{{pageFilter}}</code>.  </p>
-      </div>
+      <EmptyState
+        @title="No policies matching &quot;{{pageFilter}}&quot;"
+      />
     {{/each}}
+    {{#if (gt model.meta.lastPage 1) }}
+      {{list-pagination
+        page=model.meta.currentPage
+        lastPage=model.meta.lastPage
+        link="vault.cluster.policies.index"
+      }}
+    {{/if}}
   {{else}}
-    <div class="box is-bottomless has-background-white-bis">
-      <div class="columns is-centered">
-        <div class="column is-half has-text-centered">
-          <div class="box is-shadowless has-background-white-bis">
-            <p class="has-text-grey" data-test-no-policies-text>
-            There are currently no {{uppercase policyType}} policies.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  {{/if}}
-  {{#if (gt model.meta.lastPage 1) }}
-    {{list-pagination
-      page=model.meta.currentPage
-      lastPage=model.meta.lastPage
-      link="vault.cluster.policies.index"
-    }}
+    <EmptyState
+      @title="No {{uppercase policyType}} policies yet"
+      @message="A list of policies will be listed here. Create your first {{uppercase policyType}} policy to get started."
+    >
+      {{#link-to "vault.cluster.policies.create" class="link"}}
+        Create {{uppercase policyType}} policy
+      {{/link-to}}
+      <LearnLink @path="/vault/getting-started/policies">
+        Learn More
+      </LearnLink>
+    </EmptyState>
   {{/if}}
 {{else}}
   {{upgrade-page title="Sentinel" minimumEdition="Vault Enterprise Premium"}}

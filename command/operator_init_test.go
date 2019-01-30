@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -332,7 +333,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 		root := match[0][1]
 		decryptedRoot := testPGPDecrypt(t, pgpkeys.TestPrivKey1, root)
 
-		if l, exp := len(decryptedRoot), 36; l != exp {
+		if l, exp := len(decryptedRoot), vault.TokenLength+2; l != exp {
 			t.Errorf("expected %d to be %d", l, exp)
 		}
 	})

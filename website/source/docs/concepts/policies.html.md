@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Policies"
+sidebar_title: "Policies"
 sidebar_current: "docs-concepts-policies"
 description: |-
   Policies are how authorization is done in Vault, allowing you to restrict which parts of Vault a user can access.
@@ -27,7 +28,7 @@ would take to configure Vault to authenticate using a corporate LDAP or
 ActiveDirectory installation. Even though this example uses LDAP, the concept
 applies to all auth methods.
 
-[![Vault Auth Workflow](/assets/images/vault-policy-workflow.svg)](/assets/images/vault-policy-workflow.svg)
+[![Vault Auth Workflow](/img/vault-policy-workflow.svg)](/img/vault-policy-workflow.svg)
 
 1. The security team configures Vault to connect to an auth method.
 This configuration varies by auth method. In the case of LDAP, Vault
@@ -39,7 +40,7 @@ Vault will delegate the authentication to the auth method.
 access to paths in Vault. Policies are written in HCL in your editor of
 preference and saved to disk.
 
-1. The policy's contents are uploaded and store in Vault and referenced by name.
+1. The policy's contents are uploaded and stored in Vault and referenced by name.
 You can think of the policy's name as a pointer or symlink to its set of rules.
 
 1. Most importantly, the security team maps data in the auth method to a policy.
@@ -55,7 +56,7 @@ Now Vault has an internal mapping between a backend authentication system and
 internal policy. When a user authenticates to Vault, the actual authentication
 is delegated to the auth method. As a user, the flow looks like:
 
-[![Vault Auth Workflow](/assets/images/vault-auth-workflow.svg)](/assets/images/vault-auth-workflow.svg)
+[![Vault Auth Workflow](/img/vault-auth-workflow.svg)](/img/vault-auth-workflow.svg)
 
 1. A user attempts to authenticate to Vault using their LDAP credentials,
 providing Vault with their LDAP username and password.
@@ -224,6 +225,60 @@ action taken. This can be a common source of confusion. Generating database
 credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
 credentials, the policy would grant `read` access on the appropriate path.
+
+## Templated Policies
+
+The policy syntax allows for doing variable replacement in some policy strings
+with values available to the token. Currently `identity` information can be
+injected, and currently the `path` keys in policies allow injection.
+
+### Parameters
+
+|                                    Name                                |                                    Description                               |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------------------- |
+| `identity.entity.id`                                                   | The entity's ID                                                              |
+| `identity.entity.name`                                                 | The entity's name                                                            |
+| `identity.entity.metadata.<<metadata key>>`                            | Metadata associated with the entity for the given key                        |
+| `identity.entity.aliases.<<mount accessor>>.id`                        | Entity alias ID for the given mount                                          |
+| `identity.entity.aliases.<<mount accessor>>.name`                      | Entity alias name for the given mount                                        |
+| `identity.entity.aliases.<<mount accessor>>.metadata.<<metadata key>>` | Metadata associated with the alias for the given mount and metadata key      |
+| `identity.groups.ids.<<group id>>.name`                                | The group name for the given group ID                                        |
+| `identity.groups.names.<<group name>>.id`                              | The group ID for the given group name                                        |
+| `identity.groups.ids.<<group id>>.metadata.<<metadata key>>`           | Metadata associated with the group for the given key                                        |
+| `identity.groups.names.<<group name>>.metadata.<<metadata key>>`       | Metadata associated with the group for the given key                                        |
+
+### Examples
+
+The following policy creates a section of the KVv2 Secret Engine to a specific user
+
+```ruby
+path "secret/data/{{identity.entity.id}}/*" {
+  capabilities = ["create", "update", "read", "delete"]
+}
+
+path "secret/metadata/{{identity.entity.id}}/*" {
+  capabilities = ["list"]
+}
+```
+
+If you wanted to create a shared section of KV that is associated with entities that are in a
+group.
+
+```ruby
+# In the example below, the group ID maps a group and the path 
+path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
+  capabilities = ["create", "update", "read", "delete"]
+}
+
+path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
+  capabilities = ["list"]
+}
+```
+
+ ~> When developing templated policies, use IDs wherever possible. Each ID is
+ unique to the user, whereas names can change over time and can be reused. This
+ ensures that if a given user or group name is changed, the policy will be
+ mapped to the intended entity or group.
 
 ## Fine-Grained Control
 
@@ -509,10 +564,6 @@ policy in Vault:
 $ vault policy write policy-name policy-file.hcl
 ```
 
--> The `@` tells Vault to read from a file on disk. In the example above, Vault
--will read the contents of `my-policy.hcl` in the current working directory into
--the value for that parameter.
-
 or via the API:
 
 ```sh
@@ -520,10 +571,10 @@ $ curl \
   --request POST \
   --header "X-Vault-Token: ..." \
   --data '{"policy":"path \"...\" {...} "}' \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
-In both examples, the name of the policy is "my-policy". You can think of this
+In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
@@ -552,7 +603,7 @@ $ curl \
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
 ```sh
-$ vault delete sys/policy/my-policy
+$ vault delete sys/policy/policy-name
 ```
 
 or via the API:
@@ -561,7 +612,7 @@ or via the API:
 $ curl \
   --request DELETE \
   --header "X-Vault-Token: ..." \
-  https://vault.hashicorp.rocks/v1/sys/policy/my-policy
+  https://vault.hashicorp.rocks/v1/sys/policy/policy-name
 ```
 
 This is an idempotent operation. Vault will not return an error when deleting a

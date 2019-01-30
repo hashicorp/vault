@@ -1,6 +1,9 @@
 package ldaputil
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestCertificateValidation(t *testing.T) {
 	// certificate should default to "" without error if it doesn't exist
@@ -25,6 +28,18 @@ func TestCertificateValidation(t *testing.T) {
 	}
 }
 
+func TestUseTokenGroupsDefault(t *testing.T) {
+	config := testConfig()
+	if config.UseTokenGroups {
+		t.Errorf("expected false UseTokenGroups but got %t", config.UseTokenGroups)
+	}
+
+	config = testJSONConfig(t)
+	if config.UseTokenGroups {
+		t.Errorf("expected false UseTokenGroups from JSON but got %t", config.UseTokenGroups)
+	}
+}
+
 func testConfig() *ConfigEntry {
 	return &ConfigEntry{
 		Url:           "ldap://138.91.247.105",
@@ -34,6 +49,14 @@ func testConfig() *ConfigEntry {
 		TLSMaxVersion: "tls12",
 		TLSMinVersion: "tls12",
 	}
+}
+
+func testJSONConfig(t *testing.T) *ConfigEntry {
+	config := new(ConfigEntry)
+	if err := json.Unmarshal(jsonConfig, config); err != nil {
+		t.Fatal(err)
+	}
+	return config
 }
 
 const validCertificate = `
@@ -72,3 +95,14 @@ d6TqelcRw9WnDsb9IPxRwaXhvGljnYVAgXXlJEI/6nxj2T4wdmL1LWAr6C7DuWGz
 Beq3QOqp2+dga36IzQybzPQ8QtotrpSJ3q82zztEvyWiJ7E=
 -----END CERTIFICATE-----
 `
+
+var jsonConfig = []byte(`
+{
+	"url": "ldap://138.91.247.105",
+	"userdn": "example,com",
+	"binddn": "kitty",
+	"bindpass": "cats",
+	"tls_max_version": "tls12",
+	"tls_min_version": "tls12"
+}
+`)

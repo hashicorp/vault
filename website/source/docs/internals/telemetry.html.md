@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Telemetry"
+sidebar_title: "Telemetry"
 sidebar_current: "docs-internals-telemetry"
 description: |-
   Learn about the telemetry data available in Vault.
@@ -256,6 +257,14 @@ Thes operations take a request and response with an associated lease and registe
 
 **[S]** Summary (Milliseconds): Time taken for register authentication operations which create lease entries without lease ID
 
+### vault.merkle_flushdirty
+
+**[S]** Summary (Milliseconds): Time taken to flush any dirty pages to cold storage
+
+### vault.merkle_savecheckpoint
+
+**[S]** Summary (Milliseconds): Time taken to save the checkpoint
+
 ### vault.policy.get_policy
 
 **[S]** Summary (Milliseconds): Time taken to get a policy
@@ -295,6 +304,26 @@ Thes operations take a request and response with an associated lease and registe
 ### vault.token.store
 
 **[S]** Summary (Milliseconds): Time taken to store an updated token entry without writing to the secondary index
+
+### vault.wal_deletewals
+
+**[S]** Summary (Milliseconds): Time taken to delete a Write Ahead Log (WAL)
+
+### vault.wal_gc_deleted
+
+**[C]** Counter (Number of WAL): Number of Write Ahead Logs (WAL) deleted during each garbage collection run
+
+### vault.wal_gc_total
+
+**[C]** Counter (Number of WAL): Total Number of Write Ahead Logs (WAL) on disk
+
+### vault.wal_persistwals
+
+**[S]** Summary (Milliseconds): Time taken to persist a Write Ahead Log (WAL)
+
+### vault.wal_flushready
+
+**[S]** Summary (Milliseconds): Time taken to flush a ready Write Ahead Log (WAL) to storage
 
 ## Auth Methods Metrics
 
@@ -340,6 +369,32 @@ These metrics relate to supported authentication methods.
 
 **[S]** Summary (Milliseconds): Time taken to perform a route rollback operation for the system backend
 
+## Replication Metrics
+
+These metrics relate to [Vault Enterprise Replication](https://www.vaultproject.io/docs/enterprise/replication/index.html).
+
+### logshipper.streamWALs.missing_guard
+
+**[C]** Counter (Number of missing guards): Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is not matched/found
+
+### logshipper.streamWALs.guard_found
+
+**[C]** Counter (Number of found guards):
+
+Number of incidences where the starting Merkle Tree index used to begin streaming WAL entries is matched/found
+
+### replication.fetchRemoteKeys
+
+**[S]** Summary (Milliseconds): Time taken to fetch keys from a remote cluster participating in replication prior to Merkle Tree based delta generation
+
+### replication.merkleDiff
+
+**[S]** Summary (Milliseconds): Time taken to perform a Merkle Tree based delta generation between the clusters participating in replication
+
+### replication.merkleSync
+
+**[S]** Summary (Milliseconds): Time taken to perform a Merkle Tree based synchronization using the last delta generated between the clusters participating in replication
+
 ## Secrets Engines Metrics
 
 These metrics relate to the supported [secrets engines][secrets-engines].
@@ -350,7 +405,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of database secrets engine initialization operations across database secrets engines
 
-### database.<name>.Initialize
+### database.&lt;name&gt;.Initialize
 
 **[S]** Summary (Milliseconds): Time taken to initialize a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize`
 
@@ -360,7 +415,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors across all database secrets engines
 
-### database.<name>.Initialize.error
+### database.&lt;name&gt;.Initialize.error
 
 **[C]** Counter (Number of errors): Number of database secrets engine initialization operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Initialize.error`
 
@@ -370,7 +425,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of database secrets engine close operations across database secrets engines
 
-### database.<name>.Close
+### database.&lt;name&gt;.Close
 
 **[S]** Summary (Milliseconds): Time taken to close a database secret engine for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close`
 
@@ -380,7 +435,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of database secrets engine close operation errors across all database secrets engines
 
-### database.<name>.Close.error
+### database.&lt;name&gt;.Close.error
 
 **[C]** Counter (Number of errors): Number of database secrets engine close operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.Close.error`
 
@@ -390,7 +445,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user creation operations across database secrets engines
 
-### database.<name>.CreateUser
+### database.&lt;name&gt;.CreateUser
 
 **[S]** Summary (Milliseconds): Time taken to create a user for the named database secrets engine `<name>`
 
@@ -400,7 +455,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user creation operation errors across all database secrets engines
 
-### database.<name>.CreateUser.error
+### database.&lt;name&gt;.CreateUser.error
 
 **[C]** Counter (Number of operations): Number of user creation operation errors for the named database secrets engine `<name>`, for example: `database.postgresql-prod.CreateUser.error`
 
@@ -410,7 +465,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user renewal operations across database secrets engines
 
-### database.<name>.RenewUser
+### database.&lt;name&gt;.RenewUser
 
 **[S]** Summary (Milliseconds): Time taken to renew a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser`
 
@@ -420,7 +475,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user renewal operation errors across all database secrets engines
 
-### database.<name>.RenewUser.error
+### database.&lt;name&gt;.RenewUser.error
 
 **[C]** Counter (Number of errors): Number of user renewal operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RenewUser.error`
 
@@ -430,7 +485,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of operations): Number of user revocation operations across database secrets engines
 
-### database.<name>.RevokeUser
+### database.&lt;name&gt;.RevokeUser
 
 **[S]** Summary (Milliseconds): Time taken to revoke a user for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser`
 
@@ -440,7 +495,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 
 **[C]** Counter (Number of errors): Number of user revocation operation errors across all database secrets engines
 
-### database.<name>.RevokeUser.error
+### database.&lt;name&gt;.RevokeUser.error
 
 **[C]** Counter (Number of errors): Number of user revocation operations for the named database secrets engine `<name>`, for example: `database.postgresql-prod.RevokeUser.error`
 

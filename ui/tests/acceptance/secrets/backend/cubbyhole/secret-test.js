@@ -1,36 +1,31 @@
-import { test } from 'qunit';
-import moduleForAcceptance from 'vault/tests/helpers/module-for-acceptance';
+import { currentRouteName } from '@ember/test-helpers';
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import authPage from 'vault/tests/pages/auth';
 
-moduleForAcceptance('Acceptance | secrets/cubbyhole/create', {
-  beforeEach() {
+module('Acceptance | secrets/cubbyhole/create', function(hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(function() {
     this.server = apiStub({ usePassthrough: true });
-    return authLogin();
-  },
-  afterEach() {
-    this.server.shutdown();
-  },
-});
-
-test('it creates and can view a secret with the cubbyhole backend', function(assert) {
-  const kvPath = `cubbyhole-kv-${new Date().getTime()}`;
-  listPage.visitRoot({ backend: 'cubbyhole' });
-  andThen(() => {
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
+    return authPage.login();
   });
 
-  listPage.create();
-  editPage.createSecret(kvPath, 'foo', 'bar');
-  andThen(() => {
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `cubbyhole/${kvPath}`,
-      'calls capabilites with the correct path'
-    );
+  hooks.afterEach(function() {
+    this.server.shutdown();
+  });
+
+  test('it creates and can view a secret with the cubbyhole backend', async function(assert) {
+    const kvPath = `cubbyhole-kv-${new Date().getTime()}`;
+    await listPage.visitRoot({ backend: 'cubbyhole' });
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
+
+    await listPage.create();
+    await editPage.createSecret(kvPath, 'foo', 'bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv-v1"
+sidebar_title: "K/V Version 1"
+sidebar_current: "api-http-secret-kv-v1"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---

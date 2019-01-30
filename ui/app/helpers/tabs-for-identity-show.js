@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 export const TABS = {
   entity: ['details', 'aliases', 'policies', 'groups', 'metadata'],
@@ -18,4 +18,4 @@ export function tabsForIdentityShow([modelType, groupType]) {
   return TABS[key];
 }
 
-export default Ember.Helper.helper(tabsForIdentityShow);
+export default buildHelper(tabsForIdentityShow);

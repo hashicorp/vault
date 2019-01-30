@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
-	"google.golang.org/grpc"
-
-	"fmt"
-
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
+	"google.golang.org/grpc"
 )
 
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
@@ -110,7 +109,7 @@ func (s *gRPCSystemViewClient) ResponseWrapData(ctx context.Context, data map[st
 	return info, nil
 }
 
-func (s *gRPCSystemViewClient) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (s *gRPCSystemViewClient) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
@@ -121,6 +120,11 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	}
 
 	return reply.Enabled
+}
+
+func (s *gRPCSystemViewClient) HasFeature(feature license.Features) bool {
+	// Not implemented
+	return false
 }
 
 func (s *gRPCSystemViewClient) LocalMount() bool {
@@ -144,6 +148,15 @@ func (s *gRPCSystemViewClient) EntityInfo(entityID string) (*logical.Entity, err
 	}
 
 	return reply.Entity, nil
+}
+
+func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEnvironment, error) {
+	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	return reply.PluginEnvironment, nil
 }
 
 type gRPCSystemViewServer struct {
@@ -240,5 +253,17 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 	}
 	return &pb.EntityInfoReply{
 		Entity: entity,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
+	pluginEnv, err := s.impl.PluginEnv(ctx)
+	if err != nil {
+		return &pb.PluginEnvReply{
+			Err: pb.ErrToString(err),
+		}, nil
+	}
+	return &pb.PluginEnvReply{
+		PluginEnvironment: pluginEnv,
 	}, nil
 }

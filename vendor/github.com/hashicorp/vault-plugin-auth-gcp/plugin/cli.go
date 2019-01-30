@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/iam/v1"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -44,15 +44,14 @@ func getSignedJwt(role string, m map[string]string) (string, error) {
 		}
 	}
 
-	var ttlMin = int64(defaultIamMaxJwtExpMinutes)
+	var ttl = time.Duration(defaultIamMaxJwtExpMinutes) * time.Minute
 	jwtExpStr, ok := m["jwt_exp"]
 	if ok {
-		ttlMin, err = strconv.ParseInt(jwtExpStr, 10, 64)
+		ttl, err = parseutil.ParseDurationSecond(jwtExpStr)
 		if err != nil {
 			return "", fmt.Errorf("could not parse jwt_exp '%s' into integer value", jwtExpStr)
 		}
 	}
-	ttl := time.Minute * time.Duration(ttlMin)
 
 	jwtPayload := map[string]interface{}{
 		"aud": fmt.Sprintf("http://vault/%s", role),
@@ -164,8 +163,8 @@ Configuration:
 	permissions on this service account. 
   
   project=<string>                                
-	Project the service account belongs to. Defaults to credentials 
-	"project_id" if "credentials" specified and this value is not.  
+	Project for the service account who will be authenticating to Vault.
+    Defaults to the credential's "project_id" (if credentials are specified)."
 `
 
 	return strings.TrimSpace(help)

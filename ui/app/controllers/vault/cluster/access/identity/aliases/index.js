@@ -1,7 +1,7 @@
-import Ember from 'ember';
+import Controller from '@ember/controller';
 import ListController from 'vault/mixins/list-controller';
 
-export default Ember.Controller.extend(ListController, {
+export default Controller.extend(ListController, {
   actions: {
     onDelete() {
       this.send('reload');

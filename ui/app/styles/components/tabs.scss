@@ -1,0 +1,42 @@
+.tabs {
+  box-shadow: inset 0 -1px 0 $grey-light;
+
+  ul {
+    border-color: transparent;
+    min-height: 3rem;
+  }
+
+  li {
+    &:focus {
+      box-shadow: none;
+    }
+    &.is-active a,
+    &.is-active .tab {
+      border-color: $blue;
+      color: $blue;
+    }
+    &:first-child a,
+    &:first-child .tab {
+      margin-left: $size-5;
+    }
+  }
+
+  a,
+  .tab {
+    color: $grey-dark;
+    font-weight: $font-weight-semibold;
+    text-decoration: none;
+    padding: $size-6 $size-8 $size-8;
+    border-bottom: 2px solid transparent;
+    transition: border-color $speed;
+
+    &:hover,
+    &:active {
+      border-color: $grey-light;
+    }
+  }
+
+  .ember-basic-dropdown-trigger {
+    outline: none;
+  }
+}

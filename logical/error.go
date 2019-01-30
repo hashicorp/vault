@@ -1,5 +1,35 @@
 package logical
 
+import "errors"
+
+var (
+	// ErrUnsupportedOperation is returned if the operation is not supported
+	// by the logical backend.
+	ErrUnsupportedOperation = errors.New("unsupported operation")
+
+	// ErrUnsupportedPath is returned if the path is not supported
+	// by the logical backend.
+	ErrUnsupportedPath = errors.New("unsupported path")
+
+	// ErrInvalidRequest is returned if the request is invalid
+	ErrInvalidRequest = errors.New("invalid request")
+
+	// ErrPermissionDenied is returned if the client is not authorized
+	ErrPermissionDenied = errors.New("permission denied")
+
+	// ErrMultiAuthzPending is returned if the the request needs more
+	// authorizations
+	ErrMultiAuthzPending = errors.New("request needs further approval")
+
+	// ErrUpstreamRateLimited is returned when Vault receives a rate limited
+	// response from an upstream
+	ErrUpstreamRateLimited = errors.New("upstream rate limited")
+
+	// ErrPerfStandbyForward is returned when Vault is in a state such that a
+	// perf standby cannot satisfy a request
+	ErrPerfStandbyPleaseForward = errors.New("please forward to the active node")
+)
+
 type HTTPCodedError interface {
 	Error() string
 	Code() int
@@ -49,4 +79,16 @@ type ReplicationCodedError struct {
 
 func (r *ReplicationCodedError) Error() string {
 	return r.Msg
+}
+
+type KeyNotFoundError struct {
+	Err error
+}
+
+func (e *KeyNotFoundError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *KeyNotFoundError) Error() string {
+	return e.Err.Error()
 }

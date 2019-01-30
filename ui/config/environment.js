@@ -1,4 +1,5 @@
-/* jshint node: true */
+/* eslint-env node */
+'use strict';
 
 module.exports = function(environment) {
   var ENV = {
@@ -18,8 +19,13 @@ module.exports = function(environment) {
     },
 
     APP: {
-      // Here you can pass flags/options to your application instance
-      // when it is created
+      // endpoints that the UI polls
+      POLLING_URLS: ['sys/health', 'sys/replication/status', 'sys/seal-status'],
+      // endpoints that UI uses to determine the cluster state
+      // calls to these endpoints will always go to the root namespace
+      NAMESPACE_ROOT_URLS: ['sys/health', 'sys/seal-status', 'sys/license/features'],
+      // number of records to show on a single page by default - this is used by the client-side pagination
+      DEFAULT_PAGE_SIZE: 100,
     },
     flashMessageDefaults: {
       timeout: 7000,
@@ -51,8 +57,12 @@ module.exports = function(environment) {
     ENV['ember-cli-mirage'] = {
       enabled: false,
     };
+    ENV.APP.autoboot = false;
+
+    ENV.flashMessageDefaults.timeout = 50;
   }
   if (environment !== 'production') {
+    ENV.APP.DEFAULT_PAGE_SIZE = 15;
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {
@@ -64,8 +74,7 @@ module.exports = function(environment) {
     };
   }
 
-  if (environment === 'production') {
-  }
+  ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;
 
   return ENV;
 };

@@ -1,0 +1,65 @@
+<WizardContent @headerText="Vault Web UI" @glyph="tour" @selectProgress={{selectProgress}}>
+  <h2 class="title is-6">
+    Choosing where to go
+  </h2>
+  <p>You did it! You now have access to your Vault and can start entering your data. We can help you get started with any of the options below.</p>
+  <div class="access-information">
+    <ICon @glyph="information-circled" class="has-text-info"/>
+    <p>Vault only shows links to pages that you have access to based on your policies. Contact your administrator if you need access changes.</p>
+  </div>
+  {{#if (or (has-feature "Performance Replication") (has-feature "DR Replication")) }}
+  {{/if}}
+  <h3 class="feature-header">Walk me through setting up:</h3>
+  <form id="features-form" class="feature-selection" {{action "saveFeatures" on="submit"}}>
+    {{#each allFeatures as |feature|}}
+    {{#if feature.show}}
+    <div class="feature-box {{if feature.selected 'is-active'}} {{if feature.disabled 'is-disabled'}}"
+        data-test-select-input={{true}}>
+      <div class="b-checkbox">
+        <input
+          id="feature-{{feature.key}}"
+          type="checkbox"
+          class="styled"
+          checked={{feature.selected}}
+          onchange={{action (mut feature.selected) value="target.checked"}}
+          disabled={{feature.disabled}}
+          data-test-checkbox={{feature.name}}
+         />
+        <label for="feature-{{feature.key}}">{{feature.name}}</label>
+        <button type="button" class="button is-ghost icon is-pulled-right" onclick={{action (toggle (concat feature.key "-isOpen") this)}}>
+          <ICon
+            @glyph={{if (get this (concat feature.key "-isOpen")) "chevron-up" "chevron-down"}}
+            @class="has-text-grey auto-width is-paddingless is-flex-column"
+          />
+        </button>
+        {{#if feature.disabled}}
+          <Info-Tooltip data-test-tooltip>
+              You do not have permissions to tour some parts of this feature
+          </Info-Tooltip>
+        {{/if}}
+      </div>
+      {{#if (get this (concat feature.key "-isOpen"))}}
+        <ul class="feature-steps">
+          {{#each feature.steps as |step|}}
+            <li>{{step}}</li>
+          {{/each}}
+        </ul>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{/each}}
+    <span class="selection-summary">
+      <button
+        type="submit"
+        class="button is-primary"
+        disabled={{cannotStartWizard}}
+        data-test-start-button
+        >
+        Start
+      </button>
+      {{#if selectedFeatures}}
+        <span class="time-estimate"><ICon @glyph="stopwatch" @class="has-text-grey auto-width is-paddingless is-flex-column"/>About {{estimatedTime}} minutes</span>
+      {{/if}}
+    </span>
+  </form>
+</WizardContent>

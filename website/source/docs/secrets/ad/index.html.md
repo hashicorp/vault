@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Active Directory - Secrets Engines"
+sidebar_title: "Active Directory"
 sidebar_current: "docs-secrets-active-directory"
 description: |-
   The Active Directory secrets engine for Vault generates passwords dynamically based on
@@ -84,7 +85,7 @@ to generate passwords:
     $ vault write ad/config \
         binddn=$USERNAME \
         bindpass=$PASSWORD \
-        url=ldap://138.91.247.105 \
+        url=ldaps://138.91.247.105 \
         userdn='dc=example,dc=com'
     ```
 

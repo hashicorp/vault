@@ -33,7 +33,7 @@ func pathListKeys(b *backend) *framework.Path {
 
 func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/" + framework.GenericNameRegex("name"),
+		Pattern: "keys/" + framework.GenericNameWithAtRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,

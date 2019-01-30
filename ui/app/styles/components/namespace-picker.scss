@@ -1,0 +1,137 @@
+.namespace-picker {
+  position: relative;
+  color: $white;
+  display: flex;
+  fill: $white;
+  padding: $spacing-xxs $spacing-xs;
+  width: 100%;
+
+  @include from($mobile) {
+    margin-left: -$spacing-xs;
+    padding: $spacing-xxs 0 $spacing-xxs $spacing-s;
+    width: auto;
+  }
+}
+
+.namespace-picker.no-namespaces {
+  border: none;
+  padding-right: 0;
+}
+.namespace-picker-trigger {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  height: 2rem;
+  justify-content: space-between;
+  padding: 0;
+  text-align: left;
+
+  @include from($mobile) {
+    height: auto;
+    padding: $spacing-xs $spacing-m;
+  }
+
+  .is-status-chevron {
+    transform: rotate(-90deg);
+
+    @include from($mobile) {
+      transform: rotate(0deg);
+    }
+  }
+
+  &.ember-basic-dropdown-trigger--below .is-status-chevron {
+    transform: rotate(0deg);
+
+    @include from($mobile) {
+      transform: rotate(180deg);
+    }
+  }
+}
+.namespace-name {
+  display: inline-block;
+  flex: 1 1 auto;
+  font-size: 1rem;
+  margin: 0 $spacing-xs;
+
+  @include from($mobile) {
+    margin-left: $size-10;
+  }
+}
+.namespace-picker-content {
+  width: $drawer-width - ($spacing-xs * 2);
+  max-height: 300px;
+  overflow: auto;
+  border-radius: $radius;
+  box-shadow: $box-shadow, $box-shadow-high;
+
+  @include from($mobile) {
+    width: $drawer-width;
+  }
+}
+.namespace-picker-content .level-left {
+  max-width: 210px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-all;
+  word-break: break-word;
+}
+
+.namespace-header-bar {
+  padding: $size-11 $size-10;
+  box-shadow: $box-shadow;
+  font-weight: $font-weight-semibold;
+  min-height: 32px;
+  .namespace-manage-link {
+    text-decoration: none;
+  }
+}
+
+.current-namespace {
+  border-bottom: 1px solid rgba($black, 0.1);
+}
+
+.namespace-list {
+  position: relative;
+  overflow: hidden;
+}
+
+.namespace-link {
+  color: $black;
+  text-decoration: none;
+  font-weight: $font-weight-semibold;
+  padding: $size-10 $size-9;
+}
+
+.leaf-panel {
+  transition: transform ease-in-out 250ms;
+  will-change: transform;
+  transform: translateX(0);
+  background: $white;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+.leaf-panel-left {
+  transform: translateX(-$drawer-width);
+}
+.leaf-panel-adding,
+.leaf-panel-current {
+  position: relative;
+  & .namespace-link:last-child {
+    margin-bottom: 4px;
+  }
+}
+.animated-list {
+  .leaf-panel-exiting,
+  .leaf-panel-adding {
+    transform: translateX($drawer-width);
+    z-index: 20;
+  }
+}
+.leaf-panel-adding {
+  z-index: 100;
+}
