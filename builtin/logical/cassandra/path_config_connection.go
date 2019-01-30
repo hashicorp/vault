@@ -77,8 +77,8 @@ take precedence.`,
 			"local_datacenter": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Host selection policy which will prioritize and
-return hosts which are in the local datacenter before returning hosts in all
-other datercentres.`,
+use hosts which are in the local datacenter before hosts in all
+other datacenters.`,
 			},
 		},
 
@@ -231,7 +231,7 @@ This path configures the connection information used to connect to Cassandra.
 
 "local_datacenter" if set, enables host selection policy which will prioritize and
 use hosts which are in the local datacenter before hosts in all
-other datercentres.
+other datercenters.
 
 "username" and "password" are self-explanatory, although the given user
 must have superuser access within Cassandra. Note that since this backend
