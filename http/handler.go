@@ -664,26 +664,28 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 
 // getTokenFromReq parse headers of the incoming request to extract token if present
 // it accepts Authorization Bearer (RFC6750) and X-Vault-Token header
-func getTokenFromReq(r *http.Request) (string, error) {
+func getTokenFromReq(r *http.Request) (string, bool, error) {
 	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
-		return token, nil
+		r.Header.Del(consts.AuthHeaderName)
+		return token, false, nil
 	}
 	if v := r.Header.Get("Authorization"); v != "" {
 		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
 
-		// If string does not start by Bearer, or contains any space after it. It is a formatting error
-		if !strings.HasPrefix(v, "Bearer ") || strings.LastIndexByte(v, ' ') > 7 {
-			return "", fmt.Errorf("the Authorization header provided is wrongly formatted. Please use \"Bearer <token>\"")
+		// If string does not start by 'Bearer ', it is not one we would use,
+		// but might be used by plugins
+		if !strings.HasPrefix(v, "Bearer ") {
+			return "", false, nil
 		}
-		return v[7:], nil
+		return strings.TrimSpace(v[7:]), true, nil
 	}
-	return "", nil
+	return "", false, nil
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if token, err := getTokenFromReq(r); err != nil {
+	if token, fromAuthzHeader, err := getTokenFromReq(r); err != nil {
 		return req, err
 	} else if token != "" {
 		req.ClientToken = token
@@ -700,6 +702,10 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
 			req.SetTokenEntry(te)
+			if fromAuthzHeader {
+				// This was a valid token in an authz header
+				r.Header.Del("Authorization")
+			}
 		}
 	}
 

@@ -19,7 +19,6 @@ import (
 
 var (
 	deniedPassthroughRequestHeaders = []string{
-		"Authorization",
 		consts.AuthHeaderName,
 	}
 )

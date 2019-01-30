@@ -601,36 +601,41 @@ func TestHandler_requestAuth(t *testing.T) {
 func TestHandler_getTokenFromReq(t *testing.T) {
 	r := http.Request{Header: http.Header{}}
 
-	if tok, err := getTokenFromReq(&r); err != nil {
+	if tok, _, err := getTokenFromReq(&r); err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	} else if tok != "" {
 		t.Fatalf("expected '' as result, got '%s'", tok)
 	}
 
 	r.Header.Set("Authorization", "Bearer TOKEN NOT_GOOD_TOKEN")
-	if tok, err := getTokenFromReq(&r); err == nil {
-		t.Fatalf("expected an error, got none")
-	} else if tok != "" {
-		t.Fatalf("expected '' as result, got '%s'", tok)
+	if _, fromHeader, err := getTokenFromReq(&r); err != nil {
+		t.Fatal(err)
+	} else if !fromHeader {
+		t.Fatal("expected from header")
+	} else if r.Header.Get("Authorization") == "" {
+		t.Fatal("expected value to be passed through")
 	}
 
 	r.Header.Set(consts.AuthHeaderName, "NEWTOKEN")
-	if tok, err := getTokenFromReq(&r); err != nil {
+	if tok, _, err := getTokenFromReq(&r); err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	} else if tok == "TOKEN" {
 		t.Fatalf("%s header should be prioritized", consts.AuthHeaderName)
 	} else if tok != "NEWTOKEN" {
 		t.Fatalf("expected 'NEWTOKEN' as result, got '%s'", tok)
+	} else if r.Header.Get(consts.AuthHeaderName) != "" {
+		t.Fatal("expected auth header to be removed")
 	}
 
 	r.Header = http.Header{}
 	r.Header.Set("Authorization", "Basic TOKEN")
-	if tok, err := getTokenFromReq(&r); err == nil {
-		t.Fatal("expected error, got none")
+	if tok, fromHeader, err := getTokenFromReq(&r); err != nil {
+		t.Fatal(err)
 	} else if tok != "" {
 		t.Fatalf("expected '' as result, got '%s'", tok)
+	} else if fromHeader {
+		t.Fatal("expected not from header")
 	}
-
 }
 
 func TestHandler_nonPrintableChars(t *testing.T) {
