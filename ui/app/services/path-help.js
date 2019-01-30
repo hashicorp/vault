@@ -23,7 +23,10 @@ export default Service.extend({
   getProps(modelType, backend) {
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
-    let helpUrl = `/v1/${backend}/${path}/example?help=1`;
+    const authMethods = ['auth-config/ldap'];
+    let helpUrl = authMethods.includes(modelType)
+      ? `/v1/auth/${backend}/${path}?help=1`
+      : `/v1/${backend}/${path}/example?help=1`;
     let wildcard;
     switch (path) {
       case 'roles':
@@ -47,9 +50,8 @@ export default Service.extend({
     }
 
     return this.ajax(helpUrl, backend).then(help => {
-      let props =
-        help.openapi.paths[`/${path}/{${wildcard}}`].post.requestBody.content['application/json'].schema
-          .properties;
+      let fullPath = wildcard ? `/${path}/{${wildcard}}` : `/${path}`;
+      let props = help.openapi.paths[fullPath].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
     });
   },
