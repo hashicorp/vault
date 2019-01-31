@@ -813,7 +813,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	if err != nil {
 		return err
 	}
-	ent := &Entry{
+	ent := &logical.StorageEntry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}
