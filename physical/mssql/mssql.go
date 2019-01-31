@@ -97,8 +97,6 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		connectionString = strings.Join(connectionParams, ";")
 	}
 
-	fmt.Println(connectionString) //todo delete this
-
 	db, err := sql.Open("mssql", connectionString)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to connect to mssql: {{err}}", err)
