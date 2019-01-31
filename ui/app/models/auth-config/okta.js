@@ -2,6 +2,7 @@ import { computed } from '@ember/object';
 import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 const { attr } = DS;
 
@@ -26,8 +27,9 @@ export default AuthConfig.extend({
     helpText:
       "Useful if Vault's built-in MFA mechanisms. Will also cause certain other statuses to be ignored, such as PASSWORD_EXPIRED",
   }),
+
   fieldGroups: computed(function() {
-    const groups = [
+    let groups = [
       {
         default: ['orgName'],
       },
@@ -35,6 +37,10 @@ export default AuthConfig.extend({
         Options: ['apiToken', 'baseUrl', 'bypassOktaMfa'],
       },
     ];
+    if (this.newFields) {
+      groups = combineFieldGroups(groups, this.newFields, []);
+    }
+
     return fieldToAttrs(this, groups);
   }),
 });
