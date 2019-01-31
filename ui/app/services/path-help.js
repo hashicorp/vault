@@ -3,7 +3,7 @@
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
-import { expandOpenApiProps } from 'vault/utils/openapi-to-attrs';
+import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -17,6 +17,28 @@ export default Service.extend({
     let { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
+    });
+  },
+
+  getNewModel(modelType, backend, owner) {
+    let name = `model:${modelType}`;
+    let newModel = owner.factoryFor(name).class;
+    debugger; //eslint-disable-line
+    if (newModel.merged || newModel.useOpenAPI === false) {
+      return RSVP.resolve();
+    }
+
+    return this.getProps(modelType, backend).then(props => {
+      if (owner.hasRegistration(name) && !newModel.merged) {
+        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+        newModel = newModel.extend(attrs, { newFields });
+      } else {
+        //generate a whole new model
+      }
+
+      newModel.reopenClass({ merged: true });
+      owner.unregister(name);
+      owner.register(name, newModel);
     });
   },
 
@@ -50,7 +72,6 @@ export default Service.extend({
     }
 
     return this.ajax(helpUrl, backend).then(help => {
-      debugger; //eslint-disable-line
       let fullPath = wildcard ? `/${path}/{${wildcard}}` : `/${path}`;
       let props = help.openapi.paths[fullPath].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);

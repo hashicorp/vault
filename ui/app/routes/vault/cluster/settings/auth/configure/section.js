@@ -5,7 +5,6 @@ import RSVP from 'rsvp';
 import DS from 'ember-data';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { getOwner } from '@ember/application';
-import { combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
@@ -31,38 +30,13 @@ export default Route.extend(UnloadModelRoute, {
 
   beforeModel() {
     const { section_name } = this.paramsFor(this.routeName);
-    return this.buildModel(section_name);
-  },
-
-  buildModel(section) {
-    const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
-    let modelType = this.modelType(method, section);
-
-    let name = `model:${modelType}`;
-    let owner = getOwner(this);
-    let newModel = owner.factoryFor(name).class;
-    if (newModel.merged || newModel.useOpenAPI === false) {
-      return RSVP.resolve();
+    if (section_name === 'options') {
+      return;
     }
-
-    return this.pathHelp
-      .getProps(modelType, method)
-      .then(props => {
-        if (owner.hasRegistration(name) && !newModel.merged) {
-          //combine them
-          let { attrs, newFields } = combineAttributes(newModel.attributes, props);
-          newModel = newModel.extend(attrs, { newFields });
-        } else {
-          //generate a whole new model
-        }
-
-        newModel.reopenClass({ merged: true });
-        owner.unregister(name);
-        owner.register(name, newModel);
-      })
-      .catch(e => {
-        debugger; //eslint-disable-line
-      });
+    const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
+    let modelType = this.modelType(method, section_name);
+    let owner = getOwner(this);
+    return this.pathHelp.getNewModel(modelType, method, owner);
   },
 
   model(params) {

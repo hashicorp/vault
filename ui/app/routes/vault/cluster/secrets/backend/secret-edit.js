@@ -57,31 +57,8 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType in ['secret', 'secret-v2']) {
       return;
     }
-    let name = `model:${modelType}`;
     let owner = getOwner(this);
-    let newModel = owner.factoryFor(name).class;
-    if (newModel.merged || newModel.useOpenAPI === false) {
-      return resolve();
-    }
-
-    return this.pathHelp
-      .getProps(modelType, backend)
-      .then(props => {
-        if (owner.hasRegistration(name) && !newModel.merged) {
-          //combine them
-          let { attrs, newFields } = combineAttributes(newModel.attributes, props);
-          newModel = newModel.extend(attrs, { newFields });
-        } else {
-          //generate a whole new model
-        }
-        newModel.reopenClass({ merged: true });
-        owner.unregister(name);
-        owner.register(name, newModel);
-        debugger; //eslint-disable-line
-      })
-      .catch(e => {
-        debugger; //eslint-disable-line
-      });
+    return this.pathHelp.getNewModel(modelType, backend, owner);
   },
 
   modelType(backend, secret) {
