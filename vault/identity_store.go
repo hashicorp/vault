@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	entityBucketsPrefix = "packer/buckets/"
-	groupBucketsPrefix  = "packer/group/buckets/"
+	entityStoragePackerPrefix = "packer/"
+	groupStoragePackerPrefix  = "packer/group/"
 )
 
 var (
@@ -63,34 +63,52 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
 
-	// If we find buckets, we've already written values so we fall back to md5
-	// at the top level for compatibility. If we don't, this is a fresh install
-	// and we use Blake at the top level.
-	baseHashType := storagepacker.HashTypeBlake2b256
-	vals, err := iStore.view.List(ctx, entityBucketsPrefix)
+	// Check for the upgrade case
+	entitiesBucketStorageView := logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/")
+	vals, err := entitiesBucketStorageView.List(ctx, "")
 	if err != nil {
 		return nil, err
 	}
+	entityBucketsToUpgrade := make([]string, 0, 256)
+	for _, val := range vals {
+		if val == "v2/" {
+			continue
+		}
+		entityBucketsToUpgrade = append(entityBucketsToUpgrade, val)
+	}
 	if len(vals) > 0 {
-		baseHashType = storagepacker.HashTypeMD5
+		// TODO
 	}
 	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		View:         iStore.view,
-		ViewPrefix:   entityBucketsPrefix,
-		Logger:       entitiesPackerLogger,
-		BaseHashType: baseHashType,
+		BucketStorageView: logical.NewStorageView(entitiesBucketStorageView, "v2/"),
+		ConfigStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"config/"),
+		Logger:            entitiesPackerLogger,
 	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		View:         iStore.view,
-		ViewPrefix:   groupBucketsPrefix,
-		Logger:       groupsPackerLogger,
-		BaseHashType: baseHashType,
-	})
+	groupsBucketStorageView := logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/")
+	vals, err = groupsBucketStorageView.List(ctx, "")
+	if err != nil {
+		return nil, err
+	}
 
+	groupBucketsToUpgrade := make([]string, 0, 256)
+	for _, val := range vals {
+		if val == "v2/" {
+			continue
+		}
+		groupBucketsToUpgrade = append(groupBucketsToUpgrade, val)
+	}
+	if len(vals) > 0 {
+		// TODO
+	}
+	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
+		BucketStorageView: logical.NewStorageView(groupsBucketStorageView, "v2/"),
+		ConfigStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"config/"),
+		Logger:            groupsPackerLogger,
+	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create group packer: {{err}}", err)
 	}
@@ -132,13 +150,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
-	case strings.HasPrefix(key, storagepacker.DefaultStoragePackerBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.entityPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
-			return
-		}
+	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
+		bucketKeyHash := storagepacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -148,9 +161,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// entry key of the entity bucket. Fetch all the entities that
 		// belong to this bucket using the hash value. Remove these entities
 		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, bucketKeyHash)
 		if err != nil {
-			i.logger.Error("failed to fetch entities using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch entities using bucket hash key", "bucket_entry_key_hash", bucketKeyHash)
 			return
 		}
 
@@ -206,13 +219,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		return
 
 	// Check if the key is a storage entry key for an group bucket
-	case strings.HasPrefix(key, groupBucketsPrefix):
-		// Get the hash value of the storage bucket entry key
-		bucketKeyHash := i.groupPacker.BucketKeyHashByKey(key)
-		if len(bucketKeyHash) == 0 {
-			i.logger.Error("failed to get the bucket entry key hash")
-			return
-		}
+	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
+		bucketKeyHash := storagepacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -310,7 +318,6 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.LastUpdateTime = oldEntity.LastUpdateTime
 		entity.MergedEntityIDs = oldEntity.MergedEntityIDs
 		entity.Policies = oldEntity.Policies
-		entity.BucketKeyHash = oldEntity.BucketKeyHash
 		entity.MFASecrets = oldEntity.MFASecrets
 		// Copy each alias individually since the format of aliases were
 		// also different
@@ -331,6 +338,8 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 
 		persistNeeded = true
 	}
+
+	entity.BucketKeyHash = i.entityPacker.BucketHashKeyForItemID(entity.ID)
 
 	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
 	if err != nil {
@@ -379,6 +388,8 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 	if group.NamespaceID == "" {
 		group.NamespaceID = namespace.RootNamespaceID
 	}
+
+	group.BucketKeyHash = i.groupPacker.BucketHashKeyForItemID(group.ID)
 
 	return &group, nil
 }

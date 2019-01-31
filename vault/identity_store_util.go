@@ -76,138 +76,12 @@ func (i *IdentityStore) sanitizeName(name string) string {
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
 
-	allBuckets := make([]string, 0, 257)
-
-	var walkPrefixes func(in string) error
-	walkPrefixes = func(in string) error {
-		existing, err := i.groupPacker.StorageView().List(ctx, in)
-		if err != nil {
-			return errwrap.Wrapf("failed to scan for groups: {{err}}", err)
-		}
-		for _, key := range existing {
-			if key == "config" {
-				continue
-			}
-			if key[len(key)-1] == '/' {
-				if err := walkPrefixes(key); err != nil {
-					return err
-				}
-			} else {
-				allBuckets = append(allBuckets, key)
-			}
-		}
-		return nil
-	}
-	if err := walkPrefixes(groupBucketsPrefix); err != nil {
-		return err
+	allBuckets, err := logical.CollectKeys(ctx, i.groupPacker.BucketsView())
+	if err != nil {
+		return errwrap.Wrapf("failed to scan for group buckets: {{err}}", err)
 	}
 
 	i.logger.Debug("group buckets collected", "num_existing", len(allBuckets))
-	for _, key := range allBuckets {
-		bucket, err := i.groupPacker.GetBucket(i.groupPacker.BucketPath(key))
-		if err != nil {
-			return err
-		}
-
-		if bucket == nil {
-			continue
-		}
-
-		for _, item := range bucket.Items {
-			group, err := i.parseGroupFromBucketItem(item)
-			if err != nil {
-				return err
-			}
-			if group == nil {
-				continue
-			}
-
-			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
-			if err != nil {
-				return err
-			}
-			if groupByName != nil {
-				i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
-				if !i.disableLowerCasedNames {
-					return errDuplicateIdentityName
-				}
-			}
-
-			if i.logger.IsDebug() {
-				i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
-			}
-
-			txn := i.db.Txn(true)
-
-			// Before pull#5786, entity memberships in groups were not getting
-			// updated when respective entities were deleted. This is here to
-			// check that the entity IDs in the group are indeed valid, and if
-			// not remove them.
-			persist := false
-			for _, memberEntityID := range group.MemberEntityIDs {
-				entity, err := i.MemDBEntityByID(memberEntityID, false)
-				if err != nil {
-					return err
-				}
-				if entity == nil {
-					persist = true
-					group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
-				}
-			}
-
-			err = i.UpsertGroupInTxn(txn, group, persist)
-			if err != nil {
-				txn.Abort()
-				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
-			}
-
-			txn.Commit()
-		}
-	}
-
-	if i.logger.IsInfo() {
-		i.logger.Info("groups restored")
-	}
-
-	return nil
-}
-
-func (i *IdentityStore) loadEntities(ctx context.Context) error {
-	// Accumulate existing entities
-	i.logger.Debug("loading entities")
-	existing, err := i.entityPacker.StorageView().List(ctx, storagepacker.DefaultStoragePackerBucketsPrefix)
-	if err != nil {
-		return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
-	}
-
-	allBuckets := make([]string, 0, 257)
-
-	var walkPrefixes func(in string) error
-	walkPrefixes = func(in string) error {
-		existing, err := i.entityPacker.StorageView().List(ctx, in)
-		if err != nil {
-			return errwrap.Wrapf("failed to scan for entities: {{err}}", err)
-		}
-		for _, key := range existing {
-			if key == "config" {
-				continue
-			}
-			if key[len(key)-1] == '/' {
-				if err := walkPrefixes(key); err != nil {
-					return err
-				}
-			} else {
-				allBuckets = append(allBuckets, key)
-			}
-		}
-		return nil
-	}
-	if err := walkPrefixes(entityBucketsPrefix); err != nil {
-		return err
-	}
-
-	i.logger.Debug("entity buckets collected", "num_existing", len(allBuckets))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
@@ -215,7 +89,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 	// Buffer these channels to prevent deadlocks
 	errs := make(chan error, len(allBuckets))
-	result := make(chan *storagepacker.Bucket, len(allBuckets))
+	result := make(chan *storagepacker.LockedBucket, len(allBuckets))
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -234,7 +108,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(i.entityPacker.BucketPath(bucketKey))
+					bucket, err := i.groupPacker.GetBucket(bucketKey)
 					if err != nil {
 						errs <- err
 						continue
@@ -255,7 +129,160 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for j, bucketKey := range existing {
+		for j, bucketKey := range allBuckets {
+			if j%500 == 0 {
+				i.logger.Debug("groups loading", "progress", j)
+			}
+
+			select {
+			case <-quit:
+				return
+
+			default:
+				broker <- bucketKey
+			}
+		}
+
+		// Close the broker, causing worker routines to exit
+		close(broker)
+	}()
+
+	// Restore each key by pulling from the result chan
+	for j := 0; j < len(allBuckets); j++ {
+		select {
+		case err := <-errs:
+			// Close all go routines
+			close(quit)
+
+			return err
+
+		case bucket := <-result:
+			// If there is no entry, nothing to restore
+			if bucket == nil {
+				continue
+			}
+
+			for _, item := range bucket.Items {
+				group, err := i.parseGroupFromBucketItem(item)
+				if err != nil {
+					return err
+				}
+				if group == nil {
+					continue
+				}
+
+				// Ensure that there are no groups with duplicate names
+				groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+				if err != nil {
+					return err
+				}
+				if groupByName != nil {
+					i.logger.Warn(errDuplicateIdentityName.Error(), "group_name", group.Name, "conflicting_group_name", groupByName.Name, "action", "merge the contents of duplicated groups into one and delete the other")
+					if !i.disableLowerCasedNames {
+						return errDuplicateIdentityName
+					}
+				}
+
+				if i.logger.IsDebug() {
+					i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
+				}
+
+				txn := i.db.Txn(true)
+
+				// Before pull#5786, entity memberships in groups were not getting
+				// updated when respective entities were deleted. This is here to
+				// check that the entity IDs in the group are indeed valid, and if
+				// not remove them.
+				persist := false
+				for _, memberEntityID := range group.MemberEntityIDs {
+					entity, err := i.MemDBEntityByID(memberEntityID, false)
+					if err != nil {
+						return err
+					}
+					if entity == nil {
+						persist = true
+						group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, memberEntityID)
+					}
+				}
+
+				err = i.UpsertGroupInTxn(txn, group, persist)
+				if err != nil {
+					txn.Abort()
+					return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
+				}
+
+				txn.Commit()
+			}
+		}
+	}
+
+	// Let all go routines finish
+	wg.Wait()
+
+	if i.logger.IsInfo() {
+		i.logger.Info("groups restored")
+	}
+
+	return nil
+}
+
+func (i *IdentityStore) loadEntities(ctx context.Context) error {
+	// Accumulate existing entities
+	i.logger.Debug("loading entities")
+	allBuckets, err := logical.CollectKeys(ctx, i.entityPacker.BucketsView())
+	if err != nil {
+		return errwrap.Wrapf("failed to scan for entity buckets: {{err}}", err)
+	}
+
+	i.logger.Debug("entity buckets collected", "num_existing", len(allBuckets))
+
+	// Make the channels used for the worker pool
+	broker := make(chan string)
+	quit := make(chan bool)
+
+	// Buffer these channels to prevent deadlocks
+	errs := make(chan error, len(allBuckets))
+	result := make(chan *storagepacker.LockedBucket, len(allBuckets))
+
+	// Use a wait group
+	wg := &sync.WaitGroup{}
+
+	// Create 64 workers to distribute work to
+	for j := 0; j < consts.ExpirationRestoreWorkerCount; j++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for {
+				select {
+				case bucketKey, ok := <-broker:
+					// broker has been closed, we are done
+					if !ok {
+						return
+					}
+
+					bucket, err := i.entityPacker.GetBucket(bucketKey)
+					if err != nil {
+						errs <- err
+						continue
+					}
+
+					// Write results out to the result channel
+					result <- bucket
+
+				// quit early
+				case <-quit:
+					return
+				}
+			}
+		}()
+	}
+
+	// Distribute the collected keys to the workers in a go routine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for j, bucketKey := range allBuckets {
 			if j%500 == 0 {
 				i.logger.Debug("entities loading", "progress", j)
 			}
@@ -274,7 +301,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}()
 
 	// Restore each key by pulling from the result chan
-	for j := 0; j < len(existing); j++ {
+	for j := 0; j < len(allBuckets); j++ {
 		select {
 		case err := <-errs:
 			// Close all go routines
@@ -975,7 +1002,7 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 		}
 
 		// Set the hash value of the storage bucket key in entity
-		entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
+		entity.BucketKeyHash = i.entityPacker.BucketHashKeyForItemID(entity.ID)
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1035,7 +1062,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 
 		// Set the hash value of the storage bucket key in group
-		group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
+		group.BucketKeyHash = i.groupPacker.BucketHashKeyForItemID(group.ID)
 	}
 
 	if group.NamespaceID == "" {
