@@ -195,7 +195,13 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit(e) {
+    doSubmit() {
+      let passedData, e;
+      if (arguments.length > 1) {
+        [passedData, e] = arguments;
+      } else {
+        [e] = arguments;
+      }
       if (e) {
         e.preventDefault();
       }
@@ -210,6 +216,9 @@ export default Component.extend(DEFAULTS, {
       let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
       data = assign(data, this.getProperties(...attributes));
+      if (passedData) {
+        data = assign(data, passedData);
+      }
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }

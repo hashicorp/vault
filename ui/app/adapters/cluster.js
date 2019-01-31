@@ -109,7 +109,7 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { token, password, username, path } = data;
+    const { role, jwt, token, password, username, path } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
     let options = {
@@ -119,6 +119,8 @@ export default ApplicationAdapter.extend({
       options.headers = {
         'X-Vault-Token': token,
       };
+    } else if (backend === 'jwt') {
+      options.data = { role, jwt };
     } else {
       options.data = token ? { token, password } : { password };
     }

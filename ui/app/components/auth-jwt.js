@@ -35,7 +35,7 @@ export default Component.extend({
   }),
 
   getWindow() {
-    return window;
+    return this.window || window;
   },
 
   fetchRole: task(function*(roleName, options = {}) {
