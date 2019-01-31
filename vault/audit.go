@@ -308,7 +308,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   coreAuditConfigPath,
 			Value: compressedBytes,
 		}
@@ -327,7 +327,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		return err
 	}
 
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   coreLocalAuditConfigPath,
 		Value: compressedBytes,
 	}

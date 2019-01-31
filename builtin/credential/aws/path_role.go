@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	currentRoleStorageVersion = 2
+	currentRoleStorageVersion = 3
 )
 
 func pathRole(b *backend) *framework.Path {
@@ -391,8 +391,8 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundVpcIDs = []string{roleEntry.BoundVpcID}
 			roleEntry.BoundVpcID = ""
 		}
-		roleEntry.Version = 1
 		fallthrough
+
 	case 1:
 		// Make BoundIamRoleARNs and BoundIamInstanceProfileARNs explicitly prefix-matched
 		for i, arn := range roleEntry.BoundIamRoleARNs {
@@ -401,15 +401,24 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 		for i, arn := range roleEntry.BoundIamInstanceProfileARNs {
 			roleEntry.BoundIamInstanceProfileARNs[i] = fmt.Sprintf("%s*", arn)
 		}
-		roleEntry.Version = 2
 		fallthrough
+
+	case 2:
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return false, err
+		}
+		roleEntry.RoleID = roleID
+		fallthrough
+
 	case currentRoleStorageVersion:
+		roleEntry.Version = currentRoleStorageVersion
+
 	default:
 		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
 	}
 
 	return upgraded, nil
-
 }
 
 // nonLockedAWSRole returns the properties set on the given role. This method
@@ -494,7 +503,12 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	if roleEntry == nil {
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
 		roleEntry = &awsRoleEntry{
+			RoleID:  roleID,
 			Version: currentRoleStorageVersion,
 		}
 	} else {
@@ -807,7 +821,8 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	AuthType                    string        `json:"auth_type" `
+	RoleID                      string        `json:"role_id"`
+	AuthType                    string        `json:"auth_type"`
 	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
 	BoundAccountIDs             []string      `json:"bound_account_id_list"`
 	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
@@ -858,6 +873,7 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"inferred_entity_type":           r.InferredEntityType,
 		"inferred_aws_region":            r.InferredAWSRegion,
 		"resolve_aws_unique_ids":         r.ResolveAWSUniqueIDs,
+		"role_id":                        r.RoleID,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
 		"ttl":                            r.TTL / time.Second,

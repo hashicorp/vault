@@ -4,12 +4,11 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"strings"
 	"time"
 
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -28,11 +27,11 @@ func pathListCerts(b *backend) *framework.Path {
 }
 
 func pathCerts(b *backend) *framework.Path {
-	return &framework.Path{
+	path := &framework.Path{
 		Pattern: "certs/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeLowerCaseString,
 				Description: "The name of the certificate",
 			},
 
@@ -93,41 +92,10 @@ All values much match. Supports globbing on "value".`,
 certificate.`,
 			},
 
-			"policies": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: "Comma-separated list of policies.",
-			},
-
 			"lease": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `Deprecated: use "ttl" instead. TTL time in
 seconds. Defaults to system/backend default TTL.`,
-			},
-
-			"ttl": &framework.FieldSchema{
-				Type: framework.TypeDurationSecond,
-				Description: `TTL for tokens issued by this backend.
-Defaults to system/backend default TTL time.`,
-			},
-
-			"max_ttl": &framework.FieldSchema{
-				Type: framework.TypeDurationSecond,
-				Description: `Duration in either an integer number of seconds (3600) or
-an integer time unit (60m) after which the
-issued token can no longer be renewed.`,
-			},
-
-			"period": &framework.FieldSchema{
-				Type: framework.TypeDurationSecond,
-				Description: `If set, indicates that the token generated using this role
-should never expire. The token should be renewed within the
-duration specified by this value. At each renewal, the token's
-TTL will be set to the value of this parameter.`,
-			},
-			"bound_cidrs": &framework.FieldSchema{
-				Type: framework.TypeCommaStringSlice,
-				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
-IP addresses which can perform the login operation.`,
 			},
 		},
 
@@ -140,10 +108,13 @@ IP addresses which can perform the login operation.`,
 		HelpSynopsis:    pathCertHelpSyn,
 		HelpDescription: pathCertHelpDesc,
 	}
+	tokenhelper.AddTokenFields(path.Fields)
+
+	return path
 }
 
 func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertEntry, error) {
-	entry, err := s.Get(ctx, "cert/"+strings.ToLower(n))
+	entry, err := s.Get(ctx, "cert/"+n)
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +126,48 @@ func (b *backend) Cert(ctx context.Context, s logical.Storage, n string) (*CertE
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
+
+	var needsUpgrade bool
+	if result.OldTTL != 0 {
+		needsUpgrade = true
+		result.TTL = result.OldTTL
+		result.OldTTL = 0
+	}
+	if result.OldMaxTTL != 0 {
+		needsUpgrade = true
+		result.MaxTTL = result.OldMaxTTL
+		result.OldMaxTTL = 0
+	}
+	if result.OldPeriod != 0 {
+		needsUpgrade = true
+		result.Period = result.OldPeriod
+		result.OldPeriod = 0
+	}
+	if len(result.OldPolicies) > 0 {
+		needsUpgrade = true
+		result.Policies = result.OldPolicies
+		result.OldPolicies = nil
+	}
+	if len(result.OldBoundCIDRs) > 0 {
+		needsUpgrade = true
+		result.BoundCIDRs = result.OldBoundCIDRs
+		result.OldBoundCIDRs = nil
+	}
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
+		entry, err := logical.StorageEntryJSON("cert/"+n, result)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.Put(ctx, entry); err != nil {
+			return nil, err
+		}
+	}
+
 	return &result, nil
 }
 
 func (b *backend) pathCertDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "cert/"+strings.ToLower(d.Get("name").(string)))
+	err := req.Storage.Delete(ctx, "cert/"+d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +183,7 @@ func (b *backend) pathCertList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cert, err := b.Cert(ctx, req.Storage, strings.ToLower(d.Get("name").(string)))
+	cert, err := b.Cert(ctx, req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -183,30 +191,27 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		return nil, nil
 	}
 
+	data := map[string]interface{}{
+		"certificate":                  cert.Certificate,
+		"display_name":                 cert.DisplayName,
+		"allowed_names":                cert.AllowedNames,
+		"allowed_common_names":         cert.AllowedCommonNames,
+		"allowed_dns_sans":             cert.AllowedDNSSANs,
+		"allowed_email_sans":           cert.AllowedEmailSANs,
+		"allowed_uri_sans":             cert.AllowedURISANs,
+		"allowed_organizational_units": cert.AllowedOrganizationalUnits,
+		"required_extensions":          cert.RequiredExtensions,
+	}
+	cert.PopulateTokenData(data)
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"certificate":                  cert.Certificate,
-			"display_name":                 cert.DisplayName,
-			"policies":                     cert.Policies,
-			"ttl":                          cert.TTL / time.Second,
-			"max_ttl":                      cert.MaxTTL / time.Second,
-			"period":                       cert.Period / time.Second,
-			"allowed_names":                cert.AllowedNames,
-			"allowed_common_names":         cert.AllowedCommonNames,
-			"allowed_dns_sans":             cert.AllowedDNSSANs,
-			"allowed_email_sans":           cert.AllowedEmailSANs,
-			"allowed_uri_sans":             cert.AllowedURISANs,
-			"allowed_organizational_units": cert.AllowedOrganizationalUnits,
-			"required_extensions":          cert.RequiredExtensions,
-		},
+		Data: data,
 	}, nil
 }
 
 func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := strings.ToLower(d.Get("name").(string))
+	name := d.Get("name").(string)
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
-	policies := policyutil.ParsePolicies(d.Get("policies"))
 	allowedNames := d.Get("allowed_names").([]string)
 	allowedCommonNames := d.Get("allowed_common_names").([]string)
 	allowedDNSSANs := d.Get("allowed_dns_sans").([]string)
@@ -215,45 +220,32 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	allowedOrganizationalUnits := d.Get("allowed_organizational_units").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
+	certEntry := &CertEntry{}
 	var resp logical.Response
+
+	if err := certEntry.ParseTokenFields(req, d); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 
 	// Parse the ttl (or lease duration)
 	systemDefaultTTL := b.System().DefaultLeaseTTL()
-	ttl := time.Duration(d.Get("ttl").(int)) * time.Second
-	if ttl == 0 {
-		ttl = time.Duration(d.Get("lease").(int)) * time.Second
-	}
-	if ttl > systemDefaultTTL {
-		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", ttl/time.Second, systemDefaultTTL/time.Second))
-	}
-
-	if ttl < time.Duration(0) {
-		return logical.ErrorResponse("ttl cannot be negative"), nil
+	if certEntry.TTL > systemDefaultTTL {
+		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds is greater than current mount/system default of %d seconds", certEntry.TTL/time.Second, systemDefaultTTL/time.Second))
 	}
 
 	// Parse max_ttl
 	systemMaxTTL := b.System().MaxLeaseTTL()
-	maxTTL := time.Duration(d.Get("max_ttl").(int)) * time.Second
-	if maxTTL > systemMaxTTL {
-		resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", maxTTL/time.Second, systemMaxTTL/time.Second))
+	if certEntry.MaxTTL > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given max_ttl of %d seconds is greater than current mount/system default of %d seconds", certEntry.MaxTTL/time.Second, systemMaxTTL/time.Second))
 	}
 
-	if maxTTL < time.Duration(0) {
-		return logical.ErrorResponse("max_ttl cannot be negative"), nil
-	}
-
-	if maxTTL != 0 && ttl > maxTTL {
+	if certEntry.MaxTTL != 0 && certEntry.TTL > certEntry.MaxTTL {
 		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
 	}
 
 	// Parse period
-	period := time.Duration(d.Get("period").(int)) * time.Second
-	if period > systemMaxTTL {
-		resp.AddWarning(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", period/time.Second, systemMaxTTL/time.Second))
-	}
-
-	if period < time.Duration(0) {
-		return logical.ErrorResponse("period cannot be negative"), nil
+	if certEntry.Period > systemMaxTTL {
+		resp.AddWarning(fmt.Sprintf("Given period of %d seconds is greater than the backend's maximum TTL of %d seconds", certEntry.Period/time.Second, systemMaxTTL/time.Second))
 	}
 
 	// Default the display name to the certificate name if not given
@@ -280,28 +272,16 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	parsedCIDRs, err := parseutil.ParseAddrs(d.Get("bound_cidrs"))
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	certEntry := &CertEntry{
-		Name:                       name,
-		Certificate:                certificate,
-		DisplayName:                displayName,
-		Policies:                   policies,
-		AllowedNames:               allowedNames,
-		AllowedCommonNames:         allowedCommonNames,
-		AllowedDNSSANs:             allowedDNSSANs,
-		AllowedEmailSANs:           allowedEmailSANs,
-		AllowedURISANs:             allowedURISANs,
-		AllowedOrganizationalUnits: allowedOrganizationalUnits,
-		RequiredExtensions:         requiredExtensions,
-		TTL:                        ttl,
-		MaxTTL:                     maxTTL,
-		Period:                     period,
-		BoundCIDRs:                 parsedCIDRs,
-	}
+	certEntry.Name = name
+	certEntry.Certificate = certificate
+	certEntry.DisplayName = displayName
+	certEntry.AllowedNames = allowedNames
+	certEntry.AllowedCommonNames = allowedCommonNames
+	certEntry.AllowedDNSSANs = allowedDNSSANs
+	certEntry.AllowedEmailSANs = allowedEmailSANs
+	certEntry.AllowedURISANs = allowedURISANs
+	certEntry.AllowedOrganizationalUnits = allowedOrganizationalUnits
+	certEntry.RequiredExtensions = requiredExtensions
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("cert/"+name, certEntry)
@@ -320,13 +300,11 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 type CertEntry struct {
+	tokenhelper.TokenParams
+
 	Name                       string
 	Certificate                string
 	DisplayName                string
-	Policies                   []string
-	TTL                        time.Duration
-	MaxTTL                     time.Duration
-	Period                     time.Duration
 	AllowedNames               []string
 	AllowedCommonNames         []string
 	AllowedDNSSANs             []string
@@ -334,7 +312,13 @@ type CertEntry struct {
 	AllowedURISANs             []string
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
-	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
+
+	// These token-related fields have been moved to the embedded tokenhelper.TokenParams struct
+	OldPolicies   []string                      `json:"Policies"`
+	OldTTL        time.Duration                 `json:"TTL"`
+	OldMaxTTL     time.Duration                 `json:"MaxTTL"`
+	OldPeriod     time.Duration                 `json:"Period"`
+	OldBoundCIDRs []*sockaddr.SockAddrMarshaler `json:"BoundCIDRs"`
 }
 
 const pathCertHelpSyn = `

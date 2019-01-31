@@ -2173,7 +2173,7 @@ func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request
 	}
 
 	value := data.Get("value").(string)
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   path,
 		Value: []byte(value),
 	}
@@ -2272,7 +2272,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(ctx, &Entry{
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
