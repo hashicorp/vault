@@ -73,13 +73,6 @@ take precedence.`,
 				Default:     5,
 				Description: `The connection timeout to use. Defaults to 5.`,
 			},
-
-			"local_datacenter": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `Host selection policy which will prioritize and
-use hosts which are in the local datacenter before hosts in all
-other datacenters.`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -117,7 +110,6 @@ func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, 
 			"protocol_version": config.ProtocolVersion,
 			"connect_timeout":  config.ConnectTimeout,
 			"tls_min_version":  config.TLSMinVersion,
-			"local_datacenter": config.LocalDatacenter,
 		},
 	}
 	return resp, nil
@@ -145,7 +137,6 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 		InsecureTLS:     data.Get("insecure_tls").(bool),
 		ProtocolVersion: data.Get("protocol_version").(int),
 		ConnectTimeout:  data.Get("connect_timeout").(int),
-		LocalDatacenter: data.Get("local_datacenter").(string),
 	}
 
 	config.TLSMinVersion = data.Get("tls_min_version").(string)
@@ -228,10 +219,6 @@ const pathConfigConnectionHelpDesc = `
 This path configures the connection information used to connect to Cassandra.
 
 "hosts" is a comma-delimited list of hostnames in the Cassandra cluster.
-
-"local_datacenter" if set, enables host selection policy which will prioritize and
-use hosts which are in the local datacenter before hosts in all
-other datacenters.
 
 "username" and "password" are self-explanatory, although the given user
 must have superuser access within Cassandra. Note that since this backend
