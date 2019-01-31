@@ -52,7 +52,17 @@ func (tq *TimeQueue) Size() int {
 // PopItem pops the highest priority item from the queue. This is a
 // wrapper/convienence method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
-func (tq *TimeQueue) PopItem() {
+func (tq *TimeQueue) PopItem() *Item {
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
+        if tq.Size() == 0 {
+                return nil
+        }
+
+        item := heap.Pop(tq).(*Item)
+        delete(tq.dataMap, item.Key)
+        return item
 }
 
 // PushItem pushes an item on to the queue. This is a wrapper/convienence
@@ -71,6 +81,12 @@ func (tq *TimeQueue) PushItem(i *Item) error {
         tq.dataMutex.RUnlock()
         tq.dataMutex.Lock()
         defer tq.dataMutex.Unlock()
+
+        // check the map again, in the event the item was being added during the Rlock
+        if _, ok := tq.dataMap[i.Key]; ok {
+                return fmt.Errorf("error adding item: Item already in queue. Use UpdateItem() instead")
+        }
+
         tq.dataMap[i.Key] = i
         heap.Push(tq, i)
         return nil

@@ -20,7 +20,7 @@ type PriorityQueue interface {
         // PopItem pops the highest priority item from the queue. This is a
         // wrapper/convienence method that calls heap.Pop, so consumers do not need to
         // invoke heap functions directly
-        PopItem()
+        PopItem() *Item
 
         // PushItem pushes an item on to the queue. This is a wrapper/convienence
         // method that calls heap.Push, so consumers do not need to invoke heap
