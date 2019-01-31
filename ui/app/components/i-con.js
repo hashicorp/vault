@@ -5,6 +5,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 const GLYPHS_WITH_SVG_TAG = [
   'cancel-square-outline',
+  'cancel-square-fill',
   'check-circle-fill',
   'check-plain',
   'checkmark-circled-outline',

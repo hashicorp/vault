@@ -16,7 +16,7 @@ const MESSAGE_TYPES = {
   danger: {
     class: 'is-danger',
     glyphClass: 'has-text-danger',
-    glyph: 'close-circled',
+    glyph: 'cancel-square-fill',
     text: 'Error',
   },
   warning: {
