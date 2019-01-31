@@ -23,14 +23,14 @@ message Item {
 message Bucket {
 	// Key is the storage path where the bucket gets stored
 	string key = 1;
-	// Items holds the items contained within this bucket
+	// Items holds the items contained within this bucket. Used by v1.
 	repeated Item items = 2;
+	// ItemMap stores a mapping of item ID to message. Used by v2.
+	map <string, google.protobuf.Any> item_map = 3;
 	// Buckets are the buckets contained within this bucket
-	map <string, Bucket> buckets = 3;
+	map <string, Bucket> buckets = 4;
 	// Sharded indicates if the contained buckets are pushed out or not
-	bool sharded = 4;
-	// The number of shards created in this bucket
-	uint32 shard_count = 5;
+	bool sharded = 5;
 	// Size of this bucket in number of bytes
 	uint32 size = 6;
 }

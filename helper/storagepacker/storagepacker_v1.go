@@ -10,6 +10,7 @@ import (
 
 	radix "github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
+	any "github.com/golang/protobuf/ptypes/any"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/compressutil"
@@ -299,23 +300,11 @@ func (s *Bucket) upsert(item *Item) error {
 		return fmt.Errorf("missing item ID")
 	}
 
-	// Look for an item with matching key and don't modify the collection
-	// while iterating
-	foundIdx := -1
-	for itemIdx, bucketItems := range s.Items {
-		if bucketItems.ID == item.ID {
-			foundIdx = itemIdx
-			break
-		}
+	if s.ItemMap == nil {
+		s.ItemMap = make(map[string]*any.Any)
 	}
 
-	// If there is no match, append the item, otherwise update it
-	if foundIdx == -1 {
-		s.Items = append(s.Items, item)
-	} else {
-		s.Items[foundIdx] = item
-	}
-
+	s.ItemMap[item.ID] = item.Message
 	return nil
 }
 
@@ -325,8 +314,6 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
 	}
-
-	var err error
 
 	// Get the bucket key
 	bucketKey := s.BucketStorageKeyForItemID(itemID)
@@ -367,28 +354,17 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 	bucket.Lock()
 	defer bucket.Unlock()
 
-	// Look for a matching storage entry
-	foundIdx := -1
-	for itemIdx, item := range bucket.Items {
-		if item.ID == itemID {
-			foundIdx = itemIdx
-			break
-		}
+	if len(bucket.ItemMap) == 0 {
+		return nil
 	}
 
-	// If there is a match, remove it from the collection and persist the
-	// resulting collection
-	if foundIdx != -1 {
-		bucket.Items = append(bucket.Items[:foundIdx], bucket.Items[foundIdx+1:]...)
-
-		// Persist bucket entry only if there is an update
-		err = s.storeBucket(bucket)
-		if err != nil {
-			return err
-		}
+	_, ok := bucket.ItemMap[itemID]
+	if !ok {
+		return nil
 	}
 
-	return nil
+	delete(bucket.ItemMap, itemID)
+	return s.storeBucket(bucket)
 }
 
 // GetItem fetches the storage entry for a given key from its corresponding
@@ -435,16 +411,22 @@ func (s *StoragePackerV1) GetItem(itemID string) (*Item, error) {
 
 	bucket.RLock()
 
-	// Look for a matching storage entry in the bucket items
-	for _, item := range bucket.Items {
-		if item.ID == itemID {
-			bucket.RUnlock()
-			return item, nil
-		}
+	if len(bucket.ItemMap) == 0 {
+		bucket.RUnlock()
+		return nil, nil
+	}
+
+	item, ok := bucket.ItemMap[itemID]
+	if !ok {
+		bucket.RUnlock()
+		return nil, nil
 	}
 
 	bucket.RUnlock()
-	return nil, nil
+	return &Item{
+		ID:      itemID,
+		Message: item,
+	}, nil
 }
 
 // PutItem stores a storage entry in its corresponding bucket

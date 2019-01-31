@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
@@ -94,6 +95,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	// Use a wait group
 	wg := &sync.WaitGroup{}
 
+	var restoreCount uint64
+
 	// Create 64 workers to distribute work to
 	for j := 0; j < consts.ExpirationRestoreWorkerCount; j++ {
 		wg.Add(1)
@@ -130,8 +133,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		for j, bucketKey := range allBuckets {
-			if j%500 == 0 {
-				i.logger.Debug("groups loading", "progress", j)
+			if j%50 == 0 {
+				i.logger.Debug("groups buckets loading", "progress", j)
 			}
 
 			select {
@@ -162,8 +165,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
-			for _, item := range bucket.Items {
-				group, err := i.parseGroupFromBucketItem(item)
+			for id, message := range bucket.ItemMap {
+				group, err := i.parseGroupFromBucketItem(&storagepacker.Item{ID: id, Message: message})
 				if err != nil {
 					return err
 				}
@@ -212,6 +215,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 
 				txn.Commit()
+
+				atomic.AddUint64(&restoreCount, 1)
 			}
 		}
 	}
@@ -220,7 +225,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	wg.Wait()
 
 	if i.logger.IsInfo() {
-		i.logger.Info("groups restored")
+		i.logger.Info("groups restored", "num_restored", atomic.LoadUint64(&restoreCount))
 	}
 
 	return nil
@@ -283,8 +288,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	go func() {
 		defer wg.Done()
 		for j, bucketKey := range allBuckets {
-			if j%500 == 0 {
-				i.logger.Debug("entities loading", "progress", j)
+			if j%50 == 0 {
+				i.logger.Debug("entities buckets loading", "progress", j)
 			}
 
 			select {
@@ -299,6 +304,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 		// Close the broker, causing worker routines to exit
 		close(broker)
 	}()
+
+	var restoreCount uint64
 
 	// Restore each key by pulling from the result chan
 	for j := 0; j < len(allBuckets); j++ {
@@ -315,8 +322,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				continue
 			}
 
-			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(ctx, item)
+			for id, message := range bucket.ItemMap {
+				entity, err := i.parseEntityFromBucketItem(ctx, &storagepacker.Item{ID: id, Message: message})
 				if err != nil {
 					return err
 				}
@@ -342,6 +349,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
+
+				atomic.AddUint64(&restoreCount, 1)
 			}
 		}
 	}
@@ -350,7 +359,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Wait()
 
 	if i.logger.IsInfo() {
-		i.logger.Info("entities restored")
+		i.logger.Info("entities restored", "num_restored", atomic.LoadUint64(&restoreCount))
 	}
 
 	return nil

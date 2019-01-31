@@ -199,8 +199,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
 		if bucket != nil {
-			for _, item := range bucket.Items {
-				entity, err := i.parseEntityFromBucketItem(ctx, item)
+			for id, message := range bucket.ItemMap {
+				entity, err := i.parseEntityFromBucketItem(ctx, &storagepacker.Item{ID: id, Message: message})
 				if err != nil {
 					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 					return
@@ -249,8 +249,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		if bucket != nil {
-			for _, item := range bucket.Items {
-				group, err := i.parseGroupFromBucketItem(item)
+			for id, message := range bucket.ItemMap {
+				group, err := i.parseGroupFromBucketItem(&storagepacker.Item{ID: id, Message: message})
 				if err != nil {
 					i.logger.Error("failed to parse group from bucket entry item", "error", err)
 					return
