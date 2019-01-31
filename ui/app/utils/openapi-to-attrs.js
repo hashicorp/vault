@@ -4,7 +4,6 @@ import { assign } from '@ember/polyfills';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export const expandOpenApiProps = function(props) {
-  debugger; //eslint-disable-line
   let attrs = {};
   // expand all attributes
   for (let prop in props) {
@@ -80,10 +79,11 @@ export const combineFieldGroups = function(currentGroups, newFields, excludedFie
     allFields = allFields.concat(group[fieldName]);
   }
   let otherFields = newFields.filter(field => {
-    !allFields.includes(field) && !excludedFields.includes(field);
+    return !allFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {
-    currentGroups.default = currentGroups.default.concat(otherFields);
+    currentGroups[0].default = currentGroups[0].default.concat(otherFields);
   }
+
   return currentGroups;
 };
