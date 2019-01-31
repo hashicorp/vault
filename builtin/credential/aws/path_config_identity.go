@@ -21,7 +21,7 @@ func pathConfigIdentity(b *backend) *framework.Path {
 			"ec2_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasEC2InstanceID,
-				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults ot %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
+				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
 			},
 		},
 
