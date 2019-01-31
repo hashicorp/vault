@@ -33,7 +33,7 @@ export const expandOpenApiProps = function(props) {
       attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
     }
   }
-  debugger; //eslint-disable-line
+
   return attrs;
 };
 

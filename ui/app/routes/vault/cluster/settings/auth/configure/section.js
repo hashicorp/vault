@@ -55,10 +55,10 @@ export default Route.extend(UnloadModelRoute, {
         } else {
           //generate a whole new model
         }
+
         newModel.reopenClass({ merged: true });
         owner.unregister(name);
         owner.register(name, newModel);
-        debugger; //eslint-disable-line
       })
       .catch(e => {
         debugger; //eslint-disable-line
