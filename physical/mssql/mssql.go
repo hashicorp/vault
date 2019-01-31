@@ -29,16 +29,8 @@ type MSSQLBackend struct {
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	username, ok := conf["username"]
-	if !ok {
-		username = ""
-	}
 
-	password, ok := conf["password"]
-	if !ok {
-		password = ""
-	}
-
+	// enforce required configurations
 	server, ok := conf["server"]
 	if !ok || server == "" {
 		return nil, fmt.Errorf("missing server")
@@ -59,44 +51,32 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		maxParInt = physical.DefaultParallelOperations
 	}
 
-	database, ok := conf["database"]
-	if !ok {
-		database = "Vault"
+	// set defaults
+	defaults := make(map[string]string)
+	defaults["database"] = "Vault"
+	defaults["table"] = "Vault"
+	defaults["appname"] = "Vault"
+	defaults["connection timeout"] = "30"
+	defaults["schema"] = "dbo"
+	defaults["log level"] = "0"
+
+	// inject defaults into configuration map
+	var isSet bool
+	for k, v := range defaults {
+		_, isSet = conf[k]
+		if !isSet {
+			conf[k] = v
+		}
 	}
 
-	table, ok := conf["table"]
-	if !ok {
-		table = "Vault"
+	// create ado style connection
+	var connectionParams []string
+	for k, v := range conf {
+		connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
 	}
+	connectionString := strings.Join(connectionParams, ";")
 
-	appname, ok := conf["appname"]
-	if !ok {
-		appname = "Vault"
-	}
-
-	connectionTimeout, ok := conf["connectiontimeout"]
-	if !ok {
-		connectionTimeout = "30"
-	}
-
-	logLevel, ok := conf["loglevel"]
-	if !ok {
-		logLevel = "0"
-	}
-
-	schema, ok := conf["schema"]
-	if !ok || schema == "" {
-		schema = "dbo"
-	}
-
-	connectionString := fmt.Sprintf("server=%s;app name=%s;connection timeout=%s;log=%s", server, appname, connectionTimeout, logLevel)
-	if username != "" {
-		connectionString += ";user id=" + username
-	}
-
-	if password != "" {
-		connectionString += ";password=" + password
-	}
+	fmt.Println(connectionString) //todo delete this
 
 	db, err := sql.Open("mssql", connectionString)
 	if err != nil {
@@ -104,6 +84,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	db.SetMaxOpenConns(maxParInt)
+
+	database := conf["database"]
+	schema := conf["schema"]
+	table := conf["table"]
 
 	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '" + database + "') CREATE DATABASE " + database); err != nil {
 		return nil, errwrap.Wrapf("failed to create mssql database: {{err}}", err)
