@@ -2,7 +2,6 @@ import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { getOwner } from '@ember/application';
 import { inject as service } from '@ember/service';
-import { combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['ssh', 'aws', 'pki'];
 
@@ -25,28 +24,10 @@ export default Route.extend({
 
   beforeModel() {
     const { action } = this.paramsFor(this.routeName);
-    return this.buildModel(action);
-  },
-
-  buildModel(action) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(action);
-    let name = `model:${modelType}`;
     let owner = getOwner(this);
-    return this.pathHelp.getProps(modelType, backend).then(props => {
-      let newModel = owner.factoryFor(name).class;
-      if (owner.hasRegistration(name) && !newModel.merged) {
-        //combine them
-        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
-        debugger; //eslint-disable-line
-        newModel = newModel.extend(attrs, { newFields });
-      } else {
-        //generate a whole new model
-      }
-      newModel.reopenClass({ merged: true });
-      owner.unregister(name);
-      owner.register(name, newModel);
-    });
+    return this.pathHelp.getNewModel(modelType, backend, owner);
   },
 
   model(params) {

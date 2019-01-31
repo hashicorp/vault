@@ -4,6 +4,7 @@ import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
+import { resolve } from 'rsvp';
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -23,9 +24,8 @@ export default Service.extend({
   getNewModel(modelType, backend, owner) {
     let name = `model:${modelType}`;
     let newModel = owner.factoryFor(name).class;
-    debugger; //eslint-disable-line
     if (newModel.merged || newModel.useOpenAPI === false) {
-      return RSVP.resolve();
+      return resolve();
     }
 
     return this.getProps(modelType, backend).then(props => {

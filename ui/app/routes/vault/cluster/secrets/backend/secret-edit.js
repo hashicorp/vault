@@ -5,7 +5,6 @@ import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import { combineAttributes } from 'vault/utils/openapi-to-attrs';
 
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
