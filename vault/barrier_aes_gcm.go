@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -662,7 +663,7 @@ func (b *AESGCMBarrier) updateMasterKeyCommon(key []byte) (*Keyring, error) {
 }
 
 // Put is used to insert or update an entry
-func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
+func (b *AESGCMBarrier) Put(ctx context.Context, entry *logical.StorageEntry) error {
 	defer metrics.MeasureSince([]string{"barrier", "put"}, time.Now())
 	b.l.RLock()
 	if b.sealed {
@@ -690,7 +691,7 @@ func (b *AESGCMBarrier) Put(ctx context.Context, entry *Entry) error {
 }
 
 // Get is used to fetch an entry
-func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
+func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
 	defer metrics.MeasureSince([]string{"barrier", "get"}, time.Now())
 	b.l.RLock()
 	if b.sealed {
@@ -735,7 +736,7 @@ func (b *AESGCMBarrier) Get(ctx context.Context, key string) (*Entry, error) {
 	}
 
 	// Wrap in a logical entry
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:      key,
 		Value:    plain,
 		SealWrap: pe.SealWrap,
