@@ -33,15 +33,15 @@ type TimeQueue struct {
 }
 
 // Peek returns the top priority item without removing it from the queue
-func (tq *TimeQueue) Peek() {}
+// func (tq *TimeQueue) Peek() {}
 
-// Pluck removes an item from the queue by index. Plux must "fix" the heap when
+// Pluck removes an item from the queue by index. Pluck must "fix" the heap when
 // it's done
 func (tq *TimeQueue) Pluck() {}
 
 // Find searches the queue for an item by index and returns it if found,
 // otherwise ErrNotFound
-func (tq *TimeQueue) Find() {}
+// func (tq *TimeQueue) Find() {}
 
 // Size reports the size of the queue, e.g. number of items in data
 // TODO: duplicate of Len()?
