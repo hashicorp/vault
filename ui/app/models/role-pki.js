@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
-
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 const { attr } = DS;
 
 export default DS.Model.extend({
@@ -31,7 +31,7 @@ export default DS.Model.extend({
   canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
   fieldGroups: computed('backend', 'merged', function() {
-    const groups = [
+    let groups = [
       { default: ['name', 'keyType'] },
       {
         Options: [
@@ -77,34 +77,9 @@ export default DS.Model.extend({
       },
     ];
     let excludedFields = ['extKeyUsage'];
-    if (this.newFields) {
-      let allFields = [];
-      for (let group in groups) {
-        let fieldName = Object.keys(groups[group])[0];
-        allFields.concat(groups[group][fieldName]);
-      }
-      let otherFields = this.newFields.filter(field => {
-        !allFields.includes(field) && !excludedFields.includes(field);
-      });
-      if (otherFields.length) {
-        groups.default.concat(otherFields);
-      }
+    if (this.newFields.length) {
+      groups = combineFieldGroups(groups, this.newFields, excludedFields);
     }
-
-    if (this.newFields) {
-      let allFields = [];
-      for (let group in groups) {
-        let fieldName = Object.keys(groups[group])[0];
-        allFields.concat(groups[group][fieldName]);
-      }
-      let otherFields = this.newFields.filter(field => {
-        !allFields.includes(field);
-      });
-      if (otherFields.length) {
-        groups.default.concat(otherFields);
-      }
-    }
-
     return fieldToAttrs(this, groups);
   }),
 });

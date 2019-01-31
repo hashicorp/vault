@@ -4,10 +4,14 @@ import { assign } from '@ember/polyfills';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export const expandOpenApiProps = function(props) {
+  debugger; //eslint-disable-line
   let attrs = {};
   // expand all attributes
   for (let prop in props) {
     let details = props[prop];
+    if (details.deprecated === true) {
+      continue;
+    }
     if (details.type === 'integer') {
       details.type = 'number';
     }
@@ -17,12 +21,10 @@ export const expandOpenApiProps = function(props) {
     } else if (details.items) {
       editType = details.items.type + details.type.capitalize();
     }
-
     attrs[prop.camelize()] = {
       editType: editType,
       type: details.type,
     };
-
     if (details['x-vault-displayName']) {
       attrs[prop.camelize()].label = details['x-vault-displayName'];
     }
@@ -33,7 +35,6 @@ export const expandOpenApiProps = function(props) {
       attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
     }
   }
-  debugger; //eslint-disable-line
   return attrs;
 };
 
@@ -56,4 +57,33 @@ export const combineAttributes = function(oldAttrs, newProps) {
     }
   }
   return { attrs: newAttrs, newFields };
+};
+
+export const combineFields = function(currentFields, newFields, excludedFields) {
+  let allFields = [];
+  for (let group in currentGroups) {
+    let fieldName = Object.keys(groups[group])[0];
+    allFields.concat(groups[group][fieldName]);
+  }
+  let otherFields = newFields.filter(field => {
+    !allFields.includes(field) && !excludedFields.includes(field);
+  });
+  if (otherFields.length) {
+    groups.default.concat(otherFields);
+  }
+};
+
+export const combineFieldGroups = function(currentGroups, newFields, excludedFields) {
+  let allFields = [];
+  for (let group of currentGroups) {
+    let fieldName = Object.keys(group)[0];
+    allFields = allFields.concat(group[fieldName]);
+  }
+  let otherFields = newFields.filter(field => {
+    !allFields.includes(field) && !excludedFields.includes(field);
+  });
+  if (otherFields.length) {
+    currentGroups.default = currentGroups.default.concat(otherFields);
+  }
+  return currentGroups;
 };

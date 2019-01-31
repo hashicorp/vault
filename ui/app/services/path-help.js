@@ -50,6 +50,7 @@ export default Service.extend({
     }
 
     return this.ajax(helpUrl, backend).then(help => {
+      debugger; //eslint-disable-line
       let fullPath = wildcard ? `/${path}/{${wildcard}}` : `/${path}`;
       let props = help.openapi.paths[fullPath].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
