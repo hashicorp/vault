@@ -2,22 +2,18 @@ package queue
 
 import (
         "container/heap"
-
-        "github.com/y0ssar1an/q"
+        "errors"
+        "fmt"
+        "sync"
 )
 
 // NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
-func NewTimeQueue(items []*Item) PriorityQueue {
+func NewTimeQueue() PriorityQueue {
         tq := TimeQueue{
-                data:    make([]*Item, len(items)),
+                data:    make([]*Item, 0),
                 dataMap: make(map[string]*Item),
         }
-        for i, v := range items {
-                tq.data[i] = v
-        }
-        q.Q("pre-heap:", tq)
         heap.Init(&tq)
-        q.Q("post-heap:", tq)
         return &tq
 }
 
@@ -31,6 +27,9 @@ type TimeQueue struct {
         // dataMap represents all the items in the queue, with unique indexes, used
         // for finding specific items. dataMap must be kept in sync with data
         dataMap map[string]*Item
+
+        // mapMutex is used to facilitate read/write locks on the dataMap
+        dataMutex sync.RWMutex
 }
 
 // Peek returns the top priority item without removing it from the queue
@@ -45,8 +44,43 @@ func (tq *TimeQueue) Pluck() {}
 func (tq *TimeQueue) Find() {}
 
 // Size reports the size of the queue, e.g. number of items in data
+// TODO: duplicate of Len()?
 func (tq *TimeQueue) Size() int {
         return len(tq.data)
+}
+
+// PopItem pops the highest priority item from the queue. This is a
+// wrapper/convienence method that calls heap.Pop, so consumers do not need to
+// invoke heap functions directly
+func (tq *TimeQueue) PopItem() {
+}
+
+// PushItem pushes an item on to the queue. This is a wrapper/convienence
+// method that calls heap.Push, so consumers do not need to invoke heap
+// functions directly
+func (tq *TimeQueue) PushItem(i *Item) error {
+        if i.Key == "" {
+                return errors.New("error adding item: Item Key is required")
+        }
+
+        tq.dataMutex.RLock()
+        if _, ok := tq.dataMap[i.Key]; ok {
+                tq.dataMutex.RUnlock()
+                return fmt.Errorf("error adding item: Item already in queue. Use UpdateItem() instead")
+        }
+        tq.dataMutex.RUnlock()
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+        tq.dataMap[i.Key] = i
+        heap.Push(tq, i)
+        return nil
+}
+
+// Update modifies the priority and value of an Item
+func (tq *TimeQueue) Update(item *Item, value string, priority int64) {
+        item.Value = value
+        item.Priority = priority
+        heap.Fix(tq, item.index)
 }
 
 //////
@@ -61,12 +95,7 @@ func (tq *TimeQueue) Len() int { return len(tq.data) }
 // Less returns the less of two things, which in this case, we return the
 // highest thing.
 func (tq *TimeQueue) Less(i, j int) bool {
-        // we want pop to give the highest, not lowest, priority
-        // TODO: same priority?
-        if tq.data[i].priority == tq.data[j].priority {
-                return tq.data[j].createdAt.After(tq.data[i].createdAt)
-        }
-        return tq.data[i].priority > tq.data[j].priority
+        return tq.data[i].Priority < tq.data[j].Priority
 }
 
 // Swap swaps things in-place
@@ -76,7 +105,8 @@ func (tq *TimeQueue) Swap(i, j int) {
         tq.data[j].index = j
 }
 
-// Push pushes things
+// Push is used by heap.Interface to push items onto the heap. Do not use this
+// to add items to a queue: use PushItem instead
 func (tq *TimeQueue) Push(x interface{}) {
         n := len(tq.data)
         item := x.(*Item)
@@ -97,10 +127,3 @@ func (tq *TimeQueue) Pop() interface{} {
 //////
 // end heap.Interface methods
 //////
-
-// update modifies the priority and value of an Item
-func (tq *TimeQueue) update(item *Item, value string, priority int64) {
-        item.value = value
-        item.priority = priority
-        heap.Fix(tq, item.index)
-}

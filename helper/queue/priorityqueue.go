@@ -17,6 +17,16 @@ var ErrNoItemFound = errors.New("item not found in queue")
 type PriorityQueue interface {
         heap.Interface
 
+        // PopItem pops the highest priority item from the queue. This is a
+        // wrapper/convienence method that calls heap.Pop, so consumers do not need to
+        // invoke heap functions directly
+        PopItem()
+
+        // PushItem pushes an item on to the queue. This is a wrapper/convienence
+        // method that calls heap.Push, so consumers do not need to invoke heap
+        // functions directly
+        PushItem(*Item) error
+
         // Peek returns the top item from the queue, but does not remove it
         Peek()
 
