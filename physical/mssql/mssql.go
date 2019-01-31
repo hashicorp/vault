@@ -52,16 +52,34 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	// set defaults
-	defaults := make(map[string]string)
-	defaults["database"] = "Vault"
-	defaults["table"] = "Vault"
-	defaults["appname"] = "Vault"
-	defaults["connection timeout"] = "30"
-	defaults["schema"] = "dbo"
-	defaults["log level"] = "0"
+	defaults := map[string]string{
+		"database":           "Vault",
+		"table":              "Vault",
+		"appname":            "Vault",
+		"connection timeout": "30",
+		"schema":             "dbo",
+		"log level":          "0",
+	}
+
+	// backcomp maps commonly used hcl paramater names to valid sql server parameters for backwards compatibility
+	backcomp := map[string]string{
+		"connectiontimeout": "connection timeout",
+		"loglevel":          "log level",
+		"username":          "user id",
+	}
+
+	// upgrade parameter keys
+	var isSet bool
+	var confv string
+	for k, v := range backcomp {
+		confv, isSet = conf[k]
+		if isSet {
+			conf[v] = confv
+			delete(conf, k)
+		}
+	}
 
 	// inject defaults into configuration map
-	var isSet bool
 	for k, v := range defaults {
 		_, isSet = conf[k]
 		if !isSet {
@@ -69,12 +87,15 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	// create ado style connection
-	var connectionParams []string
-	for k, v := range conf {
-		connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
+	// create ado style connection unless a connection_url was provided
+	connectionString, ok := conf["connection_url"]
+	if !ok || connectionString == "" {
+		var connectionParams []string
+		for k, v := range conf {
+			connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
+		}
+		connectionString = strings.Join(connectionParams, ";")
 	}
-	connectionString := strings.Join(connectionParams, ";")
 
 	fmt.Println(connectionString) //todo delete this
 
