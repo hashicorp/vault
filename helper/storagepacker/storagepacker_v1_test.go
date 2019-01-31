@@ -1,9 +1,11 @@
 package storagepacker
 
 import (
-	"reflect"
+	"context"
 	"testing"
 
+	"github.com/go-test/deep"
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -11,15 +13,22 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func BenchmarkStoragePackerV1(b *testing.B) {
-	storagePacker, err := NewStoragePackerV1(
-		&logical.InmemStorage{},
-		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
-		"",
-	)
+func getStoragePacker(tb testing.TB) *StoragePackerV1 {
+	storage := &logical.InmemStorage{}
+	storageView := logical.NewStorageView(storage, "packer/buckets/v2")
+	storagePacker, err := NewStoragePackerV1(context.Background(), &Config{
+		BucketStorageView: storageView,
+		ConfigStorageView: logical.NewStorageView(storage, "packer/config"),
+		Logger:            log.New(&log.LoggerOptions{Name: "storagepackertest"}),
+	})
 	if err != nil {
-		b.Fatal(err)
+		tb.Fatal(err)
 	}
+	return storagePacker
+}
+
+func BenchmarkStoragePackerV1(b *testing.B) {
+	storagePacker := getStoragePacker(b)
 
 	for i := 0; i < b.N; i++ {
 		itemID, err := uuid.GenerateUUID()
@@ -65,21 +74,14 @@ func BenchmarkStoragePackerV1(b *testing.B) {
 }
 
 func TestStoragePackerV1(t *testing.T) {
-	storagePacker, err := NewStoragePackerV1(
-		&logical.InmemStorage{},
-		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
-		"",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	storagePacker := getStoragePacker(t)
 
 	// Persist a storage entry
 	item1 := &Item{
 		ID: "item1",
 	}
 
-	err = storagePacker.PutItem(item1)
+	err := storagePacker.PutItem(item1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,14 +117,7 @@ func TestStoragePackerV1(t *testing.T) {
 }
 
 func TestStoragePackerV1_SerializeDeserializeComplexItem_Version1(t *testing.T) {
-	storagePacker, err := NewStoragePackerV1(
-		&logical.InmemStorage{},
-		log.New(&log.LoggerOptions{Name: "storagepackertest"}),
-		"",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	storagePacker := getStoragePacker(t)
 
 	timeNow := ptypes.TimestampNow()
 
@@ -178,7 +173,8 @@ func TestStoragePackerV1_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(&itemDecoded, entity) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v\n", entity, itemDecoded)
+	if !proto.Equal(&itemDecoded, entity) {
+		diff := deep.Equal(&itemDecoded, entity)
+		t.Fatal(diff)
 	}
 }

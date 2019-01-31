@@ -436,7 +436,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKeyHash:   i.groupPacker.BucketHashKeyForItemID("testgroupid"),
 	}
 
 	// Insert it into memdb
@@ -459,7 +459,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid2", "testparentgroupid3"},
 		MemberEntityIDs: []string{"testentityid2", "testentityid3"},
 		Policies:        []string{"testpolicy2", "testpolicy3"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid2"),
+		BucketKeyHash:   i.groupPacker.BucketHashKeyForItemID("testgroupid2"),
 	}
 
 	// Insert it into memdb

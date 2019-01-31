@@ -479,7 +479,7 @@ func TestIdentityStore_MemDBImmutability(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKeyHash = is.entityPacker.BucketHashKeyForItemID(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
@@ -733,7 +733,7 @@ func TestIdentityStore_MemDBEntityIndexes(t *testing.T) {
 		},
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKeyHash = is.entityPacker.BucketHashKeyForItemID(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()
