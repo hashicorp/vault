@@ -37,11 +37,15 @@ type TimeQueue struct {
 
 // Pluck removes an item from the queue by index. Pluck must "fix" the heap when
 // it's done
-func (tq *TimeQueue) Pluck() {}
+func (tq *TimeQueue) Pluck(key string) (*Item, error) {
+        return nil, nil
+}
 
-// Find searches the queue for an item by index and returns it if found,
-// otherwise ErrNotFound
-// func (tq *TimeQueue) Find() {}
+// Find searches the queue for an item by index and returns it if found, but
+// does not remove it from the queue. If not found, returns ErrNotFound
+func (tq *TimeQueue) Find(key string) (*Item, error) {
+        return nil, nil
+}
 
 // Size reports the size of the queue, e.g. number of items in data
 // TODO: duplicate of Len()?
