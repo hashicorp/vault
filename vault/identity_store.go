@@ -108,12 +108,14 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 			iStore.entityPacker.PutBucket(bucket)
 		}
 		iStore.entityPacker.SetQueueMode(false)
-		if err := iStore.entityPacker.FlushQueue(); err != nil {
-			return nil, err
-		}
-		for _, key := range entityBucketsToUpgrade {
-			if err := entitiesBucketStorageView.Delete(ctx, key); err != nil {
+		if !core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
+			if err := iStore.entityPacker.FlushQueue(); err != nil {
 				return nil, err
+			}
+			for _, key := range entityBucketsToUpgrade {
+				if err := entitiesBucketStorageView.Delete(ctx, key); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
