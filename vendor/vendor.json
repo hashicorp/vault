@@ -763,28 +763,36 @@
 			"revisionTime": "2018-09-10T15:25:13Z"
 		},
 		{
-			"checksumSHA1": "smALroa48uCO+J9JRlHBmz/XQMw=",
+			"checksumSHA1": "H4RhrnI0P34qLB9345G4r7CAwpU=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "xtzLG2UjYF1lnD33Wk+Nu/KOO6E=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "bQhz/fcyZPmuHSH2qwC4ZtATy5c=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api/config",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "Ij8yB33E0Kk+GfTkNRoF1mG26dc=",
 			"path": "github.com/circonus-labs/circonus-gometrics/checkmgr",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "2efAvf/xcfGiQ4Y1P3+5YObpeVg=",
@@ -1185,10 +1193,10 @@
 			"revisionTime": "2018-10-04T02:44:35Z"
 		},
 		{
-			"checksumSHA1": "/yKfFSspjuDzyOe/bBslrPzyfYM=",
+			"checksumSHA1": "9SqwC2BzFbsWulQuBG2+QEliTpo=",
 			"path": "github.com/hashicorp/go-retryablehttp",
-			"revision": "e651d75abec6fbd4f2c09508f72ae7af8a8b7171",
-			"revisionTime": "2018-07-18T19:50:05Z"
+			"revision": "73489d0a1476f0c9e6fb03f9c39241523a496dfd",
+			"revisionTime": "2019-01-26T20:33:39Z"
 		},
 		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
