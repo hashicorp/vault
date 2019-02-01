@@ -69,10 +69,8 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	// upgrade parameter keys
-	var isSet bool
-	var confv string
 	for k, v := range backcomp {
-		confv, isSet = conf[k]
+		confv, isSet := conf[k]
 		if isSet {
 			conf[v] = confv
 			delete(conf, k)
@@ -81,8 +79,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	// inject defaults into configuration map
 	for k, v := range defaults {
-		_, isSet = conf[k]
-		if !isSet {
+		if _, isSet := conf[k]; !isSet {
 			conf[k] = v
 		}
 	}
