@@ -32,9 +32,6 @@ type TimeQueue struct {
         dataMutex sync.Mutex
 }
 
-// Peek returns the top priority item without removing it from the queue
-// func (tq *TimeQueue) Peek() {}
-
 // Pluck removes an item from the queue by index. Pluck must "fix" the heap when
 // it's done
 func (tq *TimeQueue) Pluck(key string) (*Item, error) {
@@ -62,7 +59,14 @@ func (tq *TimeQueue) Pluck(key string) (*Item, error) {
 // Find searches the queue for an item by index and returns it if found, but
 // does not remove it from the queue. If not found, returns ErrNotFound
 func (tq *TimeQueue) Find(key string) (*Item, error) {
-        return nil, nil
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
+        if item, ok := tq.dataMap[key]; ok {
+                return item, nil
+        }
+
+        return nil, ErrItemNotFound(key)
 }
 
 // Size reports the size of the queue, e.g. number of items in data
@@ -108,10 +112,12 @@ func (tq *TimeQueue) PushItem(i *Item) error {
 }
 
 // Update modifies the priority and value of an Item
-func (tq *TimeQueue) Update(item *Item, value string, priority int64) {
-        item.Value = value
-        item.Priority = priority
+func (tq *TimeQueue) Update(item *Item) {
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
         heap.Fix(tq, item.index)
+        // tq.dataMap[item.Key] = item
 }
 
 //////

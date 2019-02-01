@@ -23,9 +23,6 @@ type PriorityQueue interface {
         // functions directly
         PushItem(*Item) error
 
-        // Peek returns the top item from the queue, but does not remove it
-        // Peek()
-
         // Pluck removes an item from the queue by the given Key. Pluck must fix the
         // queue after removal. If no item is removed, returns ErrItemNotFound
         Pluck(string) (*Item, error)
@@ -34,8 +31,8 @@ type PriorityQueue interface {
         // remove the item. If no item is found, returns ErrItemNotFound
         Find(string) (*Item, error)
 
-        // Size reports the number of items in the queue
-        // Size() int
+        // Update
+        Update(*Item)
 }
 
 // ErrItemNotFound creates a "not found" error for the given key
