@@ -408,8 +408,8 @@ func (c *ServerCommand) Run(args []string) int {
 	if config == nil {
 		c.UI.Output(wrapAtLength(
 			"No configuration files found. Please provide configurations with the " +
-				"-config flag. If you are supply the path to a directory, please " +
-				"ensure the directory contains files with the .hcl or .json " +
+				"-config flag. If you are specifying the path to a directory, please " +
+				"ensure it contains files with the .hcl or .json " +
 				"extension."))
 		return 1
 	}
