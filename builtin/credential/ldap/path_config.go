@@ -67,7 +67,7 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		persistNeeded = true
 	}
 
-	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
 		if err != nil {
 			return nil, err
