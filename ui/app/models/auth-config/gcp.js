@@ -1,12 +1,13 @@
 import { computed } from '@ember/object';
 import DS from 'ember-data';
-
 import AuthConfig from '../auth-config';
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  // We have to leave this here because the backend doesn't support the file type yet.
   credentials: attr('string', {
     editType: 'file',
   }),
@@ -14,12 +15,17 @@ export default AuthConfig.extend({
   googleCertsEndpoint: attr('string'),
 
   fieldGroups: computed(function() {
-    const groups = [
+    let groups = [
       { default: ['credentials'] },
       {
         'Google Cloud Options': ['googleCertsEndpoint'],
       },
     ];
+    debugger; // eslint-disable-line
+    if (this.newFields) {
+      groups = combineFieldGroups(groups, this.newFields, []);
+    }
+
     return fieldToAttrs(this, groups);
   }),
 });

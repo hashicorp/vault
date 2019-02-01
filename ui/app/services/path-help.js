@@ -51,6 +51,7 @@ export default Service.extend({
       'auth-config/okta',
       'auth-config/radius',
       'auth-config/cert',
+      'auth-config/gcp',
     ];
     let helpUrl = authMethods.includes(modelType)
       ? `/v1/auth/${backend}/${path}?help=1`
