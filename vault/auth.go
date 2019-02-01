@@ -517,7 +517,7 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   path,
 			Value: compressedBytes,
 		}
