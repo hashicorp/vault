@@ -1470,7 +1470,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		core.barrier.Put(namespace.RootContext(nil), &Entry{
+		core.barrier.Put(namespace.RootContext(nil), &logical.StorageEntry{
 			Key:   coreLeaderPrefix + keyUUID,
 			Value: []byte(valueUUID),
 		})

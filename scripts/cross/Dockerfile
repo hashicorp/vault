@@ -13,7 +13,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl7
 
 RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
-RUN apt-get install -y nodejs
+RUN apt-get install -y nodejs npm
 
 RUN rm -rf /var/lib/apt/lists/*
 

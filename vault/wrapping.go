@@ -46,7 +46,7 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 		if err != nil {
 			return errwrap.Wrapf("failed to encode wrapping key: {{err}}", err)
 		}
-		entry = &Entry{
+		entry = &logical.StorageEntry{
 			Key:   coreWrappingJWTKeyPath,
 			Value: val,
 		}

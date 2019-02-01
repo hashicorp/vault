@@ -106,9 +106,9 @@ func (l *Conn) Add(addRequest *AddRequest) error {
 	}
 
 	if packet.Children[1].Tag == ApplicationAddResponse {
-		resultCode, resultDescription := getLDAPResultCode(packet)
-		if resultCode != 0 {
-			return NewError(resultCode, errors.New(resultDescription))
+		err := GetLDAPError(packet)
+		if err != nil {
+			return err
 		}
 	} else {
 		log.Printf("Unexpected Response: %d", packet.Children[1].Tag)

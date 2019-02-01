@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 
+	metrics "github.com/armon/go-metrics"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/logical/plugin/pb"
@@ -104,7 +103,7 @@ var (
 )
 
 func (ts *TokenStore) paths() []*framework.Path {
-	p := []*framework.Path{
+	return []*framework.Path{
 		{
 			Pattern: "roles/?$",
 
@@ -125,6 +124,76 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			HelpSynopsis:    tokenListAccessorsHelp,
 			HelpDescription: tokenListAccessorsHelp,
+		},
+
+		{
+			Pattern: "roles/" + framework.GenericNameRegex("role_name"),
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+
+				"allowed_policies": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: tokenAllowedPoliciesHelp,
+				},
+
+				"disallowed_policies": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: tokenDisallowedPoliciesHelp,
+				},
+
+				"orphan": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     false,
+					Description: tokenOrphanHelp,
+				},
+
+				"period": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Default:     0,
+					Description: tokenPeriodHelp,
+				},
+
+				"path_suffix": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "",
+					Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
+				},
+
+				"explicit_max_ttl": &framework.FieldSchema{
+					Type:        framework.TypeDurationSecond,
+					Default:     0,
+					Description: tokenExplicitMaxTTLHelp,
+				},
+
+				"renewable": &framework.FieldSchema{
+					Type:        framework.TypeBool,
+					Default:     true,
+					Description: tokenRenewableHelp,
+				},
+
+				"bound_cidrs": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+				},
+
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "service",
+					Description: "The type of token to generate, service or batch",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   ts.tokenStoreRoleRead,
+				logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
+				logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
+				logical.DeleteOperation: ts.tokenStoreRoleDelete,
+			},
+
+			ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 		},
 
 		{
@@ -345,61 +414,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(tokenTidyDesc),
 		},
 	}
-
-	rolesPath := &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("role_name"),
-		Fields: map[string]*framework.FieldSchema{
-			"role_name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Name of the role",
-			},
-
-			"allowed_policies": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: tokenAllowedPoliciesHelp,
-			},
-
-			"disallowed_policies": &framework.FieldSchema{
-				Type:        framework.TypeCommaStringSlice,
-				Description: tokenDisallowedPoliciesHelp,
-			},
-
-			"orphan": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: tokenOrphanHelp,
-			},
-
-			"path_suffix": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
-			},
-
-			"renewable": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: tokenRenewableHelp,
-			},
-		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   ts.tokenStoreRoleRead,
-			logical.CreateOperation: ts.tokenStoreRoleCreateUpdate,
-			logical.UpdateOperation: ts.tokenStoreRoleCreateUpdate,
-			logical.DeleteOperation: ts.tokenStoreRoleDelete,
-		},
-
-		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
-	}
-	// Roles in token store handle policies and TTLs differently
-	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields,
-		[]string{"bound_cidrs", "explicit_max_ttl", "period", "token_type"})
-	// For this backend default to service
-	rolesPath.Fields["token_type"].Default = "service"
-	p = append(p, rolesPath)
-
-	return p
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -567,8 +581,6 @@ func (ts *TokenStore) Salt(ctx context.Context) (*salt.Salt, error) {
 
 // tsRoleEntry contains token store role information
 type tsRoleEntry struct {
-	tokenhelper.TokenParams
-
 	// The name of the role. Embedded so it can be used for pathing
 	Name string `json:"name" mapstructure:"name" structs:"name"`
 
@@ -582,12 +594,26 @@ type tsRoleEntry struct {
 	// If true, tokens created using this role will be orphans
 	Orphan bool `json:"orphan" mapstructure:"orphan" structs:"orphan"`
 
+	// If non-zero, tokens created using this role will be able to be renewed
+	// forever, but will have a fixed renewal period of this value
+	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+
 	// If set, a suffix will be set on the token path, making it easier to
 	// revoke using 'revoke-prefix'
 	PathSuffix string `json:"path_suffix" mapstructure:"path_suffix" structs:"path_suffix"`
 
 	// If set, controls whether created tokens are marked as being renewable
 	Renewable bool `json:"renewable" mapstructure:"renewable" structs:"renewable"`
+
+	// If set, the token entry will have an explicit maximum TTL set, rather
+	// than deferring to role/mount values
+	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
+
+	// The set of CIDRs that tokens generated using this role will be bound to
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// The type of token this role should issue
+	TokenType logical.TokenType `json:"token_type" mapstructure:"token_type"`
 }
 
 type accessorEntry struct {
