@@ -65,7 +65,7 @@ func TestTimeQueue_PushItem(t *testing.T) {
                 t.Fatalf("error adding items, expected (%d) items, got (%d)", tcl, tq.Len())
         }
 
-        testValidateInternalData(t, tq, len(tc))
+        testValidateInternalData(t, tq, len(tc), false)
 
         item, err := tq.PopItem()
         if err != nil {
@@ -78,7 +78,7 @@ func TestTimeQueue_PushItem(t *testing.T) {
                 t.Fatal("expected test case and popped item match")
         }
 
-        testValidateInternalData(t, tq, len(tc)-1)
+        testValidateInternalData(t, tq, len(tc)-1, true)
 }
 
 func TestTimeQueue_PopItem(t *testing.T) {
@@ -113,7 +113,7 @@ func TestTimeQueue_PopItem(t *testing.T) {
                 t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
         }
 
-        testValidateInternalData(t, tq, 0)
+        testValidateInternalData(t, tq, 0, true)
 }
 
 func TestTimeQueue_PopItemByKey(t *testing.T) {
@@ -146,7 +146,7 @@ func TestTimeQueue_PopItemByKey(t *testing.T) {
                 }
         }
 
-        testValidateInternalData(t, tq, len(tc)-len(popKeys))
+        testValidateInternalData(t, tq, len(tc)-len(popKeys), false)
 
         // grab the top priority item again, to compare with the top item priority
         // from above
@@ -157,11 +157,14 @@ func TestTimeQueue_PopItemByKey(t *testing.T) {
         if oldPriority == newPriority || oldKey == newKey {
                 t.Fatalf("expected old/new key and priority to differ, got (%s/%s) and (%d/%d)", oldKey, newKey, oldPriority, newPriority)
         }
+
+        testValidateInternalData(t, tq, len(tc)-len(popKeys)-1, true)
 }
 
 // testValidateInternalData checks the internal data stucture of the TimeQueue
-// and verifies that items are in-sync
-func testValidateInternalData(t *testing.T, pq PriorityQueue, expectedSize int) {
+// and verifies that items are in-sync. Use drain only at the end of a test,
+// because it will mutate the input queue
+func testValidateInternalData(t *testing.T, pq PriorityQueue, expectedSize int, drain bool) {
         actualSize := pq.Len()
         if actualSize != expectedSize {
                 t.Fatalf("expected new queue size to be (%d), got (%d)", expectedSize, actualSize)
@@ -172,9 +175,9 @@ func testValidateInternalData(t *testing.T, pq PriorityQueue, expectedSize int) 
                 t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tq.data), len(tq.dataMap))
         }
 
-        // pop all the items, verify lengths
-        if tq.Len() > 0 {
-                var i *Item
+        if drain && tq.Len() > 0 {
+                // pop all the items, verify lengths
+                i, _ := tq.PopItem()
                 for ; i != nil; i, _ = tq.PopItem() {
                         expectedSize--
                         if len(tq.data) != len(tq.dataMap) || len(tq.data) != expectedSize {
