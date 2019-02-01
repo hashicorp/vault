@@ -4,12 +4,13 @@ import (
 	"context"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func pathConfig(b *backend) *framework.Path {
-	return &framework.Path{
+	ret := &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"host": &framework.FieldSchema{
@@ -64,6 +65,9 @@ func pathConfig(b *backend) *framework.Path {
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
 	}
+	tokenhelper.AddTokenFields(ret.Fields)
+
+	return ret
 }
 
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
@@ -107,18 +111,20 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"host":                       cfg.Host,
-			"port":                       cfg.Port,
-			"unregistered_user_policies": cfg.UnregisteredUserPolicies,
-			"dial_timeout":               cfg.DialTimeout,
-			"read_timeout":               cfg.ReadTimeout,
-			"nas_port":                   cfg.NasPort,
-			"nas_identifier":             cfg.NasIdentifier,
-		},
+	data := map[string]interface{}{
+		"host":                       cfg.Host,
+		"port":                       cfg.Port,
+		"unregistered_user_policies": cfg.UnregisteredUserPolicies,
+		"dial_timeout":               cfg.DialTimeout,
+		"read_timeout":               cfg.ReadTimeout,
+		"nas_port":                   cfg.NasPort,
+		"nas_identifier":             cfg.NasIdentifier,
 	}
-	return resp, nil
+	cfg.PopulateTokenData(data)
+
+	return &logical.Response{
+		Data: data,
+	}, nil
 }
 
 func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -203,6 +209,10 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 		cfg.NasIdentifier = d.Get("nas_identifier").(string)
 	}
 
+	if err := cfg.ParseTokenFields(req, d); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -215,6 +225,8 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 }
 
 type ConfigEntry struct {
+	tokenhelper.TokenParams
+
 	Host                     string   `json:"host" structs:"host" mapstructure:"host"`
 	Port                     int      `json:"port" structs:"port" mapstructure:"port"`
 	Secret                   string   `json:"secret" structs:"secret" mapstructure:"secret"`

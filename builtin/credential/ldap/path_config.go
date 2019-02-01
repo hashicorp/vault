@@ -12,7 +12,7 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
-		Fields:  ldaputil.ConfigFields(),
+		Fields:  ldaputil.ConfigFields(true),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
@@ -89,8 +89,11 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		return nil, nil
 	}
 
+	data := cfg.PasswordlessMap()
+	cfg.PopulateTokenData(data)
+
 	resp := &logical.Response{
-		Data: cfg.PasswordlessMap(),
+		Data: data,
 	}
 	return resp, nil
 }
@@ -107,6 +110,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if cfg.CaseSensitiveNames == nil {
 		cfg.CaseSensitiveNames = new(bool)
 		*cfg.CaseSensitiveNames = false
+	}
+
+	if err := cfg.ParseTokenFields(req, d); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
