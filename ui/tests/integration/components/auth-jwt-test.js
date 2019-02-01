@@ -50,36 +50,79 @@ const storeStub = Service.extend({
   },
 });
 
-const renderIt = async context => {
-  context.set('window', fakeWindow.create());
+const routerStub = Service.extend({
+  urlFor() {
+    return 'http://example.com';
+  },
+});
+
+const renderIt = async (context, path) => {
   let handler = e => {
     if (e) e.preventDefault();
   };
+  context.set('window', fakeWindow.create());
   context.set('handler', sinon.spy(handler));
+  context.set('roleName', '');
+  context.set('selectedAuthPath', path);
 
-  await context.render(hbs`
+  await render(hbs`
     <AuthJwt
       @window={{window}}
-      @onError={{action (mut context.error)}}
-      @onLoading={{action (mut context.isLoading)}}
-      @onToken={{action (mut context.token)}}
-      @onNamespace={{action (mut context.namespace)}}
-      @onSelectedAuth={{action (mut context.selectedAuth)}}
+      @roleName={{roleName}}
+      @selectedAuthPath={{selectedAuthPath}}
+      @onError={{action (mut error)}}
+      @onLoading={{action (mut isLoading)}}
+      @onToken={{action (mut token)}}
+      @onNamespace={{action (mut namespace)}}
+      @onSelectedAuth={{action (mut selectedAuth)}}
       @onSubmit={{action handler}}
-      @onRoleName={{action (mut context.roleName)}}
-      @roleName={{this.roleName}}
-      @selectedAuthPath={{'foo'}}
-      @form={{hash options=(component 'auth-form-options' customPath=context.customPath onPathChange=(action (mut context.customPath))  selectedAuthIsPath=context.selectedAuthIsPath )}}
+      @onRoleName={{action (mut roleName)}}
     />
     `);
 };
 module('Integration | Component | auth jwt', function(hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {});
+  hooks.beforeEach(function() {
+    this.owner.register('service:router', routerStub);
+    this.owner.register('service:store', storeStub);
+    this.server = new Pretender(function() {
+      this.post('/v1/auth/:path/oidc/auth_url', request => {
+        let body = JSON.parse(request.requestBody);
+        if (body.role === 'test') {
+          return [
+            200,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+              data: {
+                auth_url: 'http://example.com',
+              },
+            }),
+          ];
+        }
+        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: ['nope'] })];
+      });
+    });
+  });
 
-  hooks.afterEach(function() {});
-  test('', async function() {});
+  hooks.afterEach(function() {
+    this.server.shutdown();
+  });
+  test('jwt: it renders', async function(assert) {
+    await renderIt(this);
+    assert.ok(component.jwtPresent, 'renders jwt field');
+    assert.ok(component.rolePresent, 'renders jwt field');
+    assert.equal(this.server.handledRequests.length, 0, 'no requests made when there is no path set');
+
+    this.set('selectedAuthPath', 'foo');
+
+    await settled();
+    assert.equal(
+      this.server.handledRequests[0].url,
+      '/v1/auth/foo/oidc/auth_url',
+      'requests when path is set'
+    );
+  });
 
   test('', async function() {});
 });

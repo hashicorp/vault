@@ -22,12 +22,6 @@ export default Component.extend({
     });
   },
 
-  // if there is a role but no roleName has been entered,
-  // we have a default role
-  isDefaultRole: computed('role', 'roleName', function() {
-    return this.role && !this.roleName;
-  }),
-
   // OIDC roles in the JWT/OIDC backend are those with an authUrl,
   // those that are JWT type will 400 when trying to fetch the role
   isOIDC: computed('role', function() {

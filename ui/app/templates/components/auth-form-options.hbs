@@ -1,13 +1,10 @@
-<div class="box has-slim-padding is-shadowless">
-  <ToggleButton
-    @toggleTarget={{this}}
-    @toggleAttr="isOpen"
-    />
-  {{#if this.isOpen}}
-    {{#if hasBlock}}
-      {{yield}}
-    {{/if}}
-    {{#if (not this.selectedAuthIsPath)}}
+{{#if (not this.selectedAuthIsPath)}}
+  <div class="box has-slim-padding is-shadowless">
+    <ToggleButton
+      @toggleTarget={{this}}
+      @toggleAttr="isOpen"
+      />
+    {{#if this.isOpen}}
       <div class="field">
         <label for="custom-path" class="is-label">
           Mount path
@@ -22,10 +19,8 @@
              oninput={{action @onPathChange value="target.value"}}
           />
         </div>
-          <p class="help has-text-grey-dark">
-          If this backend was mounted using a non-default path, enter it here.
-          </p>
+        <AlertInline @type="info" @message="If this backend was mounted using a non-default path, enter it here." />
       </div>
     {{/if}}
-  {{/if}}
-</div>
+  </div>
+{{/if}}

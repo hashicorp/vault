@@ -66,8 +66,13 @@
       @roleName={{this.roleName}}
       @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
       @disabled={{authenticate.isRunning}}
-      @form={{hash options=(component 'auth-form-options' customPath=this.customPath onPathChange=(action (mut this.customPath))  selectedAuthIsPath=this.selectedAuthIsPath )}}
-    />
+    >
+      <AuthFormOptions
+        @customPath={{this.customPath}}
+        @onPathChange={{action (mut this.customPath)}}
+        @selectedAuthIsPath={{this.selectedAuthIsPath}}
+      />
+    </AuthJwt>
   {{else}}
     <form
       id="auth-form"
