@@ -558,7 +558,7 @@ func testCore_MountTable_UpgradeToTyped_Common(
 		t.Fatalf("bad: values here should be different")
 	}
 
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   path,
 		Value: raw,
 	}

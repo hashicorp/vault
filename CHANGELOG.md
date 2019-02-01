@@ -2,11 +2,21 @@
 
 CHANGES:
 
+ * New AWS authentication plugin mounts will default to using the generated
+   role ID as the Identity alias name.  This applies to both EC2 and IAM auth.
+   Existing mounts will not be affected.
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
 
+FEATURES:
+
+ * **cURL Command Output**: CLI commands can now use the `-output-curl-string`
+   flag to print out an equivalent cURL command.
+
 IMPROVEMENTS:
 
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   role ID [GH-6133]
  * auth/jwt: The supported set of signing algorithms is now configurable [JWT
    plugin GH-16]
  * core: When starting from an uninitialized state, HA nodes will now attempt
@@ -55,6 +65,7 @@ CHANGES:
    the root namespace is disallowed.
 
 FEATURES:
+
  * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
    users
 

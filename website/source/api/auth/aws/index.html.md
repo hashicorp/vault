@@ -135,7 +135,8 @@ $ curl \
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity/index.html) store.
+[Identity](/docs/secrets/identity/index.html) store. The default (as of Vault
+1.0.3) is `role_id` for both values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -144,8 +145,9 @@ This configures the way that Vault interacts with the
 ### Parameters
 
 - `iam_alias` `(string: "unique_id")` - How to generate the identity alias when
-  using the `iam` auth method. Valid choices are `unique_id` and `full_arn`.
-  When `unique_id` is selected, the [IAM Unique
+  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
+  `full_arn`  When `role_id` is selected, the randomly generated ID of the role
+  is used. When `unique_id` is selected, the [IAM Unique
   ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
   of the IAM principal (either the user or role) is used as the identity alias
   name. When `full_arn` is selected, the ARN returned by the
@@ -156,17 +158,18 @@ This configures the way that Vault interacts with the
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
-- `ec2_alias (string: "instance_id")` - Configures how to generate the identity alias when
-  using the `ec2` auth method. Valid choices are `instance_id` and `image_id`.
-  When `instance_id` is selected, the instance identifier is used as the
-  identity alias name. When `image_id` is selected, AMI ID of the instance is
-  used as the identity alias name.
+- `ec2_alias (string: "instance_id")` - Configures how to generate the identity
+  alias when using the `ec2` auth method. Valid choices are `role_id`,
+  `instance_id`, and `image_id`. When `role_id` is selected, the randomly
+  generated ID of the role is used. When `instance_id` is selected, the
+  instance identifier is used as the identity alias name. When `image_id` is
+  selected, AMI ID of the instance is used as the identity alias name.
 
 ### Sample Payload
 
 ```json
 {
-  "iam_alias": "full_arn"
+  "iam_alias": "unique_id"
 }
 ```
 

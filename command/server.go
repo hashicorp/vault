@@ -507,8 +507,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		sealLogger := c.logger.Named(vaultseal.Test)
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		sealLogger := c.logger.Named(sealType)
 		allLoggers = append(allLoggers, sealLogger)

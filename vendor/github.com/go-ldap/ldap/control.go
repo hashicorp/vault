@@ -18,13 +18,20 @@ const (
 	ControlTypeVChuPasswordWarning = "2.16.840.1.113730.3.4.5"
 	// ControlTypeManageDsaIT - https://tools.ietf.org/html/rfc3296
 	ControlTypeManageDsaIT = "2.16.840.1.113730.3.4.2"
+
+	// ControlTypeMicrosoftNotification - https://msdn.microsoft.com/en-us/library/aa366983(v=vs.85).aspx
+	ControlTypeMicrosoftNotification = "1.2.840.113556.1.4.528"
+	// ControlTypeMicrosoftShowDeleted - https://msdn.microsoft.com/en-us/library/aa366989(v=vs.85).aspx
+	ControlTypeMicrosoftShowDeleted = "1.2.840.113556.1.4.417"
 )
 
 // ControlTypeMap maps controls to text descriptions
 var ControlTypeMap = map[string]string{
-	ControlTypePaging:               "Paging",
-	ControlTypeBeheraPasswordPolicy: "Password Policy - Behera Draft",
-	ControlTypeManageDsaIT:          "Manage DSA IT",
+	ControlTypePaging:                "Paging",
+	ControlTypeBeheraPasswordPolicy:  "Password Policy - Behera Draft",
+	ControlTypeManageDsaIT:           "Manage DSA IT",
+	ControlTypeMicrosoftNotification: "Change Notification - Microsoft",
+	ControlTypeMicrosoftShowDeleted:  "Show Deleted Objects - Microsoft",
 }
 
 // Control defines an interface controls provide to encode and describe themselves
@@ -238,6 +245,64 @@ func NewControlManageDsaIT(Criticality bool) *ControlManageDsaIT {
 	return &ControlManageDsaIT{Criticality: Criticality}
 }
 
+// ControlMicrosoftNotification implements the control described in https://msdn.microsoft.com/en-us/library/aa366983(v=vs.85).aspx
+type ControlMicrosoftNotification struct{}
+
+// GetControlType returns the OID
+func (c *ControlMicrosoftNotification) GetControlType() string {
+	return ControlTypeMicrosoftNotification
+}
+
+// Encode returns the ber packet representation
+func (c *ControlMicrosoftNotification) Encode() *ber.Packet {
+	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Control")
+	packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, ControlTypeMicrosoftNotification, "Control Type ("+ControlTypeMap[ControlTypeMicrosoftNotification]+")"))
+
+	return packet
+}
+
+// String returns a human-readable description
+func (c *ControlMicrosoftNotification) String() string {
+	return fmt.Sprintf(
+		"Control Type: %s (%q)",
+		ControlTypeMap[ControlTypeMicrosoftNotification],
+		ControlTypeMicrosoftNotification)
+}
+
+// NewControlMicrosoftNotification returns a ControlMicrosoftNotification control
+func NewControlMicrosoftNotification() *ControlMicrosoftNotification {
+	return &ControlMicrosoftNotification{}
+}
+
+// ControlMicrosoftShowDeleted implements the control described in https://msdn.microsoft.com/en-us/library/aa366989(v=vs.85).aspx
+type ControlMicrosoftShowDeleted struct{}
+
+// GetControlType returns the OID
+func (c *ControlMicrosoftShowDeleted) GetControlType() string {
+	return ControlTypeMicrosoftShowDeleted
+}
+
+// Encode returns the ber packet representation
+func (c *ControlMicrosoftShowDeleted) Encode() *ber.Packet {
+	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Control")
+	packet.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, ControlTypeMicrosoftShowDeleted, "Control Type ("+ControlTypeMap[ControlTypeMicrosoftShowDeleted]+")"))
+
+	return packet
+}
+
+// String returns a human-readable description
+func (c *ControlMicrosoftShowDeleted) String() string {
+	return fmt.Sprintf(
+		"Control Type: %s (%q)",
+		ControlTypeMap[ControlTypeMicrosoftShowDeleted],
+		ControlTypeMicrosoftShowDeleted)
+}
+
+// NewControlMicrosoftShowDeleted returns a ControlMicrosoftShowDeleted control
+func NewControlMicrosoftShowDeleted() *ControlMicrosoftShowDeleted {
+	return &ControlMicrosoftShowDeleted{}
+}
+
 // FindControl returns the first control of the given type in the list, or nil
 func FindControl(controls []Control, controlType string) Control {
 	for _, c := range controls {
@@ -385,6 +450,10 @@ func DecodeControl(packet *ber.Packet) (Control, error) {
 		value.Value = c.Expire
 
 		return c, nil
+	case ControlTypeMicrosoftNotification:
+		return NewControlMicrosoftNotification(), nil
+	case ControlTypeMicrosoftShowDeleted:
+		return NewControlMicrosoftShowDeleted(), nil
 	default:
 		c := new(ControlString)
 		c.ControlType = ControlType
