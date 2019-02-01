@@ -116,6 +116,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			DisplayName: displayName,
 			Policies:    policies,
 			Metadata:    metadata,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+			},
 			Alias: &logical.Alias{
 				Name: appId,
 			},

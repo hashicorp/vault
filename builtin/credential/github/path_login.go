@@ -9,7 +9,6 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -69,35 +68,38 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
-	auth := &logical.Auth{
-		InternalData: map[string]interface{}{
-			"token": token,
-		},
-		Metadata: map[string]string{
-			"username": *verifyResp.User.Login,
-			"org":      *verifyResp.Org.Login,
-		},
-		DisplayName: *verifyResp.User.Login,
-		Alias: &logical.Alias{
-			Name: *verifyResp.User.Login,
+	resp := &logical.Response{
+		Auth: &logical.Auth{
+			InternalData: map[string]interface{}{
+				"token": token,
+			},
+			Policies: verifyResp.Policies,
+			Metadata: map[string]string{
+				"username": *verifyResp.User.Login,
+				"org":      *verifyResp.Org.Login,
+			},
+			DisplayName: *verifyResp.User.Login,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       config.TTL,
+				MaxTTL:    config.MaxTTL,
+				Renewable: true,
+			},
+			Alias: &logical.Alias{
+				Name: *verifyResp.User.Login,
+			},
 		},
 	}
-	config.PopulateTokenAuth(auth)
-	auth.Policies = append(auth.Policies, verifyResp.Policies...)
-	auth.Policies = strutil.RemoveDuplicates(auth.Policies, false)
 
 	for _, teamName := range verifyResp.TeamNames {
 		if teamName == "" {
 			continue
 		}
-		auth.GroupAliases = append(auth.GroupAliases, &logical.Alias{
+		resp.Auth.GroupAliases = append(resp.Auth.GroupAliases, &logical.Alias{
 			Name: teamName,
 		})
 	}
 
-	return &logical.Response{
-		Auth: auth,
-	}, nil
+	return resp, nil
 }
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
