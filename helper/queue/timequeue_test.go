@@ -15,7 +15,7 @@ var _ PriorityQueue = &TimeQueue{}
 func testCases() (tc []*Item) {
         // create a slice of items with priority / times offest by these seconds
         for i, m := range []time.Duration{
-                0,
+                5,
                 183600,  // 51 hours
                 15,      // 15 seconds
                 45,      // 45 seconds
@@ -143,6 +143,53 @@ func TestTimeQueue_PluckItem(t *testing.T) {
         _, pluckErr := tq.Pluck("notfound")
         if pluckErr != nil && pluckErr.Error() != ErrItemNotFound("notfound").Error() {
                 t.Fatalf("expected not found error, got (%s)", pluckErr)
+        }
+
+        tqi := tq.(*TimeQueue)
+        if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != expectedSize {
+                t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tqi.data), len(tqi.dataMap))
+        }
+}
+
+func TestTimeQueue_FindItem(t *testing.T) {
+        tq := NewTimeQueue()
+
+        tc := testCases()
+        for _, i := range tc {
+                if err := tq.PushItem(i); err != nil {
+                        t.Fatal(err)
+                }
+        }
+
+        _, err := tq.Find("item-2")
+        if err != nil {
+                t.Fatalf("error finding item-2: %s", err)
+        }
+
+        actualSize, expectedSize := tq.Len(), len(tc)
+        if actualSize != expectedSize {
+                t.Fatalf("expected new queue size to be (%d), got (%d)", expectedSize, actualSize)
+        }
+
+        tqi := tq.(*TimeQueue)
+        if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != expectedSize {
+                t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tqi.data), len(tqi.dataMap))
+        }
+}
+
+func TestTimeQueue_UpdateItem(t *testing.T) {
+        tq := NewTimeQueue()
+
+        tc := testCases()
+        for _, i := range tc {
+                if err := tq.PushItem(i); err != nil {
+                        t.Fatal(err)
+                }
+        }
+
+        actualSize, expectedSize := tq.Len(), len(tc)
+        if actualSize != expectedSize {
+                t.Fatalf("expected new queue size to be (%d), got (%d)", expectedSize, actualSize)
         }
 
         tqi := tq.(*TimeQueue)
