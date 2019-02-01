@@ -127,19 +127,26 @@ func TestTimeQueue_PluckItem(t *testing.T) {
                 }
         }
 
-        // var items []*Item
-        // items = append(items, topItem)
-        // // pop the remaining items, compare size of input and output
-        // it := tq.PopItem()
-        // for ; it != nil; it = tq.PopItem() {
-        // 	items = append(items, it)
-        // }
-        // if len(items) != len(tc) {
-        // 	t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
-        // }
+        pluckKeys := []int{2, 4, 7, 1}
+        for _, i := range pluckKeys {
+                item, err := tq.Pluck(fmt.Sprintf("item-%d", i))
+                if err != nil || item == nil {
+                        t.Fatalf("failed to pluck item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
+                }
+        }
 
-        // tqi := tq.(*TimeQueue)
-        // if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != 0 {
-        // 	t.Fatalf("error in queue/map size, expected data and map to be zero, got (%d) and (%d)", len(tqi.data), len(tqi.dataMap))
-        // }
+        actualSize, expectedSize := tq.Len(), len(tc)-len(pluckKeys)
+        if actualSize != expectedSize {
+                t.Fatalf("expected new queue size to be (%d), got (%d)", expectedSize, actualSize)
+        }
+
+        _, pluckErr := tq.Pluck("notfound")
+        if pluckErr != nil && pluckErr.Error() != ErrItemNotFound("notfound").Error() {
+                t.Fatalf("expected not found error, got (%s)", pluckErr)
+        }
+
+        tqi := tq.(*TimeQueue)
+        if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != expectedSize {
+                t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tqi.data), len(tqi.dataMap))
+        }
 }
