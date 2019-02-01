@@ -2,12 +2,8 @@ package queue
 
 import (
         "container/heap"
-        "errors"
+        "fmt"
 )
-
-// ErrNoItemFound is used in Pluck and Find, to indicate a matching item was not
-// found
-var ErrNoItemFound = errors.New("item not found in queue")
 
 // PriorityQueue interface defines what a Queue must include, which is satisfying
 // heap.Interface, and a few additional methods
@@ -31,13 +27,18 @@ type PriorityQueue interface {
         // Peek()
 
         // Pluck removes an item from the queue by the given Key. Pluck must fix the
-        // queue after removal. If no item is removed, returns ErrNoItemFound
+        // queue after removal. If no item is removed, returns ErrItemNotFound
         Pluck(string) (*Item, error)
 
         // Find searches and returns item from the queue, if found. This does not
-        // remove the item. If no item is found, returns ErrNoItemFound
+        // remove the item. If no item is found, returns ErrItemNotFound
         Find(string) (*Item, error)
 
         // Size reports the number of items in the queue
         // Size() int
+}
+
+// ErrItemNotFound creates a "not found" error for the given key
+func ErrItemNotFound(key string) error {
+        return fmt.Errorf("queue item with key (%s) not found", key)
 }
