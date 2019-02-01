@@ -11,37 +11,31 @@ import (
 // Compile time test to enforce TimeQueue satisfies the heap.Interface interface
 var _ PriorityQueue = &TimeQueue{}
 
-var secondOffsets = []time.Duration{
-        0,       // some tests rely on the first test case being the highest priority
-        183600,  // 51 hours
-        15,      // 15 seconds
-        45,      // 45 seconds
-        900,     // 15 minutes
-        300,     // 5 minutes
-        7200,    // 2 hours
-        183600,  // 51 hours
-        7201,    // 2 hours, 1 second
-        115200,  // 32 hours
-        1209600, // 2 weeks
-}
-
-func testCases() []*Item {
-        tc := make([]*Item, len(secondOffsets))
+// some tests rely on the ordering of items from this method
+func testCases() (tc []*Item) {
         // create a slice of items with priority / times offest by these seconds
-        for i, m := range secondOffsets {
+        for i, m := range []time.Duration{
+                0,
+                183600,  // 51 hours
+                15,      // 15 seconds
+                45,      // 45 seconds
+                900,     // 15 minutes
+                300,     // 5 minutes
+                7200,    // 2 hours
+                183600,  // 51 hours
+                7201,    // 2 hours, 1 second
+                115200,  // 32 hours
+                1209600, // 2 weeks
+        } {
                 n := time.Now()
                 ft := n.Add(time.Second * m)
-                tc[i] = &Item{
+                tc = append(tc, &Item{
                         Key:      fmt.Sprintf("item-%d", i),
                         Value:    1,
                         Priority: ft.Unix(),
-                }
+                })
         }
-        // fmt.Println("test cases")
-        // for i, t := range tc {
-        // 	fmt.Printf("\t %d - %s\n", i, time.Unix(t.Priority, 0).String())
-        // }
-        return tc
+        return
 }
 
 func TestNewTimeQueue(t *testing.T) {
@@ -121,4 +115,31 @@ func TestTimeQueue_PopItem(t *testing.T) {
         if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != 0 {
                 t.Fatalf("error in queue/map size, expected data and map to be zero, got (%d) and (%d)", len(tqi.data), len(tqi.dataMap))
         }
+}
+
+func TestTimeQueue_PluckItem(t *testing.T) {
+        tq := NewTimeQueue()
+
+        tc := testCases()
+        for _, i := range tc {
+                if err := tq.PushItem(i); err != nil {
+                        t.Fatal(err)
+                }
+        }
+
+        // var items []*Item
+        // items = append(items, topItem)
+        // // pop the remaining items, compare size of input and output
+        // it := tq.PopItem()
+        // for ; it != nil; it = tq.PopItem() {
+        // 	items = append(items, it)
+        // }
+        // if len(items) != len(tc) {
+        // 	t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
+        // }
+
+        // tqi := tq.(*TimeQueue)
+        // if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != 0 {
+        // 	t.Fatalf("error in queue/map size, expected data and map to be zero, got (%d) and (%d)", len(tqi.data), len(tqi.dataMap))
+        // }
 }
