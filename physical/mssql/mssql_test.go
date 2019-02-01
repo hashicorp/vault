@@ -68,8 +68,6 @@ func TestMSSQLBackend(t *testing.T) {
 
 	b, err := NewMSSQLBackend(map[string]string{
 		"connection_url": connURL,
-		"username":       "sa",
-		"password":       "pa$$w0rd!",
 	}, logger)
 
 	if err != nil {

@@ -30,12 +30,6 @@ type MSSQLBackend struct {
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 
-	//// enforce required configurations
-	//server, ok := conf["server"]
-	//if !ok || server == "" {
-	//	return nil, fmt.Errorf("missing server")
-	//}
-
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	var err error
@@ -87,6 +81,12 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// create ado style connection unless a connection_url was provided
 	connectionString := conf["connection_url"]
 	if connectionString == "" {
+		// enforce required configurations
+		server, ok := conf["server"]
+		if !ok || server == "" {
+			return nil, fmt.Errorf("missing server")
+		}
+
 		var connectionParams []string
 		for k, v := range conf {
 			connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
