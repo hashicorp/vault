@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -78,7 +77,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return nil, err
 	}
 
-	auth := &logical.Auth{
+	resp.Auth = &logical.Auth{
+		Policies: policies,
 		Metadata: map[string]string{
 			"username": username,
 			"policies": strings.Join(policies, ","),
@@ -87,15 +87,15 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 			"password": password,
 		},
 		DisplayName: username,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       cfg.TTL,
+			MaxTTL:    cfg.MaxTTL,
+			Renewable: true,
+		},
 		Alias: &logical.Alias{
 			Name: username,
 		},
 	}
-	cfg.PopulateTokenAuth(auth)
-	auth.Policies = append(auth.Policies, policies...)
-	auth.Policies = strutil.RemoveDuplicates(auth.Policies, false)
-
-	resp.Auth = auth
 
 	for _, groupName := range groupNames {
 		if groupName == "" {
