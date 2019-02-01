@@ -76,9 +76,6 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		}
 		entityBucketsToUpgrade = append(entityBucketsToUpgrade, val)
 	}
-	if len(vals) > 0 {
-		// TODO
-	}
 	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
 		BucketStorageView: logical.NewStorageView(entitiesBucketStorageView, "v2/"),
 		ConfigStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"config/"),
@@ -86,6 +83,39 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
+	}
+	if len(entityBucketsToUpgrade) > 0 {
+		iStore.entityPacker.SetQueueMode(true)
+		for _, key := range entityBucketsToUpgrade {
+			storageEntry, err := entitiesBucketStorageView.Get(ctx, key)
+			if err != nil {
+				return nil, err
+			}
+			if storageEntry == nil {
+				// Not clear what to do here really, but if there's really
+				// nothing there, nothing to load, so continue
+				continue
+			}
+			bucket, err := iStore.entityPacker.DecodeBucket(storageEntry)
+			if err != nil {
+				return nil, err
+			}
+			// Set to the new prefix
+			bucket.Key = bucket.Key + "v2/"
+			for _, item := range bucket.Items {
+				bucket.ItemMap[item.ID] = item.Message
+			}
+			iStore.entityPacker.PutBucket(bucket)
+		}
+		iStore.entityPacker.SetQueueMode(false)
+		if err := iStore.entityPacker.FlushQueue(); err != nil {
+			return nil, err
+		}
+		for _, key := range entityBucketsToUpgrade {
+			if err := entitiesBucketStorageView.Delete(ctx, key); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	groupsBucketStorageView := logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/")

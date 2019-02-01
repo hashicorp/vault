@@ -232,12 +232,20 @@ func (s *StoragePackerV1) PutBucket(bucket *LockedBucket) error {
 	bucket.Lock()
 	defer bucket.Unlock()
 
-	return s.storeBucket(bucket, false)
+	if err := s.storeBucket(bucket); err != nil {
+		return err
+	}
+
+	s.bucketsCacheLock.Lock()
+	s.bucketsCache.Insert(GetCacheKey(bucket.Key), bucket)
+	s.bucketsCacheLock.Unlock()
+
+	return nil
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV1) storeBucket(bucket *LockedBucket, flushMode bool) error {
-	if !flushMode && atomic.LoadUint32(&s.queueMode) == 1 {
+func (s *StoragePackerV1) storeBucket(bucket *LockedBucket) error {
+	if atomic.LoadUint32(&s.queueMode) == 1 {
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
 	}
@@ -262,10 +270,6 @@ func (s *StoragePackerV1) storeBucket(bucket *LockedBucket, flushMode bool) erro
 	if err != nil {
 		return errwrap.Wrapf("failed to persist packed storage entry: {{err}}", err)
 	}
-
-	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Insert(GetCacheKey(bucket.Key), bucket)
-	s.bucketsCacheLock.Unlock()
 
 	return nil
 }
@@ -372,7 +376,7 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 	}
 
 	delete(bucket.ItemMap, itemID)
-	return s.storeBucket(bucket, false)
+	return s.storeBucket(bucket)
 }
 
 // GetItem fetches the storage entry for a given key from its corresponding
@@ -496,7 +500,7 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 	}
 
 	// Persist the result
-	return s.storeBucket(bucket, false)
+	return s.storeBucket(bucket)
 }
 
 // NewStoragePackerV1 creates a new storage packer for a given view
@@ -594,7 +598,7 @@ func (s *StoragePackerV1) SetQueueMode(enabled bool) {
 func (s *StoragePackerV1) FlushQueue() error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
-		lErr := s.storeBucket(value.(*LockedBucket), true)
+		lErr := s.storeBucket(value.(*LockedBucket))
 		if lErr != nil {
 			err = multierror.Append(err, lErr)
 		}
