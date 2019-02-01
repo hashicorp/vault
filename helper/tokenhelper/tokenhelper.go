@@ -64,41 +64,49 @@ func TokenFields() map[string]*framework.FieldSchema {
 		"bound_cidrs": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
+			DisplayName: "Bound CIDRs",
 		},
 
 		"explicit_max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenExplicitMaxTTLHelp,
+			DisplayName: "Explicit Max TTL",
 		},
 
 		"max_ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The maximum lifetime of the generated token",
+			DisplayName: "Max TTL",
 		},
 
 		"no_default_policy": &framework.FieldSchema{
 			Type:        framework.TypeBool,
 			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
+			DisplayName: "No Default Policy",
 		},
 
 		"period": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
+			DisplayName: "Period",
 		},
 
 		"policies": &framework.FieldSchema{
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
+			DisplayName: "Policies",
 		},
 
 		"token_type": &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: "The type of token to generate, service or batch",
+			DisplayName: "Token Type",
 		},
 
 		"ttl": &framework.FieldSchema{
 			Type:        framework.TypeDurationSecond,
 			Description: "The initial ttl of the token to generate",
+			DisplayName: "TTL",
 		},
 	}
 }
