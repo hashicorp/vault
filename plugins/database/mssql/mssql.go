@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/multierr"
-
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/dbtxn"
@@ -174,7 +173,7 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		return err
 	}
 
-	var errs error
+	var result error
 
 	// Execute each query
 	for _, stmt := range statements.Revocation {
@@ -188,12 +187,12 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 				"name": username,
 			}
 			if err := dbtxn.ExecuteDBQuery(ctx, db, m, query); err != nil {
-				errs = multierr.Append(errs, err)
+				result = multierror.Append(result, err)
 			}
 		}
 	}
 
-	return errs
+	return result
 }
 
 func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
