@@ -29,7 +29,7 @@ type TimeQueue struct {
         dataMap map[string]*Item
 
         // mapMutex is used to facilitate read/write locks on the dataMap
-        dataMutex sync.RWMutex
+        dataMutex sync.Mutex
 }
 
 // Peek returns the top priority item without removing it from the queue
@@ -38,7 +38,25 @@ type TimeQueue struct {
 // Pluck removes an item from the queue by index. Pluck must "fix" the heap when
 // it's done
 func (tq *TimeQueue) Pluck(key string) (*Item, error) {
-        return nil, nil
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
+        item, ok := tq.dataMap[key]
+        if !ok {
+                return nil, ErrItemNotFound(key)
+        }
+
+        // remove the item the heap and delete it from the dataMap
+        itemRaw := heap.Remove(tq, item.index)
+        delete(tq.dataMap, key)
+
+        if i, ok := itemRaw.(*Item); ok {
+                return i, nil
+        }
+
+        // TODO log that we found something but it wasn't an Item. Or just not bother
+        // type asserting
+        return nil, ErrItemNotFound(key)
 }
 
 // Find searches the queue for an item by index and returns it if found, but
@@ -77,16 +95,9 @@ func (tq *TimeQueue) PushItem(i *Item) error {
                 return errors.New("error adding item: Item Key is required")
         }
 
-        tq.dataMutex.RLock()
-        if _, ok := tq.dataMap[i.Key]; ok {
-                tq.dataMutex.RUnlock()
-                return fmt.Errorf("error adding item: Item already in queue. Use UpdateItem() instead")
-        }
-        tq.dataMutex.RUnlock()
         tq.dataMutex.Lock()
         defer tq.dataMutex.Unlock()
 
-        // check the map again, in the event the item was being added during the Rlock
         if _, ok := tq.dataMap[i.Key]; ok {
                 return fmt.Errorf("error adding item: Item already in queue. Use UpdateItem() instead")
         }
