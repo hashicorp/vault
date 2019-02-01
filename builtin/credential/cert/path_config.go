@@ -13,9 +13,11 @@ func pathConfig(b *backend) *framework.Path {
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"disable_binding": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.`,
+				Type:         framework.TypeBool,
+				Default:      false,
+				Description:  `If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.`,
+				DisplayName:  "Disable Binding",
+				DisplayValue: false,
 			},
 		},
 
