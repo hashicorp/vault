@@ -38,14 +38,6 @@ API-compatible authentication server.`,
 				Description: `Maximum duration after which authentication will be expired`,
 				DisplayName: "Max TTL",
 			},
-			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `Duration after which authentication will be expired`,
-			},
-			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `Maximum duration after which authentication will be expired`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
