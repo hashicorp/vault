@@ -63,81 +63,17 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
 
-	// Check for the upgrade case
-	entitiesBucketStorageView := logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/")
-	vals, err := entitiesBucketStorageView.List(ctx, "")
-	if err != nil {
-		return nil, err
-	}
-	entityBucketsToUpgrade := make([]string, 0, 256)
-	for _, val := range vals {
-		if val == "v2/" {
-			continue
-		}
-		entityBucketsToUpgrade = append(entityBucketsToUpgrade, val)
-	}
 	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		BucketStorageView: logical.NewStorageView(entitiesBucketStorageView, "v2/"),
+		BucketStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/v2/"),
 		ConfigStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"config/"),
 		Logger:            entitiesPackerLogger,
 	})
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
-	if len(entityBucketsToUpgrade) > 0 {
-		iStore.entityPacker.SetQueueMode(true)
-		for _, key := range entityBucketsToUpgrade {
-			storageEntry, err := entitiesBucketStorageView.Get(ctx, key)
-			if err != nil {
-				return nil, err
-			}
-			if storageEntry == nil {
-				// Not clear what to do here really, but if there's really
-				// nothing there, nothing to load, so continue
-				continue
-			}
-			bucket, err := iStore.entityPacker.DecodeBucket(storageEntry)
-			if err != nil {
-				return nil, err
-			}
-			// Set to the new prefix
-			bucket.Key = bucket.Key + "v2/"
-			for _, item := range bucket.Items {
-				bucket.ItemMap[item.ID] = item.Message
-			}
-			iStore.entityPacker.PutBucket(bucket)
-		}
-		iStore.entityPacker.SetQueueMode(false)
-		if !core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
-			if err := iStore.entityPacker.FlushQueue(); err != nil {
-				return nil, err
-			}
-			for _, key := range entityBucketsToUpgrade {
-				if err := entitiesBucketStorageView.Delete(ctx, key); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
 
-	groupsBucketStorageView := logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/")
-	vals, err = groupsBucketStorageView.List(ctx, "")
-	if err != nil {
-		return nil, err
-	}
-
-	groupBucketsToUpgrade := make([]string, 0, 256)
-	for _, val := range vals {
-		if val == "v2/" {
-			continue
-		}
-		groupBucketsToUpgrade = append(groupBucketsToUpgrade, val)
-	}
-	if len(vals) > 0 {
-		// TODO
-	}
 	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		BucketStorageView: logical.NewStorageView(groupsBucketStorageView, "v2/"),
+		BucketStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/v2/"),
 		ConfigStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"config/"),
 		Logger:            groupsPackerLogger,
 	})

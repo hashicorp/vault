@@ -13,6 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/locksutil"
+	sp2 "github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -57,7 +58,7 @@ func (s *LegacyStoragePacker) View() logical.Storage {
 }
 
 // Get returns a bucket for a given key
-func (s *LegacyStoragePacker) GetBucket(key string) (*Bucket, error) {
+func (s *LegacyStoragePacker) GetBucket(key string) (*sp2.Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -83,7 +84,7 @@ func (s *LegacyStoragePacker) GetBucket(key string) (*Bucket, error) {
 		uncompressedData = storageEntry.Value
 	}
 
-	var bucket Bucket
+	var bucket sp2.Bucket
 	err = proto.Unmarshal(uncompressedData, &bucket)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
@@ -94,7 +95,7 @@ func (s *LegacyStoragePacker) GetBucket(key string) (*Bucket, error) {
 
 // upsert either inserts a new item into the bucket or updates an existing one
 // if an item with a matching key is already present.
-func (s *Bucket) legacyUpsert(item *Item) error {
+func legacyUpsert(s *sp2.Bucket, item *sp2.Item) error {
 	if s == nil {
 		return fmt.Errorf("nil storage bucket")
 	}
@@ -170,7 +171,7 @@ func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
 		uncompressedData = storageEntry.Value
 	}
 
-	var bucket Bucket
+	var bucket sp2.Bucket
 	err = proto.Unmarshal(uncompressedData, &bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed decoding packed storage entry: {{err}}", err)
@@ -201,7 +202,7 @@ func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
 }
 
 // Put stores a packed bucket entry
-func (s *LegacyStoragePacker) PutBucket(bucket *Bucket) error {
+func (s *LegacyStoragePacker) PutBucket(bucket *sp2.Bucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -240,7 +241,7 @@ func (s *LegacyStoragePacker) PutBucket(bucket *Bucket) error {
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *LegacyStoragePacker) GetItem(itemID string) (*Item, error) {
+func (s *LegacyStoragePacker) GetItem(itemID string) (*sp2.Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -268,7 +269,7 @@ func (s *LegacyStoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *LegacyStoragePacker) PutItem(item *Item) error {
+func (s *LegacyStoragePacker) PutItem(item *sp2.Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -281,7 +282,7 @@ func (s *LegacyStoragePacker) PutItem(item *Item) error {
 	bucketKey := s.BucketKey(item.ID)
 	bucketPath := s.BucketPath(bucketKey)
 
-	bucket := &Bucket{
+	bucket := &sp2.Bucket{
 		Key: bucketPath,
 	}
 
@@ -301,7 +302,7 @@ func (s *LegacyStoragePacker) PutItem(item *Item) error {
 	if storageEntry == nil {
 		// If the bucket entry does not exist, this will be the only item the
 		// bucket that is going to be persisted.
-		bucket.Items = []*Item{
+		bucket.Items = []*sp2.Item{
 			item,
 		}
 	} else {
@@ -318,7 +319,7 @@ func (s *LegacyStoragePacker) PutItem(item *Item) error {
 			return errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 		}
 
-		err = bucket.legacyUpsert(item)
+		err = legacyUpsert(bucket, item)
 		if err != nil {
 			return errwrap.Wrapf("failed to update entry in packed storage entry: {{err}}", err)
 		}

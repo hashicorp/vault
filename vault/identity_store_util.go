@@ -31,6 +31,77 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return nil
 	}
 
+	// Check for the legacy -> v2 upgrade case
+	upgradeLegacyStoragePacker := func(prefix string, packer *storagepacker.StoragePackerV1) error {
+		bucketStorageView := logical.NewStorageView(c.identityStore.view, prefix+"buckets/")
+		vals, err := bucketStorageView.List(ctx, "")
+		if err != nil {
+			return err
+		}
+		bucketsToUpgrade := make([]string, 0, 256)
+		for _, val := range vals {
+			if val == "v2/" {
+				continue
+			}
+			bucketsToUpgrade = append(bucketsToUpgrade, val)
+		}
+
+		if len(bucketsToUpgrade) == 0 {
+			return nil
+		}
+
+		packer.SetQueueMode(true)
+		for _, key := range bucketsToUpgrade {
+			storageEntry, err := bucketStorageView.Get(ctx, key)
+			if err != nil {
+				return err
+			}
+			if storageEntry == nil {
+				// Not clear what to do here really, but if there's really
+				// nothing there, nothing to load, so continue
+				continue
+			}
+			bucket, err := packer.DecodeBucket(storageEntry)
+			if err != nil {
+				return err
+			}
+			// Set to the new prefix
+			for _, item := range bucket.Items {
+				packer.PutItem(item)
+			}
+		}
+		packer.SetQueueMode(false)
+		// We don't want to try persisting/deleting on a secondary. What will
+		// happen is: since the buckets will be in the cache in the storage
+		// packer with the new data, they won't get flushed, but further
+		// lookups will hit those in-memory updated buckets and return the new
+		// values, so memdb will actually use the new values. When the new
+		// buckets get written on the primary, since there is no randomness
+		// they should also match the buckets that were upgraded in memory
+		// here; when the old buckets get removed on the primary, it will then
+		// be essentially a noop here and when memdb tries to expire entries it
+		// will just not find any. I think.
+		if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
+			if err := packer.FlushQueue(); err != nil {
+				return err
+			}
+			for _, key := range bucketsToUpgrade {
+				if err := bucketStorageView.Delete(ctx, key); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	if err := upgradeLegacyStoragePacker(entityStoragePackerPrefix, c.identityStore.entityPacker); err != nil {
+		return err
+	}
+	if err := upgradeLegacyStoragePacker(groupStoragePackerPrefix, c.identityStore.groupPacker); err != nil {
+		return err
+	}
+
 	loadFunc := func(context.Context) error {
 		err := c.identityStore.loadEntities(ctx)
 		if err != nil {

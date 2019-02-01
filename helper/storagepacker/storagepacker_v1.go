@@ -485,11 +485,11 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 			if err != nil {
 				return errwrap.Wrapf("error decoding existing storage entry for upsert: {{err}}", err)
 			}
-
-			s.bucketsCacheLock.Lock()
-			s.bucketsCache.Insert(cacheKey, bucket)
-			s.bucketsCacheLock.Unlock()
 		}
+
+		s.bucketsCacheLock.Lock()
+		s.bucketsCache.Insert(cacheKey, bucket)
+		s.bucketsCacheLock.Unlock()
 	}
 
 	bucket.Lock()
