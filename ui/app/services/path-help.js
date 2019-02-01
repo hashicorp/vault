@@ -45,7 +45,7 @@ export default Service.extend({
   getProps(modelType, backend) {
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
-    const authMethods = ['auth-config/ldap', 'auth-config/github', 'auth-config/okta'];
+    const authMethods = ['auth-config/ldap', 'auth-config/github', 'auth-config/okta', 'auth-config/radius'];
     let helpUrl = authMethods.includes(modelType)
       ? `/v1/auth/${backend}/${path}?help=1`
       : `/v1/${backend}/${path}/example?help=1`;
