@@ -1011,7 +1011,7 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 		}
 
 		// Set the hash value of the storage bucket key in entity
-		entity.BucketKeyHash = i.entityPacker.BucketHashKeyForItemID(entity.ID)
+		entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1071,7 +1071,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 
 		// Set the hash value of the storage bucket key in group
-		group.BucketKeyHash = i.groupPacker.BucketHashKeyForItemID(group.ID)
+		group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
 	}
 
 	if group.NamespaceID == "" {

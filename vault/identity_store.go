@@ -339,7 +339,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	entity.BucketKeyHash = i.entityPacker.BucketHashKeyForItemID(entity.ID)
+	entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
 
 	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
 	if err != nil {
@@ -389,7 +389,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 		group.NamespaceID = namespace.RootNamespaceID
 	}
 
-	group.BucketKeyHash = i.groupPacker.BucketHashKeyForItemID(group.ID)
+	group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
 
 	return &group, nil
 }

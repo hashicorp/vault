@@ -410,7 +410,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias,
 		},
 	}
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketHashKeyForItemID(entity.ID)
+	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
 	// Now add the alias to two entities, skipping all existing checking by
 	// writing directly
 	entityAny, err := ptypes.MarshalAny(entity)
@@ -430,7 +430,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	entity.Policies = []string{"bar", "baz"}
 	alias.ID = "alias2"
 	alias.CanonicalID = "entity2"
-	entity.BucketKeyHash = c.identityStore.entityPacker.BucketHashKeyForItemID(entity.ID)
+	entity.BucketKeyHash = c.identityStore.entityPacker.BucketKeyHashByItemID(entity.ID)
 	entityAny, err = ptypes.MarshalAny(entity)
 	if err != nil {
 		t.Fatal(err)

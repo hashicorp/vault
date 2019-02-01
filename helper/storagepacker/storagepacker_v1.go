@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	radix "github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
 	any "github.com/golang/protobuf/ptypes/any"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -71,6 +73,9 @@ type StoragePackerV1 struct {
 	// So we can get away with only locking just when modifying, because we
 	// should already be locked in terms of an entry overwriting itself.
 	bucketsCacheLock sync.RWMutex
+
+	queueMode     uint32
+	queuedBuckets sync.Map
 }
 
 // LockedBucket embeds a bucket and its corresponding lock to ensure thread
@@ -117,7 +122,7 @@ func (s *StoragePackerV1) BucketStorageKeyForItemID(itemID string) string {
 	return cacheKey
 }
 
-func (s *StoragePackerV1) BucketHashKeyForItemID(itemID string) string {
+func (s *StoragePackerV1) BucketKeyHashByItemID(itemID string) string {
 	return GetCacheKey(s.BucketStorageKeyForItemID(itemID))
 }
 
@@ -222,18 +227,21 @@ func (s *StoragePackerV1) PutBucket(bucket *LockedBucket) error {
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.Lock()
+	defer lock.Unlock()
 
 	bucket.Lock()
-	err := s.storeBucket(bucket)
-	bucket.Unlock()
+	defer bucket.Unlock()
 
-	lock.Unlock()
-
-	return err
+	return s.storeBucket(bucket, false)
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV1) storeBucket(bucket *LockedBucket) error {
+func (s *StoragePackerV1) storeBucket(bucket *LockedBucket, flushMode bool) error {
+	if !flushMode && atomic.LoadUint32(&s.queueMode) == 1 {
+		s.queuedBuckets.Store(bucket.Key, bucket)
+		return nil
+	}
+
 	marshaledBucket, err := proto.Marshal(bucket.Bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed to marshal bucket: {{err}}", err)
@@ -287,7 +295,7 @@ func (s *StoragePackerV1) DeleteBucket(key string) error {
 
 // upsert either inserts a new item into the bucket or updates an existing one
 // if an item with a matching key is already present.
-func (s *Bucket) upsert(item *Item) error {
+func (s *LockedBucket) upsert(item *Item) error {
 	if s == nil {
 		return fmt.Errorf("nil storage bucket")
 	}
@@ -364,7 +372,7 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 	}
 
 	delete(bucket.ItemMap, itemID)
-	return s.storeBucket(bucket)
+	return s.storeBucket(bucket, false)
 }
 
 // GetItem fetches the storage entry for a given key from its corresponding
@@ -488,7 +496,7 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 	}
 
 	// Persist the result
-	return s.storeBucket(bucket)
+	return s.storeBucket(bucket, false)
 }
 
 // NewStoragePackerV1 creates a new storage packer for a given view
@@ -573,4 +581,26 @@ func NewStoragePackerV1(ctx context.Context, config *Config) (*StoragePackerV1, 
 	}
 
 	return packer, nil
+}
+
+func (s *StoragePackerV1) SetQueueMode(enabled bool) {
+	if enabled {
+		atomic.StoreUint32(&s.queueMode, 1)
+	} else {
+		atomic.StoreUint32(&s.queueMode, 0)
+	}
+}
+
+func (s *StoragePackerV1) FlushQueue() error {
+	var err *multierror.Error
+	s.queuedBuckets.Range(func(key, value interface{}) bool {
+		lErr := s.storeBucket(value.(*LockedBucket), true)
+		if lErr != nil {
+			err = multierror.Append(err, lErr)
+		}
+		s.queuedBuckets.Delete(key)
+		return true
+	})
+
+	return err.ErrorOrNil()
 }
