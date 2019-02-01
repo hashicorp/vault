@@ -332,7 +332,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// Otherwise it's still tied to previousEntity and fall through
 			// into merging
 			fallthrough
-		case persist && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+		case persist && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby):
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
 			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
 			switch {
