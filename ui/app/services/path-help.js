@@ -52,6 +52,7 @@ export default Service.extend({
       'auth-config/radius',
       'auth-config/cert',
       'auth-config/gcp',
+      'auth-config/azure',
     ];
     let helpUrl = authMethods.includes(modelType)
       ? `/v1/auth/${backend}/${path}?help=1`
