@@ -21,7 +21,6 @@ export default AuthConfig.extend({
         'Google Cloud Options': ['googleCertsEndpoint'],
       },
     ];
-    debugger; // eslint-disable-line
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);
     }
