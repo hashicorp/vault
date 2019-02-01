@@ -32,9 +32,44 @@ type TimeQueue struct {
         dataMutex sync.Mutex
 }
 
-// Pluck removes an item from the queue by index. Pluck must "fix" the heap when
-// it's done
-func (tq *TimeQueue) Pluck(key string) (*Item, error) {
+// PopItem pops the highest priority item from the queue. This is a
+// wrapper/convienence method that calls heap.Pop, so consumers do not need to
+// invoke heap functions directly
+func (tq *TimeQueue) PopItem() (*Item, error) {
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
+        if tq.Len() == 0 {
+                return nil, errors.New("queue is empty")
+        }
+
+        item := heap.Pop(tq).(*Item)
+        delete(tq.dataMap, item.Key)
+        return item, nil
+}
+
+// PushItem pushes an item on to the queue. This is a wrapper/convienence
+// method that calls heap.Push, so consumers do not need to invoke heap
+// functions directly
+func (tq *TimeQueue) PushItem(i *Item) error {
+        if i.Key == "" {
+                return errors.New("error adding item: Item Key is required")
+        }
+
+        tq.dataMutex.Lock()
+        defer tq.dataMutex.Unlock()
+
+        if _, ok := tq.dataMap[i.Key]; ok {
+                return fmt.Errorf("error adding item: Item (%s) is already in queue", i.Key)
+        }
+
+        tq.dataMap[i.Key] = i
+        heap.Push(tq, i)
+        return nil
+}
+
+// PopItemByKey removes an item from the queue by key, if found
+func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
         tq.dataMutex.Lock()
         defer tq.dataMutex.Unlock()
 
@@ -54,70 +89,6 @@ func (tq *TimeQueue) Pluck(key string) (*Item, error) {
         // TODO log that we found something but it wasn't an Item. Or just not bother
         // type asserting
         return nil, ErrItemNotFound(key)
-}
-
-// Find searches the queue for an item by index and returns it if found, but
-// does not remove it from the queue. If not found, returns ErrNotFound
-func (tq *TimeQueue) Find(key string) (*Item, error) {
-        tq.dataMutex.Lock()
-        defer tq.dataMutex.Unlock()
-
-        if item, ok := tq.dataMap[key]; ok {
-                return item, nil
-        }
-
-        return nil, ErrItemNotFound(key)
-}
-
-// Size reports the size of the queue, e.g. number of items in data
-// TODO: duplicate of Len()?
-func (tq *TimeQueue) Size() int {
-        return len(tq.data)
-}
-
-// PopItem pops the highest priority item from the queue. This is a
-// wrapper/convienence method that calls heap.Pop, so consumers do not need to
-// invoke heap functions directly
-func (tq *TimeQueue) PopItem() *Item {
-        tq.dataMutex.Lock()
-        defer tq.dataMutex.Unlock()
-
-        if tq.Size() == 0 {
-                return nil
-        }
-
-        item := heap.Pop(tq).(*Item)
-        delete(tq.dataMap, item.Key)
-        return item
-}
-
-// PushItem pushes an item on to the queue. This is a wrapper/convienence
-// method that calls heap.Push, so consumers do not need to invoke heap
-// functions directly
-func (tq *TimeQueue) PushItem(i *Item) error {
-        if i.Key == "" {
-                return errors.New("error adding item: Item Key is required")
-        }
-
-        tq.dataMutex.Lock()
-        defer tq.dataMutex.Unlock()
-
-        if _, ok := tq.dataMap[i.Key]; ok {
-                return fmt.Errorf("error adding item: Item already in queue. Use UpdateItem() instead")
-        }
-
-        tq.dataMap[i.Key] = i
-        heap.Push(tq, i)
-        return nil
-}
-
-// Update modifies the priority and value of an Item
-func (tq *TimeQueue) Update(item *Item) {
-        tq.dataMutex.Lock()
-        defer tq.dataMutex.Unlock()
-
-        heap.Fix(tq, item.index)
-        // tq.dataMap[item.Key] = item
 }
 
 //////
