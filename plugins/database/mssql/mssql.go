@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/multierr"
+
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
@@ -172,12 +174,7 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		return err
 	}
 
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	var errs error
 
 	// Execute each query
 	for _, stmt := range statements.Revocation {
@@ -190,18 +187,13 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			m := map[string]string{
 				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return err
+			if err := dbtxn.ExecuteDBQuery(ctx, db, m, query); err != nil {
+				errs = multierr.Append(errs, err)
 			}
 		}
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return errs
 }
 
 func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
