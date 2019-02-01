@@ -85,8 +85,8 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	// create ado style connection unless a connection_url was provided
-	connectionString, ok := conf["connection_url"]
-	if !ok || connectionString == "" {
+	connectionString := conf["connection_url"]
+	if connectionString == "" {
 		var connectionParams []string
 		for k, v := range conf {
 			connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
