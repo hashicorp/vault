@@ -52,8 +52,8 @@ func TestNewTimeQueue(t *testing.T) {
                 t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(tqi.data), len(tqi.dataMap))
         }
 
-        if tq.Size() != 0 {
-                t.Fatalf("expected new queue to have zero size, got (%d)", tq.Size())
+        if tq.Len() != 0 {
+                t.Fatalf("expected new queue to have zero size, got (%d)", tq.Len())
         }
 }
 
@@ -68,8 +68,8 @@ func TestTimeQueue_PushItem(t *testing.T) {
                 }
         }
 
-        if tq.Size() != tcl {
-                t.Fatalf("error adding items, expected (%d) items, got (%d)", tcl, tq.Size())
+        if tq.Len() != tcl {
+                t.Fatalf("error adding items, expected (%d) items, got (%d)", tcl, tq.Len())
         }
 
         // check the internal data structures
