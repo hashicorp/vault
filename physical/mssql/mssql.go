@@ -30,11 +30,11 @@ type MSSQLBackend struct {
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 
-	// enforce required configurations
-	server, ok := conf["server"]
-	if !ok || server == "" {
-		return nil, fmt.Errorf("missing server")
-	}
+	//// enforce required configurations
+	//server, ok := conf["server"]
+	//if !ok || server == "" {
+	//	return nil, fmt.Errorf("missing server")
+	//}
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
