@@ -2507,7 +2507,7 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 		}
 		return &logical.Response{
 			Data: map[string]interface{}{
-				logical.HTTPContentType: "text/plain",
+				logical.HTTPContentType: expfmt.FmtText,
 				logical.HTTPRawBody:     buf.Bytes(),
 				logical.HTTPStatusCode:  200,
 			},

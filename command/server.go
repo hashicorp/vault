@@ -1755,6 +1755,11 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 		if err != nil {
 			return nil, err
 		}
+		// Hostname enabled will create poor quality metrics name
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+
+		}
 		fanout = append(fanout, sink)
 	}
 
