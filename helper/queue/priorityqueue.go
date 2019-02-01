@@ -30,8 +30,8 @@ type PriorityQueue interface {
         // Peek returns the top item from the queue, but does not remove it
         // Peek()
 
-        // Pluck removes an item from the queue. Pluck must fix the queue after
-        // removal. If no item is removed, returns ErrNoItemFound
+        // Pluck removes an item from the queue by the given Key. Pluck must fix the
+        // queue after removal. If no item is removed, returns ErrNoItemFound
         Pluck(string) (*Item, error)
 
         // Find searches and returns item from the queue, if found. This does not
