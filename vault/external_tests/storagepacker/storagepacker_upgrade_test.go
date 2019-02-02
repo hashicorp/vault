@@ -139,63 +139,72 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 
 	// Step 5: Unseal Vault, make sure we can fetch every one of the created
 	// identities, and that storage looks as we expect
-	testhelpers.EnsureCoresUnsealed(t, cluster)
+	step5 := func() {
+		testhelpers.EnsureCoresUnsealed(t, cluster)
 
-	for i := 0; i < numEntries; i++ {
-		secret, err := client.Logical().Read(fmt.Sprintf("identity/entity/name/%d", i))
+		for i := 0; i < numEntries; i++ {
+			secret, err := client.Logical().Read(fmt.Sprintf("identity/entity/name/%d", i))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if secret == nil {
+				t.Fatal("nil secret")
+			}
+			if secret.Data["name"] != fmt.Sprintf("%d", i) {
+				t.Fatal("bad name")
+			}
+
+			secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%d", i))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if secret == nil {
+				t.Fatal("nil secret")
+			}
+			if secret.Data["name"] != fmt.Sprintf("%d", i) {
+				t.Fatal("bad name")
+			}
+		}
+
+		buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/buckets/")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret == nil {
-			t.Fatal("nil secret")
-		}
-		if secret.Data["name"] != fmt.Sprintf("%d", i) {
-			t.Fatal("bad name")
+		if len(buckets) != 1 {
+			t.Fatalf("%d", len(buckets))
 		}
 
-		secret, err = client.Logical().Read(fmt.Sprintf("identity/group/name/%d", i))
+		buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/buckets/v2/")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret == nil {
-			t.Fatal("nil secret")
+		if len(buckets) != 256 {
+			t.Fatalf("%d", len(buckets))
 		}
-		if secret.Data["name"] != fmt.Sprintf("%d", i) {
-			t.Fatal("bad name")
+
+		buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/group/buckets/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(buckets) != 1 {
+			t.Fatalf("%d", len(buckets))
+		}
+
+		buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/group/buckets/v2/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(buckets) != 256 {
+			t.Fatalf("%d", len(buckets))
 		}
 	}
+	step5()
 
-	buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/buckets/")
-	if err != nil {
+	// Step 6: seal and unseal to make sure we're not just reading cache; IOW repeat step 5
+	if err := client.Sys().Seal(); err != nil {
 		t.Fatal(err)
 	}
-	if len(buckets) != 1 {
-		t.Fatalf("%d", len(buckets))
-	}
 
-	buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/buckets/v2/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(buckets) != 256 {
-		t.Fatalf("%d", len(buckets))
-	}
+	step5()
 
-	buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/group/buckets/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(buckets) != 1 {
-		t.Fatalf("%d", len(buckets))
-	}
-
-	buckets, err = barrier.List(ctx, "logical/"+bes[0]+"packer/group/buckets/v2/")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(buckets) != 256 {
-		t.Fatalf("%d", len(buckets))
-	}
-
-	// Step 6: repeat with groups
 }
