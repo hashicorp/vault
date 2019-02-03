@@ -406,7 +406,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			Message: entityAsAny,
 		}
 
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err
 		}

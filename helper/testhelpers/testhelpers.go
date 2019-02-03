@@ -103,32 +103,35 @@ func RandomWithPrefix(name string) string {
 func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
 	t.Helper()
 	for _, core := range c.Cores {
-		if !core.Sealed() {
-			continue
-		}
+		EnsureCoreUnsealed(t, c, core)
+	}
+}
+func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClusterCore) {
+	if !core.Sealed() {
+		return
+	}
 
-		client := core.Client
-		client.Sys().ResetUnsealProcess()
-		for j := 0; j < len(c.BarrierKeys); j++ {
-			statusResp, err := client.Sys().Unseal(base64.StdEncoding.EncodeToString(c.BarrierKeys[j]))
-			if err != nil {
-				// Sometimes when we get here it's already unsealed on its own
-				// and then this fails for DR secondaries so check again
-				if core.Sealed() {
-					t.Fatal(err)
-				}
-				break
+	client := core.Client
+	client.Sys().ResetUnsealProcess()
+	for j := 0; j < len(c.BarrierKeys); j++ {
+		statusResp, err := client.Sys().Unseal(base64.StdEncoding.EncodeToString(c.BarrierKeys[j]))
+		if err != nil {
+			// Sometimes when we get here it's already unsealed on its own
+			// and then this fails for DR secondaries so check again
+			if core.Sealed() {
+				t.Fatal(err)
 			}
-			if statusResp == nil {
-				t.Fatal("nil status response during unseal")
-			}
-			if !statusResp.Sealed {
-				break
-			}
+			break
 		}
-		if core.Sealed() {
-			t.Fatal("core is still sealed")
+		if statusResp == nil {
+			t.Fatal("nil status response during unseal")
 		}
+		if !statusResp.Sealed {
+			break
+		}
+	}
+	if core.Sealed() {
+		t.Fatal("core is still sealed")
 	}
 }
 

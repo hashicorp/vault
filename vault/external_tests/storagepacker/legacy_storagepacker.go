@@ -13,6 +13,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/storagepacker"
 	sp2 "github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/logical"
 )
@@ -27,7 +28,7 @@ const (
 // that gets inserted into the packer should implement StorageBucketItem
 // interface.
 type LegacyStoragePacker struct {
-	view         logical.Storage
+	view         *logical.StorageView
 	logger       log.Logger
 	storageLocks []*locksutil.LockEntry
 	viewPrefix   string
@@ -42,7 +43,11 @@ func (s *LegacyStoragePacker) BucketPath(bucketKey string) string {
 // the item will be stored. The choice of MD5 is only for hash performance
 // reasons since its value is not used for any security sensitive operation.
 func (s *LegacyStoragePacker) BucketKeyHashByItemID(itemID string) string {
-	return s.BucketKeyHashByKey(s.BucketPath(s.BucketKey(itemID)))
+	return s.BucketPath(s.BucketKey(itemID))
+}
+
+func (s *LegacyStoragePacker) GetCacheKey(key string) string {
+	return key
 }
 
 // BucketKeyHashByKey returns the MD5 hash of the bucket storage key
@@ -53,12 +58,12 @@ func (s *LegacyStoragePacker) BucketKeyHashByKey(bucketKey string) string {
 }
 
 // View returns the storage view configured to be used by the packer
-func (s *LegacyStoragePacker) View() logical.Storage {
+func (s *LegacyStoragePacker) BucketsView() *logical.StorageView {
 	return s.view
 }
 
 // Get returns a bucket for a given key
-func (s *LegacyStoragePacker) GetBucket(key string) (*sp2.Bucket, error) {
+func (s *LegacyStoragePacker) GetBucket(ctx context.Context, key string) (*sp2.LockedBucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -68,10 +73,20 @@ func (s *LegacyStoragePacker) GetBucket(key string) (*sp2.Bucket, error) {
 	defer lock.RUnlock()
 
 	// Read from the underlying view
-	storageEntry, err := s.view.Get(context.Background(), key)
+	storageEntry, err := s.view.Get(ctx, key)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
 	}
+
+	lb, err := s.DecodeBucket(storageEntry)
+	if err != nil {
+		return nil, err
+	}
+
+	return lb, nil
+}
+
+func (s *LegacyStoragePacker) DecodeBucket(storageEntry *logical.StorageEntry) (*sp2.LockedBucket, error) {
 	if storageEntry == nil {
 		return nil, nil
 	}
@@ -90,7 +105,19 @@ func (s *LegacyStoragePacker) GetBucket(key string) (*sp2.Bucket, error) {
 		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 	}
 
-	return &bucket, nil
+	return &sp2.LockedBucket{Bucket: &bucket}, nil
+}
+
+func (s *LegacyStoragePacker) DeleteBucket(ctx context.Context, key string) error {
+	if key == "" {
+		return fmt.Errorf("missing bucket key")
+	}
+
+	lock := locksutil.LockForKey(s.storageLocks, key)
+	lock.Lock()
+	defer lock.Unlock()
+
+	return s.view.Delete(ctx, key)
 }
 
 // upsert either inserts a new item into the bucket or updates an existing one
@@ -142,7 +169,7 @@ func (s *LegacyStoragePacker) BucketKey(itemID string) string {
 
 // DeleteItem removes the storage entry which the given key refers to from its
 // corresponding bucket.
-func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
+func (s *LegacyStoragePacker) DeleteItem(ctx context.Context, itemID string) error {
 
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
@@ -155,7 +182,7 @@ func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
 	bucketPath := s.BucketPath(bucketKey)
 
 	// Read from underlying view
-	storageEntry, err := s.view.Get(context.Background(), bucketPath)
+	storageEntry, err := s.view.Get(ctx, bucketPath)
 	if err != nil {
 		return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 	}
@@ -192,7 +219,7 @@ func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
 		bucket.Items = append(bucket.Items[:foundIdx], bucket.Items[foundIdx+1:]...)
 
 		// Persist bucket entry only if there is an update
-		err = s.PutBucket(&bucket)
+		err = s.PutBucket(ctx, &sp2.LockedBucket{Bucket: &bucket})
 		if err != nil {
 			return err
 		}
@@ -202,7 +229,7 @@ func (s *LegacyStoragePacker) DeleteItem(itemID string) error {
 }
 
 // Put stores a packed bucket entry
-func (s *LegacyStoragePacker) PutBucket(bucket *sp2.Bucket) error {
+func (s *LegacyStoragePacker) PutBucket(ctx context.Context, bucket *sp2.LockedBucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -228,7 +255,7 @@ func (s *LegacyStoragePacker) PutBucket(bucket *sp2.Bucket) error {
 	}
 
 	// Store the compressed value
-	err = s.view.Put(context.Background(), &logical.StorageEntry{
+	err = s.view.Put(ctx, &logical.StorageEntry{
 		Key:   bucket.Key,
 		Value: compressedBucket,
 	})
@@ -241,7 +268,7 @@ func (s *LegacyStoragePacker) PutBucket(bucket *sp2.Bucket) error {
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *LegacyStoragePacker) GetItem(itemID string) (*sp2.Item, error) {
+func (s *LegacyStoragePacker) GetItem(ctx context.Context, itemID string) (*sp2.Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -250,7 +277,7 @@ func (s *LegacyStoragePacker) GetItem(itemID string) (*sp2.Item, error) {
 	bucketPath := s.BucketPath(bucketKey)
 
 	// Fetch the bucket entry
-	bucket, err := s.GetBucket(bucketPath)
+	bucket, err := s.GetBucket(ctx, bucketPath)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 	}
@@ -269,7 +296,7 @@ func (s *LegacyStoragePacker) GetItem(itemID string) (*sp2.Item, error) {
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *LegacyStoragePacker) PutItem(item *sp2.Item) error {
+func (s *LegacyStoragePacker) PutItem(ctx context.Context, item *sp2.Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -326,30 +353,24 @@ func (s *LegacyStoragePacker) PutItem(item *sp2.Item) error {
 	}
 
 	// Persist the result
-	return s.PutBucket(bucket)
+	return s.PutBucket(ctx, &sp2.LockedBucket{Bucket: bucket})
 }
 
 // NewLegacyStoragePacker creates a new storage packer for a given view
-func NewLegacyStoragePacker(view logical.Storage, logger log.Logger, viewPrefix string) (*LegacyStoragePacker, error) {
-	if view == nil {
+func NewLegacyStoragePacker(ctx context.Context, config *storagepacker.Config) (storagepacker.StoragePacker, error) {
+	if config.BucketStorageView == nil {
 		return nil, fmt.Errorf("nil view")
-	}
-
-	if viewPrefix == "" {
-		viewPrefix = LegacyStoragePackerBucketsPrefix
-	}
-
-	if !strings.HasSuffix(viewPrefix, "/") {
-		viewPrefix = viewPrefix + "/"
 	}
 
 	// Create a new packer object for the given view
 	packer := &LegacyStoragePacker{
-		view:         view,
-		viewPrefix:   viewPrefix,
-		logger:       logger,
+		view:         config.BucketStorageView,
+		logger:       config.Logger,
 		storageLocks: locksutil.CreateLocks(),
 	}
 
 	return packer, nil
 }
+
+func (s *LegacyStoragePacker) SetQueueMode(bool)                {}
+func (s *LegacyStoragePacker) FlushQueue(context.Context) error { return nil }

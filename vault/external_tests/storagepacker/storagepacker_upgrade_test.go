@@ -51,10 +51,20 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if barrierKey == nil {
+		t.Fatal("nil barrier key")
+	}
+
+	if core.UnderlyingStorage == nil {
+		t.Fatal("underlying storage is nil")
+	}
 
 	barrier, err := vault.NewAESGCMBarrier(core.UnderlyingStorage)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if barrier == nil {
+		t.Fatal("nil barrier")
 	}
 
 	if err := barrier.Unseal(ctx, barrierKey); err != nil {
@@ -82,12 +92,18 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entityPacker, err := NewLegacyStoragePacker(storage, entityPackerLogger, "")
+	entityPacker, err := NewLegacyStoragePacker(ctx, &storagepacker.Config{
+		BucketStorageView: storage.SubView("packer/buckets/"),
+		Logger:            entityPackerLogger,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	groupPacker, err := NewLegacyStoragePacker(storage, groupPackerLogger, "packer/group/buckets/")
+	groupPacker, err := NewLegacyStoragePacker(ctx, &storagepacker.Config{
+		BucketStorageView: storage.SubView("packer/group/buckets/"),
+		Logger:            groupPackerLogger,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +120,7 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 		}
 		item.ID = entity.ID
 		item.Message = entityAsAny
-		if err := entityPacker.PutItem(&item); err != nil {
+		if err := entityPacker.PutItem(ctx, &item); err != nil {
 			t.Fatal(err)
 		}
 
@@ -116,7 +132,7 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 		}
 		item.ID = group.ID
 		item.Message = groupAsAny
-		if err := groupPacker.PutItem(&item); err != nil {
+		if err := groupPacker.PutItem(ctx, &item); err != nil {
 			t.Fatal(err)
 		}
 	}

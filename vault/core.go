@@ -416,6 +416,10 @@ type Core struct {
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
 	allLoggersLock sync.RWMutex
+
+	// Can be toggled atomically to cause the core to never try to become
+	// active, or give up active as soon as it gets it
+	neverBecomeActive *uint32
 }
 
 // CoreConfig is used to parameterize a core
@@ -590,6 +594,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
+		neverBecomeActive:                new(uint32),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

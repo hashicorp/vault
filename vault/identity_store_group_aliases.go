@@ -294,7 +294,7 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 		// Delete the alias
 		group.Alias = nil
 
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return nil, err
 		}

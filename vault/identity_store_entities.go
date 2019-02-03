@@ -489,7 +489,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 
 	for _, group := range groups {
 		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entity.ID)
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return err
 		}
@@ -508,7 +508,7 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	}
 
 	// Delete the entity from storage
-	err = i.entityPacker.DeleteItem(entity.ID)
+	err = i.entityPacker.DeleteItem(ctx, entity.ID)
 	if err != nil {
 		return err
 	}
@@ -705,7 +705,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		// Delete the entity which we are merging from in storage
-		err = i.entityPacker.DeleteItem(fromEntity.ID)
+		err = i.entityPacker.DeleteItem(ctx, fromEntity.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -727,7 +727,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		Message: toEntityAsAny,
 	}
 
-	err = i.entityPacker.PutItem(item)
+	err = i.entityPacker.PutItem(ctx, item)
 	if err != nil {
 		return nil, err
 	}

@@ -123,16 +123,16 @@ func (s *StoragePackerV1) BucketStorageKeyForItemID(itemID string) string {
 }
 
 func (s *StoragePackerV1) BucketKeyHashByItemID(itemID string) string {
-	return GetCacheKey(s.BucketStorageKeyForItemID(itemID))
+	return s.GetCacheKey(s.BucketStorageKeyForItemID(itemID))
 }
 
-func GetCacheKey(key string) string {
+func (s *StoragePackerV1) GetCacheKey(key string) string {
 	return strings.Replace(key, "/", "", -1)
 }
 
 // Get returns a bucket for a given key
-func (s *StoragePackerV1) GetBucket(key string) (*LockedBucket, error) {
-	cacheKey := GetCacheKey(key)
+func (s *StoragePackerV1) GetBucket(ctx context.Context, key string) (*LockedBucket, error) {
+	cacheKey := s.GetCacheKey(key)
 
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
@@ -167,7 +167,7 @@ func (s *StoragePackerV1) GetBucket(key string) (*LockedBucket, error) {
 	}
 
 	// Read from the underlying view
-	storageEntry, err := s.BucketStorageView.Get(context.Background(), key)
+	storageEntry, err := s.BucketStorageView.Get(ctx, key)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
 	}
@@ -214,7 +214,7 @@ func (s *StoragePackerV1) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 }
 
 // Put stores a packed bucket entry
-func (s *StoragePackerV1) PutBucket(bucket *LockedBucket) error {
+func (s *StoragePackerV1) PutBucket(ctx context.Context, bucket *LockedBucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -223,7 +223,7 @@ func (s *StoragePackerV1) PutBucket(bucket *LockedBucket) error {
 		return fmt.Errorf("missing key")
 	}
 
-	cacheKey := GetCacheKey(bucket.Key)
+	cacheKey := s.GetCacheKey(bucket.Key)
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.Lock()
@@ -232,19 +232,19 @@ func (s *StoragePackerV1) PutBucket(bucket *LockedBucket) error {
 	bucket.Lock()
 	defer bucket.Unlock()
 
-	if err := s.storeBucket(bucket); err != nil {
+	if err := s.storeBucket(ctx, bucket); err != nil {
 		return err
 	}
 
 	s.bucketsCacheLock.Lock()
-	s.bucketsCache.Insert(GetCacheKey(bucket.Key), bucket)
+	s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
 	s.bucketsCacheLock.Unlock()
 
 	return nil
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV1) storeBucket(bucket *LockedBucket) error {
+func (s *StoragePackerV1) storeBucket(ctx context.Context, bucket *LockedBucket) error {
 	if atomic.LoadUint32(&s.queueMode) == 1 {
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
@@ -263,7 +263,7 @@ func (s *StoragePackerV1) storeBucket(bucket *LockedBucket) error {
 	}
 
 	// Store the compressed value
-	err = s.BucketStorageView.Put(context.Background(), &logical.StorageEntry{
+	err = s.BucketStorageView.Put(ctx, &logical.StorageEntry{
 		Key:   bucket.Key,
 		Value: compressedBucket,
 	})
@@ -275,18 +275,18 @@ func (s *StoragePackerV1) storeBucket(bucket *LockedBucket) error {
 }
 
 // DeleteBucket deletes an entire bucket entry
-func (s *StoragePackerV1) DeleteBucket(key string) error {
+func (s *StoragePackerV1) DeleteBucket(ctx context.Context, key string) error {
 	if key == "" {
 		return fmt.Errorf("missing key")
 	}
 
-	cacheKey := GetCacheKey(key)
+	cacheKey := s.GetCacheKey(key)
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.Lock()
 	defer lock.Unlock()
 
-	if err := s.BucketStorageView.Delete(context.Background(), key); err != nil {
+	if err := s.BucketStorageView.Delete(ctx, key); err != nil {
 		return errwrap.Wrapf("failed to delete packed storage entry: {{err}}", err)
 	}
 
@@ -322,14 +322,14 @@ func (s *LockedBucket) upsert(item *Item) error {
 
 // DeleteItem removes the storage entry which the given key refers to from its
 // corresponding bucket.
-func (s *StoragePackerV1) DeleteItem(itemID string) error {
+func (s *StoragePackerV1) DeleteItem(ctx context.Context, itemID string) error {
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
 	}
 
 	// Get the bucket key
 	bucketKey := s.BucketStorageKeyForItemID(itemID)
-	cacheKey := GetCacheKey(bucketKey)
+	cacheKey := s.GetCacheKey(bucketKey)
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.Lock()
@@ -345,7 +345,7 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 		bucket = bucketRaw.(*LockedBucket)
 	} else {
 		// Read from underlying view
-		storageEntry, err := s.BucketStorageView.Get(context.Background(), bucketKey)
+		storageEntry, err := s.BucketStorageView.Get(ctx, bucketKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 		}
@@ -376,18 +376,18 @@ func (s *StoragePackerV1) DeleteItem(itemID string) error {
 	}
 
 	delete(bucket.ItemMap, itemID)
-	return s.storeBucket(bucket)
+	return s.storeBucket(ctx, bucket)
 }
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *StoragePackerV1) GetItem(itemID string) (*Item, error) {
+func (s *StoragePackerV1) GetItem(ctx context.Context, itemID string) (*Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
 
 	bucketKey := s.BucketStorageKeyForItemID(itemID)
-	cacheKey := GetCacheKey(bucketKey)
+	cacheKey := s.GetCacheKey(bucketKey)
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.RLock()
@@ -403,7 +403,7 @@ func (s *StoragePackerV1) GetItem(itemID string) (*Item, error) {
 		bucket = bucketRaw.(*LockedBucket)
 	} else {
 		// Read from underlying view
-		storageEntry, err := s.BucketStorageView.Get(context.Background(), bucketKey)
+		storageEntry, err := s.BucketStorageView.Get(ctx, bucketKey)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 		}
@@ -442,7 +442,7 @@ func (s *StoragePackerV1) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *StoragePackerV1) PutItem(item *Item) error {
+func (s *StoragePackerV1) PutItem(ctx context.Context, item *Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -453,7 +453,7 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 
 	// Get the bucket key
 	bucketKey := s.BucketStorageKeyForItemID(item.ID)
-	cacheKey := GetCacheKey(bucketKey)
+	cacheKey := s.GetCacheKey(bucketKey)
 
 	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lock.Lock()
@@ -469,7 +469,7 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 		bucket = bucketRaw.(*LockedBucket)
 	} else {
 		// Read from underlying view
-		storageEntry, err := s.BucketStorageView.Get(context.Background(), bucketKey)
+		storageEntry, err := s.BucketStorageView.Get(ctx, bucketKey)
 		if err != nil {
 			return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
 		}
@@ -500,14 +500,16 @@ func (s *StoragePackerV1) PutItem(item *Item) error {
 	}
 
 	// Persist the result
-	return s.storeBucket(bucket)
+	return s.storeBucket(ctx, bucket)
 }
 
 // NewStoragePackerV1 creates a new storage packer for a given view
-func NewStoragePackerV1(ctx context.Context, config *Config) (*StoragePackerV1, error) {
+func NewStoragePackerV1(ctx context.Context, config *Config) (StoragePacker, error) {
 	if config.BucketStorageView == nil {
 		return nil, fmt.Errorf("nil buckets view")
 	}
+
+	config.BucketStorageView = config.BucketStorageView.SubView("v2/")
 
 	if config.ConfigStorageView == nil {
 		return nil, fmt.Errorf("nil config view")
@@ -595,10 +597,10 @@ func (s *StoragePackerV1) SetQueueMode(enabled bool) {
 	}
 }
 
-func (s *StoragePackerV1) FlushQueue() error {
+func (s *StoragePackerV1) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
-		lErr := s.storeBucket(value.(*LockedBucket))
+		lErr := s.storeBucket(ctx, value.(*LockedBucket))
 		if lErr != nil {
 			err = multierror.Append(err, lErr)
 		}

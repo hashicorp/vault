@@ -400,7 +400,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		leaderLostCh := c.acquireLock(lock, stopCh)
 
 		// Bail if we are being shutdown
-		if leaderLostCh == nil {
+		if leaderLostCh == nil || atomic.LoadUint32(c.neverBecomeActive) == 1 {
 			return
 		}
 		c.logger.Info("acquired lock, enabling active operation")
@@ -770,6 +770,10 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 			return leaderLostCh
 		}
 
+		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
+			return nil
+		}
+
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
 		select {
@@ -868,4 +872,12 @@ func (c *Core) clearLeader(uuid string) error {
 	}
 
 	return err
+}
+
+func (c *Core) SetNeverBecomeActive(on bool) {
+	if on {
+		atomic.StoreUint32(c.neverBecomeActive, 1)
+	} else {
+		atomic.StoreUint32(c.neverBecomeActive, 0)
+	}
 }

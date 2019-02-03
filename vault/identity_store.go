@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
@@ -27,7 +28,12 @@ var (
 	sendGroupUpgrade             = func(*IdentityStore, *identity.Group) (bool, error) { return false, nil }
 	parseExtraEntityFromBucket   = func(context.Context, *IdentityStore, *identity.Entity) (bool, error) { return false, nil }
 	addExtraEntityDataToResponse = func(*identity.Entity, map[string]interface{}) {}
+	StoragePackerCreationFunc    = new(atomic.Value)
 )
+
+func init() {
+	StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV1))
+}
 
 func (c *Core) IdentityStore() *IdentityStore {
 	return c.identityStore
@@ -63,8 +69,10 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
 	core.AddLogger(groupsPackerLogger)
 
-	iStore.entityPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		BucketStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/v2/"),
+	creationFunc := StoragePackerCreationFunc.Load().(storagepacker.StoragePackerFactory)
+
+	iStore.entityPacker, err = creationFunc(ctx, &storagepacker.Config{
+		BucketStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"buckets/"),
 		ConfigStorageView: logical.NewStorageView(iStore.view, entityStoragePackerPrefix+"config/"),
 		Logger:            entitiesPackerLogger,
 	})
@@ -72,8 +80,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, errwrap.Wrapf("failed to create entity packer: {{err}}", err)
 	}
 
-	iStore.groupPacker, err = storagepacker.NewStoragePackerV1(ctx, &storagepacker.Config{
-		BucketStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/v2/"),
+	iStore.groupPacker, err = creationFunc(ctx, &storagepacker.Config{
+		BucketStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"buckets/"),
 		ConfigStorageView: logical.NewStorageView(iStore.view, groupStoragePackerPrefix+"config/"),
 		Logger:            groupsPackerLogger,
 	})
@@ -119,7 +127,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
-		bucketKeyHash := storagepacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
+		bucketKeyHash := i.entityPacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -153,7 +161,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.entityPacker.GetBucket(key)
+		bucket, err := i.entityPacker.GetBucket(ctx, key)
 		if err != nil {
 			i.logger.Error("failed to refresh entities", "key", key, "error", err)
 			return
@@ -188,7 +196,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
-		bucketKeyHash := storagepacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
+		bucketKeyHash := i.groupPacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
@@ -210,7 +218,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(key)
+		bucket, err := i.groupPacker.GetBucket(ctx, key)
 		if err != nil {
 			i.logger.Error("failed to refresh group", "key", key, "error", err)
 			return
@@ -243,7 +251,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				}
 
 				// Only update MemDB and don't touch the storage
-				err = i.UpsertGroupInTxn(txn, group, false)
+				err = i.UpsertGroupInTxn(ctx, txn, group, false)
 				if err != nil {
 					i.logger.Error("failed to update group in MemDB", "error", err)
 					return
@@ -329,7 +337,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		}
 
 		// Store the entity with new format
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err
 		}
