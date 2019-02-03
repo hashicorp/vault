@@ -135,6 +135,23 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 	}
 }
 
+func EnsureCoreIsPerfStandby(t testing.T, core *vault.TestClusterCore) {
+	start := time.Now()
+	for {
+		health, err := core.Client.Sys().Health()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if health.PerformanceStandby {
+			break
+		}
+		time.Sleep(time.Millisecond * 500)
+		if time.Now().After(start.Add(time.Second * 30)) {
+			t.Fatal("did not become a perf standby")
+		}
+	}
+}
+
 func WaitForReplicationState(t testing.T, c *vault.Core, state consts.ReplicationState) {
 	timeout := time.Now().Add(10 * time.Second)
 	for {

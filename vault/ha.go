@@ -400,9 +400,17 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		leaderLostCh := c.acquireLock(lock, stopCh)
 
 		// Bail if we are being shutdown
-		if leaderLostCh == nil || atomic.LoadUint32(c.neverBecomeActive) == 1 {
+		if leaderLostCh == nil {
 			return
 		}
+
+		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
+			c.heldHALock = nil
+			lock.Unlock()
+			c.logger.Info("marked never become active, giving up after interrupting perf standbys")
+			continue
+		}
+
 		c.logger.Info("acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
@@ -410,6 +418,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		activeTime := time.Now()
 
 		continueCh := interruptPerfStandby(newLeaderCh, stopCh)
+
 		// Grab the statelock or stop
 		if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, stopCh); stopped {
 			lock.Unlock()
@@ -768,10 +777,6 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		leaderLostCh, err := lock.Lock(stopCh)
 		if err == nil {
 			return leaderLostCh
-		}
-
-		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
-			return nil
 		}
 
 		// Retry the acquisition
