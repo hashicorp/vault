@@ -2,25 +2,12 @@ package logical
 
 import (
 	"context"
-	"fmt"
-
-	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/file"
-	"github.com/hashicorp/vault/physical/inmem"
-)
-
-type LogicalType string
-
-const (
-	LogicalTypeInmem LogicalType = "inmem"
-	LogicalTypeFile  LogicalType = "file"
 )
 
 type LogicalStorage struct {
-	logicalType LogicalType
-	underlying  physical.Backend
+	underlying physical.Backend
 }
 
 func (s *LogicalStorage) Get(ctx context.Context, key string) (*StorageEntry, error) {
@@ -58,25 +45,8 @@ func (s *LogicalStorage) Underlying() physical.Backend {
 	return s.underlying
 }
 
-func NewLogicalStorage(logicalType LogicalType, config map[string]string, logger log.Logger) (*LogicalStorage, error) {
-	s := &LogicalStorage{
-		logicalType: logicalType,
+func NewLogicalStorage(underlying physical.Backend) *LogicalStorage {
+	return &LogicalStorage{
+		underlying: underlying,
 	}
-	var err error
-	switch logicalType {
-	case LogicalTypeInmem:
-		s.underlying, err = inmem.NewInmem(nil, nil)
-		if err != nil {
-			return nil, err
-		}
-	case LogicalTypeFile:
-		s.underlying, err = file.NewFileBackend(config, logger)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported logical type %q", logicalType)
-	}
-
-	return s, nil
 }

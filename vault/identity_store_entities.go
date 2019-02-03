@@ -261,7 +261,8 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 
 		// Prepare the response
 		respData := map[string]interface{}{
-			"id": entity.ID,
+			"id":   entity.ID,
+			"name": entity.Name,
 		}
 
 		var aliasIDs []string
