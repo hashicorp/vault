@@ -333,16 +333,17 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// into merging
 			fallthrough
 		default:
-			// During startup and invalidations, log the conflicts and don't
-			// hit the storage, regardless of being primary or secondary. Also,
-			// ensure that case-insensitivity is assumed only after all the
-			// conflicts are resolved.
 			if !persist {
 				i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
 				if !i.disableLowerCasedNames {
 					return errDuplicateIdentityName
 				}
-				break
+
+				// At this point, identity store is operating case-sensitively.
+				// Persisting is allowed only on the primary.
+				if i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+					break
+				}
 			}
 
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
