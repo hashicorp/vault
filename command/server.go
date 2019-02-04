@@ -472,7 +472,6 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
-	prometheusEnabled := config.Telemetry != nil && config.Telemetry.PrometheusRetentionTime > 0
 
 	// Initialize the backend
 	factory, exists := c.PhysicalBackends[config.Storage.Type]
@@ -565,7 +564,6 @@ func (c *ServerCommand) Run(args []string) int {
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
 		InMemSink:                 inMemMetrics,
-		PrometheusEnabled:         prometheusEnabled,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1692,6 +1690,23 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+
+	// Configure the Prometheus sink
+	if telConfig.PrometheusRetentionTime == 0 {
+		return nil, fmt.Errorf("telemetry.prometheus_retention_time must be > 0")
+	}
+
+	prometheusOpts := prometheus.PrometheusOpts{
+		Expiration: telConfig.PrometheusRetentionTime,
+	}
+
+	sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	fanout = append(fanout, sink)
+
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
@@ -1746,23 +1761,6 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 		fanout = append(fanout, sink)
 	}
 
-	// Configure the Prometheus sink
-	if telConfig.PrometheusRetentionTime.Nanoseconds() > 0 {
-		prometheusOpts := prometheus.PrometheusOpts{
-			Expiration: telConfig.PrometheusRetentionTime,
-		}
-		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
-		if err != nil {
-			return nil, err
-		}
-		// Hostname enabled will create poor quality metrics name
-		if !telConfig.DisableHostname {
-			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
-
-		}
-		fanout = append(fanout, sink)
-	}
-
 	if telConfig.DogStatsDAddr != "" {
 		var tags []string
 
@@ -1779,13 +1777,16 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 	}
 
 	// Initialize the global sink
-	if len(fanout) > 0 {
-		fanout = append(fanout, inm)
-		metrics.NewGlobal(metricsConf, fanout)
+	if len(fanout) > 1 {
+		// Hostname enabled will create poor quality metrics name for prometheus
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		}
 	} else {
 		metricsConf.EnableHostname = false
-		metrics.NewGlobal(metricsConf, inm)
 	}
+	fanout = append(fanout, inm)
+	metrics.NewGlobal(metricsConf, fanout)
 	return inm, nil
 }
 

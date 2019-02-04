@@ -405,7 +405,6 @@ type Core struct {
 
 	// Telemetry objects
 	inMemSink         *metrics.InmemSink
-	prometheusEnabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -477,7 +476,6 @@ type CoreConfig struct {
 
 	// Telemetry objects
 	InMemSink         *metrics.InmemSink
-	PrometheusEnabled bool
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -585,7 +583,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
 		inMemSink:                        conf.InMemSink,
-		prometheusEnabled:                conf.PrometheusEnabled,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

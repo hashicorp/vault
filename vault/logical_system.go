@@ -2484,10 +2484,6 @@ func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request,
 
 	acceptHeaders := req.Headers["Accept"]
 	if format == "prometheus" || (len(acceptHeaders) > 0 && strings.HasPrefix(acceptHeaders[0], "application/openmetrics-text")) {
-		if !b.Core.prometheusEnabled {
-			err := "prometheus support is not enabled"
-			return nil, fmt.Errorf(err)
-		}
 
 		metricsFamilies, err := prometheus.DefaultGatherer.Gather()
 		if err != nil && len(metricsFamilies) == 0 {

@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 )
 
+const (
+	prometheusDefaultRetentionTime = 24 * time.Hour
+)
+
 // Config is the configuration for the vault server.
 type Config struct {
 	Listeners []*Listener `hcl:"-"`
@@ -99,7 +103,7 @@ func DevConfig(ha, transactional bool) *Config {
 		EnableUI: true,
 
 		Telemetry: &Telemetry{
-			PrometheusRetentionTime: 24 * time.Hour,
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
 			DisableHostname:         true,
 		},
 	}
@@ -239,8 +243,7 @@ type Telemetry struct {
 
 	// Prometheus:
 	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
-	// A value of 0 disable Prometheus support.
-	// Default: 0
+	// Default: 24h
 	PrometheusRetentionTime    time.Duration `hcl:-`
 	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
@@ -832,6 +835,8 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
 			return err
 		}
+	} else {
+		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
 	}
 
 	return nil
