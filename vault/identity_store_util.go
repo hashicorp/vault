@@ -236,8 +236,14 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
+			// Need to check both map and Items in case it's during upgrading
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				group, err := i.parseGroupFromBucketItem(&storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			}
+			for _, item := range items {
+				group, err := i.parseGroupFromBucketItem(item)
 				if err != nil {
 					return err
 				}
@@ -393,8 +399,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				continue
 			}
 
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				entity, err := i.parseEntityFromBucketItem(ctx, &storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			}
+			for _, item := range items {
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					return err
 				}

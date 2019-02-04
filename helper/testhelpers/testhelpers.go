@@ -28,8 +28,12 @@ type ReplicatedTestClusters struct {
 func (r *ReplicatedTestClusters) Cleanup() {
 	r.PerfPrimaryCluster.Cleanup()
 	r.PerfSecondaryCluster.Cleanup()
-	r.PerfPrimaryDRCluster.Cleanup()
-	r.PerfSecondaryDRCluster.Cleanup()
+	if r.PerfPrimaryDRCluster != nil {
+		r.PerfPrimaryDRCluster.Cleanup()
+	}
+	if r.PerfSecondaryDRCluster != nil {
+		r.PerfSecondaryDRCluster.Cleanup()
+	}
 }
 
 // Generates a root token on the target cluster.
@@ -98,6 +102,29 @@ func GenerateRootWithError(t testing.T, cluster *vault.TestCluster, drToken bool
 // randomizing names in acceptance tests
 func RandomWithPrefix(name string) string {
 	return fmt.Sprintf("%s-%d", name, rand.New(rand.NewSource(time.Now().UnixNano())).Int())
+}
+
+func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
+	t.Helper()
+	for _, core := range c.Cores {
+		EnsureCoreSealed(t, core)
+	}
+}
+
+func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) error {
+	client := core.Client
+	client.Sys().Seal()
+	timeout := time.Now().Add(60 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			return fmt.Errorf("timeout waiting for core to seal")
+		}
+		if core.Core.Sealed() {
+			break
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	return nil
 }
 
 func EnsureCoresUnsealed(t testing.T, c *vault.TestCluster) {
@@ -195,6 +222,30 @@ func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.H
 	return cluster, core
 }
 
+func GetPerfReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
+	ret := &ReplicatedTestClusters{}
+
+	logger := log.New(&log.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: log.Trace,
+	})
+	// Set this lower so that state populates quickly to standby nodes
+	vault.HeartbeatInterval = 2 * time.Second
+
+	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
+
+	ret.PerfSecondaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-sec"), handlerFunc)
+
+	SetupTwoClusterPerfReplication(t, ret.PerfPrimaryCluster, ret.PerfSecondaryCluster)
+
+	// Wait until poison pills have been read
+	time.Sleep(45 * time.Second)
+	EnsureCoresUnsealed(t, ret.PerfPrimaryCluster)
+	EnsureCoresUnsealed(t, ret.PerfSecondaryCluster)
+
+	return ret
+}
+
 func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
@@ -223,6 +274,46 @@ func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerPrope
 	EnsureCoresUnsealed(t, ret.PerfSecondaryDRCluster)
 
 	return ret
+}
+
+func SetupTwoClusterPerfReplication(t testing.T, perfPrimary, perfSecondary *vault.TestCluster) {
+	// Enable performance primary
+	_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/enable", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationPerformancePrimary)
+
+	// get performance token
+	secret, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/secondary-token", map[string]interface{}{
+		"id": "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	token := secret.WrapInfo.Token
+
+	// enable performace secondary
+	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
+		"token":   token,
+		"ca_file": perfPrimary.CACertPEMFile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationPerformanceSecondary)
+	time.Sleep(time.Second * 3)
+	perfSecondary.BarrierKeys = perfPrimary.BarrierKeys
+
+	EnsureCoresUnsealed(t, perfSecondary)
+	rootToken := GenerateRoot(t, perfSecondary, false)
+	perfSecondary.Cores[0].Client.SetToken(rootToken)
+	for _, core := range perfSecondary.Cores {
+		core.Client.SetToken(rootToken)
+	}
 }
 
 func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDRSecondary, perfSecondaryDRSecondary *vault.TestCluster) {
@@ -289,7 +380,9 @@ func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDR
 
 	EnsureCoresUnsealed(t, perfSecondary)
 	rootToken := GenerateRoot(t, perfSecondary, false)
-	perfSecondary.Cores[0].Client.SetToken(rootToken)
+	for _, core := range perfSecondary.Cores {
+		core.Client.SetToken(rootToken)
+	}
 
 	// Enable dr primary on perf secondary
 	_, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)

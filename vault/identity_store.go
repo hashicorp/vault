@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/kr/pretty"
 )
 
 const (
@@ -127,6 +128,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
+		i.logger.Trace("found entity bucket for invalidation", "key", key, "prefix", i.entityPacker.BucketsView().Prefix())
 		bucketKeyHash := i.entityPacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
@@ -161,7 +163,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.entityPacker.GetBucket(ctx, key)
+		bucket, err := i.entityPacker.GetBucket(ctx, strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
 		if err != nil {
 			i.logger.Error("failed to refresh entities", "key", key, "error", err)
 			return
@@ -174,9 +176,15 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
+		parsedCount := 0
 		if bucket != nil {
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				entity, err := i.parseEntityFromBucketItem(ctx, &storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			}
+			for _, item := range items {
+				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
 					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 					return
@@ -188,7 +196,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to update entity in MemDB", "error", err)
 					return
 				}
+				parsedCount++
 			}
+		}
+
+		if parsedCount > 0 {
+			i.logger.Trace("parsed entities for invalidation", "num_entities", parsedCount)
+		} else {
+			i.logger.Error("found no groups", "bucket", pretty.Sprint(bucket))
 		}
 
 		txn.Commit()
@@ -196,6 +211,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
+		i.logger.Trace("found group bucket for invalidation", "key", key, "prefix", i.groupPacker.BucketsView().Prefix())
 		bucketKeyHash := i.groupPacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
@@ -218,15 +234,21 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(ctx, key)
+		bucket, err := i.groupPacker.GetBucket(ctx, strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
 		if err != nil {
 			i.logger.Error("failed to refresh group", "key", key, "error", err)
 			return
 		}
 
+		parsedCount := 0
 		if bucket != nil {
+			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
+			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				group, err := i.parseGroupFromBucketItem(&storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			}
+			for _, item := range items {
+				group, err := i.parseGroupFromBucketItem(item)
 				if err != nil {
 					i.logger.Error("failed to parse group from bucket entry item", "error", err)
 					return
@@ -256,7 +278,15 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to update group in MemDB", "error", err)
 					return
 				}
+
+				parsedCount++
 			}
+		}
+
+		if parsedCount > 0 {
+			i.logger.Trace("parsed entities for invalidation", "num_entities", parsedCount)
+		} else {
+			i.logger.Error("found no entities", "bucket", pretty.Sprint(bucket))
 		}
 
 		txn.Commit()
