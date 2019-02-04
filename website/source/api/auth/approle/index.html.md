@@ -54,7 +54,7 @@ $ curl \
 }
 ```
 
-## Create New AppRole
+## Create/Update AppRole
 
 Creates a new AppRole or updates an existing AppRole. This endpoint
 supports both `create` and `update` capabilities. There can be one or more
