@@ -442,18 +442,3 @@ path "/" {
 		t.Errorf("bad error: %s", err)
 	}
 }
-
-func TestPolicy_ParseMixedSegmentGlobbing(t *testing.T) {
-	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
-path "/mixed/+/segment/*/globbing" {
-	capabilities = ["read"]
-}
-`))
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-
-	if !strings.Contains(err.Error(), `path "mixed/+/segment/*/globbing": segment wildcards ('+') and globs ('*') cannot be used together`) {
-		t.Errorf("bad error: %s", err)
-	}
-}
