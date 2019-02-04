@@ -8,6 +8,7 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   kubernetesHost: attr('string', {
     label: 'Kubernetes Host',
     helpText:

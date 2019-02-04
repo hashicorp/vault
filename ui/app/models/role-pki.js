@@ -15,6 +15,7 @@ export default DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
+  useOpenAPI: true,
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),

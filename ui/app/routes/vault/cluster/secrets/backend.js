@@ -1,6 +1,4 @@
 import { inject as service } from '@ember/service';
-import { getOwner } from '@ember/application';
-import { run } from '@ember/runloop';
 import Route from '@ember/routing/route';
 export default Route.extend({
   flashMessages: service(),

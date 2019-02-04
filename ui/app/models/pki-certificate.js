@@ -13,6 +13,7 @@ export default DS.Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
+  useOpenAPI: true,
   //the id prefixed with `cert/` so we can use it as the *secret param for the secret show route
   idForNav: attr('string', {
     readOnly: true,

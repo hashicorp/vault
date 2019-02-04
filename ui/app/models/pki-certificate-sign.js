@@ -10,7 +10,7 @@ export default Certificate.extend({
     readOnly: true,
     defaultValue: false,
   }),
-
+  useOpenAPI: true,
   csr: attr('string', {
     label: 'Certificate Signing Request (CSR)',
     editType: 'textarea',

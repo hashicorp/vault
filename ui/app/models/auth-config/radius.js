@@ -7,6 +7,7 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   host: attr('string'),
 
   port: attr('number', {

@@ -1,4 +1,6 @@
 import { isEmpty } from '@ember/utils';
+import DS from 'ember-data';
+
 /*
   DS.attr('integer')
 */

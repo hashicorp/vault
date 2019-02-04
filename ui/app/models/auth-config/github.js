@@ -7,6 +7,7 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   organization: attr('string'),
   baseUrl: attr('string', {
     label: 'Base URL',

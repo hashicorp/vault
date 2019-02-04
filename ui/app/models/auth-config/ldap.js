@@ -8,6 +8,7 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   binddn: attr('string', {
     helpText: 'Used when performing user search. Example: cn=vault,ou=Users,dc=example,dc=com',
   }),

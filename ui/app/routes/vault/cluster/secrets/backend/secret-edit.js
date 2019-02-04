@@ -1,6 +1,7 @@
 import { set } from '@ember/object';
 import { hash, resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
+import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import { getOwner } from '@ember/application';
@@ -32,7 +33,7 @@ export default Route.extend(UnloadModelRoute, {
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel(params) {
+  beforeModel() {
     // currently there is no recursive delete for folders in vault, so there's no need to 'edit folders'
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
@@ -51,10 +52,12 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   buildModel(secret) {
+    debugger; //eslint-disable-line
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, secret);
-    if (modelType in ['secret', 'secret-v2']) {
-      return;
+    debugger; //eslint-disable-line
+    if (['secret', 'secret-v2'].includes(modelType)) {
+      return resolve();
     }
     let owner = getOwner(this);
     return this.pathHelp.getNewModel(modelType, backend, owner);

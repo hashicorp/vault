@@ -39,6 +39,7 @@ const CA_FIELDS = [
   'keyIdFormat',
 ];
 export default DS.Model.extend({
+  useOpenAPI: true,
   zeroAddress: attr('boolean', {
     readOnly: true,
   }),

@@ -7,6 +7,7 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   // We have to leave this here because the backend doesn't support the file type yet.
   credentials: attr('string', {
     editType: 'file',

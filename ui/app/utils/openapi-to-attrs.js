@@ -1,7 +1,6 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
@@ -60,17 +59,13 @@ export const combineAttributes = function(oldAttrs, newProps) {
 };
 
 export const combineFields = function(currentFields, newFields, excludedFields) {
-  let allFields = [];
-  for (let group in currentGroups) {
-    let fieldName = Object.keys(groups[group])[0];
-    allFields.concat(groups[group][fieldName]);
-  }
   let otherFields = newFields.filter(field => {
-    !allFields.includes(field) && !excludedFields.includes(field);
+    return !currentFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {
-    groups.default.concat(otherFields);
+    currentFields = currentFields.concat(otherFields);
   }
+  return currentFields;
 };
 
 export const combineFieldGroups = function(currentGroups, newFields, excludedFields) {

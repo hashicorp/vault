@@ -7,6 +7,7 @@ import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   orgName: attr('string', {
     label: 'Organization Name',
     helpText: 'Name of the organization to be used in the Okta API',
