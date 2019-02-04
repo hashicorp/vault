@@ -96,6 +96,9 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		MountType:     "github",
 		MountAccessor: ghAccessor,
 		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
 	}
 
 	entity, err := is.CreateOrFetchEntity(ctx, alias)
@@ -128,6 +131,71 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 
 	if entity.Aliases[0].Name != alias.Name {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
+	}
+	if diff := deep.Equal(entity.Aliases[0].Metadata, map[string]string{"foo": "a"}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Add a new alias to the entity and verify its existence
+	registerReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "entity-alias",
+		Data: map[string]interface{}{
+			"name":           "githubuser2",
+			"canonical_id":   entity.ID,
+			"mount_accessor": ghAccessor,
+		},
+	}
+
+	resp, err := is.HandleRequest(ctx, registerReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity == nil {
+		t.Fatalf("expected a non-nil entity")
+	}
+
+	if len(entity.Aliases) != 2 {
+		t.Fatalf("bad: length of aliases; expected: 2, actual: %d", len(entity.Aliases))
+	}
+
+	if entity.Aliases[1].Name != "githubuser2" {
+		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, "githubuser2")
+	}
+
+	if diff := deep.Equal(entity.Aliases[1].Metadata, map[string]string(nil)); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Change the metadata of an existing alias and verify that
+	// a the change takes effect only for the target alias.
+	alias.Metadata = map[string]string{
+		"foo": "zzzz",
+	}
+
+	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entity == nil {
+		t.Fatalf("expected a non-nil entity")
+	}
+
+	if len(entity.Aliases) != 2 {
+		t.Fatalf("bad: length of aliases; expected: 2, actual: %d", len(entity.Aliases))
+	}
+
+	if diff := deep.Equal(entity.Aliases[0].Metadata, map[string]string{"foo": "zzzz"}); diff != nil {
+		t.Fatal(diff)
+	}
+
+	if diff := deep.Equal(entity.Aliases[1].Metadata, map[string]string(nil)); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

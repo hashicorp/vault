@@ -1,3 +1,12 @@
+# v2.2.6
+
+* fix: func signature to match go-retryablehttp update
+* upd: dependency go-retryablehttp, lock to v0.5.2 to prevent future breaking patch features
+
+# v2.2.5
+
+* upd: switch from tracking master to versions for retryablehttp and circonusllhist now that both repositories are doing releases
+
 # v2.2.4
 
 * fix: worksheet.graphs is a required attribute. worksheet.smart_queries is an optional attribute.

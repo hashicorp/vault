@@ -107,6 +107,16 @@ func (e *NonFatalError) Error() string {
 	return e.Err.Error()
 }
 
+// NewNonFatalError returns a new non-fatal error.
+func NewNonFatalError(err error) *NonFatalError {
+	return &NonFatalError{Err: err}
+}
+
+// IsFatalError returns true if the given error is a non-fatal error.
+func IsFatalError(err error) bool {
+	return !errwrap.ContainsType(err, new(NonFatalError))
+}
+
 // ErrInvalidKey is returned if there is a user-based error with a provided
 // unseal key. This will be shown to the user, so should not contain
 // information that is sensitive.
@@ -385,6 +395,10 @@ type Core struct {
 
 	// Stores the sealunwrapper for downgrade needs
 	sealUnwrapper physical.Backend
+
+	// unsealwithStoredKeysLock is a mutex that prevents multiple processes from
+	// unsealing with stored keys are the same time.
+	unsealWithStoredKeysLock sync.Mutex
 
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
@@ -1138,10 +1152,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr

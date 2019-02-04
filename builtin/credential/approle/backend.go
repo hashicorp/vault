@@ -159,7 +159,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 // to delay the removal of SecretIDs by a minute.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// Initiate clean-up of expired SecretID entries
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		b.tidySecretID(ctx, req)
 	}
 	return nil

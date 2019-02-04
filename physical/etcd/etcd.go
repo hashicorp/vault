@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/coreos/etcd/client"
 	"github.com/coreos/go-semver/semver"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/physical"
+	"go.etcd.io/etcd/client"
 )
 
 var (
@@ -133,8 +133,9 @@ func getEtcdEndpoints(conf map[string]string) ([]string, error) {
 	}
 
 	if useSrv {
+		srvName, _ := getEtcdOption(conf, "discovery_srv_name", "ETCD_DISCOVERY_SRV_NAME")
 		discoverer := client.NewSRVDiscover()
-		endpoints, err := discoverer.Discover(domain)
+		endpoints, err := discoverer.Discover(domain, srvName)
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to discover etcd endpoints through SRV discovery: {{err}}", err)
 		}

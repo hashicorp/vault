@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
-	"github.com/tyrannosaurus-becks/aliyun-oss-go-sdk/oss"
 )
 
 func TestAliCloudOSSBackend(t *testing.T) {

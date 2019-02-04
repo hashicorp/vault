@@ -2173,7 +2173,7 @@ func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request
 	}
 
 	value := data.Get("value").(string)
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   path,
 		Value: []byte(value),
 	}
@@ -2272,7 +2272,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(ctx, &Entry{
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
@@ -2793,7 +2793,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
-		acl.globRules.WalkPrefix(path, walkFn)
+		acl.prefixRules.WalkPrefix(path, walkFn)
 	}
 
 	return aclCapabilitiesGiven
@@ -2824,10 +2824,6 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		// Load the ACL policies so we can walk the prefix for this mount
 		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 		if err != nil {
-			if errwrap.ContainsType(err, new(TemplateError)) {
-				b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-				err = logical.ErrPermissionDenied
-			}
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
@@ -2846,7 +2842,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, ns.Path+me.Path)
+			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
 		}
 
 		return false
@@ -2854,7 +2850,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				secretMounts[entry.Path] = mountInfo(entry)
@@ -2871,7 +2867,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				authMounts[entry.Path] = mountInfo(entry)
@@ -2921,10 +2917,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
@@ -2951,10 +2943,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 
@@ -3048,7 +3036,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	}
 
 	acl.exactRules.Walk(exactWalkFn)
-	acl.globRules.Walk(globWalkFn)
+	acl.prefixRules.Walk(globWalkFn)
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob

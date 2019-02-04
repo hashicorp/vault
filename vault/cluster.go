@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -270,7 +271,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		}
 
 		// Store it
-		err = c.barrier.Put(ctx, &Entry{
+		err = c.barrier.Put(ctx, &logical.StorageEntry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
 		})

@@ -212,10 +212,6 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		return retErr
 	}
@@ -817,7 +813,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 	if err != nil {
 		return err
 	}
-	ent := &Entry{
+	ent := &logical.StorageEntry{
 		Key:   coreLeaderPrefix + uuid,
 		Value: val,
 	}

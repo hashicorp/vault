@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -104,7 +103,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	result, initErr := core.Initialize(ctx, initParams)
 	if initErr != nil {
-		if !errwrap.ContainsType(initErr, new(vault.NonFatalError)) {
+		if vault.IsFatalError(initErr) {
 			respondError(w, http.StatusBadRequest, initErr)
 			return
 		} else {
@@ -136,7 +135,10 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	core.UnsealWithStoredKeys(ctx)
+	if err := core.UnsealWithStoredKeys(ctx); err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	respondOk(w, resp)
 }
