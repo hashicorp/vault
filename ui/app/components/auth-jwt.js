@@ -99,7 +99,9 @@ export default Component.extend({
 
   actions: {
     startOIDCAuth(e) {
-      e.preventDefault();
+      if (e && e.preventDefault) {
+        e.preventDefault();
+      }
       if (!this.isOIDC) {
         return;
       }
