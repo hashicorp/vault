@@ -54,7 +54,7 @@ export const combineAttributes = function(oldAttrs, newProps) {
       newFields.push(prop);
     }
   }
-
+  debugger; //eslint-disable-line
   return { attrs: newAttrs, newFields };
 };
 

@@ -29,6 +29,7 @@ const roleAWSModel = DS.Model.extend({
     fieldValue: 'id',
     readOnly: true,
   }),
+  useOpenAPI: false,
   // credentialTypes are for backwards compatibility.
   // we use this to populate "credentialType" in
   // the serializer. if there is more than one, the

@@ -46,7 +46,7 @@ export default DS.Model.extend({
       { default: ['commonName', 'format'] },
       { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] },
     ];
-    if (this.newFields.length) {
+    if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);
     }
     return groups;

@@ -78,7 +78,7 @@ export default DS.Model.extend({
       },
     ];
     let excludedFields = ['extKeyUsage'];
-    if (this.newFields.length) {
+    if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, excludedFields);
     }
     return fieldToAttrs(this, groups);

@@ -24,7 +24,7 @@ export default Service.extend({
   getNewModel(modelType, backend, owner) {
     let name = `model:${modelType}`;
     let newModel = owner.factoryFor(name).class;
-    if (newModel.merged || !newModel.useOpenAPI === true) {
+    if (newModel.merged || !newModel.prototype.useOpenAPI === true) {
       return resolve();
     }
 

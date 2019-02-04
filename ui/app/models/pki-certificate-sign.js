@@ -23,7 +23,7 @@ export default Certificate.extend({
         default: ['csr', 'commonName', 'format', 'signVerbatim'],
       },
     ];
-    if (this.newFields.length) {
+    if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);
     }
     if (this.get('signVerbatim') === false) {
