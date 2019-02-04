@@ -224,6 +224,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			return logical.ErrorResponse(err.Error()), nil
 		case errutil.InternalError:
 			return nil, err
+		default:
+			panic(fmt.Sprintf("unhandled err: %v", err))
 		}
 	}
 

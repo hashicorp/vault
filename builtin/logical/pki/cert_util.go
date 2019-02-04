@@ -125,6 +125,7 @@ var (
 	// we still need to use this to check the output.
 	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
 
 func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
@@ -733,6 +734,173 @@ func signCert(b *backend,
 	return parsedBundle, nil
 }
 
+// OtherName describes a name related to a certificate which is not in one
+// of the standard name formats. RFC 5280, 4.2.1.6:
+// OtherName ::= SEQUENCE {
+//      type-id    OBJECT IDENTIFIER,
+//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+type OtherName struct {
+	TypeID asn1.ObjectIdentifier
+	Value  asn1.RawValue
+}
+
+// GeneralNames holds a collection of names related to a certificate.
+type GeneralNames struct {
+	DNSNames       []string
+	EmailAddresses []string
+	DirectoryNames []pkix.Name
+	URIs           []string
+	IPNets         []net.IPNet
+	RegisteredIDs  []asn1.ObjectIdentifier
+	OtherNames     []OtherName
+}
+
+// parseGeneralNames lifted from https://github.com/google/certificate-transparency-go
+func parseGeneralNames(value []byte, gname *GeneralNames) error {
+	// RFC 5280, 4.2.1.6
+	// GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
+	//
+	// GeneralName ::= CHOICE {
+	//      otherName                       [0]     OtherName,
+	//      rfc822Name                      [1]     IA5String,
+	//      dNSName                         [2]     IA5String,
+	//      x400Address                     [3]     ORAddress,
+	//      directoryName                   [4]     Name,
+	//      ediPartyName                    [5]     EDIPartyName,
+	//      uniformResourceIdentifier       [6]     IA5String,
+	//      iPAddress                       [7]     OCTET STRING,
+	//      registeredID                    [8]     OBJECT IDENTIFIER }
+	var seq asn1.RawValue
+	var rest []byte
+	if rest, err := asn1.Unmarshal(value, &seq); err != nil {
+		return fmt.Errorf("x509: failed to parse GeneralNames: %v", err)
+	} else if len(rest) != 0 {
+		return fmt.Errorf("x509: trailing data after GeneralNames")
+	}
+	if !seq.IsCompound || seq.Tag != asn1.TagSequence || seq.Class != asn1.ClassUniversal {
+		return fmt.Errorf("x509: failed to parse GeneralNames sequence, tag %+v", seq)
+	}
+
+	rest = seq.Bytes
+	for len(rest) > 0 {
+		var err error
+		rest, err = parseGeneralName(rest, gname, false)
+		if err != nil {
+			return fmt.Errorf("x509: failed to parse GeneralName: %v", err)
+		}
+	}
+	return nil
+}
+
+const (
+	// GeneralName tag values from RFC 5280, 4.2.1.6
+	tagOtherName     = 0
+	tagRFC822Name    = 1
+	tagDNSName       = 2
+	tagX400Address   = 3
+	tagDirectoryName = 4
+	tagEDIPartyName  = 5
+	tagURI           = 6
+	tagIPAddress     = 7
+	tagRegisteredID  = 8
+)
+
+// parseGeneralName lifted from https://github.com/google/certificate-transparency-go
+func parseGeneralName(data []byte, gname *GeneralNames, withMask bool) ([]byte, error) {
+	var v asn1.RawValue
+	var rest []byte
+	var err error
+	rest, err = asn1.Unmarshal(data, &v)
+	if err != nil {
+		return nil, fmt.Errorf("x509: failed to unmarshal GeneralNames: %v", err)
+	}
+	switch v.Tag {
+	case tagOtherName:
+		if !v.IsCompound {
+			return nil, fmt.Errorf("x509: failed to unmarshal GeneralNames.otherName: not compound")
+		}
+		var other OtherName
+		v.FullBytes = append([]byte{}, v.FullBytes...)
+		v.FullBytes[0] = asn1.TagSequence | 0x20
+		_, err = asn1.Unmarshal(v.FullBytes, &other)
+		gname.OtherNames = append(gname.OtherNames, other)
+	case tagRFC822Name:
+		gname.EmailAddresses = append(gname.EmailAddresses, string(v.Bytes))
+	case tagDNSName:
+		dns := string(v.Bytes)
+		gname.DNSNames = append(gname.DNSNames, dns)
+	case tagDirectoryName:
+		var rdnSeq pkix.RDNSequence
+		if _, err := asn1.Unmarshal(v.Bytes, &rdnSeq); err != nil {
+			return nil, fmt.Errorf("x509: failed to unmarshal GeneralNames.directoryName: %v", err)
+		}
+		var dirName pkix.Name
+		dirName.FillFromRDNSequence(&rdnSeq)
+		gname.DirectoryNames = append(gname.DirectoryNames, dirName)
+	case tagURI:
+		gname.URIs = append(gname.URIs, string(v.Bytes))
+	case tagIPAddress:
+		vlen := len(v.Bytes)
+		if withMask {
+			switch vlen {
+			case (2 * net.IPv4len), (2 * net.IPv6len):
+				ipNet := net.IPNet{IP: v.Bytes[0 : vlen/2], Mask: v.Bytes[vlen/2:]}
+				gname.IPNets = append(gname.IPNets, ipNet)
+			default:
+				return nil, fmt.Errorf("x509: invalid IP/mask length %d in GeneralNames.iPAddress", vlen)
+			}
+		} else {
+			switch vlen {
+			case net.IPv4len, net.IPv6len:
+				ipNet := net.IPNet{IP: v.Bytes}
+				gname.IPNets = append(gname.IPNets, ipNet)
+			default:
+				return nil, fmt.Errorf("x509: invalid IP length %d in GeneralNames.iPAddress", vlen)
+			}
+		}
+	case tagRegisteredID:
+		var oid asn1.ObjectIdentifier
+		v.FullBytes = append([]byte{}, v.FullBytes...)
+		v.FullBytes[0] = asn1.TagOID
+		_, err = asn1.Unmarshal(v.FullBytes, &oid)
+		if err != nil {
+			return nil, fmt.Errorf("x509: failed to unmarshal GeneralNames.registeredID: %v", err)
+		}
+		gname.RegisteredIDs = append(gname.RegisteredIDs, oid)
+	default:
+		return nil, fmt.Errorf("x509: failed to unmarshal GeneralName: unknown tag %d", v.Tag)
+	}
+	return rest, nil
+}
+
+func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]string, error) {
+	var ret []string
+	for _, ext := range exts {
+		if ext.Id.Equal(oidExtensionSubjectAltName) {
+			var gnames GeneralNames
+			err := parseGeneralNames(ext.Value, &gnames)
+			if err != nil {
+				return nil, errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
+			}
+			for _, other := range gnames.OtherNames {
+				svalue := cryptobyte.String(other.Value.Bytes)
+				var outtag cbbasn1.Tag
+				var val cryptobyte.String
+				read := svalue.ReadAnyASN1(&val, &outtag)
+
+				if err != nil {
+					return nil, fmt.Errorf("x509: failed to unmarshal GeneralNames.otherName: %v", err)
+				}
+				if read && outtag == asn1.TagUTF8String {
+					ret = append(ret, fmt.Sprintf("%s;%s:%s", other.TypeID.String(), "UTF-8", string(val)))
+				}
+			}
+		}
+	}
+
+	return ret, nil
+}
+
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
@@ -848,9 +1016,25 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
+	// otherSANsInput has the same format as the other_sans HTTP param in the
+	// Vault PKI API: it is a list of strings of the form <oid>;<type>:<value>
+	// where <type> must be UTF8/UTF-8.
+	var otherSANsInput []string
+	// otherSANs is the output of parseOtherSANs(otherSANsInput): its keys are
+	// the <oid> value, its values are of the form [<type>, <value>]
 	var otherSANs map[string][]string
 	if sans := data.apiData.Get("other_sans").([]string); len(sans) > 0 {
-		requested, err := parseOtherSANs(sans)
+		otherSANsInput = sans
+	}
+	if data.role.UseCSRSANs && data.csr != nil && len(data.csr.Extensions) > 0 {
+		var err error
+		otherSANsInput, err = getOtherSANsFromX509Extensions(data.csr.Extensions)
+		if err != nil {
+			return errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+		}
+	}
+	if len(otherSANsInput) > 0 {
+		requested, err := parseOtherSANs(otherSANsInput)
 		if err != nil {
 			return errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
 		}
@@ -1605,7 +1789,7 @@ func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 	// Marshal and add to ExtraExtensions
 	ext := pkix.Extension{
 		// This is the defined OID for subjectAltName
-		Id: asn1.ObjectIdentifier{2, 5, 29, 17},
+		Id: asn1.ObjectIdentifier(oidExtensionSubjectAltName),
 	}
 	var err error
 	ext.Value, err = asn1.Marshal(rawValues)
