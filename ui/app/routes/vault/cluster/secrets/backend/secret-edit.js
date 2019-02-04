@@ -52,10 +52,8 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   buildModel(secret) {
-    debugger; //eslint-disable-line
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, secret);
-    debugger; //eslint-disable-line
     if (['secret', 'secret-v2'].includes(modelType)) {
       return resolve();
     }

@@ -34,9 +34,10 @@ export default Route.extend(UnloadModelRoute, {
       return;
     }
     const { method } = this.paramsFor('vault.cluster.settings.auth.configure');
-    let modelType = this.modelType(method, section_name);
+    const backend = this.modelFor('vault.cluster.settings.auth.configure');
+    const modelType = this.modelType(backend.type, section_name);
     let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, method, owner);
+    return this.pathHelp.getNewModel(modelType, backend.type, owner);
   },
 
   model(params) {

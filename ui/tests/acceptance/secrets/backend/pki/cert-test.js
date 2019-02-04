@@ -47,6 +47,7 @@ elRplAzrMF4=
   };
 
   test('it issues a cert', async function(assert) {
+    debugger; //eslint-disable-line
     await setup(assert);
 
     await generatePage.issueCert('foo');

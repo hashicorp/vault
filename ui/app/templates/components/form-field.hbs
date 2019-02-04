@@ -126,6 +126,7 @@
   }}
 {{else if (eq attr.options.editType "stringArray")}}
   {{string-list
+    data-test-input=attr.name
     label=labelString
     warning=attr.options.warning
     helpText=attr.options.helpText
