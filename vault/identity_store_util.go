@@ -333,7 +333,20 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// into merging
 			fallthrough
 		default:
-			if !persist {
+			// `persist` will be `false` during startup and invalidations.
+			// During startup, if there are conflicting alias names, log the
+			// fact and bring up identity store to operate in case-sensitive
+			// manner by returning errDuplicateIdentityName, and by setting
+			// disableLowerCasedNames to `true`. This implies that, by the time
+			// invalidations are happening, only 2 things can happen: 1)
+			// disableLowerCasedNames is `false` and when that's the case this
+			// default case will never be hit. 2) This default case will be hit
+			// but only when disableLowerCasedNames is set to `true`. Hence
+			// invalidations workflow will execute the `mergeEntity` call while
+			// the startup workflow will not. That's the desired behavior as
+			// the `mergeEntity` call will result in a read-only error in
+			// secondaries during startup causing unseal failure.
+			if !persist && !i.disableLowerCasedNames {
 				i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
 				return errDuplicateIdentityName
 			}
