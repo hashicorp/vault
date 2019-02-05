@@ -37,9 +37,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 supports both protocols
 		3: plugin.PluginSet{
-			"database": &DatabasePlugin{
-				GRPCDatabasePlugin: new(GRPCDatabasePlugin),
-			},
+			"database": new(GRPCDatabasePlugin),
 		},
 		// Version 4 only supports gRPC
 		4: plugin.PluginSet{
@@ -76,9 +74,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	switch raw.(type) {
 	case *gRPCClient:
 		db = raw.(*gRPCClient)
-	case *databasePluginRPCClient:
-		logger.Warn("plugin is using deprecated netRPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
-		db = raw.(*databasePluginRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")
 	}
