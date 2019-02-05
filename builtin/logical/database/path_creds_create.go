@@ -59,6 +59,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
+                // branch for static account around here
 
 		db.RLock()
 		defer db.RUnlock()
