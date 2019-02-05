@@ -168,7 +168,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	time.Sleep(manualStepDownSleepPeriod)
 	checkListenersFunc(false)
 
-	err = cores[0].Seal(cluster.RootToken)
+	err = cores[0].Core.Seal(cluster.RootToken)
 	if err != nil {
 		t.Fatal(err)
 	}

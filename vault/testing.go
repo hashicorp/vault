@@ -688,7 +688,7 @@ func TestWaitActiveWithError(core *Core) error {
 	start := time.Now()
 	var standby bool
 	var err error
-	for time.Now().Sub(start) < time.Second {
+	for time.Now().Sub(start) < 30*time.Second {
 		standby, err = core.Standby()
 		if err != nil {
 			return err
@@ -785,6 +785,13 @@ func (c *TestCluster) UnsealCoresWithError() error {
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (c *TestClusterCore) Seal(t testing.T) {
+	t.Helper()
+	if err := c.Core.sealInternal(); err != nil {
 		t.Fatal(err)
 	}
 }
