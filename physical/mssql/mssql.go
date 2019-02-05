@@ -13,6 +13,7 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/connutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 )
@@ -26,6 +27,22 @@ type MSSQLBackend struct {
 	statements map[string]*sql.Stmt
 	logger     log.Logger
 	permitPool *physical.PermitPool
+}
+
+// set connection defaults and backcomp
+var defaults = map[string]string{
+	"database":           "Vault",
+	"table":              "Vault",
+	"Application Name":   "Vault",
+	"Connection Timeout": "30",
+	"schema":             "dbo",
+}
+
+var backcomp = map[string]string{
+	"connectiontimeout": "Connection Timeout",
+	"appname":           "Application Name",
+	"username":          "user id",
+	"loglevel":          "log",
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -45,53 +62,16 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		maxParInt = physical.DefaultParallelOperations
 	}
 
-	// set defaults
-	defaults := map[string]string{
-		"database":           "Vault",
-		"table":              "Vault",
-		"appname":            "Vault",
-		"connection timeout": "30",
-		"schema":             "dbo",
-		"log level":          "0",
-	}
-
-	// backcomp maps commonly used hcl paramater names to valid sql server parameters for backwards compatibility
-	backcomp := map[string]string{
-		"connectiontimeout": "connection timeout",
-		"loglevel":          "log level",
-		"username":          "user id",
-	}
-
-	// upgrade parameter keys
-	for k, v := range backcomp {
-		confv, isSet := conf[k]
-		if isSet {
-			conf[v] = confv
-			delete(conf, k)
-		}
-	}
-
-	// inject defaults into configuration map
-	for k, v := range defaults {
-		if _, isSet := conf[k]; !isSet {
-			conf[k] = v
-		}
-	}
+	upgradedConf := connutil.UpgradeParameterKeysInConnectionString(backcomp, conf)
+	upgradedAndDefaultsAppliedConf := connutil.InjectDefaultsIntoConnectionString(defaults, upgradedConf)
 
 	// create ado style connection unless a connection_url was provided
 	connectionString := conf["connection_url"]
 	if connectionString == "" {
-		// enforce required configurations
-		server, ok := conf["server"]
-		if !ok || server == "" {
-			return nil, fmt.Errorf("missing server")
+		connectionString, ok = connutil.BuildConnectionString(upgradedAndDefaultsAppliedConf, connutil.ADO)
+		if !ok {
+			return nil, fmt.Errorf("unable to build connection string")
 		}
-
-		var connectionParams []string
-		for k, v := range conf {
-			connectionParams = append(connectionParams, fmt.Sprintf("%s=%s", k, v))
-		}
-		connectionString = strings.Join(connectionParams, ";")
 	}
 
 	db, err := sql.Open("mssql", connectionString)
