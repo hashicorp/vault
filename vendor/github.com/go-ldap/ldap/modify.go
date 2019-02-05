@@ -160,9 +160,9 @@ func (l *Conn) Modify(modifyRequest *ModifyRequest) error {
 	}
 
 	if packet.Children[1].Tag == ApplicationModifyResponse {
-		resultCode, resultDescription := getLDAPResultCode(packet)
-		if resultCode != 0 {
-			return NewError(resultCode, errors.New(resultDescription))
+		err := GetLDAPError(packet)
+		if err != nil {
+			return err
 		}
 	} else {
 		log.Printf("Unexpected Response: %d", packet.Children[1].Tag)

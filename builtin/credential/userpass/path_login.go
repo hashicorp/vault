@@ -108,19 +108,23 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse("login request originated from invalid CIDR"), nil
 	}
 
-	auth := &logical.Auth{
-		Metadata: map[string]string{
-			"username": username,
-		},
-		DisplayName: username,
-		Alias: &logical.Alias{
-			Name: username,
-		},
-	}
-	user.PopulateTokenAuth(auth)
-
 	return &logical.Response{
-		Auth: auth,
+		Auth: &logical.Auth{
+			Policies: user.Policies,
+			Metadata: map[string]string{
+				"username": username,
+			},
+			DisplayName: username,
+			LeaseOptions: logical.LeaseOptions{
+				TTL:       user.TTL,
+				MaxTTL:    user.MaxTTL,
+				Renewable: true,
+			},
+			Alias: &logical.Alias{
+				Name: username,
+			},
+			BoundCIDRs: user.BoundCIDRs,
+		},
 	}, nil
 }
 

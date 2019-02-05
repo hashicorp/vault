@@ -8,6 +8,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 )
@@ -209,7 +210,7 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -249,7 +250,7 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -294,7 +295,7 @@ func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -338,7 +339,7 @@ func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -382,7 +383,7 @@ func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -432,7 +433,7 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatalf("barrier is sealed")
 	}
 
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	term := b.keyring.ActiveTerm()
 	primary, _ := b.aeadForTerm(term)
 
