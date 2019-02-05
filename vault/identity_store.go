@@ -120,7 +120,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 // storage entries that get updated. The value needs to be read and MemDB needs
 // to be updated accordingly.
 func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
-	i.logger.Debug("invalidate notification received", "key", key)
+	i.logger.Trace("invalidate notification received", "key", key)
 
 	i.lock.Lock()
 	defer i.lock.Unlock()
@@ -128,7 +128,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
-		i.logger.Trace("found entity bucket for invalidation", "key", key, "prefix", i.entityPacker.BucketsView().Prefix())
 		bucketKeyHash := i.entityPacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction
@@ -169,8 +168,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			return
 		}
 
-		i.logger.Trace("got bucket to invalidate", "key", key, "bucket_nil", bucket == nil)
-
 		// If the underlying entry is nil, it means that this invalidation
 		// notification is for the deletion of the underlying storage entry. At
 		// this point, since all the entities belonging to this bucket are
@@ -191,8 +188,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					i.logger.Error("failed to parse entity from bucket entry item", "error", err)
 					return
 				}
-
-				i.logger.Trace("found entity name", "name", entity.Name)
 
 				// Only update MemDB and don't touch the storage
 				err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
@@ -215,7 +210,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
-		i.logger.Trace("found group bucket for invalidation", "key", key, "prefix", i.groupPacker.BucketsView().Prefix())
 		bucketKeyHash := i.groupPacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
 
 		// Create a MemDB transaction

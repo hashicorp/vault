@@ -33,13 +33,13 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 
 	// Check for the legacy -> v2 upgrade case
 	upgradeLegacyStoragePacker := func(prefix string, packer storagepacker.StoragePacker) error {
-		c.logger.Trace("checking for identity storage packer upgrade", "prefix", prefix)
+		c.logger.Trace("checking for identity storagepacker upgrade", "prefix", prefix)
 		bucketStorageView := logical.NewStorageView(c.identityStore.view, prefix+"buckets/")
 		vals, err := bucketStorageView.List(ctx, "")
 		if err != nil {
 			return err
 		}
-		c.logger.Trace("found buckets", "buckets", vals)
+		c.logger.Trace("found buckets to upgrade", "buckets", vals)
 		bucketsToUpgrade := make([]string, 0, 256)
 		for _, val := range vals {
 			if val == "v2/" {
@@ -70,7 +70,6 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 				return err
 			}
 			// Set to the new prefix
-			c.logger.Trace("found bucket entries", "num", len(bucket.Items))
 			for _, item := range bucket.Items {
 				packer.PutItem(ctx, item)
 			}
@@ -210,7 +209,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 		defer wg.Done()
 		for j, bucketKey := range allBuckets {
 			if j%50 == 0 {
-				i.logger.Debug("groups buckets loading", "progress", j)
+				i.logger.Debug("group buckets loading", "progress", j)
 			}
 
 			select {
@@ -367,7 +366,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 		defer wg.Done()
 		for j, bucketKey := range allBuckets {
 			if j%50 == 0 {
-				i.logger.Debug("entities buckets loading", "progress", j)
+				i.logger.Debug("entity buckets loading", "progress", j)
 			}
 
 			select {
