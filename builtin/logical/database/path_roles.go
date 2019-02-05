@@ -135,6 +135,7 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 			"renew_statements":      role.Statements.Renewal,
 			"default_ttl":           role.DefaultTTL.Seconds(),
 			"max_ttl":               role.MaxTTL.Seconds(),
+                        "static_account:":       role.StaticAccount,
 		}
 		if len(role.Statements.Creation) == 0 {
 			data["creation_statements"] = []string{}
@@ -265,7 +266,7 @@ type roleEntry struct {
         Statements    dbplugin.Statements `json:"statements"`
         DefaultTTL    time.Duration       `json:"default_ttl"`
         MaxTTL        time.Duration       `json:"max_ttl"`
-        StaticAccount *staticAccount      `json:"static_account"`
+        StaticAccount *staticAccount      `json:"static_account" mapstructure:"static_account"`
 }
 
 type staticAccount struct {

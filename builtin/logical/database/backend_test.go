@@ -1484,14 +1484,19 @@ func TestBackend_Static_Config(t *testing.T) {
                 expected map[string]interface{}
                 err      error
         }{
+                "normal": {},
                 "basic": {
-                        account:  map[string]interface{}{},
-                        expected: map[string]interface{}{},
+                        account: map[string]interface{}{
+                                "username":           "sa-test",
+                                "rotation_frequency": "5400",
+                        },
+                        expected: map[string]interface{}{
+                                "username":           "sa-test",
+                                "rotation_frequency": "5400",
+                        },
                 },
         }
 
-        // "username":           "sa-test",
-        // "rotation_frequency": "5400",
         for name, tc := range testCases {
                 t.Run(name, func(t *testing.T) {
                         data := map[string]interface{}{
@@ -1538,22 +1543,18 @@ func TestBackend_Static_Config(t *testing.T) {
                                 t.Fatalf("err:%s resp:%#v\n", err, resp)
                         }
 
-                        expected := dbplugin.Statements{
-                                Creation:   []string{strings.TrimSpace(testRole)},
-                                Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
-                                Rollback:   []string{},
-                                Renewal:    []string{},
+                        // q.Q("read-role: ", resp.Data)
+
+                        expected := tc.expected
+                        actual := resp.Data["static_account"]
+                        if len(tc.expected) > 0 {
+                                if diff := deep.Equal(expected, actual); diff != nil {
+                                        t.Fatal(diff)
+                                }
                         }
 
-                        actual := dbplugin.Statements{
-                                Creation:   resp.Data["creation_statements"].([]string),
-                                Revocation: resp.Data["revocation_statements"].([]string),
-                                Rollback:   resp.Data["rollback_statements"].([]string),
-                                Renewal:    resp.Data["renew_statements"].([]string),
-                        }
-
-                        if diff := deep.Equal(expected, actual); diff != nil {
-                                t.Fatal(diff)
+                        if len(tc.expected) == 0 && resp.Data["static_account"] != nil {
+                                t.Fatalf("got unexpected static_account info: %#v", actual)
                         }
 
                         if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
@@ -1567,5 +1568,4 @@ func TestBackend_Static_Config(t *testing.T) {
                         }
                 })
         }
-
 }
