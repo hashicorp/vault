@@ -341,7 +341,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 				// At this point, identity store is operating case-sensitively.
 				// Persisting is allowed only on the primary.
-				if i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+				if i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby {
 					break
 				}
 			}
