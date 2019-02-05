@@ -61,18 +61,10 @@ export default Component.extend({
   },
 
   getConfigModelType(methodType) {
-    let mountType = this.get('mountType');
-    // will be something like secret-aws
-    // or auth-azure
-    let key = `${mountType}-${methodType}`;
-    let noConfig = ['auth-approle', 'auth-alicloud'];
-    if (mountType === 'secret' || noConfig.includes(key)) {
-      return;
-    }
     if (methodType === 'aws') {
       return 'auth-config/aws/client';
     }
-    return `auth-config/${methodType}`;
+    return;
   },
 
   changeConfigModel(methodType) {
