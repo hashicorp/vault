@@ -558,23 +558,11 @@ func TestHandler_requestAuth(t *testing.T) {
 		}
 	}
 
-	rInvalidScheme, err := http.NewRequest("GET", "v1/test/path", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	rInvalidScheme.Header.Set("Authorization", "invalid_scheme something")
-	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
-
-	_, err = requestAuth(core, rInvalidScheme, req)
-	if err == nil {
-		t.Fatalf("expected an error, got none")
-	}
-
 	rNothing, err := http.NewRequest("GET", "v1/test/path", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
+	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
 	req, err = requestAuth(core, rNothing, req)
 	if err != nil {

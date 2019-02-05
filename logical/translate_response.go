@@ -90,7 +90,7 @@ type HTTPResponse struct {
 	Data          map[string]interface{} `json:"data"`
 	WrapInfo      *HTTPWrapInfo          `json:"wrap_info"`
 	Warnings      []string               `json:"warnings"`
-	Headers       map[string][]string    `json:"headers"`
+	Headers       map[string][]string    `json:"-"`
 	Auth          *HTTPAuth              `json:"auth"`
 }
 
