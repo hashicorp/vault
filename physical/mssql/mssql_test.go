@@ -76,7 +76,6 @@ func TestMSSQLBackendWithConnectionURL(t *testing.T) {
 
 	// connect with a connection url
 	conf["connection_url"] = connURL
-	t.Logf("withConnectionString: %s", conf)
 	b, err := NewMSSQLBackend(conf, logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
@@ -104,7 +103,6 @@ func TestMSSQLBackendWithoutConnectionURL(t *testing.T) {
 	// connect without a connection url
 	conf["port"] = connPort
 	delete(conf, "connection_url")
-	t.Logf("withoutConnectionString: %s", conf)
 	b, err := NewMSSQLBackend(conf, logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
