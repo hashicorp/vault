@@ -3,8 +3,8 @@ import { inject as service } from '@ember/service';
 
 export default Helper.extend({
   permissions: service(),
-  compute([navItem], { routeParams }) {
+  compute([route], { routeParams, capability }) {
     let permissions = this.permissions;
-    return permissions.hasNavPermission(navItem, routeParams);
+    return permissions.hasNavPermission(route, routeParams, capability);
   },
 });

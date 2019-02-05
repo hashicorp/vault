@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -23,7 +24,7 @@ type VaultUI struct {
 
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string) {
+func setupEnv(args []string) (retArgs []string, format string, outputCurlString bool) {
 	var nextArgFormat bool
 
 	for _, arg := range args {
@@ -40,6 +41,11 @@ func setupEnv(args []string) (retArgs []string, format string) {
 		if len(args) == 1 && (arg == "-v" || arg == "-version" || arg == "--version") {
 			args = []string{"version"}
 			break
+		}
+
+		if arg == "-output-curl-string" {
+			outputCurlString = true
+			continue
 		}
 
 		// Parse a given flag here, which overrides the env var
@@ -66,7 +72,7 @@ func setupEnv(args []string) (retArgs []string, format string) {
 		format = "table"
 	}
 
-	return args, format
+	return args, format, outputCurlString
 }
 
 type RunOptions struct {
@@ -89,7 +95,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	var format string
-	args, format = setupEnv(args)
+	var outputCurlString bool
+	args, format, outputCurlString = setupEnv(args)
 
 	// Don't use color if disabled
 	useColor := true
@@ -117,13 +124,18 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts.Stderr = colorable.NewNonColorable(runOpts.Stderr)
 	}
 
+	uiErrWriter := runOpts.Stderr
+	if outputCurlString {
+		uiErrWriter = ioutil.Discard
+	}
+
 	ui := &VaultUI{
 		Ui: &cli.ColoredUi{
 			ErrorColor: cli.UiColorRed,
 			WarnColor:  cli.UiColorYellow,
 			Ui: &cli.BasicUi{
 				Writer:      runOpts.Stdout,
-				ErrorWriter: runOpts.Stderr,
+				ErrorWriter: uiErrWriter,
 			},
 		},
 		format: format,
@@ -168,7 +180,27 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 	}
 
 	exitCode, err := cli.Run()
-	if err != nil {
+	if outputCurlString {
+		if exitCode == 0 {
+			fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
+			return 1
+		} else {
+			if api.LastOutputStringError == nil {
+				if exitCode == 127 {
+					// Usage, just pass it through
+					return exitCode
+				}
+				fmt.Fprint(runOpts.Stderr, "cURL command not set by API operation; run without -output-curl-string to see the generated error\n")
+				return exitCode
+			}
+			if api.LastOutputStringError.Error() != api.ErrOutputStringRequest {
+				runOpts.Stdout.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", api.LastOutputStringError.Error())))
+				return 1
+			}
+			runOpts.Stdout.Write([]byte(fmt.Sprintf("%s\n", api.LastOutputStringError.CurlString())))
+			return 0
+		}
+	} else if err != nil {
 		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
 	}

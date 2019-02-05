@@ -125,7 +125,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		tainted:       false,
 		backend:       backend,
 		mountEntry:    mountEntry,
-		storagePrefix: storageView.prefix,
+		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
