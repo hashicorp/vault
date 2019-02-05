@@ -247,7 +247,7 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 	if err != nil {
 		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
-	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		b.roleMutex.Lock()
 		defer b.roleMutex.Unlock()
 		// Now that we have a R/W lock, we need to re-read the role entry in case it was

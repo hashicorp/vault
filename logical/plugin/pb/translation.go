@@ -373,6 +373,14 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 		return nil, err
 	}
 
+	var headers map[string][]string
+	if len(r.Headers) > 0 {
+		headers = make(map[string][]string, len(r.Headers))
+		for k, v := range r.Headers {
+			headers[k] = v.Header
+		}
+	}
+
 	return &logical.Response{
 		Secret:   secret,
 		Auth:     auth,
@@ -380,6 +388,7 @@ func ProtoResponseToLogicalResponse(r *Response) (*logical.Response, error) {
 		Redirect: r.Redirect,
 		Warnings: r.Warnings,
 		WrapInfo: wrapInfo,
+		Headers:  headers,
 	}, nil
 }
 
@@ -454,6 +463,11 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 		return nil, err
 	}
 
+	headers := map[string]*Header{}
+	for k, v := range r.Headers {
+		headers[k] = &Header{Header: v}
+	}
+
 	return &Response{
 		Secret:   secret,
 		Auth:     auth,
@@ -461,6 +475,7 @@ func LogicalResponseToProtoResponse(r *logical.Response) (*Response, error) {
 		Redirect: r.Redirect,
 		Warnings: r.Warnings,
 		WrapInfo: wrapInfo,
+		Headers:  headers,
 	}, nil
 }
 
@@ -492,7 +507,6 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		Policies:         a.Policies,
 		TokenPolicies:    a.TokenPolicies,
 		IdentityPolicies: a.IdentityPolicies,
-		NoDefaultPolicy:  a.NoDefaultPolicy,
 		Metadata:         a.Metadata,
 		ClientToken:      a.ClientToken,
 		Accessor:         a.Accessor,
@@ -540,7 +554,6 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		Policies:         a.Policies,
 		TokenPolicies:    a.TokenPolicies,
 		IdentityPolicies: a.IdentityPolicies,
-		NoDefaultPolicy:  a.NoDefaultPolicy,
 		Metadata:         a.Metadata,
 		ClientToken:      a.ClientToken,
 		Accessor:         a.Accessor,

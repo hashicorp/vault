@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 func pathConfig(b *backend) *framework.Path {
-	ret := &framework.Path{
+	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"organization": &framework.FieldSchema{
@@ -26,6 +26,14 @@ func pathConfig(b *backend) *framework.Path {
 are running GitHub Enterprise or an
 API-compatible authentication server.`,
 			},
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Duration after which authentication will be expired`,
+			},
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Maximum duration after which authentication will be expired`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -33,9 +41,6 @@ API-compatible authentication server.`,
 			logical.ReadOperation:   b.pathConfigRead,
 		},
 	}
-	tokenhelper.AddTokenFields(ret.Fields)
-
-	return ret
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -48,16 +53,35 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
-	cfg := &config{
+	var ttl time.Duration
+	var err error
+	ttlRaw, ok := data.GetOk("ttl")
+	if !ok || len(ttlRaw.(string)) == 0 {
+		ttl = 0
+	} else {
+		ttl, err = time.ParseDuration(ttlRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'ttl':%s", err)), nil
+		}
+	}
+
+	var maxTTL time.Duration
+	maxTTLRaw, ok := data.GetOk("max_ttl")
+	if !ok || len(maxTTLRaw.(string)) == 0 {
+		maxTTL = 0
+	} else {
+		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'max_ttl':%s", err)), nil
+		}
+	}
+
+	entry, err := logical.StorageEntryJSON("config", config{
 		Organization: organization,
 		BaseURL:      baseURL,
-	}
-
-	if err := cfg.ParseTokenFields(req, data); err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
-	entry, err := logical.StorageEntryJSON("config", cfg)
+		TTL:          ttl,
+		MaxTTL:       maxTTL,
+	})
 
 	if err != nil {
 		return nil, err
@@ -80,15 +104,18 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, data
 		return nil, fmt.Errorf("configuration object not found")
 	}
 
-	respData := map[string]interface{}{
-		"organization": config.Organization,
-		"base_url":     config.BaseURL,
-	}
-	config.PopulateTokenData(respData)
+	config.TTL /= time.Second
+	config.MaxTTL /= time.Second
 
-	return &logical.Response{
-		Data: respData,
-	}, nil
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"organization": config.Organization,
+			"base_url":     config.BaseURL,
+			"ttl":          config.TTL,
+			"max_ttl":      config.MaxTTL,
+		},
+	}
+	return resp, nil
 }
 
 // Config returns the configuration for this backend.
@@ -109,8 +136,8 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 }
 
 type config struct {
-	tokenhelper.TokenParams
-
-	Organization string `json:"organization" structs:"organization" mapstructure:"organization"`
-	BaseURL      string `json:"base_url" structs:"base_url" mapstructure:"base_url"`
+	Organization string        `json:"organization" structs:"organization" mapstructure:"organization"`
+	BaseURL      string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
+	TTL          time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL       time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 }

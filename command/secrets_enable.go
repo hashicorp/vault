@@ -27,6 +27,7 @@ type SecretsEnableCommand struct {
 	flagAuditNonHMACResponseKeys  []string
 	flagListingVisibility         string
 	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
 	flagForceNoCache              bool
 	flagPluginName                string
 	flagOptions                   map[string]string
@@ -141,7 +142,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
 		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the backend",
+			"will be sent to the plugins",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Comma-separated string or list of response header values that " +
+			"plugins will be allowed to set",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -283,6 +291,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
 			mountInput.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
 	})
 
