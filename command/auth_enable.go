@@ -26,8 +26,9 @@ type AuthEnableCommand struct {
 	flagAuditNonHMACRequestKeys   []string
 	flagAuditNonHMACResponseKeys  []string
 	flagListingVisibility         string
-	flagPassthroughRequestHeaders []string
 	flagPluginName                string
+	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
@@ -134,7 +135,14 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
 		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the backend",
+			"will be sent to the plugin",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Comma-separated string or list of response header values that " +
+			"plugins will be allowed to set",
 	})
 
 	f.StringVar(&StringVar{
@@ -270,6 +278,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
 			authOpts.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			authOpts.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
 
 		if fl.Name == flagNameTokenType {
