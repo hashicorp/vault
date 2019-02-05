@@ -46,6 +46,11 @@ var backcomp = map[string]string{
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 
+	port, ok := conf["port"]
+	if !ok {
+		port = ""
+	}
+
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	var err error
@@ -71,6 +76,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		if !ok {
 			return nil, fmt.Errorf("unable to build connection string")
 		}
+	}
+
+	if port != "" {
+		connectionString += ";port=" + port
 	}
 
 	db, err := sql.Open("mssql", connectionString)

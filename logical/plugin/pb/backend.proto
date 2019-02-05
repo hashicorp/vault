@@ -285,6 +285,11 @@ message Response {
 
 	// Information for wrapping the response in a cubbyhole
 	ResponseWrapInfo wrap_info = 6;
+
+	// Headers will contain the http headers from the response. This value will
+	// be used in the audit broker to ensure we are auditing only the allowed
+	// headers.
+	map<string, Header> headers = 7;
 }
 
 message ResponseWrapInfo {

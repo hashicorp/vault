@@ -8,6 +8,14 @@ CHANGES:
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
 
+FEATURES:
+
+ * **cURL Command Output**: CLI commands can now use the `-output-curl-string`
+   flag to print out an equivalent cURL command.
+ * **Response Headers From Plugins**: Plugins can now send back headers that
+   will be included in the response to a client. The set of allowed headers can
+   be managed by the operator.
+
 IMPROVEMENTS:
 
  * auth/aws: AWS EC2 authentication can optionally create entity aliases by
@@ -60,6 +68,7 @@ CHANGES:
    the root namespace is disallowed.
 
 FEATURES:
+
  * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
    users
 
