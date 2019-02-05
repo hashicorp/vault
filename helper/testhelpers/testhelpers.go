@@ -112,8 +112,7 @@ func EnsureCoresSealed(t testing.T, c *vault.TestCluster) {
 }
 
 func EnsureCoreSealed(t testing.T, core *vault.TestClusterCore) error {
-	client := core.Client
-	client.Sys().Seal()
+	core.Seal(t)
 	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
@@ -163,6 +162,7 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 }
 
 func EnsureCoreIsPerfStandby(t testing.T, core *vault.TestClusterCore) {
+	t.Helper()
 	start := time.Now()
 	for {
 		health, err := core.Client.Sys().Health()
@@ -173,7 +173,7 @@ func EnsureCoreIsPerfStandby(t testing.T, core *vault.TestClusterCore) {
 			break
 		}
 		time.Sleep(time.Millisecond * 500)
-		if time.Now().After(start.Add(time.Second * 30)) {
+		if time.Now().After(start.Add(time.Second * 60)) {
 			t.Fatal("did not become a perf standby")
 		}
 	}

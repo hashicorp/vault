@@ -33,11 +33,13 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 
 	// Check for the legacy -> v2 upgrade case
 	upgradeLegacyStoragePacker := func(prefix string, packer storagepacker.StoragePacker) error {
+		c.logger.Trace("checking for identity storage packer upgrade", "prefix", prefix)
 		bucketStorageView := logical.NewStorageView(c.identityStore.view, prefix+"buckets/")
 		vals, err := bucketStorageView.List(ctx, "")
 		if err != nil {
 			return err
 		}
+		c.logger.Trace("found buckets", "buckets", vals)
 		bucketsToUpgrade := make([]string, 0, 256)
 		for _, val := range vals {
 			if val == "v2/" {
@@ -52,11 +54,13 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 
 		packer.SetQueueMode(true)
 		for _, key := range bucketsToUpgrade {
+			c.logger.Trace("upgrading bucket", "key", key)
 			storageEntry, err := bucketStorageView.Get(ctx, key)
 			if err != nil {
 				return err
 			}
 			if storageEntry == nil {
+				c.logger.Trace("bucket nil")
 				// Not clear what to do here really, but if there's really
 				// nothing there, nothing to load, so continue
 				continue
@@ -66,6 +70,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 				return err
 			}
 			// Set to the new prefix
+			c.logger.Trace("found bucket entries", "num", len(bucket.Items))
 			for _, item := range bucket.Items {
 				packer.PutItem(ctx, item)
 			}
@@ -81,7 +86,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		// here; when the old buckets get removed on the primary, it will then
 		// be essentially a noop here and when memdb tries to expire entries it
 		// will just not find any. I think.
-		if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby) {
+		if !c.perfStandby && !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 			if err := packer.FlushQueue(ctx); err != nil {
 				return err
 			}
@@ -148,7 +153,7 @@ func (i *IdentityStore) sanitizeName(name string) string {
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("identity loading groups")
 
-	allBuckets, err := logical.CollectKeys(ctx, i.groupPacker.BucketsView())
+	allBuckets, err := i.groupPacker.BucketKeys(ctx)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for group buckets: {{err}}", err)
 	}
@@ -182,7 +187,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 						return
 					}
 
-					bucket, err := i.groupPacker.GetBucket(ctx, bucketKey)
+					bucket, err := i.groupPacker.GetBucket(ctx, bucketKey, false)
 					if err != nil {
 						errs <- err
 						continue
@@ -263,10 +268,6 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 					}
 				}
 
-				if i.logger.IsDebug() {
-					i.logger.Debug("loading group", "name", group.Name, "id", group.ID)
-				}
-
 				txn := i.db.Txn(true)
 
 				// Before pull#5786, entity memberships in groups were not getting
@@ -311,7 +312,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	// Accumulate existing entities
 	i.logger.Debug("loading entities")
-	allBuckets, err := logical.CollectKeys(ctx, i.entityPacker.BucketsView())
+	allBuckets, err := i.entityPacker.BucketKeys(ctx)
 	if err != nil {
 		return errwrap.Wrapf("failed to scan for entity buckets: {{err}}", err)
 	}
@@ -343,7 +344,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(ctx, bucketKey)
+					bucket, err := i.entityPacker.GetBucket(ctx, bucketKey, false)
 					if err != nil {
 						errs <- err
 						continue

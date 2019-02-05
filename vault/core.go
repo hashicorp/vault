@@ -345,8 +345,11 @@ type Core struct {
 	clusterLeaderRedirectAddr string
 	// Most recent leader cluster addr
 	clusterLeaderClusterAddr string
-	// Lock for the cluster leader values
-	clusterLeaderParamsLock sync.RWMutex
+	// Lock for the leader values, ensuring we don't run the parts of Leader()
+	// that change things concurrently
+	leaderParamsLock sync.RWMutex
+	// Current cluster leader values
+	clusterLeaderParams *atomic.Value
 	// Info on cluster members
 	clusterPeerClusterAddrsCache *cache.Cache
 	// Stores whether we currently have a server running
@@ -595,6 +598,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
 		neverBecomeActive:                new(uint32),
+		clusterLeaderParams:              new(atomic.Value),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -604,6 +608,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.localClusterCert.Store(([]byte)(nil))
 	c.localClusterParsedCert.Store((*x509.Certificate)(nil))
 	c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
+
+	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 

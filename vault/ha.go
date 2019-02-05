@@ -108,28 +108,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		return false, "", "", nil
 	}
 
-	c.clusterLeaderParamsLock.RLock()
-	localLeaderUUID := c.clusterLeaderUUID
-	localRedirAddr := c.clusterLeaderRedirectAddr
-	localClusterAddr := c.clusterLeaderClusterAddr
-	c.clusterLeaderParamsLock.RUnlock()
+	var localLeaderUUID, localRedirectAddr, localClusterAddr string
+	clusterLeaderParams := c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	}
 
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
-	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
 		c.stateLock.RUnlock()
-		return false, localRedirAddr, localClusterAddr, nil
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
 	defer c.stateLock.RUnlock()
-	c.clusterLeaderParamsLock.Lock()
-	defer c.clusterLeaderParamsLock.Unlock()
+	c.leaderParamsLock.Lock()
+	defer c.leaderParamsLock.Unlock()
 
 	// Validate base conditions again
-	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, localRedirAddr, localClusterAddr, nil
+	clusterLeaderParams = c.clusterLeaderParams.Load().(*ClusterLeaderParams)
+	if clusterLeaderParams != nil {
+		localLeaderUUID = clusterLeaderParams.LeaderUUID
+		localRedirectAddr = clusterLeaderParams.LeaderRedirectAddr
+		localClusterAddr = clusterLeaderParams.LeaderClusterAddr
+	} else {
+		localLeaderUUID = ""
+		localRedirectAddr = ""
+		localClusterAddr = ""
+	}
+
+	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
+		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
@@ -174,9 +187,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 
 	// Don't set these until everything has been parsed successfully or we'll
 	// never try again
-	c.clusterLeaderRedirectAddr = adv.RedirectAddr
-	c.clusterLeaderClusterAddr = adv.ClusterAddr
-	c.clusterLeaderUUID = leaderUUID
+	c.clusterLeaderParams.Store(&ClusterLeaderParams{
+		LeaderUUID:         leaderUUID,
+		LeaderRedirectAddr: adv.RedirectAddr,
+		LeaderClusterAddr:  adv.ClusterAddr,
+	})
 
 	return false, adv.RedirectAddr, adv.ClusterAddr, nil
 }

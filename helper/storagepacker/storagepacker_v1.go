@@ -130,8 +130,33 @@ func (s *StoragePackerV1) GetCacheKey(key string) string {
 	return strings.Replace(key, "/", "", -1)
 }
 
+func (s *StoragePackerV1) BucketKeys(ctx context.Context) ([]string, error) {
+	keys := map[string]struct{}{}
+	diskBuckets, err := logical.CollectKeys(ctx, s.BucketStorageView)
+	if err != nil {
+		return nil, err
+	}
+	for _, bucket := range diskBuckets {
+		keys[bucket] = struct{}{}
+	}
+
+	s.bucketsCacheLock.RLock()
+	s.bucketsCache.Walk(func(s string, _ interface{}) bool {
+		keys[s] = struct{}{}
+		return false
+	})
+	s.bucketsCacheLock.RUnlock()
+
+	ret := make([]string, 0, len(keys))
+	for k := range keys {
+		ret = append(ret, k)
+	}
+
+	return ret, nil
+}
+
 // Get returns a bucket for a given key
-func (s *StoragePackerV1) GetBucket(ctx context.Context, key string) (*LockedBucket, error) {
+func (s *StoragePackerV1) GetBucket(ctx context.Context, key string, skipCache bool) (*LockedBucket, error) {
 	cacheKey := s.GetCacheKey(key)
 
 	if key == "" {
@@ -145,7 +170,7 @@ func (s *StoragePackerV1) GetBucket(ctx context.Context, key string) (*LockedBuc
 	_, bucketRaw, found := s.bucketsCache.LongestPrefix(cacheKey)
 	s.bucketsCacheLock.RUnlock()
 
-	if found {
+	if found && !skipCache {
 		ret := bucketRaw.(*LockedBucket)
 		lock.RUnlock()
 		return ret, nil
@@ -161,7 +186,7 @@ func (s *StoragePackerV1) GetBucket(ctx context.Context, key string) (*LockedBuc
 	_, bucketRaw, found = s.bucketsCache.LongestPrefix(cacheKey)
 	s.bucketsCacheLock.RUnlock()
 
-	if found {
+	if found && !skipCache {
 		ret := bucketRaw.(*LockedBucket)
 		return ret, nil
 	}

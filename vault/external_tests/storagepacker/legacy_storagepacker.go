@@ -62,8 +62,22 @@ func (s *LegacyStoragePacker) BucketsView() *logical.StorageView {
 	return s.view
 }
 
+func (s *LegacyStoragePacker) BucketKeys(ctx context.Context) ([]string, error) {
+	keys, err := logical.CollectKeys(ctx, s.view)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if !strings.HasPrefix(key, "v2") {
+			ret = append(ret, key)
+		}
+	}
+	return ret, nil
+}
+
 // Get returns a bucket for a given key
-func (s *LegacyStoragePacker) GetBucket(ctx context.Context, key string) (*sp2.LockedBucket, error) {
+func (s *LegacyStoragePacker) GetBucket(ctx context.Context, key string, _ bool) (*sp2.LockedBucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -277,7 +291,7 @@ func (s *LegacyStoragePacker) GetItem(ctx context.Context, itemID string) (*sp2.
 	bucketPath := s.BucketPath(bucketKey)
 
 	// Fetch the bucket entry
-	bucket, err := s.GetBucket(ctx, bucketPath)
+	bucket, err := s.GetBucket(ctx, bucketPath, false)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
 	}

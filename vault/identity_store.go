@@ -163,11 +163,13 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.entityPacker.GetBucket(ctx, strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
+		bucket, err := i.entityPacker.GetBucket(ctx, strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()), true)
 		if err != nil {
 			i.logger.Error("failed to refresh entities", "key", key, "error", err)
 			return
 		}
+
+		i.logger.Trace("got bucket to invalidate", "key", key, "bucket_nil", bucket == nil)
 
 		// If the underlying entry is nil, it means that this invalidation
 		// notification is for the deletion of the underlying storage entry. At
@@ -190,6 +192,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 					return
 				}
 
+				i.logger.Trace("found entity name", "name", entity.Name)
+
 				// Only update MemDB and don't touch the storage
 				err = i.upsertEntityInTxn(ctx, txn, entity, nil, false)
 				if err != nil {
@@ -201,7 +205,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		if parsedCount > 0 {
-			i.logger.Trace("parsed entities for invalidation", "num_entities", parsedCount)
+			i.logger.Trace("parsed entities for invalidation", "key", key, "num_entities", parsedCount)
 		} else {
 			i.logger.Error("found no groups", "bucket", pretty.Sprint(bucket))
 		}
@@ -234,7 +238,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		}
 
 		// Get the storage bucket entry
-		bucket, err := i.groupPacker.GetBucket(ctx, strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
+		bucket, err := i.groupPacker.GetBucket(ctx, strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()), true)
 		if err != nil {
 			i.logger.Error("failed to refresh group", "key", key, "error", err)
 			return

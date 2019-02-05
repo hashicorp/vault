@@ -789,6 +789,13 @@ func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) Seal(t testing.T) {
+	t.Helper()
+	if err := c.Core.sealInternal(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func CleanupClusters(clusters []*TestCluster) {
 	wg := &sync.WaitGroup{}
 	for _, cluster := range clusters {

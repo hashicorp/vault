@@ -12,7 +12,8 @@ type StoragePacker interface {
 	BucketsView() *logical.StorageView
 	BucketKeyHashByItemID(string) string
 	GetCacheKey(string) string
-	GetBucket(context.Context, string) (*LockedBucket, error)
+	BucketKeys(context.Context) ([]string, error)
+	GetBucket(context.Context, string, bool) (*LockedBucket, error)
 	DecodeBucket(*logical.StorageEntry) (*LockedBucket, error)
 	PutBucket(context.Context, *LockedBucket) error
 	DeleteBucket(context.Context, string) error
