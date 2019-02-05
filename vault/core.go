@@ -338,13 +338,6 @@ type Core struct {
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
-	// Most recent leader UUID. Used to avoid repeatedly JSON parsing the same
-	// values.
-	clusterLeaderUUID string
-	// Most recent leader redirect addr
-	clusterLeaderRedirectAddr string
-	// Most recent leader cluster addr
-	clusterLeaderClusterAddr string
 	// Lock for the leader values, ensuring we don't run the parts of Leader()
 	// that change things concurrently
 	leaderParamsLock sync.RWMutex
