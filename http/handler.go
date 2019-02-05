@@ -660,12 +660,13 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	w.WriteHeader(307)
 }
 
-// getTokenFromReq parse headers of the incoming request to extract token if present
-// it accepts Authorization Bearer (RFC6750) and X-Vault-Token header
-func getTokenFromReq(r *http.Request) (string, bool, error) {
+// getTokenFromReq parse headers of the incoming request to extract token if
+// present it accepts Authorization Bearer (RFC6750) and X-Vault-Token header.
+// Returns true if the token was sourced from a Bearer header.
+func getTokenFromReq(r *http.Request) (string, bool) {
 	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
 		r.Header.Del(consts.AuthHeaderName)
-		return token, false, nil
+		return token, false
 	}
 	if v := r.Header.Get("Authorization"); v != "" {
 		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
@@ -673,19 +674,18 @@ func getTokenFromReq(r *http.Request) (string, bool, error) {
 		// If string does not start by 'Bearer ', it is not one we would use,
 		// but might be used by plugins
 		if !strings.HasPrefix(v, "Bearer ") {
-			return "", false, nil
+			return "", false
 		}
-		return strings.TrimSpace(v[7:]), true, nil
+		return strings.TrimSpace(v[7:]), true
 	}
-	return "", false, nil
+	return "", false
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if token, fromAuthzHeader, err := getTokenFromReq(r); err != nil {
-		return req, err
-	} else if token != "" {
+	token, fromAuthzHeader := getTokenFromReq(r)
+	if token != "" {
 		req.ClientToken = token
 
 		// Also attach the accessor if we have it. This doesn't fail if it
