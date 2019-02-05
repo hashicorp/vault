@@ -40,11 +40,9 @@ func Serve(opts *ServeOpts) error {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		3: plugin.PluginSet{
-			"backend": &BackendPlugin{
-				GRPCBackendPlugin: &GRPCBackendPlugin{
-					Factory: opts.BackendFactoryFunc,
-					Logger:  logger,
-				},
+			"backend": &GRPCBackendPlugin{
+				Factory: opts.BackendFactoryFunc,
+				Logger:  logger,
 			},
 		},
 		4: plugin.PluginSet{

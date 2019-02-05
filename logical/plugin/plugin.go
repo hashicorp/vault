@@ -99,10 +99,8 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		3: plugin.PluginSet{
-			"backend": &BackendPlugin{
-				GRPCBackendPlugin: &GRPCBackendPlugin{
-					MetadataMode: isMetadataMode,
-				},
+			"backend": &GRPCBackendPlugin{
+				MetadataMode: isMetadataMode,
 			},
 		},
 		4: plugin.PluginSet{
@@ -142,10 +140,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch raw.(type) {
-	case *backendPluginClient:
-		logger.Warn("plugin is using deprecated netRPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
-		backend = raw.(*backendPluginClient)
-		transport = "netRPC"
 	case *backendGRPCPluginClient:
 		backend = raw.(*backendGRPCPluginClient)
 		transport = "gRPC"
