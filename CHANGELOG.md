@@ -12,6 +12,9 @@ FEATURES:
 
  * **cURL Command Output**: CLI commands can now use the `-output-curl-string`
    flag to print out an equivalent cURL command.
+ * **Response Headers From Plugins**: Plugins can now send back headers that
+   will be included in the response to a client. The set of allowed headers can
+   be managed by the operator.
 
 IMPROVEMENTS:
 
