@@ -33,14 +33,13 @@ type MSSQLBackend struct {
 var defaults = map[string]string{
 	"database":           "Vault",
 	"table":              "Vault",
-	"Application Name":   "Vault",
+	"appname":            "Vault",
 	"Connection Timeout": "30",
 	"schema":             "dbo",
 }
 
 var backcomp = map[string]string{
 	"connectiontimeout": "Connection Timeout",
-	"appname":           "Application Name",
 	"username":          "user id",
 	"loglevel":          "log",
 }

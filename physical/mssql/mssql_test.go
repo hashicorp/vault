@@ -14,9 +14,16 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
-func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
+var conf = map[string]string{
+	"database": "master",
+	"server":   "localhost",
+	"username": "SA",
+	"password": "pa$$w0rd!",
+}
+
+func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string, retPort string) {
 	if os.Getenv("MSSQL_URL") != "" {
-		return func() {}, os.Getenv("MSSQL_URL")
+		return func() {}, os.Getenv("MSSQL_URL"), ""
 	}
 
 	pool, err := dockertest.NewPool("")
@@ -41,7 +48,8 @@ func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		}
 	}
 
-	retURL = fmt.Sprintf("sqlserver://SA:pa$$w0rd!@localhost:%s", resource.GetPort("1433/tcp"))
+	retPort = resource.GetPort("1433/tcp")
+	retURL = fmt.Sprintf("sqlserver://SA:pa$$w0rd!@localhost:%s", retPort)
 
 	// exponential backoff-retry
 	if retryErr := pool.Retry(func() error {
@@ -59,17 +67,45 @@ func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	return
 }
 
-func TestMSSQLBackend(t *testing.T) {
-	cleanup, connURL := prepareMSSQLTestContainer(t)
+func TestMSSQLBackendWithConnectionURL(t *testing.T) {
+	cleanup, connURL, _ := prepareMSSQLTestContainer(t)
 	defer cleanup()
 
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 
-	b, err := NewMSSQLBackend(map[string]string{
-		"connection_url": connURL,
-	}, logger)
+	// connect with a connection url
+	conf["connection_url"] = connURL
+	t.Logf("withConnectionString: %s", conf)
+	b, err := NewMSSQLBackend(conf, logger)
+	if err != nil {
+		t.Fatalf("Failed to create new backend: %v", err)
+	}
 
+	defer func() {
+		mssql := b.(*MSSQLBackend)
+		_, err := mssql.client.Exec("DROP TABLE " + mssql.dbTable)
+		if err != nil {
+			t.Fatalf("Failed to drop table: %v", err)
+		}
+	}()
+
+	physical.ExerciseBackend(t, b)
+	physical.ExerciseBackend_ListPrefix(t, b)
+}
+
+func TestMSSQLBackendWithoutConnectionURL(t *testing.T) {
+	cleanup, _, connPort := prepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	// Run vault tests
+	logger := logging.NewVaultLogger(log.Debug)
+
+	// connect without a connection url
+	conf["port"] = connPort
+	delete(conf, "connection_url")
+	t.Logf("withoutConnectionString: %s", conf)
+	b, err := NewMSSQLBackend(conf, logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
