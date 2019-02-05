@@ -422,7 +422,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		if atomic.LoadUint32(c.neverBecomeActive) == 1 {
 			c.heldHALock = nil
 			lock.Unlock()
-			c.logger.Info("marked never become active, giving up after interrupting perf standbys")
+			c.logger.Info("marked never become active, giving up active state")
 			continue
 		}
 
