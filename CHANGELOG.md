@@ -7,6 +7,7 @@ CHANGES:
    Existing mounts will not be affected.
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
+ * The Vault UI's navigation and onboarding wizard now only display items that are permitted in a users' policy [GH-5980] & [GH6094]
 
 FEATURES:
 
