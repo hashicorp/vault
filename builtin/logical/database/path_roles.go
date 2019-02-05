@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+        "github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -73,6 +74,11 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a credential is valid for",
 			},
+
+                        "static_account": &framework.FieldSchema{
+                                Type:        framework.TypeMap,
+                                Description: `Static account thing. only accpets a few things`,
+                        },
 		},
 
 		ExistenceCheck: b.pathRoleExistenceCheck(),
@@ -95,6 +101,7 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 			return false, err
 		}
 
+                // q.Q("role existance check:", role)
 		return role != nil, nil
 	}
 }
@@ -174,6 +181,11 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			role = &roleEntry{}
 		}
 
+                // q.Q("role in RoleCreateUpdate:", role)
+                // q.Q("data in RoleCreateUpdate:", data.Schema)
+
+                static := data.Get("static_account").(map[string]interface{})
+                q.Q("static:", static)
 		// DB Attributes
 		{
 			if dbNameRaw, ok := data.GetOk("db_name"); ok {
@@ -249,10 +261,44 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 }
 
 type roleEntry struct {
-	DBName     string              `json:"db_name"`
-	Statements dbplugin.Statements `json:"statements"`
-	DefaultTTL time.Duration       `json:"default_ttl"`
-	MaxTTL     time.Duration       `json:"max_ttl"`
+        DBName        string              `json:"db_name"`
+        Statements    dbplugin.Statements `json:"statements"`
+        DefaultTTL    time.Duration       `json:"default_ttl"`
+        MaxTTL        time.Duration       `json:"max_ttl"`
+        StaticAccount *staticAccount      `json:"static_account"`
+}
+
+type staticAccount struct {
+        // Fields used in Static Accounts and automatic password rotation
+
+        // Username to create or assume management for static accounts
+        Username string `json:"username"`
+
+        // Password is the current password for static accounts. Return this on
+        // credential request if it exists.
+        //
+        // PreviousPassword is used to preserve the previous password during a rotation. If
+        // any step in the process fails, we have record of the previous password and
+        // can attempt to roll back.
+        //
+        // InitialPassword is used when the Username exists, and Vault needs to assume
+        // management. The InitialPassword needs to be verified before initial
+        // rotation is attempted. After management is assume, this value should be
+        // emptied.
+        Password         string `json:"password"`
+        PreviousPassword string `json:"previous_password"`
+        InitialPassword  string `json:"initial_password"`
+
+        // LastVaultRotation represents the last time Vault rotated the password
+        // PasswordLastSet represents the last time a manual password rotation was
+        // preformed, using the Vault endpoint
+        LastVaultRotation time.Time `json:"last_vault_rotation"`
+        PasswordLastSet   time.Time `json:"password_last_set"`
+
+        // RotationFrequency is numer in seconds between each rotation, effectively a
+        // "time to live". This value is compared to the LastVaultRotation to
+        // determine if a password needs to be rotated
+        RotationFrequency time.Duration `json:"rotation_frequency"`
 }
 
 const pathRoleHelpSyn = `
