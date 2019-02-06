@@ -2,6 +2,7 @@ package database
 
 import (
         "context"
+        "errors"
         "testing"
 
         "github.com/go-test/deep"
@@ -55,7 +56,7 @@ func TestBackend_Static_Config(t *testing.T) {
                 expected map[string]interface{}
                 err      error
         }{
-                // "normal": {},
+                "normal": {},
                 "basic": {
                         account: map[string]interface{}{
                                 "username":           "sa-test",
@@ -65,6 +66,12 @@ func TestBackend_Static_Config(t *testing.T) {
                                 "username":           "sa-test",
                                 "rotation_frequency": int64(5400000000000),
                         },
+                },
+                "missing rotation frequency": {
+                        account: map[string]interface{}{
+                                "username": "sa-test",
+                        },
+                        err: errors.New("rotation_frequency is a required field for static accounts"),
                 },
         }
 
@@ -87,7 +94,18 @@ func TestBackend_Static_Config(t *testing.T) {
                         }
                         resp, err = b.HandleRequest(namespace.RootContext(nil), req)
                         if err != nil || (resp != nil && resp.IsError()) {
-                                t.Fatalf("err:%s resp:%#v\n", err, resp)
+                                if tc.err == nil {
+                                        t.Fatalf("err:%s resp:%#v\n", err, resp)
+                                }
+                                if err != nil && tc.err.Error() == err.Error() {
+                                        // errors match
+                                        return
+                                }
+                                if err == nil && tc.err.Error() == resp.Error().Error() {
+                                        // errors match
+                                        return
+                                }
+                                t.Fatalf("expected err message: (%s), got (%s), response error: (%s)", tc.err, err, resp.Error())
                         }
 
                         exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
@@ -129,6 +147,17 @@ func TestBackend_Static_Config(t *testing.T) {
 
                         if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
                                 t.Fatal(diff)
+                        }
+
+                        // Delete role for next run
+                        req = &logical.Request{
+                                Operation: logical.DeleteOperation,
+                                Path:      "roles/plugin-role-test",
+                                Storage:   config.StorageView,
+                        }
+                        resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+                        if err != nil || (resp != nil && resp.IsError()) {
+                                t.Fatalf("err:%s resp:%#v\n", err, resp)
                         }
                 })
         }
