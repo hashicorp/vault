@@ -108,7 +108,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
 				Comma separated list of CIDR blocks for which the role is applicable for.
 				CIDR blocks can belong to more than one role.`,
-				DisplayName: "Admin Username",
+				DisplayName: "CIDR List",
 			},
 			"exclude_cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -127,7 +127,7 @@ func pathRoles(b *backend) *framework.Path {
 				play any role in creation of OTP. For 'otp' type, this is just a way
 				to inform client about the port number to use. Port number will be
 				returned to client by Vault server along with OTP.`,
-				DisplayName: "Port",
+				DisplayName:  "Port",
 				DisplayValue: 22,
 			},
 			"key_type": &framework.FieldSchema{
@@ -136,9 +136,9 @@ func pathRoles(b *backend) *framework.Path {
 				[Required for all types]
 				Type of key used to login to hosts. It can be either 'otp', 'dynamic' or 'ca'.
 				'otp' type requires agent to be installed in remote hosts.`,
-				DisplayName: "Key Type",
+				DisplayName:   "Key Type",
 				AllowedValues: []interface{}{"otp", "ca"},
-				DisplayValue: "ca",
+				DisplayValue:  "ca",
 			},
 			"key_bits": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -256,7 +256,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'user'.
 				`,
-				Default: false,
+				Default:     false,
 				DisplayName: "Allow User Certificates",
 			},
 			"allow_host_certificates": &framework.FieldSchema{
@@ -265,7 +265,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'host'.
 				`,
-				Default: false,
+				Default:     false,
 				DisplayName: "Allow Host Certificates",
 			},
 			"allow_bare_domains": &framework.FieldSchema{
