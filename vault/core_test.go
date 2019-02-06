@@ -1470,7 +1470,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		core.barrier.Put(namespace.RootContext(nil), &Entry{
+		core.barrier.Put(namespace.RootContext(nil), &logical.StorageEntry{
 			Key:   coreLeaderPrefix + keyUUID,
 			Value: []byte(valueUUID),
 		})
@@ -2255,7 +2255,6 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	}
 }
 
-// Ensure that InternalData is never returned
 func TestCore_HandleRequest_Headers(t *testing.T) {
 	noop := &NoopBackend{
 		Response: &logical.Response{
@@ -2295,6 +2294,7 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 			"Should-Passthrough":                  []string{"foo"},
 			"Should-Passthrough-Case-Insensitive": []string{"baz"},
 			"Should-Not-Passthrough":              []string{"bar"},
+			consts.AuthHeaderName:                 []string{"nope"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2321,11 +2321,15 @@ func TestCore_HandleRequest_Headers(t *testing.T) {
 			t.Fatalf("expected: %v, got: %v", expected, val)
 		}
 	} else {
-		t.Fatalf("expected 'Should-Passthrough-Case-Insensitive' to be present in the headers map")
+		t.Fatal("expected 'Should-Passthrough-Case-Insensitive' to be present in the headers map")
 	}
 
 	if _, ok := headers["Should-Not-Passthrough"]; ok {
-		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
+		t.Fatal("did not expect 'Should-Not-Passthrough' to be in the headers map")
+	}
+
+	if _, ok := headers[consts.AuthHeaderName]; ok {
+		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
 	}
 }
 
@@ -2366,7 +2370,6 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 		ClientToken: root,
 		Headers: map[string][]string{
 			consts.AuthHeaderName: []string{"foo"},
-			"Authorization":       []string{"baz"},
 		},
 	}
 	_, err = c.HandleRequest(namespace.RootContext(nil), lreq)
@@ -2378,10 +2381,6 @@ func TestCore_HandleRequest_Headers_denyList(t *testing.T) {
 	headers := noop.Requests[0].Headers
 
 	// Test passthrough values, they should not be present in the backend
-	if _, ok := headers["Authorization"]; ok {
-		t.Fatalf("did not expect 'Should-Not-Passthrough' to be in the headers map")
-	}
-
 	if _, ok := headers[consts.AuthHeaderName]; ok {
 		t.Fatalf("did not expect %q to be in the headers map", consts.AuthHeaderName)
 	}

@@ -31,10 +31,10 @@ func TestBackend_pathConfigIdentity(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
 	}
-	if resp.Data["iam_alias"] == nil || resp.Data["iam_alias"] != identityAliasIAMUniqueID {
+	if resp.Data["iam_alias"] == nil || resp.Data["iam_alias"] != identityAliasRoleID {
 		t.Fatalf("bad: iam_alias; expected: %q, actual: %q", identityAliasIAMUniqueID, resp.Data["iam_alias"])
 	}
-	if resp.Data["ec2_alias"] == nil || resp.Data["ec2_alias"] != identityAliasEC2InstanceID {
+	if resp.Data["ec2_alias"] == nil || resp.Data["ec2_alias"] != identityAliasRoleID {
 		t.Fatalf("bad: ec2_alias; expected: %q, actual: %q", identityAliasIAMUniqueID, resp.Data["ec2_alias"])
 	}
 
