@@ -57,6 +57,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{
 				"config/*",
+                                // TODO: will want to encrypt static accounts / roles with password info
+                                // in them
 			},
 		},
 
