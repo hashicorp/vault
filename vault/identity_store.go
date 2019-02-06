@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/kr/pretty"
 )
 
 const (
@@ -202,7 +201,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		if parsedCount > 0 {
 			i.logger.Trace("parsed entities for invalidation", "key", key, "num_entities", parsedCount)
 		} else {
-			i.logger.Error("found no groups", "bucket", pretty.Sprint(bucket))
+			i.logger.Error("found no groups")
 		}
 
 		txn.Commit()
@@ -284,7 +283,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		if parsedCount > 0 {
 			i.logger.Trace("parsed entities for invalidation", "num_entities", parsedCount)
 		} else {
-			i.logger.Error("found no entities", "bucket", pretty.Sprint(bucket))
+			i.logger.Error("found no entities")
 		}
 
 		txn.Commit()
