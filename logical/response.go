@@ -61,6 +61,10 @@ type Response struct {
 
 	// Information for wrapping the response in a cubbyhole
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+
+	// Headers will contain the http headers from the plugin that it wishes to
+	// have as part of the output
+	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
 }
 
 // AddWarning adds a warning into the response's warning list
