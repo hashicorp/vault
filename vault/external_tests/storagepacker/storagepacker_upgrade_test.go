@@ -102,7 +102,7 @@ func TestIdentityStore_StoragePacker_UpgradeFromLegacy(t *testing.T) {
 	}
 	t.Log(buckets)
 
-	vault.StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV1))
+	vault.StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV2))
 
 	// Step 5: Unseal Vault, make sure we can fetch every one of the created
 	// identities, and that storage looks as we expect

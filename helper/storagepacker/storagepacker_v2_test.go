@@ -13,10 +13,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func getStoragePacker(tb testing.TB) *StoragePackerV1 {
+func getStoragePacker(tb testing.TB) *StoragePackerV2 {
 	storage := &logical.InmemStorage{}
 	storageView := logical.NewStorageView(storage, "packer/buckets/v2")
-	storagePacker, err := NewStoragePackerV1(context.Background(), &Config{
+	storagePacker, err := NewStoragePackerV2(context.Background(), &Config{
 		BucketStorageView: storageView,
 		ConfigStorageView: logical.NewStorageView(storage, "packer/config"),
 		Logger:            log.New(&log.LoggerOptions{Name: "storagepackertest"}),
@@ -27,7 +27,7 @@ func getStoragePacker(tb testing.TB) *StoragePackerV1 {
 	return storagePacker
 }
 
-func BenchmarkStoragePackerV1(b *testing.B) {
+func BenchmarkStoragePackerV2(b *testing.B) {
 	storagePacker := getStoragePacker(b)
 
 	for i := 0; i < b.N; i++ {
@@ -73,7 +73,7 @@ func BenchmarkStoragePackerV1(b *testing.B) {
 	}
 }
 
-func TestStoragePackerV1(t *testing.T) {
+func TestStoragePackerV2(t *testing.T) {
 	storagePacker := getStoragePacker(t)
 
 	// Persist a storage entry
@@ -116,7 +116,7 @@ func TestStoragePackerV1(t *testing.T) {
 	}
 }
 
-func TestStoragePackerV1_SerializeDeserializeComplexItem_Version1(t *testing.T) {
+func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) {
 	storagePacker := getStoragePacker(t)
 
 	timeNow := ptypes.TimestampNow()

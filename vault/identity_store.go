@@ -33,7 +33,7 @@ var (
 )
 
 func init() {
-	StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV1))
+	StoragePackerCreationFunc.Store(storagepacker.StoragePackerFactory(storagepacker.NewStoragePackerV2))
 }
 
 func (c *Core) IdentityStore() *IdentityStore {

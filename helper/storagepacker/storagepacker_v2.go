@@ -61,7 +61,7 @@ type Config struct {
 // number of items. This is the second version of the utility which supports
 // indefinitely expanding the capacity of the storage by sharding the buckets
 // when they exceed the imposed limit.
-type StoragePackerV1 struct {
+type StoragePackerV2 struct {
 	*Config
 	storageLocks []*locksutil.LockEntry
 	bucketsCache *radix.Tree
@@ -85,11 +85,11 @@ type LockedBucket struct {
 	*Bucket
 }
 
-func (s *StoragePackerV1) BucketsView() *logical.StorageView {
+func (s *StoragePackerV2) BucketsView() *logical.StorageView {
 	return s.BucketStorageView
 }
 
-func (s *StoragePackerV1) BucketStorageKeyForItemID(itemID string) string {
+func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
 	hexVal := hex.EncodeToString(cryptoutil.Blake2b256Hash(itemID))
 
 	s.bucketsCacheLock.RLock()
@@ -122,15 +122,15 @@ func (s *StoragePackerV1) BucketStorageKeyForItemID(itemID string) string {
 	return cacheKey
 }
 
-func (s *StoragePackerV1) BucketKeyHashByItemID(itemID string) string {
+func (s *StoragePackerV2) BucketKeyHashByItemID(itemID string) string {
 	return s.GetCacheKey(s.BucketStorageKeyForItemID(itemID))
 }
 
-func (s *StoragePackerV1) GetCacheKey(key string) string {
+func (s *StoragePackerV2) GetCacheKey(key string) string {
 	return strings.Replace(key, "/", "", -1)
 }
 
-func (s *StoragePackerV1) BucketKeys(ctx context.Context) ([]string, error) {
+func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
 	keys := map[string]struct{}{}
 	diskBuckets, err := logical.CollectKeys(ctx, s.BucketStorageView)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *StoragePackerV1) BucketKeys(ctx context.Context) ([]string, error) {
 }
 
 // Get returns a bucket for a given key
-func (s *StoragePackerV1) GetBucket(ctx context.Context, key string, skipCache bool) (*LockedBucket, error) {
+func (s *StoragePackerV2) GetBucket(ctx context.Context, key string, skipCache bool) (*LockedBucket, error) {
 	cacheKey := s.GetCacheKey(key)
 
 	if key == "" {
@@ -215,7 +215,7 @@ func (s *StoragePackerV1) GetBucket(ctx context.Context, key string, skipCache b
 // NOTE: Don't put inserting into the cache here, as that will mess with
 // upgrade cases for the identity store as we want to keep the bucket out of
 // the cache until we actually re-store it.
-func (s *StoragePackerV1) DecodeBucket(storageEntry *logical.StorageEntry) (*LockedBucket, error) {
+func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*LockedBucket, error) {
 	uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decompress packed storage entry: {{err}}", err)
@@ -239,7 +239,7 @@ func (s *StoragePackerV1) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 }
 
 // Put stores a packed bucket entry
-func (s *StoragePackerV1) PutBucket(ctx context.Context, bucket *LockedBucket) error {
+func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -269,7 +269,7 @@ func (s *StoragePackerV1) PutBucket(ctx context.Context, bucket *LockedBucket) e
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
-func (s *StoragePackerV1) storeBucket(ctx context.Context, bucket *LockedBucket) error {
+func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket) error {
 	if atomic.LoadUint32(&s.queueMode) == 1 {
 		s.queuedBuckets.Store(bucket.Key, bucket)
 		return nil
@@ -300,7 +300,7 @@ func (s *StoragePackerV1) storeBucket(ctx context.Context, bucket *LockedBucket)
 }
 
 // DeleteBucket deletes an entire bucket entry
-func (s *StoragePackerV1) DeleteBucket(ctx context.Context, key string) error {
+func (s *StoragePackerV2) DeleteBucket(ctx context.Context, key string) error {
 	if key == "" {
 		return fmt.Errorf("missing key")
 	}
@@ -347,7 +347,7 @@ func (s *LockedBucket) upsert(item *Item) error {
 
 // DeleteItem removes the storage entry which the given key refers to from its
 // corresponding bucket.
-func (s *StoragePackerV1) DeleteItem(ctx context.Context, itemID string) error {
+func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
 	}
@@ -406,7 +406,7 @@ func (s *StoragePackerV1) DeleteItem(ctx context.Context, itemID string) error {
 
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
-func (s *StoragePackerV1) GetItem(ctx context.Context, itemID string) (*Item, error) {
+func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, error) {
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -467,7 +467,7 @@ func (s *StoragePackerV1) GetItem(ctx context.Context, itemID string) (*Item, er
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *StoragePackerV1) PutItem(ctx context.Context, item *Item) error {
+func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -528,8 +528,8 @@ func (s *StoragePackerV1) PutItem(ctx context.Context, item *Item) error {
 	return s.storeBucket(ctx, bucket)
 }
 
-// NewStoragePackerV1 creates a new storage packer for a given view
-func NewStoragePackerV1(ctx context.Context, config *Config) (StoragePacker, error) {
+// NewStoragePackerV2 creates a new storage packer for a given view
+func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, error) {
 	if config.BucketStorageView == nil {
 		return nil, fmt.Errorf("nil buckets view")
 	}
@@ -605,7 +605,7 @@ func NewStoragePackerV1(ctx context.Context, config *Config) (StoragePacker, err
 	}
 
 	// Create a new packer object for the given view
-	packer := &StoragePackerV1{
+	packer := &StoragePackerV2{
 		Config:       config,
 		bucketsCache: radix.New(),
 		storageLocks: locksutil.CreateLocks(),
@@ -614,7 +614,7 @@ func NewStoragePackerV1(ctx context.Context, config *Config) (StoragePacker, err
 	return packer, nil
 }
 
-func (s *StoragePackerV1) SetQueueMode(enabled bool) {
+func (s *StoragePackerV2) SetQueueMode(enabled bool) {
 	if enabled {
 		atomic.StoreUint32(&s.queueMode, 1)
 	} else {
@@ -622,7 +622,7 @@ func (s *StoragePackerV1) SetQueueMode(enabled bool) {
 	}
 }
 
-func (s *StoragePackerV1) FlushQueue(ctx context.Context) error {
+func (s *StoragePackerV2) FlushQueue(ctx context.Context) error {
 	var err *multierror.Error
 	s.queuedBuckets.Range(func(key, value interface{}) bool {
 		lErr := s.storeBucket(ctx, value.(*LockedBucket))
