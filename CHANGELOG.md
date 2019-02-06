@@ -7,7 +7,8 @@ CHANGES:
    Existing mounts will not be affected.
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
- * The Vault UI's navigation and onboarding wizard now only display items that are permitted in a users' policy [GH-5980] & [GH6094]
+ * The Vault UI's navigation and onboarding wizard now only displays items that
+   are permitted in a users' policy [GH-5980, GH-6094]
 
 FEATURES:
 
@@ -34,6 +35,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * core: Fix a rare case where a standby whose connection is entirely torn down
+   to the active node, then reconnects to the same active node, may not
+   successfully resume operation [GH-6167]
  * replication: Fix a potential race when a token is created and then used with
    a performance standby very quickly, before an associated entity has been
    replicated. If the entity is not found in this scenario, the request will
