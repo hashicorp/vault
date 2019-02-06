@@ -42,7 +42,6 @@ module('Acceptance | ssh secret backend', function(hooks) {
         await fillIn('[data-test-input="cidrList"]', '1.2.3.4/32');
       },
       async fillInGenerate() {
-        debugger; //eslint-disable-line
         await fillIn('[data-test-input="username"]', 'admin');
         await fillIn('[data-test-input="ip"]', '1.2.3.4');
       },

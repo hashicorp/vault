@@ -29,7 +29,6 @@ export default Service.extend({
     }
 
     return this.getProps(modelType, backend).then(props => {
-      debugger; // eslint-disable-line
       if (owner.hasRegistration(name) && !newModel.merged) {
         let { attrs, newFields } = combineAttributes(newModel.attributes, props);
         newModel = newModel.extend(attrs, { newFields });
@@ -44,7 +43,6 @@ export default Service.extend({
   },
 
   getProps(modelType, backend) {
-    debugger; // eslint-disable-line
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
     const authMethods = [
