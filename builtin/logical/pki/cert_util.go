@@ -734,7 +734,7 @@ func signCert(b *backend,
 	return parsedBundle, nil
 }
 
-// OtherName describes a name related to a certificate which is not in one
+// otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
 // OtherName ::= SEQUENCE {
 //      type-id    OBJECT IDENTIFIER,
@@ -758,89 +758,79 @@ func (o *otherNameRaw) ExtractUTF8String() (string, error) {
 	return "", fmt.Errorf("no UTF-8 string found in OtherName")
 }
 
-// unmarshalOtherNamesFromExtension returns all the otherNames found in ext.
-func unmarshalOtherNames(ext pkix.Extension) ([]otherNameRaw, error) {
-	// RFC 5280, 4.2.1.6
-	// GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
-	//
-	// GeneralName ::= CHOICE {
-	//      otherName                       [0]     OtherName,
-	var seq asn1.RawValue
-	var rest []byte
-	if rest, err := asn1.Unmarshal(ext.Value, &seq); err != nil {
-		return nil, fmt.Errorf("x509: failed to parse GeneralNames: %v", err)
-	} else if len(rest) != 0 {
-		return nil, fmt.Errorf("x509: trailing data after GeneralNames")
-	}
-	if !seq.IsCompound || seq.Tag != asn1.TagSequence || seq.Class != asn1.ClassUniversal {
-		return nil, fmt.Errorf("x509: failed to parse GeneralNames sequence, tag %+v", seq)
-	}
-
-	var otherNameRaws []otherNameRaw
-	rest = seq.Bytes
-	for len(rest) > 0 {
-		var err error
-		var other *otherNameRaw
-		rest, other, err = unmarshalOtherName(rest)
-		if err != nil {
-			return nil, fmt.Errorf("x509: failed to parse GeneralName: %v", err)
-		}
-		if other != nil {
-			otherNameRaws = append(otherNameRaws, *other)
-		}
-	}
-	return otherNameRaws, nil
-}
-
-// unmarshalOtherName consumes a single GeneralName from the ASN1 data, returning
-// any remaining bytes as the first return value.  If an OtherName was found and
-// no errors occurred, it will be returned as otherNameRaw.
-func unmarshalOtherName(data []byte) ([]byte, *otherNameRaw, error) {
-	var v asn1.RawValue
-	rest, err := asn1.Unmarshal(data, &v)
-	if err != nil {
-		return nil, nil, fmt.Errorf("x509: failed to unmarshal GeneralName: %v", err)
-	}
-
-	if v.Tag != nameTypeOther {
-		return rest, nil, nil
-	}
-
-	if !v.IsCompound {
-		return nil, nil, fmt.Errorf("x509: failed to unmarshal GeneralName.otherName: not compound")
-	}
-
-	var other otherNameRaw
-	v.FullBytes = append([]byte{}, v.FullBytes...)
-	v.FullBytes[0] = asn1.TagSequence | 0x20
-	_, err = asn1.Unmarshal(v.FullBytes, &other)
-	if err != nil {
-		return nil, nil, errwrap.Wrapf("x509: failed to unmarshal GeneralName.otherName: {{err}}", err)
-
-	}
-	return rest, &other, nil
-}
-
-// getOtherSANsFromX509Extensions returns
 func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]string, error) {
 	var ret []string
 	for _, ext := range exts {
-		if ext.Id.Equal(oidExtensionSubjectAltName) {
-			otherNameRaws, err := unmarshalOtherNames(ext)
+		if !ext.Id.Equal(oidExtensionSubjectAltName) {
+			continue
+		}
+		err := forEachSAN(ext.Value, func(tag int, data []byte) error {
+			if tag != 0 {
+				return nil
+			}
+
+			var other otherNameRaw
+			_, err := asn1.UnmarshalWithParams(data, &other, "tag:0")
 			if err != nil {
-				return nil, errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
+				return errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
 			}
-			for _, other := range otherNameRaws {
-				val, err := other.ExtractUTF8String()
-				if err != nil {
-					return nil, err
-				}
-				ret = append(ret, fmt.Sprintf("%s;%s:%s", other.TypeID.String(), "UTF-8", val))
+			val, err := other.ExtractUTF8String()
+			if err != nil {
+				return err
 			}
+			ret = append(ret, fmt.Sprintf("%s;%s:%s", other.TypeID.String(), "UTF-8", val))
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return ret, nil
+}
+
+func forEachSAN(extension []byte, callback func(tag int, data []byte) error) error {
+	// RFC 5280, 4.2.1.6
+
+	// SubjectAltName ::= GeneralNames
+	//
+	// GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
+	//
+	// GeneralName ::= CHOICE {
+	//      otherName                       [0]     OtherName,
+	//      rfc822Name                      [1]     IA5String,
+	//      dNSName                         [2]     IA5String,
+	//      x400Address                     [3]     ORAddress,
+	//      directoryName                   [4]     Name,
+	//      ediPartyName                    [5]     EDIPartyName,
+	//      uniformResourceIdentifier       [6]     IA5String,
+	//      iPAddress                       [7]     OCTET STRING,
+	//      registeredID                    [8]     OBJECT IDENTIFIER }
+	var seq asn1.RawValue
+	rest, err := asn1.Unmarshal(extension, &seq)
+	if err != nil {
+		return err
+	} else if len(rest) != 0 {
+		return fmt.Errorf("x509: trailing data after X.509 extension")
+	}
+	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
+		return asn1.StructuralError{Msg: "bad SAN sequence"}
+	}
+
+	rest = seq.Bytes
+	for len(rest) > 0 {
+		var v asn1.RawValue
+		rest, err = asn1.Unmarshal(rest, &v)
+		if err != nil {
+			return err
+		}
+
+		if err := callback(v.Tag, v.FullBytes); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // generateCreationBundle is a shared function that reads parameters supplied
