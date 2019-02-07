@@ -10,7 +10,6 @@ import (
         "github.com/hashicorp/vault/helper/strutil"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
-        "github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -98,22 +97,17 @@ func pathRoles(b *databaseBackend) *framework.Path {
 
 func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
         return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-                // rn := data.Get("name").(string)
-                // q.Q("pathRoleExistenceCheck:=", rn)
                 role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
                 if err != nil {
-                        // q.Q("role does not exist")
                         return false, err
                 }
 
-                // q.Q("role exists:", role != nil)
                 return role != nil, nil
         }
 }
 
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
         return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-                q.Q("name to delete:", data.Get("name"))
                 err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
                 if err != nil {
                         return nil, err
@@ -163,7 +157,7 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
                                 sa["password"] = role.StaticAccount.Password
                         }
                         data["static_account"] = sa
-                        q.Q("static account=", sa)
+                        // TODO return LastVaultRotation once it's set
                 }
 
                 return &logical.Response{
@@ -195,10 +189,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                         return nil, err
                 }
                 if role == nil {
-                        // q.Q("did not find role for name:", data.Get("name").(string))
                         role = &roleEntry{}
-                } else {
-                        // q.Q("found role for name:", data.Get("name").(string))
                 }
 
                 // DB Attributes
