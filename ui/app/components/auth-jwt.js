@@ -4,7 +4,6 @@ import Component from './outer-html';
 import { next, later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
-import { or } from '@ember/object/computed';
 
 const WAIT_TIME = Ember.testing ? 0 : 500;
 const ERROR_WINDOW_CLOSED =
@@ -128,13 +127,16 @@ export default Component.extend({
   }),
 
   actions: {
-    startOIDCAuth(data, e) {
+    async startOIDCAuth(data, e) {
+      this.onError(null);
       if (e && e.preventDefault) {
         e.preventDefault();
       }
       if (!this.isOIDC) {
         return;
       }
+
+      await this.fetchRole.perform(this.roleName, { nodebounce: true });
       let win = this.getWindow();
 
       let left = win.screen.width / 2 - 250;
