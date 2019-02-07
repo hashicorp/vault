@@ -27,15 +27,22 @@ func TestSysSealStatus(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"sealed":        true,
-		"t":             json.Number("3"),
-		"n":             json.Number("3"),
-		"progress":      json.Number("0"),
-		"nonce":         "",
-		"type":          "shamir",
-		"recovery_seal": false,
-		"initialized":   true,
-		"migration":     false,
+		"sealed":                              true,
+		"t":                                   json.Number("3"),
+		"n":                                   json.Number("3"),
+		"progress":                            json.Number("0"),
+		"nonce":                               "",
+		"type":                                "shamir",
+		"recovery_seal":                       false,
+		"initialized":                         true,
+		"migration":                           false,
+		"ha_enabled":                          false,
+		"is_self":                             false,
+		"leader_address":                      "",
+		"leader_cluster_address":              "",
+		"performance_standby":                 false,
+		"performance_standby_last_remote_wal": json.Number("0"),
+		"last_wal":                            json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -111,15 +118,22 @@ func TestSysUnseal(t *testing.T) {
 
 		var actual map[string]interface{}
 		expected := map[string]interface{}{
-			"sealed":        true,
-			"t":             json.Number("3"),
-			"n":             json.Number("3"),
-			"progress":      json.Number(fmt.Sprintf("%d", i+1)),
-			"nonce":         "",
-			"type":          "shamir",
-			"recovery_seal": false,
-			"initialized":   true,
-			"migration":     false,
+			"sealed":                              true,
+			"t":                                   json.Number("3"),
+			"n":                                   json.Number("3"),
+			"progress":                            json.Number(fmt.Sprintf("%d", i+1)),
+			"nonce":                               "",
+			"type":                                "shamir",
+			"recovery_seal":                       false,
+			"initialized":                         true,
+			"migration":                           false,
+			"ha_enabled":                          false,
+			"is_self":                             false,
+			"leader_address":                      "",
+			"leader_cluster_address":              "",
+			"performance_standby":                 false,
+			"performance_standby_last_remote_wal": json.Number("0"),
+			"last_wal":                            json.Number("0"),
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -193,14 +207,21 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 		var actual map[string]interface{}
 		expected := map[string]interface{}{
-			"sealed":        true,
-			"t":             json.Number("3"),
-			"n":             json.Number("5"),
-			"progress":      json.Number(strconv.Itoa(i + 1)),
-			"type":          "shamir",
-			"recovery_seal": false,
-			"initialized":   true,
-			"migration":     false,
+			"sealed":                              true,
+			"t":                                   json.Number("3"),
+			"n":                                   json.Number("5"),
+			"progress":                            json.Number(strconv.Itoa(i + 1)),
+			"type":                                "shamir",
+			"recovery_seal":                       false,
+			"initialized":                         true,
+			"migration":                           false,
+			"ha_enabled":                          false,
+			"is_self":                             false,
+			"leader_address":                      "",
+			"leader_cluster_address":              "",
+			"performance_standby":                 false,
+			"performance_standby_last_remote_wal": json.Number("0"),
+			"last_wal":                            json.Number("0"),
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -233,14 +254,21 @@ func TestSysUnseal_Reset(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected := map[string]interface{}{
-		"sealed":        true,
-		"t":             json.Number("3"),
-		"n":             json.Number("5"),
-		"progress":      json.Number("0"),
-		"type":          "shamir",
-		"recovery_seal": false,
-		"initialized":   true,
-		"migration":     false,
+		"sealed":                              true,
+		"t":                                   json.Number("3"),
+		"n":                                   json.Number("5"),
+		"progress":                            json.Number("0"),
+		"type":                                "shamir",
+		"recovery_seal":                       false,
+		"initialized":                         true,
+		"migration":                           false,
+		"ha_enabled":                          false,
+		"is_self":                             false,
+		"leader_address":                      "",
+		"leader_cluster_address":              "",
+		"performance_standby":                 false,
+		"performance_standby_last_remote_wal": json.Number("0"),
+		"last_wal":                            json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

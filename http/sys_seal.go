@@ -220,35 +220,73 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 
 	progress, nonce := core.SecretProgress()
 
-	respondOk(w, &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  true,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		Migration:    core.IsInSealMigration(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-	})
+	// Fetch the status about HA
+	haEnabled := true
+	isLeader, address, clusterAddr, err := core.Leader()
+	if errwrap.Contains(err, vault.ErrHANotEnabled.Error()) {
+		haEnabled = false
+		err = nil
+	}
+	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
+	// we cannot query for the leader since we are sealed.
+	if errwrap.Contains(err, vault.ErrBarrierSealed.Error()) {
+		haEnabled = true
+		err = nil
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	resp := &SealStatusResponse{
+		Type:                 sealConfig.Type,
+		Initialized:          true,
+		Sealed:               sealed,
+		T:                    sealConfig.SecretThreshold,
+		N:                    sealConfig.SecretShares,
+		Progress:             progress,
+		Nonce:                nonce,
+		Version:              version.GetVersion().VersionNumber(),
+		Migration:            core.IsInSealMigration(),
+		ClusterName:          clusterName,
+		ClusterID:            clusterID,
+		RecoverySeal:         core.SealAccess().RecoveryKeySupported(),
+		HAEnabled:            haEnabled,
+		IsSelf:               isLeader,
+		LeaderAddress:        address,
+		LeaderClusterAddress: clusterAddr,
+		PerfStandby:          core.PerfStandby(),
+	}
+
+	if resp.PerfStandby {
+		resp.PerfStandbyLastRemoteWAL = vault.LastRemoteWAL(core)
+	} else if isLeader || !haEnabled {
+		resp.LastWAL = vault.LastWAL(core)
+	}
+
+	respondOk(w, resp)
 }
 
 type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
+	Type                     string `json:"type"`
+	Initialized              bool   `json:"initialized"`
+	Sealed                   bool   `json:"sealed"`
+	T                        int    `json:"t"`
+	N                        int    `json:"n"`
+	Progress                 int    `json:"progress"`
+	Nonce                    string `json:"nonce"`
+	Version                  string `json:"version"`
+	Migration                bool   `json:"migration"`
+	ClusterName              string `json:"cluster_name,omitempty"`
+	ClusterID                string `json:"cluster_id,omitempty"`
+	RecoverySeal             bool   `json:"recovery_seal"`
+	HAEnabled                bool   `json:"ha_enabled"`
+	IsSelf                   bool   `json:"is_self"`
+	LeaderAddress            string `json:"leader_address"`
+	LeaderClusterAddress     string `json:"leader_cluster_address"`
+	PerfStandby              bool   `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64 `json:"last_wal"`
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it
