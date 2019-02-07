@@ -155,11 +155,7 @@ export default Component.extend({
     toggleShowConfig(value) {
       this.set('showConfig', value);
       if (value === true && this.get('wizard.featureState') === 'idle') {
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          'CONTINUE',
-          this.get('mountModel').get('type')
-        );
+        this.advanceWizard();
       } else {
         this.get('wizard').transitionFeatureMachine(
           this.get('wizard.featureState'),
