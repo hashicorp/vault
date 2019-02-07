@@ -469,7 +469,10 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
 	defaultExtensions := convertMapToStringValue(data.Get("default_extensions").(map[string]interface{}))
-	allowedUserKeyLengths := convertMapToIntValue(data.Get("allowed_user_key_lengths").(map[string]interface{}))
+	allowedUserKeyLengths, err := convertMapToIntValue(data.Get("allowed_user_key_lengths").(map[string]interface{}))
+	if err != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("error processing allowed_user_key_lengths: %s", err.Error()))
+	}
 
 	if ttl != 0 && maxTTL != 0 && ttl > maxTTL {
 		return nil, logical.ErrorResponse(

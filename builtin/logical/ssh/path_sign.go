@@ -414,7 +414,7 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			case ed25519.PublicKey:
 				kstr = "ed25519"
 			default:
-				return fmt.Errorf("your public key type of %s is not allowed", kstr)
+				return fmt.Errorf("public key type of %s is not allowed", kstr)
 			}
 		default:
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
@@ -442,11 +442,11 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			}
 
 			if !pass {
-				return fmt.Errorf("your key is of an invalid size: %v", kbits)
+				return fmt.Errorf("key is of an invalid size: %v", kbits)
 			}
 
 		} else {
-			return fmt.Errorf("your key type of %s is not allowed", kstr)
+			return fmt.Errorf("key type of %s is not allowed", kstr)
 		}
 	}
 	return nil

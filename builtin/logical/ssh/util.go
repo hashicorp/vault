@@ -216,13 +216,21 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 	return result
 }
 
-func convertMapToIntValue(initial map[string]interface{}) map[string]int {
+func convertMapToIntValue(initial map[string]interface{}) (map[string]int, error) {
 	result := map[string]int{}
 	for key, value := range initial {
-		i, _ := value.(json.Number).Int64()
+		v, ok := value.(json.Number)
+		if !ok {
+			return nil, fmt.Errorf("invalid integer value for type (%s): %v", key, value)
+		}
+
+		i, err := v.Int64()
+		if err != nil {
+			return nil, err
+		}
 		result[key] = int(i)
 	}
-	return result
+	return result, nil
 }
 
 // Serve a template processor for custom format inputs

@@ -722,7 +722,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
-					if resp.Data["error"] != "public_key failed to meet the key requirements: your key is of an invalid size: 2048" {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 2048" {
 						return errors.New("a smaller key (2048) was allowed, when the minimum was set for 4096")
 					}
 					return nil
@@ -752,7 +752,7 @@ func TestBackend_AllowedUserKeyLengths(t *testing.T) {
 				},
 				ErrorOk: true,
 				Check: func(resp *logical.Response) error {
-					if resp.Data["error"] != "public_key failed to meet the key requirements: your key is of an invalid size: 4096" {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 4096" {
 						return errors.New("a larger key (4096) was allowed, when the size was set for 2048")
 					}
 					return nil
