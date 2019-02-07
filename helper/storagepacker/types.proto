@@ -29,8 +29,4 @@ message Bucket {
 	map <string, google.protobuf.Any> item_map = 3;
 	// Buckets are the buckets contained within this bucket
 	map <string, Bucket> buckets = 4;
-	// Sharded indicates if the contained buckets are pushed out or not
-	bool sharded = 5;
-	// Size of this bucket in number of bytes
-	uint32 size = 6;
 }

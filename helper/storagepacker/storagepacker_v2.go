@@ -19,18 +19,12 @@ import (
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/physical"
 )
 
 const (
 	defaultBaseBucketBits  = 8
 	defaultBucketShardBits = 4
-	// Larger size of the bucket size adversely affects the performance of the
-	// storage packer. Also, some of the backends impose a maximum size limit
-	// on the objects that gets persisted. For example, Consul imposes 256KB if using transactions
-	// and DynamoDB imposes 400KB. Going forward, if there exists storage
-	// backends that has more constrained limits, this will have to become more
-	// flexible. For now, 240KB seems like a decent value.
-	defaultBucketMaxSize = 240 * 1024
 )
 
 type Config struct {
@@ -49,11 +43,6 @@ type Config struct {
 	// BucketShardBits is the number of bits to use for sub-buckets a bucket
 	// gets sharded into when it reaches the maximum threshold.
 	BucketShardBits int `json:"-"`
-
-	// BucketMaxSize (in bytes) is the maximum allowed size per bucket. When
-	// the size of the bucket reaches a threshold relative to this limit, it
-	// gets sharded into the configured number of pieces incrementally.
-	BucketMaxSize int64 `json:"-"`
 }
 
 // StoragePacker packs many items into abstractions called buckets. The goal
@@ -258,7 +247,12 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 	defer bucket.Unlock()
 
 	if err := s.storeBucket(ctx, bucket); err != nil {
-		return err
+		if strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+			err = s.shardBucket(ctx, bucket)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	s.bucketsCacheLock.Lock()
@@ -266,6 +260,17 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 	s.bucketsCacheLock.Unlock()
 
 	return nil
+}
+
+func (s *StoragePacker) shardBucket(ctx context.Context, bucket *LockedBucket) error {
+	for i := 0; i < 2^s.BucketShardBits; i++ {
+		shardedBucket := &LockedBucket{Bucket: &Bucket{}}
+		bucket.Buckets[fmt.Sprintf("%x", i)] = shardedBucket
+	}
+	cacheKey := hexVal[0 : s.BaseBucketBits/4]
+	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
+	lock.RLock()
+
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
@@ -560,23 +565,12 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 		// constant: the bucket base count, so we know how many to expect at
 		// the base level
 		//
-		// The rest of the values can change; the max size can change based on
-		// e.g. if storage is migrated, so as long as we don't move to a new
-		// location with a smaller value we're fine (and even then we're fine
-		// if we can read it; otherwise storage migration would have failed
-		// anyways). The shard count is recorded in each bucket at the time
-		// it's sharded; if we realize it's more efficient to do some other
-		// value later we can update it and use that going forward for new
-		// shards.
+		// The rest of the values can change
 		config.BaseBucketBits = exist.BaseBucketBits
 	}
 
 	if config.BucketShardBits == 0 {
 		config.BucketShardBits = defaultBucketShardBits
-	}
-
-	if config.BucketMaxSize == 0 {
-		config.BucketMaxSize = defaultBucketMaxSize
 	}
 
 	if config.BaseBucketBits%4 != 0 {
