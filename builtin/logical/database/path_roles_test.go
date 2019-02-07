@@ -50,7 +50,8 @@ func TestBackend_Static_Config(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        // Test static role creation scenarios
+        // Test static role creation scenarios. Uses a map, so there is no guaranteed
+        // ordering, so each case cleans up by deleting the role
         testCases := map[string]struct {
                 account  map[string]interface{}
                 expected map[string]interface{}
@@ -73,6 +74,28 @@ func TestBackend_Static_Config(t *testing.T) {
                         },
                         err: errors.New("rotation_frequency is a required field for static accounts"),
                 },
+                "missing username frequency": {
+                        account: map[string]interface{}{
+                                "rotation_frequency": int64(5400000000000),
+                        },
+                        err: errors.New("username is a required field for static accounts"),
+                },
+                "missing all": {
+                        account: map[string]interface{}{"fill": "stuff"},
+                        err:     errors.New("username is a required field for static accounts"),
+                },
+                "with password": {
+                        account: map[string]interface{}{
+                                "username":           "sa-test",
+                                "rotation_frequency": "5400s",
+                                "password":           "somesecret123!!",
+                        },
+                        expected: map[string]interface{}{
+                                "username":           "sa-test",
+                                "rotation_frequency": int64(5400000000000),
+                                "password":           "somesecret123!!",
+                        },
+                },
         }
 
         for name, tc := range testCases {
@@ -86,12 +109,25 @@ func TestBackend_Static_Config(t *testing.T) {
                                 "static_account":        tc.account,
                         }
 
+                        roleName := "roles/plugin-role-test"
                         req := &logical.Request{
                                 Operation: logical.CreateOperation,
-                                Path:      "roles/plugin-role-test",
+                                Path:      roleName,
                                 Storage:   config.StorageView,
                                 Data:      data,
                         }
+
+                        exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+                                Raw:    data,
+                                Schema: pathRoles(b).Fields,
+                        })
+                        if err != nil {
+                                t.Fatal(err)
+                        }
+                        if exists {
+                                t.Fatal("expected not exists")
+                        }
+
                         resp, err = b.HandleRequest(namespace.RootContext(nil), req)
                         if err != nil || (resp != nil && resp.IsError()) {
                                 if tc.err == nil {
@@ -108,22 +144,11 @@ func TestBackend_Static_Config(t *testing.T) {
                                 t.Fatalf("expected err message: (%s), got (%s), response error: (%s)", tc.err, err, resp.Error())
                         }
 
-                        exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
-                                Raw:    data,
-                                Schema: pathRoles(b).Fields,
-                        })
-                        if err != nil {
-                                t.Fatal(err)
-                        }
-                        if exists {
-                                t.Fatal("expected not exists")
-                        }
-
                         // Read the role
                         data = map[string]interface{}{}
                         req = &logical.Request{
                                 Operation: logical.ReadOperation,
-                                Path:      "roles/plugin-role-test",
+                                Path:      roleName,
                                 Storage:   config.StorageView,
                                 Data:      data,
                         }
@@ -152,7 +177,7 @@ func TestBackend_Static_Config(t *testing.T) {
                         // Delete role for next run
                         req = &logical.Request{
                                 Operation: logical.DeleteOperation,
-                                Path:      "roles/plugin-role-test",
+                                Path:      roleName,
                                 Storage:   config.StorageView,
                         }
                         resp, err = b.HandleRequest(namespace.RootContext(nil), req)
