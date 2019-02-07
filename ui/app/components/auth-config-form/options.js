@@ -5,12 +5,16 @@ import DS from 'ember-data';
 
 export default AuthConfigComponent.extend({
   router: service(),
+  wizard: service(),
   saveModel: task(function*() {
     let data = this.model.config.serialize();
     data.description = this.model.description;
     yield this.model
       .tune(data)
       .then(() => {
+        if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
+          this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+        }
         this.router.transitionTo('vault.cluster.access.methods').followRedirects();
         this.flashMessages.success('The configuration was saved successfully.');
       })

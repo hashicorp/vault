@@ -9,10 +9,14 @@ const AuthConfigBase = Component.extend({
 
   flashMessages: service(),
   router: service(),
+  wizard: service(),
   saveModel: task(function*() {
     yield this.model
       .save()
       .then(() => {
+        if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
+          this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+        }
         this.router.transitionTo('vault.cluster.access.methods').followRedirects();
         this.flashMessages.success('The configuration was saved successfully.');
       })
