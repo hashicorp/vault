@@ -10,6 +10,7 @@ import (
         "github.com/hashicorp/vault/helper/strutil"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
+        "github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -96,21 +97,26 @@ func pathRoles(b *databaseBackend) *framework.Path {
 }
 
 func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
-		if err != nil {
+        return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+                // rn := data.Get("name").(string)
+                // q.Q("pathRoleExistenceCheck:=", rn)
+                role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+                if err != nil {
+                        // q.Q("role does not exist")
                         return false, err
                 }
 
+                // q.Q("role exists:", role != nil)
                 return role != nil, nil
         }
 }
 
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
-		if err != nil {
-			return nil, err
+        return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+                q.Q("name to delete:", data.Get("name"))
+                err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+                if err != nil {
+                        return nil, err
 		}
 
 		return nil, nil
@@ -153,7 +159,9 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
                         sa := make(map[string]interface{})
                         sa["username"] = role.StaticAccount.Username
                         sa["rotation_frequency"] = role.StaticAccount.RotationFrequency.Nanoseconds()
-
+                        if role.StaticAccount.Password != "" {
+                                sa["password"] = role.StaticAccount.Password
+                        }
                         data["static_account"] = sa
                 }
 
@@ -183,10 +191,13 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
 		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
 		if err != nil {
-			return nil, err
-		}
-		if role == nil {
+                        return nil, err
+                }
+                if role == nil {
+                        // q.Q("did not find role for name:", data.Get("name").(string))
                         role = &roleEntry{}
+                } else {
+                        // q.Q("found role for name:", data.Get("name").(string))
                 }
 
                 // DB Attributes
@@ -256,18 +267,23 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                 if len(staticRaw) > 0 {
                         sa = &staticAccount{}
 
-                        sa.Username = staticRaw["username"].(string)
-                        if sa.Username == "" {
-                                return logical.ErrorResponse("username is required for static accounts"), nil
+                        if v, ok := staticRaw["username"].(string); ok {
+                                sa.Username = v
+                        } else {
+                                return logical.ErrorResponse("username is a required field for static accounts"), nil
                         }
 
-                        rfRaw, ok := staticRaw["rotation_frequency"]
-                        if !ok {
+                        if v, ok := staticRaw["rotation_frequency"]; ok {
+                                sa.RotationFrequency, err = parseutil.ParseDurationSecond(v)
+                                if err != nil {
+                                        return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
+                                }
+                        } else {
                                 return logical.ErrorResponse("rotation_frequency is a required field for static accounts"), nil
                         }
-                        sa.RotationFrequency, err = parseutil.ParseDurationSecond(rfRaw)
-                        if err != nil {
-                                return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
+
+                        if p, ok := staticRaw["password"].(string); ok {
+                                sa.Password = p
                         }
                 }
 
