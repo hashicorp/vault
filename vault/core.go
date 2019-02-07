@@ -416,6 +416,10 @@ type Core struct {
 	// Can be toggled atomically to cause the core to never try to become
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
+
+	// loadCaseSensitiveIdentityStore enforces the loading of identity store
+	// artifacts in a case sensitive manner. To be used only in testing.
+	loadCaseSensitiveIdentityStore bool
 }
 
 // CoreConfig is used to parameterize a core

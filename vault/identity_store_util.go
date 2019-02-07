@@ -24,28 +24,35 @@ var (
 	errDuplicateIdentityName = errors.New("duplicate identity name")
 )
 
+func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
+	c.loadCaseSensitiveIdentityStore = caseSensitive
+}
+
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
 		return nil
 	}
 
+	var err error
 	loadFunc := func(context.Context) error {
-		err := c.identityStore.loadEntities(ctx)
+		err = c.identityStore.loadEntities(ctx)
 		if err != nil {
 			return err
 		}
 		return c.identityStore.loadGroups(ctx)
 	}
 
-	// Load everything when memdb is set to operate on lower cased names
-	err := loadFunc(ctx)
-	switch {
-	case err == nil:
-		// If it succeeds, all is well
-		return nil
-	case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
-		return err
+	if !c.loadCaseSensitiveIdentityStore {
+		// Load everything when memdb is set to operate on lower cased names
+		err = loadFunc(ctx)
+		switch {
+		case err == nil:
+			// If it succeeds, all is well
+			return nil
+		case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+			return err
+		}
 	}
 
 	c.identityStore.logger.Warn("enabling case sensitive identity names")
