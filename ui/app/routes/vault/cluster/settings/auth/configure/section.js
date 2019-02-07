@@ -8,7 +8,6 @@ import { getOwner } from '@ember/application';
 
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
-  wizard: service(),
   pathHelp: service('path-help'),
 
   modelType(backendType, section) {
@@ -44,11 +43,6 @@ export default Route.extend(UnloadModelRoute, {
     const backend = this.modelFor('vault.cluster.settings.auth.configure');
     const { section_name: section } = params;
     if (section === 'options') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'EDIT',
-        backend.get('type')
-      );
       return RSVP.hash({
         model: backend,
         section,
@@ -62,11 +56,6 @@ export default Route.extend(UnloadModelRoute, {
     }
     const model = this.store.peekRecord(modelType, backend.id);
     if (model) {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'EDIT',
-        backend.get('type')
-      );
       return RSVP.hash({
         model,
         section,
@@ -75,11 +64,6 @@ export default Route.extend(UnloadModelRoute, {
     return this.store
       .findRecord(modelType, backend.id)
       .then(config => {
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          'EDIT',
-          backend.get('type')
-        );
         config.set('backend', backend);
         return RSVP.hash({
           model: config,
@@ -105,7 +89,7 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   actions: {
-    willTransition() {
+    willTransition(transition) {
       if (this.currentModel.model.constructor.modelName !== 'auth-method') {
         this.unloadModel();
         return true;

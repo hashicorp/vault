@@ -25,7 +25,6 @@ export default AuthConfig.extend({
     if (this.newFields) {
       groups = combineFieldGroups(groups, this.newFields, []);
     }
-
     return fieldToAttrs(this, groups);
   }),
 });

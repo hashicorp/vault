@@ -1,22 +1,30 @@
 import AuthConfigComponent from './config';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
 export default AuthConfigComponent.extend({
+  router: service(),
+  wizard: service(),
   saveModel: task(function*() {
-    const model = this.get('model');
-    let data = model.get('config').serialize();
-    data.description = model.get('description');
-    try {
-      yield model.tune(data);
-    } catch (err) {
-      // AdapterErrors are handled by the error-message component
-      // in the form
-      if (err instanceof DS.AdapterError === false) {
-        throw err;
-      }
-      return;
-    }
-    this.get('flashMessages').success('The configuration options were saved successfully.');
+    let data = this.model.config.serialize();
+    data.description = this.model.description;
+    yield this.model
+      .tune(data)
+      .then(() => {
+        if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
+          this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+        }
+        this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+        this.flashMessages.success('The configuration was saved successfully.');
+      })
+      .catch(err => {
+        // AdapterErrors are handled by the error-message component
+        // in the form
+        if (err instanceof DS.AdapterError === false) {
+          throw err;
+        }
+        return;
+      });
   }),
 });
