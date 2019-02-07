@@ -232,6 +232,7 @@ export default Service.extend(DEFAULTS, {
     // else we want the URL we land on in didTransition in the
     // application route - we'll notify the application route to
     // update the route
+    debugger; // eslint-disable-line
     if (transitionURL) {
       this.set('expectedURL', transitionURL);
       this.set('expectedRouteName', expectedRouteName);

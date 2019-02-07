@@ -1,4 +1,4 @@
-<form {{action "tuneAndRedirect" on="submit"}}>
+<form {{action (perform saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" @noun="auth method" />
     {{message-error model=model}}
