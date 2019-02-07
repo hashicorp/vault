@@ -935,6 +935,107 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	type csrPlan struct {
+		errorOk     bool
+		roleKeyBits int
+		cert        string
+		privKey     crypto.Signer
+	}
+
+	getCsr := func(keyType string, keyBits int, csrTemplate *x509.CertificateRequest) (*pem.Block, crypto.Signer) {
+		var privKey crypto.Signer
+		var ok bool
+		switch keyType {
+		case "rsa":
+			privKey, ok = generatedRSAKeys[keyBits]
+			if !ok {
+				privKey, _ = rsa.GenerateKey(rand.Reader, keyBits)
+				generatedRSAKeys[keyBits] = privKey
+			}
+
+		case "ec":
+			var curve elliptic.Curve
+
+			switch keyBits {
+			case 224:
+				curve = elliptic.P224()
+			case 256:
+				curve = elliptic.P256()
+			case 384:
+				curve = elliptic.P384()
+			case 521:
+				curve = elliptic.P521()
+			}
+
+			privKey, ok = generatedECKeys[keyBits]
+			if !ok {
+				privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
+				generatedECKeys[keyBits] = privKey
+			}
+
+		default:
+			panic("invalid key type: " + keyType)
+		}
+
+		csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privKey)
+		if err != nil {
+			t.Fatalf("Error creating certificate request: %s", err)
+		}
+		block := pem.Block{
+			Type:  "CERTIFICATE REQUEST",
+			Bytes: csr,
+		}
+		return &block, privKey
+	}
+
+	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
+		rsaKeyBits := []int{2048, 4096}
+		ecKeyBits := []int{224, 256, 384, 521}
+		var plan = csrPlan{errorOk: errorOk}
+
+		var testBitSize int
+		switch keyType {
+		case "rsa":
+			plan.roleKeyBits = rsaKeyBits[mathRand.Int()%2]
+			testBitSize = plan.roleKeyBits
+
+			// If we don't expect an error already, randomly choose a
+			// key size and expect an error if it's less than the role
+			// setting
+			if !keybitSizeRandOff && !errorOk {
+				testBitSize = rsaKeyBits[mathRand.Int()%2]
+			}
+
+			if testBitSize < plan.roleKeyBits {
+				plan.errorOk = true
+			}
+
+		case "ec":
+			plan.roleKeyBits = ecKeyBits[mathRand.Int()%4]
+			testBitSize = plan.roleKeyBits
+
+			// If we don't expect an error already, randomly choose a
+			// key size and expect an error if it's less than the role
+			// setting
+			if !keybitSizeRandOff && !errorOk {
+				testBitSize = ecKeyBits[mathRand.Int()%4]
+			}
+
+			if testBitSize < plan.roleKeyBits {
+				plan.errorOk = true
+			}
+
+		default:
+			panic("invalid key type: " + keyType)
+		}
+		t.Logf("roleKeyBits=%d testBitSize=%d errorOk=%v", plan.roleKeyBits, testBitSize, plan.errorOk)
+
+		block, privKey := getCsr(keyType, testBitSize, csrTemplate)
+		plan.cert = strings.TrimSpace(string(pem.EncodeToMemory(block)))
+		plan.privKey = privKey
+		return plan
+	}
+
 	// Common names to test with the various role flags toggled
 	var commonNames struct {
 		Localhost            bool `structs:"localhost"`
@@ -1040,86 +1141,18 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 			validity := roleVals.MaxTTL
 
-			var testBitSize int
-
 			if useCSRs {
-				rsaKeyBits := []int{2048, 4096}
-				ecKeyBits := []int{224, 256, 384, 521}
-
-				var privKey crypto.Signer
-				var ok bool
-				switch roleVals.KeyType {
-				case "rsa":
-					roleVals.KeyBits = rsaKeyBits[mathRand.Int()%2]
-
-					// If we don't expect an error already, randomly choose a
-					// key size and expect an error if it's less than the role
-					// setting
-					testBitSize = roleVals.KeyBits
-					if !keybitSizeRandOff && !issueTestStep.ErrorOk {
-						testBitSize = rsaKeyBits[mathRand.Int()%2]
-					}
-
-					if testBitSize < roleVals.KeyBits {
-						issueTestStep.ErrorOk = true
-					}
-
-					privKey, ok = generatedRSAKeys[testBitSize]
-					if !ok {
-						privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
-						generatedRSAKeys[testBitSize] = privKey
-					}
-
-				case "ec":
-					roleVals.KeyBits = ecKeyBits[mathRand.Int()%4]
-
-					var curve elliptic.Curve
-
-					// If we don't expect an error already, randomly choose a
-					// key size and expect an error if it's less than the role
-					// setting
-					testBitSize = roleVals.KeyBits
-					if !keybitSizeRandOff && !issueTestStep.ErrorOk {
-						testBitSize = ecKeyBits[mathRand.Int()%4]
-					}
-
-					switch testBitSize {
-					case 224:
-						curve = elliptic.P224()
-					case 256:
-						curve = elliptic.P256()
-					case 384:
-						curve = elliptic.P384()
-					case 521:
-						curve = elliptic.P521()
-					}
-
-					if curve.Params().BitSize < roleVals.KeyBits {
-						issueTestStep.ErrorOk = true
-					}
-
-					privKey, ok = generatedECKeys[testBitSize]
-					if !ok {
-						privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
-						generatedECKeys[testBitSize] = privKey
-					}
-				}
 				templ := &x509.CertificateRequest{
 					Subject: pkix.Name{
 						CommonName: issueVals.CommonName,
 					},
 				}
-				csr, err := x509.CreateCertificateRequest(rand.Reader, templ, privKey)
-				if err != nil {
-					t.Fatalf("Error creating certificate request: %s", err)
-				}
-				block := pem.Block{
-					Type:  "CERTIFICATE REQUEST",
-					Bytes: csr,
-				}
-				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+				plan := getRandCsr(roleVals.KeyType, issueTestStep.ErrorOk, templ)
+				issueVals.CSR = plan.cert
+				roleVals.KeyBits = plan.roleKeyBits
+				issueTestStep.ErrorOk = plan.errorOk
 
-				addTests(getCnCheck(issueVals.CommonName, roleVals, privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
 			} else {
 				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
 			}
