@@ -163,9 +163,10 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
                                 sa["password"] = role.StaticAccount.Password
                         }
                         data["static_account"] = sa
+                        q.Q("static account=", sa)
                 }
 
-		return &logical.Response{
+                return &logical.Response{
 			Data: data,
 		}, nil
 	}
