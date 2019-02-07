@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/go-test/deep"
 	"math"
 	"math/big"
 	mathrand "math/rand"
@@ -191,166 +192,58 @@ func TestBackend_URLsCRUD(t *testing.T) {
 
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
-// Uses the RSA CA key
-func TestBackend_RSARoles(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
+func TestBackend_Roles(t *testing.T) {
+	cases := []struct {
+		name      string
+		key, cert *string
+		useCSR    bool
+	}{
+		{"RSA", &rsaCAKey, &rsaCACert, false},
+		{"RSACSR", &rsaCAKey, &rsaCACert, true},
+		{"EC", &ecCAKey, &ecCACert, false},
+		{"ECCSR", &ecCAKey, &ecCACert, true},
 	}
 
-	testCase := logicaltest.TestCase{
-		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
-				Operation: logical.UpdateOperation,
-				Path:      "config/ca",
-				Data: map[string]interface{}{
-					"pem_bundle": strings.Join([]string{rsaCAKey, rsaCACert}, "\n"),
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			initTest.Do(setCerts)
+			defaultLeaseTTLVal := time.Hour * 24
+			maxLeaseTTLVal := time.Hour * 24 * 32
+			b, err := Factory(context.Background(), &logical.BackendConfig{
+				Logger: nil,
+				System: &logical.StaticSystemView{
+					DefaultLeaseTTLVal: defaultLeaseTTLVal,
+					MaxLeaseTTLVal:     maxLeaseTTLVal,
 				},
-			},
-		},
-	}
-
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
-	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
-		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
-		}
-	}
-
-	logicaltest.Test(t, testCase)
-}
-
-// Generates and tests steps that walk through the various possibilities
-// of role flags to ensure that they are properly restricted
-// Uses the RSA CA key
-func TestBackend_RSARoles_CSR(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
-				Operation: logical.UpdateOperation,
-				Path:      "config/ca",
-				Data: map[string]interface{}{
-					"pem_bundle": strings.Join([]string{rsaCAKey, rsaCACert}, "\n"),
+			})
+			if err != nil {
+				t.Fatalf("Unable to create backend: %s", err)
+			}
+			testCase := logicaltest.TestCase{
+				LogicalBackend: b,
+				Steps: []logicaltest.TestStep{
+					logicaltest.TestStep{
+						Operation: logical.UpdateOperation,
+						Path:      "config/ca",
+						Data: map[string]interface{}{
+							"pem_bundle": *tc.key + "\n" + *tc.cert,
+						},
+					},
 				},
-			},
-		},
+			}
+
+			testCase.Steps = append(testCase.Steps, generateRoleSteps(t, tc.useCSR)...)
+			if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
+				for i, v := range testCase.Steps {
+					fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
+				}
+			}
+
+			logicaltest.Test(t, testCase)
+		})
 	}
-
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
-	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
-		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
-		}
-	}
-
-	logicaltest.Test(t, testCase)
-}
-
-// Generates and tests steps that walk through the various possibilities
-// of role flags to ensure that they are properly restricted
-// Uses the EC CA key
-func TestBackend_ECRoles(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
-				Operation: logical.UpdateOperation,
-				Path:      "config/ca",
-				Data: map[string]interface{}{
-					"pem_bundle": strings.Join([]string{ecCAKey, ecCACert}, "\n"),
-				},
-			},
-		},
-	}
-
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
-	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
-		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
-		}
-	}
-
-	logicaltest.Test(t, testCase)
-}
-
-// Generates and tests steps that walk through the various possibilities
-// of role flags to ensure that they are properly restricted
-// Uses the EC CA key
-func TestBackend_ECRoles_CSR(t *testing.T) {
-	initTest.Do(setCerts)
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 32
-	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
-			logicaltest.TestStep{
-				Operation: logical.UpdateOperation,
-				Path:      "config/ca",
-				Data: map[string]interface{}{
-					"pem_bundle": strings.Join([]string{ecCAKey, ecCACert}, "\n"),
-				},
-			},
-		},
-	}
-
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
-	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
-		for i, v := range testCase.Steps {
-			fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
-		}
-	}
-
-	logicaltest.Test(t, testCase)
 }
 
 // Performs some validity checking on the returned bundles
