@@ -355,7 +355,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if strutil.StrListContains(aliasFactors, i.sanitizeName(alias.Name)+alias.MountAccessor) {
 			i.logger.Warn(errDuplicateIdentityName.Error(), "alias_name", alias.Name, "mount_accessor", alias.MountAccessor, "entity_name", entity.Name, "action", "delete one of the duplicate aliases")
-			if !persist && !i.disableLowerCasedNames {
+			if !i.disableLowerCasedNames {
 				return errDuplicateIdentityName
 			}
 		}
@@ -370,23 +370,25 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	// If previous entity is set, update it in MemDB and persist it
-	if previousEntity != nil && persist {
+	if previousEntity != nil {
 		err = i.MemDBUpsertEntityInTxn(txn, previousEntity)
 		if err != nil {
 			return err
 		}
 
-		// Persist the previous entity object
-		marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
-		if err != nil {
-			return err
-		}
-		err = i.entityPacker.PutItem(&storagepacker.Item{
-			ID:      previousEntity.ID,
-			Message: marshaledPreviousEntity,
-		})
-		if err != nil {
-			return err
+		if persist {
+			// Persist the previous entity object
+			marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
+			if err != nil {
+				return err
+			}
+			err = i.entityPacker.PutItem(&storagepacker.Item{
+				ID:      previousEntity.ID,
+				Message: marshaledPreviousEntity,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
