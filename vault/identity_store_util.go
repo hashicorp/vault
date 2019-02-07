@@ -34,9 +34,8 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return nil
 	}
 
-	var err error
 	loadFunc := func(context.Context) error {
-		err = c.identityStore.loadEntities(ctx)
+		err := c.identityStore.loadEntities(ctx)
 		if err != nil {
 			return err
 		}
@@ -45,7 +44,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 
 	if !c.loadCaseSensitiveIdentityStore {
 		// Load everything when memdb is set to operate on lower cased names
-		err = loadFunc(ctx)
+		err := loadFunc(ctx)
 		switch {
 		case err == nil:
 			// If it succeeds, all is well
@@ -63,8 +62,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// Swap the memdb instance by the one which operates on case sensitive
 	// names, hence obviating the need to unload anything that's already
 	// loaded.
-	err = c.identityStore.resetDB(ctx)
-	if err != nil {
+	if err := c.identityStore.resetDB(ctx); err != nil {
 		return err
 	}
 
