@@ -1,10 +1,12 @@
 package consul
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -530,6 +532,80 @@ func TestConsulBackend(t *testing.T) {
 
 	physical.ExerciseBackend(t, b)
 	physical.ExerciseBackend_ListPrefix(t, b)
+}
+
+func TestConsul_TooLarge(t *testing.T) {
+	var token string
+	addr := os.Getenv("CONSUL_HTTP_ADDR")
+	if addr == "" {
+		cid, connURL := prepareTestContainer(t)
+		if cid != "" {
+			defer cleanupTestContainer(t, cid)
+		}
+		addr = connURL
+		token = dockertest.ConsulACLMasterToken
+	}
+
+	conf := api.DefaultConfig()
+	conf.Address = addr
+	conf.Token = token
+	client, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+	defer func() {
+		client.KV().DeleteTree(randPath, nil)
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewConsulBackend(map[string]string{
+		"address":      conf.Address,
+		"path":         randPath,
+		"max_parallel": "256",
+		"token":        conf.Token,
+	}, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	zeros := make([]byte, 600000, 600000)
+	n, err := rand.Read(zeros)
+	if n != 600000 {
+		t.Fatalf("expected 500k zeros, read %d", n)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Put(context.Background(), &physical.Entry{
+		Key:   "foo",
+		Value: zeros,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
+
+	err = b.(physical.Transactional).Transaction(context.Background(), []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   "foo",
+				Value: zeros,
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+		t.Fatalf("expected value too large error, got %v", err)
+	}
 }
 
 func TestConsulHABackend(t *testing.T) {

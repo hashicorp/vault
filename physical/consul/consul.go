@@ -402,6 +402,9 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 
 	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
+		if strings.Contains(err.Error(), "is too large") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
 		return err
 	}
 	if ok && len(resp.Errors) == 0 {
@@ -432,7 +435,13 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	writeOpts = writeOpts.WithContext(ctx)
 
 	_, err := c.kv.Put(pair, writeOpts)
-	return err
+	if err != nil {
+		if strings.Contains(err.Error(), "Value exceeds") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
+		return err
+	}
+	return nil
 }
 
 // Get is used to fetch an entry
