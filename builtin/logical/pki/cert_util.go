@@ -744,22 +744,31 @@ type otherNameRaw struct {
 	Value  asn1.RawValue
 }
 
+type otherNameUtf8 struct {
+	oid   string
+	value string
+}
+
 // ExtractUTF8String returns the UTF8 string contained in the Value, or an error
 // if none is present.
-func (o *otherNameRaw) ExtractUTF8String() (string, error) {
-	svalue := cryptobyte.String(o.Value.Bytes)
+func (oraw *otherNameRaw) extractUTF8String() (*otherNameUtf8, error) {
+	svalue := cryptobyte.String(oraw.Value.Bytes)
 	var outTag cbbasn1.Tag
 	var val cryptobyte.String
 	read := svalue.ReadAnyASN1(&val, &outTag)
 
 	if read && outTag == asn1.TagUTF8String {
-		return string(val), nil
+		return &otherNameUtf8{oid: oraw.TypeID.String(), value: string(val)}, nil
 	}
-	return "", fmt.Errorf("no UTF-8 string found in OtherName")
+	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
 }
 
-func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]string, error) {
-	var ret []string
+func (o otherNameUtf8) String() string {
+	return fmt.Sprintf("%s;%s:%s", o.oid, "UTF-8", o.value)
+}
+
+func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]otherNameUtf8, error) {
+	var ret []otherNameUtf8
 	for _, ext := range exts {
 		if !ext.Id.Equal(oidExtensionSubjectAltName) {
 			continue
@@ -774,11 +783,11 @@ func getOtherSANsFromX509Extensions(exts []pkix.Extension) ([]string, error) {
 			if err != nil {
 				return errwrap.Wrapf("could not parse requested other SAN: {{err}}", err)
 			}
-			val, err := other.ExtractUTF8String()
+			val, err := other.extractUTF8String()
 			if err != nil {
 				return err
 			}
-			ret = append(ret, fmt.Sprintf("%s;%s:%s", other.TypeID.String(), "UTF-8", val))
+			ret = append(ret, *val)
 			return nil
 		})
 		if err != nil {
@@ -959,10 +968,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		otherSANsInput = sans
 	}
 	if data.role.UseCSRSANs && data.csr != nil && len(data.csr.Extensions) > 0 {
-		var err error
-		otherSANsInput, err = getOtherSANsFromX509Extensions(data.csr.Extensions)
+		others, err := getOtherSANsFromX509Extensions(data.csr.Extensions)
 		if err != nil {
 			return errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+		}
+		for _, other := range others {
+			otherSANsInput = append(otherSANsInput, other.String())
 		}
 	}
 	if len(otherSANsInput) > 0 {
