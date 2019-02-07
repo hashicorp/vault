@@ -1351,26 +1351,32 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// IP SAN tests
 	{
-		roleVals.UseCSRSANs = true
-		roleVals.AllowIPSANs = false
-		issueTestStep.ErrorOk = false
+		// TODO it doesn't seem like any of these tests provide a CSR; should we
+		// stop setting UseCSRSANs since it does nothing and creates confusion?
+		// Or should we make some tests that do use CSRs to set IP SANs?
+
+		// IPSANs not allowed and not provided, should not be an error.
+		roleVals.UseCSRSANs, roleVals.AllowIPSANs = true, false
+		issueVals.IPSANs, issueTestStep.ErrorOk = "", false
 		addTests(nil)
 
-		roleVals.UseCSRSANs = false
-		issueVals.IPSANs = "127.0.0.1,::1"
-		issueTestStep.ErrorOk = true
+		// IPSANs not allowed but valid IPSANs provided, should be an error.
+		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, false
+		issueVals.IPSANs, issueTestStep.ErrorOk = "127.0.0.1,::1", true
 		addTests(nil)
 
-		roleVals.AllowIPSANs = true
-		issueTestStep.ErrorOk = false
+		// IPSANs allowed and valid IPSANs provided, should not be an error.
+		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
+		issueVals.IPSANs, issueTestStep.ErrorOk = "127.0.0.1,::1", false
 		addTests(nil)
 
-		issueVals.IPSANs = "foobar"
-		issueTestStep.ErrorOk = true
+		// IPSANs allowed and bogus IPSANs provided, should be an error.
+		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
+		issueVals.IPSANs, issueTestStep.ErrorOk = "foobar", true
 		addTests(nil)
 
-		issueTestStep.ErrorOk = false
-		issueVals.IPSANs = ""
+		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
+		issueVals.IPSANs, issueTestStep.ErrorOk = "", false
 	}
 
 	// Lease tests
