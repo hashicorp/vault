@@ -12,7 +12,19 @@ export default Controller.extend({
           return transition.followRedirects();
         })
         .catch(err => {
-          debugger; // eslint-disable-line
+          throw err;
+        });
+    },
+    tuneModel: function(model) {
+      let data = model.config.serialize();
+      data.description = model.description;
+      return model
+        .tune(data)
+        .then(() => {
+          let transition = this.transitionToRoute('vault.cluster.access.methods');
+          return transition.followRedirects();
+        })
+        .catch(err => {
           throw err;
         });
     },

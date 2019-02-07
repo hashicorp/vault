@@ -1,4 +1,4 @@
-<form {{action (perform saveModel) on="submit"}}>
+<form {{action "tuneAndRedirect" on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" @noun="auth method" />
     {{message-error model=model}}
@@ -7,7 +7,12 @@
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button type="submit" data-test-save-config=true class="button is-primary {{if saveModel.isRunning 'loading'}}" disabled={{saveModel.isRunning}}>
+    <button
+      type="submit"
+      data-test-save-config="true"
+      class="button is-primary {{if saveModel.isRunning "loading"}}"
+      disabled={{saveModel.isRunning}}
+    >
       Update Options
     </button>
   </div>

@@ -11,7 +11,7 @@ const AuthConfigBase = Component.extend({
   saveModel() {},
   actions: {
     saveAndRedirect: function() {
-      this.saveModel(this.model)
+      return this.saveModel(this.model)
         .then(() => {
           this.flashMessages.success('The configuration was saved successfully.');
         })

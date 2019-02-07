@@ -1,5 +1,5 @@
 {{#if (eq model.section "options")}}
-  {{auth-config-form/options model.model}}
+  {{auth-config-form/options model.model tuneModel=(action "tuneModel")}}
 {{else}}
   {{auth-config-form/config model.model saveModel=(action "saveModel")}}
 {{/if}}
