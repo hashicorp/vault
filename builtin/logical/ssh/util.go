@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 
 	log "github.com/hashicorp/go-hclog"
@@ -219,16 +219,11 @@ func convertMapToStringValue(initial map[string]interface{}) map[string]string {
 func convertMapToIntValue(initial map[string]interface{}) (map[string]int, error) {
 	result := map[string]int{}
 	for key, value := range initial {
-		v, ok := value.(json.Number)
-		if !ok {
-			return nil, fmt.Errorf("invalid integer value for type (%s): %v", key, value)
-		}
-
-		i, err := v.Int64()
+		v, err := parseutil.ParseInt(value)
 		if err != nil {
 			return nil, err
 		}
-		result[key] = int(i)
+		result[key] = int(v)
 	}
 	return result, nil
 }
