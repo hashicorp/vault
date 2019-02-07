@@ -73,23 +73,34 @@ export default Component.extend({
   },
 
   prepareForOIDC: task(function*(oidcWindow) {
-    this.waitForClose.perform(oidcWindow);
+    // show the loading animation in the parent
+    this.onLoading(true);
+    // start watching the popup window and the current one
+    this.watchPopup.perform(oidcWindow);
+    this.watchCurrent.perform(oidcWindow);
+    // and then wait for storage event to be fired from the popup
+    // window setting a value in localStorage when the callback route is loaded
     let storageEvent = yield waitForEvent(this.getWindow(), 'storage');
     this.exchangeOIDC.perform(storageEvent, oidcWindow);
   }),
 
-  waitForClose: task(function*(oidcWindow) {
+  watchPopup: task(function*(oidcWindow) {
     while (true) {
       yield timeout(WAIT_TIME);
-      this.onLoading(true);
       if (!oidcWindow || oidcWindow.closed) {
         return this.handleOIDCError(ERROR_WINDOW_CLOSED);
       }
     }
   }),
 
+  watchCurrent: task(function*(oidcWindow) {
+    yield waitForEvent(this.getWindow(), 'beforeunload');
+    oidcWindow.close();
+  }),
+
   closeWindow(oidcWindow) {
-    this.waitForClose.cancelAll();
+    this.watchPopup.cancelAll();
+    this.watchCurrent.cancelAll();
     oidcWindow.close();
   },
 
