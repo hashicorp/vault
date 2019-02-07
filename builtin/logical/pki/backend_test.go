@@ -2118,7 +2118,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // top-level sequence; see
 // https://lapo.it/asn1js/#3046A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374A022060A2B060104018237140204A0140C12322D6465766F7073406C6F63616C686F7374 for an openssl-generated example.
 //
-// The good news is that it's valid to simply copy and paste the PEM ouput from
+// The good news is that it's valid to simply copy and paste the PEM output from
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
@@ -2313,12 +2313,16 @@ func TestBackend_OID_SANs(t *testing.T) {
 	t.Logf("certificate 2 to check:\n%s", certStr)
 
 	// Valid for both
+	oid1, type1, val1 := "1.3.6.1.4.1.311.20.2.3", "utf8", "devops@nope.com"
+	oid2, type2, val2 := "1.3.6.1.4.1.311.20.2.4", "utf-8", "d234e@foobar.com"
+	otherNames := []string{fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
+		fmt.Sprintf("%s;%s:%s", oid2, type2, val2)}
 	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
 		"ttl":         "1h",
-		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:devops@nope.com,1.3.6.1.4.1.311.20.2.4;utf8:d234e@foobar.com",
+		"other_sans":  strings.Join(otherNames, ","),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2336,6 +2340,14 @@ func TestBackend_OID_SANs(t *testing.T) {
 		cert.DNSNames[1] != "bar.foobar.com" ||
 		cert.DNSNames[2] != "foo.foobar.com" {
 		t.Fatalf("unexpected DNS SANs %v", cert.DNSNames)
+	}
+	expectedOtherNames := []otherNameUtf8{{oid1, val1}, {oid2, val2}}
+	foundOtherNames, err := getOtherSANsFromX509Extensions(cert.Extensions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
+		t.Errorf("unexpected otherNames: %v", diff)
 	}
 	t.Logf("certificate 3 to check:\n%s", certStr)
 }
