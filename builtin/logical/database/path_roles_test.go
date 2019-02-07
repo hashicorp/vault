@@ -101,6 +101,7 @@ func TestBackend_Static_Config(t *testing.T) {
         for name, tc := range testCases {
                 t.Run(name, func(t *testing.T) {
                         data := map[string]interface{}{
+                                "name":                  "plugin-role-test",
                                 "db_name":               "plugin-test",
                                 "creation_statements":   testRole,
                                 "revocation_statements": defaultRevocationSQL,
@@ -109,10 +110,9 @@ func TestBackend_Static_Config(t *testing.T) {
                                 "static_account":        tc.account,
                         }
 
-                        roleName := "roles/plugin-role-test"
                         req := &logical.Request{
                                 Operation: logical.CreateOperation,
-                                Path:      roleName,
+                                Path:      "roles/plugin-role-test",
                                 Storage:   config.StorageView,
                                 Data:      data,
                         }
@@ -148,7 +148,7 @@ func TestBackend_Static_Config(t *testing.T) {
                         data = map[string]interface{}{}
                         req = &logical.Request{
                                 Operation: logical.ReadOperation,
-                                Path:      roleName,
+                                Path:      "roles/plugin-role-test",
                                 Storage:   config.StorageView,
                                 Data:      data,
                         }
@@ -177,7 +177,7 @@ func TestBackend_Static_Config(t *testing.T) {
                         // Delete role for next run
                         req = &logical.Request{
                                 Operation: logical.DeleteOperation,
-                                Path:      roleName,
+                                Path:      "roles/plugin-role-test",
                                 Storage:   config.StorageView,
                         }
                         resp, err = b.HandleRequest(namespace.RootContext(nil), req)
