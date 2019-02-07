@@ -7,4 +7,5 @@ export default {
   rolePresent: isPresent('[data-test-role]'),
   login: clickable('[data-test-auth-submit]'),
   loginButtonText: text('[data-test-auth-submit]'),
+  yieldContent: text('[data-test-yield-content]'),
 };

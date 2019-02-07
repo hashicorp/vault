@@ -1,14 +1,29 @@
+import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import Component from './outer-html';
 import { next, later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { or } from '@ember/object/computed';
+
+const WAIT_TIME = Ember.testing ? 0 : 500;
+const ERROR_WINDOW_CLOSED =
+  'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
+const ERROR_MISSING_PARAMS =
+  'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
+
+export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
 
 export default Component.extend({
   store: service(),
   selectedAuthPath: null,
   roleName: null,
   role: null,
+  onRoleName() {},
+  onLoading() {},
+  onError() {},
+  onToken() {},
+  onNamespace() {},
 
   didReceiveAttrs() {
     next(() => {
@@ -36,7 +51,7 @@ export default Component.extend({
     if (!options.nodebounce) {
       this.onRoleName(roleName);
       // debounce
-      yield timeout(500);
+      yield timeout(WAIT_TIME);
     }
     let path = this.selectedAuthPath || 'jwt';
     let id = JSON.stringify([path, roleName]);
@@ -52,6 +67,8 @@ export default Component.extend({
   }).restartable(),
 
   handleOIDCError(err) {
+    this.onLoading(false);
+    this.prepareForOIDC.cancelAll();
     this.onError(err);
   },
 
@@ -63,9 +80,10 @@ export default Component.extend({
 
   waitForClose: task(function*(oidcWindow) {
     while (true) {
-      yield timeout(500);
+      yield timeout(WAIT_TIME);
+      this.onLoading(true);
       if (!oidcWindow || oidcWindow.closed) {
-        return this.handleOIDCError('windowClosed');
+        return this.handleOIDCError(ERROR_WINDOW_CLOSED);
       }
     }
   }),
@@ -79,13 +97,14 @@ export default Component.extend({
     if (event.key !== 'oidcState') {
       return;
     }
+    this.onLoading(true);
     let { namespace, path, state, code } = JSON.parse(event.newValue);
     this.getWindow().localStorage.removeItem('oidcState');
     later(() => {
       this.closeWindow(oidcWindow);
-    }, 500);
+    }, WAIT_TIME);
     if (!path || !state || !code) {
-      return this.handleOIDCError('missingParams');
+      return this.handleOIDCError(ERROR_MISSING_PARAMS);
     }
     let adapter = this.store.adapterFor('auth-method');
     // this might be bad to mutate the outer state
@@ -98,7 +117,7 @@ export default Component.extend({
   }),
 
   actions: {
-    startOIDCAuth(e) {
+    startOIDCAuth(data, e) {
       if (e && e.preventDefault) {
         e.preventDefault();
       }
@@ -114,6 +133,7 @@ export default Component.extend({
         'vaultOIDCWindow',
         `width=500,height=600,resizable,scrollbars=yes,top=${top},left=${left}`
       );
+
       this.prepareForOIDC.perform(oidcWindow);
     },
   },

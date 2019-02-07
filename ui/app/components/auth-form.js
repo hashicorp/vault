@@ -156,7 +156,7 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
-  showLoading: or('authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e) {
     this.set('loading', false);

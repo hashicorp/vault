@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { next, later, run } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 import { resolve } from 'rsvp';
@@ -11,13 +11,20 @@ import sinon from 'sinon';
 import Pretender from 'pretender';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
+import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS } from 'vault/components/auth-jwt';
 
 const component = create(form);
 const fakeWindow = EmberObject.extend(Evented, {
+  init() {
+    this._super(...arguments);
+    this.__proto__.on('close', () => {
+      this.set('closed', true);
+    });
+  },
   screen: computed(function() {
     return {
-      height: 200,
-      width: 200,
+      height: 600,
+      width: 500,
     };
   }),
   localStorage: computed(function() {
@@ -25,30 +32,24 @@ const fakeWindow = EmberObject.extend(Evented, {
       removeItem: sinon.stub(),
     };
   }),
-  open: sinon.stub(),
   closed: false,
+});
+
+fakeWindow.reopen({
+  open() {
+    return fakeWindow.create();
+  },
+
   close() {
-    this.set('closed', true);
+    fakeWindow.prototype.trigger('close');
   },
 });
 
-let response = {
+const OIDC_AUTH_RESPONSE = {
   auth: {
     client_token: 'token',
   },
 };
-
-let adapter = {
-  exchangeOIDC() {
-    return resolve(response);
-  },
-};
-
-const storeStub = Service.extend({
-  adapterFor() {
-    return adapter;
-  },
-});
 
 const routerStub = Service.extend({
   urlFor() {
@@ -57,10 +58,12 @@ const routerStub = Service.extend({
 });
 
 const renderIt = async (context, path) => {
-  let handler = e => {
-    if (e) e.preventDefault();
+  let handler = (data, e) => {
+    if (e && e.preventDefault) e.preventDefault();
   };
-  context.set('window', fakeWindow.create());
+  let fake = fakeWindow.create();
+  sinon.spy(fake, 'open');
+  context.set('window', fake);
   context.set('handler', sinon.spy(handler));
   context.set('roleName', '');
   context.set('selectedAuthPath', path);
@@ -85,8 +88,10 @@ module('Integration | Component | auth jwt', function(hooks) {
 
   hooks.beforeEach(function() {
     this.owner.register('service:router', routerStub);
-    this.owner.register('service:store', storeStub);
     this.server = new Pretender(function() {
+      this.get('/v1/auth/:path/oidc/callback', request => {
+        return [200, { 'Content-Type': 'application/json' }, JSON.stringify(OIDC_AUTH_RESPONSE)];
+      });
       this.post('/v1/auth/:path/oidc/auth_url', request => {
         let body = JSON.parse(request.requestBody);
         if (body.role === 'test') {
@@ -100,6 +105,17 @@ module('Integration | Component | auth jwt', function(hooks) {
             }),
           ];
         }
+        if (body.role === 'okta') {
+          return [
+            200,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+              data: {
+                auth_url: 'http://okta.com',
+              },
+            }),
+          ];
+        }
         return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: ['nope'] })];
       });
     });
@@ -108,14 +124,18 @@ module('Integration | Component | auth jwt', function(hooks) {
   hooks.afterEach(function() {
     this.server.shutdown();
   });
+
+  test('it renders the yield', async function(assert) {
+    await render(hbs`<AuthJwt @onSubmit={{action (mut submit)}}>Hello!</AuthJwt>`);
+    assert.equal(component.yieldContent, 'Hello!', 'yields properly');
+  });
+
   test('jwt: it renders', async function(assert) {
     await renderIt(this);
     assert.ok(component.jwtPresent, 'renders jwt field');
     assert.ok(component.rolePresent, 'renders jwt field');
     assert.equal(this.server.handledRequests.length, 0, 'no requests made when there is no path set');
-
     this.set('selectedAuthPath', 'foo');
-
     await settled();
     assert.equal(
       this.server.handledRequests[0].url,
@@ -124,5 +144,104 @@ module('Integration | Component | auth jwt', function(hooks) {
     );
   });
 
-  test('', async function() {});
+  test('jwt: it calls passed action on login', async function(assert) {
+    await renderIt(this);
+    await component.login();
+    assert.ok(this.handler.calledOnce);
+  });
+
+  test('oidc: test role: it renders', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    assert.notOk(component.jwtPresent, 'does not show jwt input for OIDC type login');
+    assert.equal(component.loginButtonText, 'Sign in with OIDC Provider');
+
+    await component.role('okta');
+    // 1 for initial render, 1 for each time role changed = 3
+    assert.equal(this.server.handledRequests.length, 3, 'fetches the auth_url when the path changes');
+    assert.equal(component.loginButtonText, 'Sign in with Okta', 'recognizes auth methods with certain urls');
+  });
+
+  test('oidc: it calls window.open popup window on login', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+
+    next(() => {
+      run.cancelTimers();
+      let call = this.window.open.getCall(0);
+      assert.deepEqual(
+        call.args,
+        [
+          'http://example.com',
+          'vaultOIDCWindow',
+          'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
+        ],
+        'called with expected args'
+      );
+    });
+  });
+
+  test('oidc: it calls error handler when popup is closed', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+
+    next(async () => {
+      this.window.close();
+      await settled();
+      assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
+    });
+  });
+
+  test('oidc: storage event fires with wrong key', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    next(async () => {
+      run.cancelTimers();
+      this.window.trigger('storage', { key: 'wrongThing' });
+      assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never callse removeItem');
+    });
+  });
+
+  test('oidc: storage event fires with correct key, wrong params', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    // need next tick here to let ec tasks set up
+    next(async () => {
+      this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
+      await settled();
+      assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
+      assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
+    });
+  });
+
+  test('oidc: storage event fires with correct key, correct params', async function(assert) {
+    await renderIt(this);
+    this.set('selectedAuthPath', 'foo');
+    await component.role('test');
+    component.login();
+    // need next tick here to let ec tasks set up
+    next(async () => {
+      this.window.trigger('storage', {
+        key: 'oidcState',
+        newValue: JSON.stringify({
+          path: 'foo',
+          state: 'state',
+          code: 'code',
+        }),
+      });
+      await settled();
+      assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
+      assert.equal(this.token, 'token', 'calls onToken with token');
+      assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
+    });
+  });
 });

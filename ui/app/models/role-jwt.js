@@ -13,6 +13,9 @@ const DOMAIN_STRINGS = {
 };
 
 const PROVIDER_WITH_LOGO = ['GitLab', 'Google', 'Auth0'];
+
+export { DOMAIN_STRINGS, PROVIDER_WITH_LOGO };
+
 export default DS.Model.extend({
   authUrl: attr('string'),
 
