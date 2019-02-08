@@ -123,6 +123,9 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, err
 		}
+		if !dbName.Valid {
+			continue
+		}
 		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName.String, username, username))
 	}
 

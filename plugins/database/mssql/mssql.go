@@ -271,6 +271,9 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 		if err != nil {
 			return err
 		}
+		if !dbName.Valid {
+			continue
+		}
 		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName.String, username, username))
 	}
 
