@@ -265,6 +265,23 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, nil, errors.New("cannot access root path in unauthenticated request")
 	}
 
+	// At this point we won't be forwarding a raw request; we should delete
+	// authorization headers as appropriate
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		delete(req.Headers, consts.AuthHeaderName)
+	case logical.ClientTokenFromAuthzHeader:
+		if headers, ok := req.Headers["Authorization"]; ok {
+			for i, v := range headers {
+				if !strings.HasPrefix(v, "Bearer ") {
+					continue
+				}
+				headers = append(headers[:i], headers[i+1:]...)
+				break
+			}
+		}
+	}
+
 	// When we receive a write of either type, rather than require clients to
 	// PUT/POST and trust the operation, we ask the backend to give us the real
 	// skinny -- if the backend implements an existence check, it can tell us
