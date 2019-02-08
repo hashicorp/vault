@@ -65,12 +65,17 @@ type StoragePackerV2 struct {
 
 	queueMode     uint32
 	queuedBuckets sync.Map
+
+	// disableSharding is used for tests
+	disableSharding bool
+
+	prewarmCache sync.Once
 }
 
 // LockedBucket embeds a bucket and its corresponding lock to ensure thread
 // safety
 type LockedBucket struct {
-	sync.RWMutex
+	*locksutil.LockEntry
 	*Bucket
 }
 
@@ -89,26 +94,10 @@ func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
 		return bucketRaw.(*LockedBucket).Key
 	}
 
-	// If we have existing buckets we'd have parsed them in on startup
-	// (assuming that all users load all entries on startup), so this is a
-	// fresh storagepacker, so we use the root bits to return a proper number
-	// of chars. But first do that, lock, and try again to ensure nothing
-	// changed without holding a lock.
-	cacheKey := hexVal[0 : s.BaseBucketBits/4]
-	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
-	lock.RLock()
-
-	s.bucketsCacheLock.RLock()
-	_, bucketRaw, found = s.bucketsCache.LongestPrefix(hexVal)
-	s.bucketsCacheLock.RUnlock()
-
-	lock.RUnlock()
-
-	if found {
-		return bucketRaw.(*LockedBucket).Key
-	}
-
-	return cacheKey
+	// If we have existing buckets we'd have parsed them in on startup so this
+	// is a fresh storagepacker, so we use the root bits to return a proper
+	// number of chars.
+	return hexVal[0 : s.BaseBucketBits/4]
 }
 
 func (s *StoragePackerV2) BucketKeyHashByItemID(itemID string) string {
@@ -120,26 +109,47 @@ func (s *StoragePackerV2) GetCacheKey(key string) string {
 }
 
 func (s *StoragePackerV2) BucketKeys(ctx context.Context) ([]string, error) {
-	keys := map[string]struct{}{}
-	diskBuckets, err := logical.CollectKeys(ctx, s.BucketStorageView)
-	if err != nil {
-		return nil, err
-	}
-	for _, bucket := range diskBuckets {
-		keys[bucket] = struct{}{}
+	var retErr error
+	s.prewarmCache.Do(func() {
+		diskBuckets, err := logical.CollectKeys(ctx, s.BucketStorageView)
+		if err != nil {
+			retErr = err
+			return
+		}
+		for _, key := range diskBuckets {
+			// Read from the underlying view
+			storageEntry, err := s.BucketStorageView.Get(ctx, key)
+			if err != nil {
+				retErr = errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
+				return
+			}
+			if storageEntry == nil {
+				retErr = fmt.Errorf("no data found at bucket %s", key)
+				return
+			}
+
+			bucket, err := s.DecodeBucket(storageEntry)
+			if err != nil {
+				retErr = err
+				return
+			}
+
+			s.bucketsCacheLock.Lock()
+			s.bucketsCache.Insert(s.GetCacheKey(bucket.Key), bucket)
+			s.bucketsCacheLock.Unlock()
+		}
+	})
+	if retErr != nil {
+		return nil, retErr
 	}
 
+	ret := make([]string, 0, 256)
 	s.bucketsCacheLock.RLock()
 	s.bucketsCache.Walk(func(s string, _ interface{}) bool {
-		keys[s] = struct{}{}
+		ret = append(ret, s)
 		return false
 	})
 	s.bucketsCacheLock.RUnlock()
-
-	ret := make([]string, 0, len(keys))
-	for k := range keys {
-		ret = append(ret, k)
-	}
 
 	return ret, nil
 }
@@ -219,8 +229,11 @@ func (s *StoragePackerV2) DecodeBucket(storageEntry *logical.StorageEntry) (*Loc
 		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
 	}
 
+	cacheKey := s.GetCacheKey(storageEntry.Key)
+	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
 	lb := &LockedBucket{
-		Bucket: &bucket,
+		LockEntry: lock,
+		Bucket:    &bucket,
 	}
 	lb.Key = storageEntry.Key
 
@@ -239,16 +252,12 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 
 	cacheKey := s.GetCacheKey(bucket.Key)
 
-	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
-	lock.Lock()
-	defer lock.Unlock()
-
 	bucket.Lock()
 	defer bucket.Unlock()
 
 	if err := s.storeBucket(ctx, bucket); err != nil {
-		if strings.Contains(err.Error(), physical.ErrValueTooLarge) {
-			err = s.shardBucket(ctx, bucket)
+		if strings.Contains(err.Error(), physical.ErrValueTooLarge) && !s.disableSharding {
+			err = s.shardBucket(ctx, bucket, cacheKey)
 		}
 		if err != nil {
 			return err
@@ -262,15 +271,91 @@ func (s *StoragePackerV2) PutBucket(ctx context.Context, bucket *LockedBucket) e
 	return nil
 }
 
-func (s *StoragePacker) shardBucket(ctx context.Context, bucket *LockedBucket) error {
+func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket, cacheKey string) error {
+	// Create the shards and lock them
+	locks := make(map[*locksutil.LockEntry]struct{}, 2^s.BucketShardBits)
+	shards := make(map[string]*LockedBucket, 2^s.BucketShardBits)
 	for i := 0; i < 2^s.BucketShardBits; i++ {
-		shardedBucket := &LockedBucket{Bucket: &Bucket{}}
-		bucket.Buckets[fmt.Sprintf("%x", i)] = shardedBucket
+		shardKey := fmt.Sprintf("%x", i)
+		lock := locksutil.LockForKey(s.storageLocks, cacheKey+shardKey)
+		shardedBucket := &LockedBucket{
+			LockEntry: lock,
+			Bucket: &Bucket{
+				Key: fmt.Sprintf("%s/%s", bucket.Key, shardKey),
+			},
+		}
+		shards[shardKey] = shardedBucket
+		// If it was equal we'd be locked already
+		if lock != bucket.LockEntry {
+			// Don't try to lock the same lock twice in case it hashes that way
+			if _, ok := locks[lock]; !ok {
+				lock.Lock()
+				defer lock.Unlock()
+				locks[lock] = struct{}{}
+			}
+		}
 	}
-	cacheKey := hexVal[0 : s.BaseBucketBits/4]
-	lock := locksutil.LockForKey(s.storageLocks, cacheKey)
-	lock.RLock()
 
+	parentPrefix := s.GetCacheKey(bucket.Key)
+	// Resilver the items
+	for k, v := range bucket.ItemMap {
+		itemKey := strings.TrimPrefix(k, parentPrefix)[0 : s.BucketShardBits/4]
+		// Sanity check
+		childBucket, ok := shards[itemKey]
+		if !ok {
+			// We didn't complete sharding so don't make other parts of the
+			// code think that it completed
+			s.Logger.Error("failed to find sharded storagepacker bucket", "bucket_key", bucket.Key, "item_key", itemKey)
+			return errors.New("failed to shard storagepacker bucket")
+		}
+		childBucket.ItemMap[k] = v
+	}
+
+	// Ensure we can write all of these buckets. Create a cleanup function if not.
+	retErr := new(multierror.Error)
+	cleanupStorage := func() {
+		for _, v := range shards {
+			if err := s.BucketStorageView.Delete(ctx, v.Key); err != nil {
+				retErr = multierror.Append(retErr, err)
+				// Don't exit out, clean up as much as possible
+			}
+		}
+	}
+	for _, v := range shards {
+		if err := s.storeBucket(ctx, v); err != nil {
+			retErr = multierror.Append(retErr, err)
+			cleanupStorage()
+			return retErr
+		}
+	}
+
+	cleanupCache := func() {
+		for _, v := range shards {
+			s.bucketsCache.Delete(s.GetCacheKey(v.Key))
+		}
+	}
+	// Add to the cache. It's not too late to back out, via the cleanup cache
+	// function. We hold the lock while storing the updated original bucket so
+	// that nobody accesses it in an inconsistent state.
+	s.bucketsCacheLock.Lock()
+	{
+		for _, v := range shards {
+			s.bucketsCache.Insert(s.GetCacheKey(v.Key), v)
+		}
+
+		// Finally, update the original and persist
+		origBucketItemMap := bucket.ItemMap
+		bucket.ItemMap = nil
+		if err := s.storeBucket(ctx, bucket); err != nil {
+			retErr = multierror.Append(retErr, err)
+			bucket.ItemMap = origBucketItemMap
+			cleanupStorage()
+			cleanupCache()
+		}
+	}
+	s.bucketsCacheLock.Unlock()
+
+	return retErr.ErrorOrNil()
 }
 
 // storeBucket actually stores the bucket. It expects that it's already locked.
@@ -393,9 +478,6 @@ func (s *StoragePackerV2) DeleteItem(ctx context.Context, itemID string) error {
 		s.bucketsCacheLock.Unlock()
 	}
 
-	bucket.Lock()
-	defer bucket.Unlock()
-
 	if len(bucket.ItemMap) == 0 {
 		return nil
 	}
@@ -451,20 +533,15 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 		s.bucketsCacheLock.Unlock()
 	}
 
-	bucket.RLock()
-
 	if len(bucket.ItemMap) == 0 {
-		bucket.RUnlock()
 		return nil, nil
 	}
 
 	item, ok := bucket.ItemMap[itemID]
 	if !ok {
-		bucket.RUnlock()
 		return nil, nil
 	}
 
-	bucket.RUnlock()
 	return &Item{
 		ID:      itemID,
 		Message: item,
@@ -521,9 +598,6 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 		s.bucketsCache.Insert(cacheKey, bucket)
 		s.bucketsCacheLock.Unlock()
 	}
-
-	bucket.Lock()
-	defer bucket.Unlock()
 
 	if err := bucket.upsert(item); err != nil {
 		return errwrap.Wrapf("failed to update entry in packed storage entry: {{err}}", err)
@@ -603,6 +677,11 @@ func NewStoragePackerV2(ctx context.Context, config *Config) (StoragePacker, err
 		Config:       config,
 		bucketsCache: radix.New(),
 		storageLocks: locksutil.CreateLocks(),
+	}
+
+	// Prewarm the cache
+	if _, err := packer.BucketKeys(ctx); err != nil {
+		return nil, errwrap.Wrapf("error preloading storagepacker cache: {{err}}", err)
 	}
 
 	return packer, nil

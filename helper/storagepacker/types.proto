@@ -27,6 +27,4 @@ message Bucket {
 	repeated Item items = 2;
 	// ItemMap stores a mapping of item ID to message. Used by v2.
 	map <string, google.protobuf.Any> item_map = 3;
-	// Buckets are the buckets contained within this bucket
-	map <string, Bucket> buckets = 4;
 }
