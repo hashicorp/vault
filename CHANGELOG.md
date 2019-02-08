@@ -38,6 +38,7 @@ BUG FIXES:
  * core: Fix a rare case where a standby whose connection is entirely torn down
    to the active node, then reconnects to the same active node, may not
    successfully resume operation [GH-6167]
+ * identity: Persist merged entities only on the primary [GH-6075]
  * replication: Fix a potential race when a token is created and then used with
    a performance standby very quickly, before an associated entity has been
    replicated. If the entity is not found in this scenario, the request will
