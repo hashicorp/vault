@@ -652,6 +652,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
+	isPerfSecondaryOrStandby := i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -705,7 +706,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return nil, err
 		}
 
-		if persist && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+		if persist && !isPerfSecondaryOrStandby {
 			// Delete the entity which we are merging from in storage
 			err = i.entityPacker.DeleteItem(fromEntity.ID)
 			if err != nil {
@@ -720,7 +721,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return nil, err
 	}
 
-	if persist && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
 		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
 		if err != nil {
