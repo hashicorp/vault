@@ -340,14 +340,6 @@ func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) 
 	return r.matchingStorage(ctx, path, false)
 }
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
-	re := r.getRouteEntry(ctx, path, apiPath)
-	return re.storageView
-}
-func (r *Router) MatchingStorageAndMountByApiPath(ctx context.Context, path string) (logical.Storage, *MountEntry) {
-	re := r.getRouteEntry(ctx, path, true)
-	return re.storageView, re.mountEntry
-}
-func (r *Router) getRouteEntry(ctx context.Context, path string, apiPath bool) *routeEntry {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil
@@ -366,7 +358,7 @@ func (r *Router) getRouteEntry(ctx context.Context, path string, apiPath bool) *
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry)
+	return raw.(*routeEntry).storageView
 }
 
 // MatchingMountEntry returns the MountEntry used for a path
@@ -481,6 +473,11 @@ func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) 
 	return resp, ok, exists, err
 }
 
+// routeCommon executes a request on the router or, if existenceCheck is true,
+// tests whether the path exists or not.  The bool return values only have
+// meaning when existenceCheck is true.  The first bool indicates whether an
+// existence check function was found for the backend; the second indicates
+// whether, if an existence check function was found, the item exists or not.
 func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {

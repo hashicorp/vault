@@ -2754,11 +2754,11 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 // hasMountAccess returns true if path has a non-deny capability in acl,
 // or if there exist any non-deny capability beneath that path in acl.
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
-	return hasNonDenyCapability(ctx, acl, path) || containsNonDenyCapability(ctx, acl, path)
+	return hasAccess(ctx, acl, path) || hasAccessChildren(ctx, acl, path)
 }
 
-// hasNonDenyCapability returns true if path has a non-deny capability in acl.
-func hasNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
+// hasAccess returns true if path has a non-deny capability in acl.
+func hasAccess(ctx context.Context, acl *ACL, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return false
@@ -2781,9 +2781,9 @@ func hasNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
 	return res.CapabilitiesBitmap > 0
 }
 
-// containsNonDenyCapability returns true if there exist any non-deny capability
+// hasAccessChildren returns true if there exist any non-deny capability
 // beneath that path in acl.
-func containsNonDenyCapability(ctx context.Context, acl *ACL, path string) bool {
+func hasAccessChildren(ctx context.Context, acl *ACL, path string) bool {
 	var aclCapabilitiesGiven bool
 	walkFn := func(s string, v interface{}) bool {
 		if v == nil {
@@ -3096,22 +3096,21 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	storage, mountEntry := b.Core.router.MatchingStorageAndMountByApiPath(ctx, path)
-	if storage == nil {
-		// Return a permission denied error here so this path cannot be used to
-		// brute force a list of mounts.
-		return errResp, logical.ErrPermissionDenied
-	}
-
-	relpath := strings.TrimPrefix(path, mountEntry.Path)
-	unfiltered, err := storage.List(ctx, relpath)
+	newreq := *req
+	newreq.Path = path
+	resp, _, _, err := b.Core.router.routeCommon(ctx, &newreq, false)
 	if err != nil {
 		return nil, err
 	}
 
+	keys, ok := resp.Data["keys"]
+	if !ok {
+		return logical.ListResponse(nil), nil
+	}
+
+	unfiltered := keys.([]string)
+
 	// Return early if we have list access to the path.
-	newreq := *req
-	newreq.Path = path
 	if acl.AllowOperation(ctx, &newreq, false).Allowed {
 		return logical.ListResponse(unfiltered), nil
 	}
@@ -3120,8 +3119,7 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 	for _, key := range unfiltered {
 		isSubTree := strings.HasSuffix(key, "/")
 		fullPath := ns.Path + filepath.Join(path, key)
-		hasNonDeny := hasNonDenyCapability(ctx, acl, fullPath)
-		if hasNonDeny || (isSubTree && containsNonDenyCapability(ctx, acl, fullPath)) {
+		if hasAccess(ctx, acl, fullPath) || (isSubTree && hasAccessChildren(ctx, acl, fullPath)) {
 			filtered = append(filtered, key)
 		}
 	}

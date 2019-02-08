@@ -2631,7 +2631,7 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	checkFunc(t, token, filteredPath+"secret", []string{"foo/", "bar/", "qux/"})
 }
 
-func BenchmarkHasNonDenyCapability(b *testing.B) {
+func BenchmarkHasAccess(b *testing.B) {
 	b.ReportAllocs()
 	ns := namespace.RootNamespace
 	policy, err := ParseACLPolicy(ns, `
@@ -2651,7 +2651,7 @@ path "foo/bar" {
 	}
 
 	for i := 0; i < b.N; i++ {
-		hasNonDenyCapability(ctx, acl, "/foo/bar")
+		hasAccess(ctx, acl, "/foo/bar")
 	}
 }
 
