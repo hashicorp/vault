@@ -56,7 +56,7 @@ export default Component.extend({
     let id = JSON.stringify([path, roleName]);
     let role = null;
     try {
-      role = yield this.store.findRecord('role-jwt', id);
+      role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
     } catch (e) {
       if (!e.httpStatus || e.httpStatus !== 400) {
         throw e;
@@ -108,8 +108,12 @@ export default Component.extend({
       return;
     }
     this.onLoading(true);
+    // get the info from the event fired by the other window and
+    // then remove it from localStorage
     let { namespace, path, state, code } = JSON.parse(event.newValue);
     this.getWindow().localStorage.removeItem('oidcState');
+
+    // defer closing of the window, but continue executing the task
     later(() => {
       this.closeWindow(oidcWindow);
     }, WAIT_TIME);
@@ -117,9 +121,15 @@ export default Component.extend({
       return this.handleOIDCError(ERROR_MISSING_PARAMS);
     }
     let adapter = this.store.adapterFor('auth-method');
-    // this might be bad to mutate the outer state
     this.onNamespace(namespace);
-    let resp = yield adapter.exchangeOIDC(path, state, code);
+    let resp;
+    // do the OIDC exchange, set the token on the parent component
+    // and submit auth form
+    try {
+      resp = yield adapter.exchangeOIDC(path, state, code);
+    } catch (e) {
+      return this.handleOIDCError(e);
+    }
     let token = resp.auth.client_token;
     this.onSelectedAuth('token');
     this.onToken(token);
