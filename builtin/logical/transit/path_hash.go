@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -27,6 +28,7 @@ func (b *backend) pathHash() *framework.Path {
 				Default: "sha2-256",
 				Description: `Algorithm to use (POST body parameter). Valid values are:
 
+* sha1
 * sha2-224
 * sha2-256
 * sha2-384
@@ -78,6 +80,8 @@ func (b *backend) pathHashWrite(ctx context.Context, req *logical.Request, d *fr
 
 	var hf hash.Hash
 	switch algorithm {
+	case "sha1":
+		hf = sha1.New()
 	case "sha2-224":
 		hf = sha256.New224()
 	case "sha2-256":
