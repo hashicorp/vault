@@ -25,25 +25,26 @@ export default Route.extend({
 
   beforeModel() {
     let owner = getOwner(this);
-    let { backend, tab } = this.paramsFor('vault.cluster.secrets.backend');
-    let modelType = this.getModelType(backend, tab);
+    let { secret } = this.paramsFor(this.routeName);
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let secretEngine = this.store.peekRecord('secret-engine', backend);
+    let type = secretEngine && secretEngine.engineType;
+    if (!type || !SUPPORTED_BACKENDS.includes(type)) {
+      return this.transitionTo('vault.cluster.secrets');
+    }
+    if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
+      return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
+    }
+    let modelType = this.getModelType();
     return this.pathHelp.getNewModel(modelType, backend, owner).then(() => {
-      let { secret } = this.paramsFor(this.routeName);
-      let secretEngine = this.store.peekRecord('secret-engine', backend);
-      let type = secretEngine && secretEngine.get('engineType');
-      if (!type || !SUPPORTED_BACKENDS.includes(type)) {
-        return this.transitionTo('vault.cluster.secrets');
-      }
-      if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
-        return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
-      }
       this.store.unloadAll('capabilities');
     });
   },
 
-  getModelType(backend, tab) {
+  getModelType() {
+    let { backend, tab } = this.paramsFor('vault.cluster.secrets.backend');
     let secretEngine = this.store.peekRecord('secret-engine', backend);
-    let type = secretEngine.get('engineType');
+    let type = secretEngine && secretEngine.engineType;
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
@@ -51,8 +52,8 @@ export default Route.extend({
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: secretEngine.get('modelTypeForKV'),
-      generic: secretEngine.get('modelTypeForKV'),
+      kv: secretEngine.modelTypeForKV,
+      generic: secretEngine.modelTypeForKV,
     };
     return types[type];
   },

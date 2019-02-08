@@ -13,22 +13,12 @@ export default Route.extend({
     return this.modelFor('vault.cluster.secrets.backend');
   },
 
-  modelType(action, backend) {
-    if (backend === 'ssh') {
-      return 'ssh-otp-credential';
-    }
-    let types = {
-      sign: 'pki-certificate-sign',
-      issue: 'pki-certificate',
-      signVerbatim: 'pki-certificate',
-    };
-    return types[action];
-  },
-
   beforeModel() {
-    const { action } = this.paramsFor(this.routeName);
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let modelType = this.modelType(action, backend);
+    if (backend != 'ssh') {
+      return;
+    }
+    let modelType = 'ssh-otp-credential';
     let owner = getOwner(this);
     return this.pathHelp.getNewModel(modelType, backend, owner);
   },
