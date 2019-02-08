@@ -1,15 +1,16 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (5.0.7.1)
-      concurrent-ruby (~> 1.0, >= 1.0.2)
-      i18n (>= 0.7, < 2)
+    activesupport (4.2.11)
+      i18n (~> 0.7)
       minitest (~> 5.1)
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
-    addressable (2.6.0)
-      public_suffix (>= 2.0.2, < 4.0)
-    backports (3.11.3)
+    autoprefixer-rails (9.4.7)
+      execjs
+    bootstrap-sass (3.4.0)
+      autoprefixer-rails (>= 5.2.1)
+      sassc (>= 2.0.0)
     builder (3.2.3)
     capybara (2.4.4)
       mime-types (>= 1.16)
@@ -17,7 +18,7 @@ GEM
       rack (>= 1.0.0)
       rack-test (>= 0.5.4)
       xpath (~> 2.0)
-    chunky_png (1.3.10)
+    chunky_png (1.3.11)
     coffee-script (2.4.1)
       coffee-script-source
       execjs
@@ -34,42 +35,13 @@ GEM
       sass (>= 3.3.0, < 3.5)
     compass-import-once (1.0.5)
       sass (>= 3.2, < 3.5)
-    concurrent-ruby (1.1.4)
-    contracts (0.13.0)
-    dato (0.6.18)
-      activesupport (>= 4.2.7)
-      addressable
-      cacert
-      dotenv
-      downloadr
-      faraday (>= 0.9.0)
-      faraday_middleware (>= 0.9.0)
-      fastimage
-      imgix (>= 0.3.1)
-      json_schema
-      listen
-      pusher-client
-      thor
-      toml
-    domain_name (0.5.20180417)
-      unf (>= 0.0.5, < 1.0.0)
-    dotenv (2.1.0)
-    downloadr (0.0.41)
-      addressable (~> 2.3)
-      rest-client (~> 1.7)
     em-websocket (0.5.1)
       eventmachine (>= 0.12.9)
       http_parser.rb (~> 0.6.0)
     erubis (2.7.0)
-    eventmachine (1.2.5)
+    eventmachine (1.2.7)
     execjs (2.7.0)
-    faraday (0.15.4)
-      multipart-post (>= 1.2, < 3)
-    faraday_middleware (0.13.0)
-      faraday (>= 0.7.4, < 1.0)
-    fast_blank (1.0.0)
-    fastimage (2.1.5)
-    ffi (1.10.0)
+    ffi (1.9.25)
     haml (5.0.4)
       temple (>= 0.8.0)
       tilt
@@ -78,10 +50,7 @@ GEM
       uber (~> 0.0.14)
     http_parser.rb (0.6.0)
     i18n (0.7.0)
-    imgix (1.2.2)
-      addressable
     json (2.1.0)
-    json_schema (0.20.1)
     kramdown (1.17.0)
     listen (3.0.8)
       rb-fsevent (~> 0.9, >= 0.9.4)
@@ -129,37 +98,35 @@ GEM
     middleman-syntax (3.0.0)
       middleman-core (>= 3.2)
       rouge (~> 2.0)
-    mime-types (3.1)
+    mime-types (3.2.2)
       mime-types-data (~> 3.2015)
-    mime-types-data (3.2016.0521)
-    mini_portile2 (2.3.0)
+    mime-types-data (3.2018.0812)
+    mini_portile2 (2.4.0)
     minitest (5.11.3)
     multi_json (1.13.1)
-    nokogiri (1.8.2)
-      mini_portile2 (~> 2.3.0)
+    nokogiri (1.10.1)
+      mini_portile2 (~> 2.4.0)
     padrino-helpers (0.12.9)
       i18n (~> 0.6, >= 0.6.7)
       padrino-support (= 0.12.9)
       tilt (>= 1.4.1, < 3)
     padrino-support (0.12.9)
       activesupport (>= 3.1)
-    parallel (1.12.1)
-    parslet (1.8.2)
-    public_suffix (3.0.3)
-    pusher-client (0.6.2)
-      json
-      websocket (~> 1.0)
-    rack (2.0.6)
+    rack (1.6.11)
     rack-livereload (0.3.17)
       rack
-    rack-test (1.0.0)
+    rack-test (1.1.0)
       rack (>= 1.0, < 3)
+    rake (12.3.2)
     rb-fsevent (0.10.3)
     rb-inotify (0.10.0)
       ffi (~> 1.0)
     redcarpet (3.4.0)
     rouge (2.2.1)
     sass (3.4.25)
+    sassc (2.0.0)
+      ffi (~> 1.9.6)
+      rake
     sprockets (2.12.5)
       hike (~> 1.2)
       multi_json (~> 1.0)
@@ -174,9 +141,9 @@ GEM
     thor (0.20.3)
     thread_safe (0.3.6)
     tilt (1.4.1)
-    turbolinks (5.1.0)
-      turbolinks-source (~> 5.1)
-    turbolinks-source (5.1.0)
+    turbolinks (5.2.0)
+      turbolinks-source (~> 5.2)
+    turbolinks-source (5.2.0)
     tzinfo (1.2.5)
       thread_safe (~> 0.1)
     uber (0.0.15)
@@ -194,4 +161,4 @@ DEPENDENCIES
   middleman-hashicorp (= 0.3.34)
 
 BUNDLED WITH
-   1.16.1
+   1.16.5
