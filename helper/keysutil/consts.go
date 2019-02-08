@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"hash"
@@ -9,8 +10,9 @@ import (
 type HashType uint32
 
 const (
-	_                        = iota
-	HashTypeSHA2224 HashType = iota
+	_                     = iota
+	HashTypeSHA1 HashType = iota
+	HashTypeSHA2224
 	HashTypeSHA2256
 	HashTypeSHA2384
 	HashTypeSHA2512
@@ -26,6 +28,7 @@ const (
 
 var (
 	HashTypeMap = map[string]HashType{
+		"sha1":     HashTypeSHA1,
 		"sha2-224": HashTypeSHA2224,
 		"sha2-256": HashTypeSHA2256,
 		"sha2-384": HashTypeSHA2384,
@@ -33,6 +36,7 @@ var (
 	}
 
 	HashFuncMap = map[HashType]func() hash.Hash{
+		HashTypeSHA1:    sha1.New,
 		HashTypeSHA2224: sha256.New224,
 		HashTypeSHA2256: sha256.New,
 		HashTypeSHA2384: sha512.New384,
