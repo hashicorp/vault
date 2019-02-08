@@ -171,7 +171,7 @@ Active Directory, and `bsmith` might be Bob's username in GitHub.
 **`base.hcl`**
 
 ```hcl
-path "secret/training_*" {
+path "secret/data/training_*" {
    capabilities = ["create", "read"]
 }
 ```
@@ -179,7 +179,7 @@ path "secret/training_*" {
 **`test.hcl`**
 
 ```hcl
-path "secret/test" {
+path "secret/data/test" {
    capabilities = [ "create", "read", "update", "delete" ]
 }
 ```
@@ -187,14 +187,14 @@ path "secret/test" {
 **`team-qa.hcl`**
 
 ```hcl
-path "secret/team-qa" {
+path "secret/data/team-qa" {
    capabilities = [ "create", "read", "update", "delete" ]
 }
 ```
 
-~> **NOTE:** If you are running [K/V Secrets Engine v2](/api/secret/kv/kv-v2.html)
-at `secret`, set the policies path accordingly: `secret/data/training_*`,
-`secret/data/test`, and `secret/data/team-qa`.
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the policies path accordingly: `secret/training_*`,
+`secret/test`, and `secret/team-qa`.
 
 Now, you are going to create `bob` and `bsmith` users with appropriate policies
 attached.
@@ -286,7 +286,7 @@ attached.
 
     ```plaintext
     $ vault write identity/entity-alias name="bob" \
-         canonical_id=<entity_id>
+         canonical_id=<entity_id> \
          mount_accessor=<userpass_accessor>
     ```
 
@@ -663,9 +663,12 @@ of the `bob-smith` entity, and the entity has base policy attached.
 Check to see that the bob's token inherited the capabilities.  
 
 ```plaintext
-$ vault token capabilities secret/training_test
+$ vault token capabilities secret/data/training_test
 create, read
 ```
+
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/training_test`** instead.
 
 > The `base` policy grants create and read capabilities on
 `secret/training_*` path; therefore, `bob` is permitted to run create and
@@ -675,10 +678,13 @@ read operations against any path starting with `secret/training_*`.
 What about the `secret/team-qa` path?
 
 ```plaintext
-$ vault token capabilities secret/team-qa
+$ vault token capabilities secret/data/team-qa
 deny
 ```
 ￼
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/team-qa`** instead.
+
 The user `bob` only inherits capability from its associating entity's policy.
 The user can access the `secret/team-qa` path only if he logs in with
 `bsmith` credentials.
@@ -726,8 +732,8 @@ to make sure that you can write secrets in the path.
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"owner": "bob"}' \
-       http://127.0.0.1:8200/v1/secret/test
+       --data '{"data":{"owner": "bob"}}' \
+       http://127.0.0.1:8200/v1/secret/data/test | jq
 ```
 
 
@@ -740,15 +746,18 @@ Check to see that the bob's token inherited the capabilities.
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
          --request POST \
-         --data '{"paths": ["secret/training_test"]}'
+         --data '{"paths": ["secret/data/training_test"]}' \
          http://127.0.0.1:8200/v1/sys/capabilities-self | jq
 {
- "secret/training_test": [
+ "secret/data/training_test": [
    "create",
    "read"
  ],
  ...
 ```
+
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/training_test`** instead.
 
 > The `base` policy grants create and read capabilities on
 `secret/training_*` path; therefore, `bob` is permitted to run create and
@@ -760,15 +769,18 @@ What about the `secret/team-qa` path?
 ```plaintext
 $ curl --header "X-Vault-Token: ..." \
        --request POST \
-       --data '{"paths": ["secret/team-qa"]}'
+       --data '{"paths": ["secret/data/team-qa"]}'
        http://127.0.0.1:8200/v1/sys/capabilities-self | jq
 {
- "secret/team-qa": [
+ "secret/data/team-qa": [
    "deny"
  ],
  ...
 ```
 ￼
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/team-qa`** instead.
+
 The user `bob` only inherits capability from its associating entity's policy.
 The user can access the `secret/team-qa` path only if he logs in with
 `bsmith` credentials.
@@ -788,10 +800,13 @@ member is `bob-smith` entity that you created in [Step 1](#step1).
 The group policy, `team-eng` defines the following: **`team-eng.hcl`**
 
 ```plaintext
-path "secret/team/eng" {
+path "secret/data/team/eng" {
   capabilities = [ "create", "read", "update", "delete"]
 }
 ```
+
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/team/eng`** instead.
 
 #### CLI Command
 
@@ -840,7 +855,7 @@ in [Step 2](#step2) to verify that.
     # API request payload containing stringified policy
     $ tee payload.json <<EOF
     {
-      "policy": "path \"secret/team/eng\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\"]\n }"
+      "policy": "path \"secret/data/team/eng\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\"]\n }"
     }
     EOF
 
@@ -850,6 +865,9 @@ in [Step 2](#step2) to verify that.
            --data @payload-1.json \
            http://127.0.0.1:8200/v1/sys/policy/team-eng
     ```
+
+~> **NOTE:** If you are running [K/V Secrets Engine v1](/api/secret/kv/kv-v1.html)
+at `secret`, set the path to **`secret/team/eng`** instead.
 
 
 1. Create an internal group named, `engineers` and add `bob-smith` entity as a
@@ -952,9 +970,9 @@ exists as well as `training` team within the organization.
 
 ```shell
 # Write a new policy file
-# If you are running KV v2, set the path to "secret/data/education" instead
+# If you are running KV v1, set the path to "secret/education" instead
 $ tee education.hcl <<EOF
-path "secret/education" {
+path "secret/data/education" {
   capabilities = [ "create", "read", "update", "delete", "list" ]
 }
 EOF
@@ -991,10 +1009,10 @@ $ vault write identity/group-alias name="training" \
 
 ```shell
 # API request payload containing stringfied policy
-# If you are running KV v2, set the path to "secret/data/education" instead
+# If you are running KV v1, set the path to "secret/education" instead
 $ tee payload-pol.json <<EOF
 {
-  "policy": "path \"secret/education\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\", \"list\"]\n }"
+  "policy": "path \"secret/data/education\" {\n capabilities = [\"create\", \"read\", \"delete\", \"update\", \"list\"]\n }"
 }
 EOF
 
@@ -1079,10 +1097,10 @@ $ curl --header "X-Vault-Token: ..." \
 
 1. Enter **`education`** in the **Name** field, and enter the following policy
 in the **Policy** text editor, and then click **Create Policy**. (**NOTE:** If
-you are running KV v2, set the path to **`secret/data/education`** instead.)
+you are running KV v1, set the path to **`secret/education`** instead.)
 
     ```plaintext
-    path "secret/education" {
+    path "secret/data/education" {
       capabilities = [ "create", "read", "update", "delete", "list" ]
     }
     ```
