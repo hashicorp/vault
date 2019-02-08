@@ -54,7 +54,7 @@
         </div>
       </div>
     {{/if}}
-  {{#if (eq this.selectedAuthBackend.type "jwt")}}
+  {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
     <AuthJwt
       @onError={{action (mut this.error)}}
       @onLoading={{action (mut this.isLoading)}}
