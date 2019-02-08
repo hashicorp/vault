@@ -185,11 +185,51 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		}
 
 		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
-		if err != nil {
+                if err != nil {
                         return nil, err
                 }
+
+                // createRole is a boolean to indicate if this is a new role creation. This
+                // is used to ensure we do not allow an existing role to be "migrated" to
+                // roel with a static account. If createRole is false and static_account
+                // data is given, return an error
+                var createRole bool
                 if role == nil {
                         role = &roleEntry{}
+                        createRole = true
+                }
+
+                // Static Account information
+                staticRaw := data.Get("static_account").(map[string]interface{})
+                if len(staticRaw) > 0 && !createRole {
+                        return logical.ErrorResponse("cannot change role to a static account"), nil
+                }
+
+                if len(staticRaw) > 0 {
+                        var sa *staticAccount
+                        sa = &staticAccount{}
+
+                        if v, ok := staticRaw["username"].(string); ok {
+                                sa.Username = v
+                        } else {
+                                return logical.ErrorResponse("username is a required field for static accounts"), nil
+                        }
+
+                        if v, ok := staticRaw["rotation_frequency"]; ok {
+                                sa.RotationFrequency, err = parseutil.ParseDurationSecond(v)
+                                if err != nil {
+                                        return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
+                                }
+                        } else {
+                                return logical.ErrorResponse("rotation_frequency is a required field for static accounts"), nil
+                        }
+
+                        if p, ok := staticRaw["password"].(string); ok {
+                                sa.Password = p
+                        }
+                        if sa != nil {
+                                role.StaticAccount = sa
+                        }
                 }
 
                 // DB Attributes
@@ -251,40 +291,14 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			role.Statements.RollbackStatements = ""
 		}
 
-		role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
+                role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 
-                // Static Account information
-                staticRaw := data.Get("static_account").(map[string]interface{})
-                var sa *staticAccount
-                if len(staticRaw) > 0 {
-                        sa = &staticAccount{}
+                // TODO branch out and create static account in Database
 
-                        if v, ok := staticRaw["username"].(string); ok {
-                                sa.Username = v
-                        } else {
-                                return logical.ErrorResponse("username is a required field for static accounts"), nil
-                        }
+                // END create static account
 
-                        if v, ok := staticRaw["rotation_frequency"]; ok {
-                                sa.RotationFrequency, err = parseutil.ParseDurationSecond(v)
-                                if err != nil {
-                                        return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
-                                }
-                        } else {
-                                return logical.ErrorResponse("rotation_frequency is a required field for static accounts"), nil
-                        }
-
-                        if p, ok := staticRaw["password"].(string); ok {
-                                sa.Password = p
-                        }
-                }
-
-                if sa != nil {
-                        role.StaticAccount = sa
-                }
-
-		// Store it
-		entry, err := logical.StorageEntryJSON("role/"+name, role)
+                // Store it
+                entry, err := logical.StorageEntryJSON("role/"+name, role)
 		if err != nil {
 			return nil, err
 		}
