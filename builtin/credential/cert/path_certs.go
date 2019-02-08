@@ -198,7 +198,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 			"allowed_uri_sans":             cert.AllowedURISANs,
 			"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 			"required_extensions":          cert.RequiredExtensions,
-			"bound_cidrs": 					cert.BoundCIDRs,
+			"bound_cidrs":                  cert.BoundCIDRs,
 		},
 	}, nil
 }

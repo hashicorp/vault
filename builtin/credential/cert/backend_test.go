@@ -1225,8 +1225,8 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	readCertReq := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "certs/" + name,
+		Operation:  logical.ReadOperation,
+		Path:       "certs/" + name,
 		Storage:    storage,
 		Connection: &logical.Connection{ConnState: &connState},
 	}
@@ -1236,7 +1236,7 @@ func TestBackend_validCIDR(t *testing.T) {
 
 	if cidrsResult[0].String() != boundCIDRs[0] ||
 		cidrsResult[1].String() != boundCIDRs[1] {
-			t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
+		t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
 	}
 
 	loginReq := &logical.Request{
