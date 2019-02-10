@@ -705,10 +705,6 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
 			req.SetTokenEntry(te)
-			if fromAuthzHeader {
-				// This was a valid token in an authz header
-				r.Header.Del("Authorization")
-			}
 		}
 	}
 
