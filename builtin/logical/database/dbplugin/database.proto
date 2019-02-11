@@ -23,6 +23,16 @@ message CreateUserRequest {
 	google.protobuf.Timestamp expiration = 3;
 }
 
+message SetPasswordForUserRequest {
+        StaticUserConfig static_user_config = 1;
+}
+
+message SetPasswordForUserResponse {
+        string username = 1;
+        string password = 2;
+  bool restored = 3;
+}
+
 message RenewUserRequest {
 	Statements statements = 1;
 	string username = 2;
@@ -59,6 +69,12 @@ message UsernameConfig {
 	string RoleName = 2;
 }
 
+message StaticUserConfig{
+        string Username = 1;
+        string Password = 2;
+  bool Restore = 3;
+}
+
 message InitResponse {
 	bytes config = 1;
 }
@@ -86,6 +102,7 @@ service Database {
 	rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (RotateRootCredentialsResponse);
 	rpc Init(InitRequest) returns (InitResponse);
 	rpc Close(Empty) returns (Empty);
+  rpc SetPasswordForUser(SetPasswordForUserRequest) returns (SetPasswordForUserResponse);
 	
 	rpc Initialize(InitializeRequest) returns (Empty) {
 		option deprecated = true;
