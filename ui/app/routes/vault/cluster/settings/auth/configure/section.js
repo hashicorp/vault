@@ -89,7 +89,7 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   actions: {
-    willTransition(transition) {
+    willTransition() {
       if (this.currentModel.model.constructor.modelName !== 'auth-method') {
         this.unloadModel();
         return true;
