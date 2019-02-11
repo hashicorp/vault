@@ -43,6 +43,14 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+type ClientTokenSource uint32
+
+const (
+	NoClientToken ClientTokenSource = iota
+	ClientTokenFromVaultHeader
+	ClientTokenFromAuthzHeader
+)
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -157,6 +165,10 @@ type Request struct {
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
+
+	// ClientTokenSource tells us where the client token was sourced from, so
+	// we can delete it before sending off to plugins
+	ClientTokenSource ClientTokenSource
 }
 
 // Get returns a data field and guards for nil Data
