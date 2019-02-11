@@ -22,7 +22,7 @@ or "pem_bundle". If "pem_bundle" any private
 key and issuing cert will be appended to the
 certificate pem. Defaults to "pem".`,
 		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
-		DisplayValue: "pem",
+		DisplayValue:  "pem",
 	}
 
 	fields["private_key_format"] = &framework.FieldSchema{
@@ -35,7 +35,6 @@ However, this can be set to "pkcs8" to have the returned
 private key contain base64-encoded pkcs8 or PEM-encoded
 pkcs8 instead. Defaults to "der".`,
 		AllowedValues: []interface{}{"", "der", "pem", "pkcs8"},
-		DisplayValue: "",
 	}
 
 	fields["ip_sans"] = &framework.FieldSchema{
@@ -227,7 +226,7 @@ the key_type.`,
 		Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
 		AllowedValues: []interface{}{"rsa", "ec"},
-		DisplayValue: "rsa",
+		DisplayValue:  "rsa",
 	}
 
 	return fields
