@@ -15,6 +15,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
 		Data:     input.Data,
 		Warnings: input.Warnings,
+		Headers:  input.Headers,
 	}
 
 	if input.Secret != nil {
@@ -47,6 +48,7 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 	logicalResp := &Response{
 		Data:     input.Data,
 		Warnings: input.Warnings,
+		Headers:  input.Headers,
 	}
 
 	if input.LeaseID != "" {
@@ -88,6 +90,7 @@ type HTTPResponse struct {
 	Data          map[string]interface{} `json:"data"`
 	WrapInfo      *HTTPWrapInfo          `json:"wrap_info"`
 	Warnings      []string               `json:"warnings"`
+	Headers       map[string][]string    `json:"-"`
 	Auth          *HTTPAuth              `json:"auth"`
 }
 

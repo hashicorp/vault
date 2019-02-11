@@ -1149,6 +1149,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
 				},
+				"allowed_response_headers": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
+				},
 				"token_type": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
@@ -1438,6 +1442,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"passthrough_request_headers": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+				},
+				"allowed_response_headers": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
 				},
 				"token_type": &framework.FieldSchema{
 					Type:        framework.TypeString,

@@ -24,6 +24,10 @@ var (
 	errDuplicateIdentityName = errors.New("duplicate identity name")
 )
 
+func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
+	c.loadCaseSensitiveIdentityStore = caseSensitive
+}
+
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
 		c.logger.Warn("identity store is not setup, skipping loading")
@@ -38,14 +42,16 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return c.identityStore.loadGroups(ctx)
 	}
 
-	// Load everything when memdb is set to operate on lower cased names
-	err := loadFunc(ctx)
-	switch {
-	case err == nil:
-		// If it succeeds, all is well
-		return nil
-	case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
-		return err
+	if !c.loadCaseSensitiveIdentityStore {
+		// Load everything when memdb is set to operate on lower cased names
+		err := loadFunc(ctx)
+		switch {
+		case err == nil:
+			// If it succeeds, all is well
+			return nil
+		case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+			return err
+		}
 	}
 
 	c.identityStore.logger.Warn("enabling case sensitive identity names")
@@ -56,8 +62,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// Swap the memdb instance by the one which operates on case sensitive
 	// names, hence obviating the need to unload anything that's already
 	// loaded.
-	err = c.identityStore.resetDB(ctx)
-	if err != nil {
+	if err := c.identityStore.resetDB(ctx); err != nil {
 		return err
 	}
 
@@ -334,13 +339,15 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			fallthrough
 		default:
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
-			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
+
+			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true, persist)
 			switch {
 			case respErr != nil:
 				return respErr
 			case intErr != nil:
 				return intErr
 			}
+
 			// The entity and aliases will be loaded into memdb and persisted
 			// as a result of the merge so we are done here
 			return nil
@@ -363,23 +370,25 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	// If previous entity is set, update it in MemDB and persist it
-	if previousEntity != nil && persist {
+	if previousEntity != nil {
 		err = i.MemDBUpsertEntityInTxn(txn, previousEntity)
 		if err != nil {
 			return err
 		}
 
-		// Persist the previous entity object
-		marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
-		if err != nil {
-			return err
-		}
-		err = i.entityPacker.PutItem(&storagepacker.Item{
-			ID:      previousEntity.ID,
-			Message: marshaledPreviousEntity,
-		})
-		if err != nil {
-			return err
+		if persist {
+			// Persist the previous entity object
+			marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
+			if err != nil {
+				return err
+			}
+			err = i.entityPacker.PutItem(&storagepacker.Item{
+				ID:      previousEntity.ID,
+				Message: marshaledPreviousEntity,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 

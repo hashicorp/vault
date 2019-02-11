@@ -38,6 +38,12 @@ var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
 
+type ClusterLeaderParams struct {
+	LeaderUUID         string
+	LeaderRedirectAddr string
+	LeaderClusterAddr  string
+}
+
 type ReplicatedClusters struct {
 	DR          *ReplicatedCluster
 	Performance *ReplicatedCluster

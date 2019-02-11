@@ -5,11 +5,10 @@ package identity
 
 import (
 	fmt "fmt"
-	math "math"
-
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	mfa "github.com/hashicorp/vault/helper/identity/mfa"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
