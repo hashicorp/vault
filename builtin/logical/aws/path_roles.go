@@ -42,7 +42,6 @@ func pathRoles(b *backend) *framework.Path {
 			"credential_type": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: fmt.Sprintf("Type of credential to retrieve. Must be one of %s, %s, or %s", assumedRoleCred, iamUserCred, federationTokenCred),
-				DisplayName: "Credential Type",
 			},
 
 			"role_arns": &framework.FieldSchema{
@@ -64,7 +63,6 @@ iam_user, then it will attach the contents of the policy_document to the IAM
 user generated. When credential_type is assumed_role or federation_token, this
 will be passed in as the Policy parameter to the AssumeRole or
 GetFederationToken API call, acting as a filter on permissions available.`,
-				DisplayName: "Policy Document",
 			},
 
 			"default_sts_ttl": &framework.FieldSchema{

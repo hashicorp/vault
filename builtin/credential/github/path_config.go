@@ -18,7 +18,6 @@ func pathConfig(b *backend) *framework.Path {
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The organization users must be part of",
-				DisplayName: "Organization",
 			},
 
 			"base_url": &framework.FieldSchema{

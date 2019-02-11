@@ -38,9 +38,8 @@ func ConfigFields() map[string]*framework.FieldSchema {
 		},
 
 		"bindpass": {
-			Type:        framework.TypeString,
-			Description: "LDAP password for searching for the user DN (optional)",
-			DisplayName: "Password",
+			Type:             framework.TypeString,
+			Description:      "LDAP password for searching for the user DN (optional)",
 			DisplaySensitive: true,
 		},
 
@@ -57,7 +56,6 @@ func ConfigFields() map[string]*framework.FieldSchema {
 The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
-			DisplayName: "Group Filter",
 		},
 
 		"groupattr": {
@@ -67,7 +65,7 @@ Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}
 in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
-			DisplayName: "Group Attribute",
+			DisplayName:  "Group Attribute",
 			DisplayValue: "cn",
 		},
 
@@ -78,23 +76,22 @@ Default: cn`,
 		},
 
 		"userattr": {
-			Type:        framework.TypeString,
-			Default:     "cn",
-			Description: "Attribute used for users (default: cn)",
-			DisplayName: "User Attribute",
+			Type:         framework.TypeString,
+			Default:      "cn",
+			Description:  "Attribute used for users (default: cn)",
+			DisplayName:  "User Attribute",
 			DisplayValue: "cn",
 		},
 
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
-			DisplayName: "Certificate",
 		},
 
 		"discoverdn": {
-			Type:        framework.TypeBool,
-			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
-			DisplayName: "Discover DN",
+			Type:         framework.TypeBool,
+			Description:  "Use anonymous bind to discover the bind DN of a user (optional)",
+			DisplayName:  "Discover DN",
 			DisplayValue: false,
 		},
 
@@ -131,24 +128,21 @@ Default: cn`,
 		},
 
 		"deny_null_bind": {
-			Type:        framework.TypeBool,
-			Default:     true,
-			Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
-			DisplayName: "Deny Null Bind",
+			Type:         framework.TypeBool,
+			Default:      true,
+			Description:  "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
 			DisplayValue: true,
 		},
 
 		"case_sensitive_names": {
 			Type:        framework.TypeBool,
 			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
-			DisplayName: "Case Sensitive Names",
 		},
 
 		"use_token_groups": {
-			Type:        framework.TypeBool,
-			Default:     false,
-			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
-			DisplayName: "Use Token Groups",
+			Type:         framework.TypeBool,
+			Default:      false,
+			Description:  "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
 			DisplayValue: false,
 		},
 	}

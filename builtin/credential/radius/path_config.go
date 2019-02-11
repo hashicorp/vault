@@ -22,13 +22,11 @@ func pathConfig(b *backend) *framework.Path {
 				Type:         framework.TypeInt,
 				Default:      1812,
 				Description:  "RADIUS server port (default: 1812)",
-				DisplayName:  "Port",
 				DisplayValue: 1812,
 			},
 			"secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Secret shared with the RADIUS server",
-				DisplayName: "Secret",
 			},
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -40,14 +38,12 @@ func pathConfig(b *backend) *framework.Path {
 				Type:         framework.TypeDurationSecond,
 				Default:      10,
 				Description:  "Number of seconds before connect times out (default: 10)",
-				DisplayName:  "Dial Timeout",
 				DisplayValue: 10,
 			},
 			"read_timeout": &framework.FieldSchema{
 				Type:         framework.TypeDurationSecond,
 				Default:      10,
 				Description:  "Number of seconds before response times out (default: 10)",
-				DisplayName:  "Read Timeout",
 				DisplayValue: 10,
 			},
 			"nas_port": &framework.FieldSchema{

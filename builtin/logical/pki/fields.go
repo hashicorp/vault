@@ -21,7 +21,6 @@ Defaults to false (CN is included).`,
 or "pem_bundle". If "pem_bundle" any private
 key and issuing cert will be appended to the
 certificate pem. Defaults to "pem".`,
-		DisplayName: "Format",
 		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
 		DisplayValue: "pem",
 	}
@@ -35,7 +34,6 @@ parameter as either base64-encoded DER or PEM-encoded DER.
 However, this can be set to "pkcs8" to have the returned
 private key contain base64-encoded pkcs8 or PEM-encoded
 pkcs8 instead. Defaults to "der".`,
-		DisplayName: "Private Key Format",
 		AllowedValues: []interface{}{"", "der", "pem", "pkcs8"},
 		DisplayValue: "",
 	}
@@ -81,7 +79,6 @@ request`,
 one, specify the alternative names in the
 alt_names map. If email protection is enabled
 in the role, this may be an email address.`,
-		DisplayName: "Common Name",
 	}
 
 	fields["alt_names"] = &framework.FieldSchema{
@@ -98,7 +95,6 @@ email addresses.`,
 		Description: `The requested serial number, if any. If you want
 more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
-		DisplayName: "Serial Number",
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -134,7 +130,6 @@ one, specify the alternative names in the alt_names
 map. If not specified when signing, the common
 name will be taken from the CSR; other names
 must still be specified in alt_names or ip_sans.`,
-		DisplayName: "Common Name",
 	}
 
 	fields["ttl"] = &framework.FieldSchema{
@@ -154,8 +149,7 @@ generating a CSR for an intermediate CA.`,
 		Type: framework.TypeCommaStringSlice,
 		Description: `If set, OU (OrganizationalUnit) will be set to
 this value.`,
-	DisplayName: "Common Name",
-
+		DisplayName: "OU (Organizational Unit)",
 	}
 
 	fields["organization"] = &framework.FieldSchema{
@@ -203,7 +197,6 @@ this value.`,
 		Description: `The requested serial number, if any. If you want
 more than one, specify alternative names in
 the alt_names map using OID 2.5.4.5.`,
-		DisplayName: "Serial Number",
 	}
 
 	return fields
@@ -226,7 +219,6 @@ the private key!`,
 		Description: `The number of bits to use. You will almost
 certainly want to change this if you adjust
 the key_type.`,
-		DisplayName: "Key Bits",
 	}
 
 	fields["key_type"] = &framework.FieldSchema{
@@ -234,7 +226,6 @@ the key_type.`,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
-		DisplayName: "Key Type",
 		AllowedValues: []interface{}{"rsa", "ec"},
 		DisplayValue: "rsa",
 	}
@@ -249,8 +240,6 @@ func addCAIssueFields(fields map[string]*framework.FieldSchema) map[string]*fram
 		Type:        framework.TypeInt,
 		Default:     -1,
 		Description: "The maximum allowable path length",
-		DisplayName: "Max Path Length",
-		DisplayValue: -1,
 	}
 
 	fields["permitted_dns_domains"] = &framework.FieldSchema{
