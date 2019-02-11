@@ -272,13 +272,14 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		delete(req.Headers, consts.AuthHeaderName)
 	case logical.ClientTokenFromAuthzHeader:
 		if headers, ok := req.Headers["Authorization"]; ok {
-			for i, v := range headers {
-				if !strings.HasPrefix(v, "Bearer ") {
+			retHeaders := make([]string, 0, len(headers))
+			for _, v := range headers {
+				if strings.HasPrefix(v, "Bearer ") {
 					continue
 				}
-				headers = append(headers[:i], headers[i+1:]...)
-				break
+				retHeaders = append(retHeaders, v)
 			}
+			req.Headers["Authorization"] = retHeaders
 		}
 	}
 
