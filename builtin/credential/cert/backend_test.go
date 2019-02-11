@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"crypto/rand"
+	"github.com/hashicorp/go-sockaddr"
 	"net/http"
 
 	"golang.org/x/net/http2"
@@ -26,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 
-	"github.com/hashicorp/go-rootcerts"
+	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -220,7 +221,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Sign the intermediate CSR using /pki
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
-		"csr": intermediateCSR,
+		"csr":                   intermediateCSR,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1200,6 +1201,7 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	name := "web"
+	boundCIDRs := []string{"127.0.0.1", "128.252.0.0/16"}
 
 	addCertReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1211,7 +1213,7 @@ func TestBackend_validCIDR(t *testing.T) {
 			"allowed_names":       "",
 			"required_extensions": "",
 			"lease":               1000,
-			"bound_cidrs":         []string{"127.0.0.1/32", "128.252.0.0/16"},
+			"bound_cidrs":         boundCIDRs,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{ConnState: &connState},
@@ -1220,6 +1222,21 @@ func TestBackend_validCIDR(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), addCertReq)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	readCertReq := &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "certs/" + name,
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
+
+	if cidrsResult[0].String() != boundCIDRs[0] ||
+		cidrsResult[1].String() != boundCIDRs[1] {
+		t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
 	}
 
 	loginReq := &logical.Request{

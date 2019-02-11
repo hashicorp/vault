@@ -16,7 +16,12 @@ export default ApplicationAdapter.extend({
 
   urlForFindRecord(id) {
     let [backend, path, version] = JSON.parse(id);
-    return this._url(backend, path) + `?version=${version}`;
+    let base = this._url(backend, path);
+    return version ? base + `?version=${version}` : base;
+  },
+
+  urlForQueryRecord(id) {
+    return this.urlForFindRecord(id);
   },
 
   findRecord() {
@@ -27,6 +32,17 @@ export default ApplicationAdapter.extend({
         throw errorOrModel;
       }
       return errorOrModel;
+    });
+  },
+
+  queryRecord(id, options) {
+    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then(resp => {
+      if (options.wrapTTL) {
+        return resp;
+      }
+      resp.id = id;
+      resp.backend = backend;
+      return resp;
     });
   },
 

@@ -878,6 +878,8 @@ func TestBackend_roleCrud(t *testing.T) {
 		expected := dbplugin.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+			Rollback:   []string{},
+			Renewal:    []string{},
 		}
 
 		actual := dbplugin.Statements{
@@ -887,8 +889,8 @@ func TestBackend_roleCrud(t *testing.T) {
 			Renewal:    resp.Data["renew_statements"].([]string),
 		}
 
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
+		if diff := deep.Equal(expected, actual); diff != nil {
+			t.Fatal(diff)
 		}
 
 		if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
@@ -946,6 +948,8 @@ func TestBackend_roleCrud(t *testing.T) {
 		expected := dbplugin.Statements{
 			Creation:   []string{strings.TrimSpace(testRole)},
 			Revocation: []string{strings.TrimSpace(defaultRevocationSQL)},
+			Rollback:   []string{},
+			Renewal:    []string{},
 		}
 
 		actual := dbplugin.Statements{
@@ -1029,8 +1033,8 @@ func TestBackend_roleCrud(t *testing.T) {
 			Renewal:    resp.Data["renew_statements"].([]string),
 		}
 
-		if !reflect.DeepEqual(expected, actual) {
-			t.Fatalf("Statements did not match, expected %#v, got %#v", expected, actual)
+		if diff := deep.Equal(expected, actual); diff != nil {
+			t.Fatal(diff)
 		}
 
 		if diff := deep.Equal(resp.Data["db_name"], "plugin-test"); diff != nil {
@@ -1152,8 +1156,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// update connection with glob allowed roles connection
@@ -1250,8 +1254,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// Get creds from allowed role, should work.

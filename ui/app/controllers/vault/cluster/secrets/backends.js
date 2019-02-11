@@ -1,6 +1,7 @@
 import { filterBy } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
+import { task } from 'ember-concurrency';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -25,4 +26,16 @@ export default Controller.extend({
         .sortBy('id');
     }
   ),
+
+  disableEngine: task(function*(engine) {
+    const { engineType, path } = engine;
+    try {
+      yield engine.destroyRecord();
+      this.get('flashMessages').success(`The ${engineType} secrets engine at ${path} has been disabled.`);
+    } catch (err) {
+      this.get('flashMessages').danger(
+        `There was an error disabling the ${engineType} secrets engine at ${path}: ${err.errors.join(' ')}.`
+      );
+    }
+  }).drop(),
 });

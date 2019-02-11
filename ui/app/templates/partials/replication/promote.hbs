@@ -46,6 +46,7 @@
             </label>
           </div>
           <AlertInline
+            @class="has-top"
             @type="warning"
             @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
             promotes the cluster even if certain safety checks fail."
@@ -104,6 +105,7 @@
         </label>
       </div>
       <AlertInline
+        @class="has-top"
         @type="warning"
         @message="Forcing promotion could result in data loss if data isn't fully replicated. Force promotion
           promotes the cluster even if certain safety checks fail."

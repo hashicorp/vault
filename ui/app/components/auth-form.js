@@ -158,6 +158,9 @@ export default Component.extend(DEFAULTS, {
 
   handleError(e) {
     this.set('loading', false);
+    if (!e.errors) {
+      return e;
+    }
     let errors = e.errors.map(error => {
       if (error.detail) {
         return error.detail;

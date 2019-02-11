@@ -15,15 +15,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/patrickmn/go-cache"
+	multierror "github.com/hashicorp/go-multierror"
+	uuid "github.com/hashicorp/go-uuid"
+	cache "github.com/patrickmn/go-cache"
 
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 const (
@@ -104,6 +105,16 @@ func (e *NonFatalError) WrappedErrors() []error {
 
 func (e *NonFatalError) Error() string {
 	return e.Err.Error()
+}
+
+// NewNonFatalError returns a new non-fatal error.
+func NewNonFatalError(err error) *NonFatalError {
+	return &NonFatalError{Err: err}
+}
+
+// IsFatalError returns true if the given error is a non-fatal error.
+func IsFatalError(err error) bool {
+	return !errwrap.ContainsType(err, new(NonFatalError))
 }
 
 // ErrInvalidKey is returned if there is a user-based error with a provided
@@ -327,15 +338,11 @@ type Core struct {
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
-	// Most recent leader UUID. Used to avoid repeatedly JSON parsing the same
-	// values.
-	clusterLeaderUUID string
-	// Most recent leader redirect addr
-	clusterLeaderRedirectAddr string
-	// Most recent leader cluster addr
-	clusterLeaderClusterAddr string
-	// Lock for the cluster leader values
-	clusterLeaderParamsLock sync.RWMutex
+	// Lock for the leader values, ensuring we don't run the parts of Leader()
+	// that change things concurrently
+	leaderParamsLock sync.RWMutex
+	// Current cluster leader values
+	clusterLeaderParams *atomic.Value
 	// Info on cluster members
 	clusterPeerClusterAddrsCache *cache.Cache
 	// Stores whether we currently have a server running
@@ -385,6 +392,10 @@ type Core struct {
 	// Stores the sealunwrapper for downgrade needs
 	sealUnwrapper physical.Backend
 
+	// unsealwithStoredKeysLock is a mutex that prevents multiple processes from
+	// unsealing with stored keys are the same time.
+	unsealWithStoredKeysLock sync.Mutex
+
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
 
@@ -401,6 +412,14 @@ type Core struct {
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
 	allLoggersLock sync.RWMutex
+
+	// Can be toggled atomically to cause the core to never try to become
+	// active, or give up active as soon as it gets it
+	neverBecomeActive *uint32
+
+	// loadCaseSensitiveIdentityStore enforces the loading of identity store
+	// artifacts in a case sensitive manner. To be used only in testing.
+	loadCaseSensitiveIdentityStore bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -466,6 +485,7 @@ type CoreConfig struct {
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
+	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
 }
@@ -574,6 +594,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
+		neverBecomeActive:                new(uint32),
+		clusterLeaderParams:              new(atomic.Value),
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -583,6 +605,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.localClusterCert.Store(([]byte)(nil))
 	c.localClusterParsedCert.Store((*x509.Certificate)(nil))
 	c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
+
+	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 
@@ -1136,16 +1160,10 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr
 	}
-
-	req.SetTokenEntry(te)
 
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
@@ -1641,6 +1659,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	if err := jsonutil.DecodeJSON(pe.Value, barrierConf); err != nil {
 		return nil, nil, errwrap.Wrapf("failed to decode barrier seal configuration at migration check time: {{err}}", err)
 	}
+	err = barrierConf.Validate()
+	if err != nil {
+		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
+	}
+	// In older versions of vault the default seal would not store a type. This
+	// is here to offer backwards compatability for older seal configs.
+	if barrierConf.Type == "" {
+		barrierConf.Type = seal.Shamir
+	}
 
 	var recoveryConf *SealConfig
 	pe, err = c.physical.Get(ctx, recoverySealConfigPlaintextPath)
@@ -1651,6 +1678,15 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		recoveryConf = &SealConfig{}
 		if err := jsonutil.DecodeJSON(pe.Value, recoveryConf); err != nil {
 			return nil, nil, errwrap.Wrapf("failed to decode seal configuration at migration check time: {{err}}", err)
+		}
+		err = recoveryConf.Validate()
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
+		}
+		// In older versions of vault the default seal would not store a type. This
+		// is here to offer backwards compatability for older seal configs.
+		if recoveryConf.Type == "" {
+			recoveryConf.Type = seal.Shamir
 		}
 	}
 

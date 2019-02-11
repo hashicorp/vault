@@ -255,7 +255,7 @@ func generateData() map[string][]byte {
 	for i := 0; i < 500; i++ {
 		segments := make([]string, rand.Intn(8)+1)
 		for j := 0; j < len(segments); j++ {
-			s, _ := base62.Random(6, false)
+			s, _ := base62.Random(6)
 			segments[j] = s
 		}
 		data := make([]byte, 100)

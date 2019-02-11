@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -42,6 +42,11 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	server, ok := conf["server"]
 	if !ok || server == "" {
 		return nil, fmt.Errorf("missing server")
+	}
+
+	port, ok := conf["port"]
+	if !ok {
+		port = ""
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -96,6 +101,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	if password != "" {
 		connectionString += ";password=" + password
+	}
+
+	if port != "" {
+		connectionString += ";port=" + port
 	}
 
 	db, err := sql.Open("mssql", connectionString)

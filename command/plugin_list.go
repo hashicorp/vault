@@ -96,6 +96,10 @@ func (c *PluginListCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error listing available plugins: %s", err))
 		return 2
 	}
+	if resp == nil {
+		c.UI.Error("No response from server when listing plugins")
+		return 2
+	}
 
 	switch Format(c.UI) {
 	case "table":

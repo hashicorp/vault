@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -110,8 +111,8 @@ func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 }
 
 func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		role, err := b.Role(ctx, req.Storage, d.Get("name").(string))
 		if err != nil {
 			return nil, err
 		}
@@ -119,16 +120,30 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 			return nil, nil
 		}
 
+		data := map[string]interface{}{
+			"db_name":               role.DBName,
+			"creation_statements":   role.Statements.Creation,
+			"revocation_statements": role.Statements.Revocation,
+			"rollback_statements":   role.Statements.Rollback,
+			"renew_statements":      role.Statements.Renewal,
+			"default_ttl":           role.DefaultTTL.Seconds(),
+			"max_ttl":               role.MaxTTL.Seconds(),
+		}
+		if len(role.Statements.Creation) == 0 {
+			data["creation_statements"] = []string{}
+		}
+		if len(role.Statements.Revocation) == 0 {
+			data["revocation_statements"] = []string{}
+		}
+		if len(role.Statements.Rollback) == 0 {
+			data["rollback_statements"] = []string{}
+		}
+		if len(role.Statements.Renewal) == 0 {
+			data["renew_statements"] = []string{}
+		}
+
 		return &logical.Response{
-			Data: map[string]interface{}{
-				"db_name":               role.DBName,
-				"creation_statements":   role.Statements.Creation,
-				"revocation_statements": role.Statements.Revocation,
-				"rollback_statements":   role.Statements.Rollback,
-				"renew_statements":      role.Statements.Renewal,
-				"default_ttl":           role.DefaultTTL.Seconds(),
-				"max_ttl":               role.MaxTTL.Seconds(),
-			},
+			Data: data,
 		}, nil
 	}
 }
@@ -217,6 +232,8 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			role.Statements.RenewStatements = ""
 			role.Statements.RollbackStatements = ""
 		}
+
+		role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 
 		// Store it
 		entry, err := logical.StorageEntryJSON("role/"+name, role)

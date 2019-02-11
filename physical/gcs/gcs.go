@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -18,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/physical"
 
 	"cloud.google.com/go/storage"
-	"github.com/armon/go-metrics"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -177,6 +178,8 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
+	md5Array := md5.Sum(entry.Value)
+	w.MD5 = md5Array[:]
 	defer func() {
 		closeErr := w.Close()
 		if closeErr != nil {

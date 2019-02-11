@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -223,12 +223,17 @@ type MountConfig struct {
 	DefaultLeaseTTL           time.Duration         `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL               time.Duration         `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
-	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+
+	// PluginName is the name of the plugin registered in the catalog.
+	//
+	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
+	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -236,12 +241,17 @@ type APIMountConfig struct {
 	DefaultLeaseTTL           string                `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 	MaxLeaseTTL               string                `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 	ForceNoCache              bool                  `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	PluginNameDeprecated      string                `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 	AuditNonHMACRequestKeys   []string              `json:"audit_non_hmac_request_keys,omitempty" structs:"audit_non_hmac_request_keys" mapstructure:"audit_non_hmac_request_keys"`
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
+
+	// PluginName is the name of the plugin registered in the catalog.
+	//
+	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
+	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 // Clone returns a deep copy of the mount entry
@@ -287,6 +297,12 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("passthrough_request_headers")
 	} else {
 		e.synthesizedConfigCache.Store("passthrough_request_headers", e.Config.PassthroughRequestHeaders)
+	}
+
+	if len(e.Config.AllowedResponseHeaders) == 0 {
+		e.synthesizedConfigCache.Delete("allowed_response_headers")
+	} else {
+		e.synthesizedConfigCache.Store("allowed_response_headers", e.Config.AllowedResponseHeaders)
 	}
 }
 
@@ -683,9 +699,16 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 	}
 
 	// Verify exact match of the route
-	match := c.router.MatchingMount(ctx, src)
-	if match == "" || ns.Path+src != match {
+	srcMatch := c.router.MatchingMountEntry(ctx, src)
+	if srcMatch == nil {
 		return fmt.Errorf("no matching mount at %q", src)
+	}
+	if srcMatch.NamespaceID != ns.ID {
+		return fmt.Errorf("source mount in a different namespace than request")
+	}
+
+	if err := verifyNamespace(c, ns, &MountEntry{Path: dst}); err != nil {
+		return err
 	}
 
 	if match := c.router.MatchingMount(ctx, dst); match != "" {
@@ -722,8 +745,9 @@ func (c *Core) remount(ctx context.Context, src, dst string) error {
 
 	c.mountsLock.Lock()
 	var entry *MountEntry
-	for _, entry = range c.mounts.Entries {
-		if entry.Path == src {
+	for _, mountEntry := range c.mounts.Entries {
+		if mountEntry.Path == src && mountEntry.NamespaceID == ns.ID {
+			entry = mountEntry
 			entry.Path = dst
 			entry.Tainted = false
 			break
@@ -941,7 +965,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   path,
 			Value: compressedBytes,
 		}
@@ -1127,7 +1151,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	switch {
 	case entry.Type == "plugin":
-		conf["plugin_name"] = entry.Config.PluginNameDeprecated
+		conf["plugin_name"] = entry.Config.PluginName
 	default:
 		conf["plugin_name"] = t
 	}

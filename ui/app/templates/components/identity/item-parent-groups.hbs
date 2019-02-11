@@ -23,15 +23,7 @@
     {{/linked-block}}
   {{/each}}
 {{else}}
-  <div class="box is-bottomless has-background-white-bis">
-    <div class="columns is-centered">
-      <div class="column is-half has-text-centered">
-        <div class="box is-shadowless has-background-white-bis">
-          <p class="has-text-grey">
-            This group has no parent groups.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <EmptyState
+    @title="This group has no parent groups yet"
+  />
 {{/if}}

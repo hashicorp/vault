@@ -6,15 +6,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-)
-
-var (
-	testMSQLImagePull sync.Once
 )
 
 func TestMSSQL_Initialize(t *testing.T) {
@@ -100,6 +95,7 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 		return
 	}
 	connURL := os.Getenv("MSSQL_URL")
+
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
 		"username":       "sa",

@@ -3,22 +3,26 @@
 
   ul {
     border-color: transparent;
+    min-height: 3rem;
   }
 
   li {
     &:focus {
       box-shadow: none;
     }
-    &.is-active a {
+    &.is-active a,
+    &.is-active .tab {
       border-color: $blue;
       color: $blue;
     }
-    &:first-child a {
+    &:first-child a,
+    &:first-child .tab {
       margin-left: $size-5;
     }
   }
 
-  a {
+  a,
+  .tab {
     color: $grey-dark;
     font-weight: $font-weight-semibold;
     text-decoration: none;

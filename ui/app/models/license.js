@@ -26,4 +26,5 @@ export default DS.Model.extend({
   licenseId: attr('string'),
   startTime: attr('string'),
   text: attr('string'),
+  performanceStandbyCount: attr('number'),
 });

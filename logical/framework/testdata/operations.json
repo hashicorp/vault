@@ -12,7 +12,7 @@
   "paths": {
     "/foo/{id}": {
       "description": "Synopsis",
-      "x-vault-create-supported": true,
+      "x-vault-createSupported": true,
       "x-vault-sudo": true,
       "parameters": [
         {
@@ -29,11 +29,13 @@
           "description": "a header value",
           "in": "header",
           "schema": {
-            "type": "string"
+            "type": "string",
+            "enum": ["a", "b", "c"]
           }
         }
       ],
       "get": {
+        "operationId": "getFooId",
         "tags": ["secrets"],
         "summary": "My Summary",
         "description": "My Description",
@@ -54,6 +56,7 @@
         ]
       },
       "post": {
+        "operationId": "postFooId",
         "tags": ["secrets"],
         "summary": "Update Summary",
         "description": "Update Description",
@@ -69,6 +72,15 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "age": {
+                    "type": "integer",
+                    "description": "the age",
+                    "enum": [1, 2, 3],
+                    "required": true,
+                    "x-vault-displayName": "Age",
+                    "x-vault-displayValue": 7,
+                    "x-vault-displaySensitive": true
                   },
                   "name": {
                     "type": "string",

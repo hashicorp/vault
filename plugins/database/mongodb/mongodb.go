@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"gopkg.in/mgo.v2"
+	mgo "gopkg.in/mgo.v2"
 )
 
 const mongoDBTypeName = "mongodb"
@@ -223,5 +223,5 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
 }

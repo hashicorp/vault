@@ -163,8 +163,8 @@ Configuration:
 	permissions on this service account. 
   
   project=<string>                                
-	Project the service account belongs to. Defaults to credentials 
-	"project_id" if "credentials" specified and this value is not.  
+	Project for the service account who will be authenticating to Vault.
+    Defaults to the credential's "project_id" (if credentials are specified)."
 `
 
 	return strings.TrimSpace(help)

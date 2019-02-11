@@ -286,7 +286,7 @@ attached.
 
     ```plaintext
     $ vault write identity/entity-alias name="bob" \
-         canonical_id=<entity_id>
+         canonical_id=<entity_id> \
          mount_accessor=<userpass_accessor>
     ```
 

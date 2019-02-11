@@ -324,7 +324,7 @@ func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName stri
 	}
 
 	newRoleEntry := upgradeLegacyPolicyEntry(string(legacyEntry.Value))
-	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+	if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 		err = setAwsRole(ctx, s, roleName, newRoleEntry)
 		if err != nil {
 			return nil, err
@@ -429,12 +429,12 @@ type awsRoleEntry struct {
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 	respData := map[string]interface{}{
-		"credential_types": r.CredentialTypes,
-		"policy_arns":      r.PolicyArns,
-		"role_arns":        r.RoleArns,
-		"policy_document":  r.PolicyDocument,
-		"default_sts_ttl":  int64(r.DefaultSTSTTL.Seconds()),
-		"max_sts_ttl":      int64(r.MaxSTSTTL.Seconds()),
+		"credential_type": strings.Join(r.CredentialTypes, ","),
+		"policy_arns":     r.PolicyArns,
+		"role_arns":       r.RoleArns,
+		"policy_document": r.PolicyDocument,
+		"default_sts_ttl": int64(r.DefaultSTSTTL.Seconds()),
+		"max_sts_ttl":     int64(r.MaxSTSTTL.Seconds()),
 	}
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData

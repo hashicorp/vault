@@ -3,6 +3,7 @@ package logical
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -60,6 +61,10 @@ type Response struct {
 
 	// Information for wrapping the response in a cubbyhole
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+
+	// Headers will contain the http headers from the plugin that it wishes to
+	// have as part of the output
+	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
 }
 
 // AddWarning adds a warning into the response's warning list
@@ -100,7 +105,10 @@ func HelpResponse(text string, seeAlso []string, oapiDoc interface{}) *Response 
 }
 
 // ErrorResponse is used to format an error response
-func ErrorResponse(text string) *Response {
+func ErrorResponse(text string, vargs ...interface{}) *Response {
+	if len(vargs) > 0 {
+		text = fmt.Sprintf(text, vargs...)
+	}
 	return &Response{
 		Data: map[string]interface{}{
 			"error": text,

@@ -22,7 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"

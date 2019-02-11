@@ -161,7 +161,7 @@ func (b *azureSecretBackend) pathRoleUpdate(ctx context.Context, req *logical.Re
 
 		err := jsonutil.DecodeJSON([]byte(roles.(string)), &parsedRoles)
 		if err != nil {
-			return logical.ErrorResponse("invalid Azure role definitions"), nil
+			return logical.ErrorResponse(fmt.Sprintf("error parsing Azure roles '%s': %s", roles.(string), err.Error())), nil
 		}
 		role.AzureRoles = parsedRoles
 	}

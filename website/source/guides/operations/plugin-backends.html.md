@@ -61,6 +61,14 @@ Put the plugin in the directory:
 $ mv my-mock-plugin /etc/vault/vault_plugins
 ```
 
+Alternatively, if you wanted a custom version of a plugin built into Vault, such as AppRole:
+
+```sh
+$ cd $GOPATH/src/github.com/hashicorp/vault/builtin/credential/approle/cmd/approle
+$ go build
+$ mv approle /etc/vault/vault_plugins
+```
+
 ## Register in Plugin Catalog
 
 Calculate the SHA256 sum of the compiled plugin binary, and use that to register
@@ -70,10 +78,10 @@ the plugin into Vault's plugin catalog:
 $ shasum -a 256 /etc/vault/vault_plugins/my-mock-plugin
 2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/my-mock-plugin
 
-$ vault write sys/plugins/catalog/my-mock-plugin \
+$ vault write sys/plugins/catalog/secret/my-mock-plugin \
     sha256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 \
     command=my-mock-plugin
-Success! Data written to: sys/plugins/catalog/my-mock-plugin
+Success! Data written to: sys/plugins/catalog/secret/my-mock-plugin
 ```
 
 ## Enable Plugin
@@ -81,7 +89,7 @@ Success! Data written to: sys/plugins/catalog/my-mock-plugin
 Enabling the plugin varies depending on if it's a secrets engine or auth method:
 
 ```sh
-$ vault secrets enable -path=my-secrets-plugin -plugin-name=my-mock-plugin plugin
+$ vault secrets enable -path=my-secrets-plugin my-mock-plugin
 Success! Enabled the my-mock-plugin plugin at: my-secrets-plugin/
 ```
 
@@ -89,7 +97,7 @@ If you try to mount this particular plugin as an auth method instead of a
 secrets engine, you will get an error:
 
 ```sh
-$ vault auth enable -path=my-auth-plugin -plugin-name=my-mock-plugin plugin
+$ vault auth enable -path=my-auth-plugin my-mock-plugin
 # ...
 * cannot mount 'my-mock-plugin' of type 'secret' as an auth method
 ```

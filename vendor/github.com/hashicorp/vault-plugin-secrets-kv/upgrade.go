@@ -28,7 +28,7 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 			time.Sleep(15 * time.Millisecond)
 
 			if atomic.LoadUint32(b.upgrading) == 1 {
-				return logical.ErrorResponse("Uprading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
 			}
 		}
 

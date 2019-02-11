@@ -3,7 +3,7 @@ package vault
 import (
 	"context"
 
-	"github.com/mitchellh/go-testing-interface"
+	testing "github.com/mitchellh/go-testing-interface"
 )
 
 var (
@@ -14,6 +14,7 @@ var (
 type TestSealOpts struct {
 	StoredKeysDisabled   bool
 	RecoveryKeysDisabled bool
+	Secret               []byte
 }
 
 func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
@@ -35,7 +36,7 @@ func testCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealCon
 		t.Fatalf("err: %s", err)
 	}
 	err = core.UnsealWithStoredKeys(context.Background())
-	if err != nil {
+	if err != nil && IsFatalError(err) {
 		t.Fatalf("err: %s", err)
 	}
 	if core.Sealed() {

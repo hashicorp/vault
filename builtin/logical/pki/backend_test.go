@@ -984,7 +984,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			actualDiff := time.Now().Sub(cert.NotBefore)
 			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
 			// These times get truncated, so give a 1 second buffer on each side
-			if certRoleDiff > -1*time.Second && certRoleDiff < 1*time.Second {
+			if certRoleDiff >= -1*time.Second && certRoleDiff <= 1*time.Second {
 				return nil
 			}
 			return fmt.Errorf("validity period out of range diff: %v", certRoleDiff)
@@ -1986,8 +1986,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber: big.NewInt(1234),
-		IsCA:         false,
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
 		BasicConstraintsValid: true,
 	}
 
@@ -2017,8 +2017,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber: big.NewInt(2345),
-		IsCA:         true,
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2600,7 +2600,7 @@ func setCerts() {
 		SerialNumber:          big.NewInt(mathrand.Int63()),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {

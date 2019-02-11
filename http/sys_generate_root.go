@@ -98,7 +98,7 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 	case len(req.PGPKey) > 0, len(req.OTP) > 0:
 	default:
 		genned = true
-		req.OTP, err = base62.Random(vault.TokenLength+2, true)
+		req.OTP, err = base62.Random(vault.TokenLength + 2)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return

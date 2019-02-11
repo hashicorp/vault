@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -259,7 +259,7 @@ func (c *Core) loadAudits(ctx context.Context) error {
 		entry.namespace = ns
 	}
 
-	if !needPersist {
+	if !needPersist || c.perfStandby {
 		return nil
 	}
 
@@ -308,7 +308,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   coreAuditConfigPath,
 			Value: compressedBytes,
 		}
@@ -327,7 +327,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		return err
 	}
 
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   coreLocalAuditConfigPath,
 		Value: compressedBytes,
 	}

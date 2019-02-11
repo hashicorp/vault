@@ -55,6 +55,7 @@
     - api/system/generate-root.html
     - api/system/health.html
     - api/system/init.html
+    - api/system/internal-specs-openapi.html
     - api/system/internal-ui-mounts.html
     - api/system/key-status.html
     - api/system/leader.html

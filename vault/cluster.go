@@ -18,8 +18,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -36,6 +37,12 @@ const (
 var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
+
+type ClusterLeaderParams struct {
+	LeaderUUID         string
+	LeaderRedirectAddr string
+	LeaderClusterAddr  string
+}
 
 type ReplicatedClusters struct {
 	DR          *ReplicatedCluster
@@ -270,7 +277,7 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		}
 
 		// Store it
-		err = c.barrier.Put(ctx, &Entry{
+		err = c.barrier.Put(ctx, &logical.StorageEntry{
 			Key:   coreLocalClusterInfoPath,
 			Value: rawCluster,
 		})

@@ -6,7 +6,7 @@ description: |-
   This deployment guide covers the steps required to install and
   configure a single HashiCorp Vault cluster as defined in the
   Vault Reference Architecture
-product_version: 0.11
+product_version: 1.0
 ---
 
 # Vault Deployment Guide
@@ -210,7 +210,7 @@ listener "tcp" {
 
 The following parameters are set for the `tcp` listener stanza:
 
-- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` – Changing from the loopback address to allow external access to the Vault UI
+- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` - Changing from the loopback address to allow external access to the Vault UI
 - [`tls_cert_file`](/docs/configuration/listener/tcp.html#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 - [`tls_key_file`](/docs/configuration/listener/tcp.html#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 
@@ -263,6 +263,20 @@ The following parameters are set for the `consul` storage stanza:
 The `telemetry` stanza specifies various configurations for Vault to publish metrics to upstream systems.
 
 If you decide to configure Vault to publish telemtery data, you should review the [telemetry configuration section](/docs/configuration/telemetry.html) of our documentation.
+
+### High Availability Parameters
+
+The `api_addr` parameter configures the API address used in high availability scenarios, when client redirection is used instead of request forwarding. Client redirection is the fallback method used when request forwarding is turned off or there is an error performing the forwarding. As such, a redirect address is always required for all HA setups.
+
+This parameter value defaults to the `address` specified in the `listener` stanza, but Vault will log a `[WARN]` message if it is not explicitly configured.
+
+Add the below configuration to the Vault configuration file:
+
+```hcl
+api_addr = "{{ full URL to Vault API endpoint }}"
+```
+
+[More information about high availability configuration](/docs/configuration/#high-availability-parameters).
 
 ### Vault UI
 

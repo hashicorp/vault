@@ -50,7 +50,7 @@ export default DS.Model.extend({
   tuneAttrs: computed(function() {
     return expandAttributeMeta(this, [
       'description',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
     ]);
   }),
 
@@ -69,7 +69,7 @@ export default DS.Model.extend({
       'accessor',
       'local',
       'sealWrap',
-      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+      'config.{listingVisibility,defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
     ];
   }),
 
@@ -82,7 +82,7 @@ export default DS.Model.extend({
           'config.listingVisibility',
           'local',
           'sealWrap',
-          'config.{defaultLeaseTtl,maxLeaseTtl,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
+          'config.{defaultLeaseTtl,maxLeaseTtl,tokenType,auditNonHmacRequestKeys,auditNonHmacResponseKeys,passthroughRequestHeaders}',
         ],
       },
     ];

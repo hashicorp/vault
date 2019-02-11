@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -791,7 +791,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
 		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
-			return fmt.Errorf("failed to delete previous role ID index")
+			return errwrap.Wrapf("failed to delete previous role ID index: {{err}}", err)
 		}
 	}
 
@@ -847,7 +847,7 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
-	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), &role)
 		if err != nil {
 			return nil, err

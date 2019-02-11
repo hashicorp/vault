@@ -246,6 +246,28 @@ func TestFieldDataGet(t *testing.T) {
 			[]string{"abc"},
 		},
 
+		"string slice type, empty string": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "",
+			},
+			"foo",
+			[]string{},
+		},
+
+		"comma string slice type, empty string": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "",
+			},
+			"foo",
+			[]string{},
+		},
+
 		"comma string slice type, comma string with one value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
@@ -488,7 +510,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": {Type: TypeHeader},
 			},
 			map[string]interface{}{
-				"foo": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==",
+				"foo": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdLCAiRm9vIjogNDJ9",
 			},
 			"foo",
 			http.Header{
@@ -498,6 +520,7 @@ func TestFieldDataGet(t *testing.T) {
 				"X-Amz-Date":               []string{"20160930T043121Z"},
 				"Content-Type":             []string{"application/x-www-form-urlencoded; charset=utf-8"},
 				"Authorization":            []string{"AWS4-HMAC-SHA256 Credential=foo/20160930/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date;x-vault-server, Signature=a69fd750a3445c4e553e1b3e79d3da90eef54047f1eb4efe8ffbc9c428c2655b"},
+				"Foo":                      []string{"42"},
 			},
 		},
 
@@ -506,12 +529,14 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": {Type: TypeHeader},
 			},
 			map[string]interface{}{
-				"foo": `{"hello":"world","bonjour":["monde","dieu"]}`,
+				"foo": `{"hello":"world","bonjour":["monde","dieu"], "Guten Tag": 42, "你好": ["10", 20, 3.14]}`,
 			},
 			"foo",
 			http.Header{
-				"Hello":   []string{"world"},
-				"Bonjour": []string{"monde", "dieu"},
+				"Hello":     []string{"world"},
+				"Bonjour":   []string{"monde", "dieu"},
+				"Guten Tag": []string{"42"},
+				"你好":        []string{"10", "20", "3.14"},
 			},
 		},
 

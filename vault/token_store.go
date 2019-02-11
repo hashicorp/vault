@@ -19,8 +19,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 
-	"github.com/armon/go-metrics"
-	"github.com/hashicorp/go-multierror"
+	metrics "github.com/armon/go-metrics"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
@@ -65,7 +65,7 @@ const (
 )
 
 var (
-	// TokenLength is the size of tokens we are currenlty generating, without
+	// TokenLength is the size of tokens we are currently generating, without
 	// any namespace information
 	TokenLength = 24
 
@@ -85,16 +85,8 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS == nil {
-			return namespace.ErrNoNamespace
-		}
-
-		switch tokenNS.ID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -245,13 +237,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "lookup" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "lookup",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to lookup (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to lookup (POST request body)",
@@ -268,13 +256,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "lookup-accessor" + framework.OptionalParamRegex("urlaccessor"),
+			Pattern: "lookup-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Accessor of the token to lookup (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
-				},
 				"accessor": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Accessor of the token to look up (request body)",
@@ -309,13 +293,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke-accessor" + framework.OptionalParamRegex("urlaccessor"),
+			Pattern: "revoke-accessor",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urlaccessor": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Accessor of the token to revoke (URL parameter). Do not use this; use the POST version instead with the accessor in the body.",
-				},
 				"accessor": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Accessor of the token (request body)",
@@ -342,13 +322,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "revoke",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
@@ -364,13 +340,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "revoke-orphan" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "revoke-orphan",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to revoke (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to revoke (request body)",
@@ -409,13 +381,9 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "renew" + framework.OptionalParamRegex("urltoken"),
+			Pattern: "renew",
 
 			Fields: map[string]*framework.FieldSchema{
-				"urltoken": &framework.FieldSchema{
-					Type:        framework.TypeString,
-					Description: "DEPRECATED: Token to renew (URL parameter). Do not use this; use the POST version instead with the token in the body.",
-				},
 				"token": &framework.FieldSchema{
 					Type:        framework.TypeString,
 					Description: "Token to renew (request body)",
@@ -720,7 +688,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 	for _, entry := range entries {
 		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
 		if err != nil {
-			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
 			continue
 		}
 
@@ -747,7 +715,7 @@ func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEn
 
 	var err error
 	// Create a random accessor
-	entry.Accessor, err = base62.Random(TokenLength, true)
+	entry.Accessor, err = base62.Random(TokenLength)
 	if err != nil {
 		return err
 	}
@@ -814,7 +782,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if entry.ID == "" {
 			userSelectedID = false
 			var err error
-			entry.ID, err = base62.Random(TokenLength, true)
+			entry.ID, err = base62.Random(TokenLength)
 			if err != nil {
 				return err
 			}
@@ -836,7 +804,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, "s.") {
 			if entry.CubbyholeID == "" {
-				cubbyholeID, err := base62.Random(TokenLength, true)
+				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
 					return err
 				}
@@ -1746,7 +1714,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed get namespace from context: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
 	}
 
 	go func() {
@@ -1773,6 +1741,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			parentList, err := ts.parentView(ns).List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
+			}
+
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1848,9 +1822,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
+				countCubbyholeKeys,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor int64
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
+
+			validCubbyholeKeys := make(map[string]bool)
 
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
@@ -1895,10 +1873,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				lock.RUnlock()
 
-				// If token entry is not found assume that the token is not valid any
-				// more and conclude that accessor, leases, and secondary index entries
-				// for this token should not exist as well.
-				if te == nil {
+				switch {
+				case te == nil:
+					// If token entry is not found assume that the token is not valid any
+					// more and conclude that accessor, leases, and secondary index entries
+					// for this token should not exist as well.
+
 					ts.logger.Info("deleting token with nil entry referenced by accessor", "salted_accessor", saltedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
@@ -1928,6 +1908,41 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						continue
 					}
 					deletedCountAccessorInvalidToken++
+				default:
+					// Cache the cubbyhole storage key when the token is valid
+					switch {
+					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
+						saltedID, err := ts.SaltID(quitCtx, te.ID)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							continue
+						}
+						validCubbyholeKeys[salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)] = true
+					default:
+						if te.CubbyholeID == "" {
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
+							continue
+						}
+						validCubbyholeKeys[te.CubbyholeID] = true
+					}
+				}
+			}
+
+			// Revoke invalid cubbyhole storage keys
+			for _, key := range cubbyholeKeys {
+				countCubbyholeKeys++
+				if countCubbyholeKeys%500 == 0 {
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+				}
+
+				key := strings.TrimSuffix(key, "/")
+				if !validCubbyholeKeys[key] {
+					ts.logger.Info("deleting invalid cubbyhole", "key", key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
+					}
+					deletedCountInvalidCubbyholeKey++
 				}
 			}
 
@@ -1939,6 +1954,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+			ts.logger.Info("number of deleted cubbyhole keys that were invalid", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}
@@ -1957,14 +1973,9 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
 func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
-		accessor = data.Get("urlaccessor").(string)
-		if accessor == "" {
-			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
-		}
-		urlaccessor = true
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 	}
 
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, false)
@@ -2001,24 +2012,15 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 		resp.Data["id"] = ""
 	}
 
-	if urlaccessor {
-		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
-	}
-
 	return resp, nil
 }
 
 // handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
 func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
-		accessor = data.Get("urlaccessor").(string)
-		if accessor == "" {
-			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
-		}
-		urlaccessor = true
+		return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 	}
 
 	aEntry, err := ts.lookupByAccessor(ctx, accessor, false, true)
@@ -2051,12 +2053,6 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 	err = ts.expiration.Revoke(revokeCtx, leaseID)
 	if err != nil {
 		return nil, err
-	}
-
-	if urlaccessor {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
-		return resp, nil
 	}
 
 	return nil, nil
@@ -2432,10 +2428,17 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// At this point, it is clear whether the token is going to be an orphan or
 	// not. If the token is not going to be an orphan, inherit the parent's
-	// entity identifier into the child token. We must also verify that, if
-	// it's not an orphan, the parent isn't a batch token.
+	// entity identifier into the child token.
 	if te.Parent != "" {
 		te.EntityID = parent.EntityID
+
+		// If the parent has bound CIDRs, copy those into the child. We don't
+		// do this if role is not nil because then we always use the role's
+		// bound CIDRs; roles allow escalation of privilege in proper
+		// circumstances.
+		if role == nil {
+			te.BoundCIDRs = parent.BoundCIDRs
+		}
 	}
 
 	var explicitMaxTTLToUse time.Duration
@@ -2603,24 +2606,13 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
 	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
 		return resp, err
-	}
-
-	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
 	}
 
 	return nil, nil
@@ -2665,15 +2657,10 @@ func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, da
 // in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
 	// Check if the client token has sudo/root privileges for the requested path
@@ -2703,12 +2690,6 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if urltoken {
-		resp := &logical.Response{}
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-		return resp, nil
-	}
-
 	return nil, nil
 }
 
@@ -2720,14 +2701,7 @@ func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request
 // handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
-	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id != "" {
-			urltoken = true
-		}
-	}
 	if id == "" {
 		id = req.ClientToken
 	}
@@ -2829,10 +2803,6 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		}
 	}
 
-	if urltoken {
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-	}
-
 	return resp, nil
 }
 
@@ -2844,14 +2814,9 @@ func (ts *TokenStore) handleRenewSelf(ctx context.Context, req *logical.Request,
 // handleRenew handles the auth/token/renew/id path for renewal of tokens.
 // This is used to prevent token expiration and revocation.
 func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
-		urltoken = true
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	incrementRaw := data.Get("increment").(int)
 
@@ -2875,10 +2840,6 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 
 	// Renew the token and its children
 	resp, err = ts.expiration.RenewToken(ctx, req, te, increment)
-
-	if urltoken {
-		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-	}
 
 	return resp, err
 }

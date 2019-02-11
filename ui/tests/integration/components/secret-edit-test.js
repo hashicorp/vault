@@ -69,6 +69,20 @@ module('Integration | Component | secret edit', function(hooks) {
     assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
   });
 
+  test('it allows saving when the model isError', async function(assert) {
+    this.set('mode', 'create');
+    this.set('model', {
+      isError: true,
+      secretData: {
+        int: '2',
+        null: 'null',
+        float: '1.234',
+      },
+    });
+    await render(hbs`<SecretEdit @mode={{mode}} @model={{model}} />`);
+    assert.dom('[data-test-secret-save]').isNotDisabled();
+  });
+
   test('it shows an error when editing and the data is not an object', async function(assert) {
     this.set('mode', 'edit');
     capabilities = {

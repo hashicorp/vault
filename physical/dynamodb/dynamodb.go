@@ -15,7 +15,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/physical"
@@ -155,19 +155,6 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		writeCapacity = DefaultDynamoDBWriteCapacity
 	}
 
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	if accessKey == "" {
-		accessKey = conf["access_key"]
-	}
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if secretKey == "" {
-		secretKey = conf["secret_key"]
-	}
-	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
-	if sessionToken == "" {
-		sessionToken = conf["session_token"]
-	}
-
 	endpoint := os.Getenv("AWS_DYNAMODB_ENDPOINT")
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
@@ -197,9 +184,9 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 
 	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    accessKey,
-		SecretKey:    secretKey,
-		SessionToken: sessionToken,
+		AccessKey:    conf["access_key"],
+		SecretKey:    conf["secret_key"],
+		SessionToken: conf["session_token"],
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {

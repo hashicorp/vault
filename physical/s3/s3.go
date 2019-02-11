@@ -14,7 +14,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -34,6 +34,7 @@ var _ physical.Backend = (*S3Backend)(nil)
 // within an S3 bucket.
 type S3Backend struct {
 	bucket     string
+	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
 	permitPool *physical.PermitPool
@@ -135,9 +136,15 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		}
 	}
 
+	kmsKeyId, ok := conf["kms_key_id"]
+	if !ok {
+		kmsKeyId = ""
+	}
+
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
+		kmsKeyId:   kmsKeyId,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
 	}
@@ -151,11 +158,18 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	s.permitPool.Acquire()
 	defer s.permitPool.Release()
 
-	_, err := s.client.PutObject(&s3.PutObjectInput{
+	putObjectInput := &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(entry.Key),
 		Body:   bytes.NewReader(entry.Value),
-	})
+	}
+
+	if s.kmsKeyId != "" {
+		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
+		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
+	}
+
+	_, err := s.client.PutObject(putObjectInput)
 
 	if err != nil {
 		return err

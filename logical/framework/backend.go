@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/license"
 	"github.com/hashicorp/vault/helper/logging"
@@ -505,6 +505,26 @@ type FieldSchema struct {
 	Description string
 	Required    bool
 	Deprecated  bool
+
+	// AllowedValues is an optional list of permitted values for this field.
+	// This constraint is not (yet) enforced by the framework, but the list is
+	// output as part of OpenAPI generation and may effect documentation and
+	// dynamic UI generation.
+	AllowedValues []interface{}
+
+	// Display* members are available to provide hints for UI and documentation
+	// generators. They will be included in OpenAPI output if set.
+
+	// DisplayName is the name of the field suitable as a label or documentation heading.
+	DisplayName string
+
+	// DisplayValue is a sample value to display for this field. This may be used
+	// to indicate a default value, but it is for display only and completely separate
+	// from any Default member handling.
+	DisplayValue interface{}
+
+	// DisplaySensitive indicates that the value should be masked by default in the UI.
+	DisplaySensitive bool
 }
 
 // DefaultOrZero returns the default value if it is set, or otherwise

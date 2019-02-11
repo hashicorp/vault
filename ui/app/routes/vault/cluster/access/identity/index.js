@@ -10,7 +10,6 @@ export default Route.extend(ListRoute, {
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
-        size: 100,
       })
       .catch(err => {
         if (err.httpStatus === 404) {

@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
@@ -176,7 +176,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) {
 			}
 
 		default:
-			if secret.Auth == nil {
+			if secret == nil || secret.Auth == nil {
 				ah.logger.Error("authentication returned nil auth info", "backoff", backoff.Seconds())
 				backoffOrQuit(ctx, backoff)
 				continue

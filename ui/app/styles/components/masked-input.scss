@@ -12,6 +12,10 @@
   padding-top: $spacing-s;
 }
 
+.has-padding {
+  padding: $size-10 $size-8;
+}
+
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
@@ -44,8 +48,16 @@
 .button.copy-button {
   min-width: $spacing-xl;
   border-left: 0;
-  border-radius: 0 $radius $radius 0;
   color: $grey;
+  box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
+}
+
+.button.copy-button {
+  border-radius: 0;
+}
+
+.button.masked-input-toggle {
+  border-radius: 0 $radius $radius 0;
 }
 
 .display-only {

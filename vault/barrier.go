@@ -130,7 +130,7 @@ type SecurityBarrier interface {
 	Keyring() (*Keyring, error)
 
 	// SecurityBarrier must provide the storage APIs
-	BarrierStorage
+	logical.Storage
 
 	// SecurityBarrier must provide the encryption APIs
 	BarrierEncryptor
@@ -139,10 +139,10 @@ type SecurityBarrier interface {
 // BarrierStorage is the storage only interface required for a Barrier.
 type BarrierStorage interface {
 	// Put is used to insert or update an entry
-	Put(ctx context.Context, entry *Entry) error
+	Put(ctx context.Context, entry *logical.StorageEntry) error
 
 	// Get is used to fetch an entry
-	Get(ctx context.Context, key string) (*Entry, error)
+	Get(ctx context.Context, key string) (*logical.StorageEntry, error)
 
 	// Delete is used to permanently delete an entry
 	Delete(ctx context.Context, key string) error
@@ -158,22 +158,6 @@ type BarrierStorage interface {
 type BarrierEncryptor interface {
 	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
 	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
-}
-
-// Entry is used to represent data stored by the security barrier
-type Entry struct {
-	Key      string
-	Value    []byte
-	SealWrap bool
-}
-
-// Logical turns the Entry into a logical storage entry.
-func (e *Entry) Logical() *logical.StorageEntry {
-	return &logical.StorageEntry{
-		Key:      e.Key,
-		Value:    e.Value,
-		SealWrap: e.SealWrap,
-	}
 }
 
 // KeyInfo is used to convey information about the encryption key

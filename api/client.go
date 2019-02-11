@@ -16,9 +16,9 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-rootcerts"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
+	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
@@ -84,6 +84,14 @@ type Config struct {
 	// then that limiter will be used. Note that an empty Limiter
 	// is equivalent blocking all events.
 	Limiter *rate.Limiter
+
+	// OutputCurlString causes the actual request to return an error of type
+	// *OutputStringError. Type asserting the error message will allow
+	// fetching a cURL-compatible string for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputCurlString bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -121,7 +129,7 @@ type TLSConfig struct {
 func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
-		HttpClient: cleanhttp.DefaultClient(),
+		HttpClient: cleanhttp.DefaultPooledClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
 
@@ -438,6 +446,24 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.config.Timeout = timeout
 }
 
+func (c *Client) OutputCurlString() bool {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.OutputCurlString
+}
+
+func (c *Client) SetOutputCurlString(curl bool) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.OutputCurlString = curl
+}
+
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
@@ -662,6 +688,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
+	outputCurlString := c.config.OutputCurlString
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -686,6 +713,11 @@ START:
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request created")
+	}
+
+	if outputCurlString {
+		LastOutputStringError = &OutputStringError{Request: req}
+		return nil, LastOutputStringError
 	}
 
 	if timeout != 0 {

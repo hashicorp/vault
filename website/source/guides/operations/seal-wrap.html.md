@@ -353,8 +353,7 @@ $ curl --header "X-Vault-Token: ..." \
     "config": {
       "default_lease_ttl": 0,
       "force_no_cache": false,
-      "max_lease_ttl": 0,
-      "plugin_name": ""
+      "max_lease_ttl": 0
     },
     "description": "key/value secret storage",
     "local": false,
@@ -404,8 +403,7 @@ $ curl --header "X-Vault-Token: ..." \
     "config": {
       "default_lease_ttl": 0,
       "force_no_cache": false,
-      "max_lease_ttl": 0,
-      "plugin_name": ""
+      "max_lease_ttl": 0
     },
     "description": "",
     "local": false,

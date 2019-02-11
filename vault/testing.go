@@ -33,7 +33,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
-	"github.com/hashicorp/go-cleanhttp"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
@@ -45,7 +45,7 @@ import (
 	"github.com/hashicorp/vault/physical"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/mitchellh/go-testing-interface"
+	testing "github.com/mitchellh/go-testing-interface"
 
 	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
@@ -107,7 +107,7 @@ func TestCoreNewSeal(t testing.T) *Core {
 }
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
-// specified core configurations overriden for testing.
+// specified core configurations overridden for testing.
 func TestCoreWithConfig(t testing.T, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -148,6 +148,14 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableRaw = opts.EnableRaw
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig
+	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
+
+	for k, v := range opts.LogicalBackends {
+		conf.LogicalBackends[k] = v
+	}
+	for k, v := range opts.CredentialBackends {
+		conf.CredentialBackends[k] = v
+	}
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -282,7 +290,7 @@ func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
 }
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
-// initialized, unsealed, with the any provided core config values overriden.
+// initialized, unsealed, with the any provided core config values overridden.
 func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
@@ -680,7 +688,7 @@ func TestWaitActiveWithError(core *Core) error {
 	start := time.Now()
 	var standby bool
 	var err error
-	for time.Now().Sub(start) < time.Second {
+	for time.Now().Sub(start) < 30*time.Second {
 		standby, err = core.Standby()
 		if err != nil {
 			return err
@@ -777,6 +785,13 @@ func (c *TestCluster) UnsealCoresWithError() error {
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (c *TestClusterCore) Seal(t testing.T) {
+	t.Helper()
+	if err := c.Core.sealInternal(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -1541,6 +1556,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		"cassandra-database-plugin",
 		"mongodb-database-plugin",
 		"hana-database-plugin",
+		"influxdb-database-plugin",
 	}
 }
 
