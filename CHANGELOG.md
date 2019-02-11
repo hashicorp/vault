@@ -28,6 +28,8 @@ IMPROVEMENTS:
    to auto-unseal using a configured auto-unseal mechanism after the active
    node initializes Vault [GH-6039]
  * secret/database: Add socket keepalive option for Cassandra [GH-6201]
+ * secret/ssh: Add signed key constraints, allowing enforcement of key types
+   and minimum key sizes [GH-6030]
  * secret/transit: ECDSA signatures can now be marshaled in JWS-compatible
    fashion [GH-6077]
  * storage/etcd: Support SRV service names [GH-6087]
