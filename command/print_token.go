@@ -15,7 +15,7 @@ type PrintTokenCommand struct {
 }
 
 func (c *PrintTokenCommand) Synopsis() string {
-	return "Prints the contents of a policy"
+	return "Prints the vault token currenty in use"
 }
 
 func (c *PrintTokenCommand) Help() string {
@@ -27,13 +27,8 @@ Usage: vault print token
 
       $ vault print token
 
-` + c.Flags().Help()
-
+`
 	return strings.TrimSpace(helpText)
-}
-
-func (c *PrintTokenCommand) Flags() *FlagSets {
-	return nil
 }
 
 func (c *PrintTokenCommand) AutocompleteArgs() complete.Predictor {
