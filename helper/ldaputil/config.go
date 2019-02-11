@@ -22,26 +22,32 @@ func ConfigFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
+			DisplayName: "URL",
 		},
 
 		"userdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
+			DisplayName: "User DN",
 		},
 
 		"binddn": {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
+			DisplayName: "Name of Object to bind (binddn)",
 		},
 
 		"bindpass": {
 			Type:        framework.TypeString,
 			Description: "LDAP password for searching for the user DN (optional)",
+			DisplayName: "Password",
+			DisplaySensitive: true,
 		},
 
 		"groupdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
+			DisplayName: "Group DN",
 		},
 
 		"groupfilter": {
@@ -51,6 +57,7 @@ func ConfigFields() map[string]*framework.FieldSchema {
 The template can access the following context variables: UserDN, Username
 Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
 Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
+			DisplayName: "Group Filter",
 		},
 
 		"groupattr": {
@@ -60,66 +67,89 @@ Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}
 in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
+			DisplayName: "Group Attribute",
+			DisplayValue: "cn",
 		},
 
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
+			DisplayName: "User Principal (UPN) Domain",
 		},
 
 		"userattr": {
 			Type:        framework.TypeString,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
+			DisplayName: "User Attribute",
+			DisplayValue: "cn",
 		},
 
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+			DisplayName: "Certificate",
 		},
 
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
+			DisplayName: "Discover DN",
+			DisplayValue: false,
 		},
 
 		"insecure_tls": {
-			Type:        framework.TypeBool,
-			Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
+			Type:         framework.TypeBool,
+			Description:  "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
+			DisplayName:  "Insecure TLS",
+			DisplayValue: false,
 		},
 
 		"starttls": {
-			Type:        framework.TypeBool,
-			Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
+			Type:         framework.TypeBool,
+			Description:  "Issue a StartTLS command after establishing unencrypted connection (optional)",
+			DisplayName:  "Issue StartTLS command after establishing an unencrypted connection",
+			DisplayValue: false,
 		},
 
 		"tls_min_version": {
-			Type:        framework.TypeString,
-			Default:     "tls12",
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Type:          framework.TypeString,
+			Default:       "tls12",
+			Description:   "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayName:   "Minimum TLS Version",
+			DisplayValue:  "tls12",
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"tls_max_version": {
-			Type:        framework.TypeString,
-			Default:     "tls12",
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Type:          framework.TypeString,
+			Default:       "tls12",
+			Description:   "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayName:   "Maxumum TLS Version",
+			DisplayValue:  "tls12",
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"deny_null_bind": {
 			Type:        framework.TypeBool,
 			Default:     true,
 			Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
+			DisplayName: "Deny Null Bind",
+			DisplayValue: true,
 		},
 
 		"case_sensitive_names": {
 			Type:        framework.TypeBool,
 			Description: "If true, case sensitivity will be used when comparing usernames and groups for matching policies.",
+			DisplayName: "Case Sensitive Names",
 		},
 
 		"use_token_groups": {
 			Type:        framework.TypeBool,
 			Default:     false,
 			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
+			DisplayName: "Use Token Groups",
+			DisplayValue: false,
 		},
 	}
 }

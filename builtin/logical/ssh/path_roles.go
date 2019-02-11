@@ -72,6 +72,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Required for all types]
 				Name of the role being created.`,
+				DisplayName: "Role Name",
 			},
 			"key": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -79,6 +80,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Required for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Name of the registered key in Vault. Before creating the role, use the
 				'keys/' endpoint to create a named key.`,
+				DisplayName: "Key",
 			},
 			"admin_user": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -89,6 +91,7 @@ func pathRoles(b *backend) *framework.Path {
 				credential is being generated for other users, Vault uses this admin
 				username to login to remote host and install the generated credential
 				for the other user.`,
+				DisplayName: "Admin Username",
 			},
 			"default_user": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -97,6 +100,7 @@ func pathRoles(b *backend) *framework.Path {
 				Default username for which a credential will be generated.
 				When the endpoint 'creds/' is used without a username, this
 				value will be used as default username.`,
+				DisplayName: "Default Username",
 			},
 			"cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -104,6 +108,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Optional for Dynamic type] [Optional for OTP type] [Not applicable for CA type]
 				Comma separated list of CIDR blocks for which the role is applicable for.
 				CIDR blocks can belong to more than one role.`,
+				DisplayName: "CIDR List",
 			},
 			"exclude_cidr_list": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -112,6 +117,7 @@ func pathRoles(b *backend) *framework.Path {
 				Comma separated list of CIDR blocks. IP addresses belonging to these blocks are not
 				accepted by the role. This is particularly useful when big CIDR blocks are being used
 				by the role and certain parts of it needs to be kept out.`,
+				DisplayName: "Exclude CIDR List",
 			},
 			"port": &framework.FieldSchema{
 				Type: framework.TypeInt,
@@ -121,6 +127,8 @@ func pathRoles(b *backend) *framework.Path {
 				play any role in creation of OTP. For 'otp' type, this is just a way
 				to inform client about the port number to use. Port number will be
 				returned to client by Vault server along with OTP.`,
+				DisplayName:  "Port",
+				DisplayValue: 22,
 			},
 			"key_type": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -128,12 +136,16 @@ func pathRoles(b *backend) *framework.Path {
 				[Required for all types]
 				Type of key used to login to hosts. It can be either 'otp', 'dynamic' or 'ca'.
 				'otp' type requires agent to be installed in remote hosts.`,
+				DisplayName:   "Key Type",
+				AllowedValues: []interface{}{"otp", "ca"},
+				DisplayValue:  "ca",
 			},
 			"key_bits": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `
 				[Optional for Dynamic type] [Not applicable for OTP type] [Not applicable for CA type]
 				Length of the RSA dynamic key in bits. It is 1024 by default or it can be 2048.`,
+				DisplayName: "Key Bits",
 			},
 			"install_script": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -142,6 +154,7 @@ func pathRoles(b *backend) *framework.Path {
 				Script used to install and uninstall public keys in the target machine.
 				The inbuilt default install script will be for Linux hosts. For sample
 				script, refer the project documentation website.`,
+				DisplayName: "Install Script",
 			},
 			"allowed_users": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -158,6 +171,7 @@ func pathRoles(b *backend) *framework.Path {
 				list means that no users are allowed; explicitly specify '*' to
 				allow any user.
 				`,
+				DisplayName: "Allowed Users",
 			},
 			"allowed_domains": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -166,6 +180,7 @@ func pathRoles(b *backend) *framework.Path {
 				If this option is not specified, client can request for a signed certificate for any
 				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
+				DisplayName: "Allowed Domains",
 			},
 			"key_option_specs": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -175,6 +190,7 @@ func pathRoles(b *backend) *framework.Path {
 				authorized_keys file. Options should be valid and comply with authorized_keys
 				file format and should not contain spaces.
 				`,
+				DisplayName: "CIDR List",
 			},
 			"ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
@@ -184,6 +200,7 @@ func pathRoles(b *backend) *framework.Path {
 				requested. The lease duration controls the expiration
 				of certificates issued by this backend. Defaults to
 				the value of max_ttl.`,
+				DisplayName: "TTL",
 			},
 			"max_ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
@@ -191,6 +208,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				The maximum allowed lease duration
 				`,
+				DisplayName: "Max TTL",
 			},
 			"allowed_critical_options": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -198,7 +216,8 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				A comma-separated list of critical options that certificates can have when signed.
  				To allow any critical options, set this to an empty string.
- 				`,
+				 `,
+				DisplayName: "Allowed Critical Options",
 			},
 			"allowed_extensions": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -207,6 +226,7 @@ func pathRoles(b *backend) *framework.Path {
 				A comma-separated list of extensions that certificates can have when signed.
 				To allow any extensions, set this to an empty string.
 				`,
+				DisplayName: "Allowed Extensions",
 			},
 			"default_critical_options": &framework.FieldSchema{
 				Type: framework.TypeMap,
@@ -217,6 +237,7 @@ func pathRoles(b *backend) *framework.Path {
 				value pairs in JSON format.  Note that these are not restricted
 				by "allowed_critical_options". Defaults to none.
 				`,
+				DisplayName: "Default Critical Options",
 			},
 			"default_extensions": &framework.FieldSchema{
 				Type: framework.TypeMap,
@@ -227,6 +248,7 @@ func pathRoles(b *backend) *framework.Path {
 				pairs in JSON format. Note that these are not restricted by
 				"allowed_extensions". Defaults to none.
 				`,
+				DisplayName: "Default Extensions",
 			},
 			"allow_user_certificates": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -234,7 +256,8 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'user'.
 				`,
-				Default: false,
+				Default:     false,
+				DisplayName: "Allow User Certificates",
 			},
 			"allow_host_certificates": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -242,7 +265,8 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'host'.
 				`,
-				Default: false,
+				Default:     false,
+				DisplayName: "Allow Host Certificates",
 			},
 			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -252,6 +276,7 @@ func pathRoles(b *backend) *framework.Path {
 				"allowed_domains", e.g. "example.com".
 				This is a separate option as in some cases this can be considered a security threat.
 				`,
+				DisplayName: "Allow Bare Domains",
 			},
 			"allow_subdomains": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -259,6 +284,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
 				`,
+				DisplayName: "Allow Subdomains",
 			},
 			"allow_user_key_ids": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -268,6 +294,7 @@ func pathRoles(b *backend) *framework.Path {
 				When false, the key ID will always be the token display name.
 				The key ID is logged by the SSH server and can be useful for auditing.
 				`,
+				DisplayName: "Allow User Key IDs",
 			},
 			"key_id_format": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -278,6 +305,7 @@ func pathRoles(b *backend) *framework.Path {
 				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
 				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,
+				DisplayName: "Key ID Format",
 			},
 		},
 
