@@ -15,7 +15,6 @@ export default Adapter.extend({
   },
 
   pathForType() {
-    debugger; //eslint-disable-line
     return 'issue';
   },
 
