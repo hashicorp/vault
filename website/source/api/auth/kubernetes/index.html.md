@@ -30,7 +30,7 @@ access the Kubernetes API.
 
 ### Parameters
  - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
- - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
+ - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: \n
  - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
     API to validate other JWTs during login. If not set
     the JWT used for login will be used to access the API.
@@ -45,7 +45,7 @@ access the Kubernetes API.
 ```json
 {
   "kubernetes_host": "https://192.168.99.100:8443",
-  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----",
   "pem_keys": "-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----"
 }
 ```
