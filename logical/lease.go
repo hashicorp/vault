@@ -22,11 +22,14 @@ type LeaseOptions struct {
 	// when returning a response.
 	Increment time.Duration `json:"-"`
 
-	// IssueTime is the time of issue for the original lease. This is
-	// only available on Renew and Revoke operations and has no effect when returning
-	// a response. It can be used to enforce maximum lease periods by
-	// a logical backend.
+	// IssueTime is the time of issue for the original lease. This is only
+	// available on Renew and Revoke operations and has no effect when returning a
+	// response. It can be used to enforce maximum lease periods by a logical
+	// backend.
 	IssueTime time.Time `json:"-"`
+
+	// Namespace is the namespace that this lease belongs to.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // LeaseEnabled checks if leasing is enabled

@@ -725,6 +725,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			return nil, auth, retErr
 		}
 
+		if ns.ID != namespace.RootNamespaceID {
+			resp.Secret.Namespace = ns.Path
+		}
+
 		switch matchingMountEntry.Type {
 		case "kv", "generic":
 			// If we are kv type, first see if we are an older passthrough
@@ -1121,6 +1125,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
+		// Attach the namespace if not the root namespace
+		if ns.ID != namespace.RootNamespaceID {
+			auth.Namespace = ns.Path
+		}
 	}
 
 	return resp, auth, routeErr

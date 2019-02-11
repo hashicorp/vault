@@ -37,6 +37,9 @@ type Secret struct {
 	// cubbyhole of the given token (which has a TTL of the given number of
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+
+	// Namespace is the namespace that this secret belongs to.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.
@@ -295,6 +298,8 @@ type SecretAuth struct {
 
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`
+
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.

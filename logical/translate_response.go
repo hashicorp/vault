@@ -22,6 +22,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 		httpResp.LeaseID = input.Secret.LeaseID
 		httpResp.Renewable = input.Secret.Renewable
 		httpResp.LeaseDuration = int(input.Secret.TTL.Seconds())
+		httpResp.Namespace = input.Secret.Namespace
 	}
 
 	// If we have authentication information, then
@@ -38,6 +39,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			Renewable:        input.Auth.Renewable,
 			EntityID:         input.Auth.EntityID,
 			TokenType:        input.Auth.TokenType.String(),
+			Namespace:        input.Auth.Namespace,
 		}
 	}
 
@@ -92,6 +94,7 @@ type HTTPResponse struct {
 	Warnings      []string               `json:"warnings"`
 	Headers       map[string][]string    `json:"-"`
 	Auth          *HTTPAuth              `json:"auth"`
+	Namespace     string                 `json:"namespace,omitempty"`
 }
 
 type HTTPAuth struct {
@@ -105,6 +108,7 @@ type HTTPAuth struct {
 	Renewable        bool              `json:"renewable"`
 	EntityID         string            `json:"entity_id"`
 	TokenType        string            `json:"token_type"`
+	Namespace        string            `json:"namespace,omitempty"`
 }
 
 type HTTPWrapInfo struct {

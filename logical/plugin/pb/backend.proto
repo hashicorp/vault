@@ -243,6 +243,8 @@ message LeaseOptions {
 	google.protobuf.Timestamp issue_time = 4;
 
 	int64 MaxTTL = 5;
+
+	string namespace = 6;
 }
 
 message Secret {
