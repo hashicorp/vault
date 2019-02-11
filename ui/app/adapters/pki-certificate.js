@@ -14,6 +14,11 @@ export default Adapter.extend({
     return url;
   },
 
+  pathForType() {
+    debugger; //eslint-disable-line
+    return 'issue';
+  },
+
   optionsForQuery(id) {
     let data = {};
     if (!id) {

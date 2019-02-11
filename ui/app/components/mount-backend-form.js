@@ -60,22 +60,7 @@ export default Component.extend({
     this.get('mountModel').rollbackAttributes();
   },
 
-  getConfigModelType(methodType) {
-    let mountType = this.get('mountType');
-    // will be something like secret-aws
-    // or auth-azure
-    let key = `${mountType}-${methodType}`;
-    let noConfig = ['auth-approle', 'auth-alicloud'];
-    if (mountType === 'secret' || noConfig.includes(key)) {
-      return;
-    }
-    if (methodType === 'aws') {
-      return 'auth-config/aws/client';
-    }
-    return `auth-config/${methodType}`;
-  },
-
-  changeConfigModel(methodType) {
+  changeConfigModel() {
     let mount = this.get('mountModel');
     if (this.get('mountType') === 'secret') {
       return;
@@ -88,10 +73,7 @@ export default Component.extend({
       currentConfig.rollbackAttributes();
       currentConfig.unloadRecord();
     }
-    let configType = this.getConfigModelType(methodType);
-    if (!configType) return;
-    let config = this.get('store').createRecord(configType);
-    config.set('backend', mount);
+    return;
   },
 
   checkPathChange(type) {
@@ -165,7 +147,7 @@ export default Component.extend({
     onTypeChange(path, value) {
       if (path === 'type') {
         this.get('wizard').set('componentState', value);
-        this.changeConfigModel(value);
+        this.changeConfigModel();
         this.checkPathChange(value);
       }
     },
@@ -173,11 +155,7 @@ export default Component.extend({
     toggleShowConfig(value) {
       this.set('showConfig', value);
       if (value === true && this.get('wizard.featureState') === 'idle') {
-        this.get('wizard').transitionFeatureMachine(
-          this.get('wizard.featureState'),
-          'CONTINUE',
-          this.get('mountModel').get('type')
-        );
+        this.advanceWizard();
       } else {
         this.get('wizard').transitionFeatureMachine(
           this.get('wizard.featureState'),

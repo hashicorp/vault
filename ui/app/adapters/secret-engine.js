@@ -7,16 +7,20 @@ export default ApplicationAdapter.extend({
     return path ? url + '/' + path : url;
   },
 
+  internalURL(path) {
+    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    if (path) {
+      url = `${url}/${path}`;
+    }
+    return url;
+  },
+
   pathForType() {
     return 'mounts';
   },
 
   query(store, type, query) {
-    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
-    if (query.path) {
-      url = `${url}/${query.path}`;
-    }
-    return this.ajax(url, 'GET');
+    return this.ajax(this.internalURL(query.path), 'GET');
   },
 
   createRecord(store, type, snapshot) {

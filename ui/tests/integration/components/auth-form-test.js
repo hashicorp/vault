@@ -38,9 +38,6 @@ const routerService = Service.extend({
       },
     };
   },
-  replaceWith() {
-    return resolve();
-  },
 });
 
 module('Integration | Component | auth form', function(hooks) {
