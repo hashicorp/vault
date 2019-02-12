@@ -73,7 +73,7 @@ func (c *KVListCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	path := ensureTrailingSlash(ensureNoLeadingSlash(args[0]))
 	mountPath, v2, err := isKVv2(path, client)
 	if err != nil {
 		c.UI.Error(err.Error())
