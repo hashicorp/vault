@@ -112,26 +112,22 @@ func (s *gRPCServer) Init(ctx context.Context, req *InitRequest) (*InitResponse,
 
 func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 	s.impl.Close()
-	return &Empty{}, nil
+        return &Empty{}, nil
 }
 
-func (s *gRPCServer) SetCredentials(context.Context, *SetCredentialsRequest) (*SetCredentialsResponse, error) {
+func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-        resp, err := s.impl.SetCredentials(ctx, req.StaticUserConfig)
-        if err != nil {
-                return nil, err
-        }
-
-        respConfig, err := json.Marshal(resp)
+        username, password, restored, err := s.impl.SetCredentials(ctx, req)
         if err != nil {
                 return nil, err
         }
 
         return &SetCredentialsResponse{
-                Config: respConfig,
+                Username: username,
+                Password: password,
+                Restored: restored,
         }, err
-}
-        return nil, status.Error(codes.Unimplemented, "not yet implemented")
+        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
 }
 
 // ---- gRPC client domain ----
@@ -301,4 +297,8 @@ func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, veri
 func (c *gRPCClient) Close() error {
 	_, err := c.client.Close(c.doneCtx, &Empty{})
 	return err
+}
+
+func (c *gRPCClient) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+        return
 }
