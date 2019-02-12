@@ -519,7 +519,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) log
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
@@ -721,7 +721,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {

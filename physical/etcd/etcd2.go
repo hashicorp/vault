@@ -12,11 +12,11 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/coreos/etcd/client"
-	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/physical"
+	"go.etcd.io/etcd/client"
+	"go.etcd.io/etcd/pkg/transport"
 )
 
 const (

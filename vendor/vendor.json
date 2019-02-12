@@ -373,6 +373,12 @@
 			"revisionTime": "2018-10-12T12:19:43Z"
 		},
 		{
+			"checksumSHA1": "GhlHTW5NOefmf1THrTLlEnrhOQA=",
+			"path": "github.com/aliyun/aliyun-oss-go-sdk/oss",
+			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
+			"revisionTime": "2018-06-15T12:55:16Z"
+		},
+		{
 			"checksumSHA1": "DUX4pOK9NKSAzC6RRXniLviyByA=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "f0300d1749da6fa982027e449ec0c7a145510c3c",
@@ -757,28 +763,36 @@
 			"revisionTime": "2018-09-10T15:25:13Z"
 		},
 		{
-			"checksumSHA1": "smALroa48uCO+J9JRlHBmz/XQMw=",
+			"checksumSHA1": "H4RhrnI0P34qLB9345G4r7CAwpU=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "xtzLG2UjYF1lnD33Wk+Nu/KOO6E=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "bQhz/fcyZPmuHSH2qwC4ZtATy5c=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api/config",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "Ij8yB33E0Kk+GfTkNRoF1mG26dc=",
 			"path": "github.com/circonus-labs/circonus-gometrics/checkmgr",
-			"revision": "03033123293bfe2241d1f7e1a3de8fb508265251",
-			"revisionTime": "2018-09-28T18:16:22Z"
+			"revision": "d6e3aea90ab9f90fe8456e13fc520f43d102da4d",
+			"revisionTime": "2019-01-28T15:50:09Z",
+			"version": "v2.2.6",
+			"versionExact": "v2.2.6"
 		},
 		{
 			"checksumSHA1": "2efAvf/xcfGiQ4Y1P3+5YObpeVg=",
@@ -797,18 +811,6 @@
 			"path": "github.com/containerd/continuity/pathdriver",
 			"revision": "be9bd761db19d4fc551d40be908f02e00487511d",
 			"revisionTime": "2018-10-03T07:59:58Z"
-		},
-		{
-			"checksumSHA1": "q1SfUjeNZ2lMjAlzyJPlNOl9OQ0=",
-			"path": "github.com/coreos/etcd/client",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
-		},
-		{
-			"checksumSHA1": "pop9HdnuvjAqCLhFZVmkrffixg4=",
-			"path": "github.com/coreos/etcd/pkg/transport",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
 		},
 		{
 			"checksumSHA1": "3fbao10aFaGLkTcNIYanekXqO+g=",
@@ -939,10 +941,10 @@
 			"revisionTime": "2018-10-14T23:42:04Z"
 		},
 		{
-			"checksumSHA1": "H5pC76pCW3fkir+2JFISc7Nep5s=",
+			"checksumSHA1": "2aRyfYrdQCGtScEVbK62QyoApOo=",
 			"path": "github.com/go-ldap/ldap",
-			"revision": "cf78c58932fcb3e1cf19a5f0d03bb77a5f4d2e88",
-			"revisionTime": "2018-10-15T21:54:33Z"
+			"revision": "214f299a0ecb2a6c6f6d2b0f13977032b207dc58",
+			"revisionTime": "2019-01-30T04:35:03Z"
 		},
 		{
 			"checksumSHA1": "r89NVOyv2X4KagJNkB7a4rZvMg4=",
@@ -1191,10 +1193,10 @@
 			"revisionTime": "2018-10-04T02:44:35Z"
 		},
 		{
-			"checksumSHA1": "/yKfFSspjuDzyOe/bBslrPzyfYM=",
+			"checksumSHA1": "9SqwC2BzFbsWulQuBG2+QEliTpo=",
 			"path": "github.com/hashicorp/go-retryablehttp",
-			"revision": "e651d75abec6fbd4f2c09508f72ae7af8a8b7171",
-			"revisionTime": "2018-07-18T19:50:05Z"
+			"revision": "73489d0a1476f0c9e6fb03f9c39241523a496dfd",
+			"revisionTime": "2019-01-26T20:33:39Z"
 		},
 		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
@@ -2235,12 +2237,6 @@
 			"revisionTime": "2015-04-27T01:28:21Z"
 		},
 		{
-			"checksumSHA1": "q8085xZyD5NbnWnP16jVxjT/ia8=",
-			"path": "github.com/tyrannosaurus-becks/aliyun-oss-go-sdk/oss",
-			"revision": "36bf7aa2f916f274137aedd05d1d36f6a3c0f4a6",
-			"revisionTime": "2018-06-15T12:55:16Z"
-		},
-		{
 			"checksumSHA1": "2itAnNmxls3SdlIGdm22djyp9IY=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "8333dd4495169d0d17214592e805b1ce5cbcdf86",
@@ -2249,116 +2245,122 @@
 		{
 			"checksumSHA1": "8nCoO1ACxWgrtwUl84Se7YIWVMA=",
 			"path": "go.etcd.io/etcd/auth/authpb",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
-			"checksumSHA1": "dOTPc9AnUrucXTh6dFhcj6Xyim8=",
+			"checksumSHA1": "LKYBHXfd+sg25r82HXXl424LH54=",
+			"path": "go.etcd.io/etcd/client",
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
+		},
+		{
+			"checksumSHA1": "fd884FzvbnjSR3hbvTaJp1cv0A8=",
 			"path": "go.etcd.io/etcd/clientv3",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "EXaUZbFolMaWfGUJUKXymQo63Fc=",
 			"path": "go.etcd.io/etcd/clientv3/balancer",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "g6eRx00F7Xl/0v8OCxgiC57ARs0=",
 			"path": "go.etcd.io/etcd/clientv3/balancer/picker",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "zsQzOE0KolNLwLKQfahcy3WZwjk=",
 			"path": "go.etcd.io/etcd/clientv3/balancer/resolver/endpoint",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
-			"checksumSHA1": "NFsezSuEcheJXAlnehOL431Q8us=",
+			"checksumSHA1": "m4fwIeCfL2HdD7Oqmj9GXihz3m8=",
 			"path": "go.etcd.io/etcd/clientv3/concurrency",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "SDdAjoQeeV8tEDv05QZ7/Yv79CI=",
 			"path": "go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "Jk0gGFdOHgsqxhoj9atENsLkwD0=",
 			"path": "go.etcd.io/etcd/etcdserver/etcdserverpb",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "C/ndQTz6TCtOsL29UYTxuax9/rw=",
 			"path": "go.etcd.io/etcd/mvcc/mvccpb",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "38iFzK4Eq3kQ3t2xlTRQvypOeRI=",
 			"path": "go.etcd.io/etcd/pkg/logutil",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "Q4ZZnZeTbMHrXKZxTd6EQjSf4uY=",
 			"path": "go.etcd.io/etcd/pkg/pathutil",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
-			"checksumSHA1": "jF9R5QbAMut5PvZMIy9+zDPf6NU=",
+			"checksumSHA1": "f0XHkJGhyhBIlx+AuLyv2lc519w=",
 			"path": "go.etcd.io/etcd/pkg/srv",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "Xf7TwBAdBTSSeTlEzqFH1Deglbk=",
 			"path": "go.etcd.io/etcd/pkg/systemd",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "yl9eTlZ74Ixe7WxHQaO6rWJq+tU=",
 			"path": "go.etcd.io/etcd/pkg/tlsutil",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "YQD4i+Li76ogXqgKS62MJVf1agE=",
 			"path": "go.etcd.io/etcd/pkg/transport",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "VL9HsNKbbCb1Ntj9VcFCfiTmjmM=",
 			"path": "go.etcd.io/etcd/pkg/types",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
-			"checksumSHA1": "b6/18Kp2W5oWnbgqIq6Ks3FKOBk=",
+			"checksumSHA1": "G5GOx28aUKrnslEBisXvZtlQdmE=",
 			"path": "go.etcd.io/etcd/raft",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "0ZI+YcuXXszApIhI+HcsmIcSVgg=",
 			"path": "go.etcd.io/etcd/raft/raftpb",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "Vyt9fFWEV2/sagq9KmkVbPn+LFM=",
 			"path": "go.etcd.io/etcd/version",
-			"revision": "7a759c18d294698f537f8be91927354818a71e51",
-			"revisionTime": "2018-10-15T17:54:34Z"
+			"revision": "de8e29e71ccfed8ecb2d3102f2ea78c627a528c0",
+			"revisionTime": "2019-01-22T19:19:15Z"
 		},
 		{
 			"checksumSHA1": "FYNpZ/C+tTLe/JMqvIPybkoBh2Y=",

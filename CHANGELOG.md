@@ -1,14 +1,57 @@
 ## Next
 
+CHANGES:
+
+ * New AWS authentication plugin mounts will default to using the generated
+   role ID as the Identity alias name.  This applies to both EC2 and IAM auth.
+   Existing mounts will not be affected.
+ * The default policy now allows a token to look up its associated identity
+   entity either by name or by id [GH-6105]
+ * The Vault UI's navigation and onboarding wizard now only displays items that
+   are permitted in a users' policy [GH-5980, GH-6094]
+
+FEATURES:
+
+ * **cURL Command Output**: CLI commands can now use the `-output-curl-string`
+   flag to print out an equivalent cURL command.
+ * **Response Headers From Plugins**: Plugins can now send back headers that
+   will be included in the response to a client. The set of allowed headers can
+   be managed by the operator.
+
+IMPROVEMENTS:
+
+ * auth/aws: AWS EC2 authentication can optionally create entity aliases by
+   role ID [GH-6133]
+ * auth/jwt: The supported set of signing algorithms is now configurable [JWT
+   plugin GH-16]
+ * core: When starting from an uninitialized state, HA nodes will now attempt
+   to auto-unseal using a configured auto-unseal mechanism after the active
+   node initializes Vault [GH-6039]
+ * secret/database: Add socket keepalive option for Cassandra [GH-6201]
+ * secret/ssh: Add signed key constraints, allowing enforcement of key types
+   and minimum key sizes [GH-6030]
+ * secret/transit: ECDSA signatures can now be marshaled in JWS-compatible
+   fashion [GH-6077]
+ * storage/etcd: Support SRV service names [GH-6087]
+ * storage/aws: Support specifying a KMS key ID for server-side encryption
+   [GH-5996]
+
 BUG FIXES:
 
- * storage/postgresql: The `Get` method will now return an Entry object with the
-   `Key` member correctly populated with the full path that was requested instead
-   of just the last path element [GH-6044].
-   
-IMPROVEMENTS:
-  * auth/jwt: The supported set of signing algorithms is now configurable
-    [JWT plugin GH-16].
+ * core: Fix a rare case where a standby whose connection is entirely torn down
+   to the active node, then reconnects to the same active node, may not
+   successfully resume operation [GH-6167]
+ * cors: Don't duplicate headers when they're written [GH-6207]
+ * identity: Persist merged entities only on the primary [GH-6075]
+ * replication: Fix a potential race when a token is created and then used with
+   a performance standby very quickly, before an associated entity has been
+   replicated. If the entity is not found in this scenario, the request will
+   forward to the active node.
+ * replication: Fix a "failed to register lease" error when using performance
+   standbys
+ * storage/postgresql: The `Get` method will now return an Entry object with
+   the `Key` member correctly populated with the full path that was requested
+   instead of just the last path element [GH-6044]
 
 ## 1.0.2 (January 15th, 2019)
 
@@ -35,6 +78,7 @@ CHANGES:
    the root namespace is disallowed.
 
 FEATURES:
+
  * **InfluxDB Database Plugin**: Use Vault to dynamically create and manage InfluxDB
    users
 

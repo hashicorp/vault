@@ -94,6 +94,25 @@ func TestSystemConfigCORS(t *testing.T) {
 		t.Fatalf("bad: %#v", actual)
 	}
 
+	// Do it again. Bug #6182
+	req = logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req.Data["allowed_origins"] = "http://www.example.com"
+	req.Data["allowed_headers"] = "X-Custom-Header"
+	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+
 	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
 	_, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {

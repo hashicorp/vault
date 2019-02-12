@@ -531,3 +531,44 @@ func TestDifference(t *testing.T) {
 		})
 	}
 }
+
+func TestStrUtil_EqualStringMaps(t *testing.T) {
+	m1 := map[string]string{
+		"foo": "a",
+	}
+	m2 := map[string]string{
+		"foo": "a",
+		"bar": "b",
+	}
+	var m3 map[string]string
+
+	m4 := map[string]string{
+		"dog": "",
+	}
+
+	m5 := map[string]string{
+		"cat": "",
+	}
+
+	tests := []struct {
+		a      map[string]string
+		b      map[string]string
+		result bool
+	}{
+		{m1, m1, true},
+		{m2, m2, true},
+		{m1, m2, false},
+		{m2, m1, false},
+		{m2, m2, true},
+		{m3, m1, false},
+		{m3, m3, true},
+		{m4, m5, false},
+	}
+
+	for i, test := range tests {
+		actual := EqualStringMaps(test.a, test.b)
+		if actual != test.result {
+			t.Fatalf("case %d, expected %v, got %v", i, test.result, actual)
+		}
+	}
+}

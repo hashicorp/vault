@@ -44,6 +44,11 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, fmt.Errorf("missing server")
 	}
 
+	port, ok := conf["port"]
+	if !ok {
+		port = ""
+	}
+
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
 	var err error
@@ -96,6 +101,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	if password != "" {
 		connectionString += ";password=" + password
+	}
+
+	if port != "" {
+		connectionString += ";port=" + port
 	}
 
 	db, err := sql.Open("mssql", connectionString)

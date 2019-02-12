@@ -799,6 +799,7 @@ supports signing.
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
@@ -825,6 +826,12 @@ supports signing.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also change the output encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Payload
 
@@ -871,6 +878,7 @@ data.
 - `hash_algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
@@ -900,6 +908,13 @@ data.
 
     - `pss`
     - `pkcs1v15`
+
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature was originally marshaled. This currently only applies to ECDSA keys. Supported types are:
+
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also expect the input encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Payload
 

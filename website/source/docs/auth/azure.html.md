@@ -58,6 +58,16 @@ $ vault write auth/azure/login \
 
 The `role` and `jwt` parameters are required. When using bound_service_principal_ids and bound_groups in the token roles, all the information is required in the JWT.  When using other bound_* parameters, calls to Azure APIs will be made and subscription id, resource group name, and vm name are all required and can be obtained through instance metadata.
 
+For example:
+
+```text
+$ vault write auth/azure/login role="dev-role" \
+     jwt="$(curl -s 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.hashicorp.com%2F' -H Metadata:true | jq -r '.access_token')" \
+     subscription_id=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .subscriptionId')  \
+     resource_group_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .resourceGroupName') \
+     vm_name=$(curl -s -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2017-08-01" | jq -r '.compute | .name')
+```
+
 ### Via the API
 
 The default endpoint is `auth/azure/login`. If this auth method was enabled

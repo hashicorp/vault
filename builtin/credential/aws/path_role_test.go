@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -620,8 +621,13 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"period":                         time.Duration(60),
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)
+	if resp.Data["role_id"] == nil {
+		t.Fatal("role_id not found in repsonse")
+	}
+	expected["role_id"] = resp.Data["role_id"]
+
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	roleData["bound_vpc_id"] = "newvpcid"
@@ -711,7 +717,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 }
 
-func TestRoleEntryUpgradeV1(t *testing.T) {
+func TestRoleEntryUpgradeV(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -743,8 +749,12 @@ func TestRoleEntryUpgradeV1(t *testing.T) {
 	if !upgraded {
 		t.Fatalf("expected to upgrade role entry %#v but got no upgrade", roleEntryToUpgrade)
 	}
-	if !reflect.DeepEqual(*roleEntryToUpgrade, *expected) {
-		t.Fatalf("bad: expected upgraded role of %#v, got %#v instead", expected, roleEntryToUpgrade)
+	if roleEntryToUpgrade.RoleID == "" {
+		t.Fatal("expected role ID to be populated")
+	}
+	expected.RoleID = roleEntryToUpgrade.RoleID
+	if diff := deep.Equal(*roleEntryToUpgrade, *expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
