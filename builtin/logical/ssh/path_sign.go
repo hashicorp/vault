@@ -2,7 +2,10 @@ package ssh
 
 import (
 	"context"
+	"crypto/dsa"
+	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -16,11 +19,12 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
 )
 
 type creationBundle struct {
-	KeyId           string
+	KeyID           string
 	ValidPrincipals []string
 	PublicKey       ssh.PublicKey
 	CertificateType uint32
@@ -110,9 +114,14 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
+	err = b.validateSignedKeyRequirements(userPublicKey, role)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("public_key failed to meet the key requirements: %s", err)), nil
+	}
+
 	// Note that these various functions always return "user errors" so we pass
 	// them as 4xx values
-	keyId, err := b.calculateKeyId(data, req, role, userPublicKey)
+	keyID, err := b.calculateKeyID(data, req, role, userPublicKey)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -164,7 +173,7 @@ func (b *backend) pathSignCertificate(ctx context.Context, req *logical.Request,
 	}
 
 	cBundle := creationBundle{
-		KeyId:           keyId,
+		KeyID:           keyID,
 		PublicKey:       userPublicKey,
 		Signer:          signer,
 		ValidPrincipals: parsedPrincipals,
@@ -266,14 +275,14 @@ func (b *backend) calculateCertificateType(data *framework.FieldData, role *sshR
 	return certificateType, nil
 }
 
-func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request, role *sshRole, pubKey ssh.PublicKey) (string, error) {
-	reqId := data.Get("key_id").(string)
+func (b *backend) calculateKeyID(data *framework.FieldData, req *logical.Request, role *sshRole, pubKey ssh.PublicKey) (string, error) {
+	reqID := data.Get("key_id").(string)
 
-	if reqId != "" {
+	if reqID != "" {
 		if !role.AllowUserKeyIDs {
 			return "", fmt.Errorf("setting key_id is not allowed by role")
 		}
-		return reqId, nil
+		return reqID, nil
 	}
 
 	keyIDFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
@@ -384,6 +393,65 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 	return ttl, nil
 }
 
+func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *sshRole) error {
+	if len(role.AllowedUserKeyLengths) != 0 {
+		var kstr string
+		var kbits int
+
+		switch k := publickey.(type) {
+		case ssh.CryptoPublicKey:
+			ff := k.CryptoPublicKey()
+			switch k := ff.(type) {
+			case *rsa.PublicKey:
+				kstr = "rsa"
+				kbits = k.N.BitLen()
+			case *dsa.PublicKey:
+				kstr = "dsa"
+				kbits = k.Parameters.P.BitLen()
+			case *ecdsa.PublicKey:
+				kstr = "ecdsa"
+				kbits = k.Curve.Params().BitSize
+			case ed25519.PublicKey:
+				kstr = "ed25519"
+			default:
+				return fmt.Errorf("public key type of %s is not allowed", kstr)
+			}
+		default:
+			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
+		}
+
+		if value, ok := role.AllowedUserKeyLengths[kstr]; ok {
+			var pass bool
+			switch kstr {
+			case "rsa":
+				if kbits == value {
+					pass = true
+				}
+			case "dsa":
+				if kbits == value {
+					pass = true
+				}
+			case "ecdsa":
+				if kbits == value {
+					pass = true
+				}
+			case "ed25519":
+				// ed25519 public keys are always 256 bits in length,
+				// so there is no need to inspect their value
+				pass = true
+			}
+
+			if !pass {
+				return fmt.Errorf("key is of an invalid size: %v", kbits)
+			}
+
+		} else {
+			return fmt.Errorf("key type of %s is not allowed", kstr)
+		}
+	}
+	return nil
+}
+
 func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -405,7 +473,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
-		KeyId:           b.KeyId,
+		KeyId:           b.KeyID,
 		ValidPrincipals: b.ValidPrincipals,
 		ValidAfter:      uint64(now.Add(-30 * time.Second).In(time.UTC).Unix()),
 		ValidBefore:     uint64(now.Add(b.TTL).In(time.UTC).Unix()),
