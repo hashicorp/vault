@@ -3,10 +3,12 @@ package jwtauth
 import (
 	"context"
 	"sync"
+	"time"
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -16,7 +18,7 @@ const (
 
 // Factory is used by framework
 func Factory(ctx context.Context, c *logical.BackendConfig) (logical.Backend, error) {
-	b := backend(c)
+	b := backend()
 	if err := b.Setup(ctx, c); err != nil {
 		return nil, err
 	}
@@ -29,14 +31,16 @@ type jwtAuthBackend struct {
 	l            sync.RWMutex
 	provider     *oidc.Provider
 	cachedConfig *jwtConfig
+	oidcStates   *cache.Cache
 
 	providerCtx       context.Context
 	providerCtxCancel context.CancelFunc
 }
 
-func backend(c *logical.BackendConfig) *jwtAuthBackend {
+func backend() *jwtAuthBackend {
 	b := new(jwtAuthBackend)
 	b.providerCtx, b.providerCtxCancel = context.WithCancel(context.Background())
+	b.oidcStates = cache.New(oidcStateTimeout, 1*time.Minute)
 
 	b.Backend = &framework.Backend{
 		AuthRenew:   b.pathLoginRenew,
@@ -46,6 +50,9 @@ func backend(c *logical.BackendConfig) *jwtAuthBackend {
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
+				"oidc/auth_url",
+				"oidc/callback",
+				"ui", // TODO: remove when Vault UI is ready
 			},
 			SealWrapStorage: []string{
 				"config",
@@ -57,7 +64,9 @@ func backend(c *logical.BackendConfig) *jwtAuthBackend {
 				pathRoleList(b),
 				pathRole(b),
 				pathConfig(b),
+				pathUI(b), // TODO: remove when Vault UI is ready
 			},
+			pathOIDC(b),
 		),
 		Clean: b.cleanup,
 	}
