@@ -11,22 +11,7 @@ import (
 )
 
 func TestStorage_impl(t *testing.T) {
-	var _ logical.Storage = new(StorageClient)
-}
-
-func TestStorage_RPC(t *testing.T) {
-	client, server := plugin.TestRPCConn(t)
-	defer client.Close()
-
-	storage := &logical.InmemStorage{}
-
-	server.RegisterName("Plugin", &StorageServer{
-		impl: storage,
-	})
-
-	testStorage := &StorageClient{client: client}
-
-	logical.TestStorage(t, testStorage)
+	var _ logical.Storage = new(GRPCStorageClient)
 }
 
 func TestStorage_GRPC(t *testing.T) {
