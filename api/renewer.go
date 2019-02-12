@@ -175,6 +175,10 @@ func (r *Renewer) renewAuth() error {
 
 	client, token := r.client, r.secret.Auth.ClientToken
 
+	if r.secret.Auth.Namespace != "" {
+		client.SetNamespace(r.secret.Auth.Namespace)
+	}
+
 	for {
 		// Check if we are stopped.
 		select {
@@ -249,6 +253,10 @@ func (r *Renewer) renewLease() error {
 	r.calculateGrace(priorDuration)
 
 	client, leaseID := r.client, r.secret.LeaseID
+
+	if r.secret.Namespace != "" {
+		client.SetNamespace(r.secret.Namespace)
+	}
 
 	for {
 		// Check if we are stopped.
