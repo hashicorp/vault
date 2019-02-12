@@ -38,7 +38,8 @@ type Secret struct {
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
 
-	// Namespace is the namespace that this secret belongs to.
+	// Namespace, if non-root, is the namespace that this secret belongs to. This
+	// value will be empty (or fully omitted in JSON) for the root namespace.
 	Namespace string `json:"namespace,omitempty"`
 }
 
