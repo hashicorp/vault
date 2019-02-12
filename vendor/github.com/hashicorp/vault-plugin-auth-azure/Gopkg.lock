@@ -216,7 +216,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:450803219e484669ba680c777ecac629dac92abde2bc83009beaa630f5368e71"
+  digest = "1:606c7307ae83d1adc0901aa8909b700489d7f1294533344453436a8dbff0091b"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -226,6 +226,7 @@
     "helper/errutil",
     "helper/hclutil",
     "helper/jsonutil",
+    "helper/license",
     "helper/locksutil",
     "helper/logging",
     "helper/mlock",
@@ -245,7 +246,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "8655d167084028d627f687ddc25d0c71307eb5be"
+  revision = "c0739a0f2367d5fdd20cef502b628e01bdb90470"
 
 [[projects]]
   branch = "master"
@@ -286,6 +287,17 @@
   pruneopts = "UT"
   revision = "4dadeb3030eda0273a12382bb2348ffc7c9d1a39"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:c7a5e79396b6eb570159df7a1d487ce5775bf43b7907976fbef6de544ea160ad"
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32",
+  ]
+  pruneopts = "UT"
+  revision = "473cd7ce01a1113208073166464b98819526150e"
+  version = "v2.0.8"
 
 [[projects]]
   branch = "master"
