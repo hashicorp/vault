@@ -11,7 +11,7 @@ CHANGES:
    are permitted in a users' policy [GH-5980, GH-6094]
  * An issue was fixed that caused recovery keys to not work on secondary 
    clusters when using a different unseal mechanism/key than the primary. This 
-   would be hit if the cluster was rekeyed or initalized after 1.0. We recomend
+   would be hit if the cluster was rekeyed or initialized after 1.0. We recommend
    rekeying the recovery keys on the primary cluster if you meet the above 
    requirements.
 
