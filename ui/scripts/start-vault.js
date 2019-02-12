@@ -71,4 +71,7 @@ process.on('exit', function() {
   vault.kill('SIGINT');
 });
 
-fs.writeFile(pidFile, process.pid);
+fs.writeFile(pidFile, process.pid, (err) => {
+  if (err) throw err;
+  console.log('The file has been saved!');
+});
