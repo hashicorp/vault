@@ -15,6 +15,7 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       items: {
         type: 'string',
       },
+      'x-vault-displayValue': 'Grace Hopper,Lady Ada',
     },
   };
   const EXPANDED_PROPS = {
@@ -26,6 +27,7 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     awesomePeople: {
       editType: 'stringArray',
       type: 'array',
+      defaultValue: 'Grace Hopper,Lady Ada',
     },
   };
 
@@ -68,6 +70,7 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       label: 'People Who Are Awesome',
       editType: 'stringArray',
       type: 'array',
+      defaultValue: 'Grace Hopper,Lady Ada',
     }),
   };
 
@@ -131,6 +134,25 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
         expectedGroups[groupName],
         'it incorporates all new fields'
       );
+    }
+  });
+  test('it keeps fields the same when there are no brand new fields from OpenAPI', function(assert) {
+    let modelFieldGroups = [
+      { default: ['name', 'awesomePeople', 'two', 'one', 'three'] },
+      {
+        Options: ['ttl'],
+      },
+    ];
+    const excludedFields = [];
+    const expectedGroups = [
+      { default: ['name', 'awesomePeople', 'two', 'one', 'three'] },
+      {
+        Options: ['ttl'],
+      },
+    ];
+    const fieldGroups = combineFieldGroups(modelFieldGroups, NEW_FIELDS, excludedFields);
+    for (let groupName in modelFieldGroups) {
+      assert.deepEqual(fieldGroups[groupName], expectedGroups[groupName], 'it incorporates all new fields');
     }
   });
 });

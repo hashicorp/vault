@@ -13,11 +13,6 @@ export default Adapter.extend({
     }
     return url;
   },
-
-  pathForType() {
-    return 'issue';
-  },
-
   optionsForQuery(id) {
     let data = {};
     if (!id) {
