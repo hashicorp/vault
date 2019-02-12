@@ -39,6 +39,10 @@ func Serve(opts *ServeOpts) error {
 
 	// pluginMap is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
+		// Version 3 used to supports both protocols. We want to keep it around
+		// since it's possible old plugins built against this version will still
+		// work with gRPC. There is currently no difference between version 3
+		// and version 4.
 		3: plugin.PluginSet{
 			"backend": &GRPCBackendPlugin{
 				Factory: opts.BackendFactoryFunc,
@@ -70,13 +74,6 @@ func Serve(opts *ServeOpts) error {
 			opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 			return plugin.DefaultGRPCServer(opts)
 		},
-	}
-
-	// If we do not have gRPC support fallback to version 3
-	// Remove this block in 0.13
-	if !pluginutil.GRPCSupport() {
-		serveOpts.GRPCServer = nil
-		delete(pluginSets, 4)
 	}
 
 	plugin.Serve(serveOpts)

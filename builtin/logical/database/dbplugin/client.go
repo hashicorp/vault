@@ -35,7 +35,10 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
-		// Version 3 supports both protocols
+		// Version 3 used to supports both protocols. We want to keep it around
+		// since it's possible old plugins built against this version will still
+		// work with gRPC. There is currently no difference between version 3
+		// and version 4.
 		3: plugin.PluginSet{
 			"database": new(GRPCDatabasePlugin),
 		},
