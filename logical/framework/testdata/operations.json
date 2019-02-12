@@ -85,6 +85,7 @@
                   "name": {
                     "type": "string",
                     "description": "the name",
+                    "default": "Larry",
                     "pattern": "\\w([\\w-.]*\\w)?"
                   }
                 }
