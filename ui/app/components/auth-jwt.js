@@ -30,7 +30,7 @@ export default Component.extend({
       if (oldSelectedAuthPath !== selectedAuthPath) {
         this.set('role', null);
         this.onRoleName(null);
-        this.fetchRole.perform(null, { nodebounce: true });
+        this.fetchRole.perform(null, { debounce: false });
       }
       this.set('oldSelectedAuthPath', selectedAuthPath);
     });
@@ -38,7 +38,7 @@ export default Component.extend({
 
   // OIDC roles in the JWT/OIDC backend are those with an authUrl,
   // those that are JWT type will 400 when trying to fetch the role
-  isOIDC: computed('role', function() {
+  isOIDC: computed('role', 'role.authUrl', function() {
     return this.role && this.role.authUrl;
   }),
 
@@ -46,8 +46,8 @@ export default Component.extend({
     return this.window || window;
   },
 
-  fetchRole: task(function*(roleName, options = {}) {
-    if (!options.nodebounce) {
+  fetchRole: task(function*(roleName, options = { debounce: true }) {
+    if (options.debounce) {
       this.onRoleName(roleName);
       // debounce
       yield timeout(WAIT_TIME);
@@ -146,15 +146,17 @@ export default Component.extend({
         return;
       }
 
-      await this.fetchRole.perform(this.roleName, { nodebounce: true });
+      await this.fetchRole.perform(this.roleName, { debounce: false });
       let win = this.getWindow();
 
-      let left = win.screen.width / 2 - 250;
-      let top = win.screen.height / 2 - 300;
+      const POPUP_WIDTH = 500;
+      const POPUP_HEIGHT = 600;
+      let left = win.screen.width / 2 - POPUP_WIDTH / 2;
+      let top = win.screen.height / 2 - POPUP_HEIGHT / 2;
       let oidcWindow = win.open(
         this.role.authUrl,
         'vaultOIDCWindow',
-        `width=500,height=600,resizable,scrollbars=yes,top=${top},left=${left}`
+        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT}resizable,scrollbars=yes,top=${top},left=${left}`
       );
 
       this.prepareForOIDC.perform(oidcWindow);
