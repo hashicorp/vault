@@ -9,6 +9,11 @@ CHANGES:
    entity either by name or by id [GH-6105]
  * The Vault UI's navigation and onboarding wizard now only displays items that
    are permitted in a users' policy [GH-5980, GH-6094]
+ * An issue was fixed that caused recovery keys to not work on secondary 
+   clusters when using a different unseal mechanism/key than the primary. This 
+   would be hit if the cluster was rekeyed or initialized after 1.0. We recommend
+   rekeying the recovery keys on the primary cluster if you meet the above 
+   requirements.
 
 FEATURES:
 
@@ -47,6 +52,8 @@ BUG FIXES:
    a performance standby very quickly, before an associated entity has been
    replicated. If the entity is not found in this scenario, the request will
    forward to the active node.
+ * replication: Fix issue where recovery keys would not work on secondary 
+   clusters if using a different unseal mechanism than the primary.
  * replication: Fix a "failed to register lease" error when using performance
    standbys
  * storage/postgresql: The `Get` method will now return an Entry object with
