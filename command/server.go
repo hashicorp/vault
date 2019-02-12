@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"io"
 	"io/ioutil"
 	"net"
@@ -467,7 +468,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	inMemMetrics, err := c.setupTelemetry(config)
+	metricsHelper, err := c.setupTelemetry(config)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
@@ -563,7 +564,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
-		InMemSink:                 inMemMetrics,
+		MetricsHelper:             metricsHelper,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1670,7 +1671,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 }
 
 // setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
-func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSink, error) {
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -1690,22 +1691,24 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+	var prometheusEnabled bool
 
 	// Configure the Prometheus sink
-	if telConfig.PrometheusRetentionTime == 0 {
-		return nil, fmt.Errorf("telemetry.prometheus_retention_time must be > 0")
+	if telConfig.PrometheusRetentionTime != 0 {
+		prometheusEnabled = true
+		prometheusOpts := prometheus.PrometheusOpts{
+			Expiration: telConfig.PrometheusRetentionTime,
+		}
+
+		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+		if err != nil {
+			return nil, err
+		}
+		fanout = append(fanout, sink)
 	}
 
-	prometheusOpts := prometheus.PrometheusOpts{
-		Expiration: telConfig.PrometheusRetentionTime,
-	}
+	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
 
-	sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	fanout = append(fanout, sink)
 
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
@@ -1786,8 +1789,13 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metrics.InmemSin
 		metricsConf.EnableHostname = false
 	}
 	fanout = append(fanout, inm)
-	metrics.NewGlobal(metricsConf, fanout)
-	return inm, nil
+	_, err := metrics.NewGlobal(metricsConf, fanout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {

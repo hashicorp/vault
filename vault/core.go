@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -404,7 +405,7 @@ type Core struct {
 	allLoggersLock sync.RWMutex
 
 	// Telemetry objects
-	inMemSink         *metrics.InmemSink
+	metricsHelper     *metricsutil.MetricsHelper
 }
 
 // CoreConfig is used to parameterize a core
@@ -475,7 +476,7 @@ type CoreConfig struct {
 	AllLoggers []log.Logger
 
 	// Telemetry objects
-	InMemSink         *metrics.InmemSink
+	MetricsHelper *metricsutil.MetricsHelper
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -582,7 +583,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		activeContextCancelFunc:          new(atomic.Value),
 		allLoggers:                       conf.AllLoggers,
 		builtinRegistry:                  conf.BuiltinRegistry,
-		inMemSink:                        conf.InMemSink,
+		metricsHelper:                        conf.MetricsHelper,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -19,8 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/common/expfmt"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
@@ -29,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -36,7 +34,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -2479,51 +2476,11 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 }
 
 func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	format := data.Get("format").(string)
-
-	acceptHeaders := req.Headers["Accept"]
-	if format == "prometheus" || (len(acceptHeaders) > 0 && strings.HasPrefix(acceptHeaders[0], "application/openmetrics-text")) {
-
-		metricsFamilies, err := prometheus.DefaultGatherer.Gather()
-		if err != nil && len(metricsFamilies) == 0 {
-			return nil, fmt.Errorf("no prometheus metrics could be decoded: %s", err)
-		}
-
-		// Initialize a byte buffer.
-		buf := &bytes.Buffer{}
-		defer buf.Reset()
-
-		e := expfmt.NewEncoder(buf, expfmt.FmtText)
-		for _, mf := range metricsFamilies {
-			err := e.Encode(mf)
-			if err != nil {
-				return nil, fmt.Errorf("error during the encoding of metrics: %s", err)
-			}
-		}
-		return &logical.Response{
-			Data: map[string]interface{}{
-				logical.HTTPContentType: expfmt.FmtText,
-				logical.HTTPRawBody:     buf.Bytes(),
-				logical.HTTPStatusCode:  200,
-			},
-		}, nil
+	if format == "" {
+		format = metricsutil.FormatFromRequest(req)
 	}
-	summary, err := b.Core.inMemSink.DisplayMetrics(nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error while fetching the in-memory metrics: %s", err)
-	}
-	content, err := json.Marshal(summary)
-	if err != nil {
-		return nil, fmt.Errorf("error while marshalling the in-memory metrics: %s", err)
-	}
-	return &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPContentType: "application/json",
-			logical.HTTPRawBody:     content,
-			logical.HTTPStatusCode:  200,
-		},
-	}, nil
+	return b.Core.metricsHelper.ResponseForFormat(format)
 }
 
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
