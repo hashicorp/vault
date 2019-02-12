@@ -115,6 +115,25 @@ func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 	return &Empty{}, nil
 }
 
+func (s *gRPCServer) SetCredentials(context.Context, *SetCredentialsRequest) (*SetCredentialsResponse, error) {
+
+        resp, err := s.impl.SetCredentials(ctx, req.StaticUserConfig)
+        if err != nil {
+                return nil, err
+        }
+
+        respConfig, err := json.Marshal(resp)
+        if err != nil {
+                return nil, err
+        }
+
+        return &SetCredentialsResponse{
+                Config: respConfig,
+        }, err
+}
+        return nil, status.Error(codes.Unimplemented, "not yet implemented")
+}
+
 // ---- gRPC client domain ----
 
 type gRPCClient struct {
