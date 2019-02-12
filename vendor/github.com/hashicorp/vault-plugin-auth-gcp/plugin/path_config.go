@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"encoding/json"
+
 	"github.com/hashicorp/go-gcp-common/gcputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -20,11 +21,13 @@ func pathConfig(b *GcpAuthBackend) *framework.Path {
 				Description: `
 Google credentials JSON that Vault will use to verify users against GCP APIs.
 If not specified, will use application default credentials`,
+				DisplayName: "Credentials",
 			},
 			"google_certs_endpoint": {
 				Type: framework.TypeString,
 				Description: `
 Deprecated. This field does nothing and be removed in a future release`,
+				Deprecated: true,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
