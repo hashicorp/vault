@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"context"
@@ -32,6 +33,10 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 			"jwt_validation_pubkeys": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
+			},
+			"jwt_supported_algs": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `A list of supported signing algorithms. Defaults to RS256.`,
 			},
 			"bound_issuer": {
 				Type:        framework.TypeString,
@@ -99,6 +104,7 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"oidc_discovery_url":     config.OIDCDiscoveryURL,
 			"oidc_discovery_ca_pem":  config.OIDCDiscoveryCAPEM,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
+			"jwt_supported_algs":     config.JWTSupportedAlgs,
 			"bound_issuer":           config.BoundIssuer,
 		},
 	}
@@ -111,6 +117,7 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		OIDCDiscoveryURL:     d.Get("oidc_discovery_url").(string),
 		OIDCDiscoveryCAPEM:   d.Get("oidc_discovery_ca_pem").(string),
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
+		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
 	}
 
@@ -130,6 +137,15 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		for _, v := range config.JWTValidationPubKeys {
 			if _, err := certutil.ParsePublicKeyPEM([]byte(v)); err != nil {
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing public key: {{err}}", err).Error()), nil
+			}
+		}
+
+	case len(config.JWTSupportedAlgs) != 0:
+		for _, a := range config.JWTSupportedAlgs {
+			switch a {
+			case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 			}
 		}
 
@@ -182,6 +198,7 @@ type jwtConfig struct {
 	OIDCDiscoveryURL     string   `json:"oidc_discovery_url"`
 	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
 	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
+	JWTSupportedAlgs     []string `json:"jwt_supported_algs"`
 	BoundIssuer          string   `json:"bound_issuer"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`

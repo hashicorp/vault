@@ -610,8 +610,6 @@ func TestHandler_getTokenFromReq(t *testing.T) {
 		t.Fatalf("%s header should be prioritized", consts.AuthHeaderName)
 	} else if tok != "NEWTOKEN" {
 		t.Fatalf("expected 'NEWTOKEN' as result, got '%s'", tok)
-	} else if r.Header.Get(consts.AuthHeaderName) != "" {
-		t.Fatal("expected auth header to be removed")
 	}
 
 	r.Header = http.Header{}

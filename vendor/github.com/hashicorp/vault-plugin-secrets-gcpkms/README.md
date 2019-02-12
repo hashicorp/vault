@@ -84,6 +84,12 @@ instructions are only useful if you want to develop against the plugin.**
     $ vault secrets enable -path=gcpkms -plugin=vault-plugin-secrets-gcpkms plugin
     ```
 
+### Documentation
+
+The documentation for the plugin lives in the [main Vault
+repository](/hashicorp/vault) in the `website/` folder. Please make any
+documentation updates as separate Pull Requests against that repo.
+
 ### Tests
 
 This plugin has both unit tests and acceptance tests. To run the acceptance

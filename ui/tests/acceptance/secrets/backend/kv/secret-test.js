@@ -137,6 +137,29 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'navigates to the ancestor created earlier'
     );
   });
+  test('first level secrets redirect properly upon deletion', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'test';
+    // mount version 1 engine
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await withFlash(
+      mountSecrets
+        .next()
+        .path(enginePath)
+        .version(1)
+        .submit()
+    );
+
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+    await showPage.deleteSecret();
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'redirected to the list page on delete'
+    );
+  });
 
   // https://github.com/hashicorp/vault/issues/5994
   test('version 1: key named keys', async function(assert) {

@@ -425,6 +425,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"print": func() (cli.Command, error) {
+			return &PrintCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"print token": func() (cli.Command, error) {
 			return &PrintTokenCommand{
 				BaseCommand: getBaseCommand(),
