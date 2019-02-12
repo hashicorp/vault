@@ -5,7 +5,7 @@ import { alias } from '@ember/object/computed';
 export default Base.extend({
   model: alias('params.firstObject'),
   key: computed('params', function() {
-    return this.get('params').objectAt(1);
+    return this.params.objectAt(1);
   }),
 
   messageArgs(model, key) {
@@ -21,7 +21,7 @@ export default Base.extend({
   },
 
   transaction(model, key) {
-    let metadata = model.get('metadata');
+    let metadata = model.metadata;
     delete metadata[key];
     model.set('metadata', { ...metadata });
     return model.save();
