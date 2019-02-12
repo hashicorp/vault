@@ -136,7 +136,8 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 		verifier := provider.Verifier(&oidc.Config{
-			SkipClientIDCheck: true,
+			SkipClientIDCheck:    true,
+			SupportedSigningAlgs: config.JWTSupportedAlgs,
 		})
 
 		idToken, err := verifier.Verify(ctx, token)
