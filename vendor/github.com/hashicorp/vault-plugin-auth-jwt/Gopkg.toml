@@ -61,6 +61,11 @@
   name = "gopkg.in/square/go-jose.v2"
   version = "2.1.8"
 
+# Remove this once https://github.com/hashicorp/go-plugin/pull/97 is merged
+[[override]]
+  name = "github.com/hashicorp/go-plugin"
+  revision = "26219a000dd975abd5140a2ddbe415b366498be7"
+
 [prune]
   go-tests = true
   unused-packages = true

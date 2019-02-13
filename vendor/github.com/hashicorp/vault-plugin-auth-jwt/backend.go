@@ -52,7 +52,9 @@ func backend() *jwtAuthBackend {
 				"login",
 				"oidc/auth_url",
 				"oidc/callback",
-				"ui", // TODO: remove when Vault UI is ready
+
+				// Uncomment to mount simple UI handler for local development
+				// "ui",
 			},
 			SealWrapStorage: []string{
 				"config",
@@ -64,7 +66,9 @@ func backend() *jwtAuthBackend {
 				pathRoleList(b),
 				pathRole(b),
 				pathConfig(b),
-				pathUI(b), // TODO: remove when Vault UI is ready
+
+				// Uncomment to mount simple UI handler for local development
+				// pathUI(b),
 			},
 			pathOIDC(b),
 		),

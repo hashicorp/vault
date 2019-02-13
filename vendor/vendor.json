@@ -1409,12 +1409,12 @@
 			"revisionTime": "2018-12-10T20:01:33Z"
 		},
 		{
-			"checksumSHA1": "86jzaGc3dRpZ5BKQPFP7ecasQfg=",
+			"checksumSHA1": "jCtLHj3YAONxCcV6v6kifTrRJwM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "bf17a88bb5c43eb2cbdc08011cd76ecec028521c",
-			"revisionTime": "2019-02-07T06:35:46Z",
-			"version": "=oidc-cli",
-			"versionExact": "oidc-cli"
+			"revision": "6eaab2ed65f29101381ac871ffb06110b871a742",
+			"revisionTime": "2019-02-13T00:58:38Z",
+			"version": "=oidc-dev",
+			"versionExact": "oidc-dev"
 		},
 		{
 			"checksumSHA1": "Ldg2jQeyPrpAupyQq4lRVN+jfFY=",

@@ -101,15 +101,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:77a6108b8eb3cd0feac4eeb3e032f36c8fdfe9497671952fd9eb682b9c503158"
+  digest = "1:e18a77f3453d129d9a5b4cac4e912b21c2dd2af52a24a8fe6a8c241476ed7b6b"
   name = "github.com/hashicorp/go-plugin"
-  packages = [
-    ".",
-    "internal/proto",
-  ]
+  packages = ["."]
   pruneopts = "UT"
-  revision = "362c99b11937c6a84686ee5726a8170e921ab406"
+  revision = "26219a000dd975abd5140a2ddbe415b366498be7"
 
 [[projects]]
   digest = "1:d260503602063d71718eb21f85c02133ad5eac894c2a6f0e0546b7dc017dc97e"
