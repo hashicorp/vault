@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
+	"time"
+
 	"os"
 	"sort"
 	"strings"
@@ -23,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
@@ -332,9 +337,62 @@ func (c *AgentCommand) Run(args []string) int {
 		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 	})
 
-	// Start things running
+	// Start auto-auth and sink servers
 	go ah.Run(ctx, method)
 	go ss.Run(ctx, ah.OutputCh, sinks)
+
+	// Parse agent listener configurations
+	var listeners []net.Listener
+	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
+		listeners, err = cache.ServerListeners(config.Cache.Listeners, c.logWriter, c.UI)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error running listeners: %v", err))
+			return 1
+		}
+
+		cacheLogger := c.logger.Named("cache")
+
+		// Create the API proxier
+		apiProxy := cache.NewAPIProxy(&cache.APIProxyConfig{
+			Logger: cacheLogger.Named("apiproxy"),
+		})
+
+		// Create the lease cache proxier and set its underlying proxier to
+		// the API proxier.
+		leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+			BaseContext: ctx,
+			Proxier:     apiProxy,
+			Logger:      cacheLogger.Named("leasecache"),
+		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
+			return 1
+		}
+
+		// Create a muxer and add paths relevant for the lease cache layer
+		mux := http.NewServeMux()
+		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+
+		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, c.client))
+		for _, ln := range listeners {
+			server := &http.Server{
+				Handler:           mux,
+				ReadHeaderTimeout: 10 * time.Second,
+				ReadTimeout:       30 * time.Second,
+				IdleTimeout:       5 * time.Minute,
+				ErrorLog:          cacheLogger.StandardLogger(nil),
+			}
+			go server.Serve(ln)
+		}
+
+		// Ensure that listeners are closed at all the exits
+		listenerCloseFunc := func() {
+			for _, ln := range listeners {
+				ln.Close()
+			}
+		}
+		defer c.cleanupGuard.Do(listenerCloseFunc)
+	}
 
 	// Release the log gate.
 	c.logGate.Flush()

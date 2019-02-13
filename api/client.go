@@ -25,6 +25,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 const EnvVaultAddress = "VAULT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
@@ -237,6 +238,10 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
+	// Agent's address will take precedence over Vault's address
+	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+		envAddress = v
+	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
@@ -365,6 +370,21 @@ func NewClient(c *Config) (*Client, error) {
 
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
+
+	// If address begins with a `/`, treat it as a socket file path and set
+	// the HttpClient's transport to the corresponding socket dialer.
+	if strings.HasPrefix(c.Address, "/") {
+		socketFilePath := c.Address
+		c.HttpClient = &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(context.Context, string, string) (net.Conn, error) {
+					return net.Dial("unix", socketFilePath)
+				},
+			},
+		}
+		// Set the unix address for URL parsing below
+		c.Address = "http://unix"
+	}
 
 	u, err := url.Parse(c.Address)
 	if err != nil {
@@ -707,7 +727,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	redirectCount := 0
 START:
-	req, err := r.toRetryableHTTP()
+	req, err := r.ToRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}

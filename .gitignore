@@ -48,7 +48,9 @@ Vagrantfile
 # Configs
 *.hcl
 !command/agent/config/test-fixtures/config.hcl
+!command/agent/config/test-fixtures/config-cache.hcl
 !command/agent/config/test-fixtures/config-embedded-type.hcl
+!command/agent/config/test-fixtures/config-cache-embedded-type.hcl
 
 .DS_Store
 .idea
