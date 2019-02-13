@@ -94,6 +94,29 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 	if config["address"] != "" {
 		apiConfig.Address = config["address"]
 	}
+	if config["ca_cert"] != "" || config["ca_path"] != "" || config["client_cert"] != "" || config["client_key"] != "" ||
+		config["tls_server_name"] != "" || config["tls_skip_veriry"] != "" {
+		var tlsSkipVerify bool
+		if config["tls_skip_verify"] != "" {
+			var err error
+			tlsSkipVerify, err = strconv.ParseBool(config["tls_skip_verify"])
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		tlsConfig := &api.TLSConfig{
+			CACert:        config["ca_cert"],
+			CAPath:        config["ca_path"],
+			ClientCert:    config["client_cert"],
+			ClientKey:     config["client_key"],
+			TLSServerName: config["tls_server_name"],
+			Insecure:      tlsSkipVerify,
+		}
+		if err := apiConfig.ConfigureTLS(tlsConfig); err != nil {
+			return nil, err
+		}
+	}
 
 	if s.client == nil {
 		client, err := api.NewClient(apiConfig)
@@ -110,6 +133,11 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 			return nil, errors.New("missing token")
 		}
 		s.client = client
+
+		// Send a value to test the seal and to set the current key id
+		if _, err := s.Encrypt(context.Background(), []byte("a")); err != nil {
+			return nil, err
+		}
 
 		if !disableRenewal {
 			// Renew the token immediately to get a secret to pass to renewer
@@ -144,11 +172,6 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 				s.logger.Info("unable to renew token, disabling renewal", "err", err)
 			}
 		}
-	}
-
-	// Send a value to test the seal and to set the current key id
-	if _, err := s.Encrypt(context.Background(), []byte("a")); err != nil {
-		return nil, err
 	}
 
 	sealInfo := make(map[string]string)
