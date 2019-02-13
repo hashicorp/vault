@@ -5,8 +5,8 @@ sidebar_current: "guides-operations-deployment-guide"
 description: |-
   This deployment guide covers the steps required to install and
   configure a single HashiCorp Vault cluster as defined in the
-  Vault Reference Architecture
-product_version: 1.0
+  Vault Reference Architecture.
+ea_version: 1.0
 ---
 
 # Vault Deployment Guide
