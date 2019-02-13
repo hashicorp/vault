@@ -200,7 +200,11 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return nil
 	}
 
-	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots := c.perfStandbyClusterHandler()
+	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots, err := c.perfStandbyClusterHandler()
+	if err != nil {
+		return err
+	}
+
 	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
 	if err != nil {
 		return err

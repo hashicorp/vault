@@ -108,6 +108,6 @@ func (c *Core) invalidateSentinelPolicy(PolicyType, string) {}
 
 func (c *Core) removePerfStandbySecondary(context.Context, string) {}
 
-func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}) {
-	return nil, cache.New(2*HeartbeatInterval, 1*time.Second), make(chan struct{})
+func (c *Core) perfStandbyClusterHandler() (*replication.Cluster, *cache.Cache, chan struct{}, error) {
+	return nil, cache.New(2*HeartbeatInterval, 1*time.Second), make(chan struct{}), nil
 }
