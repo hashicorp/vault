@@ -238,21 +238,6 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.UpdateOperation, "foo/bar", false, true},
 		{logical.CreateOperation, "foo/bar", true, true},
 
-		// Globbing
-		// Ones that should work, with globbing allowed:
-		{logical.ReadOperation, "*/ns1/auth/ldap/config", false, false},
-		{logical.ReadOperation, "goop/ns1/ns2/az/foo", false, false},
-		{logical.ReadOperation, "ns1/ns2/azboo", false, false},
-		{logical.ReadOperation, "ns1/ns2/az/hoo", false, false},
-		// And ones that should not:
-		{logical.ReadOperation, "test/segment/wildcardglob/at/nope", false, false},
-		{logical.ReadOperation, "goop/ns1/ns2/az/doo", false, false},
-		{logical.ReadOperation, "goob/ns1/ns2/az/foo", false, false},
-		{logical.ReadOperation, "ns1/ns2/azdoo", false, false},
-		{logical.ReadOperation, "ns1/ns2/azhoo", false, false},
-		{logical.ReadOperation, "/auth/ldap/config", false, false},
-		{logical.ReadOperation, "auth/ldap/config", false, false},
-
 		// Path segment wildcards
 		{logical.ReadOperation, "test/foo/bar/segment", false, false},
 		{logical.ReadOperation, "test/foo/segment", true, false},
@@ -671,21 +656,6 @@ path "sys/*" {
 path "foo/bar" {
 	capabilities = ["read", "create", "sudo"]
 }
-#path "goop/*/foo" {
-#	capabilities = ["read"]
-#}
-#path "g*p*f*o" {
-#	capabilities = ["read"]
-#}
-#path "*boo" {
-#	capabilities = ["read"]
-#}
-#path "*/hoo" {
-#	capabilities = ["read"]
-#}
-#path "*/auth/ldap/config" {
-#	capabilities = ["read"]
-#}
 path "test/+/segment" {
 	capabilities = ["read"]
 }

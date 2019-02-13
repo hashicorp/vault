@@ -64,8 +64,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		exactRules:           radix.New(),
 		prefixRules:          radix.New(),
 		segmentWildcardPaths: make(map[string]interface{}, len(policies)),
-		//globPaths:            make(map[string]interface{}, len(policies)),
-		root: false,
+		root:                 false,
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -112,8 +111,6 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			switch {
 			case pc.HasSegmentWildcards:
 				raw, ok = a.segmentWildcardPaths[pc.Path]
-			case pc.HasGlobs:
-				//raw, ok = a.globPaths[pc.Path]
 			default:
 				// Check which tree to use
 				tree = a.exactRules
@@ -133,8 +130,6 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				switch {
 				case pc.HasSegmentWildcards:
 					a.segmentWildcardPaths[pc.Path] = clonedPerms
-				case pc.HasGlobs:
-					//a.globPaths[pc.Path] = clonedPerms
 				default:
 					tree.Insert(pc.Path, clonedPerms)
 				}
@@ -269,8 +264,6 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			switch {
 			case pc.HasSegmentWildcards:
 				a.segmentWildcardPaths[pc.Path] = existingPerms
-			case pc.HasGlobs:
-				//a.globPaths[pc.Path] = existingPerms
 			default:
 				tree.Insert(pc.Path, existingPerms)
 			}
@@ -446,34 +439,6 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 			}
 		}
 	}
-
-	/*
-		if len(a.globPaths) > 0 {
-			keySlice := make([]string, 0, len(a.globPaths))
-			for k := range a.globPaths {
-				keySlice = append(keySlice, k)
-			}
-			sort.Slice(keySlice, func(i, j int) bool {
-				ci := strings.Count(keySlice[i], "*")
-				cj := strings.Count(keySlice[j], "*")
-				switch {
-				case ci < cj:
-					return true
-				case ci > cj:
-					return false
-				default:
-					return keySlice[i] < keySlice[j]
-				}
-			})
-			for _, k := range keySlice {
-				if glob.Glob(k, path) {
-					permissions = a.globPaths[k].(*ACLPermissions)
-					capabilities = permissions.CapabilitiesBitmap
-					goto CHECK
-				}
-			}
-		}
-	*/
 
 	// No exact, prefix, or segment wildcard paths found, return without
 	// setting allowed

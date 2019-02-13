@@ -277,28 +277,6 @@ func TestPolicy_Parse(t *testing.T) {
 			},
 		},
 		{
-			Path: "test*glob",
-			Capabilities: []string{
-				"create",
-				"sudo",
-			},
-			Permissions: &ACLPermissions{
-				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
-			},
-			HasGlobs: true,
-		},
-		{
-			Path: "test*globatendtoo*",
-			Capabilities: []string{
-				"create",
-				"sudo",
-			},
-			Permissions: &ACLPermissions{
-				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
-			},
-			HasGlobs: true,
-		},
-		{
 			Path: "test/+/segment",
 			Capabilities: []string{
 				"create",

@@ -116,7 +116,6 @@ type PathRules struct {
 	Policy              string
 	Permissions         *ACLPermissions
 	IsPrefix            bool
-	HasGlobs            bool
 	HasSegmentWildcards bool
 	Capabilities        []string
 
@@ -344,7 +343,6 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			pc.HasSegmentWildcards = true
 		}
 
-		// If it has more than one * it needs to be treated as a glob for sure
 		switch strings.Count(pc.Path, "*") {
 		case 0:
 			// Nothing, no globs
@@ -360,19 +358,11 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 					pc.IsPrefix = true
 				}
 			default:
-				pc.HasGlobs = true
+				return fmt.Errorf("path %q: globs ('*') found in invalid locations", pc.Path)
 			}
 
 		default:
-			pc.HasGlobs = true
-		}
-
-		// NOTE: We don't support globs yet. We may never. But if we want to,
-		// just flip this and uncomment corresponding lines in acl.go
-		pc.HasGlobs = false
-
-		if pc.HasSegmentWildcards && pc.HasGlobs {
-			return fmt.Errorf("path %q: segment wildcards ('+') and globs ('*') cannot be used together", pc.Path)
+			return fmt.Errorf("path %q: globs ('*') found in invalid locations", pc.Path)
 		}
 
 		// Map old-style policies into capabilities
