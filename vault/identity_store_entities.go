@@ -709,7 +709,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 		if persist && !isPerfSecondaryOrStandby {
 			// Delete the entity which we are merging from in storage
-			err = i.entityPacker.DeleteItem(fromEntity.ID)
+			err = i.entityPacker.DeleteItem(ctx, fromEntity.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -733,7 +733,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			Message: toEntityAsAny,
 		}
 
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err
 		}

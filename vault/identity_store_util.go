@@ -549,7 +549,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			if err != nil {
 				return err
 			}
-			err = i.entityPacker.PutItem(&storagepacker.Item{
+			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
 				ID:      previousEntity.ID,
 				Message: marshaledPreviousEntity,
 			})
