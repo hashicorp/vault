@@ -38,8 +38,15 @@ const CA_FIELDS = [
   'allowUserKeyIds',
   'keyIdFormat',
 ];
+
 export default DS.Model.extend({
   useOpenAPI: true,
+  getOpenApiInfo: function(backend) {
+    return {
+      helpUrl: `/v1/${backend}/roles/example?help=1`,
+      path: `/roles/{role}`,
+    };
+  },
   zeroAddress: attr('boolean', {
     readOnly: true,
   }),
@@ -50,6 +57,9 @@ export default DS.Model.extend({
     label: 'Role Name',
     fieldValue: 'id',
     readOnly: true,
+  }),
+  keyType: attr('string', {
+    possibleValues: ['ca', 'otp'],
   }),
   adminUser: attr('string', {
     helpText: 'Username of the admin user at the remote host',

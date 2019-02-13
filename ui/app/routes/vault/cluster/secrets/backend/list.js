@@ -36,7 +36,7 @@ export default Route.extend({
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
     let modelType = this.getModelType(backend, tab);
-    return this.pathHelp.getNewModel(modelType, backend, owner).then(() => {
+    return this.pathHelp.getNewModel(modelType, owner, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
   },

@@ -16,7 +16,12 @@ export default DS.Model.extend({
     readOnly: true,
   }),
   useOpenAPI: true,
-
+  getOpenApiInfo: function(backend) {
+    return {
+      helpUrl: `/v1/${backend}/roles/example?help=1`,
+      path: `/roles/{name}`,
+    };
+  },
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),

@@ -9,29 +9,7 @@ const { attr } = DS;
 export default AuthConfig.extend({
   useOpenAPI: true,
   host: attr('string'),
-
-  port: attr('number', {
-    defaultValue: 1812,
-  }),
-
   secret: attr('string'),
-
-  unregisteredUserPolicies: attr('string', {
-    label: 'Policies for unregistered users',
-  }),
-
-  dialTimeout: attr('number', {
-    defaultValue: 10,
-  }),
-
-  nasPort: attr('number', {
-    defaultValue: 10,
-    label: 'NAS Port',
-  }),
-
-  nasIdentifier: attr('string', {
-    label: 'NAS Identifier',
-  }),
 
   fieldGroups: computed(function() {
     let groups = [

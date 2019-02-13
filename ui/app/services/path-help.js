@@ -24,61 +24,25 @@ export default Service.extend({
     });
   },
 
-  //Determines path health endpoint and makes a call to grab the
-  //OpenAPI document
-  getProps(modelType, backend) {
-    let adapter = getOwner(this).lookup(`adapter:${modelType}`);
-    let path = adapter.pathForType();
-    const authMethods = [
-      'auth-config/ldap',
-      'auth-config/github',
-      'auth-config/okta',
-      'auth-config/radius',
-      'auth-config/cert',
-      'auth-config/gcp',
-      'auth-config/azure',
-      'auth-config/kubernetes',
-    ];
-    let helpUrl = authMethods.includes(modelType)
-      ? `/v1/auth/${backend}/${path}?help=1`
-      : `/v1/${backend}/${path}/example?help=1`;
-    let wildcard;
-    switch (path) {
-      case 'roles':
-        if (modelType === 'role-ssh') {
-          wildcard = 'role';
-        } else {
-          wildcard = 'name';
-        }
-        break;
-      case 'mounts':
-        if (modelType === 'secret') {
-          wildcard = 'path';
-        } else {
-          wildcard = 'config';
-        }
-        break;
-      case 'sign':
-      case 'issue':
-        wildcard = 'role';
-        break;
-    }
-
+  //Makes a call to grab the OpenAPI document.
+  //Returns relevant information from OpenAPI
+  //as determined by the expandOpenApiProps util
+  getProps(helpUrl, path, backend) {
     return this.ajax(helpUrl, backend).then(help => {
-      let fullPath = wildcard ? `/${path}/{${wildcard}}` : `/${path}`;
-      let props = help.openapi.paths[fullPath].post.requestBody.content['application/json'].schema.properties;
+      let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
     });
   },
 
-  getNewModel(modelType, backend, owner) {
+  getNewModel(modelType, owner, backend) {
     let name = `model:${modelType}`;
     let newModel = owner.factoryFor(name).class;
     if (newModel.merged || newModel.prototype.useOpenAPI !== true) {
       return resolve();
     }
+    let { helpUrl, path } = newModel.prototype.getOpenApiInfo(backend);
 
-    return this.getProps(modelType, backend).then(props => {
+    return this.getProps(helpUrl, path, backend).then(props => {
       if (owner.hasRegistration(name) && !newModel.merged) {
         let { attrs, newFields } = combineAttributes(newModel.attributes, props);
         newModel = newModel.extend(attrs, { newFields });

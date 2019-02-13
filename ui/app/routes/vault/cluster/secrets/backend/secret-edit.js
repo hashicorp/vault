@@ -58,7 +58,7 @@ export default Route.extend(UnloadModelRoute, {
       return resolve();
     }
     let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, backend, owner);
+    return this.pathHelp.getNewModel(modelType, owner, backend);
   },
 
   modelType(backend, secret) {
