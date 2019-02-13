@@ -2,13 +2,9 @@ package plugin
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/rsa"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -17,28 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )
-
-// init registers basic structs with gob which will be used to transport complex
-// types through the plugin server and client.
-func init() {
-	// Common basic structs
-	gob.Register([]interface{}{})
-	gob.Register(map[string]interface{}{})
-	gob.Register(map[string]string{})
-	gob.Register(map[string]int{})
-
-	// Register these types since we have to serialize and de-serialize
-	// tls.ConnectionState over the wire as part of logical.Request.Connection.
-	gob.Register(rsa.PublicKey{})
-	gob.Register(ecdsa.PublicKey{})
-	gob.Register(time.Duration(0))
-
-	// Custom common error types for requests. If you add something here, you must
-	// also add it to the switch statement in `wrapError`!
-	gob.Register(&plugin.BasicError{})
-	gob.Register(logical.CodedError(0, ""))
-	gob.Register(&logical.StatusBadRequest{})
-}
 
 // BackendPluginClient is a wrapper around backendPluginClient
 // that also contains its plugin.Client instance. It's primarily
@@ -98,11 +72,13 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
+		// Version 3 used to supports both protocols. We want to keep it around
+		// since it's possible old plugins built against this version will still
+		// work with gRPC. There is currently no difference between version 3
+		// and version 4.
 		3: plugin.PluginSet{
-			"backend": &BackendPlugin{
-				GRPCBackendPlugin: &GRPCBackendPlugin{
-					MetadataMode: isMetadataMode,
-				},
+			"backend": &GRPCBackendPlugin{
+				MetadataMode: isMetadataMode,
 			},
 		},
 		4: plugin.PluginSet{
@@ -142,10 +118,6 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch raw.(type) {
-	case *backendPluginClient:
-		logger.Warn("plugin is using deprecated netRPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
-		backend = raw.(*backendPluginClient)
-		transport = "netRPC"
 	case *backendGRPCPluginClient:
 		backend = raw.(*backendGRPCPluginClient)
 		transport = "gRPC"

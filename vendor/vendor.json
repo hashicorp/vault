@@ -1409,10 +1409,12 @@
 			"revisionTime": "2018-12-10T20:01:33Z"
 		},
 		{
-			"checksumSHA1": "tt3FtyjXgdBI9Mb43UL4LtOZmAk=",
+			"checksumSHA1": "jCtLHj3YAONxCcV6v6kifTrRJwM=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "f428c77917331c1b87dae2dd37016bd1dd4c55da",
-			"revisionTime": "2018-10-31T19:59:42Z"
+			"revision": "6eaab2ed65f29101381ac871ffb06110b871a742",
+			"revisionTime": "2019-02-13T00:58:38Z",
+			"version": "=oidc-dev",
+			"versionExact": "oidc-dev"
 		},
 		{
 			"checksumSHA1": "Ldg2jQeyPrpAupyQq4lRVN+jfFY=",
@@ -1787,6 +1789,12 @@
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "3536a929edddb9a5b34bd6861dc4a9647cb459fe",
 			"revisionTime": "2018-10-05T04:51:35Z"
+		},
+		{
+			"checksumSHA1": "31atAEqGt+z8hZgyVZZokEeM6dM=",
+			"path": "github.com/mitchellh/pointerstructure",
+			"revision": "f2329fcfa9e280bdb5a3f2544aec815a508ad72f",
+			"revisionTime": "2017-02-05T20:42:03Z"
 		},
 		{
 			"checksumSHA1": "nxuST3bjBv5uDVPzrX9wdruOwv0=",
