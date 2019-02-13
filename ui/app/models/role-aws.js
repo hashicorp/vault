@@ -20,7 +20,7 @@ const CREDENTIAL_TYPES = [
     displayName: 'Federation Token',
   },
 ];
-const roleAWSModel = DS.Model.extend({
+export default DS.Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
@@ -70,5 +70,3 @@ const roleAWSModel = DS.Model.extend({
   generatePath: lazyCapabilities(apiPath`${'backend'}/creds/${'id'}`, 'backend', 'id'),
   canGenerate: alias('generatePath.canUpdate'),
 });
-roleAWSModel.reopenClass({ useOpenAPI: false });
-export default roleAWSModel;
