@@ -196,20 +196,17 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	c.requestForwardingConnectionLock.Unlock()
 
 	// Resolve locally to avoid races
-	if c.ha == nil {
+	if c.ha == nil || c.clusterListener == nil {
 		return nil
 	}
 
 	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots := c.perfStandbyClusterHandler()
-
 	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
 	if err != nil {
 		return err
 	}
 
-	if c.clusterListener != nil {
-		c.clusterListener.AddHandler(requestForwardingALPN, handler)
-	}
+	c.clusterListener.AddHandler(requestForwardingALPN, handler)
 
 	return nil
 }
