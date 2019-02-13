@@ -1543,8 +1543,6 @@ func (c *Core) preSeal() error {
 	}
 	c.clusterParamsLock.Unlock()
 
-	c.stopClusterListener()
-
 	c.stopForwarding()
 
 	if err := c.teardownAudits(); err != nil {
