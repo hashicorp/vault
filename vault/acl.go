@@ -26,7 +26,6 @@ type ACL struct {
 	prefixRules *radix.Tree
 
 	segmentWildcardPaths map[string]interface{}
-	globPaths            map[string]interface{}
 
 	// root is enabled if the "root" named policy is present.
 	root bool

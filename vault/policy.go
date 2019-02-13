@@ -343,26 +343,14 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			pc.HasSegmentWildcards = true
 		}
 
-		switch strings.Count(pc.Path, "*") {
-		case 0:
-			// Nothing, no globs
-		case 1:
-			// Need to figure out if it's at the end, so a prefix, or elsewhere
-			switch {
-			case strings.HasSuffix(pc.Path, "*"):
-				// If there are segment wildcards, don't actually strip the
-				// trailing asterisk, but don't want to hit the default case
-				if !pc.HasSegmentWildcards {
-					// Strip the glob character if found
-					pc.Path = strings.TrimSuffix(pc.Path, "*")
-					pc.IsPrefix = true
-				}
-			default:
-				return fmt.Errorf("path %q: globs ('*') found in invalid locations", pc.Path)
+		if strings.HasSuffix(pc.Path, "*") {
+			// If there are segment wildcards, don't actually strip the
+			// trailing asterisk, but don't want to hit the default case
+			if !pc.HasSegmentWildcards {
+				// Strip the glob character if found
+				pc.Path = strings.TrimSuffix(pc.Path, "*")
+				pc.IsPrefix = true
 			}
-
-		default:
-			return fmt.Errorf("path %q: globs ('*') found in invalid locations", pc.Path)
 		}
 
 		// Map old-style policies into capabilities

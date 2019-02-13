@@ -95,12 +95,6 @@ path "test/mfa" {
 	capabilities = ["create", "sudo"]
 	mfa_methods = ["my_totp", "my_totp2"]
 }
-path "test*glob" {
-	capabilities = ["create", "sudo"]
-}
-path "test*globatendtoo*" {
-	capabilities = ["create", "sudo"]
-}
 path "test/+/segment" {
 	capabilities = ["create", "sudo"]
 }
