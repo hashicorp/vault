@@ -1452,7 +1452,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
-		if err := c.startClusterListener(ctx); err != nil {
+		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
 	}
