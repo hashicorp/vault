@@ -1,5 +1,8 @@
-// Low level service that allows users to input paths to make requests to vault
-// this service provides the UI synecdote to the cli commands read, write, delete, and list
+/*
+  This service is used to pull an OpenAPI document describing the
+  shape of data at a specific path to hydrate a model with attrs it
+  has less (or no) information about.
+*/
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
@@ -21,27 +24,8 @@ export default Service.extend({
     });
   },
 
-  getNewModel(modelType, backend, owner) {
-    let name = `model:${modelType}`;
-    let newModel = owner.factoryFor(name).class;
-    if (newModel.merged || !newModel.prototype.useOpenAPI === true) {
-      return resolve();
-    }
-
-    return this.getProps(modelType, backend).then(props => {
-      if (owner.hasRegistration(name) && !newModel.merged) {
-        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
-        newModel = newModel.extend(attrs, { newFields });
-      } else {
-        //generate a whole new model
-      }
-
-      newModel.reopenClass({ merged: true });
-      owner.unregister(name);
-      owner.register(name, newModel);
-    });
-  },
-
+  //Determines path health endpoint and makes a call to grab the
+  //OpenAPI document
   getProps(modelType, backend) {
     let adapter = getOwner(this).lookup(`adapter:${modelType}`);
     let path = adapter.pathForType();
@@ -84,6 +68,27 @@ export default Service.extend({
       let fullPath = wildcard ? `/${path}/{${wildcard}}` : `/${path}`;
       let props = help.openapi.paths[fullPath].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
+    });
+  },
+
+  getNewModel(modelType, backend, owner) {
+    let name = `model:${modelType}`;
+    let newModel = owner.factoryFor(name).class;
+    if (newModel.merged || newModel.prototype.useOpenAPI !== true) {
+      return resolve();
+    }
+
+    return this.getProps(modelType, backend).then(props => {
+      if (owner.hasRegistration(name) && !newModel.merged) {
+        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+        newModel = newModel.extend(attrs, { newFields });
+      } else {
+        //generate a whole new model
+      }
+
+      newModel.reopenClass({ merged: true });
+      owner.unregister(name);
+      owner.register(name, newModel);
     });
   },
 });

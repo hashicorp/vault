@@ -14,7 +14,6 @@ export default create({
   hasCert: isPresent('[data-test-row-value="Certificate"]'),
   fillInField: fillable('[data-test-field]'),
   issueCert: async function(commonName) {
-    debugger; //eslint-disable-line
     await this.commonName(commonName)
       .toggleOptions()
       .fillInField('unit', 'h')
