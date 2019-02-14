@@ -1,4 +1,4 @@
-// A throwaway file for super simple testing via a UI
+// A minimal UI for simple testing via a UI without Vault
 package jwtauth
 
 import (

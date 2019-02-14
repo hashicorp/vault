@@ -38,7 +38,12 @@ const CA_FIELDS = [
   'allowUserKeyIds',
   'keyIdFormat',
 ];
+
 export default DS.Model.extend({
+  useOpenAPI: true,
+  getHelpUrl: function(backend) {
+    return `/v1/${backend}/roles/example?help=1`;
+  },
   zeroAddress: attr('boolean', {
     readOnly: true,
   }),
@@ -46,12 +51,12 @@ export default DS.Model.extend({
     readOnly: true,
   }),
   name: attr('string', {
-    label: 'Role name',
+    label: 'Role Name',
     fieldValue: 'id',
     readOnly: true,
   }),
   keyType: attr('string', {
-    possibleValues: ['ca', 'otp'],
+    possibleValues: ['ca', 'otp'], //overriding the API which also lists 'dynamic' as a type though it is deprecated
   }),
   adminUser: attr('string', {
     helpText: 'Username of the admin user at the remote host',
@@ -68,24 +73,13 @@ export default DS.Model.extend({
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
   }),
   cidrList: attr('string', {
-    label: 'CIDR list',
     helpText: 'List of CIDR blocks for which this role is applicable',
   }),
   excludeCidrList: attr('string', {
-    label: 'Exclude CIDR list',
     helpText: 'List of CIDR blocks that are not accepted by this role',
   }),
   port: attr('number', {
-    defaultValue: 22,
     helpText: 'Port number for the SSH connection (default is `22`)',
-  }),
-  ttl: attr({
-    label: 'TTL',
-    editType: 'ttl',
-  }),
-  maxTtl: attr({
-    label: 'Max TTL',
-    editType: 'ttl',
   }),
   allowedCriticalOptions: attr('string', {
     helpText: 'List of critical options that certificates have when signed',
@@ -114,11 +108,9 @@ export default DS.Model.extend({
       'Specifies if host certificates that are requested are allowed to be subdomains of those listed in Allowed Domains',
   }),
   allowUserKeyIds: attr('boolean', {
-    label: 'Allow user key IDs',
     helpText: 'Specifies if users can override the key ID for a signed certificate with the "key_id" field',
   }),
   keyIdFormat: attr('string', {
-    label: 'Key ID format',
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
   }),
 

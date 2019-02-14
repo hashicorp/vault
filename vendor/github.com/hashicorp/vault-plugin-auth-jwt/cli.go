@@ -18,6 +18,8 @@ import (
 const defaultMount = "oidc"
 const defaultPort = "8300"
 
+var errorRegex = regexp.MustCompile(`(?s)Errors:.*\* *(.*)`)
+
 type CLIHandler struct{}
 
 type loginResp struct {
@@ -44,9 +46,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	role := m["role"]
-	if role == "" {
-		return nil, errors.New("a 'role' must be specified")
-	}
 
 	authURL, err := fetchAuthURL(c, role, mount, port)
 	if err != nil {
@@ -54,7 +53,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	// Set up callback handler
-	http.HandleFunc(fmt.Sprintf("/ui/vault/auth/%s/oidc/callback", mount), func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/oidc/callback", func(w http.ResponseWriter, req *http.Request) {
 		var response string
 
 		query := req.URL.Query()
@@ -101,14 +100,14 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	case s := <-doneCh:
 		return s.secret, s.err
 	case <-sigintCh:
-		return nil, errors.New("interrupted")
+		return nil, errors.New("Interrupted")
 	}
 }
 
 func fetchAuthURL(c *api.Client, role, mount, port string) (string, error) {
 	data := map[string]interface{}{
 		"role":         role,
-		"redirect_uri": fmt.Sprintf("http://localhost:%s/ui/vault/auth/%s/oidc/callback", port, mount),
+		"redirect_uri": fmt.Sprintf("http://localhost:%s/oidc/callback", port),
 	}
 
 	secret, err := c.Logical().Write(fmt.Sprintf("auth/%s/oidc/auth_url", mount), data)
@@ -157,9 +156,7 @@ func parseError(err error) (string, string) {
 	summary := "Login error"
 	detail := ""
 
-	re := regexp.MustCompile(`(?s)Errors:.*\* *(.*)`)
-
-	errorParts := re.FindStringSubmatch(err.Error())
+	errorParts := errorRegex.FindStringSubmatch(err.Error())
 	switch len(errorParts) {
 	case 0:
 		summary = ""

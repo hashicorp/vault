@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -414,6 +415,9 @@ type Core struct {
 
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *ClusterListener
+  
+	// Telemetry objects
+	metricsHelper     *metricsutil.MetricsHelper
 }
 
 // CoreConfig is used to parameterize a core
@@ -482,6 +486,9 @@ type CoreConfig struct {
 	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
+
+	// Telemetry objects
+	MetricsHelper *metricsutil.MetricsHelper
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -587,6 +594,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		builtinRegistry:              conf.BuiltinRegistry,
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
+    metricsHelper:                conf.MetricsHelper,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

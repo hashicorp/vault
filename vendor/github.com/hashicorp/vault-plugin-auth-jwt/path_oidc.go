@@ -17,7 +17,7 @@ import (
 
 var oidcStateTimeout = 10 * time.Minute
 
-// OIDC error prefixes. This are searched for specifically by the UI, so any
+// OIDC error prefixes. These are searched for specifically by the UI, so any
 // changes to them must be aligned with a UI change.
 const errLoginFailed = "Vault login failed."
 const errNoResponse = "No response from provider."
@@ -126,7 +126,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	}
 
 	// Parse and verify ID Token payload.
-	allClaims, err := b.verifyToken(ctx, config, role, rawToken)
+	allClaims, err := b.verifyOIDCToken(ctx, config, role, rawToken)
 	if err != nil {
 		return logical.ErrorResponse("%s %s", errTokenVerification, err.Error()), nil
 	}
@@ -211,9 +211,9 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 	roleName := d.Get("role").(string)
 	if roleName == "" {
 		roleName = config.DefaultRole
-		if roleName == "" {
-			return logical.ErrorResponse("missing role"), nil
-		}
+	}
+	if roleName == "" {
+		return logical.ErrorResponse("missing role"), nil
 	}
 
 	redirectURI := d.Get("redirect_uri").(string)
@@ -223,12 +223,10 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 
 	role, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
-		logger.Warn("error loading role", "error", err)
 		return resp, nil
 	}
 
 	if role == nil || role.RoleType != "oidc" {
-		logger.Warn("invalid role type", "role type", role)
 		return resp, nil
 	}
 
