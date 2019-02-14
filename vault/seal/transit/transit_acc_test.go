@@ -23,13 +23,13 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 	defer cleanup()
 
 	sealConfig := map[string]string{
-		"address":     retAddress,
-		"token":       token,
-		"mount_path":  mountPath,
-		"key_name":    keyName,
-		"ca_cert":     tlsConfig.CACert,
-		"client_cert": tlsConfig.ClientCert,
-		"client_key":  tlsConfig.ClientKey,
+		"address":         retAddress,
+		"token":           token,
+		"mount_path":      mountPath,
+		"key_name":        keyName,
+		"tls_ca_cert":     tlsConfig.CACert,
+		"tls_client_cert": tlsConfig.ClientCert,
+		"tls_client_key":  tlsConfig.ClientKey,
 	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err := s.SetConfig(sealConfig)
@@ -80,13 +80,13 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 
 	sealConfig := map[string]string{
-		"address":     retAddress,
-		"token":       rsp.Auth.ClientToken,
-		"mount_path":  mountPath,
-		"key_name":    keyName,
-		"ca_cert":     tlsConfig.CACert,
-		"client_cert": tlsConfig.ClientCert,
-		"client_key":  tlsConfig.ClientKey,
+		"address":         retAddress,
+		"token":           rsp.Auth.ClientToken,
+		"mount_path":      mountPath,
+		"key_name":        keyName,
+		"tls_ca_cert":     tlsConfig.CACert,
+		"tls_client_cert": tlsConfig.ClientCert,
+		"tls_client_key":  tlsConfig.ClientKey,
 	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err = s.SetConfig(sealConfig)

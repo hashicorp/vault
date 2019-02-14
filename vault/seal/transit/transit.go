@@ -94,7 +94,7 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 	if config["address"] != "" {
 		apiConfig.Address = config["address"]
 	}
-	if config["ca_cert"] != "" || config["ca_path"] != "" || config["client_cert"] != "" || config["client_key"] != "" ||
+	if config["tls_ca_cert"] != "" || config["tls_ca_path"] != "" || config["tls_client_cert"] != "" || config["tls_client_key"] != "" ||
 		config["tls_server_name"] != "" || config["tls_skip_veriry"] != "" {
 		var tlsSkipVerify bool
 		if config["tls_skip_verify"] != "" {
@@ -106,10 +106,10 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 		}
 
 		tlsConfig := &api.TLSConfig{
-			CACert:        config["ca_cert"],
-			CAPath:        config["ca_path"],
-			ClientCert:    config["client_cert"],
-			ClientKey:     config["client_key"],
+			CACert:        config["tls_ca_cert"],
+			CAPath:        config["tls_ca_path"],
+			ClientCert:    config["tls_client_cert"],
+			ClientKey:     config["tls_client_key"],
 			TLSServerName: config["tls_server_name"],
 			Insecure:      tlsSkipVerify,
 		}
