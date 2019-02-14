@@ -63,6 +63,7 @@ export default DS.RESTAdapter.extend({
     let options = passedOptions;
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
+    let isListRequest = type === 'GET' && options.data && options.data.list && !options.listRetry;
     // if we have a control group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
@@ -76,22 +77,35 @@ export default DS.RESTAdapter.extend({
           token: controlGroupToken.token,
         },
       };
+    } else if (isListRequest) {
+      url = `/v1/sys/internal/ui/filtered-path/${intendedUrl.replace(/^\/v1\//, '')}`;
     }
+
     let opts = this._preRequest(url, options);
 
-    return this._super(url, type, opts).then((...args) => {
-      if (controlGroupToken) {
-        controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
-      }
-      const [resp] = args;
-      if (resp && resp.warnings) {
-        let flash = this.get('flashMessages');
-        resp.warnings.forEach(message => {
-          flash.info(message);
-        });
-      }
-      return controlGroup.checkForControlGroup(args, resp, options.wrapTTL);
-    });
+    return this._super(url, type, opts)
+      .then((...args) => {
+        if (controlGroupToken) {
+          controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
+        }
+        const [resp] = args;
+        if (resp && resp.warnings) {
+          let flash = this.flashMessages;
+          resp.warnings.forEach(message => {
+            flash.info(message);
+          });
+        }
+        return controlGroup.checkForControlGroup(args, resp, options.wrapTTL);
+      })
+      .catch(e => {
+        if (isListRequest && e.httpStatus === 403) {
+          // recurse to do a retry but with options.listRetry = true
+          // we recurse here instead of calling super so that control groups get checked again
+          opts.listRetry = true;
+          return this.ajax(intendedUrl, type, opts);
+        }
+        throw e;
+      });
   },
 
   // for use on endpoints that don't return JSON responses

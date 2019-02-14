@@ -80,6 +80,10 @@ export default Service.extend({
     return null;
   },
 
+  // checks the response from a url - if we were not expecting a
+  // wrapped response, and we're in enterprise, we assume that the
+  // endpoint is control grouped and throw a ControlGroupError with
+  // the associated wrapped response.
   checkForControlGroup(callbackArgs, response, wasWrapTTLRequested) {
     let creationPath = response && get(response, 'wrap_info.creation_path');
     if (
