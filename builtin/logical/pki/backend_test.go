@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -237,7 +238,41 @@ func TestBackend_Roles(t *testing.T) {
 			testCase.Steps = append(testCase.Steps, generateRoleSteps(t, tc.useCSR)...)
 			if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 				for i, v := range testCase.Steps {
-					fmt.Printf("Step %d:\n%+v\n\n", i+1, v)
+					data := map[string]interface{}{}
+					var keys []string
+					for k := range v.Data {
+						keys = append(keys, k)
+					}
+					sort.Strings(keys)
+					for _, k := range keys {
+						interf := v.Data[k]
+						switch v := interf.(type) {
+						case bool:
+							if !v {
+								continue
+							}
+						case int:
+							if v == 0 {
+								continue
+							}
+						case []string:
+							if len(v) == 0 {
+								continue
+							}
+						case string:
+							if v == "" {
+								continue
+							}
+							lines := strings.Split(v, "\n")
+							if len(lines) > 1 {
+								data[k] = lines[0] + " ... (truncated)"
+								continue
+							}
+						}
+						data[k] = interf
+
+					}
+					fmt.Printf("Step %d:\n%s %s err=%v %+v\n\n", i+1, v.Operation, v.Path, v.ErrorOk, data)
 				}
 			}
 
@@ -681,7 +716,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 	mathRand := mathrand.New(mathrand.NewSource(seed))
-	t.Logf("seed under test: %v", seed)
+	// t.Logf("seed under test: %v", seed)
 
 	// Used by tests not toggling common names to turn off the behavior of random key bit fuzziness
 	keybitSizeRandOff := false
@@ -1159,6 +1194,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	funcs := []interface{}{addCnTests, getCnCheck, getCountryCheck, getLocalityCheck, getNotBeforeCheck,
+		getOrganizationCheck, getOuCheck, getPostalCodeCheck, getRandCsr, getStreetAddressCheck,
+		getProvinceCheck}
+	t.Logf("funcs=%d", len(funcs))
+
 	// Common Name tests
 	{
 		// common_name not provided
@@ -1275,34 +1315,79 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.NotBeforeDuration = 0
 	}
+
 	// IP SAN tests
 	{
-		// TODO it doesn't seem like any of these tests provide a CSR; should we
-		// stop setting UseCSRSANs since it does nothing and creates confusion?
-		// Or should we make some tests that do use CSRs to set IP SANs?
+		getIpCheck := func(expectedIp ...net.IP) logicaltest.TestCheckFunc {
+			return func(resp *logical.Response) error {
+				var certBundle certutil.CertBundle
+				err := mapstructure.Decode(resp.Data, &certBundle)
+				if err != nil {
+					return err
+				}
+				parsedCertBundle, err := certBundle.ToParsedCertBundle()
+				if err != nil {
+					return fmt.Errorf("error parsing cert bundle: %s", err)
+				}
+				cert := parsedCertBundle.Certificate
+				var emptyIPs []net.IP
+				var expected []net.IP = append(emptyIPs, expectedIp...)
+				if diff := deep.Equal(cert.IPAddresses, expected); len(diff) > 0 {
+					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
+				}
+				return nil
+			}
+		}
+		addIPSANTests := func(useCSRs, useCSRSANs, allowIPSANs, errorOk bool, ipSANs string, csrIPSANs []net.IP, check logicaltest.TestCheckFunc) {
+			if useCSRs {
+				csrTemplate := &x509.CertificateRequest{
+					Subject: pkix.Name{
+						CommonName: issueVals.CommonName,
+					},
+					IPAddresses: csrIPSANs,
+				}
+				block, _ := getCsr(roleVals.KeyType, roleVals.KeyBits, csrTemplate)
+				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(block)))
+			}
+			oldRoleVals, oldIssueVals, oldIssueTestStep := roleVals, issueVals, issueTestStep
+			roleVals.UseCSRSANs = useCSRSANs
+			roleVals.AllowIPSANs = allowIPSANs
+			issueVals.CommonName = "someone@example.com"
+			issueVals.IPSANs = ipSANs
+			issueTestStep.ErrorOk = errorOk
+			addTests(check)
+			roleVals, issueVals, issueTestStep = oldRoleVals, oldIssueVals, oldIssueTestStep
+		}
+		roleVals.AllowAnyName = true
+		roleVals.EnforceHostnames = true
+		roleVals.AllowLocalhost = true
+		roleVals.UseCSRCommonName = true
+		commonNames.Localhost = true
+
+		netip1, netip2 := net.IP{127, 0, 0, 1}, net.IP{170, 171, 172, 173}
+		textip1, textip3 := "127.0.0.1", "::1"
 
 		// IPSANs not allowed and not provided, should not be an error.
-		roleVals.UseCSRSANs, roleVals.AllowIPSANs = true, false
-		issueVals.IPSANs, issueTestStep.ErrorOk = "", false
-		addTests(nil)
+		addIPSANTests(useCSRs, false, false, false, "", nil, getIpCheck())
 
-		// IPSANs not allowed but valid IPSANs provided, should be an error.
-		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, false
-		issueVals.IPSANs, issueTestStep.ErrorOk = "127.0.0.1,::1", true
-		addTests(nil)
+		// IPSANs not allowed, valid IPSANs provided, should be an error.
+		addIPSANTests(useCSRs, false, false, true, textip1+","+textip3, nil, nil)
 
-		// IPSANs allowed and valid IPSANs provided, should not be an error.
-		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
-		issueVals.IPSANs, issueTestStep.ErrorOk = "127.0.0.1,::1", false
-		addTests(nil)
+		// IPSANs allowed, bogus IPSANs provided, should be an error.
+		addIPSANTests(useCSRs, false, true, true, "foobar", nil, nil)
 
-		// IPSANs allowed and bogus IPSANs provided, should be an error.
-		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
-		issueVals.IPSANs, issueTestStep.ErrorOk = "foobar", true
-		addTests(nil)
+		// Given IPSANs as API argument and useCSRSANs false, CSR arg ignored.
+		addIPSANTests(useCSRs, false, true, false, textip1,
+			[]net.IP{netip2}, getIpCheck(netip1))
 
-		roleVals.UseCSRSANs, roleVals.AllowIPSANs = false, true
-		issueVals.IPSANs, issueTestStep.ErrorOk = "", false
+		if useCSRs {
+			// IPSANs not allowed, valid IPSANs provided via CSR, should be an error.
+			addIPSANTests(useCSRs, true, false, true, "", []net.IP{netip1}, nil)
+
+			// Given IPSANs as both API and CSR arguments and useCSRSANs=true, API arg ignored.
+			addIPSANTests(useCSRs, true, true, false, textip3,
+				[]net.IP{netip1, netip2}, getIpCheck(netip1, netip2))
+		}
 	}
 
 	// Lease tests
