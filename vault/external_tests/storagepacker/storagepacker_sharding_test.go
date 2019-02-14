@@ -113,17 +113,12 @@ func TestStoragePacker_Sharding(t *testing.T) {
 		}
 	}
 
-	/*
-		buckets, err := logical.CollectKeys(ctx, bucketStorageView.SubView("v2/"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(buckets) == 256 {
-			t.Fatalf("%d", len(buckets))
-		}
-		t.Log(len(buckets))
-		t.Log(buckets)
-	*/
+	buckets, err := logical.CollectKeys(ctx, bucketStorageView.SubView("v2/"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(len(buckets))
+	t.Log(buckets)
 
 	// Create a new packer, then start looking for expected values
 	packer, err = storagepacker.NewStoragePackerV2(ctx, &storagepacker.Config{
