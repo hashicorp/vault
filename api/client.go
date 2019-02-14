@@ -371,10 +371,20 @@ func NewClient(c *Config) (*Client, error) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	// If address begins with a `/`, treat it as a socket file path and set
-	// the HttpClient's transport to the corresponding socket dialer.
-	if strings.HasPrefix(c.Address, "/") {
-		socketFilePath := c.Address
+	unixDomainSocket := true
+	socketFilePath := ""
+	switch {
+	case strings.HasPrefix(c.Address, "http://unix"):
+		socketFilePath = strings.TrimPrefix(c.Address, "http://unix")
+		c.Address = "http://unix"
+	case strings.HasPrefix(c.Address, "https://unix"):
+		socketFilePath = strings.TrimPrefix(c.Address, "https://unix")
+		c.Address = "https://unix"
+	default:
+		unixDomainSocket = false
+	}
+
+	if unixDomainSocket {
 		c.HttpClient = &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(context.Context, string, string) (net.Conn, error) {
@@ -382,8 +392,6 @@ func NewClient(c *Config) (*Client, error) {
 				},
 			},
 		}
-		// Set the unix address for URL parsing below
-		c.Address = "http://unix"
 	}
 
 	u, err := url.Parse(c.Address)
