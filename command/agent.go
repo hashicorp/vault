@@ -375,6 +375,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, c.client))
 		for _, ln := range listeners {
+			cacheLogger.Info("starting listener", "addr", ln.Addr().String())
 			server := &http.Server{
 				Handler:           mux,
 				ReadHeaderTimeout: 10 * time.Second,
