@@ -86,6 +86,15 @@ func (mw *databaseTracingMiddleware) Close() (err error) {
 	return mw.next.Close()
 }
 
+func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+        defer func(then time.Time) {
+                mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
+        }(time.Now())
+
+        mw.logger.Trace("set credentials", "status", "started")
+        return mw.next.SetCredentials(ctx, req)
+}
+
 // ---- Metrics Middleware Domain ----
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
@@ -201,6 +210,22 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 	return mw.next.Close()
 }
 
+func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+        defer func(now time.Time) {
+                metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
+                metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
+
+                if err != nil {
+                        metrics.IncrCounter([]string{"database", "SetCredentials", "error"}, 1)
+                        metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials", "error"}, 1)
+                }
+        }(time.Now())
+
+        metrics.IncrCounter([]string{"database", "SetCredentials"}, 1)
+        metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials"}, 1)
+        return mw.next.SetCredentials(ctx, req)
+}
+
 // ---- Error Sanitizer Middleware Domain ----
 
 // DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
@@ -272,4 +297,9 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		}
 	}
 	return err
+}
+
+func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+        username, password, restored, err = mw.next.SetCredentials(ctx, req)
+        return username, password, restored, mw.sanitize(err)
 }

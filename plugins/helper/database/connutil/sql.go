@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
+        "github.com/y0ssar1an/q"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
@@ -31,6 +33,17 @@ type SQLConnectionProducer struct {
 	Initialized           bool
 	db                    *sql.DB
 	sync.Mutex
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
+        q.Q("connutil/sql SetCredentials called:", username, password, restored)
+        return
 }
 
 func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {

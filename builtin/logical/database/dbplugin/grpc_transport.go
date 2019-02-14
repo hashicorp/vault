@@ -12,6 +12,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/pluginutil"
+        "github.com/y0ssar1an/q"
 )
 
 var (
@@ -122,12 +123,12 @@ func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequ
                 return nil, err
         }
 
+        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
         return &SetCredentialsResponse{
                 Username: username,
                 Password: password,
                 Restored: restored,
         }, err
-        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
 }
 
 // ---- gRPC client domain ----
@@ -300,5 +301,6 @@ func (c *gRPCClient) Close() error {
 }
 
 func (c *gRPCClient) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+        q.Q("grpc_transport:client SetCredentials called")
         return
 }
