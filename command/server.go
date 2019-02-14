@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"io"
 	"io/ioutil"
 	"net"
@@ -23,6 +24,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
+	"github.com/armon/go-metrics/prometheus"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -469,7 +471,8 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	if err := c.setupTelemetry(config); err != nil {
+	metricsHelper, err := c.setupTelemetry(config)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
@@ -563,6 +566,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
+		MetricsHelper:             metricsHelper,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -1691,8 +1695,8 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-// setupTelemetry is used to setup the telemetry sub-systems
-func (c *ServerCommand) setupTelemetry(config *server.Config) error {
+// setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -1701,10 +1705,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	metrics.DefaultInmemSignal(inm)
 
 	var telConfig *server.Telemetry
-	if config.Telemetry == nil {
-		telConfig = &server.Telemetry{}
-	} else {
+	if config.Telemetry != nil {
 		telConfig = config.Telemetry
+	} else {
+		telConfig = &server.Telemetry{}
 	}
 
 	metricsConf := metrics.DefaultConfig("vault")
@@ -1712,10 +1716,29 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+	var prometheusEnabled bool
+
+	// Configure the Prometheus sink
+	if telConfig.PrometheusRetentionTime != 0 {
+		prometheusEnabled = true
+		prometheusOpts := prometheus.PrometheusOpts{
+			Expiration: telConfig.PrometheusRetentionTime,
+		}
+
+		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+		if err != nil {
+			return nil, err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
+
+
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1724,7 +1747,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1760,7 +1783,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
@@ -1775,21 +1798,29 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 
 	// Initialize the global sink
-	if len(fanout) > 0 {
-		fanout = append(fanout, inm)
-		metrics.NewGlobal(metricsConf, fanout)
+	if len(fanout) > 1 {
+		// Hostname enabled will create poor quality metrics name for prometheus
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		}
 	} else {
 		metricsConf.EnableHostname = false
-		metrics.NewGlobal(metricsConf, inm)
 	}
-	return nil
+	fanout = append(fanout, inm)
+	_, err := metrics.NewGlobal(metricsConf, fanout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {
