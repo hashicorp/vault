@@ -223,19 +223,6 @@ func (c *AgentCommand) Run(args []string) int {
 		info["cgo"] = "enabled"
 	}
 
-	// Server configuration output
-	padding := 24
-	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault agent configuration:\n")
-	for _, k := range infoKeys {
-		c.UI.Output(fmt.Sprintf(
-			"%s%s: %s",
-			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
-			info[k]))
-	}
-	c.UI.Output("")
-
 	// Tests might not want to start a vault server and just want to verify
 	// the configuration.
 	if c.flagTestVerifyOnly {
@@ -374,7 +361,11 @@ func (c *AgentCommand) Run(args []string) int {
 		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, c.client))
-		for _, ln := range listeners {
+		for i, ln := range listeners {
+			infoKey := fmt.Sprintf("api address %d", i+1)
+			info[infoKey] = ln.Addr().String()
+			infoKeys = append(infoKeys, infoKey)
+
 			cacheLogger.Info("starting listener", "addr", ln.Addr().String())
 			server := &http.Server{
 				Handler:           mux,
@@ -394,6 +385,19 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
+
+	// Server configuration output
+	padding := 24
+	sort.Strings(infoKeys)
+	c.UI.Output("==> Vault agent configuration:\n")
+	for _, k := range infoKeys {
+		c.UI.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.UI.Output("")
 
 	// Release the log gate.
 	c.logGate.Flush()
