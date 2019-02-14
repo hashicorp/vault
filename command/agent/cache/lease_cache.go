@@ -272,6 +272,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Reset the response body for upper layers to read
+	if resp.Response.Body != nil {
+		resp.Response.Body.Close()
+	}
 	resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(resp.ResponseBody))
 
 	// Set the index's Response
@@ -345,9 +348,13 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 	for {
 		select {
 		case <-ctx.Done():
+			// This is the case which captures context cancellations from token
+			// and leases. Since all the contexts are derived from the agent's
+			// context, this will also cover the shutdown scenario.
 			c.logger.Debug("context cancelled; stopping renewer", "path", req.Request.URL.Path)
 			return
 		case err := <-renewer.DoneCh():
+			// This case covers renewal completion and renewal errors
 			if err != nil {
 				c.logger.Error("failed to renew secret", "error", err)
 				return
@@ -355,6 +362,8 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			c.logger.Debug("renewal halted; evicting from cache", "path", req.Request.URL.Path)
 			return
 		case renewal := <-renewer.RenewCh():
+			// This case captures secret renewals. Renewed secret is updated in
+			// the cached index.
 			c.logger.Debug("renewal received; updating cache", "path", req.Request.URL.Path)
 			err = c.updateResponse(ctx, renewal)
 			if err != nil {
@@ -362,6 +371,10 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 				return
 			}
 		case <-index.RenewCtxInfo.DoneCh:
+			// This case indicates the renewal process to shutdown and evict
+			// the cache entry. This is triggered when a specific secret
+			// renewal needs to be killed without affecting any of the derived
+			// context renewals.
 			c.logger.Debug("done channel closed")
 			return
 		}
@@ -391,6 +404,9 @@ func (c *LeaseCache) updateResponse(ctx context.Context, renewal *api.RenewOutpu
 	bodyBytes, err := json.Marshal(renewal.Secret)
 	if err != nil {
 		return err
+	}
+	if resp.Body != nil {
+		resp.Body.Close()
 	}
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	resp.ContentLength = int64(len(bodyBytes))
@@ -426,6 +442,9 @@ func computeIndexID(req *SendRequest) (string, error) {
 	}
 
 	// Reset the request body after it has been closed by Write
+	if req.Request.Body != nil {
+		req.Request.Body.Close()
+	}
 	req.Request.Body = ioutil.NopCloser(bytes.NewBuffer(req.RequestBody))
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed

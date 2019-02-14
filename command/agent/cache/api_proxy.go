@@ -49,6 +49,9 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		ap.logger.Error("failed to read request body", "error", err)
 		return nil, err
 	}
+	if resp.Body != nil {
+		resp.Body.Close()
+	}
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respBody))
 
 	return &SendResponse{

@@ -33,6 +33,9 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 			logger.Error("failed to read request body")
 			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
 		}
+		if r.Body != nil {
+			r.Body.Close()
+		}
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
 
 		resp, err := proxier.Send(ctx, &SendRequest{
