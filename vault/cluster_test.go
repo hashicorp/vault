@@ -107,14 +107,14 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		cores[0].clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 
 		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
-		dailer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+		dialer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 		for _, ln := range cores[0].Listeners {
 			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 			if !ok {
 				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
-			netConn, err := dailer(fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), 0)
+			netConn, err := dialer(fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), 0)
 			conn := netConn.(*tls.Conn)
 			if err != nil {
 				if expectFail {
@@ -389,9 +389,9 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	core.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{core.Core})
 
 	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dailer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+	dialer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 
-	netConn, err := dailer(fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), 0)
+	netConn, err := dialer(fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), 0)
 	conn := netConn.(*tls.Conn)
 	if err != nil {
 		t.Fatal(err)
