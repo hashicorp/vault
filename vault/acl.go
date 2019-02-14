@@ -377,35 +377,35 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 
 	if len(a.segmentWildcardPaths) > 0 {
 		pathParts := strings.Split(path, "/")
-		for k := range a.segmentWildcardPaths {
-			if k == "" {
+		for currWCPath := range a.segmentWildcardPaths {
+			if currWCPath == "" {
 				continue
 			}
 
 			var isPrefix bool
 			var invalid bool
-			origK := k
+			origCurrWCPath := currWCPath
 
-			if k[len(k)-1] == '*' {
+			if currWCPath[len(currWCPath)-1] == '*' {
 				isPrefix = true
-				k = k[0 : len(k)-1]
+				currWCPath = currWCPath[0 : len(currWCPath)-1]
 			}
-			splitK := strings.Split(k, "/")
-			if len(pathParts) < len(splitK) {
+			splitCurrWCPath := strings.Split(currWCPath, "/")
+			if len(pathParts) < len(splitCurrWCPath) {
 				// The path coming in is shorter; it can't match
 				continue
 			}
-			if !isPrefix && len(splitK) != len(pathParts) {
+			if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
 				// If it's not a prefix we expect the same number of segments
 				continue
 			}
 			// We key off splitK here since it might be less than pathParts
-			for i, aclPart := range splitK {
+			for i, aclPart := range splitCurrWCPath {
 				if aclPart == "+" {
 					// Matches anything in the segment, so keep checking
 					continue
 				}
-				if i == len(splitK)-1 && isPrefix {
+				if i == len(splitCurrWCPath)-1 && isPrefix {
 					// In this case we may have foo* or just * depending on if
 					// originally it was foo* or foo/*.
 					if aclPart == "" {
@@ -432,7 +432,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 			// If invalid isn't set then we got through the full segmented path
 			// without finding a mismatch, so it's valid
 			if !invalid {
-				permissions = a.segmentWildcardPaths[origK].(*ACLPermissions)
+				permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
 				capabilities = permissions.CapabilitiesBitmap
 				goto CHECK
 			}
