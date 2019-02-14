@@ -17,7 +17,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
-func TestS3Backend(t *testing.T) {
+func TestDefaultS3Backend(t *testing.T) {
+	DoS3BackendTest(t, "")
+}
+
+func TestS3BackendSseKms(t *testing.T) {
+	DoS3BackendTest(t, "alias/aws/s3")
+}
+
+func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 	credsConfig := &awsutil.CredentialsConfig{}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
@@ -83,7 +91,8 @@ func TestS3Backend(t *testing.T) {
 
 	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewS3Backend(map[string]string{
-		"bucket": bucket,
+		"bucket":   bucket,
+		"kmsKeyId": kmsKeyId,
 	}, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)

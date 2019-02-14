@@ -331,16 +331,18 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	var level log.Level
 	var logLevelWasNotSet bool
+	logLevelString := c.flagLogLevel
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
-	case notSetValue:
+	case notSetValue, "":
 		logLevelWasNotSet = true
+		logLevelString = "info"
 		level = log.Info
 	case "trace":
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "notice", "info", "":
+	case "notice", "info":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn
@@ -416,6 +418,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if config.LogLevel != "" && logLevelWasNotSet {
 		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
 		switch configLogLevel {
 		case "trace":
 			c.logger.SetLevel(log.Trace)
@@ -492,7 +495,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 
 	sealType := vaultseal.Shamir
@@ -507,8 +510,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		sealLogger := c.logger.Named(vaultseal.Test)
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		sealLogger := c.logger.Named(sealType)
 		allLoggers = append(allLoggers, sealLogger)
@@ -753,7 +755,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = c.flagLogLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())

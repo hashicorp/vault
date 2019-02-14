@@ -26,6 +26,7 @@ import (
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
+	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
@@ -75,6 +76,8 @@ const (
 	flagNameListingVisibility = "listing-visibility"
 	// flagNamePassthroughRequestHeaders is the flag name used to set passthrough request headers to the backend
 	flagNamePassthroughRequestHeaders = "passthrough-request-headers"
+	// flagNameAllowedResponseHeaders is used to set allowed response headers from a plugin
+	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
 )
@@ -139,6 +142,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
+		"oidc":     &credOIDC.CLIHandler{},
 		"okta":     &credOkta.CLIHandler{},
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
@@ -383,6 +387,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"policy write": func() (cli.Command, error) {
 			return &PolicyWriteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"print": func() (cli.Command, error) {
+			return &PrintCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"print token": func() (cli.Command, error) {
+			return &PrintTokenCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

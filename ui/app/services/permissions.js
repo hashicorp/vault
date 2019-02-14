@@ -108,31 +108,51 @@ export default Service.extend({
     }
   },
 
-  hasPermission(pathName) {
+  hasPermission(pathName, capabilities = [null]) {
     const path = this.pathNameWithNamespace(pathName);
 
-    if (this.canViewAll || this.hasMatchingExactPath(path) || this.hasMatchingGlobPath(path)) {
+    if (this.canViewAll) {
       return true;
     }
-    return false;
+
+    return capabilities.every(
+      capability => this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
+    );
   },
 
-  hasMatchingExactPath(pathName) {
+  hasMatchingExactPath(pathName, capability) {
     const exactPaths = this.get('exactPaths');
     if (exactPaths) {
       const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
-      return prefix && !this.isDenied(exactPaths[prefix]);
+      const hasMatchingPath = prefix && !this.isDenied(exactPaths[prefix]);
+
+      if (prefix && capability) {
+        return this.hasCapability(exactPaths[prefix], capability) && hasMatchingPath;
+      }
+
+      return hasMatchingPath;
     }
     return false;
   },
 
-  hasMatchingGlobPath(pathName) {
+  hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.get('globPaths');
     if (globPaths) {
       const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
-      return (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+      const hasMatchingPath =
+        (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
+
+      if (matchingPath && capability) {
+        return this.hasCapability(globPaths[matchingPath], capability) && hasMatchingPath;
+      }
+
+      return hasMatchingPath;
     }
     return false;
+  },
+
+  hasCapability(path, capability) {
+    return path.capabilities.includes(capability);
   },
 
   isDenied(path) {

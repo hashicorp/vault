@@ -1,11 +1,14 @@
 import { set } from '@ember/object';
 import { hash, resolve } from 'rsvp';
+import { inject as service } from '@ember/service';
+import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
+import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import DS from 'ember-data';
 
 export default Route.extend(UnloadModelRoute, {
+  pathHelp: service('path-help'),
   capabilities(secret) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
@@ -35,15 +38,27 @@ export default Route.extend(UnloadModelRoute, {
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
     const { secret } = this.paramsFor(this.routeName);
-    const parentKey = utils.parentKeyForKey(secret);
-    const mode = this.routeName.split('.').pop();
-    if (mode === 'edit' && utils.keyIsFolder(secret)) {
-      if (parentKey) {
-        return this.transitionTo('vault.cluster.secrets.backend.list', parentKey);
-      } else {
-        return this.transitionTo('vault.cluster.secrets.backend.list-root');
+    return this.buildModel(secret).then(() => {
+      const parentKey = utils.parentKeyForKey(secret);
+      const mode = this.routeName.split('.').pop();
+      if (mode === 'edit' && utils.keyIsFolder(secret)) {
+        if (parentKey) {
+          return this.transitionTo('vault.cluster.secrets.backend.list', parentKey);
+        } else {
+          return this.transitionTo('vault.cluster.secrets.backend.list-root');
+        }
       }
+    });
+  },
+
+  buildModel(secret) {
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let modelType = this.modelType(backend, secret);
+    if (['secret', 'secret-v2'].includes(modelType)) {
+      return resolve();
     }
+    let owner = getOwner(this);
+    return this.pathHelp.getNewModel(modelType, owner, backend);
   },
 
   modelType(backend, secret) {

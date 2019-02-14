@@ -16,7 +16,7 @@ const (
 	// ensure no overlap between old and new values.
 
 	ReplicationUnknown            ReplicationState = 0
-	ReplicationPerformancePrimary ReplicationState = 1 << iota
+	ReplicationPerformancePrimary ReplicationState = 1 << iota // Note -- iota is 5 here!
 	ReplicationPerformanceSecondary
 	OldSplitReplicationBootstrapping
 	ReplicationDRPrimary
@@ -49,6 +49,39 @@ func (r ReplicationState) string() string {
 	}
 
 	return "unknown"
+}
+
+func (r ReplicationState) StateStrings() []string {
+	var ret []string
+	if r.HasState(ReplicationPerformanceSecondary) {
+		ret = append(ret, "perf-secondary")
+	}
+	if r.HasState(ReplicationPerformancePrimary) {
+		ret = append(ret, "perf-primary")
+	}
+	if r.HasState(ReplicationPerformanceBootstrapping) {
+		ret = append(ret, "perf-bootstrapping")
+	}
+	if r.HasState(ReplicationPerformanceDisabled) {
+		ret = append(ret, "perf-disabled")
+	}
+	if r.HasState(ReplicationDRPrimary) {
+		ret = append(ret, "dr-primary")
+	}
+	if r.HasState(ReplicationDRSecondary) {
+		ret = append(ret, "dr-secondary")
+	}
+	if r.HasState(ReplicationDRBootstrapping) {
+		ret = append(ret, "dr-bootstrapping")
+	}
+	if r.HasState(ReplicationDRDisabled) {
+		ret = append(ret, "dr-disabled")
+	}
+	if r.HasState(ReplicationPerformanceStandby) {
+		ret = append(ret, "perfstandby")
+	}
+
+	return ret
 }
 
 func (r ReplicationState) GetDRString() string {

@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 func testBarrier(t *testing.T, b SecurityBarrier) {
@@ -32,7 +34,7 @@ func testBarrier(t *testing.T, b SecurityBarrier) {
 	}
 
 	// All operations should fail
-	e := &Entry{Key: "test", Value: []byte("test")}
+	e := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	if err := b.Put(context.Background(), e); err != ErrBarrierSealed {
 		t.Fatalf("err: %v", err)
 	}
@@ -264,7 +266,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	first := info.InstallTime
 
 	// Write a key
-	e1 := &Entry{Key: "test", Value: []byte("test")}
+	e1 := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	if err := b.Put(context.Background(), e1); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -291,7 +293,7 @@ func testBarrier_Rotate(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Write another key
-	e2 := &Entry{Key: "foo", Value: []byte("test")}
+	e2 := &logical.StorageEntry{Key: "foo", Value: []byte("test")}
 	if err := b.Put(context.Background(), e2); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -357,7 +359,7 @@ func testBarrier_Rekey(t *testing.T, b SecurityBarrier) {
 	}
 
 	// Write a key
-	e1 := &Entry{Key: "test", Value: []byte("test")}
+	e1 := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	if err := b.Put(context.Background(), e1); err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -397,6 +397,8 @@ func (c *Core) clearForwardingClients() {
 
 	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
+
+	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }
 
 // ForwardRequest forwards a given request to the active node and returns the
