@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/logical"
 
 	"github.com/go-test/deep"
@@ -134,7 +133,7 @@ func setupClusterAndAgent(t *testing.T, coreConfig *vault.CoreConfig) (func(), *
 		t.Fatal(err)
 	}
 
-	if err := testClient.SetAddress("http://" + listener.Addr()); err != nil {
+	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -159,107 +158,150 @@ func setupClusterAndAgent(t *testing.T, coreConfig *vault.CoreConfig) (func(), *
 }
 
 func TestCache_TokenRevocations(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
-		LogicalBackends: map[string]logical.Factory{
-			"kv": vault.LeasedPassthroughBackendFactory,
-		},
-	}
+	var token1, token2, token3, lease1, lease2, lease3 string
+	var leaseCache *LeaseCache
+	var testClient *api.Client
+	var cleanup func()
+	var sampleSpace map[string]string
+	setupFunc := func() {
+		coreConfig := &vault.CoreConfig{
+			DisableMlock: true,
+			DisableCache: true,
+			Logger:       hclog.NewNullLogger(),
+			LogicalBackends: map[string]logical.Factory{
+				"kv": vault.LeasedPassthroughBackendFactory,
+			},
+		}
 
-	cleanup, _, testClient, leaseCache := setupClusterAndAgent(t, coreConfig)
-	defer cleanup()
+		sampleSpace := make(map[string]string)
 
-	token1 := testClient.Token()
+		cleanup, _, testClient, leaseCache = setupClusterAndAgent(t, coreConfig)
 
-	// Mount the kv backend
-	err := testClient.Sys().Mount("kv", &api.MountInput{
-		Type: "kv",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		token1 = testClient.Token()
+		sampleSpace[token1] = "token"
 
-	// Create a secret in the backend
-	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
-		"value": "bar",
-		"ttl":   "1h",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Read the secret and create a lease
-	leaseResp, err := testClient.Logical().Read("kv/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	lease11 := leaseResp.LeaseID
-
-	resp, err := testClient.Logical().Write("auth/token/create", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	token2 := resp.Auth.ClientToken
-
-	testClient.SetToken(token2)
-
-	leaseResp, err = testClient.Logical().Read("kv/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	lease21 := leaseResp.LeaseID
-
-	resp, err = testClient.Logical().Write("auth/token/create", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	token3 := resp.Auth.ClientToken
-
-	testClient.SetToken(token3)
-
-	leaseResp, err = testClient.Logical().Read("kv/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	lease31 := leaseResp.LeaseID
-
-	// TODO: This test will be enhanced soon to use all the values here
-	fmt.Printf("===== token1: %q\n", token1)
-	fmt.Printf("===== lease11: %#v\n", lease11)
-	fmt.Printf("===== token2: %q\n", token2)
-	fmt.Printf("===== lease21: %#v\n", lease21)
-	fmt.Printf("===== token3: %q\n", token3)
-	fmt.Printf("===== lease31: %#v\n", lease31)
-
-	/*
-		testClient.SetToken(token1)
-		err = testClient.Auth().Token().RevokeSelf("")
+		// Mount the kv backend
+		err := testClient.Sys().Mount("kv", &api.MountInput{
+			Type: "kv",
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-	*/
 
-	indexes, err := leaseCache.db.GetAll(cachememdb.IndexNameID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(indexes) != 6 {
-		t.Fatalf("bad: len(indexes); expected: 6, actual: %d", len(indexes))
+		// Create a secret in the backend
+		_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+			"value": "bar",
+			"ttl":   "1h",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Read the secret and create a lease
+		leaseResp, err := testClient.Logical().Read("kv/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		lease1 = leaseResp.LeaseID
+		sampleSpace[lease1] = "lease"
+
+		resp, err := testClient.Logical().Write("auth/token/create", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		token2 = resp.Auth.ClientToken
+		sampleSpace[token2] = "token"
+
+		testClient.SetToken(token2)
+
+		leaseResp, err = testClient.Logical().Read("kv/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		lease2 = leaseResp.LeaseID
+		sampleSpace[lease2] = "lease"
+
+		resp, err = testClient.Logical().Write("auth/token/create", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		token3 = resp.Auth.ClientToken
+		sampleSpace[token3] = "token"
+
+		testClient.SetToken(token3)
+
+		leaseResp, err = testClient.Logical().Read("kv/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+		lease3 = leaseResp.LeaseID
+		sampleSpace[lease3] = "lease"
 	}
 
+	setupFunc()
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+
+	validateFunc := func() {
+		t.Helper()
+		for val, valType := range sampleSpace {
+			index, err := leaseCache.db.Get(valType, val)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if expected[val] == "" && index != nil {
+				t.Fatalf("failed to evict index from the cache: type: %q, value: %q", valType, val)
+			}
+			if expected[val] != "" && index == nil {
+				t.Fatalf("evicted an undesired index from cache: type: %q, value: %q", valType, val)
+			}
+		}
+	}
+
+	// Ensure that all the entries are in the cache
+	validateFunc()
+
+	// Cancel the base context of the lease cache. This should trigger
+	// evictions of all the entries from the cache.
 	leaseCache.baseCtxInfo.CancelFunc()
 
-	time.Sleep(2 * time.Second)
+	// Give it some time
+	time.Sleep(1 * time.Second)
 
-	indexes, err = leaseCache.db.GetAll(cachememdb.IndexNameID)
+	// Ensure that all the entries are now gone
+	expected = make(map[string]string)
+	validateFunc()
+
+	cleanup()
+
+	// Reset all the things in cache
+	setupFunc()
+
+	expected = make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+
+	// Ensure that all the entries are in the cache
+	validateFunc()
+
+	// Revoke the top level token. This should evict all the leases belonging
+	// to this token, evict entries for all the child tokens and their
+	// respective leases.
+	testClient.SetToken(token1)
+	err := testClient.Auth().Token().RevokeSelf("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(indexes) != 0 {
-		t.Fatalf("bad: len(indexes); expected: 0, actual: %d", len(indexes))
-	}
+
+	expected = make(map[string]string)
+
+	validateFunc()
+
+	cleanup()
 }
 
 func TestCache_NonCacheable(t *testing.T) {

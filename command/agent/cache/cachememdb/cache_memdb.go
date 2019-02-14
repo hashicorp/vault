@@ -154,26 +154,6 @@ func (c *CacheMemDB) Set(index *Index) error {
 	return nil
 }
 
-// GetAll returns all the matched cached indexes based on the index name provided.
-func (c *CacheMemDB) GetAll(indexName string) ([]*Index, error) {
-	if !validIndexName(indexName) {
-		return nil, fmt.Errorf("invalid index name %q", indexName)
-	}
-
-	txn := c.db.Txn(false)
-	iter, err := txn.Get(tableNameIndexer, indexName)
-	if err != nil {
-		return nil, err
-	}
-
-	var indexes []*Index
-	for index := iter.Next(); index != nil; index = iter.Next() {
-		indexes = append(indexes, index.(*Index))
-	}
-
-	return indexes, nil
-}
-
 // GetByPrefix returns all the cached indexes based on the index name and the
 // value prefix.
 func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) ([]*Index, error) {
