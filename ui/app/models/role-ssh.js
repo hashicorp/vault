@@ -41,11 +41,8 @@ const CA_FIELDS = [
 
 export default DS.Model.extend({
   useOpenAPI: true,
-  getOpenApiInfo: function(backend) {
-    return {
-      helpUrl: `/v1/${backend}/roles/example?help=1`,
-      path: `/roles/{role}`,
-    };
+  getHelpUrl: function(backend) {
+    return `/v1/${backend}/roles/example?help=1`;
   },
   zeroAddress: attr('boolean', {
     readOnly: true,

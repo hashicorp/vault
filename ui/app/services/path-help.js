@@ -27,8 +27,9 @@ export default Service.extend({
   //Makes a call to grab the OpenAPI document.
   //Returns relevant information from OpenAPI
   //as determined by the expandOpenApiProps util
-  getProps(helpUrl, path, backend) {
+  getProps(helpUrl, backend) {
     return this.ajax(helpUrl, backend).then(help => {
+      let path = Object.keys(help.openapi.paths)[0];
       let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
     });
@@ -40,9 +41,9 @@ export default Service.extend({
     if (newModel.merged || newModel.prototype.useOpenAPI !== true) {
       return resolve();
     }
-    let { helpUrl, path } = newModel.prototype.getOpenApiInfo(backend);
+    let helpUrl = newModel.prototype.getHelpUrl(backend);
 
-    return this.getProps(helpUrl, path, backend).then(props => {
+    return this.getProps(helpUrl, backend).then(props => {
       if (owner.hasRegistration(name) && !newModel.merged) {
         let { attrs, newFields } = combineAttributes(newModel.attributes, props);
         newModel = newModel.extend(attrs, { newFields });
