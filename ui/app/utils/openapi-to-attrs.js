@@ -1,6 +1,7 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
+import { isEmpty } from '@ember/utils';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
@@ -31,6 +32,11 @@ export const expandOpenApiProps = function(props) {
     }
     if (details['x-vault-displayValue']) {
       attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
+    } else {
+      if (!isEmpty(details['default'])) {
+        debugger; // eslint-disable-line
+        attrs[prop.camelize()].defaultValue = details['default'];
+      }
     }
   }
   return attrs;
