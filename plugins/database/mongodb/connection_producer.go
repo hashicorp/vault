@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
+        "github.com/y0ssar1an/q"
 
 	mgo "gopkg.in/mgo.v2"
 )
@@ -45,7 +46,8 @@ type mongoDBConnectionProducer struct {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (c *mongoDBConnectionProducer) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
+func (c *mongoDBConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, restored bool, err error) {
+        q.Q("connutil/sql SetCredentials called:", statements, staticUser)
         return
 }
 

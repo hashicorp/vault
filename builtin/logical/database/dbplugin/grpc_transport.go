@@ -119,7 +119,7 @@ func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-        username, password, restored, err := s.impl.SetCredentials(ctx, req)
+        username, password, restored, err := s.impl.SetCredentials(ctx, *req.Statements, *req.StaticUserConfig)
         if err != nil {
                 return nil, err
         }
@@ -297,10 +297,10 @@ func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, veri
 
 func (c *gRPCClient) Close() error {
 	_, err := c.client.Close(c.doneCtx, &Empty{})
-	return err
+        return err
 }
 
-func (c *gRPCClient) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
+func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, staticUser StaticUserConfig) (username, password string, restored bool, err error) {
         q.Q("grpc_transport:client SetCredentials called")
         // return nil, status.Error(codes.Unimplemented, "not yet implemented")
 
@@ -312,7 +312,11 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, req *SetCredentialsRequ
         // TODO: Question: CreateUser takes the CreateUserRequest and splits the
         // statements and the config. Here we just pass on the request without
         // splitting anything
-        resp, err := c.client.SetCredentials(ctx, req)
+        resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
+                Statements:       &statements,
+                StaticUserConfig: &staticUser,
+        })
+
         if err != nil {
                 // Fall back to old call if not implemented
                 grpcStatus, ok := status.FromError(err)

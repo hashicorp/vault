@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	influx "github.com/influxdata/influxdb/client/v2"
 	"github.com/mitchellh/mapstructure"
+        "github.com/y0ssar1an/q"
 )
 
 // influxdbConnectionProducer implements ConnectionProducer and provides an
@@ -54,7 +55,8 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, conf map[st
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
+func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, restored bool, err error) {
+        q.Q("connutil/influx SetCredentials called:", statements, staticUser)
         return
 }
 

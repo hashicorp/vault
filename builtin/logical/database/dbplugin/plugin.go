@@ -19,13 +19,13 @@ type Database interface {
 	Type() (string, error)
 	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
-	RevokeUser(ctx context.Context, statements Statements, username string) error
+        RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
-        SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username string, password string, restored bool, err error)
+        RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
+        SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username string, password string, restored bool, err error)
 
-	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
-	Close() error
+        Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
+        Close() error
 
 	// DEPRECATED, will be removed in a future plugin version bump.
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)

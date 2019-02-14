@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
+        "github.com/y0ssar1an/q"
 )
 
 const (
@@ -95,9 +96,65 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-// func (p *PostgreSQL) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
-// 	return
-// }
+func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, restored bool, err error) {
+        q.Q("postgresql SetCredentials called:")
+        statements = dbutil.StatementCompatibilityHelper(statements)
+
+        if len(statements.Creation) == 0 {
+                return "", "", false, dbutil.ErrEmptyCreationStatement
+        }
+
+        // Grab the lock
+        p.Lock()
+        defer p.Unlock()
+
+        password, err = p.GeneratePassword()
+        if err != nil {
+                return "", "", false, err
+        }
+
+        // Get the connection
+        db, err := p.getConnection(ctx)
+        if err != nil {
+                return "", "", false, err
+        }
+
+        // Start a transaction
+        tx, err := db.BeginTx(ctx, nil)
+        if err != nil {
+                return "", "", false, err
+        }
+        defer func() {
+                _ = tx.Rollback()
+        }()
+        // Return the secret
+
+        // Execute each query
+        for _, stmt := range statements.Creation {
+                q.Q("stmt pre parsee:", stmt)
+                // for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+                stmt = strings.TrimSpace(stmt)
+                if len(stmt) == 0 {
+                        continue
+                }
+
+                m := map[string]string{
+                        "name":     staticUser.Username,
+                        "password": password,
+                }
+                if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+                        return "", "", false, err
+                }
+                // }
+        }
+
+        // Commit the transaction
+        if err := tx.Commit(); err != nil {
+                return "", "", false, err
+        }
+
+        return username, password, false, nil
+}
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	statements = dbutil.StatementCompatibilityHelper(statements)

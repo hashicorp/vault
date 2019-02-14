@@ -10,6 +10,7 @@ import (
         "github.com/hashicorp/vault/helper/strutil"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
+        "github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -294,6 +295,15 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                 role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 
                 // TODO branch out and create static account in Database
+                if role.StaticAccount != nil {
+                        q.Q(">>> branch out to create static account")
+                        // in create/update of static accounts, we only care if the operation
+                        // err'd , and this call does not return credentials
+                        _, _, _, err := b.createUpdateStaticAcount(ctx, req, name, role)
+                        if err != nil {
+                                return nil, err
+                        }
+                }
 
                 // END create static account
 
@@ -307,7 +317,45 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		}
 
 		return nil, nil
-	}
+        }
+}
+
+func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry) (username, password string, restored bool, err error) {
+        q.Q(">>> createUpdateStaticAcount called: ", role)
+        dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
+        if err != nil {
+                return "", "", false, err
+        }
+
+        // If role name isn't in the database's allowed roles, send back a
+        // permission denied.
+        if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
+                return "", "", false, fmt.Errorf("%q is not an allowed role", name)
+        }
+
+        // Get the Database object
+        db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+        if err != nil {
+                return "", "", false, err
+        }
+        // branch for static account around here
+
+        db.RLock()
+        defer db.RUnlock()
+
+        config := dbplugin.StaticUserConfig{
+                Username: name,
+        }
+
+        // Create the user
+        username, password, restored, err = db.SetCredentials(ctx, role.Statements, config)
+        if err != nil {
+                b.CloseIfShutdown(db, err)
+                return "", "", false, err
+        }
+        q.Q("returned values:", username, password, restored, err)
+
+        return "", "", false, nil
 }
 
 type roleEntry struct {

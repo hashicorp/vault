@@ -29,15 +29,17 @@ func TestBackend_Static_Config(t *testing.T) {
         }
         defer b.Cleanup(context.Background())
 
-        // cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
-        // defer cleanup()
-        connURL := "postgres://postgres:secret@localhost:32768/database?sslmode=disable"
+        cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+        defer cleanup()
+        // connURL := "postgres://postgres:secret@localhost:32768/database?sslmode=disable"
 
         // Configure a connection
         data := map[string]interface{}{
                 "connection_url":    connURL,
                 "plugin_name":       "postgresql-database-plugin",
                 "verify_connection": false,
+                "allowed_roles":     []string{"*"},
+                "name":              "plugin-test",
         }
         req := &logical.Request{
                 Operation: logical.UpdateOperation,
@@ -50,6 +52,7 @@ func TestBackend_Static_Config(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
+        // q.Q("postgresql SetCredentials called:", statements, staticUser)
         // Test static role creation scenarios. Uses a map, so there is no guaranteed
         // ordering, so each case cleans up by deleting the role
         testCases := map[string]struct {
@@ -103,7 +106,7 @@ func TestBackend_Static_Config(t *testing.T) {
                         data := map[string]interface{}{
                                 "name":                  "plugin-role-test",
                                 "db_name":               "plugin-test",
-                                "creation_statements":   testRole,
+                                "creation_statements":   testStaticRoleCreate,
                                 "revocation_statements": defaultRevocationSQL,
                                 "default_ttl":           "5m",
                                 "max_ttl":               "10m",
@@ -187,3 +190,43 @@ func TestBackend_Static_Config(t *testing.T) {
                 })
         }
 }
+
+// const testStaticRole = `
+// DO
+// $do$
+// BEGIN
+//    IF NOT EXISTS (
+//       SELECT
+//       FROM   pg_catalog.pg_roles
+//       WHERE  rolname = '{{name}}') THEN
+
+//       CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
+//    END IF;
+// END
+// $do$;
+// `
+var testStaticRoleCreate = []string{
+        `
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{{name}}') THEN
+        CREATE ROLE "{{name}}";
+    END IF;
+END
+$$;
+`,
+        `
+ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+`,
+}
+
+// const testStaticRoleCreate = `
+// CREATE ROLE "{{name}}" WITH
+//   LOGIN
+//   PASSWORD '{{password}}';
+// GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+// `
+
+// const testStaticRoleUpdate = `
+// ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+// `
