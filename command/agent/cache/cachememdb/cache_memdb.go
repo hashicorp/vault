@@ -60,6 +60,16 @@ func newDB() (*memdb.MemDB, error) {
 						},
 					},
 					// This index enables fetching all the entries in cache
+					// belonging to the leases of a given token.
+					IndexNameLeaseToken: &memdb.IndexSchema{
+						Name:         IndexNameLeaseToken,
+						Unique:       false,
+						AllowMissing: true,
+						Indexer: &memdb.StringFieldIndex{
+							Field: "LeaseToken",
+						},
+					},
+					// This index enables fetching all the entries in cache
 					// that are tied to the given token, regardless of the
 					// entries belonging to the token or belonging to the
 					// lease.

@@ -225,6 +225,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		renewCtxInfo = newCtxInfo
 
 		index.Lease = secret.LeaseID
+		index.LeaseToken = req.Token
 
 	case secret.Auth != nil:
 		c.logger.Debug("processing auth response", "path", req.Request.URL.Path, "method", req.Request.Method)
@@ -652,27 +653,31 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected token in the request body to be string")
 		}
 
-		// Find out all the indexes that are directly tied to the revoked token
-		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameToken, token)
+		// Kill the renewers of all the leases attached to the revoked token
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLeaseToken, token)
 		if err != nil {
 			return false, err
 		}
-
-		// Out of these indexes, one will be for the token itself and the rest
-		// will be for leases of this token. Cancel the contexts of all the
-		// leases and return from renewer goroutine for the token's index
-		// without cancelling the context. Cancelling the context of the
-		// token's renewer will evict all the child tokens which is not
-		// desired.
 		for _, index := range indexes {
-			if index.Lease != "" {
-				index.RenewCtxInfo.CancelFunc()
-			} else {
-				close(index.RenewCtxInfo.DoneCh)
-			}
+			index.RenewCtxInfo.CancelFunc()
 		}
 
-		// Clear the parent references of the revoked token
+		// Kill the renewer of the revoked token
+		index, err := c.db.Get(cachememdb.IndexNameToken, token)
+		if err != nil {
+			return false, err
+		}
+		if index == nil {
+			return true, nil
+		}
+
+		// Indicate the renewer goroutine for this index to return. This will
+		// not affect the child tokens because the context is not getting
+		// cancelled.
+		close(index.RenewCtxInfo.DoneCh)
+
+		// Clear the parent references of the revoked token in the entries
+		// belonging to the child tokens of the revoked token.
 		indexes, err = c.db.GetByPrefix(cachememdb.IndexNameTokenParent, token)
 		if err != nil {
 			return false, err

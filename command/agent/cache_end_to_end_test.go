@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -225,15 +226,37 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	defer listener.Close()
 
-	err = cache.Run(ctx, &cache.Config{
-		Client:           client,
-		UseAutoAuthToken: true,
-		Listeners:        []net.Listener{listener},
-		Logger:           logging.NewVaultLogger(hclog.Trace),
+	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+
+	// Create the API proxier
+	apiProxy := cache.NewAPIProxy(&cache.APIProxyConfig{
+		Logger: cacheLogger.Named("apiproxy"),
+	})
+
+	// Create the lease cache proxier and set its underlying proxier to
+	// the API proxier.
+	leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+		BaseContext: ctx,
+		Proxier:     apiProxy,
+		Logger:      cacheLogger.Named("leasecache"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Create a muxer and add paths relevant for the lease cache layer
+	mux := http.NewServeMux()
+	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+
+	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, true, client))
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       5 * time.Minute,
+		ErrorLog:          cacheLogger.StandardLogger(nil),
+	}
+	go server.Serve(listener)
 
 	testClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {

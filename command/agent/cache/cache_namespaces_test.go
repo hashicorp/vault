@@ -8,6 +8,7 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -46,7 +47,7 @@ func testSendNamespaces(t *testing.T) {
 		},
 	}
 
-	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(t, coreConfig)
+	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
 	// Create a namespace
@@ -161,7 +162,7 @@ func testHandleCacheClearNamespaces(t *testing.T, fullPath bool) {
 		},
 	}
 
-	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(t, coreConfig)
+	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
 	// Create a namespace
@@ -247,7 +248,7 @@ func testEvictionOnRevocationNamespaces(t *testing.T, fullPath bool) {
 		},
 	}
 
-	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(t, coreConfig)
+	cleanup, clusterClient, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
 	// Create a namespace

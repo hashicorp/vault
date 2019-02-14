@@ -11,7 +11,7 @@ import (
 )
 
 func TestCache_APIProxy(t *testing.T) {
-	cleanup, client, _, _ := setupClusterAndAgent(t, nil)
+	cleanup, client, _, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	proxier := NewAPIProxy(&APIProxyConfig{

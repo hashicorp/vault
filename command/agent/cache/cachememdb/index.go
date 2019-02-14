@@ -17,7 +17,7 @@ type Index struct {
 	ID string
 
 	// Token is the token that fetched the response held by this index
-	// Required: true, Unique: false
+	// Required: true, Unique: true
 	Token string
 
 	// TokenParent is the parent token of the token held by this index
@@ -25,7 +25,7 @@ type Index struct {
 	TokenParent string
 
 	// TokenAccessor is the accessor of the token being cached in this index
-	// Required: true, Unique: false
+	// Required: true, Unique: true
 	TokenAccessor string
 
 	// Namespace is the namespace that was provided in the request path as the
@@ -41,6 +41,11 @@ type Index struct {
 	// response held by this index.
 	// Required: false, Unique: true
 	Lease string
+
+	// LeaseToken is the identifier of the token that created the lease held by
+	// this index.
+	// Required: false, Unique: false
+	LeaseToken string
 
 	// Response is the serialized response object that the agent is caching.
 	Response []byte
@@ -71,6 +76,9 @@ const (
 
 	// IndexNameTokenParent is the token parent of the index.
 	IndexNameTokenParent = "token_parent"
+
+	// IndexNameLeaseToken is the token that created the lease.
+	IndexNameLeaseToken = "lease_token"
 )
 
 func validIndexName(indexName string) bool {
@@ -81,6 +89,7 @@ func validIndexName(indexName string) bool {
 	case "token":
 	case "token_accessor":
 	case "token_parent":
+	case "lease_token":
 	default:
 		return false
 	}

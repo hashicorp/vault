@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/vault"
 )
@@ -31,8 +32,12 @@ path "*" {
 // caching agent. It returns a cleanup func that should be deferred immediately
 // along with two clients, one for direct cluster communication and another to
 // talk to the caching agent.
-func setupClusterAndAgent(t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
 	t.Helper()
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// Handle sane defaults
 	if coreConfig == nil {
@@ -91,7 +96,7 @@ func setupClusterAndAgent(t *testing.T, coreConfig *vault.CoreConfig) (func(), *
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
 	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
-	ctx := context.Background()
+
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -157,217 +162,102 @@ func setupClusterAndAgent(t *testing.T, coreConfig *vault.CoreConfig) (func(), *
 	return cleanup, clusterClient, testClient, leaseCache
 }
 
-func TestCache_TokenRevocations(t *testing.T) {
-	var token1, token2, token3, lease1, lease2, lease3 string
-	var leaseCache *LeaseCache
-	var testClient *api.Client
-	var cleanup func()
-	var sampleSpace map[string]string
-	setupFunc := func() {
-		coreConfig := &vault.CoreConfig{
-			DisableMlock: true,
-			DisableCache: true,
-			Logger:       hclog.NewNullLogger(),
-			LogicalBackends: map[string]logical.Factory{
-				"kv": vault.LeasedPassthroughBackendFactory,
-			},
-		}
-
-		sampleSpace := make(map[string]string)
-
-		cleanup, _, testClient, leaseCache = setupClusterAndAgent(t, coreConfig)
-
-		token1 = testClient.Token()
-		sampleSpace[token1] = "token"
-
-		// Mount the kv backend
-		err := testClient.Sys().Mount("kv", &api.MountInput{
-			Type: "kv",
-		})
+func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expected map[string]string, leaseCache *LeaseCache) {
+	t.Helper()
+	for val, valType := range sampleSpace {
+		index, err := leaseCache.db.Get(valType, val)
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		// Create a secret in the backend
-		_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
-			"value": "bar",
-			"ttl":   "1h",
-		})
-		if err != nil {
-			t.Fatal(err)
+		if expected[val] == "" && index != nil {
+			t.Fatalf("failed to evict index from the cache: type: %q, value: %q", valType, val)
 		}
-
-		// Read the secret and create a lease
-		leaseResp, err := testClient.Logical().Read("kv/foo")
-		if err != nil {
-			t.Fatal(err)
+		if expected[val] != "" && index == nil {
+			t.Fatalf("evicted an undesired index from cache: type: %q, value: %q", valType, val)
 		}
-		lease1 = leaseResp.LeaseID
-		sampleSpace[lease1] = "lease"
+	}
+}
 
-		resp, err := testClient.Logical().Write("auth/token/create", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		token2 = resp.Auth.ClientToken
-		sampleSpace[token2] = "token"
-
-		testClient.SetToken(token2)
-
-		leaseResp, err = testClient.Logical().Read("kv/foo")
-		if err != nil {
-			t.Fatal(err)
-		}
-		lease2 = leaseResp.LeaseID
-		sampleSpace[lease2] = "lease"
-
-		resp, err = testClient.Logical().Write("auth/token/create", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		token3 = resp.Auth.ClientToken
-		sampleSpace[token3] = "token"
-
-		testClient.SetToken(token3)
-
-		leaseResp, err = testClient.Logical().Read("kv/foo")
-		if err != nil {
-			t.Fatal(err)
-		}
-		lease3 = leaseResp.LeaseID
-		sampleSpace[lease3] = "lease"
+func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
 	}
 
-	setupFunc()
+	sampleSpace := make(map[string]string)
+
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
 
 	expected := make(map[string]string)
 	for k, v := range sampleSpace {
 		expected[k] = v
 	}
-
-	validateFunc := func() {
-		t.Helper()
-		for val, valType := range sampleSpace {
-			index, err := leaseCache.db.Get(valType, val)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if expected[val] == "" && index != nil {
-				t.Fatalf("failed to evict index from the cache: type: %q, value: %q", valType, val)
-			}
-			if expected[val] != "" && index == nil {
-				t.Fatalf("evicted an undesired index from cache: type: %q, value: %q", valType, val)
-			}
-		}
-	}
-
-	// Ensure that all the entries are in the cache
-	validateFunc()
-
-	// Cancel the base context of the lease cache. This should trigger
-	// evictions of all the entries from the cache.
-	leaseCache.baseCtxInfo.CancelFunc()
-
-	// Give it some time
-	time.Sleep(1 * time.Second)
-
-	// Ensure that all the entries are now gone
-	expected = make(map[string]string)
-	validateFunc()
-	cleanup()
-
-	// Setup all the things in cache
-	setupFunc()
-
-	expected = make(map[string]string)
-	for k, v := range sampleSpace {
-		expected[k] = v
-	}
-
-	// Ensure that all the entries are in the cache
-	validateFunc()
-
-	// Revoke the top level token. This should evict all the leases belonging
-	// to this token, evict entries for all the child tokens and their
-	// respective leases.
-	testClient.SetToken(token1)
-	err := testClient.Auth().Token().RevokeSelf("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected = make(map[string]string)
-	validateFunc()
-	cleanup()
-
-	// Setup all the things in cache
-	setupFunc()
-
-	expected = make(map[string]string)
-	for k, v := range sampleSpace {
-		expected[k] = v
-	}
-
-	// Ensure that all the entries are in the cache
-	validateFunc()
-
-	// Revoke the second level token. This should evict all the leases
-	// belonging to this token, evict entries for all the child tokens and
-	// their respective leases.
-	testClient.SetToken(token2)
-	err = testClient.Auth().Token().RevokeSelf("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected = map[string]string{
-		token1: "token",
-		lease1: "lease",
-	}
-
-	validateFunc()
-	cleanup()
-
-	// Setup all the things in cache
-	setupFunc()
-
-	expected = make(map[string]string)
-	for k, v := range sampleSpace {
-		expected[k] = v
-	}
-
-	// Ensure that all the entries are in the cache
-	validateFunc()
-
-	// Revoke the second level token. This should evict all the leases
-	// belonging to this token, evict entries for all the child tokens and
-	// their respective leases.
-	testClient.SetToken(token3)
-	err = testClient.Auth().Token().RevokeSelf("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected = map[string]string{
-		token1: "token",
-		lease1: "lease",
-		token2: "token",
-		lease2: "lease",
-	}
-
-	validateFunc()
-	cleanup()
-
-	// Setup all the things in cache
-	setupFunc()
-
-	expected = make(map[string]string)
-	for k, v := range sampleSpace {
-		expected[k] = v
-	}
-
-	// Ensure that all the entries are in the cache
-	validateFunc()
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
 
 	// Revoke-orphan the intermediate token. This should result in its own
 	// eviction and evictions of the revoked token's leases. All other things
@@ -378,6 +268,7 @@ func TestCache_TokenRevocations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(1 * time.Second)
 
 	expected = map[string]string{
 		token1: "token",
@@ -385,9 +276,481 @@ func TestCache_TokenRevocations(t *testing.T) {
 		token3: "token",
 		lease3: "lease",
 	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+}
 
-	validateFunc()
-	cleanup()
+func TestCache_TokenRevocations_LeafLevelToken(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	sampleSpace := make(map[string]string)
+
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+
+	// Revoke the lef token. This should evict all the leases belonging to this
+	// token, evict entries for all the child tokens and their respective
+	// leases.
+	testClient.SetToken(token3)
+	err = testClient.Auth().Token().RevokeSelf("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+
+	expected = map[string]string{
+		token1: "token",
+		lease1: "lease",
+		token2: "token",
+		lease2: "lease",
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+}
+
+func TestCache_TokenRevocations_IntermediateLevelToken(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	sampleSpace := make(map[string]string)
+
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+
+	// Revoke the second level token. This should evict all the leases
+	// belonging to this token, evict entries for all the child tokens and
+	// their respective leases.
+	testClient.SetToken(token2)
+	err = testClient.Auth().Token().RevokeSelf("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+
+	expected = map[string]string{
+		token1: "token",
+		lease1: "lease",
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+}
+
+func TestCache_TokenRevocations_TopLevelToken(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	sampleSpace := make(map[string]string)
+
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+
+	// Revoke the top level token. This should evict all the leases belonging
+	// to this token, evict entries for all the child tokens and their
+	// respective leases.
+	testClient.SetToken(token1)
+	err = testClient.Auth().Token().RevokeSelf("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+
+	expected = make(map[string]string)
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+}
+
+func TestCache_TokenRevocations_Shutdown(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	sampleSpace := make(map[string]string)
+
+	ctx, rootCancelFunc := context.WithCancel(namespace.RootContext(nil))
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(ctx, t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+
+	rootCancelFunc()
+	time.Sleep(1 * time.Second)
+
+	// Ensure that all the entries are now gone
+	expected = make(map[string]string)
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+}
+
+func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	sampleSpace := make(map[string]string)
+
+	cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	token1 := testClient.Token()
+	sampleSpace[token1] = "token"
+
+	// Mount the kv backend
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a secret in the backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the secret and create a lease
+	leaseResp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease1 := leaseResp.LeaseID
+	sampleSpace[lease1] = "lease"
+
+	resp, err := testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token2 := resp.Auth.ClientToken
+	sampleSpace[token2] = "token"
+
+	testClient.SetToken(token2)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease2 := leaseResp.LeaseID
+	sampleSpace[lease2] = "lease"
+
+	resp, err = testClient.Logical().Write("auth/token/create", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token3 := resp.Auth.ClientToken
+	sampleSpace[token3] = "token"
+
+	testClient.SetToken(token3)
+
+	leaseResp, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease3 := leaseResp.LeaseID
+	sampleSpace[lease3] = "lease"
+
+	expected := make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
+
+	// Cancel the base context of the lease cache. This should trigger
+	// evictions of all the entries from the cache.
+	leaseCache.baseCtxInfo.CancelFunc()
+	time.Sleep(1 * time.Second)
+
+	// Ensure that all the entries are now gone
+	expected = make(map[string]string)
+	tokenRevocationValidation(t, sampleSpace, expected, leaseCache)
 }
 
 func TestCache_NonCacheable(t *testing.T) {
@@ -400,7 +763,7 @@ func TestCache_NonCacheable(t *testing.T) {
 		},
 	}
 
-	cleanup, _, testClient, _ := setupClusterAndAgent(t, coreConfig)
+	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
 	// Query mounts first
@@ -433,7 +796,7 @@ func TestCache_NonCacheable(t *testing.T) {
 }
 
 func TestCache_AuthResponse(t *testing.T) {
-	cleanup, _, testClient, _ := setupClusterAndAgent(t, nil)
+	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
 	resp, err := testClient.Logical().Write("auth/token/create", nil)
@@ -492,7 +855,7 @@ func TestCache_LeaseResponse(t *testing.T) {
 		},
 	}
 
-	cleanup, client, testClient, _ := setupClusterAndAgent(t, coreConfig)
+	cleanup, client, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
 	defer cleanup()
 
 	err := client.Sys().Mount("kv", &api.MountInput{
