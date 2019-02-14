@@ -17,6 +17,19 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       },
       'x-vault-displayValue': 'Grace Hopper,Lady Ada',
     },
+    'favorite-ice-cream': {
+      type: 'string',
+      enum: ['vanilla', 'chocolate', 'strawberry'],
+    },
+    'default-value': {
+      default: 30,
+      'x-vault-displayValue': 300,
+      type: 'integer',
+    },
+    default: {
+      default: 30,
+      type: 'integer',
+    },
   };
   const EXPANDED_PROPS = {
     ttl: {
@@ -28,6 +41,21 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       editType: 'stringArray',
       type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
+    },
+    favoriteIceCream: {
+      editType: 'string',
+      type: 'string',
+      possibleValues: ['vanilla', 'chocolate', 'strawberry'],
+    },
+    defaultValue: {
+      editType: 'number',
+      type: 'number',
+      defaultValue: 300,
+    },
+    default: {
+      editType: 'number',
+      type: 'number',
+      defaultValue: 30,
     },
   };
 
@@ -71,6 +99,11 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       editType: 'stringArray',
       type: 'array',
       defaultValue: 'Grace Hopper,Lady Ada',
+    }),
+    favoriteIceCream: attr('string', {
+      type: 'string',
+      editType: 'string',
+      possibleValues: ['vanilla', 'chocolate', 'strawberry'],
     }),
   };
 
