@@ -11,11 +11,6 @@ export default AuthConfigComponent.extend({
     data.description = this.model.description;
     try {
       yield this.model.tune(data);
-      if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
-      }
-      this.router.transitionTo('vault.cluster.access.methods').followRedirects();
-      this.flashMessages.success('The configuration was saved successfully.');
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
@@ -24,5 +19,10 @@ export default AuthConfigComponent.extend({
       }
       return;
     }
+    if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+    }
+    this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+    this.flashMessages.success('The configuration was saved successfully.');
   }),
 });

@@ -13,11 +13,6 @@ const AuthConfigBase = Component.extend({
   saveModel: task(function*() {
     try {
       yield this.model.save();
-      if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
-      }
-      this.router.transitionTo('vault.cluster.access.methods').followRedirects();
-      this.flashMessages.success('The configuration was saved successfully.');
     } catch (err) {
       // AdapterErrors are handled by the error-message component
       // in the form
@@ -26,6 +21,11 @@ const AuthConfigBase = Component.extend({
       }
       return;
     }
+    if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
+    }
+    this.router.transitionTo('vault.cluster.access.methods').followRedirects();
+    this.flashMessages.success('The configuration was saved successfully.');
   }),
 });
 
