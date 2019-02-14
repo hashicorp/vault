@@ -1,10 +1,7 @@
 package command
 
 import (
-	"bytes"
-	"encoding/json"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 

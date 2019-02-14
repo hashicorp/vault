@@ -27,7 +27,6 @@ type OperatorInitCommand struct {
 	flagRootTokenPGPKey string
 
 	// HSM
-	flagStoredShares      int
 	flagRecoveryShares    int
 	flagRecoveryThreshold int
 	flagRecoveryPGPKeys   []string
@@ -35,11 +34,6 @@ type OperatorInitCommand struct {
 	// Consul
 	flagConsulAuto    bool
 	flagConsulService string
-
-	// Deprecations
-	// TODO: remove in 0.9.0
-	flagAuto  bool
-	flagCheck bool
 }
 
 func (c *OperatorInitCommand) Synopsis() string {
@@ -196,32 +190,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"is only used in HSM mode.",
 	})
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	f.BoolVar(&BoolVar{
-		Name:    "check", // prefer -status
-		Target:  &c.flagCheck,
-		Default: false,
-		Hidden:  true,
-		Usage:   "",
-	})
-	f.BoolVar(&BoolVar{
-		Name:    "auto", // prefer -consul-auto
-		Target:  &c.flagAuto,
-		Default: false,
-		Hidden:  true,
-		Usage:   "",
-	})
-
-	// Kept to keep scripts passing the flag working, but not used
-	f.IntVar(&IntVar{
-		Name:    "stored-shares",
-		Target:  &c.flagStoredShares,
-		Default: 0,
-		Hidden:  true,
-		Usage:   "",
-	})
-
 	return set
 }
 
@@ -241,23 +209,6 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	if c.flagAuto {
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength("WARNING! -auto is deprecated. Please use " +
-				"-consul-auto instead. This will be removed in Vault 1.1."))
-		}
-		c.flagConsulAuto = true
-	}
-	if c.flagCheck {
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength("WARNING! -check is deprecated. Please use " +
-				"-status instead. This will be removed in Vault 1.1."))
-		}
-		c.flagStatus = true
-	}
-
 	args = f.Args()
 	if len(args) > 0 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
@@ -271,7 +222,6 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		PGPKeys:         c.flagPGPKeys,
 		RootTokenPGPKey: c.flagRootTokenPGPKey,
 
-		StoredShares:      c.flagStoredShares,
 		RecoveryShares:    c.flagRecoveryShares,
 		RecoveryThreshold: c.flagRecoveryThreshold,
 		RecoveryPGPKeys:   c.flagRecoveryPGPKeys,
