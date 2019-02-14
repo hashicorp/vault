@@ -1,7 +1,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3" data-test-mount-form-header="true">
-      {{#if showConfig}}
+      {{#if showEnable}}
         {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
           <ICon
             @size="24"
@@ -10,9 +10,9 @@
            />
 
           {{#if (eq mountType "auth")}}
-            Enable{{typeInfo.displayName}}authentication method
+            {{concat "Enable " typeInfo.displayName " authentication method"}}
           {{else}}
-            Enable{{typeInfo.displayName}}secrets engine
+            {{concat "Enable " typeInfo.displayName "secrets engine"}}
           {{/if}}
         {{/with}}
       {{else if (eq mountType "auth")}}
