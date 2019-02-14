@@ -19,10 +19,9 @@ func pathConfig(b *backend) *framework.Path {
 			},
 
 			"port": &framework.FieldSchema{
-				Type:         framework.TypeInt,
-				Default:      1812,
-				Description:  "RADIUS server port (default: 1812)",
-				DisplayValue: 1812,
+				Type:        framework.TypeInt,
+				Default:     1812,
+				Description: "RADIUS server port (default: 1812)",
 			},
 			"secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -35,23 +34,20 @@ func pathConfig(b *backend) *framework.Path {
 				DisplayName: "Policies for unregistered users",
 			},
 			"dial_timeout": &framework.FieldSchema{
-				Type:         framework.TypeDurationSecond,
-				Default:      10,
-				Description:  "Number of seconds before connect times out (default: 10)",
-				DisplayValue: 10,
+				Type:        framework.TypeDurationSecond,
+				Default:     10,
+				Description: "Number of seconds before connect times out (default: 10)",
 			},
 			"read_timeout": &framework.FieldSchema{
-				Type:         framework.TypeDurationSecond,
-				Default:      10,
-				Description:  "Number of seconds before response times out (default: 10)",
-				DisplayValue: 10,
+				Type:        framework.TypeDurationSecond,
+				Default:     10,
+				Description: "Number of seconds before response times out (default: 10)",
 			},
 			"nas_port": &framework.FieldSchema{
-				Type:         framework.TypeInt,
-				Default:      10,
-				Description:  "RADIUS NAS port field (default: 10)",
-				DisplayName:  "NAS Port",
-				DisplayValue: 10,
+				Type:        framework.TypeInt,
+				Default:     10,
+				Description: "RADIUS NAS port field (default: 10)",
+				DisplayName: "NAS Port",
 			},
 			"nas_identifier": &framework.FieldSchema{
 				Type:        framework.TypeString,

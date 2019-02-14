@@ -61,10 +61,9 @@ func pathConfig(b *backend) *framework.Path {
 				Description: `Maximum duration after which authentication will be expired`,
 			},
 			"bypass_okta_mfa": &framework.FieldSchema{
-				Type:         framework.TypeBool,
-				Description:  `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
-				DisplayName:  "Bypass Okta MFA",
-				DisplayValue: false,
+				Type:        framework.TypeBool,
+				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
+				DisplayName: "Bypass Okta MFA",
 			},
 		},
 
