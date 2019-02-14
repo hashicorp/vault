@@ -138,7 +138,7 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 	case config.OIDCDiscoveryURL != "":
-		allClaims, err = b.verifyToken(ctx, config, role, token)
+		allClaims, err = b.verifyOIDCToken(ctx, config, role, token)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -203,7 +203,7 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func (b *jwtAuthBackend) verifyToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
+func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
 	allClaims := make(map[string]interface{})
 
 	provider, err := b.getProvider(ctx, config)

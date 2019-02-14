@@ -125,7 +125,6 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 			"oidc_discovery_url":     config.OIDCDiscoveryURL,
 			"oidc_discovery_ca_pem":  config.OIDCDiscoveryCAPEM,
 			"oidc_client_id":         config.OIDCClientID,
-			"oidc_client_secret":     config.OIDCClientSecret,
 			"default_role":           config.DefaultRole,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
 			"jwt_supported_algs":     config.JWTSupportedAlgs,
@@ -171,15 +170,6 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		for _, v := range config.JWTValidationPubKeys {
 			if _, err := certutil.ParsePublicKeyPEM([]byte(v)); err != nil {
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing public key: {{err}}", err).Error()), nil
-			}
-		}
-
-	case len(config.JWTSupportedAlgs) != 0:
-		for _, a := range config.JWTSupportedAlgs {
-			switch a {
-			case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
-			default:
-				return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
 			}
 		}
 

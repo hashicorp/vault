@@ -101,11 +101,15 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:e18a77f3453d129d9a5b4cac4e912b21c2dd2af52a24a8fe6a8c241476ed7b6b"
+  branch = "master"
+  digest = "1:6c04f2be110107d22b82c18826df6f44004983147636e767e3a8bcd0ed228d16"
   name = "github.com/hashicorp/go-plugin"
-  packages = ["."]
+  packages = [
+    ".",
+    "internal/plugin",
+  ]
   pruneopts = "UT"
-  revision = "26219a000dd975abd5140a2ddbe415b366498be7"
+  revision = "b838ffee39ce7c7c38226c1413aa4ecae61b4d27"
 
 [[projects]]
   digest = "1:d260503602063d71718eb21f85c02133ad5eac894c2a6f0e0546b7dc017dc97e"
@@ -178,7 +182,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f5bdd7b0d06bfa965cefa9c52af7f556bd079ff4328d67c89f6afdf4be7eabbe"
+  digest = "1:961541c49385b69f1d3ee6087df21d7d9595f98a8f29170e810267180ff6a9fb"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -210,7 +214,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "b16527d791ba46f74a608527b328957618aa0ae6"
+  revision = "5d444354923ab54c8207f8c8820cfe78c1572656"
 
 [[projects]]
   branch = "master"
@@ -309,7 +313,7 @@
     "pbkdf2",
   ]
   pruneopts = "UT"
-  revision = "193df9c0f06f8bb35fba505183eaf0acc0136505"
+  revision = "74369b46fc6756741c016591724fd1cb8e26845f"
 
 [[projects]]
   branch = "master"
@@ -326,29 +330,29 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "65e2d4e15006aab9813ff8769e768bbf4bb667a0"
+  revision = "3a22650c66bd7f4fb6d1e8072ffd7b75c8a27898"
 
 [[projects]]
   branch = "master"
-  digest = "1:e007b54f54cbd4214aa6d97a67d57bc2539991adb4e22ea92c482bbece8de469"
+  digest = "1:c664d4451770ebc9ab63d54bccb9e4f2c6106cde7e566ea02889930b836c7d4c"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = "UT"
-  revision = "99b60b757ec124ebb7d6b7e97f153b19c10ce163"
+  revision = "3e8b2be1363542a95c52ea0796d4a40dacfb5b95"
 
 [[projects]]
   branch = "master"
-  digest = "1:c9e49928119661a681af4037236af47654d6bd421c0af184962c890d0a61e0fb"
+  digest = "1:83552c87ddffa6a9095b7b4a005fcb8d35ff05108246b247a8bbddc78a91db64"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
   ]
   pruneopts = "UT"
-  revision = "3b5209105503162ded1863c307ac66fec31120dd"
+  revision = "983097b1a8a340cd1cc7df17d735154d89e10b1a"
 
 [[projects]]
   digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"

@@ -285,7 +285,7 @@ func (b *jwtAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logical.
 
 	roleType := data.Get("role_type").(string)
 	if roleType == "" {
-		roleType = "jwt"
+		roleType = "oidc"
 	}
 	if roleType != "jwt" && roleType != "oidc" {
 		return logical.ErrorResponse("invalid 'role_type': %s", roleType), nil
