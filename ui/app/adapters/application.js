@@ -35,9 +35,9 @@ export default DS.RESTAdapter.extend({
     let headers = {};
     if (token && !options.unauthenticated) {
       headers['X-Vault-Token'] = token;
-      if (options.wrapTTL) {
-        headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
-      }
+    }
+    if (options.wrapTTL) {
+      headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
     }
     let namespace =
       typeof options.namespace === 'undefined' ? this.get('namespaceService.path') : options.namespace;

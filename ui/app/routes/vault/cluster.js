@@ -90,7 +90,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  afterModel(model) {
+  afterModel(model, transition) {
     this._super(...arguments);
     this.get('currentCluster').setCluster(model);
 
@@ -99,7 +99,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.get('namespaceService.path') && !this.get('version.hasNamespaces')) {
       return this.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
-    return this.transitionToTargetRoute();
+    return this.transitionToTargetRoute(transition);
   },
 
   setupController() {
