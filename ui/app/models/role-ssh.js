@@ -59,7 +59,7 @@ export default DS.Model.extend({
     readOnly: true,
   }),
   keyType: attr('string', {
-    possibleValues: ['ca', 'otp'],
+    possibleValues: ['ca', 'otp'], //overriding the API which also lists 'dynamic' as a type though it is deprecated
   }),
   adminUser: attr('string', {
     helpText: 'Username of the admin user at the remote host',
