@@ -57,6 +57,8 @@ type requestForwardingClusterClient struct {
 	core *Core
 }
 
+// NewRequestForwardingHandler creates a cluster handler for use with request
+// forwarding.
 func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster, perfStandbyCache *cache.Cache) (*requestForwardingHandler, error) {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
@@ -89,6 +91,8 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 	}, nil
 }
 
+// ClientLookup satisfies the ClusterClient interface and returns the ha tls
+// client certs.
 func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	parsedCert := c.core.localClusterParsedCert.Load().(*x509.Certificate)
 	if parsedCert == nil {
@@ -114,6 +118,8 @@ func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, reque
 	return nil, nil
 }
 
+// ServerLookup satisfies the ClusterHandler interface and returns the server's
+// tls certs.
 func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	currCert := rf.core.localClusterCert.Load().([]byte)
 	if len(currCert) == 0 {
@@ -130,6 +136,7 @@ func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHell
 	}, nil
 }
 
+// CALookup satisfies the ClusterHandler interface and returns the ha ca cert.
 func (rf *requestForwardingHandler) CALookup(ctx context.Context) (*x509.Certificate, error) {
 	parsedCert := rf.core.localClusterParsedCert.Load().(*x509.Certificate)
 
@@ -140,6 +147,7 @@ func (rf *requestForwardingHandler) CALookup(ctx context.Context) (*x509.Certifi
 	return parsedCert, nil
 }
 
+// Handoff serves a request forwarding connection.
 func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *sync.WaitGroup, closeCh chan struct{}, tlsConn *tls.Conn) error {
 	if !rf.ha {
 		tlsConn.Close()
@@ -179,6 +187,7 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 	return nil
 }
 
+// Stop stops the request forwarding server and closes connections.
 func (rf *requestForwardingHandler) Stop() error {
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
