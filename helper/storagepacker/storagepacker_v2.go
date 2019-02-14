@@ -402,8 +402,6 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket,
 		return nil
 	}
 
-	s.Logger.Trace("number of items in bucket", "num_items", len(bucket.ItemMap))
-
 	marshaledBucket, err := proto.Marshal(bucket.Bucket)
 	if err != nil {
 		return errwrap.Wrapf("failed to marshal bucket: {{err}}", err)
@@ -415,8 +413,6 @@ func (s *StoragePackerV2) storeBucket(ctx context.Context, bucket *LockedBucket,
 	if err != nil {
 		return errwrap.Wrapf("failed to compress packed bucket: {{err}}", err)
 	}
-
-	s.Logger.Trace("size of compressed bucket", "size", len(compressedBucket))
 
 	// Store the compressed value
 	err = s.BucketStorageView.Put(ctx, &logical.StorageEntry{
