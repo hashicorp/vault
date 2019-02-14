@@ -1,7 +1,9 @@
 import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';
+import { getOwner } from '@ember/application';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { inject as service } from '@ember/service';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -19,24 +21,29 @@ export default Route.extend({
   },
 
   templateName: 'vault/cluster/secrets/backend/list',
+  pathHelp: service('path-help'),
 
   beforeModel() {
-    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let owner = getOwner(this);
     let { secret } = this.paramsFor(this.routeName);
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel && backendModel.get('engineType');
+    let { backend, tab } = this.paramsFor('vault.cluster.secrets.backend');
+    let secretEngine = this.store.peekRecord('secret-engine', backend);
+    let type = secretEngine && secretEngine.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    this.store.unloadAll('capabilities');
+    let modelType = this.getModelType(backend, tab);
+    return this.pathHelp.getNewModel(modelType, owner, backend).then(() => {
+      this.store.unloadAll('capabilities');
+    });
   },
 
   getModelType(backend, tab) {
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel.get('engineType');
+    let secretEngine = this.store.peekRecord('secret-engine', backend);
+    let type = secretEngine.get('engineType');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
@@ -44,8 +51,8 @@ export default Route.extend({
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: backendModel.get('modelTypeForKV'),
-      generic: backendModel.get('modelTypeForKV'),
+      kv: secretEngine.get('modelTypeForKV'),
+      generic: secretEngine.get('modelTypeForKV'),
     };
     return types[type];
   },
