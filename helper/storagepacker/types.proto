@@ -6,9 +6,13 @@ package storagepacker;
 
 import "google/protobuf/any.proto";
 
-// Item represents a entry that gets inserted into the storage packer
+// Item represents an entry that gets inserted into the storage packer
 message Item {
-	// ID is the UUID to identify the item
+	// ID must be provided by the caller; the same value, if used with GetItem,
+	// can be used to fetch the item. However, when iterating through a bucket,
+	// this ID will be an internal ID. In other words, outside of the use-case
+	// described above, the caller *must not* rely on this value to be
+	// consistent with what they passed in.
 	string id = 1;
 	// message is the contents of the item
 	google.protobuf.Any message = 2;

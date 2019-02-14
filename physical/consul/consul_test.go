@@ -23,8 +23,7 @@ import (
 type consulConf map[string]string
 
 var (
-	addrCount     int = 0
-	testImagePull sync.Once
+	addrCount int = 0
 )
 
 func testHostIP() string {
@@ -497,9 +496,9 @@ func TestConsulBackend(t *testing.T) {
 	var token string
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := prepareTestContainer(t)
+		cid, connURL := PrepareConsulTestContainer(t)
 		if cid != "" {
-			defer cleanupTestContainer(t, cid)
+			defer CleanupConsulTestContainer(t, cid)
 		}
 		addr = connURL
 		token = dockertest.ConsulACLMasterToken
@@ -538,9 +537,9 @@ func TestConsul_TooLarge(t *testing.T) {
 	var token string
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := prepareTestContainer(t)
+		cid, connURL := PrepareConsulTestContainer(t)
 		if cid != "" {
-			defer cleanupTestContainer(t, cid)
+			defer CleanupConsulTestContainer(t, cid)
 		}
 		addr = connURL
 		token = dockertest.ConsulACLMasterToken
@@ -612,9 +611,9 @@ func TestConsulHABackend(t *testing.T) {
 	var token string
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := prepareTestContainer(t)
+		cid, connURL := PrepareConsulTestContainer(t)
 		if cid != "" {
-			defer cleanupTestContainer(t, cid)
+			defer CleanupConsulTestContainer(t, cid)
 		}
 		addr = connURL
 		token = dockertest.ConsulACLMasterToken
@@ -663,63 +662,5 @@ func TestConsulHABackend(t *testing.T) {
 	}
 	if host == "" {
 		t.Fatalf("bad addr: %v", host)
-	}
-}
-
-func prepareTestContainer(t *testing.T) (cid dockertest.ContainerID, retAddress string) {
-	if os.Getenv("CONSUL_HTTP_ADDR") != "" {
-		return "", os.Getenv("CONSUL_HTTP_ADDR")
-	}
-
-	// Without this the checks for whether the container has started seem to
-	// never actually pass. There's really no reason to expose the test
-	// containers, so don't.
-	dockertest.BindDockerToLocalhost = "yep"
-
-	testImagePull.Do(func() {
-		dockertest.Pull(dockertest.ConsulImageName)
-	})
-
-	try := 0
-	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
-		try += 1
-		// Build a client and verify that the credentials work
-		config := api.DefaultConfig()
-		config.Address = connAddress
-		config.Token = dockertest.ConsulACLMasterToken
-		client, err := api.NewClient(config)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		_, err = client.KV().Put(&api.KVPair{
-			Key:   "setuptest",
-			Value: []byte("setuptest"),
-		}, nil)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		retAddress = connAddress
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to consul: %v", connErr)
-	}
-
-	return
-}
-
-func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
-	err := cid.KillRemove()
-	if err != nil {
-		t.Fatal(err)
 	}
 }

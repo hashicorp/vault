@@ -21,9 +21,13 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-// Item represents a entry that gets inserted into the storage packer
+// Item represents an entry that gets inserted into the storage packer
 type Item struct {
-	// ID is the UUID to identify the item
+	// ID must be provided by the caller; the same value, if used with GetItem,
+	// can be used to fetch the item. However, when iterating through a bucket,
+	// this ID will be an internal ID. In other words, outside of the use-case
+	// described above, the caller *must not* rely on this value to be
+	// consistent with what they passed in.
 	ID string `sentinel:"" protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// message is the contents of the item
 	Message              *any.Any `sentinel:"" protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
