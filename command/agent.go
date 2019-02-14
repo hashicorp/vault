@@ -223,19 +223,6 @@ func (c *AgentCommand) Run(args []string) int {
 		info["cgo"] = "enabled"
 	}
 
-	// Server configuration output
-	padding := 24
-	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault agent configuration:\n")
-	for _, k := range infoKeys {
-		c.UI.Output(fmt.Sprintf(
-			"%s%s: %s",
-			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
-			info[k]))
-	}
-	c.UI.Output("")
-
 	// Tests might not want to start a vault server and just want to verify
 	// the configuration.
 	if c.flagTestVerifyOnly {
@@ -342,14 +329,7 @@ func (c *AgentCommand) Run(args []string) int {
 	go ss.Run(ctx, ah.OutputCh, sinks)
 
 	// Parse agent listener configurations
-	var listeners []net.Listener
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
-		listeners, err = cache.ServerListeners(config.Cache.Listeners, c.logWriter, c.UI)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error running listeners: %v", err))
-			return 1
-		}
-
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -374,8 +354,30 @@ func (c *AgentCommand) Run(args []string) int {
 		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, c.client))
-		for _, ln := range listeners {
-			cacheLogger.Info("starting listener", "addr", ln.Addr().String())
+
+		var listeners []net.Listener
+		for i, lnConfig := range config.Cache.Listeners {
+			listener, props, _, err := cache.ServerListener(lnConfig, c.logWriter, c.UI)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error parsing listener configuration: %v", err))
+				return 1
+			}
+
+			listeners = append(listeners, listener)
+
+			scheme := "https://"
+			if props["tls"] == "disabled" {
+				scheme = "http://"
+			}
+			if lnConfig.Type == "unix" {
+				scheme = scheme + "unix"
+			}
+
+			infoKey := fmt.Sprintf("api address %d", i+1)
+			info[infoKey] = scheme + listener.Addr().String()
+			infoKeys = append(infoKeys, infoKey)
+
+			cacheLogger.Info("starting listener", "addr", listener.Addr().String())
 			server := &http.Server{
 				Handler:           mux,
 				ReadHeaderTimeout: 10 * time.Second,
@@ -383,7 +385,7 @@ func (c *AgentCommand) Run(args []string) int {
 				IdleTimeout:       5 * time.Minute,
 				ErrorLog:          cacheLogger.StandardLogger(nil),
 			}
-			go server.Serve(ln)
+			go server.Serve(listener)
 		}
 
 		// Ensure that listeners are closed at all the exits
@@ -394,6 +396,19 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
+
+	// Server configuration output
+	padding := 24
+	sort.Strings(infoKeys)
+	c.UI.Output("==> Vault agent configuration:\n")
+	for _, k := range infoKeys {
+		c.UI.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.UI.Output("")
 
 	// Release the log gate.
 	c.logGate.Flush()

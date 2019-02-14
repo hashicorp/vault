@@ -13,30 +13,15 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func ServerListeners(lnConfigs []*config.Listener, logger io.Writer, ui cli.Ui) ([]net.Listener, error) {
-	var listeners []net.Listener
-	var listener net.Listener
-	var err error
-	for _, lnConfig := range lnConfigs {
-		switch lnConfig.Type {
-		case "unix":
-			listener, _, _, err = unixSocketListener(lnConfig.Config, logger, ui)
-			if err != nil {
-				return nil, err
-			}
-			listeners = append(listeners, listener)
-		case "tcp":
-			listener, _, _, err := tcpListener(lnConfig.Config, logger, ui)
-			if err != nil {
-				return nil, err
-			}
-			listeners = append(listeners, listener)
-		default:
-			return nil, fmt.Errorf("unsupported listener type: %q", lnConfig.Type)
-		}
+func ServerListener(lnConfig *config.Listener, logger io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
+	switch lnConfig.Type {
+	case "unix":
+		return unixSocketListener(lnConfig.Config, logger, ui)
+	case "tcp":
+		return tcpListener(lnConfig.Config, logger, ui)
+	default:
+		return nil, nil, nil, fmt.Errorf("unsupported listener type: %q", lnConfig.Type)
 	}
-
-	return listeners, nil
 }
 
 func unixSocketListener(config map[string]interface{}, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {
