@@ -274,10 +274,9 @@ func TestCache_TokenRevocations(t *testing.T) {
 	// Ensure that all the entries are now gone
 	expected = make(map[string]string)
 	validateFunc()
-
 	cleanup()
 
-	// Reset all the things in cache
+	// Setup all the things in cache
 	setupFunc()
 
 	expected = make(map[string]string)
@@ -298,9 +297,96 @@ func TestCache_TokenRevocations(t *testing.T) {
 	}
 
 	expected = make(map[string]string)
+	validateFunc()
+	cleanup()
 
+	// Setup all the things in cache
+	setupFunc()
+
+	expected = make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+
+	// Ensure that all the entries are in the cache
 	validateFunc()
 
+	// Revoke the second level token. This should evict all the leases
+	// belonging to this token, evict entries for all the child tokens and
+	// their respective leases.
+	testClient.SetToken(token2)
+	err = testClient.Auth().Token().RevokeSelf("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = map[string]string{
+		token1: "token",
+		lease1: "lease",
+	}
+
+	validateFunc()
+	cleanup()
+
+	// Setup all the things in cache
+	setupFunc()
+
+	expected = make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+
+	// Ensure that all the entries are in the cache
+	validateFunc()
+
+	// Revoke the second level token. This should evict all the leases
+	// belonging to this token, evict entries for all the child tokens and
+	// their respective leases.
+	testClient.SetToken(token3)
+	err = testClient.Auth().Token().RevokeSelf("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = map[string]string{
+		token1: "token",
+		lease1: "lease",
+		token2: "token",
+		lease2: "lease",
+	}
+
+	validateFunc()
+	cleanup()
+
+	// Setup all the things in cache
+	setupFunc()
+
+	expected = make(map[string]string)
+	for k, v := range sampleSpace {
+		expected[k] = v
+	}
+
+	// Ensure that all the entries are in the cache
+	validateFunc()
+
+	// Revoke-orphan the intermediate token. This should result in its own
+	// eviction and evictions of the revoked token's leases. All other things
+	// including the child tokens and leases of the child tokens should be
+	// untouched.
+	testClient.SetToken(token2)
+	err = testClient.Auth().Token().RevokeOrphan(token2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected = map[string]string{
+		token1: "token",
+		lease1: "lease",
+		token3: "token",
+		lease3: "lease",
+	}
+
+	validateFunc()
 	cleanup()
 }
 
