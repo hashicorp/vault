@@ -1390,6 +1390,108 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	{
+		getOtherCheck := func(expectedOthers ...otherNameUtf8) logicaltest.TestCheckFunc {
+			return func(resp *logical.Response) error {
+				var certBundle certutil.CertBundle
+				err := mapstructure.Decode(resp.Data, &certBundle)
+				if err != nil {
+					return err
+				}
+				parsedCertBundle, err := certBundle.ToParsedCertBundle()
+				if err != nil {
+					return fmt.Errorf("error parsing cert bundle: %s", err)
+				}
+				cert := parsedCertBundle.Certificate
+				foundOthers, err := getOtherSANsFromX509Extensions(cert.Extensions)
+				var emptyOthers []otherNameUtf8
+				var expected []otherNameUtf8 = append(emptyOthers, expectedOthers...)
+				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
+					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
+				}
+				return nil
+			}
+		}
+
+		addOtherSANTests := func(useCSRs, useCSRSANs bool, allowedOtherSANs []string, errorOk bool, otherSANs []string, csrOtherSANs []otherNameUtf8, check logicaltest.TestCheckFunc) {
+			otherSansMap := func(os []otherNameUtf8) map[string][]string {
+				ret := make(map[string][]string)
+				for _, o := range os {
+					ret[o.oid] = append(ret[o.oid], o.value)
+				}
+				return ret
+			}
+			if useCSRs {
+				csrTemplate := &x509.CertificateRequest{
+					Subject: pkix.Name{
+						CommonName: issueVals.CommonName,
+					},
+				}
+				if err := handleOtherCSRSANs(csrTemplate, otherSansMap(csrOtherSANs)); err != nil {
+					t.Fatal(err)
+				}
+				block, _ := getCsr(roleVals.KeyType, roleVals.KeyBits, csrTemplate)
+				issueVals.CSR = strings.TrimSpace(string(pem.EncodeToMemory(block)))
+			}
+			oldRoleVals, oldIssueVals, oldIssueTestStep := roleVals, issueVals, issueTestStep
+			roleVals.UseCSRSANs = useCSRSANs
+			roleVals.AllowedOtherSANs = allowedOtherSANs
+			issueVals.CommonName = "someone@example.com"
+			issueVals.OtherSANs = strings.Join(otherSANs, ",")
+			issueTestStep.ErrorOk = errorOk
+			addTests(check)
+			roleVals, issueVals, issueTestStep = oldRoleVals, oldIssueVals, oldIssueTestStep
+		}
+		roleVals.AllowAnyName = true
+		roleVals.EnforceHostnames = true
+		roleVals.AllowLocalhost = true
+		roleVals.UseCSRCommonName = true
+		commonNames.Localhost = true
+
+		newOtherNameUtf8 := func(s string) (ret otherNameUtf8) {
+			pieces := strings.Split(s, ";")
+			if len(pieces) == 2 {
+				piecesRest := strings.Split(pieces[1], ":")
+				if len(piecesRest) == 2 {
+					switch strings.ToUpper(piecesRest[0]) {
+					case "UTF-8", "UTF8":
+						return otherNameUtf8{oid: pieces[0], value: piecesRest[1]}
+					}
+				}
+			}
+			t.Fatalf("error parsing otherName: %q", s)
+			return
+		}
+		oid1 := "1.3.6.1.4.1.311.20.2.3"
+		oth1str := oid1 + ";utf8:devops@nope.com"
+		oth1 := newOtherNameUtf8(oth1str)
+		oth2 := otherNameUtf8{oid1, "me@example.com"}
+		allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
+		// allowNone, allowAll := []string{}, []string{"*"}
+
+		// OtherSANs not allowed and not provided, should not be an error.
+		addOtherSANTests(useCSRs, false, allowNone, false, nil, nil, getOtherCheck())
+
+		// OtherSANs not allowed, valid OtherSANs provided, should be an error.
+		addOtherSANTests(useCSRs, false, allowNone, true, []string{oth1str}, nil, nil)
+
+		// OtherSANs allowed, bogus OtherSANs provided, should be an error.
+		addOtherSANTests(useCSRs, false, allowAll, true, []string{"foobar"}, nil, nil)
+
+		// Given OtherSANs as API argument and useCSRSANs false, CSR arg ignored.
+		addOtherSANTests(useCSRs, false, allowAll, false, []string{oth1str},
+			[]otherNameUtf8{oth2}, getOtherCheck(oth1))
+
+		if useCSRs {
+			// OtherSANs not allowed, valid OtherSANs provided via CSR, should be an error.
+			addOtherSANTests(useCSRs, true, allowNone, true, nil, []otherNameUtf8{oth1}, nil)
+
+			// Given OtherSANs as both API and CSR arguments and useCSRSANs=true, API arg ignored.
+			addOtherSANTests(useCSRs, false, allowAll, false, []string{oth2.String()},
+				[]otherNameUtf8{oth1}, getOtherCheck(oth2))
+		}
+	}
+
 	// Lease tests
 	{
 		roleTestStep.ErrorOk = true
