@@ -20,6 +20,7 @@ import (
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -592,7 +593,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		return false, nil
 	}
 
-	namespace, path := deriveNamespaceAndRevocationPath(req)
+	_, path := deriveNamespaceAndRevocationPath(req)
 
 	switch {
 	case path == vaultPathTokenRevoke:
@@ -717,12 +718,18 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokeForce)
 		// Get all the cache indexes that use the request path containing the
 		// prefix and cancel the renewer context of each.
-		indexes, err := c.db.GetByPrefix("request_path", namespace, "/v1"+prefix)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err
 		}
+
+		_, tokenNSID := namespace.SplitIDFromString(req.Token)
 		for _, index := range indexes {
-			index.RenewCtxInfo.CancelFunc()
+			_, leaseNSID := namespace.SplitIDFromString(index.Lease)
+			// Only evict leases that match the token's namespace
+			if tokenNSID == leaseNSID {
+				index.RenewCtxInfo.CancelFunc()
+			}
 		}
 
 	case strings.HasPrefix(path, vaultPathLeaseRevokePrefix):
@@ -730,12 +737,18 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		prefix := strings.TrimPrefix(path, vaultPathLeaseRevokePrefix)
 		// Get all the cache indexes that use the request path containing the
 		// prefix and cancel the renewer context of each.
-		indexes, err := c.db.GetByPrefix("request_path", namespace, "/v1"+prefix)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameLease, prefix)
 		if err != nil {
 			return false, err
 		}
+
+		_, tokenNSID := namespace.SplitIDFromString(req.Token)
 		for _, index := range indexes {
-			index.RenewCtxInfo.CancelFunc()
+			_, leaseNSID := namespace.SplitIDFromString(index.Lease)
+			// Only evict leases that match the token's namespace
+			if tokenNSID == leaseNSID {
+				index.RenewCtxInfo.CancelFunc()
+			}
 		}
 
 	default:
