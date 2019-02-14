@@ -24,7 +24,8 @@ message CreateUserRequest {
 }
 
 message SetCredentialsRequest {
-  StaticUserConfig static_user_config = 1;
+        Statements     statements = 1;
+  StaticUserConfig static_user_config = 2;
 }
 
 message SetCredentialsResponse {
