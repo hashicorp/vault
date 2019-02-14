@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+        fmt "fmt"
 	"time"
 
 	"google.golang.org/grpc"
@@ -123,7 +124,6 @@ func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequ
                 return nil, err
         }
 
-        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
         return &SetCredentialsResponse{
                 Username: username,
                 Password: password,
@@ -302,5 +302,31 @@ func (c *gRPCClient) Close() error {
 
 func (c *gRPCClient) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (username, password string, restored bool, err error) {
         q.Q("grpc_transport:client SetCredentials called")
-        return
+        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
+
+        ctx, cancel := context.WithCancel(ctx)
+        quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+        defer close(quitCh)
+        defer cancel()
+
+        // TODO: Question: CreateUser takes the CreateUserRequest and splits the
+        // statements and the config. Here we just pass on the request without
+        // splitting anything
+        resp, err := c.client.SetCredentials(ctx, req)
+        if err != nil {
+                // Fall back to old call if not implemented
+                grpcStatus, ok := status.FromError(err)
+                if ok && grpcStatus.Code() == codes.Unimplemented {
+                        q.Q("grpc_transport unimlemented in grpc/client")
+                        // TODO: a better or const error type here
+                        return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
+                }
+
+                if c.doneCtx.Err() != nil {
+                        return "", "", false, ErrPluginShutdown
+                }
+                return "", "", false, err
+        }
+
+        return resp.Username, resp.Password, resp.Restored, err
 }
