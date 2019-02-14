@@ -316,10 +316,10 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 		}
 		shards[shardKey] = shardedBucket
 		// If it was equal we'd be locked already
-		s.Logger.Debug("created shard", "shard_key", shardKey)
+		s.Logger.Trace("created shard", "shard_key", shardKey)
 		// Don't try to lock the same lock twice in case it hashes that way
 		if _, ok := shardLocks[lock]; !ok {
-			s.Logger.Debug("locking lock", "shard_key", shardKey)
+			s.Logger.Trace("locking lock", "shard_key", shardKey)
 			lock.Lock()
 			shardLocks[lock] = struct{}{}
 		}
@@ -356,7 +356,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 		}
 	}
 	for k, v := range shards {
-		s.Logger.Debug("storing bucket", "shard", k)
+		s.Logger.Trace("storing bucket", "shard", k)
 		if err := s.storeBucket(ctx, v, false); err != nil {
 			s.Logger.Debug("encountered error", "shard", k)
 			retErr = multierror.Append(retErr, err)
@@ -376,7 +376,6 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 	s.Logger.Debug("updating cache")
 	s.bucketsCacheLock.Lock()
 	{
-		s.Logger.Debug("in locked section")
 		for _, v := range shards {
 			s.bucketsCache.Insert(s.GetCacheKey(v.Key), v)
 		}
