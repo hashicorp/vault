@@ -10,42 +10,42 @@
         {{/unless}}
       </h1>
     </p.levelLeft>
-    <p.levelRight>
-      {{#link-to "vault.cluster.policies.create" class="button has-icon-right is-ghost is-compact" data-test-policy-create-link=true}}
-        Create {{uppercase policyType}} policy
-        {{i-con glyph="chevron-right" size=11}}
-      {{/link-to}}
-    </p.levelRight>
   </PageHeader>
   {{#if model.meta.total}}
-    <div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-      <div class="level">
-        <div class="level-left">
-          {{navigate-input
-            filterFocusDidChange=(action "setFilterFocus")
-            filterDidChange=(action "setFilter")
-            filter=filter
-            filterMatchesKey=filterMatchesKey
-            firstPartialMatch=firstPartialMatch
-            extraNavParams=policyType
-            placeholder="Filter policies"
-            mode="policy"
-          }}
-          {{#if filterFocused}}
-            {{#if filterMatchesKey}}
-              <p class="input-hint">
-                <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
-              </p>
-            {{/if}}
-            {{#if firstPartialMatch}}
-              <p class="input-hint">
-                <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
-              </p>
-            {{/if}}
+    <Toolbar>
+      <ToolbarFilters>
+        {{navigate-input
+          filterFocusDidChange=(action "setFilterFocus")
+          filterDidChange=(action "setFilter")
+          filter=filter
+          filterMatchesKey=filterMatchesKey
+          firstPartialMatch=firstPartialMatch
+          extraNavParams=policyType
+          placeholder="Filter policies"
+          mode="policy"
+        }}
+        {{#if filterFocused}}
+          {{#if filterMatchesKey}}
+            <p class="input-hint">
+              <kbd>ENTER</kbd> to go to <code>{{or pageFilter filter}}</code>
+            </p>
           {{/if}}
-        </div>
-      </div>
-    </div>
+          {{#if firstPartialMatch}}
+            <p class="input-hint">
+              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+            </p>
+          {{/if}}
+        {{/if}}
+      </ToolbarFilters>
+      <ToolbarActions>
+        <ToolbarButton
+          @params={{array 'vault.cluster.policies.create'}}
+          data-test-policy-create-link=true
+        >
+          Create {{uppercase policyType}} policy
+        </ToolbarButton>
+      </ToolbarActions>
+    </Toolbar>
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>

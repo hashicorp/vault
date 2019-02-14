@@ -18,3 +18,21 @@
   justify-content: center;
   align-items: center;
 }
+
+.auth-form .toolbar {
+  border-top: 0;
+  border-bottom: $light-border;
+  padding: 0 $spacing-s;
+
+  .field {
+    width: 100%;
+  }
+
+  .field-label {
+    margin-right: $spacing-s;
+  }
+
+  .is-label {
+    color: $grey;
+  }
+}

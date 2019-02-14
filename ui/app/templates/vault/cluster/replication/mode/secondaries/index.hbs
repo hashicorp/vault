@@ -1,4 +1,26 @@
 {{#if model.replicationAttrs.isPrimary}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if model.replicationAttrs.knownSecondaries.length}}
+        {{#if model.canRevokeSecondary}}
+          <ToolbarButton
+            @params={{array 'vault.cluster.replication.mode.secondaries.revoke' model.name replicationMode}}
+            data-test-secondary-add=true
+          >
+            Revoke secondary
+          </ToolbarButton>
+        {{/if}}
+      {{/if}}
+      {{#if model.canAddSecondary}}
+        <ToolbarAddButton
+          @params={{array 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode}}
+          @data-test-secondary-add=true
+        >
+          Add secondary
+        </ToolbarAddButton>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
   {{#if model.replicationAttrs.knownSecondaries.length}}
     {{#each model.replicationAttrs.knownSecondaries as |secondary|}}
       <div class="box is-shadowless is-marginless" data-test-secondary-name={{secondary}}>
@@ -60,20 +82,4 @@
       </DocLink>
     </EmptyState>
   {{/if}}
-  <div class="field is-grouped box is-shadowless is-fullwidth">
-    {{#if model.canAddSecondary}}
-      <div class="control">
-        {{#link-to 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode class="button" data-test-secondary-add=true }}
-          Add
-        {{/link-to}}
-      </div>
-    {{/if}}
-    {{#if model.canRevokeSecondary}}
-      <div class="control">
-        {{#link-to 'vault.cluster.replication.mode.secondaries.revoke' model.name replicationMode class="button"}}
-          Revoke
-        {{/link-to}}
-      </div>
-    {{/if}}
-  </div>
 {{/if}}

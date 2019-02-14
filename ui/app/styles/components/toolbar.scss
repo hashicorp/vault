@@ -1,0 +1,97 @@
+.tabs-container + .toolbar {
+  border-top: 0;
+}
+
+.toolbar {
+  background-color: $ui-gray-010;
+  border-top: $base-border;
+  box-shadow: 0 2px 0 -1px $ui-gray-300;
+  position: relative;
+
+  &::after {
+    background: linear-gradient(to right, rgba($ui-gray-010, 0), $ui-gray-010);
+    bottom: 0;
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: $spacing-s;
+    z-index: 2;
+  }
+
+  .input,
+  .select {
+    min-width: 160px;
+  }
+}
+
+.toolbar-scroller {
+  align-items: center;
+  display: flex;
+  height: 44px;
+  justify-content: space-between;
+  overflow-x: auto;
+  width: 100%;
+
+  @include from($mobile) {
+    padding: 0 $spacing-xxs;
+  }
+
+  &::-webkit-scrollbar {
+    border-bottom: $base-border;
+    height: $spacing-xxs;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $ui-gray-300;
+    border-radius: $spacing-xxs;
+  }
+}
+
+.toolbar-filters,
+.toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.toolbar-filters + .toolbar-actions {
+  @include until($mobile) {
+    border-left: $base-border;
+    margin-left: $spacing-xs;
+    padding-left: $spacing-xs;
+  }
+}
+
+.toolbar-actions {
+  @include from($mobile) {
+    justify-content: flex-end;
+  }
+}
+
+.toolbar-button {
+  @extend .button;
+  @extend .is-ghost;
+  @extend .has-icon-right;
+  border: 0;
+  color: $black;
+  transition: background-color $speed;
+
+  &:hover {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+
+  &:active {
+    box-shadow: none;
+  }
+}
+
+.toolbar-separator {
+  border-right: $light-border;
+  height: 32px;
+  margin: 0 $spacing-xs;
+  width: 0;
+}

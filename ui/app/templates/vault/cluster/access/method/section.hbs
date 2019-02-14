@@ -12,25 +12,21 @@
       {{capitalize model.methodType}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    {{#if (eq section "configuration")}}
-      <div class="field is-grouped">
-        <div class="control">
-          {{#link-to
-            "vault.cluster.settings.auth.configure"
-            model.id
-            class="button is-ghost has-icon-right is-compact"
-            data-test-configure-link=true
-          }}
-            Configure
-            {{i-con glyph="chevron-right" size=11}}
-          {{/link-to}}
-        </div>
-      </div>
-    {{/if}}
-  </p.levelRight>
 </PageHeader>
 
 {{section-tabs model 'authShow'}}
-{{component (concat "auth-method/" section) model=model}}
 
+{{#if (eq section "configuration")}}
+  <Toolbar>
+    <ToolbarActions>
+        <ToolbarButton
+          @params={{array "vault.cluster.settings.auth.configure" model.id}}
+          data-test-configure-link=true
+        >
+          Configure
+        </ToolbarButton>
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}
+
+{{component (concat "auth-method/" section) model=model}}
