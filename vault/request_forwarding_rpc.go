@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -16,7 +17,7 @@ type forwardedRequestRPCServer struct {
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
-	perfStandbyRepCluster *ReplicatedCluster
+	perfStandbyRepCluster *replication.Cluster
 	perfStandbyCache      *cache.Cache
 }
 
