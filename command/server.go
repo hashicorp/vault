@@ -12,14 +12,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -69,6 +67,7 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	WaitGroup *sync.WaitGroup
 
@@ -1173,9 +1172,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for shutdown
 	shutdownTriggered := false
 
-	signalUSR2Ch := make(chan os.Signal, 1)
-	signal.Notify(signalUSR2Ch, syscall.SIGUSR2)
-
 	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
@@ -1244,7 +1240,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 
-		case <-signalUSR2Ch:
+		case <-c.SigUSR2Ch:
 			buf := make([]byte, 32*1024*1024)
 			n := runtime.Stack(buf[:], true)
 			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
