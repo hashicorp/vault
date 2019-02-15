@@ -72,7 +72,7 @@ func listenerWrapProxy(ln net.Listener, config map[string]interface{}) (net.List
 	return newLn, nil
 }
 
-func listenerWrapTLS(
+func ListenerWrapTLS(
 	ln net.Listener,
 	props map[string]string,
 	config map[string]interface{},

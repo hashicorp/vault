@@ -62,7 +62,7 @@ func (r *Request) ResetJSONBody() error {
 // DEPRECATED: ToHTTP turns this request into a valid *http.Request for use
 // with the net/http package.
 func (r *Request) ToHTTP() (*http.Request, error) {
-	req, err := r.toRetryableHTTP()
+	req, err := r.ToRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	return req.Request, nil
 }
 
-func (r *Request) toRetryableHTTP() (*retryablehttp.Request, error) {
+func (r *Request) ToRetryableHTTP() (*retryablehttp.Request, error) {
 	// Encode the query parameters
 	r.URL.RawQuery = r.Params.Encode()
 

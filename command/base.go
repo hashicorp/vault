@@ -39,6 +39,7 @@ type BaseCommand struct {
 	flagsOnce sync.Once
 
 	flagAddress        string
+	flagAgentAddress   string
 	flagCACert         string
 	flagCAPath         string
 	flagClientCert     string
@@ -77,6 +78,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
+	}
+	if c.flagAgentAddress != "" {
+		config.Address = c.flagAgentAddress
 	}
 
 	if c.flagOutputCurlString {
@@ -219,6 +223,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				addrStringVar.Default = "https://127.0.0.1:8200"
 			}
 			f.StringVar(addrStringVar)
+
+			agentAddrStringVar := &StringVar{
+				Name:       "agent-address",
+				Target:     &c.flagAgentAddress,
+				EnvVar:     "VAULT_AGENT_ADDR",
+				Completion: complete.PredictAnything,
+				Usage:      "Address of the Agent.",
+			}
+			f.StringVar(agentAddrStringVar)
 
 			f.StringVar(&StringVar{
 				Name:       "ca-cert",
