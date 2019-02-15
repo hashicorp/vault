@@ -174,7 +174,15 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		}
 
 		switch lnType {
-		case "unix", "tcp":
+		case "unix":
+			// Don't accept TLS connection information for unix domain socket
+			// listener. Maybe something to support in future.
+			unixLnConfig := map[string]interface{}{
+				"tls_disable": true,
+			}
+			unixLnConfig["address"] = lnConfig["address"]
+			lnConfig = unixLnConfig
+		case "tcp":
 		default:
 			return fmt.Errorf("invalid listener type %q", lnType)
 		}
