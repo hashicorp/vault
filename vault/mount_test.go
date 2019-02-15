@@ -64,7 +64,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	}
 
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
-		t.Fatalf("mismatch: %#v %#v", c.mounts, c2.mounts)
+		t.Fatalf("mismatch: %v", diff)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestCore_Mount(t *testing.T) {
 
 	// Verify matching mount tables
 	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
-		t.Fatalf("mismatch: %#v %#v", c.mounts, c2.mounts)
+		t.Fatalf("mismatch: %v", diff)
 	}
 }
 
