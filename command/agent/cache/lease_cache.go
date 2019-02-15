@@ -446,9 +446,6 @@ func computeIndexID(req *SendRequest) (string, error) {
 	}
 
 	// Reset the request body after it has been closed by Write
-	if req.Request.Body != nil {
-		req.Request.Body.Close()
-	}
 	req.Request.Body = ioutil.NopCloser(bytes.NewBuffer(req.RequestBody))
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
