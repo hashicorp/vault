@@ -365,19 +365,6 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
 	}
 
-	{
-		signalCh := make(chan os.Signal, 1)
-		signal.Notify(signalCh, syscall.SIGUSR2)
-		go func() {
-			var buf = make([]byte, 65536)
-			for {
-				<-signalCh
-				n := runtime.Stack(buf[:], true)
-				c.logger.Info("goroutine trace", "stack", string(buf[:n]))
-			}
-		}()
-	}
-
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
@@ -1186,6 +1173,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Wait for shutdown
 	shutdownTriggered := false
 
+	signalUSR2Ch := make(chan os.Signal, 1)
+	signal.Notify(signalUSR2Ch, syscall.SIGUSR2)
+
 	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
@@ -1253,6 +1243,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
+
+		case <-signalUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
 
