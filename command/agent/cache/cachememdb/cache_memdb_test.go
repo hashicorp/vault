@@ -131,8 +131,10 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 		Namespace:     "test_ns/",
 		RequestPath:   "/v1/request/path/1",
 		Token:         "test_token",
+		TokenParent:   "test_token_parent",
 		TokenAccessor: "test_accessor",
 		Lease:         "path/to/test_lease/1",
+		LeaseToken:    "test_lease_token",
 		Response:      []byte("hello world"),
 	}
 
@@ -146,8 +148,10 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 		Namespace:     "test_ns/",
 		RequestPath:   "/v1/request/path/2",
 		Token:         "test_token2",
+		TokenParent:   "test_token_parent",
 		TokenAccessor: "test_accessor2",
 		Lease:         "path/to/test_lease/2",
+		LeaseToken:    "test_lease_token",
 		Response:      []byte("hello world"),
 	}
 
@@ -169,6 +173,16 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 			"by_lease",
 			"lease",
 			[]interface{}{"path/to/test_lease"},
+		},
+		{
+			"by_token_parent",
+			"token_parent",
+			[]interface{}{"test_token_parent"},
+		},
+		{
+			"by_lease_token",
+			"lease_token",
+			[]interface{}{"test_lease_token"},
 		},
 	}
 
