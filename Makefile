@@ -31,7 +31,7 @@ bin: prep
 # into ./bin/ as well as $GOPATH/bin
 dev: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-ui: prep
+dev-ui: static-dist prep 
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
@@ -118,6 +118,7 @@ update-plugins:
 
 static-assets:
 	@echo "--> Generating static assets"
+	@mkdir -p pkg/web_ui/
 	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
 	@mv bindata_assetfs.go http
 	@$(MAKE) -f $(THIS_FILE) fmt

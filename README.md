@@ -72,8 +72,8 @@ $ make bootstrap
 ...
 ```
 
-To compile a development version of Vault, run `make` or `make dev`. This will
-put the Vault binary in the `bin` and `$GOPATH/bin` folders:
+To compile a development version of Vault, storing the resulting Vault binary
+in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
 $ make dev
@@ -82,11 +82,12 @@ $ bin/vault
 ...
 ```
 
-To compile a development version of Vault with the UI, run `make static-dist dev-ui`. This will
-put the Vault binary in the `bin` and `$GOPATH/bin` folders:
+After installing [yarn](https://yarnpkg.com/lang/en/docs/install) and npm in your system,
+in order to compile a development version of Vault with the UI, storing the
+resulting Vault binary in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
-$ make static-dist dev-ui
+$ make dev-ui
 ...
 $ bin/vault
 ...
