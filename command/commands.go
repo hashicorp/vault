@@ -971,7 +971,7 @@ func MakeSighupCh() chan struct{} {
 
 // MakeSigUSR2Ch returns a channel that can be used for SIGUSR2
 // goroutine logging. This channel will send a message for every
-// SIGHUP received.
+// SIGUSR2 received.
 func MakeSigUSR2Ch() chan struct{} {
 	resultCh := make(chan struct{})
 
