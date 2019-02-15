@@ -228,7 +228,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			}
 
 		// The following relative sys/leases/ paths handles re-routing requests
-		// to the proper namespace usin the lease ID on applicable paths.
+		// to the proper namespace using the lease ID on applicable paths.
 		case strings.HasPrefix(req.Path, "sys/leases/"):
 			newCtx := r.Context()
 			switch req.Path {
