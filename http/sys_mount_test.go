@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/go-test/deep"
 	"reflect"
 	"testing"
 
@@ -532,6 +533,7 @@ func TestSysUnmount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -581,6 +583,7 @@ func TestSysUnmount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -622,8 +625,8 @@ func TestSysUnmount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 
@@ -766,6 +769,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -827,6 +831,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -868,8 +873,8 @@ func TestSysTuneMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 
 	// Shorter than system default
@@ -956,6 +961,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -1017,6 +1023,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1059,8 +1066,8 @@ func TestSysTuneMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 
 	// Check simple configuration endpoint
