@@ -53,9 +53,9 @@ func unixSocketListener(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		Path:     addr,
 	}
 
-	props := map[string]string{"addr": addr}
+	props := map[string]string{"addr": addr, "tls": "disabled"}
 
-	return server.ListenerWrapTLS(listener, props, config, ui)
+	return listener, props, nil, nil
 }
 
 func tcpListener(config map[string]interface{}, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reload.ReloadFunc, error) {

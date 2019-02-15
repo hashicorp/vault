@@ -370,7 +370,7 @@ func (c *AgentCommand) Run(args []string) int {
 				scheme = "http://"
 			}
 			if lnConfig.Type == "unix" {
-				scheme = scheme + "unix"
+				scheme = "unix:/"
 			}
 
 			infoKey := fmt.Sprintf("api address %d", i+1)
