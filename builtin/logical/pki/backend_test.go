@@ -1466,8 +1466,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		oth1str := oid1 + ";utf8:devops@nope.com"
 		oth1 := newOtherNameUtf8(oth1str)
 		oth2 := otherNameUtf8{oid1, "me@example.com"}
-		allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
-		// allowNone, allowAll := []string{}, []string{"*"}
+		// allowNone, allowAll := []string{}, []string{oid1 + ";UTF-8:*"}
+		allowNone, allowAll := []string{}, []string{"*"}
 
 		// OtherSANs not allowed and not provided, should not be an error.
 		addOtherSANTests(useCSRs, false, allowNone, false, nil, nil, getOtherCheck())

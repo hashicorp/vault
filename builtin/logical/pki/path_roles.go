@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/hashicorp/vault/helper/strutil"
 	"strings"
 	"time"
 
@@ -503,7 +504,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
 	if len(otherSANs) > 0 {
-		_, err := parseOtherSANs(otherSANs)
+		_, err := parseOtherSANs(strutil.StrListDelete(otherSANs, "*"))
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error parsing allowed_other_sans: {{err}}", err).Error()), nil
 		}
