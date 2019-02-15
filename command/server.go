@@ -12,12 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -361,6 +363,19 @@ func (c *ServerCommand) Run(args []string) int {
 		})
 	} else {
 		c.logger = logging.NewVaultLoggerWithWriter(c.logWriter, level)
+	}
+
+	{
+		signalCh := make(chan os.Signal, 1)
+		signal.Notify(signalCh, syscall.SIGUSR2)
+		go func() {
+			var buf = make([]byte, 65536)
+			for {
+				<-signalCh
+				n := runtime.Stack(buf[:], true)
+				c.logger.Info("goroutine trace", "stack", string(buf[:n]))
+			}
+		}()
 	}
 
 	allLoggers := []log.Logger{c.logger}
