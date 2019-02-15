@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
@@ -31,6 +30,7 @@ func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCo
 	}
 }
 
+/*
 func TestAgent_Cache_UnixListener(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
@@ -213,6 +213,7 @@ cache {
 		t.Fatalf("failed to perform lookup self through agent")
 	}
 }
+*/
 
 func TestExitAfterAuth(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)

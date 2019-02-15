@@ -371,31 +371,26 @@ func NewClient(c *Config) (*Client, error) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	// If address begins with a `unix://`, treat it as a socket file path and set
-	// the HttpClient's transport to the corresponding socket dialer.
+	if c.HttpClient == nil {
+		c.HttpClient = def.HttpClient
+	}
+	if c.HttpClient.Transport == nil {
+		c.HttpClient.Transport = def.HttpClient.Transport
+	}
+
 	if strings.HasPrefix(c.Address, "unix://") {
-		socketFilePath := strings.TrimPrefix(c.Address, "unix://")
-		c.HttpClient = &http.Client{
-			Transport: &http.Transport{
-				DialContext: func(context.Context, string, string) (net.Conn, error) {
-					return net.Dial("unix", socketFilePath)
-				},
-			},
+		socket := strings.TrimPrefix(c.Address, "unix://")
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+			return net.Dial("unix", socket)
 		}
-		// Set the unix address for URL parsing below
+		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
 		c.Address = "http://unix"
 	}
 
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
-	}
-
-	if c.HttpClient == nil {
-		c.HttpClient = def.HttpClient
-	}
-	if c.HttpClient.Transport == nil {
-		c.HttpClient.Transport = def.HttpClient.Transport
 	}
 
 	client := &Client{
@@ -727,7 +722,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 
 	redirectCount := 0
 START:
-	req, err := r.ToRetryableHTTP()
+	req, err := r.toRetryableHTTP()
 	if err != nil {
 		return nil, err
 	}

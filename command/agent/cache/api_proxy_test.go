@@ -19,13 +19,13 @@ func TestCache_APIProxy(t *testing.T) {
 	})
 
 	r := client.NewRequest("GET", "/v1/sys/health")
-	req, err := r.ToRetryableHTTP()
+	req, err := r.ToHTTP()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp, err := proxier.Send(namespace.RootContext(nil), &SendRequest{
-		Request: req.Request,
+		Request: req,
 	})
 	if err != nil {
 		t.Fatal(err)
