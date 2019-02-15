@@ -2035,7 +2035,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 		// If the external group is from a different mount, don't remove the
 		// entity ID from it.
-		if mountAccessor != "" && group.Alias.MountAccessor != mountAccessor {
+		if mountAccessor != "" && group.Alias != nil && group.Alias.MountAccessor != mountAccessor {
 			continue
 		}
 

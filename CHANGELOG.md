@@ -1,10 +1,36 @@
+## Next
+
+CHANGES:
+
+ * auth/jwt: The `groups_claim_delimiter_pattern` has been removed. If the groups
+   claim is not at the top level, it can now be specified as a
+   [JSONPointer](https://tools.ietf.org/html/rfc6901).
+ * auth/jwt: Roles now have a "role type" parameter with a default type of "oidc". To
+   configure new JWT roles, a role type of "jwt" must be explicitly specified.
+
+IMPROVEMENTS:
+
+ * auth/jwt: A default role can be set. It will be used during JWT/OIDC logins if
+   a role is not specified.
+ * auth/jwt: Arbitrary claims data can now be copied into token & alias metadata.
+ * auth/jwt: An arbitrary set of bound claims can now be configured for a role.
+ * auth/jwt: The name "oidc" has been added as an alias for the jwt backend. Either
+   name may be specified in the `auth enable` command.
+ 
+FEATURES:
+
+ * **OIDC Support**: The JWT auth backend now supports OIDC roles. These allow
+   authentication via an OIDC-compliant provider via the user's browser. The
+   login may be initiatated from the Vault UI or through the `vault login` command.
+ 
 ## 1.0.3 (February 12th, 2019)
 
 CHANGES:
 
  * New AWS authentication plugin mounts will default to using the generated
-   role ID as the Identity alias name.  This applies to both EC2 and IAM auth.
-   Existing mounts will not be affected.
+   role ID as the Identity alias name. This applies to both EC2 and IAM auth.
+   Existing mounts that explicitly set this value will not be affected but
+   mounts that specified no preference will switch over on upgrade.
  * The default policy now allows a token to look up its associated identity
    entity either by name or by id [GH-6105]
  * The Vault UI's navigation and onboarding wizard now only displays items that
