@@ -1,3 +1,25 @@
+## Next
+
+CHANGES:
+
+ * auth/jwt: The `groups_claim_delimiter_pattern` has been removed. If the groups
+   claim is not at the top level, it can now be specified as a
+   [JSONPointer](https://tools.ietf.org/html/rfc6901).
+ * auth/jwt: Roles now have a "role type" parameter with a default type of "oidc". To
+   configure new JWT roles, a role type of "jwt" must be explicitly specified.
+
+IMPROVEMENTS:
+
+ * auth/jwt: A default role may be set. It will be used during JWT/OIDC logins if
+   a role is not specified.
+ * auth/jwt: Arbitrary claims data may now be copied into token & alias metadata.
+
+FEATURES:
+
+ * **OIDC Support**: The JWT auth backend now supports OIDC roles. These allow
+   authentication via an OIDC-compliant provider via the user's browser. The
+   login may be initiatated from the Vault UI or through the `vault login` command.
+ 
 ## 1.0.3 (February 12th, 2019)
 
 CHANGES:
