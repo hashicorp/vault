@@ -383,6 +383,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -444,6 +445,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -486,7 +488,7 @@ func TestSysRemount(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\ngot\n%#v\nexpected\n%#v\n", actual, expected)
+		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
 	}
 }
 
