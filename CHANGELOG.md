@@ -10,10 +10,12 @@ CHANGES:
 
 IMPROVEMENTS:
 
- * auth/jwt: A default role may be set. It will be used during JWT/OIDC logins if
+ * auth/jwt: A default role can be set. It will be used during JWT/OIDC logins if
    a role is not specified.
- * auth/jwt: Arbitrary claims data may now be copied into token & alias metadata.
- * auth/jwt: An arbitrary set of bound claims may now be configured for a role.
+ * auth/jwt: Arbitrary claims data can now be copied into token & alias metadata.
+ * auth/jwt: An arbitrary set of bound claims can now be configured for a role.
+ * auth/jwt: The name "oidc" has been added as an alias for the jwt backend. Either
+   name may be specified in the `auth enable` command.
  
 FEATURES:
 
