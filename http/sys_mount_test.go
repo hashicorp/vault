@@ -200,6 +200,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -261,6 +262,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -302,9 +304,10 @@ func TestSysMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v\n", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
+
 }
 
 func TestSysMount_put(t *testing.T) {
