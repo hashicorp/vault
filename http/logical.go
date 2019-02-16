@@ -205,11 +205,17 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			// using the token's embedded nsID if a relative path was provided. Since
 			// this is done at the HTTP layer, the operation will still be gated by
 			// ACLs.
-			case "auth/token/renew", "auth/token/revoke", "auth/token/revoke-orphan":
+			case "auth/token/lookup", "auth/token/renew", "auth/token/revoke", "auth/token/revoke-orphan":
 				token, ok := req.Data["token"]
 				// If the token is not present (e.g. a bad request), break out and let the backend
 				// handle the error
 				if !ok {
+					// If this is a token lookup request and if the token is not
+					// explicitly provided, it will use the client token so we simply set
+					// the context to the client token's context.
+					if req.Path == "auth/token/lookup" {
+						r = r.WithContext(newCtx)
+					}
 					break
 				}
 				_, nsID := namespace.SplitIDFromString(token.(string))
@@ -222,21 +228,20 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 					}
 					if ns != nil {
 						newCtx = namespace.ContextWithNamespace(newCtx, ns)
+						r = r.WithContext(newCtx)
 					}
 				}
-				r = r.WithContext(newCtx)
 			}
 
 		// The following relative sys/leases/ paths handles re-routing requests
 		// to the proper namespace using the lease ID on applicable paths.
 		case strings.HasPrefix(req.Path, "sys/leases/"):
-			newCtx := r.Context()
 			switch req.Path {
 			// For the following operations, we can set the proper namespace context
 			// using the lease's embedded nsID if a relative path was provided. Since
 			// this is done at the HTTP layer, the operation will still be gated by
 			// ACLs.
-			case "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
+			case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
 				leaseID, ok := req.Data["lease_id"]
 				// If lease ID is not present, break out and let the backend handle the error
 				if !ok {
@@ -244,6 +249,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 				}
 				_, nsID := namespace.SplitIDFromString(leaseID.(string))
 				if nsID != "" {
+					newCtx := r.Context()
 					ns, err := vault.NamespaceByID(newCtx, nsID, core)
 					if err != nil {
 						core.Logger().Warn("error looking up namespace from the lease's namespace ID", "error", err)
@@ -252,9 +258,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 					}
 					if ns != nil {
 						newCtx = namespace.ContextWithNamespace(newCtx, ns)
+						r = r.WithContext(newCtx)
 					}
 				}
-				r = r.WithContext(newCtx)
 			}
 		}
 
