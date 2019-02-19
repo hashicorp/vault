@@ -97,10 +97,6 @@ type Config struct {
 	// Note: It is not thread-safe to set this and make concurrent requests
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
-
-	// DisableAgent is used to suppress the connection to local agent and use
-	// the Vault's address for communication.
-	DisableAgent bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -391,7 +387,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	address := c.Address
-	if !c.DisableAgent && c.AgentAddress != "" {
+	if c.AgentAddress != "" {
 		address = c.AgentAddress
 	}
 
