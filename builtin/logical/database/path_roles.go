@@ -296,16 +296,14 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
                 // TODO branch out and create static account in Database
                 if role.StaticAccount != nil {
-                        q.Q(">>> branch out to create static account")
                         // in create/update of static accounts, we only care if the operation
                         // err'd , and this call does not return credentials
-                        _, _, _, err := b.createUpdateStaticAcount(ctx, req, name, role)
+                        _, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role)
                         if err != nil {
                                 return nil, err
                         }
                 }
-
-                // END create static account
+                // END create/update static account
 
                 // Store it
                 entry, err := logical.StorageEntryJSON("role/"+name, role)
@@ -355,7 +353,7 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
         }
         q.Q("returned values:", username, password, restored, err)
 
-        return "", "", false, nil
+        return username, password, false, nil
 }
 
 type roleEntry struct {

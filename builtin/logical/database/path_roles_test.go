@@ -52,7 +52,6 @@ func TestBackend_Static_Config(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        // q.Q("postgresql SetCredentials called:", statements, staticUser)
         // Test static role creation scenarios. Uses a map, so there is no guaranteed
         // ordering, so each case cleans up by deleting the role
         testCases := map[string]struct {
