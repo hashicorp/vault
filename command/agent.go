@@ -333,14 +333,15 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
-		originalEnvVaultAgentAddress := os.Getenv(api.EnvVaultAgentAddress)
-		os.Setenv(api.EnvVaultAgentAddress, "")
-		client, err := api.NewClient(api.DefaultConfig())
+		// Ensure that the connection from agent to Vault server doesn't loop
+		// back to agent.
+		apiConfig := api.DefaultConfig()
+		apiConfig.DisableAgent = true
+		client, err := api.NewClient(apiConfig)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating API client for cache: %v", err))
 			return 1
 		}
-		os.Setenv(api.EnvVaultAgentAddress, originalEnvVaultAgentAddress)
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
