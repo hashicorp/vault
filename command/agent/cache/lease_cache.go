@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/cryptoutil"
@@ -63,20 +64,20 @@ type cacheClearRequest struct {
 // the caching of responses. It passes the incoming request
 // to an underlying Proxier implementation.
 type LeaseCache struct {
-	client      *api.Client
-	proxier     Proxier
-	logger      hclog.Logger
-	db          *cachememdb.CacheMemDB
-	baseCtxInfo *ContextInfo
+	clientManager *agent.ClientManager
+	proxier       Proxier
+	logger        hclog.Logger
+	db            *cachememdb.CacheMemDB
+	baseCtxInfo   *ContextInfo
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
 // Lease.
 type LeaseCacheConfig struct {
-	Client      *api.Client
-	BaseContext context.Context
-	Proxier     Proxier
-	Logger      hclog.Logger
+	ClientManager *agent.ClientManager
+	BaseContext   context.Context
+	Proxier       Proxier
+	Logger        hclog.Logger
 }
 
 // ContextInfo holds a derived context and cancelFunc pair.
@@ -96,7 +97,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		return nil, fmt.Errorf("missing configuration required params: %v", conf)
 	}
 
-	if conf.Client == nil {
+	if conf.ClientManager == nil {
 		return nil, fmt.Errorf("nil API client")
 	}
 
@@ -113,11 +114,11 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	return &LeaseCache{
-		client:      conf.Client,
-		proxier:     conf.Proxier,
-		logger:      conf.Logger,
-		db:          db,
-		baseCtxInfo: baseCtxInfo,
+		clientManager: conf.ClientManager,
+		proxier:       conf.Proxier,
+		logger:        conf.Logger,
+		db:            db,
+		baseCtxInfo:   baseCtxInfo,
 	}, nil
 }
 
@@ -337,13 +338,14 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		}
 	}()
 
-	client, err := c.client.Clone()
+	client, err := c.clientManager.New()
 	if err != nil {
 		c.logger.Error("failed to create API client in the renewer", "error", err)
 		return
 	}
 	client.SetToken(req.Token)
 	client.SetHeaders(req.Request.Header)
+	defer c.clientManager.Remove(client)
 
 	renewer, err := client.NewRenewer(&api.RenewerInput{
 		Secret: secret,

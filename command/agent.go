@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/auth/approle"
@@ -31,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
+	cachesink "github.com/hashicorp/vault/command/agent/sink/cache"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
@@ -325,10 +327,6 @@ func (c *AgentCommand) Run(args []string) int {
 		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 	})
 
-	// Start auto-auth and sink servers
-	go ah.Run(ctx, method)
-	go ss.Run(ctx, ah.OutputCh, sinks)
-
 	// Parse agent listener configurations
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
@@ -342,6 +340,19 @@ func (c *AgentCommand) Run(args []string) int {
 			c.UI.Error(fmt.Sprintf("Error creating API client for cache: %v", err))
 			return 1
 		}
+
+		cacheSink, err := cachesink.NewCacheSink(&sink.SinkConfig{
+			Logger: cacheLogger,
+		}, agent.NewClientManager(client))
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating client manager: %v", err))
+			return 1
+		}
+
+		sinks = append(sinks, &sink.SinkConfig{
+			Logger: cacheLogger,
+			Sink:   cacheSink,
+		})
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
@@ -413,6 +424,10 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
+
+	// Start auto-auth and sink servers
+	go ah.Run(ctx, method)
+	go ss.Run(ctx, ah.OutputCh, sinks)
 
 	// Server configuration output
 	padding := 24
