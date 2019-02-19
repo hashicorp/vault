@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
@@ -30,6 +30,7 @@ const (
 	vaultPathTokenRevokeSelf     = "/v1/auth/token/revoke-self"
 	vaultPathTokenRevokeAccessor = "/v1/auth/token/revoke-accessor"
 	vaultPathTokenRevokeOrphan   = "/v1/auth/token/revoke-orphan"
+	vaultPathTokenLookup         = "/v1/auth/token/lookup"
 	vaultPathTokenLookupSelf     = "/v1/auth/token/lookup-self"
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"
@@ -459,8 +460,7 @@ func computeIndexID(req *SendRequest) (string, error) {
 	// requests sets the token directly into SendRequest.Token
 	b.Write([]byte(req.Token))
 
-	sum := sha256.Sum256(b.Bytes())
-	return hex.EncodeToString(sum[:]), nil
+	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.
