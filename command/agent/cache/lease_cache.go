@@ -30,6 +30,7 @@ const (
 	vaultPathTokenRevokeSelf     = "/v1/auth/token/revoke-self"
 	vaultPathTokenRevokeAccessor = "/v1/auth/token/revoke-accessor"
 	vaultPathTokenRevokeOrphan   = "/v1/auth/token/revoke-orphan"
+	vaultPathTokenLookup         = "/v1/auth/token/lookup"
 	vaultPathTokenLookupSelf     = "/v1/auth/token/lookup-self"
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"

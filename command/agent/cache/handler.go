@@ -81,53 +81,74 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 		return nil
 	}
 
-	// Strip-off namespace related information from the request and get the
-	// relative path of the request.
 	_, path := deriveNamespaceAndRevocationPath(req)
-	if path == vaultPathTokenLookupSelf {
-		logger.Info("stripping auto-auth token from the response", "path", req.Request.URL.Path, "method", req.Request.Method)
-		secret, err := api.ParseSecret(bytes.NewBuffer(resp.ResponseBody))
-		if err != nil {
-			return fmt.Errorf("failed to parse token lookup response: %v", err)
+	switch path {
+	case vaultPathTokenLookupSelf:
+	case vaultPathTokenLookup:
+		jsonBody := map[string]interface{}{}
+		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
+			return err
 		}
-		if secret != nil && secret.Data != nil && secret.Data["id"] != nil {
-			token, ok := secret.Data["id"].(string)
-			if !ok {
-				return fmt.Errorf("failed to type assert the token id in the response")
-			}
-			if token == client.Token() {
-				delete(secret.Data, "id")
-				delete(secret.Data, "accessor")
-			}
-
-			bodyBytes, err := json.Marshal(secret)
-			if err != nil {
-				return err
-			}
-			if resp.Response.Body != nil {
-				resp.Response.Body.Close()
-			}
-			resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-			resp.Response.ContentLength = int64(len(bodyBytes))
-
-			// Serialize and re-read the reponse
-			var respBytes bytes.Buffer
-			err = resp.Response.Write(&respBytes)
-			if err != nil {
-				return fmt.Errorf("failed to serialize the updated response: %v", err)
-			}
-
-			updatedResponse, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(respBytes.Bytes())), nil)
-			if err != nil {
-				return fmt.Errorf("failed to deserialize the updated response: %v", err)
-			}
-
-			resp.Response = &api.Response{
-				Response: updatedResponse,
-			}
-			resp.ResponseBody = bodyBytes
+		tokenRaw, ok := jsonBody["token"]
+		if !ok {
+			// Input error will be caught by the API
+			return nil
 		}
+		token, ok := tokenRaw.(string)
+		if !ok {
+			// Input error will be caught by the API
+			return nil
+		}
+		if token != "" && token != client.Token() {
+			// Lookup is performed on the non-auto-auth token
+			return nil
+		}
+	default:
+		return nil
 	}
+
+	logger.Info("stripping auto-auth token from the response", "path", req.Request.URL.Path, "method", req.Request.Method)
+	secret, err := api.ParseSecret(bytes.NewBuffer(resp.ResponseBody))
+	if err != nil {
+		return fmt.Errorf("failed to parse token lookup response: %v", err)
+	}
+	if secret == nil || secret.Data == nil {
+		return nil
+	}
+	if secret.Data["id"] == nil && secret.Data["accessor"] == nil {
+		return nil
+	}
+
+	delete(secret.Data, "id")
+	delete(secret.Data, "accessor")
+
+	bodyBytes, err := json.Marshal(secret)
+	if err != nil {
+		return err
+	}
+	if resp.Response.Body != nil {
+		resp.Response.Body.Close()
+	}
+	resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	resp.Response.ContentLength = int64(len(bodyBytes))
+
+	// Serialize and re-read the reponse
+	var respBytes bytes.Buffer
+	err = resp.Response.Write(&respBytes)
+	if err != nil {
+		return fmt.Errorf("failed to serialize the updated response: %v", err)
+	}
+
+	updatedResponse, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(respBytes.Bytes())), nil)
+	if err != nil {
+		return fmt.Errorf("failed to deserialize the updated response: %v", err)
+	}
+
+	resp.Response = &api.Response{
+		Response: updatedResponse,
+	}
+	resp.ResponseBody = bodyBytes
+
 	return nil
 }
 
