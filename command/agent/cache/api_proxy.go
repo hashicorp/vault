@@ -50,19 +50,26 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 
-	// Parse and reset response body
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ap.logger.Error("failed to read request body", "error", err)
-		return nil, err
+	sendResponse := &SendResponse{
+		Response: resp,
 	}
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
-	resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
 
-	return &SendResponse{
-		Response:     resp,
-		ResponseBody: respBody,
-	}, nil
+	// Set SendResponse.ResponseBody if the response body is non-nil
+	if resp.Body != nil {
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			ap.logger.Error("failed to read request body", "error", err)
+			return nil, err
+		}
+		// Close the old body
+		resp.Body.Close()
+
+		// Re-set the response body for potential consumption on the way back up the
+		// Proxier middleware chain.
+		resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
+
+		sendResponse.ResponseBody = respBody
+	}
+
+	return sendResponse, nil
 }
