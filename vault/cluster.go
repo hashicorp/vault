@@ -293,7 +293,7 @@ type ClusterHandler interface {
 	CALookup(context.Context) (*x509.Certificate, error)
 
 	// Handoff is used to pass the connection lifetime off to
-	// the storage backend
+	// the handler
 	Handoff(context.Context, *sync.WaitGroup, chan struct{}, *tls.Conn) error
 	Stop() error
 }
@@ -366,6 +366,7 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 			}
 		}
 
+		cl.logger.Warn("no TLS certs found for ALPN", "ALPN", clientHello.SupportedProtos)
 		return nil, errors.New("unsupported protocol")
 	}
 
@@ -381,6 +382,7 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 			}
 		}
 
+		cl.logger.Warn("no client information found")
 		return nil, errors.New("no client cert found")
 	}
 
@@ -412,6 +414,7 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 			}
 		}
 
+		cl.logger.Warn("no TLS config found for ALPN", "ALPN", clientHello.SupportedProtos)
 		return nil, errors.New("unsupported protocol")
 	}
 
