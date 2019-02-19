@@ -14,9 +14,13 @@ func TestCache_APIProxy(t *testing.T) {
 	cleanup, client, _, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
-	proxier := NewAPIProxy(&APIProxyConfig{
+	proxier, err := NewAPIProxy(&APIProxyConfig{
+		Client: client,
 		Logger: logging.NewVaultLogger(hclog.Trace),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r := client.NewRequest("GET", "/v1/sys/health")
 	req, err := r.ToHTTP()

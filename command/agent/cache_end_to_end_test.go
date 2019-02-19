@@ -229,13 +229,18 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
 
 	// Create the API proxier
-	apiProxy := cache.NewAPIProxy(&cache.APIProxyConfig{
+	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
+		Client: client,
 		Logger: cacheLogger.Named("apiproxy"),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+		Client:      client,
 		BaseContext: ctx,
 		Proxier:     apiProxy,
 		Logger:      cacheLogger.Named("leasecache"),

@@ -3,6 +3,7 @@ package cache
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -12,21 +13,27 @@ import (
 // APIProxy is an implementation of the proxier interface that is used to
 // forward the request to Vault and get the response.
 type APIProxy struct {
+	client *api.Client
 	logger hclog.Logger
 }
 
 type APIProxyConfig struct {
+	Client *api.Client
 	Logger hclog.Logger
 }
 
-func NewAPIProxy(config *APIProxyConfig) Proxier {
-	return &APIProxy{
-		logger: config.Logger,
+func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
+	if config.Client == nil {
+		return nil, fmt.Errorf("nil API client")
 	}
+	return &APIProxy{
+		client: config.Client,
+		logger: config.Logger,
+	}, nil
 }
 
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := ap.client.Clone()
 	if err != nil {
 		return nil, err
 	}

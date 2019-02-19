@@ -21,15 +21,21 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
 		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return lc
 }
 

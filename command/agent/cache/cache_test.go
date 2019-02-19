@@ -3,9 +3,11 @@ package cache
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,13 +105,18 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	}
 
 	// Create the API proxier
-	apiProxy := NewAPIProxy(&APIProxyConfig{
+	apiProxy, err := NewAPIProxy(&APIProxyConfig{
+		Client: clusterClient,
 		Logger: cacheLogger.Named("apiproxy"),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      clusterClient,
 		BaseContext: ctx,
 		Proxier:     apiProxy,
 		Logger:      cacheLogger.Named("leasecache"),
@@ -176,6 +183,51 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 			t.Fatalf("evicted an undesired index from cache: type: %q, value: %q", valType, val)
 		}
 	}
+}
+
+func TestCache_ConcurrentRequests(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			key := fmt.Sprintf("kv/foo/%d_%d", i, rand.Int())
+			_, err := testClient.Logical().Write(key, map[string]interface{}{
+				"key": key,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			secret, err := testClient.Logical().Read(key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if secret == nil || secret.Data["key"].(string) != key {
+				t.Fatal(fmt.Sprintf("failed to read value for key: %q", key))
+			}
+		}(i)
+
+	}
+	wg.Wait()
 }
 
 func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {

@@ -62,6 +62,7 @@ type cacheClearRequest struct {
 // the caching of responses. It passes the incoming request
 // to an underlying Proxier implementation.
 type LeaseCache struct {
+	client      *api.Client
 	proxier     Proxier
 	logger      hclog.Logger
 	db          *cachememdb.CacheMemDB
@@ -71,6 +72,7 @@ type LeaseCache struct {
 // LeaseCacheConfig is the configuration for initializing a new
 // Lease.
 type LeaseCacheConfig struct {
+	Client      *api.Client
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
@@ -93,6 +95,10 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		return nil, fmt.Errorf("missing configuration required params: %v", conf)
 	}
 
+	if conf.Client == nil {
+		return nil, fmt.Errorf("nil API client")
+	}
+
 	db, err := cachememdb.New()
 	if err != nil {
 		return nil, err
@@ -106,6 +112,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	return &LeaseCache{
+		client:      conf.Client,
 		proxier:     conf.Proxier,
 		logger:      conf.Logger,
 		db:          db,
@@ -329,7 +336,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		}
 	}()
 
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := c.client.Clone()
 	if err != nil {
 		c.logger.Error("failed to create API client in the renewer", "error", err)
 		return
