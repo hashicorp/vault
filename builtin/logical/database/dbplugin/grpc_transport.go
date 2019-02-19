@@ -11,9 +11,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/pluginutil"
-        "github.com/y0ssar1an/q"
+        "github.com/golang/protobuf/ptypes"
+        "github.com/hashicorp/vault/helper/pluginutil"
 )
 
 var (
@@ -301,7 +300,7 @@ func (c *gRPCClient) Close() error {
 }
 
 func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, staticUser StaticUserConfig) (username, password string, restored bool, err error) {
-        q.Q("grpc_transport:client SetCredentials called")
+        // q.Q("grpc_transport:client SetCredentials called")
         // return nil, status.Error(codes.Unimplemented, "not yet implemented")
 
         ctx, cancel := context.WithCancel(ctx)
@@ -321,7 +320,7 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, 
                 // Fall back to old call if not implemented
                 grpcStatus, ok := status.FromError(err)
                 if ok && grpcStatus.Code() == codes.Unimplemented {
-                        q.Q("grpc_transport unimlemented in grpc/client")
+                        // q.Q("grpc_transport unimlemented in grpc/client")
                         // TODO: a better or const error type here
                         return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
                 }

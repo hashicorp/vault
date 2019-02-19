@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-        "github.com/y0ssar1an/q"
+        "github.com/hashicorp/vault/helper/strutil"
+        "github.com/hashicorp/vault/logical"
+        "github.com/hashicorp/vault/logical/framework"
 )
 
 func pathCredsCreate(b *databaseBackend) *framework.Path {
@@ -47,7 +46,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
                 // check static account.
                 // - if static, return password
                 if role.StaticAccount != nil {
-                        q.Q("path creds create, static:", role.StaticAccount)
+                        // q.Q("path creds create, static:", role.StaticAccount)
                         return &logical.Response{
                                 Data: map[string]interface{}{
                                         "username":            role.StaticAccount.Username,

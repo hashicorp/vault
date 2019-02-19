@@ -10,7 +10,6 @@ import (
         "github.com/hashicorp/vault/helper/strutil"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
-        "github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -319,7 +318,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 }
 
 func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry) (username, password string, restored bool, err error) {
-        q.Q(">>> createUpdateStaticAcount called: ", role)
+        // q.Q(">>> createUpdateStaticAcount called: ", role)
         dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
         if err != nil {
                 return "", "", false, err
@@ -351,7 +350,7 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
                 b.CloseIfShutdown(db, err)
                 return "", "", false, err
         }
-        q.Q("returned values:", username, password, restored, err)
+        // q.Q("returned values:", username, password, restored, err)
 
         return username, password, false, nil
 }

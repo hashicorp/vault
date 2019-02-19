@@ -90,12 +90,10 @@ func TestBackend_Static_Config(t *testing.T) {
                         account: map[string]interface{}{
                                 "username":           "sa-test",
                                 "rotation_frequency": "5400s",
-                                "password":           "somesecret123!!",
                         },
                         expected: map[string]interface{}{
                                 "username":           "sa-test",
                                 "rotation_frequency": int64(5400000000000),
-                                "password":           "somesecret123!!",
                         },
                 },
         }
@@ -163,7 +161,13 @@ func TestBackend_Static_Config(t *testing.T) {
                         actual := resp.Data["static_account"]
 
                         if len(tc.expected) > 0 {
-                                if diff := deep.Equal(expected, actual); diff != nil {
+                                // verify a password is returned, but we don't care what it's value is
+                                act := actual.(map[string]interface{})
+                                if act["password"] == "" {
+                                        t.Fatalf("expected result to contain password, but none found")
+                                }
+                                delete(act, "password")
+                                if diff := deep.Equal(expected, act); diff != nil {
                                         t.Fatal(diff)
                                 }
                         }
