@@ -348,7 +348,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger: cacheLogger.Named("apiproxy"),
 		})
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error creating API proxy: %v", err))
+			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
 			return 1
 		}
 
