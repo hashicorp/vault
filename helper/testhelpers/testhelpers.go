@@ -453,3 +453,18 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 	t.Fatalf("%d cores were not sealed", n)
 }
+
+func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
+	for i := 0; i < 10; i++ {
+		for _, core := range cluster.Cores {
+			if standby, _ := core.Core.Standby(); !standby {
+				return core
+			}
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	t.Fatalf("node did not become active")
+	return nil
+}

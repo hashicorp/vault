@@ -189,6 +189,8 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 
 // Stop stops the request forwarding server and closes connections.
 func (rf *requestForwardingHandler) Stop() error {
+	// Give some time for existing RPCs to drain.
+	time.Sleep(clusterListenerAcceptDeadline)
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
 	return nil

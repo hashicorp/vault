@@ -14,7 +14,7 @@ import (
 
 func TestMSSQL_Initialize(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("MSSQL_URL")
 
@@ -51,7 +51,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 
 func TestMSSQL_CreateUser(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("MSSQL_URL")
 
@@ -92,7 +92,7 @@ func TestMSSQL_CreateUser(t *testing.T) {
 
 func TestMSSQL_RotateRootCredentials(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("MSSQL_URL")
 
@@ -131,7 +131,7 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 
 func TestMSSQL_RevokeUser(t *testing.T) {
 	if os.Getenv("MSSQL_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("MSSQL_URL")
 
