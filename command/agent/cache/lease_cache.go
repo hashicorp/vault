@@ -180,7 +180,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		RequestPath: req.Request.URL.Path,
 	}
 
-	secret, err := api.ParseSecret(bytes.NewBuffer(resp.ResponseBody))
+	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
 		c.logger.Error("failed to parse response as secret", "error", err)
 		return nil, err
@@ -287,7 +287,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(resp.ResponseBody))
+	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(resp.ResponseBody))
 
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
@@ -420,7 +420,7 @@ func (c *LeaseCache) updateResponse(ctx context.Context, renewal *api.RenewOutpu
 	if resp.Body != nil {
 		resp.Body.Close()
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	resp.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.ContentLength = int64(len(bodyBytes))
 
 	// Serialize the response
@@ -454,7 +454,7 @@ func computeIndexID(req *SendRequest) (string, error) {
 	}
 
 	// Reset the request body after it has been closed by Write
-	req.Request.Body = ioutil.NopCloser(bytes.NewBuffer(req.RequestBody))
+	req.Request.Body = ioutil.NopCloser(bytes.NewReader(req.RequestBody))
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
 	// requests sets the token directly into SendRequest.Token

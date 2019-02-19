@@ -38,7 +38,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 		if r.Body != nil {
 			r.Body.Close()
 		}
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+		r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
 		req := &SendRequest{
 			Token:       token,
 			Request:     r,
@@ -108,7 +108,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 	}
 
 	logger.Info("stripping auto-auth token from the response", "path", req.Request.URL.Path, "method", req.Request.Method)
-	secret, err := api.ParseSecret(bytes.NewBuffer(resp.ResponseBody))
+	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
 		return fmt.Errorf("failed to parse token lookup response: %v", err)
 	}
@@ -129,7 +129,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
 	// Serialize and re-read the reponse

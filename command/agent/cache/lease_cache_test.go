@@ -58,7 +58,7 @@ func TestCache_ComputeIndexID(t *testing.T) {
 					},
 				},
 			},
-			"2edc7e965c3e1bdce3b1d5f79a52927842569c0734a86544d222753f11ae4847",
+			"7b5db388f211fd9edca8c6c254831fb01ad4e6fe624dbb62711f256b5e803717",
 			false,
 		},
 	}
