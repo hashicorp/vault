@@ -129,7 +129,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
 	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, false, clusterClient))
 	server := &http.Server{

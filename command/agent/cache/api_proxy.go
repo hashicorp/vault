@@ -59,7 +59,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	if resp.Body != nil {
 		resp.Body.Close()
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respBody))
+	resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
 
 	return &SendResponse{
 		Response:     resp,
