@@ -63,6 +63,20 @@ module('Unit | Adapter | cluster', function(hooks) {
       'auth:github options OK'
     );
 
+    data = { jwt: 'token', role: 'test' };
+    adapter.authenticate({ backend: 'jwt', data });
+    assert.equal('/v1/auth/jwt/login', url, 'auth:jwt url OK');
+    assert.equal('POST', method, 'auth:jwt method OK');
+    assert.deepEqual(
+      { data: { jwt: 'token', role: 'test' }, unauthenticated: true },
+      options,
+      'auth:jwt options OK'
+    );
+
+    data = { jwt: 'token', role: 'test', path: 'oidc' };
+    adapter.authenticate({ backend: 'jwt', data });
+    assert.equal('/v1/auth/oidc/login', url, 'auth:jwt custom mount path, url OK');
+
     data = { token: 'token', password: 'password', username: 'username', path: 'path' };
 
     adapter.authenticate({ backend: 'token', data });

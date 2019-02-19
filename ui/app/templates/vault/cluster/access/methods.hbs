@@ -22,7 +22,15 @@
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
             <T.trigger>
-              <ICon @glyph={{concat "enable/" (or method.methodType "auth")}} @size=24 @class="has-text-grey-light"/>
+              <ICon @glyph={{concat "enable/"
+                (if
+                  (or
+                    (find-by "type" method.methodType (mountable-auth-methods))
+                    (eq method.methodType "token")
+                  )
+                  method.methodType
+                  "auth"
+                )}} @size=24 @class="has-text-grey-light"/>
             </T.trigger>
             <T.content @class="tool-tip">
               <div class="box">

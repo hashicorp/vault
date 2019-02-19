@@ -443,51 +443,6 @@ func TestLoginCommand_Run(t *testing.T) {
 		}
 	})
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	t.Run("deprecated_no_verify", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			TTL:      "30m",
-			NumUses:  1,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		_, cmd := testLoginCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			"-no-verify",
-			token,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		lookup, err := client.Auth().Token().Lookup(token)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// There was 1 use to start, make sure we didn't use it (verifying would
-		// use it).
-		uses, err := lookup.TokenRemainingUses()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if uses != 1 {
-			t.Errorf("expected %d to be %d", uses, 1)
-		}
-	})
-
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 

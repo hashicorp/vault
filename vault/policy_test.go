@@ -1,11 +1,11 @@
 package vault
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -95,6 +95,21 @@ path "test/mfa" {
 	capabilities = ["create", "sudo"]
 	mfa_methods = ["my_totp", "my_totp2"]
 }
+path "test/+/segment" {
+	capabilities = ["create", "sudo"]
+}
+path "test/segment/at/end/+" {
+	capabilities = ["create", "sudo"]
+}
+path "test/segment/at/end/v2/+/" {
+	capabilities = ["create", "sudo"]
+}
+path "test/+/wildcard/+/*" {
+	capabilities = ["create", "sudo"]
+}
+path "test/+/wildcard/+/end*" {
+	capabilities = ["create", "sudo"]
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
@@ -141,7 +156,6 @@ func TestPolicy_Parse(t *testing.T) {
 				"list",
 			},
 			Permissions: &ACLPermissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			IsPrefix:    false,
 		},
 		{
 			Path:   "foo/bar",
@@ -157,11 +171,9 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "foo/bar",
-			Policy: "",
+			Path: "foo/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -173,11 +185,9 @@ func TestPolicy_Parse(t *testing.T) {
 				MinWrappingTTL:     300 * time.Second,
 				MaxWrappingTTL:     3600 * time.Second,
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "foo/bar",
-			Policy: "",
+			Path: "foo/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -187,11 +197,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "baz/bar",
-			Policy: "",
+			Path: "baz/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -201,11 +209,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "biz/bar",
-			Policy: "",
+			Path: "biz/bar",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -217,7 +223,6 @@ func TestPolicy_Parse(t *testing.T) {
 				AllowedParameters:  map[string][]interface{}{"zim": {}, "zam": {}},
 				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			IsPrefix: false,
 		},
 		{
 			Path:   "test/types",
@@ -236,8 +241,7 @@ func TestPolicy_Parse(t *testing.T) {
 			IsPrefix: false,
 		},
 		{
-			Path:   "test/req",
-			Policy: "",
+			Path: "test/req",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -247,11 +251,9 @@ func TestPolicy_Parse(t *testing.T) {
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
 			},
-			IsPrefix: false,
 		},
 		{
-			Path:   "test/mfa",
-			Policy: "",
+			Path: "test/mfa",
 			Capabilities: []string{
 				"create",
 				"sudo",
@@ -267,12 +269,66 @@ func TestPolicy_Parse(t *testing.T) {
 					"my_totp2",
 				},
 			},
-			IsPrefix: false,
+		},
+		{
+			Path: "test/+/segment",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/segment/at/end/+",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/segment/at/end/v2/+/",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/+/wildcard/+/*",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
+		},
+		{
+			Path: "test/+/wildcard/+/end*",
+			Capabilities: []string{
+				"create",
+				"sudo",
+			},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+			},
+			HasSegmentWildcards: true,
 		},
 	}
 
-	if !reflect.DeepEqual(p.Paths, expect) {
-		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)
+	if diff := deep.Equal(p.Paths, expect); diff != nil {
+		t.Error(diff)
 	}
 }
 

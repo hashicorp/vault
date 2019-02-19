@@ -25,6 +25,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 const EnvVaultAddress = "VAULT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
@@ -237,6 +238,10 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
+	// Agent's address will take precedence over Vault's address
+	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+		envAddress = v
+	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
 		if err != nil {
@@ -366,16 +371,26 @@ func NewClient(c *Config) (*Client, error) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	u, err := url.Parse(c.Address)
-	if err != nil {
-		return nil, err
-	}
-
 	if c.HttpClient == nil {
 		c.HttpClient = def.HttpClient
 	}
 	if c.HttpClient.Transport == nil {
 		c.HttpClient.Transport = def.HttpClient.Transport
+	}
+
+	if strings.HasPrefix(c.Address, "unix://") {
+		socket := strings.TrimPrefix(c.Address, "unix://")
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+			return net.Dial("unix", socket)
+		}
+		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
+		c.Address = "http://unix"
+	}
+
+	u, err := url.Parse(c.Address)
+	if err != nil {
+		return nil, err
 	}
 
 	client := &Client{

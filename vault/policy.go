@@ -112,11 +112,12 @@ func (p *Policy) ShallowClone() *Policy {
 
 // PathRules represents a policy for a path in the namespace.
 type PathRules struct {
-	Path         string
-	Policy       string
-	Permissions  *ACLPermissions
-	IsPrefix     bool
-	Capabilities []string
+	Path                string
+	Policy              string
+	Permissions         *ACLPermissions
+	IsPrefix            bool
+	HasSegmentWildcards bool
+	Capabilities        []string
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
@@ -338,10 +339,18 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Ensure we are using the full request path internally
 		pc.Path = result.namespace.Path + pc.Path
 
-		// Strip the glob character if found
+		if strings.Count(pc.Path, "/+") > 0 || strings.HasPrefix(pc.Path, "+/") {
+			pc.HasSegmentWildcards = true
+		}
+
 		if strings.HasSuffix(pc.Path, "*") {
-			pc.Path = strings.TrimSuffix(pc.Path, "*")
-			pc.IsPrefix = true
+			// If there are segment wildcards, don't actually strip the
+			// trailing asterisk, but don't want to hit the default case
+			if !pc.HasSegmentWildcards {
+				// Strip the glob character if found
+				pc.Path = strings.TrimSuffix(pc.Path, "*")
+				pc.IsPrefix = true
+			}
 		}
 
 		// Map old-style policies into capabilities

@@ -22,16 +22,16 @@ export default {
         { type: 'render', level: 'step', component: 'wizard/auth-enable' },
       ],
       on: {
-        CONTINUE: 'list',
+        CONTINUE: 'config',
       },
     },
-    list: {
+    config: {
       onEntry: [
-        { type: 'render', level: 'step', component: 'wizard/auth-list' },
         { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+        { type: 'render', level: 'step', component: 'wizard/auth-config' },
       ],
       on: {
-        DETAILS: 'details',
+        CONTINUE: 'details',
       },
     },
     details: {

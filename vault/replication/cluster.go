@@ -1,11 +1,16 @@
 // +build !enterprise
 
-package vault
+package replication
 
 import "github.com/hashicorp/vault/helper/consts"
 
-type ReplicatedCluster struct {
+type Cluster struct {
 	State              consts.ReplicationState
 	ClusterID          string
 	PrimaryClusterAddr string
+}
+
+type Clusters struct {
+	DR          *Cluster
+	Performance *Cluster
 }

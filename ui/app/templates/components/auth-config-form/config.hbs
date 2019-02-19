@@ -11,7 +11,12 @@
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button type="submit" data-test-save-config=true class="button is-primary {{if saveModel.isRunning 'loading'}}" disabled={{saveModel.isRunning}}>
+    <button
+      type="submit"
+      data-test-save-config="true"
+      class="button is-primary {{if saveModel.isRunning "loading"}}"
+      disabled={{saveModel.isRunning}}
+    >
       Save
     </button>
   </div>

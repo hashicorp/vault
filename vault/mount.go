@@ -851,6 +851,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		for _, coreMount := range c.mounts.Entries {
 			if coreMount.Type == requiredMount.Type {
 				foundRequired = true
+				coreMount.Config = requiredMount.Config
 				break
 			}
 		}
@@ -1193,36 +1194,37 @@ func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
 		Type: mountTableType,
 	}
-	mountUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
-	}
-	mountAccessor, err := c.generateMountAccessor("kv")
-	if err != nil {
-		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
-	}
-	bUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
+
+	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
+		mountUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
+		}
+		mountAccessor, err := c.generateMountAccessor("kv")
+		if err != nil {
+			panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
+		}
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+		}
+
+		kvMount := &MountEntry{
+			Table:            mountTableType,
+			Path:             "secret/",
+			Type:             "kv",
+			Description:      "key/value secret storage",
+			UUID:             mountUUID,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: bUUID,
+			Options: map[string]string{
+				"version": "2",
+			},
+		}
+		table.Entries = append(table.Entries, kvMount)
 	}
 
-	kvMount := &MountEntry{
-		Table:            mountTableType,
-		Path:             "secret/",
-		Type:             "kv",
-		Description:      "key/value secret storage",
-		UUID:             mountUUID,
-		Accessor:         mountAccessor,
-		BackendAwareUUID: bUUID,
-		Options: map[string]string{
-			"version": "1",
-		},
-	}
-	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
-		kvMount.Options["version"] = "2"
-	}
-	table.Entries = append(table.Entries, kvMount)
-	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }
 
@@ -1275,6 +1277,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
 		BackendAwareUUID: sysBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Accept"},
+		},
 	}
 
 	identityUUID, err := uuid.GenerateUUID()

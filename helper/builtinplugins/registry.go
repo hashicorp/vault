@@ -73,6 +73,7 @@ func newRegistry() *registry {
 			"jwt":        credJWT.Factory,
 			"kubernetes": credKube.Factory,
 			"ldap":       credLdap.Factory,
+			"oidc":       credJWT.Factory,
 			"okta":       credOkta.Factory,
 			"radius":     credRadius.Factory,
 			"userpass":   credUserpass.Factory,

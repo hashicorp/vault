@@ -14,6 +14,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -817,7 +818,7 @@ func (c *Core) advertiseLeader(ctx context.Context, uuid string, leaderLostCh <-
 		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey.Load())
 	}
 
-	keyParams := &clusterKeyParams{
+	keyParams := &certutil.ClusterKeyParams{
 		Type: corePrivateKeyTypeP521,
 		X:    key.X,
 		Y:    key.Y,
