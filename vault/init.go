@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -30,7 +31,8 @@ type InitResult struct {
 }
 
 var (
-	initPTFunc = func(c *Core) func() { return nil }
+	initPTFunc     = func(c *Core) func() { return nil }
+	initInProgress uint32
 )
 
 // Initialized checks if the Vault is already initialized
@@ -97,6 +99,8 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
+	atomic.StoreUint32(&initInProgress, 1)
+	defer atomic.StoreUint32(&initInProgress, 0)
 	barrierConfig := initParams.BarrierConfig
 	recoveryConfig := initParams.RecoveryConfig
 

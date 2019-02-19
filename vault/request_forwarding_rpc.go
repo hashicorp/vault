@@ -61,7 +61,9 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 		}
 	}
 
-	resp.LastRemoteWal = LastRemoteWAL(s.core)
+	// Performance standby nodes will use this value to do wait for WALs to ship
+	// in order to do a best-effort read after write gurantee
+	resp.LastRemoteWal = LastWAL(s.core)
 
 	return resp, nil
 }
