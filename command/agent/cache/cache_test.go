@@ -3,9 +3,13 @@ package cache
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,13 +107,18 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	}
 
 	// Create the API proxier
-	apiProxy := NewAPIProxy(&APIProxyConfig{
+	apiProxy, err := NewAPIProxy(&APIProxyConfig{
+		Client: clusterClient,
 		Logger: cacheLogger.Named("apiproxy"),
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      clusterClient,
 		BaseContext: ctx,
 		Proxier:     apiProxy,
 		Logger:      cacheLogger.Named("leasecache"),
@@ -120,7 +129,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
 	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, false, clusterClient))
 	server := &http.Server{
@@ -176,6 +185,135 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 			t.Fatalf("evicted an undesired index from cache: type: %q, value: %q", valType, val)
 		}
 	}
+}
+
+func TestCache_AutoAuthTokenStripping(t *testing.T) {
+	response1 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup-self"}}`
+	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
+	responses := []*SendResponse{
+		&SendResponse{
+			Response: &api.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       ioutil.NopCloser(strings.NewReader(response1)),
+				},
+			},
+			ResponseBody: []byte(response1),
+		},
+		&SendResponse{
+			Response: &api.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       ioutil.NopCloser(strings.NewReader(response2)),
+				},
+			},
+			ResponseBody: []byte(response2),
+		},
+	}
+	leaseCache := testNewLeaseCache(t, responses)
+
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := namespace.RootContext(nil)
+
+	// Create a muxer and add paths relevant for the lease cache layer
+	mux := http.NewServeMux()
+	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, true, client))
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       5 * time.Minute,
+		ErrorLog:          cacheLogger.StandardLogger(nil),
+	}
+	go server.Serve(listener)
+
+	testClient, err := client.Clone()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testClient.SetToken(client.Token())
+	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
+		t.Fatal(err)
+	}
+
+	secret, err := testClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Data["id"] != nil || secret.Data["accessor"] != nil || secret.Data["request"].(string) != "lookup-self" {
+		t.Fatalf("failed to strip off auto-auth token on lookup-self")
+	}
+
+	secret, err = testClient.Auth().Token().Lookup("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Data["id"] != nil || secret.Data["accessor"] != nil || secret.Data["request"].(string) != "lookup" {
+		t.Fatalf("failed to strip off auto-auth token on lookup")
+	}
+}
+
+func TestCache_ConcurrentRequests(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	err := testClient.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			key := fmt.Sprintf("kv/foo/%d_%d", i, rand.Int())
+			_, err := testClient.Logical().Write(key, map[string]interface{}{
+				"key": key,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			secret, err := testClient.Logical().Read(key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if secret == nil || secret.Data["key"].(string) != key {
+				t.Fatal(fmt.Sprintf("failed to read value for key: %q", key))
+			}
+		}(i)
+
+	}
+	wg.Wait()
 }
 
 func TestCache_TokenRevocations_RevokeOrphan(t *testing.T) {

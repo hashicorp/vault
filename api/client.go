@@ -57,6 +57,10 @@ type Config struct {
 	// HttpClient.
 	Address string
 
+	// AgentAddress is the address of the local Vault agent. This should be a
+	// complete URL such as "http://vault.example.com".
+	AgentAddress string
+
 	// HttpClient is the HTTP client to use. Vault sets sane defaults for the
 	// http.Client and its associated http.Transport created in DefaultConfig.
 	// If you must modify Vault's defaults, it is suggested that you start with
@@ -224,6 +228,7 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 // there is an error, no configuration value is updated.
 func (c *Config) ReadEnvironment() error {
 	var envAddress string
+	var envAgentAddress string
 	var envCACert string
 	var envCAPath string
 	var envClientCert string
@@ -238,9 +243,8 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
-	// Agent's address will take precedence over Vault's address
 	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
-		envAddress = v
+		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -307,6 +311,10 @@ func (c *Config) ReadEnvironment() error {
 
 	if envAddress != "" {
 		c.Address = envAddress
+	}
+
+	if envAgentAddress != "" {
+		c.AgentAddress = envAgentAddress
 	}
 
 	if envMaxRetries != nil {
@@ -378,17 +386,22 @@ func NewClient(c *Config) (*Client, error) {
 		c.HttpClient.Transport = def.HttpClient.Transport
 	}
 
-	if strings.HasPrefix(c.Address, "unix://") {
-		socket := strings.TrimPrefix(c.Address, "unix://")
+	address := c.Address
+	if c.AgentAddress != "" {
+		address = c.AgentAddress
+	}
+
+	if strings.HasPrefix(address, "unix://") {
+		socket := strings.TrimPrefix(address, "unix://")
 		transport := c.HttpClient.Transport.(*http.Transport)
 		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
 			return net.Dial("unix", socket)
 		}
 		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
-		c.Address = "http://unix"
+		address = "http://unix"
 	}
 
-	u, err := url.Parse(c.Address)
+	u, err := url.Parse(address)
 	if err != nil {
 		return nil, err
 	}

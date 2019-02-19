@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/auth/approle"
@@ -332,14 +333,30 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
+		// Ensure that the connection from agent to Vault server doesn't loop
+		// back to agent.
+		apiConfig := api.DefaultConfig()
+		apiConfig.AgentAddress = ""
+		client, err := api.NewClient(apiConfig)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating API client for cache: %v", err))
+			return 1
+		}
+
 		// Create the API proxier
-		apiProxy := cache.NewAPIProxy(&cache.APIProxyConfig{
+		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
+			Client: client,
 			Logger: cacheLogger.Named("apiproxy"),
 		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
+			return 1
+		}
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+			Client:      client,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
 			Logger:      cacheLogger.Named("leasecache"),

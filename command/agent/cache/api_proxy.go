@@ -3,6 +3,7 @@ package cache
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -12,21 +13,27 @@ import (
 // APIProxy is an implementation of the proxier interface that is used to
 // forward the request to Vault and get the response.
 type APIProxy struct {
+	client *api.Client
 	logger hclog.Logger
 }
 
 type APIProxyConfig struct {
+	Client *api.Client
 	Logger hclog.Logger
 }
 
-func NewAPIProxy(config *APIProxyConfig) Proxier {
-	return &APIProxy{
-		logger: config.Logger,
+func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
+	if config.Client == nil {
+		return nil, fmt.Errorf("nil API client")
 	}
+	return &APIProxy{
+		client: config.Client,
+		logger: config.Logger,
+	}, nil
 }
 
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := ap.client.Clone()
 	if err != nil {
 		return nil, err
 	}
@@ -43,19 +50,26 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 
-	// Parse and reset response body
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ap.logger.Error("failed to read request body", "error", err)
-		return nil, err
+	sendResponse := &SendResponse{
+		Response: resp,
 	}
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(respBody))
 
-	return &SendResponse{
-		Response:     resp,
-		ResponseBody: respBody,
-	}, nil
+	// Set SendResponse.ResponseBody if the response body is non-nil
+	if resp.Body != nil {
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			ap.logger.Error("failed to read request body", "error", err)
+			return nil, err
+		}
+		// Close the old body
+		resp.Body.Close()
+
+		// Re-set the response body for potential consumption on the way back up the
+		// Proxier middleware chain.
+		resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
+
+		sendResponse.ResponseBody = respBody
+	}
+
+	return sendResponse, nil
 }

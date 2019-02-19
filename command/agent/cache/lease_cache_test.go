@@ -21,15 +21,21 @@ import (
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 	t.Helper()
 
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:      client,
 		BaseContext: context.Background(),
 		Proxier:     newMockProxier(responses),
 		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return lc
 }
 
@@ -52,7 +58,7 @@ func TestCache_ComputeIndexID(t *testing.T) {
 					},
 				},
 			},
-			"2edc7e965c3e1bdce3b1d5f79a52927842569c0734a86544d222753f11ae4847",
+			"7b5db388f211fd9edca8c6c254831fb01ad4e6fe624dbb62711f256b5e803717",
 			false,
 		},
 	}

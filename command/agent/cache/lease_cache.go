@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
@@ -30,6 +30,7 @@ const (
 	vaultPathTokenRevokeSelf     = "/v1/auth/token/revoke-self"
 	vaultPathTokenRevokeAccessor = "/v1/auth/token/revoke-accessor"
 	vaultPathTokenRevokeOrphan   = "/v1/auth/token/revoke-orphan"
+	vaultPathTokenLookup         = "/v1/auth/token/lookup"
 	vaultPathTokenLookupSelf     = "/v1/auth/token/lookup-self"
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"
@@ -62,6 +63,7 @@ type cacheClearRequest struct {
 // the caching of responses. It passes the incoming request
 // to an underlying Proxier implementation.
 type LeaseCache struct {
+	client      *api.Client
 	proxier     Proxier
 	logger      hclog.Logger
 	db          *cachememdb.CacheMemDB
@@ -71,6 +73,7 @@ type LeaseCache struct {
 // LeaseCacheConfig is the configuration for initializing a new
 // Lease.
 type LeaseCacheConfig struct {
+	Client      *api.Client
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
@@ -93,6 +96,10 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		return nil, fmt.Errorf("missing configuration required params: %v", conf)
 	}
 
+	if conf.Client == nil {
+		return nil, fmt.Errorf("nil API client")
+	}
+
 	db, err := cachememdb.New()
 	if err != nil {
 		return nil, err
@@ -106,6 +113,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	return &LeaseCache{
+		client:      conf.Client,
 		proxier:     conf.Proxier,
 		logger:      conf.Logger,
 		db:          db,
@@ -172,7 +180,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		RequestPath: req.Request.URL.Path,
 	}
 
-	secret, err := api.ParseSecret(bytes.NewBuffer(resp.ResponseBody))
+	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
 	if err != nil {
 		c.logger.Error("failed to parse response as secret", "error", err)
 		return nil, err
@@ -279,7 +287,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewBuffer(resp.ResponseBody))
+	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(resp.ResponseBody))
 
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
@@ -329,7 +337,7 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		}
 	}()
 
-	client, err := api.NewClient(api.DefaultConfig())
+	client, err := c.client.Clone()
 	if err != nil {
 		c.logger.Error("failed to create API client in the renewer", "error", err)
 		return
@@ -412,7 +420,7 @@ func (c *LeaseCache) updateResponse(ctx context.Context, renewal *api.RenewOutpu
 	if resp.Body != nil {
 		resp.Body.Close()
 	}
-	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	resp.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
 	resp.ContentLength = int64(len(bodyBytes))
 
 	// Serialize the response
@@ -446,14 +454,13 @@ func computeIndexID(req *SendRequest) (string, error) {
 	}
 
 	// Reset the request body after it has been closed by Write
-	req.Request.Body = ioutil.NopCloser(bytes.NewBuffer(req.RequestBody))
+	req.Request.Body = ioutil.NopCloser(bytes.NewReader(req.RequestBody))
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
 	// requests sets the token directly into SendRequest.Token
 	b.Write([]byte(req.Token))
 
-	sum := sha256.Sum256(b.Bytes())
-	return hex.EncodeToString(sum[:]), nil
+	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.
