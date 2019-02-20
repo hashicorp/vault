@@ -18,14 +18,16 @@ CHANGES:
 
 FEATURES:
 
- * **Agent Cache**: Vault Agent can now be configured to act as a caching proxy to 
-   Vault. Clients can send requests to Vault Agent and the request will be proxied
+ * **Vault Agent Caching**: Vault Agent can now be configured to act as a caching proxy 
+   to Vault. Clients can send requests to Vault Agent and the request will be proxied
    to the Vault server and cached locally in Agent. Currently Agent will cache 
    generated leases and tokens and keep them renewed. The proxy can also use the Auto
    Auth feature so clients do not need to provide a Vault token with the request.
  * **OIDC Support**: The JWT auth backend now supports OIDC roles. These allow
    authentication via an OIDC-compliant provider via the user's browser. The
    login may be initiatated from the Vault UI or through the `vault login` command.
+ * **ACL Path Wildcard**: ACL paths can now use the `+` character to enable wild card 
+   matching for a single directory in the path definition.
    
 IMPROVEMENTS:
 
@@ -35,6 +37,7 @@ IMPROVEMENTS:
  * auth/jwt: An arbitrary set of bound claims can now be configured for a role.
  * auth/jwt: The name "oidc" has been added as an alias for the jwt backend. Either
    name may be specified in the `auth enable` command.
+ * core/metrics: Prometheus pull support using a new sys/metrics endpoint. [GH-5308]
  * replication: The inital replication indexing process on newly initialized or upgraded
    clusters now runs asynchronously.
  * ui: The UI is now leveraging OpenAPI definitions to pull in fields for various forms.
@@ -42,6 +45,10 @@ IMPROVEMENTS:
    [GH-6209]
    
 BUG FIXES:
+ 
+ * identity: Fix a panic at login when external group has a nil alias [GH-6230]
+ * performance standby: Fixed a bug causing performance standbys to wait longer
+   than necessary after forwarding a write to the active node.
  
 ## 1.0.3 (February 12th, 2019)
 
@@ -162,13 +169,13 @@ BUG FIXES:
    array) [GH-5972]
  * secret/cubbyhole: Properly cleanup cubbyhole after token revocation [GH-6006]
  * secret/pki: Fix reading certificates on windows with the file storage backend [GH-6013]
- * ui (enterprise) - properly display perf-standby count on the license page [GH-5971]
- * ui - fix disappearing nested secrets and go to the nearest parent when deleting
+ * ui (enterprise): properly display perf-standby count on the license page [GH-5971]
+ * ui: fix disappearing nested secrets and go to the nearest parent when deleting
    a secret - [GH-5976]
- * ui - fix error where deleting an item via the context menu would fail if the 
+ * ui: fix error where deleting an item via the context menu would fail if the 
    item name contained dots [GH-6018]
- * ui - allow saving of kv secret after an errored save attempt [GH-6022]
- * ui - fix display of kv-v1 secret containing a key named "keys" [GH-6023]
+ * ui: allow saving of kv secret after an errored save attempt [GH-6022]
+ * ui: fix display of kv-v1 secret containing a key named "keys" [GH-6023]
 
 ## 1.0.1 (December 14th, 2018)
 
