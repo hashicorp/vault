@@ -369,11 +369,16 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
                 Username: name,
         }
 
-        // Create the user
-        username, password, restored, err = db.SetCredentials(ctx, role.Statements, config, createUser)
-        if err != nil {
-                b.CloseIfShutdown(db, err)
-                return "", "", false, err
+        // Create or rotate the user
+        stmts := role.Statements.Creation
+        if createUser {
+                stmts = role.Statements.Rotation
+        }
+
+        username, password, restored, sterr := db.SetCredentials(ctx, config, stmts)
+        if sterr != nil {
+                b.CloseIfShutdown(db, sterr)
+                return "", "", false, sterr
         }
 
         return username, password, false, nil

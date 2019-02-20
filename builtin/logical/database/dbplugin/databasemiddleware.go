@@ -86,13 +86,13 @@ func (mw *databaseTracingMiddleware) Close() (err error) {
         return mw.next.Close()
 }
 
-func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig, createUser bool) (username, password string, restored bool, err error) {
+func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
         defer func(then time.Time) {
                 mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
         }(time.Now())
 
         mw.logger.Trace("set credentials", "status", "started")
-        return mw.next.SetCredentials(ctx, statements, staticConfig, createUser)
+        return mw.next.SetCredentials(ctx, staticConfig, statements)
 }
 
 // ---- Metrics Middleware Domain ----
@@ -210,7 +210,7 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
         return mw.next.Close()
 }
 
-func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig, createUser bool) (username, password string, restored bool, err error) {
+func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
         defer func(now time.Time) {
                 metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
                 metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
@@ -223,7 +223,7 @@ func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, stateme
 
         metrics.IncrCounter([]string{"database", "SetCredentials"}, 1)
         metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials"}, 1)
-        return mw.next.SetCredentials(ctx, statements, staticConfig, createUser)
+        return mw.next.SetCredentials(ctx, staticConfig, statements)
 }
 
 // ---- Error Sanitizer Middleware Domain ----
@@ -299,7 +299,7 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
         return err
 }
 
-func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig, createUser bool) (username, password string, restored bool, err error) {
-        username, password, restored, err = mw.next.SetCredentials(ctx, statements, staticConfig, createUser)
+func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+        username, password, restored, err = mw.next.SetCredentials(ctx, staticConfig, statements)
         return username, password, restored, mw.sanitize(err)
 }

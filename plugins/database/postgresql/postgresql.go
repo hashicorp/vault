@@ -95,14 +95,9 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig, createUser bool) (username, password string, restored bool, err error) {
-        statements = dbutil.StatementCompatibilityHelper(statements)
-
-        if len(statements.Creation) == 0 {
-                return "", "", false, dbutil.ErrEmptyCreationStatement
-        }
-        if len(statements.Rotation) == 0 {
-                return "", "", false, dbutil.ErrEmptyRotationStatement
+func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+        if len(statements) == 0 {
+                return "", "", false, errors.New("empty creation or rotation statements")
         }
 
         // Grab the lock
@@ -131,11 +126,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
         // Return the secret
 
         // Execute each query
-        stmts := statements.Creation
-        if !createUser {
-                stmts = statements.Rotation
-        }
-        for _, stmt := range stmts {
+        for _, stmt := range statements {
                 for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
                         query = strings.TrimSpace(query)
                         if len(query) == 0 {
