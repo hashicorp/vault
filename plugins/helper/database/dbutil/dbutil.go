@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrEmptyCreationStatement = errors.New("empty creation statements")
+        ErrEmptyRotationStatement = errors.New("empty rotation statements")
 )
 
 // Query templates a query for us.

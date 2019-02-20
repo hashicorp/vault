@@ -26,6 +26,8 @@ message CreateUserRequest {
 message SetCredentialsRequest {
         Statements     statements = 1;
   StaticUserConfig static_user_config = 2;
+  bool create_user = 3;
+        repeated string statements = 1;
 }
 
 message SetCredentialsResponse {
@@ -63,6 +65,7 @@ message Statements {
 	repeated string revocation = 6;
 	repeated string rollback  = 7;
 	repeated string renewal = 8;
+        repeated string rotation = 9;
 }
 
 message UsernameConfig {

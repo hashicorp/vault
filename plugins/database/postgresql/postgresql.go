@@ -15,10 +15,9 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"github.com/lib/pq"
-        "github.com/y0ssar1an/q"
+        "github.com/hashicorp/vault/plugins/helper/database/credsutil"
+        "github.com/hashicorp/vault/plugins/helper/database/dbutil"
+        "github.com/lib/pq"
 )
 
 const (
@@ -96,12 +95,14 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, restored bool, err error) {
-        q.Q("postgresql SetCredentials called:")
+func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig, createUser bool) (username, password string, restored bool, err error) {
         statements = dbutil.StatementCompatibilityHelper(statements)
 
         if len(statements.Creation) == 0 {
                 return "", "", false, dbutil.ErrEmptyCreationStatement
+        }
+        if len(statements.Rotation) == 0 {
+                return "", "", false, dbutil.ErrEmptyRotationStatement
         }
 
         // Grab the lock
@@ -130,22 +131,25 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
         // Return the secret
 
         // Execute each query
-        for _, stmt := range statements.Creation {
-                q.Q("stmt pre parsee:", stmt)
-                // for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-                stmt = strings.TrimSpace(stmt)
-                if len(stmt) == 0 {
-                        continue
-                }
+        stmts := statements.Creation
+        if !createUser {
+                stmts = statements.Rotation
+        }
+        for _, stmt := range stmts {
+                for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+                        query = strings.TrimSpace(query)
+                        if len(query) == 0 {
+                                continue
+                        }
 
-                m := map[string]string{
-                        "name":     staticUser.Username,
-                        "password": password,
+                        m := map[string]string{
+                                "name":     username,
+                                "password": password,
+                        }
+                        if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+                                return "", "", false, err
+                        }
                 }
-                if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
-                        return "", "", false, err
-                }
-                // }
         }
 
         // Commit the transaction

@@ -9,7 +9,10 @@ import (
         "github.com/hashicorp/vault/helper/namespace"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
+        "github.com/y0ssar1an/q"
 )
+
+var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_frequency"}
 
 func TestBackend_Static_Config(t *testing.T) {
         cluster, sys := getCluster(t)
@@ -103,11 +106,15 @@ func TestBackend_Static_Config(t *testing.T) {
                         data := map[string]interface{}{
                                 "name":                  "plugin-role-test",
                                 "db_name":               "plugin-test",
-                                "creation_statements":   testStaticRoleCreate,
+                                "creation_statements":   testRoleStaticCreate,
+                                "rotation_statements":   testRoleStaticUpdate,
                                 "revocation_statements": defaultRevocationSQL,
                                 "default_ttl":           "5m",
                                 "max_ttl":               "10m",
-                                "static_account":        tc.account,
+                        }
+
+                        for k, v := range tc.account {
+                                data[k] = v
                         }
 
                         req := &logical.Request{
@@ -158,16 +165,23 @@ func TestBackend_Static_Config(t *testing.T) {
                         }
 
                         expected := tc.expected
-                        actual := resp.Data["static_account"]
+                        actual := make(map[string]interface{})
+                        q.Q("resp.Data:", resp.Data)
+                        for _, key := range dataKeys {
+                                if v, ok := resp.Data[key]; ok {
+                                        actual[key] = v
+                                }
+                        }
 
                         if len(tc.expected) > 0 {
                                 // verify a password is returned, but we don't care what it's value is
-                                act := actual.(map[string]interface{})
-                                if act["password"] == "" {
+                                if actual["password"] == "" {
                                         t.Fatalf("expected result to contain password, but none found")
                                 }
-                                delete(act, "password")
-                                if diff := deep.Equal(expected, act); diff != nil {
+                                delete(actual, "password")
+                                q.Q("actual:", actual)
+                                q.Q("expected:", expected)
+                                if diff := deep.Equal(expected, actual); diff != nil {
                                         t.Fatal(diff)
                                 }
                         }
@@ -233,3 +247,14 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // const testStaticRoleUpdate = `
 // ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // `
+
+const testRoleStaticCreate = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}'
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+`
+
+const testRoleStaticUpdate = `
+ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+`
