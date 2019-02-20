@@ -46,7 +46,8 @@ IMPROVEMENTS:
    
 BUG FIXES:
  
- * identity: Fix a panic at login when external group has a nil alias [GH-6230]
+ * cli: Fix panic in the token print command. [GH-6208]
+ * identity: Fix a panic at login when external group has a nil alias. [GH-6230]
  * performance standby: Fixed a bug causing performance standbys to wait longer
    than necessary after forwarding a write to the active node.
  
