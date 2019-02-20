@@ -24,10 +24,8 @@ message CreateUserRequest {
 }
 
 message SetCredentialsRequest {
-        Statements     statements = 1;
-  StaticUserConfig static_user_config = 2;
-  bool create_user = 3;
-        repeated string statements = 1;
+  StaticUserConfig static_user_config = 1;
+        repeated string statements = 2;
 }
 
 message SetCredentialsResponse {
