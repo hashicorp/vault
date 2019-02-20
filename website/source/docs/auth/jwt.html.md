@@ -82,7 +82,7 @@ JSONPointer can be used as a selector. Refer to the
 ## OIDC Authentication
 
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly, please
-refer to the JWT Authentication(NEED LINK) section below. Basic familarly of [OIDC concepts]
+refer to the [JWT Authentication](/docs/auth/jwt.html#jwt-authentication) section below. Basic familarly of [OIDC concepts]
 (https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1) is assumed.
 
 Vault includes two built in OIDC-based login flow: the Vault UI, and the CLI
@@ -115,12 +115,23 @@ they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
 
-### OIDC Login (UI)
-TBD
+### OIDC Login (Vault UI)
+
+1. Select the OIDC login method.
+1. Enter a role name if necessary.
+1. Press "Sign In" and complete the authentication with the configured provider. 
 
 ### OIDC Login (CLI)
+
+The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
+different path, specify `-path=/my-path` in the CLI. 
+
 ```text
-$ vault login 
+$ vault login -method=oidc role=test
+
+Complete the login via your OIDC provider. Launching browser to:
+
+    https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8300%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
 ```
 
 ### OIDC Provider Configuration
@@ -163,6 +174,9 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 
 ## JWT Authentication
+
+The authentication flow for roles of type "jwt" is simpler than OIDC, as Vault
+need only validate the provided JWT.
 
 ### Via the CLI
 
