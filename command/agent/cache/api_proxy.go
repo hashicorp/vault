@@ -7,39 +7,38 @@ import (
 	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/agent"
+	"github.com/hashicorp/vault/api"
 )
 
 // APIProxy is an implementation of the proxier interface that is used to
 // forward the request to Vault and get the response.
 type APIProxy struct {
-	clientManager *agent.ClientManager
-	logger        hclog.Logger
+	client *api.Client
+	logger hclog.Logger
 }
 
 type APIProxyConfig struct {
-	ClientManager *agent.ClientManager
-	Logger        hclog.Logger
+	Client *api.Client
+	Logger hclog.Logger
 }
 
 func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
-	if config.ClientManager == nil {
+	if config.Client == nil {
 		return nil, fmt.Errorf("nil API client")
 	}
 	return &APIProxy{
-		clientManager: config.ClientManager,
-		logger:        config.Logger,
+		client: config.Client,
+		logger: config.Logger,
 	}, nil
 }
 
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
-	client, err := ap.clientManager.New()
+	client, err := ap.client.Clone()
 	if err != nil {
 		return nil, err
 	}
 	client.SetToken(req.Token)
 	client.SetHeaders(req.Request.Header)
-	defer ap.clientManager.Remove(client)
 
 	fwReq := client.NewRequest(req.Request.Method, req.Request.URL.Path)
 	fwReq.BodyBytes = req.RequestBody

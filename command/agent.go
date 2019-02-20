@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/auth/approle"
@@ -32,8 +31,8 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
-	cachesink "github.com/hashicorp/vault/command/agent/sink/cache"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	passthroughsink "github.com/hashicorp/vault/command/agent/sink/passthrough"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/version"
@@ -341,11 +340,29 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
-		cacheSink, err := cachesink.NewCacheSink(&sink.SinkConfig{
+		tokenCh := make(chan string)
+		sinkConfig := &sink.SinkConfig{
 			Logger: cacheLogger,
-		}, agent.NewClientManager(client))
+		}
+
+		// Watch for auto-auth token re-auths and update the client token accordingly
+		// whenever that happens
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case token := <-tokenCh:
+					if token != client.Token() {
+						client.SetToken(token)
+					}
+				}
+			}
+		}()
+
+		cacheSink, err := passthroughsink.New(sinkConfig, tokenCh)
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error creating client manager: %v", err))
+			c.UI.Error(fmt.Sprintf("Error creating sink for cache: %v", err))
 			return 1
 		}
 
