@@ -27,7 +27,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 		token := r.Header.Get(consts.AuthHeaderName)
 		autoAuthToken := inmemSink.Token()
 		if token == "" && useAutoAuthToken {
-			logger.Debug("using auto auth token")
+			logger.Debug("using auto auth token", "path", r.URL.Path, "method", r.Method)
 			token = autoAuthToken
 		}
 
