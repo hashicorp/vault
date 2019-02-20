@@ -1,4 +1,4 @@
-## Next
+## 1.1.0-beta1 (February 20th, 2019)
 
 CHANGES:
 
@@ -7,7 +7,26 @@ CHANGES:
    [JSONPointer](https://tools.ietf.org/html/rfc6901).
  * auth/jwt: Roles now have a "role type" parameter with a default type of "oidc". To
    configure new JWT roles, a role type of "jwt" must be explicitly specified.
+ * cli: CLI commands deprecated in 0.9.2 are now removed. Please see the CLI help output
+   for updated commands.
+ * core: Vault no longer automatically mounts a k/v backend at the "secret/" path when 
+   initalizing Vault.
+ * core: Vault's cluster port will now be opened on HA standby nodes.
+ * plugins: Vault no longer supports running netRPC plugins. These were deprecated in 
+   favor of gRPC based plugins and any plugin built since 0.9.4 defaults to gRPC. Older 
+   plugins may need to be recompiled against the latest Vault dependencies.
 
+FEATURES:
+
+ * **Agent Cache**: Vault Agent can now be configured to act as a caching proxy to 
+   Vault. Clients can send requests to Vault Agent and the request will be proxied
+   to the Vault server and cached locally in Agent. Currently Agent will cache 
+   generated leases and tokens and keep them renewed. The proxy can also use the Auto
+   Auth feature so clients do not need to provide a Vault token with the request.
+ * **OIDC Support**: The JWT auth backend now supports OIDC roles. These allow
+   authentication via an OIDC-compliant provider via the user's browser. The
+   login may be initiatated from the Vault UI or through the `vault login` command.
+   
 IMPROVEMENTS:
 
  * auth/jwt: A default role can be set. It will be used during JWT/OIDC logins if
@@ -16,12 +35,10 @@ IMPROVEMENTS:
  * auth/jwt: An arbitrary set of bound claims can now be configured for a role.
  * auth/jwt: The name "oidc" has been added as an alias for the jwt backend. Either
    name may be specified in the `auth enable` command.
- 
-FEATURES:
-
- * **OIDC Support**: The JWT auth backend now supports OIDC roles. These allow
-   authentication via an OIDC-compliant provider via the user's browser. The
-   login may be initiatated from the Vault UI or through the `vault login` command.
+ * replication: The inital replication indexing process on newly initialized or upgraded
+   clusters now runs asynchronously.
+   
+BUG FIXES:
  
 ## 1.0.3 (February 12th, 2019)
 
