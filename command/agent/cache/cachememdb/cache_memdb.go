@@ -219,39 +219,6 @@ func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 	return nil
 }
 
-// EvictAll removes all matching indexes from the cache based on index name and value.
-func (c *CacheMemDB) EvictAll(indexName, indexValue string) error {
-	return c.batchEvict(false, indexName, indexValue)
-}
-
-// EvictByPrefix removes all matching prefix indexes from the cache based on index name and prefix.
-func (c *CacheMemDB) EvictByPrefix(indexName, indexPrefix string) error {
-	return c.batchEvict(true, indexName, indexPrefix)
-}
-
-// batchEvict is a helper that supports eviction based on absolute and prefixed index values.
-func (c *CacheMemDB) batchEvict(isPrefix bool, indexName string, indexValues ...interface{}) error {
-	if !validIndexName(indexName) {
-		return fmt.Errorf("invalid index name %q", indexName)
-	}
-
-	if isPrefix {
-		indexName = indexName + "_prefix"
-	}
-
-	txn := c.db.Txn(true)
-	defer txn.Abort()
-
-	_, err := txn.DeleteAll(tableNameIndexer, indexName, indexValues...)
-	if err != nil {
-		return err
-	}
-
-	txn.Commit()
-
-	return nil
-}
-
 // Flush resets the underlying cache object.
 func (c *CacheMemDB) Flush() error {
 	newDB, err := newDB()
