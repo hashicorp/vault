@@ -340,19 +340,21 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
-		sinkConfig := &sink.SinkConfig{
-			Logger: cacheLogger,
+		var inmemSink sink.Sink
+		if config.Cache.UseAutoAuthToken {
+			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+			inmemSink, err = inmem.New(&sink.SinkConfig{
+				Logger: cacheLogger,
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+				return 1
+			}
+			sinks = append(sinks, &sink.SinkConfig{
+				Logger: cacheLogger,
+				Sink:   inmemSink,
+			})
 		}
-
-		inmemSink, err := inmem.New(sinkConfig)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-			return 1
-		}
-		sinks = append(sinks, &sink.SinkConfig{
-			Logger: cacheLogger,
-			Sink:   inmemSink,
-		})
 
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
@@ -381,7 +383,7 @@ func (c *AgentCommand) Run(args []string) int {
 		mux := http.NewServeMux()
 		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, inmemSink.(sink.SinkReader)))
+		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Cache.Listeners {
