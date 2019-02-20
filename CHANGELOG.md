@@ -37,6 +37,9 @@ IMPROVEMENTS:
    name may be specified in the `auth enable` command.
  * replication: The inital replication indexing process on newly initialized or upgraded
    clusters now runs asynchronously.
+ * ui: The UI is now leveraging OpenAPI definitions to pull in fields for various forms.
+   This means, it will not be necessary to add fields on the go and JS sides in the future.
+   [GH-6209]
    
 BUG FIXES:
  
