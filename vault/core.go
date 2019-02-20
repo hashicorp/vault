@@ -415,9 +415,9 @@ type Core struct {
 
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *ClusterListener
-  
+
 	// Telemetry objects
-	metricsHelper     *metricsutil.MetricsHelper
+	metricsHelper *metricsutil.MetricsHelper
 }
 
 // CoreConfig is used to parameterize a core
@@ -594,7 +594,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		builtinRegistry:              conf.BuiltinRegistry,
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
-    metricsHelper:                conf.MetricsHelper,
+		metricsHelper:                conf.MetricsHelper,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)

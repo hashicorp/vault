@@ -1734,7 +1734,6 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.Metr
 
 	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
 
-
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
