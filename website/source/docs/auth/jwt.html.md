@@ -7,24 +7,23 @@ description: |-
   The JWT auth method allows authentication using JWTs, with support for OIDC Discovery for key fetching
 ---
 
-# JWT Auth Backend
+# JWT Auth Method
 
-The `jwt` auth backend can be used to authenticate with Vault using
+The `jwt` auth method can be used to authenticate with Vault using
 [OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a [JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
-The OIDC method will allow authentication via an configured OIDC provider using the user's web browser.
-This method may be initiated from the Vault UI or the command line. Alternatively, if a JWT is provided
-directly, it will be cryptographically verified using locally-provided keys, or, if configured, an
+The OIDC method will allow authentication via a configured OIDC provider using the user's web browser.
+This method may be initiated from the Vault UI or the command line. Alternatively, a JWT can be provided
+directly. It will be cryptographically verified using locally-provided keys, or, if configured, an
 OIDC Discovery service can be used to fetch the appropriate keys. The choice of method is configured per role.
 
-Both methods allow additional processing of the claims data in the provided or received JWT. Some of the
-common concepts will be covered first, followed by specific examples of OIDC and JWT usage.
+Both methods allow additional processing of the claims data in the JWT. Some of the concepts common to both methods will be covered first, followed by specific examples of OIDC and JWT usage.
 
 ### Bound Claims
 
 Once a JWT has been validated as being properly signed and not expired, the authorization flow will validate that any
 configured "bound" parameters match. In some cases there are dedicated parameters, for example `bound_subject`,  which must
-match the JWT's `sub` parameter. A role may also be configured to check arbitrary claimss through the `bound_claims`
-map. The maps contains a set of claims and their required values. For example, assume `bound_claims` is set to:
+match the JWT's `sub` parameter. A role may also be configured to check arbitrary claims through the `bound_claims`
+map. The map contains a set of claims and their required values. For example, assume `bound_claims` is set to:
 
 ```json
 {
@@ -38,8 +37,8 @@ would be authorized.
 
 ### Claims as Metadata
 
-Data from claims can be copied into the resulting auth token and alias metadata by configuring `claims_mappings`. This role
-parameter is a map of items to copy. The map elements are of the form: `"<JWT claim>": "<metadata key>"`. Assume
+Data from claims can be copied into the resulting auth token and alias metadata by configuring `claim_mappings`. This role
+parameter is a map of items to copy. The map elements are of the form: `"<JWT claim>":"<metadata key>"`. Assume
 `claim_mappings` is set to:
 
 ```json
@@ -53,13 +52,13 @@ This specifies that the value in the JWT claim "division" should be copied to th
 "department" claim value will also be copied into metadata but will retain the key name. If a claim is configured in `claim_mappings`,
 it must existing in the JWT or else the authentication will fail.
 
-Note: the metadata key name "role" is reserved and my not be set as a metadata target name.
+Note: the metadata key name "role" is reserved and may not be used for claim mappings.
 
 
 ### Claim specifications and JSONPointer
 
 Some parameters (e.g. `bound_claims` and `groups_claim`) are used to point to data within the JWT. If
-the desired key is at the top of level of the JWT, the name may be provided directly. If it is nested at a
+the desired key is at the top of level of the JWT, the name can be provided directly. If it is nested at a
 lower level, a JSONPointer may be used.
 
 Assume the following JSON data to be referenced:
@@ -74,19 +73,19 @@ Assume the following JSON data to be referenced:
 }
 ```
 
-The parameter `"division"` will reference "North America", as this is a top level key. The parameter
-`"/groups/primary"` use JSONPointer syntax to reference "Engineering" at a lower level. Any valid
+A parameter of `"division"` will reference "North America", as this is a top level key. A parameter
+`"/groups/primary"` uses JSONPointer syntax to reference "Engineering" at a lower level. Any valid
 JSONPointer can be used as a selector. Refer to the
 [JSONPointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax
 
 
 ## OIDC Authentication
 
-This section converse the setup and use of OIDC roles. If a JWT is provided directly, please
+This section covers the setup and use of OIDC roles. If a JWT is to be provided directly, please
 refer to the JWT Authentication(NEED LINK) section below. Basic familarly of [OIDC concepts]
 (https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1) is assumed.
 
-Vault includes two built-in OIDC-based logins approaches: via the Vault UI, and via the CLI
+Vault includes two built in OIDC-based login flow: the Vault UI, and the CLI
 using a `vault login` helper.
 
 ### Redirect URIs
@@ -94,17 +93,17 @@ using a `vault login` helper.
 An important part of OIDC role configuration is properly setting redirect URIs. This must be
 done both in Vault and with the OIDC provider, and these configurations must align. The
 redirect URIs are specified for a role with the `allowed_redirect_uris` parameter. There are
-different redirect URIs to configure for the Vault UI and `vault login -method=oidc` cases, so
+different redirect URIs to configure for the Vault UI and `vault login` flows, so
 one or both will need to be set up depending on the installation.
 
-#### CLI
+**CLI**
 
 If you plan to support authentication via `vault login -method=oidc`, a localhost redirect URI
 must be set. This can usually be: `http://localhost:8300/oidc/callback`. Logins via the CLI may
 specify a different listening port if needed, and a URI with this port must match one of the
 configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
 
-#### Vault UI
+**Vault UI**
 
 Logging in via the Vault UI requires a redirect URI of the form:
 `https://{host:port}/ui/vault/auth/{path}/oidc/callback`
@@ -116,10 +115,18 @@ they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
 
+### OIDC Login (UI)
+TBD
+
+### OIDC Login (CLI)
+```text
+$ vault login 
+```
+
 ### OIDC Provider Configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
-guide to configuring OAuth/OIDC applications (in particular setting up claims) is beyond the scope
+guide to configuring OAuth/OIDC applications is beyond the scope
 of this document, but brief overviews of how to set up an application is covered for some common
 providers.
 
@@ -137,12 +144,10 @@ providers.
 1. Copy client ID and secret.
 
 #### Google
-Main reference: https://developers.google.com/identity/protocols/OAuth2
-
-##### Setup
+Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/OAuth2)
 
 1. Visit the [Google API Console](https://console.developers.google.com).
-1. Create or a select Project.
+1. Create or a select a Project.
 1. Create a new credential via Credentials > Create Credentials > OAuth Client ID
 1. Configure the OAuth Consent Screen. Application Name is required. Save.
 1. Select application type: "Web Application".
@@ -206,18 +211,24 @@ authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
 
-1. Enable the JWT auth method:
+1. Enable the JWT auth method. Either the "jwt" or "oidc" name may be used, though
+the choice will correspond to the mount name.
 
     ```text
     $ vault auth enable jwt
+    or
+    $ vault auth enable oidc
     ```
 
-1. Use the `/config` endpoint to configure Vault with local keys or an OIDC Discovery URL. For the
+1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys or an OIDC Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
 list of available configuration options, please see the [API documentation](/api/auth/jwt/index.html).
 
     ```text
     $ vault write auth/jwt/config \
         oidc_discovery_url="https://myco.auth0.com/"
+        oidc_client_id="m5i8bj3iofytj",
+        oidc_client_secret="f4ubv72nfiu23hnsj",
+        default_role="demo"
     ```
 
 1. Create a named role:
@@ -243,4 +254,3 @@ list of available configuration options, please see the [API documentation](/api
 
 The JWT Auth Plugin has a full HTTP API. Please see the
 [API docs](/api/auth/jwt/index.html) for more details.
-
