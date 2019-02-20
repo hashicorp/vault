@@ -329,6 +329,20 @@ func (c *AgentCommand) Run(args []string) int {
 	go ah.Run(ctx, method)
 	go ss.Run(ctx, ah.OutputCh, sinks)
 
+	autoAuthToken := new(string)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case token := <-ss.OutputCh:
+				if token != *autoAuthToken {
+					*autoAuthToken = token
+				}
+			}
+		}
+	}()
+
 	// Parse agent listener configurations
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
@@ -370,7 +384,7 @@ func (c *AgentCommand) Run(args []string) int {
 		mux := http.NewServeMux()
 		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, c.client))
+		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, config.Cache.UseAutoAuthToken, autoAuthToken))
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Cache.Listeners {
