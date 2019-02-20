@@ -20,6 +20,10 @@ type Sink interface {
 	WriteToken(string) error
 }
 
+type SinkReader interface {
+	Token() string
+}
+
 type SinkConfig struct {
 	Sink
 	Logger             hclog.Logger
@@ -44,7 +48,6 @@ type SinkServerConfig struct {
 // SinkServer is responsible for pushing tokens to sinks
 type SinkServer struct {
 	DoneCh        chan struct{}
-	OutputCh      chan string
 	logger        hclog.Logger
 	client        *api.Client
 	random        *rand.Rand
@@ -55,7 +58,6 @@ type SinkServer struct {
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
 		DoneCh:        make(chan struct{}),
-		OutputCh:      make(chan string, 1),
 		logger:        conf.Logger,
 		client:        conf.Client,
 		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
@@ -76,7 +78,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 	ss.logger.Info("starting sink server")
 	defer func() {
 		ss.logger.Info("sink server stopped")
-		close(ss.OutputCh)
 		close(ss.DoneCh)
 	}()
 
@@ -102,7 +103,6 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 				}
 
 				*latestToken = token
-				ss.OutputCh <- *latestToken
 
 				sinkFunc := func(currSink *SinkConfig, currToken string) func() error {
 					return func() error {

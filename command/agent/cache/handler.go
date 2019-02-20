@@ -14,19 +14,21 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/consts"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoAuthToken bool, autoAuthToken *string) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoAuthToken bool, inmemSink sink.SinkReader) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "path", r.URL.Path, "method", r.Method)
 
 		token := r.Header.Get(consts.AuthHeaderName)
+		autoAuthToken := inmemSink.Token()
 		if token == "" && useAutoAuthToken {
 			logger.Debug("using auto auth token")
-			token = *autoAuthToken
+			token = autoAuthToken
 		}
 
 		// Parse and reset body.
@@ -70,7 +72,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 // lookup-self. If the auto-auth token was used to perform lookup-self, the
 // identifier of the token and its accessor same will be stripped off of the
 // response.
-func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAutoAuthToken bool, autoAuthToken *string, req *SendRequest, resp *SendResponse) error {
+func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAutoAuthToken bool, autoAuthToken string, req *SendRequest, resp *SendResponse) error {
 	// If auto-auth token is not being used, there is nothing to do.
 	if !useAutoAuthToken {
 		return nil
@@ -84,7 +86,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 	_, path := deriveNamespaceAndRevocationPath(req)
 	switch path {
 	case vaultPathTokenLookupSelf:
-		if req.Token != *autoAuthToken {
+		if req.Token != autoAuthToken {
 			return nil
 		}
 	case vaultPathTokenLookup:
@@ -102,7 +104,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 			// Input error will be caught by the API
 			return nil
 		}
-		if token != "" && token != *autoAuthToken {
+		if token != "" && token != autoAuthToken {
 			// Lookup is performed on the non-auto-auth token
 			return nil
 		}
