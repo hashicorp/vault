@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/command/agent/sink/mock"
 	"github.com/hashicorp/vault/logical"
 
 	"github.com/go-test/deep"
@@ -131,7 +132,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	mux := http.NewServeMux()
 	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, false, clusterClient))
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -234,7 +235,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, true, client))
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid")))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -249,11 +250,12 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testClient.SetToken(client.Token())
 	if err := testClient.SetAddress("http://" + listener.Addr().String()); err != nil {
 		t.Fatal(err)
 	}
 
+	// Empty the token in the client. Auto-auth token should be put to use.
+	testClient.SetToken("")
 	secret, err := testClient.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)

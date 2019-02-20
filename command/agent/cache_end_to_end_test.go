@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agent/sink/inmem"
 	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -159,7 +160,18 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
+
+	inmemSinkConfig := &sink.SinkConfig{
+		Logger: logger.Named("sink.inmem"),
+	}
+
+	inmemSink, err := inmem.New(inmemSinkConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmemSinkConfig.Sink = inmemSink
+
+	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
 	defer func() {
 		<-ss.DoneCh
 	}()
@@ -253,7 +265,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, true, client))
+	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

@@ -14,19 +14,20 @@ import (
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/consts"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoAuthToken bool, client *api.Client) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "path", r.URL.Path, "method", r.Method)
 
 		token := r.Header.Get(consts.AuthHeaderName)
-		if token == "" && useAutoAuthToken {
-			logger.Debug("using auto auth token")
-			token = client.Token()
+		if token == "" && inmemSink != nil {
+			logger.Debug("using auto auth token", "path", r.URL.Path, "method", r.Method)
+			token = inmemSink.(sink.SinkReader).Token()
 		}
 
 		// Parse and reset body.
@@ -51,7 +52,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 			return
 		}
 
-		err = processTokenLookupResponse(ctx, logger, useAutoAuthToken, client, req, resp)
+		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
 			return
@@ -70,11 +71,12 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, useAutoA
 // lookup-self. If the auto-auth token was used to perform lookup-self, the
 // identifier of the token and its accessor same will be stripped off of the
 // response.
-func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAutoAuthToken bool, client *api.Client, req *SendRequest, resp *SendResponse) error {
+func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, inmemSink sink.Sink, req *SendRequest, resp *SendResponse) error {
 	// If auto-auth token is not being used, there is nothing to do.
-	if !useAutoAuthToken {
+	if inmemSink == nil {
 		return nil
 	}
+	autoAuthToken := inmemSink.(sink.SinkReader).Token()
 
 	// If lookup responded with non 200 status, there is nothing to do.
 	if resp.Response.StatusCode != http.StatusOK {
@@ -84,6 +86,9 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 	_, path := deriveNamespaceAndRevocationPath(req)
 	switch path {
 	case vaultPathTokenLookupSelf:
+		if req.Token != autoAuthToken {
+			return nil
+		}
 	case vaultPathTokenLookup:
 		jsonBody := map[string]interface{}{}
 		if err := json.Unmarshal(req.RequestBody, &jsonBody); err != nil {
@@ -99,7 +104,7 @@ func processTokenLookupResponse(ctx context.Context, logger hclog.Logger, useAut
 			// Input error will be caught by the API
 			return nil
 		}
-		if token != "" && token != client.Token() {
+		if token != "" && token != autoAuthToken {
 			// Lookup is performed on the non-auto-auth token
 			return nil
 		}
