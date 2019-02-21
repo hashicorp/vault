@@ -55,11 +55,11 @@ it must existing in the JWT or else the authentication will fail.
 Note: the metadata key name "role" is reserved and may not be used for claim mappings.
 
 
-### Claim specifications and JSONPointer
+### Claim specifications and JSON Pointer
 
 Some parameters (e.g. `bound_claims` and `groups_claim`) are used to point to data within the JWT. If
 the desired key is at the top of level of the JWT, the name can be provided directly. If it is nested at a
-lower level, a JSONPointer may be used.
+lower level, a JSON Pointer may be used.
 
 Assume the following JSON data to be referenced:
 
@@ -74,27 +74,27 @@ Assume the following JSON data to be referenced:
 ```
 
 A parameter of `"division"` will reference "North America", as this is a top level key. A parameter
-`"/groups/primary"` uses JSONPointer syntax to reference "Engineering" at a lower level. Any valid
-JSONPointer can be used as a selector. Refer to the
-[JSONPointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax
+`"/groups/primary"` uses JSON Pointer syntax to reference "Engineering" at a lower level. Any valid
+JSON Pointer can be used as a selector. Refer to the
+[JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax
 
 
 ## OIDC Authentication
 
-This section covers the setup and use of OIDC roles. If a JWT is to be provided directly, please
+This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
 refer to the [JWT Authentication](/docs/auth/jwt.html#jwt-authentication) section below. Basic familarly of [OIDC concepts]
 (https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1) is assumed.
 
-Vault includes two built in OIDC-based login flow: the Vault UI, and the CLI
-using a `vault login` helper.
+Vault includes two built-in OIDC login flows: the Vault UI, and the CLI
+using a `vault login`.
 
 ### Redirect URIs
 
 An important part of OIDC role configuration is properly setting redirect URIs. This must be
 done both in Vault and with the OIDC provider, and these configurations must align. The
 redirect URIs are specified for a role with the `allowed_redirect_uris` parameter. There are
-different redirect URIs to configure for the Vault UI and `vault login` flows, so
-one or both will need to be set up depending on the installation.
+different redirect URIs to configure the Vault UI and CLI flows, so one or both will need to
+be set up depending on the installation.
 
 **CLI**
 
@@ -117,7 +117,7 @@ they must be added as query parameters, for example:
 
 ### OIDC Login (Vault UI)
 
-1. Select the OIDC login method.
+1. Select the "OIDC" login method.
 1. Enter a role name if necessary.
 1. Press "Sign In" and complete the authentication with the configured provider. 
 
@@ -134,6 +134,9 @@ Complete the login via your OIDC provider. Launching browser to:
     https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8300%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
 ```
 
+The browser will open to the generated URL to complete the provider's login. The
+URL may be entered manually if the browser cannot be automatically opened.
+
 ### OIDC Provider Configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
@@ -146,11 +149,11 @@ providers.
 1. Configure Allowed Callback URLs.
 1. Copy client ID and secret.
 1. If you see Vault errors involving signature, check the application's Advanced > OAuth settings
- and verify that that signing algorithm is "RS256".
+ and verify that signing algorithm is "RS256".
 
 #### Gitlab
 1. Visit Settings > Applications.
-1. Fill out name and Redirect URIs.
+1. Fill out Name and Redirect URIs.
 1. Making sure to select the "openid" scope.
 1. Copy client ID and secret.
 
@@ -158,8 +161,8 @@ providers.
 Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/OAuth2)
 
 1. Visit the [Google API Console](https://console.developers.google.com).
-1. Create or a select a Project.
-1. Create a new credential via Credentials > Create Credentials > OAuth Client ID
+1. Create or a select a project.
+1. Create a new credential via Credentials > Create Credentials > OAuth Client ID.
 1. Configure the OAuth Consent Screen. Application Name is required. Save.
 1. Select application type: "Web Application".
 1. Configured Authorized Redirect URIs.
@@ -167,16 +170,16 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 
 #### Okta
 
-1. Make sure an Authorization Server has been created
-1. Visit Applications > Add Application (Web)
+1. Make sure an Authorization Server has been created.
+1. Visit Applications > Add Application (Web).
 1. Configure Login redirect URIs. Save.
 1. Save client ID and secret.
 
 
 ## JWT Authentication
 
-The authentication flow for roles of type "jwt" is simpler than OIDC, as Vault
-need only validate the provided JWT.
+The authentication flow for roles of type "jwt" is simpler than OIDC since Vault
+only needs to validate the provided JWT.
 
 ### Via the CLI
 
@@ -225,12 +228,12 @@ authenticate. These steps are usually completed by an operator or configuration
 management tool.
 
 
-1. Enable the JWT auth method. Either the "jwt" or "oidc" name may be used, though
-the choice will correspond to the mount name.
+1. Enable the JWT auth method. Either the "jwt" or "oidc" name may be used. The
+backend will be mounted at the chosen name.
 
     ```text
     $ vault auth enable jwt
-    or
+     or
     $ vault auth enable oidc
     ```
 

@@ -34,9 +34,6 @@ set.
 - `oidc_discovery_ca_pem` `(string: <optional>)` - The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.
 - `oidc_client_id` `(string: <optional>)` - The OAuth Client ID from the provider for OIDC roles.
 - `oidc_client_secret` `(string: <optional>)` - The OAuth Client Secret from the provider for OIDC roles.
-
-format,
-to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used.
 - `jwt_validation_pubkeys` `(comma-separated string, or array of strings: <optional>)` - A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with `oidc_discovery_url`.
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256]. ([Available algorithms](https://github.com/hashicorp/vault-plugin-auth-jwt/blob/master/vendor/github.com/coreos/go-oidc/jose.go#L7))
@@ -269,11 +266,9 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/role/dev-role
 ```
 
-## OIDC Authoriation URL Request
+## OIDC Authorization URL Request
 
 Obtain an authorization URL from Vault to start an OIDC login flow.
-
-This will be called by the Vault UI and `vault login -method=oidc`.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -322,15 +317,15 @@ $ curl \
 Exchange an authorization code for an OIDC ID Token. The ID token will be further validated
 against any bound claims, and if valid a Vault token will be returned.
 
-This will be called by the Vault UI and `vault login -method=oidc`.
-
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `GET`    | `/auth/jwt/oidc/callback`    | `200 application/json` |
 
 ### Parameters
 
-- `state` `(string: <required>)` - Opaque state value the is part of the Authorization URL and will
+- `state` `(string: <required>)` - Opaque state ID that is part of the Authorization URL and will
+  be included in the the redirect following successful authenication on the provider.
+- `nonce` `(string: <required>)` - Opaque nonce that is part of the Authorization URL and will
   be included in the the redirect following successful authenication on the provider.
 - `code` `(string: <required>)` - Provider-generated authorization code that Vault will exchange for
   an ID token.
@@ -339,7 +334,7 @@ This will be called by the Vault UI and `vault login -method=oidc`.
 
 ```
 $ curl \
-    https://127.0.0.1:8200/v1/auth/jwt/oidc/callback?state=n2kfh3nsl&code=mn2ldl2nv98h2jl
+    https://127.0.0.1:8200/v1/auth/jwt/oidc/callback?state=n2kfh3nsl&code=mn2ldl2nv98h2jl&nonce=ni42i2idj2jj
 ```
 
 ### Sample Response
@@ -360,12 +355,6 @@ $ curl \
     ...
 }
 ```
-
-
-## JWT Login
-}
-```
-
 
 ## JWT Login
 
