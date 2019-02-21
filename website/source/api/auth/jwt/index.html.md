@@ -151,7 +151,7 @@ entities attempting to login. At least one of the bound values must be set.
     "department": "engineering",
     "sector": "7g"
   },
-  "claim_mappings" {
+  "claim_mappings": {
     "preferred_language": "language",
     "group": "group"
   }
