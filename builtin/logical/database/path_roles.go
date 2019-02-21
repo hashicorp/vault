@@ -129,10 +129,38 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
         return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-                err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+                // if this role is a static account, we need to revoke the user from the
+                // database
+                // TODO: wrap this in a WAL
+                role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
                 if err != nil {
                         return nil, err
-		}
+                }
+                if role.StaticAccount != nil {
+                        q.Q("should revoke role")
+                        // Get our connection
+                        db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+                        if err != nil {
+                                return nil, err
+                        }
+
+                        db.RLock()
+                        defer db.RUnlock()
+
+                        q.Q("trying revoke")
+                        if err := db.RevokeUser(ctx, role.Statements, role.StaticAccount.Username); err != nil {
+                                q.Q(":: revoke failed")
+                                b.CloseIfShutdown(db, err)
+                                q.Q(":: closed worked")
+                                return nil, err
+                        }
+                        q.Q("revoke worked")
+                }
+
+                err = req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+                if err != nil {
+                        return nil, err
+                }
 
 		return nil, nil
 	}
@@ -227,7 +255,8 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                 }
 
                 // Static Account information
-                if username, ok := data.Get("username").(string); ok {
+                if username, ok := data.Get("username").(string); ok && username != "" {
+                        q.Q("creating static account")
                         if role.StaticAccount == nil && !createRole {
                                 return logical.ErrorResponse("cannot change an existing role to a static account"), nil
                         }
@@ -369,6 +398,7 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
 
         db.RLock()
         defer db.RUnlock()
+        q.Q("role in create/u/sa:", role)
 
         config := dbplugin.StaticUserConfig{
                 Username: role.StaticAccount.Username,

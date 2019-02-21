@@ -278,6 +278,7 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
+        q.Q("username in revoke:", username)
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 

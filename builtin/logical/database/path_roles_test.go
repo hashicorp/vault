@@ -65,17 +65,17 @@ func TestBackend_Static_Config(t *testing.T) {
                 "normal": {},
                 "basic": {
                         account: map[string]interface{}{
-                                "username":           "sa-test",
+                                "username":           "SATest",
                                 "rotation_frequency": "5400s",
                         },
                         expected: map[string]interface{}{
-                                "username":           "sa-test",
+                                "username":           "SATest",
                                 "rotation_frequency": int64(5400000000000),
                         },
                 },
                 "missing rotation frequency": {
                         account: map[string]interface{}{
-                                "username": "sa-test",
+                                "username": "SATest",
                         },
                         err: errors.New("rotation_frequency is a required field for static accounts"),
                 },
@@ -91,11 +91,11 @@ func TestBackend_Static_Config(t *testing.T) {
                 },
                 "with password": {
                         account: map[string]interface{}{
-                                "username":           "sa-test",
+                                "username":           "SATest",
                                 "rotation_frequency": "5400s",
                         },
                         expected: map[string]interface{}{
-                                "username":           "sa-test",
+                                "username":           "SATest",
                                 "rotation_frequency": int64(5400000000000),
                         },
                 },
@@ -114,9 +114,12 @@ func TestBackend_Static_Config(t *testing.T) {
                                 "max_ttl":               "10m",
                         }
 
+                        q.Q("tc.account", tc.account)
+                        q.Q("tc.expected", tc.expected)
                         for k, v := range tc.account {
                                 data[k] = v
                         }
+                        q.Q("data input:", data)
 
                         req := &logical.Request{
                                 Operation: logical.CreateOperation,
