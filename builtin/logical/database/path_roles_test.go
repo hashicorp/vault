@@ -103,6 +103,7 @@ func TestBackend_Static_Config(t *testing.T) {
 
         for name, tc := range testCases {
                 t.Run(name, func(t *testing.T) {
+                        q.Q(">>>")
                         data := map[string]interface{}{
                                 "name":                  "plugin-role-test",
                                 "db_name":               "plugin-test",
@@ -204,8 +205,13 @@ func TestBackend_Static_Config(t *testing.T) {
                         if err != nil || (resp != nil && resp.IsError()) {
                                 t.Fatalf("err:%s resp:%#v\n", err, resp)
                         }
+                        q.Q("<<<")
+                        q.Q("")
                 })
         }
+        q.Q("")
+        q.Q("     ------")
+        q.Q("")
 }
 
 // const testStaticRole = `

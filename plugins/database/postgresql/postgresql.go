@@ -101,6 +101,8 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
                 return "", "", false, errors.New("empty creation or rotation statements")
         }
 
+        q.Q("SetCredentials input:", staticUser, statements)
+
         // Grab the lock
         p.Lock()
         defer p.Unlock()
