@@ -20,12 +20,16 @@ type CLIHandler struct{}
 
 // Generates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
-func GenerateLoginData(creds *credentials.Credentials, headerValue string) (map[string]interface{}, error) {
+func GenerateLoginData(creds *credentials.Credentials, headerValue, region string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
+	cfg := aws.Config{Credentials: creds}
+	if region != "" {
+		cfg.Region = &region
+	}
 	stsSession, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{Credentials: creds},
+		Config: cfg,
 	})
 	if err != nil {
 		return nil, err
@@ -79,7 +83,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 
-	loginData, err := GenerateLoginData(creds, headerValue)
+	loginData, err := GenerateLoginData(creds, headerValue, m["region"])
 	if err != nil {
 		return nil, err
 	}
