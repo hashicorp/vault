@@ -60,8 +60,9 @@ object:
 - `value` `(string: required-if-not-all)` - An exact or prefix value in which to
   match the desired entries for eviction.
 
-- `namespace` `(string: optional)` - The namespace of the . This is only
-  applicable when the `type` is set to `request_path`.
+- `namespace` `(string: optional)` - The namespace in which to match along with
+  the provided request path. This is only applicable when the `type` is set to
+  `request_path`.
 
 ## Configuration
 
@@ -78,7 +79,7 @@ The top level `cache` block has two configuration entries:
 These configuration values are common to all Listeners:
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
-  are `tcp` and `unix`. 
+  are `tcp` and `unix`.
   *Note*: when using HCL this can be used as the key for the block, e.g.
   `listener "tcp" {...}`.
 
