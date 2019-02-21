@@ -15,19 +15,21 @@ secrets.
 
 ## Functionality
 
-Caching is perfomed on tokens created by authentication requests proxied through
+Caching is performed on tokens created by authentication requests proxied through
 the agent, as well as any leased secrets that these tokens generate as long as
-the creation request is also proxied through the agent.
+the secret creation request is also proxied through the agent.
 
-Caching also applies to any leased secrets created by the auto-auth, if enabled.
+Similarly, caching also applies to any leased secrets created by the token
+generated from [auto-auth](/docs/agent/autoauth/index.html) if that's enabled.
 
 ### Eviction
 
-Eviction of cached entries will occur automatically upon the expiration the
+Eviction of cached entries will occur automatically upon the expiration of the
 token's or lease's TTL. A token's expiration will trigger any of its related
 leases to be evicted to avoid having any stale entries.
 
-Eviction also occurs wheen a token or lease revocation is proxied through the
+Eviction also occurs when a [token revocation](/api/auth/token/index.html) or
+[lease revocation](/api/system/leases.html) request is proxied through the
 agent, and said token or lease was kept track of by agent. Token revocation
 requests will result in eviction of the token entry as well as any of the leases
 created by the token. Lease revocation will result in eviction of the said
@@ -35,7 +37,21 @@ lease. Prefix-based revocation will evict all matching leases.
 
 ### Manual Eviction
 
-Eviction can also be done manually through the `/agent/v1/cache-clear` endpoint.
+Eviction can also be done manually through the `/agent/v1/cache-clear` endpoint
+that's available via the enabled listener(s).
+
+The API endpoint accepts the following values in the request body as a  JSON
+object:
+
+- `type` `(strings: required)` - The lookup type on the entries to clear from
+  the cache. This is use alongside the value parameter. Valid values are
+  `request_path`, `lease`, `token`, and `token_accessor`, and `all`
+
+- `value` `(string: required-if-not-all)` - An exact or prefix value in which to
+  match the desired entries for eviction.
+
+- `namespace` `(string: optional)` - The namespace of the . This is only
+  applicable when the `type` is set to `request_path`.
 
 ## Configuration
 
@@ -49,7 +65,7 @@ The top level `cache` block has two configuration entries:
 
 ### Configuration (Listeners)
 
-These configuration values are common to all Sinks:
+These configuration values are common to all Listeners:
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`. 
