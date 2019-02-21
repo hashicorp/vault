@@ -19,6 +19,10 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 )
 
+const (
+	prometheusDefaultRetentionTime = 24 * time.Hour
+)
+
 // Config is the configuration for the vault server.
 type Config struct {
 	Listeners []*Listener `hcl:"-"`
@@ -98,7 +102,10 @@ func DevConfig(ha, transactional bool) *Config {
 
 		EnableUI: true,
 
-		Telemetry: &Telemetry{},
+		Telemetry: &Telemetry{
+			PrometheusRetentionTime: prometheusDefaultRetentionTime,
+			DisableHostname:         true,
+		},
 	}
 
 	switch {
@@ -233,6 +240,12 @@ type Telemetry struct {
 	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
 	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
 	DogStatsDTags []string `hcl:"dogstatsd_tags"`
+
+	// Prometheus:
+	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
+	// Default: 24h
+	PrometheusRetentionTime    time.Duration `hcl:-`
+	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -289,6 +302,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableMlock = c2.DisableMlock
 	}
 
+	result.DisablePrintableCheck = c.DisablePrintableCheck
+	if c2.DisablePrintableCheckRaw != nil {
+		result.DisablePrintableCheck = c2.DisablePrintableCheck
+	}
+
 	// merge these integers via a MAX operation
 	result.MaxLeaseTTL = c.MaxLeaseTTL
 	if c2.MaxLeaseTTL > result.MaxLeaseTTL {
@@ -330,6 +348,24 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableRawEndpoint = c2.EnableRawEndpoint
 	}
 
+	result.APIAddr = c.APIAddr
+	if c2.APIAddr != "" {
+		result.APIAddr = c2.APIAddr
+	}
+
+	result.ClusterAddr = c.ClusterAddr
+	if c2.ClusterAddr != "" {
+		result.ClusterAddr = c2.ClusterAddr
+	}
+
+	// Retain raw value so that it can be assigned to storage objects
+	result.DisableClustering = c.DisableClustering
+	result.DisableClusteringRaw = c.DisableClusteringRaw
+	if c2.DisableClusteringRaw != nil {
+		result.DisableClustering = c2.DisableClustering
+		result.DisableClusteringRaw = c2.DisableClusteringRaw
+	}
+
 	result.PluginDirectory = c.PluginDirectory
 	if c2.PluginDirectory != "" {
 		result.PluginDirectory = c2.PluginDirectory
@@ -353,6 +389,31 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableIndexing = c.DisableIndexing
 	if c2.DisableIndexing {
 		result.DisableIndexing = c2.DisableIndexing
+	}
+
+	// Use values from top-level configuration for storage if set
+	if storage := result.Storage; storage != nil {
+		if result.APIAddr != "" {
+			storage.RedirectAddr = result.APIAddr
+		}
+		if result.ClusterAddr != "" {
+			storage.ClusterAddr = result.ClusterAddr
+		}
+		if result.DisableClusteringRaw != nil {
+			storage.DisableClustering = result.DisableClustering
+		}
+	}
+
+	if haStorage := result.HAStorage; haStorage != nil {
+		if result.APIAddr != "" {
+			haStorage.RedirectAddr = result.APIAddr
+		}
+		if result.ClusterAddr != "" {
+			haStorage.ClusterAddr = result.ClusterAddr
+		}
+		if result.DisableClusteringRaw != nil {
+			haStorage.DisableClustering = result.DisableClustering
+		}
 	}
 
 	return result
@@ -816,5 +877,15 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
 		return multierror.Prefix(err, "telemetry:")
 	}
+
+	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
+		var err error
+		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
+			return err
+		}
+	} else {
+		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
+	}
+
 	return nil
 }

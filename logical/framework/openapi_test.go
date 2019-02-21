@@ -326,12 +326,17 @@ func TestOpenAPI_Paths(t *testing.T) {
 				},
 				"name": {
 					Type:        TypeNameString,
+					Default:     "Larry",
 					Description: "the name",
 				},
 				"age": {
-					Type:          TypeInt,
-					Description:   "the age",
-					AllowedValues: []interface{}{1, 2, 3},
+					Type:             TypeInt,
+					Description:      "the age",
+					AllowedValues:    []interface{}{1, 2, 3},
+					Required:         true,
+					DisplayName:      "Age",
+					DisplayValue:     7,
+					DisplaySensitive: true,
 				},
 				"x-abc-token": {
 					Type:          TypeHeader,

@@ -10,6 +10,10 @@ import (
 
 func (c *Sys) ListPolicies() ([]string, error) {
 	r := c.c.NewRequest("LIST", "/v1/sys/policies/acl")
+	// Set this for broader compatibility, but we use LIST above to be able to
+	// handle the wrapping lookup function
+	r.Method = "GET"
+	r.Params.Set("list", "true")
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

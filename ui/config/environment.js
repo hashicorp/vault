@@ -62,7 +62,7 @@ module.exports = function(environment) {
     ENV.flashMessageDefaults.timeout = 50;
   }
   if (environment !== 'production') {
-    ENV.APP.DEFAULT_PAGE_SIZE = 5;
+    ENV.APP.DEFAULT_PAGE_SIZE = 15;
     ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
     ENV.contentSecurityPolicyMeta = true;
     ENV.contentSecurityPolicy = {

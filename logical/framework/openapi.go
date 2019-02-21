@@ -102,7 +102,7 @@ type OASPathItem struct {
 	Parameters      []OASParameter `json:"parameters,omitempty"`
 	Sudo            bool           `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
 	Unauthenticated bool           `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported bool           `json:"x-vault-create-supported,omitempty" mapstructure:"x-vault-create-supported"`
+	CreateSupported bool           `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -148,15 +148,20 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
-	Type        string                `json:"type,omitempty"`
-	Description string                `json:"description,omitempty"`
-	Properties  map[string]*OASSchema `json:"properties,omitempty"`
-	Items       *OASSchema            `json:"items,omitempty"`
-	Format      string                `json:"format,omitempty"`
-	Pattern     string                `json:"pattern,omitempty"`
-	Enum        []interface{}         `json:"enum,omitempty"`
-	Example     interface{}           `json:"example,omitempty"`
-	Deprecated  bool                  `json:"deprecated,omitempty"`
+	Type             string                `json:"type,omitempty"`
+	Description      string                `json:"description,omitempty"`
+	Properties       map[string]*OASSchema `json:"properties,omitempty"`
+	Items            *OASSchema            `json:"items,omitempty"`
+	Format           string                `json:"format,omitempty"`
+	Pattern          string                `json:"pattern,omitempty"`
+	Enum             []interface{}         `json:"enum,omitempty"`
+	Default          interface{}           `json:"default,omitempty"`
+	Example          interface{}           `json:"example,omitempty"`
+	Deprecated       bool                  `json:"deprecated,omitempty"`
+	Required         bool                  `json:"required,omitempty"`
+	DisplayName      string                `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	DisplayValue     interface{}           `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
+	DisplaySensitive bool                  `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
 }
 
 type OASResponse struct {
@@ -256,9 +261,13 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				Description: cleanString(field.Description),
 				In:          location,
 				Schema: &OASSchema{
-					Type:    t.baseType,
-					Pattern: t.pattern,
-					Enum:    field.AllowedValues,
+					Type:             t.baseType,
+					Pattern:          t.pattern,
+					Enum:             field.AllowedValues,
+					Default:          field.Default,
+					DisplayName:      field.DisplayName,
+					DisplayValue:     field.DisplayValue,
+					DisplaySensitive: field.DisplaySensitive,
 				},
 				Required:   required,
 				Deprecated: field.Deprecated,
@@ -309,12 +318,17 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				for name, field := range bodyFields {
 					openapiField := convertType(field.Type)
 					p := OASSchema{
-						Type:        openapiField.baseType,
-						Description: cleanString(field.Description),
-						Format:      openapiField.format,
-						Pattern:     openapiField.pattern,
-						Enum:        field.AllowedValues,
-						Deprecated:  field.Deprecated,
+						Type:             openapiField.baseType,
+						Description:      cleanString(field.Description),
+						Format:           openapiField.format,
+						Pattern:          openapiField.pattern,
+						Enum:             field.AllowedValues,
+						Default:          field.Default,
+						Required:         field.Required,
+						Deprecated:       field.Deprecated,
+						DisplayName:      field.DisplayName,
+						DisplayValue:     field.DisplayValue,
+						DisplaySensitive: field.DisplaySensitive,
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
@@ -533,9 +547,9 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "string"
 		ret.format = "lowercase"
 	case TypeInt:
-		ret.baseType = "number"
+		ret.baseType = "integer"
 	case TypeDurationSecond:
-		ret.baseType = "number"
+		ret.baseType = "integer"
 		ret.format = "seconds"
 	case TypeBool:
 		ret.baseType = "boolean"
@@ -553,7 +567,7 @@ func convertType(t FieldType) schemaType {
 		ret.items = "string"
 	case TypeCommaIntSlice:
 		ret.baseType = "array"
-		ret.items = "number"
+		ret.items = "integer"
 	default:
 		log.L().Warn("error parsing field type", "type", t)
 		ret.format = "unknown"

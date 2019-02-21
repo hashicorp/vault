@@ -6,7 +6,6 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
@@ -14,7 +13,6 @@ import { create } from 'ember-cli-page-object';
 import authForm from '../../pages/components/auth-form';
 
 const component = create(authForm);
-const BACKENDS = supportedAuthBackends();
 
 const authService = Service.extend({
   authenticate() {
@@ -38,9 +36,6 @@ const routerService = Service.extend({
       },
     };
   },
-  replaceWith() {
-    return resolve();
-  },
 });
 
 module('Integration | Component | auth form', function(hooks) {
@@ -48,18 +43,17 @@ module('Integration | Component | auth form', function(hooks) {
 
   hooks.beforeEach(function() {
     this.owner.lookup('service:csp-event').attach();
-    component.setContext(this);
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
   });
 
   hooks.afterEach(function() {
     this.owner.lookup('service:csp-event').remove();
-    component.removeContext();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function(assert) {
+    this.owner.unregister('service:auth');
     this.owner.register('service:auth', authService);
     this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
@@ -113,7 +107,7 @@ module('Integration | Component | auth form', function(hooks) {
     });
   });
 
-  test('it renders all the supported tabs when no methods are passed', async function(assert) {
+  test('it renders no tabs when no methods are passed', async function(assert) {
     let methods = {
       'approle/': {
         type: 'approle',
@@ -124,10 +118,10 @@ module('Integration | Component | auth form', function(hooks) {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
-    await render(hbs`{{auth-form cluster=cluster}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} />`);
 
     await settled();
-    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
     server.shutdown();
   });
 
@@ -156,6 +150,7 @@ module('Integration | Component | auth form', function(hooks) {
   });
 
   test('it calls authenticate with the correct path', async function(assert) {
+    this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
     let authSpy = sinon.spy(this.get('auth'), 'authenticate');
@@ -183,7 +178,7 @@ module('Integration | Component | auth form', function(hooks) {
     server.shutdown();
   });
 
-  test('it renders all the supported methods when no supported methods are present in passed methods', async function(assert) {
+  test('it renders no tabs when no supported methods are present in passed methods', async function(assert) {
     let methods = {
       'approle/': {
         type: 'approle',
@@ -195,10 +190,10 @@ module('Integration | Component | auth form', function(hooks) {
       });
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} />`);
     await settled();
     server.shutdown();
-    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
   });
 
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function(assert) {
@@ -222,7 +217,7 @@ module('Integration | Component | auth form', function(hooks) {
     let wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
     later(() => run.cancelTimers(), 50);
     await settled();
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');

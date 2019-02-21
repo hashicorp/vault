@@ -36,13 +36,6 @@ type OperatorRekeyCommand struct {
 	flagBackupDelete   bool
 	flagBackupRetrieve bool
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	flagDelete       bool
-	flagRecoveryKey  bool
-	flagRetrieve     bool
-	flagStoredShares int
-
 	testStdin io.Reader // for tests
 }
 
@@ -216,41 +209,6 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 			"if the PGP keys were provided and the backup has not been deleted.",
 	})
 
-	// Deprecations
-	// TODO: remove in 0.9.0
-	f.BoolVar(&BoolVar{
-		Name:    "delete", // prefer -backup-delete
-		Target:  &c.flagDelete,
-		Default: false,
-		Hidden:  true,
-		Usage:   "",
-	})
-
-	f.BoolVar(&BoolVar{
-		Name:    "retrieve", // prefer -backup-retrieve
-		Target:  &c.flagRetrieve,
-		Default: false,
-		Hidden:  true,
-		Usage:   "",
-	})
-
-	f.BoolVar(&BoolVar{
-		Name:    "recovery-key", // prefer -target=recovery
-		Target:  &c.flagRecoveryKey,
-		Default: false,
-		Hidden:  true,
-		Usage:   "",
-	})
-
-	// Kept to keep scripts passing the flag working, but not used
-	f.IntVar(&IntVar{
-		Name:    "stored-shares",
-		Target:  &c.flagStoredShares,
-		Default: 0,
-		Hidden:  true,
-		Usage:   "",
-	})
-
 	return set
 }
 
@@ -274,33 +232,6 @@ func (c *OperatorRekeyCommand) Run(args []string) int {
 	if len(args) > 1 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0-1, got %d)", len(args)))
 		return 1
-	}
-
-	// Deprecations
-	// TODO: remove in 0.9.0
-	if c.flagDelete {
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -delete flag is deprecated. Please use -backup-delete " +
-					"instead. This flag will be removed in Vault 1.1."))
-		}
-		c.flagBackupDelete = true
-	}
-	if c.flagRetrieve {
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -retrieve flag is deprecated. Please use -backup-retrieve " +
-					"instead. This flag will be removed in Vault 1.1."))
-		}
-		c.flagBackupRetrieve = true
-	}
-	if c.flagRecoveryKey {
-		if Format(c.UI) == "table" {
-			c.UI.Warn(wrapAtLength(
-				"WARNING! The -recovery-key flag is deprecated. Please use -target=recovery " +
-					"instead. This flag will be removed in Vault 1.1."))
-		}
-		c.flagTarget = "recovery"
 	}
 
 	// Create the client
@@ -349,7 +280,6 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 	status, err := fn(&api.RekeyInitRequest{
 		SecretShares:        c.flagKeyShares,
 		SecretThreshold:     c.flagKeyThreshold,
-		StoredShares:        c.flagStoredShares,
 		PGPKeys:             c.flagPGPKeys,
 		Backup:              c.flagBackup,
 		RequireVerification: c.flagVerify,

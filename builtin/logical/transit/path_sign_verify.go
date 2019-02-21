@@ -2,11 +2,8 @@ package transit
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
-	"hash"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/keysutil"
@@ -18,27 +15,28 @@ func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use",
 			},
 
-			"input": &framework.FieldSchema{
+			"input": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded input data",
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation. Required if key
 derivation is enabled; currently only available with ed25519 keys.`,
 			},
 
-			"hash_algorithm": &framework.FieldSchema{
+			"hash_algorithm": {
 				Type:    framework.TypeString,
 				Default: "sha2-256",
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
+* sha1
 * sha2-224
 * sha2-256
 * sha2-384
@@ -48,32 +46,39 @@ Defaults to "sha2-256". Not valid for all key types,
 including ed25519.`,
 			},
 
-			"algorithm": &framework.FieldSchema{
+			"algorithm": {
 				Type:        framework.TypeString,
 				Default:     "sha2-256",
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
-			"urlalgorithm": &framework.FieldSchema{
+			"urlalgorithm": {
 				Type:        framework.TypeString,
 				Description: `Hash algorithm to use (POST URL parameter)`,
 			},
 
-			"key_version": &framework.FieldSchema{
+			"key_version": {
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for signing.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
 
-			"prehashed": &framework.FieldSchema{
+			"prehashed": {
 				Type:        framework.TypeBool,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
-			"signature_algorithm": &framework.FieldSchema{
+
+			"signature_algorithm": {
 				Type: framework.TypeString,
 				Description: `The signature algorithm to use for signing. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
+			},
+
+			"marshaling_algorithm": {
+				Type:        framework.TypeString,
+				Default:     "asn1",
+				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
 		},
 
@@ -95,37 +100,38 @@ func (b *backend) pathVerify() *framework.Path {
 				Description: "The key to use",
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation. Required if key
 derivation is enabled; currently only available with ed25519 keys.`,
 			},
 
-			"signature": &framework.FieldSchema{
+			"signature": {
 				Type:        framework.TypeString,
 				Description: "The signature, including vault header/key version",
 			},
 
-			"hmac": &framework.FieldSchema{
+			"hmac": {
 				Type:        framework.TypeString,
 				Description: "The HMAC, including vault header/key version",
 			},
 
-			"input": &framework.FieldSchema{
+			"input": {
 				Type:        framework.TypeString,
 				Description: "The base64-encoded input data to verify",
 			},
 
-			"urlalgorithm": &framework.FieldSchema{
+			"urlalgorithm": {
 				Type:        framework.TypeString,
 				Description: `Hash algorithm to use (POST URL parameter)`,
 			},
 
-			"hash_algorithm": &framework.FieldSchema{
+			"hash_algorithm": {
 				Type:    framework.TypeString,
 				Default: "sha2-256",
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
+* sha1
 * sha2-224
 * sha2-256
 * sha2-384
@@ -133,20 +139,28 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 Defaults to "sha2-256". Not valid for all key types.`,
 			},
-			"algorithm": &framework.FieldSchema{
+
+			"algorithm": {
 				Type:        framework.TypeString,
 				Default:     "sha2-256",
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
-			"prehashed": &framework.FieldSchema{
+			"prehashed": {
 				Type:        framework.TypeBool,
 				Description: `Set to 'true' when the input is already hashed. If the key type is 'rsa-2048' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.`,
 			},
-			"signature_algorithm": &framework.FieldSchema{
+
+			"signature_algorithm": {
 				Type: framework.TypeString,
 				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
+			},
+
+			"marshaling_algorithm": {
+				Type:        framework.TypeString,
+				Default:     "asn1",
+				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
 		},
 
@@ -163,13 +177,25 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
-	hashAlgorithm := d.Get("urlalgorithm").(string)
-	if hashAlgorithm == "" {
-		hashAlgorithm = d.Get("hash_algorithm").(string)
-		if hashAlgorithm == "" {
-			hashAlgorithm = d.Get("algorithm").(string)
+	hashAlgorithmStr := d.Get("urlalgorithm").(string)
+	if hashAlgorithmStr == "" {
+		hashAlgorithmStr = d.Get("hash_algorithm").(string)
+		if hashAlgorithmStr == "" {
+			hashAlgorithmStr = d.Get("algorithm").(string)
 		}
 	}
+
+	hashAlgorithm, ok := keysutil.HashTypeMap[hashAlgorithmStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid hash algorithm %q", hashAlgorithmStr)), logical.ErrInvalidRequest
+	}
+
+	marshalingStr := d.Get("marshaling_algorithm").(string)
+	marshaling, ok := keysutil.MarshalingTypeMap[marshalingStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid marshaling type %q", marshalingStr)), logical.ErrInvalidRequest
+	}
+
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
@@ -209,25 +235,12 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	if p.Type.HashSignatureInput() && !prehashed {
-		var hf hash.Hash
-		switch hashAlgorithm {
-		case "sha2-224":
-			hf = sha256.New224()
-		case "sha2-256":
-			hf = sha256.New()
-		case "sha2-384":
-			hf = sha512.New384()
-		case "sha2-512":
-			hf = sha512.New()
-		default:
-			p.Unlock()
-			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
-		}
+		hf := keysutil.HashFuncMap[hashAlgorithm]()
 		hf.Write(input)
 		input = hf.Sum(nil)
 	}
 
-	sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm)
+	sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
 	if err != nil {
 		p.Unlock()
 		return nil, err
@@ -253,7 +266,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	sig := d.Get("signature").(string)
 	hmac := d.Get("hmac").(string)
 	switch {
@@ -269,13 +281,25 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	name := d.Get("name").(string)
 	inputB64 := d.Get("input").(string)
-	hashAlgorithm := d.Get("urlalgorithm").(string)
-	if hashAlgorithm == "" {
-		hashAlgorithm = d.Get("hash_algorithm").(string)
-		if hashAlgorithm == "" {
-			hashAlgorithm = d.Get("algorithm").(string)
+	hashAlgorithmStr := d.Get("urlalgorithm").(string)
+	if hashAlgorithmStr == "" {
+		hashAlgorithmStr = d.Get("hash_algorithm").(string)
+		if hashAlgorithmStr == "" {
+			hashAlgorithmStr = d.Get("algorithm").(string)
 		}
 	}
+
+	hashAlgorithm, ok := keysutil.HashTypeMap[hashAlgorithmStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid hash algorithm %q", hashAlgorithmStr)), logical.ErrInvalidRequest
+	}
+
+	marshalingStr := d.Get("marshaling_algorithm").(string)
+	marshaling, ok := keysutil.MarshalingTypeMap[marshalingStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid marshaling type %q", marshalingStr)), logical.ErrInvalidRequest
+	}
+
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
@@ -315,25 +339,12 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if p.Type.HashSignatureInput() && !prehashed {
-		var hf hash.Hash
-		switch hashAlgorithm {
-		case "sha2-224":
-			hf = sha256.New224()
-		case "sha2-256":
-			hf = sha256.New()
-		case "sha2-384":
-			hf = sha512.New384()
-		case "sha2-512":
-			hf = sha512.New()
-		default:
-			p.Unlock()
-			return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)), nil
-		}
+		hf := keysutil.HashFuncMap[hashAlgorithm]()
 		hf.Write(input)
 		input = hf.Sum(nil)
 	}
 
-	valid, err := p.VerifySignature(context, input, sig, hashAlgorithm, sigAlgorithm)
+	valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, marshaling, sig)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

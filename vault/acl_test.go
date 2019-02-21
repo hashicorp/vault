@@ -237,6 +237,19 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ListOperation, "foo/bar", false, true},
 		{logical.UpdateOperation, "foo/bar", false, true},
 		{logical.CreateOperation, "foo/bar", true, true},
+
+		// Path segment wildcards
+		{logical.ReadOperation, "test/foo/bar/segment", false, false},
+		{logical.ReadOperation, "test/foo/segment", true, false},
+		{logical.ReadOperation, "test/bar/segment", true, false},
+		{logical.ReadOperation, "test/segment/at/frond", false, false},
+		{logical.ReadOperation, "test/segment/at/front", true, false},
+		{logical.ReadOperation, "test/segment/at/end/foo", true, false},
+		{logical.ReadOperation, "test/segment/at/end/foo/", false, false},
+		{logical.ReadOperation, "test/segment/at/end/v2/foo/", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/foo/", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/end", true, false},
+		{logical.ReadOperation, "test/segment/wildcard/at/end/", true, false},
 	}
 
 	for _, tc := range tcases {
@@ -642,6 +655,24 @@ path "sys/*" {
 }
 path "foo/bar" {
 	capabilities = ["read", "create", "sudo"]
+}
+path "test/+/segment" {
+	capabilities = ["read"]
+}
+path "+/segment/at/front" {
+	capabilities = ["read"]
+}
+path "test/segment/at/end/+" {
+	capabilities = ["read"]
+}
+path "test/segment/at/end/v2/+/" {
+	capabilities = ["read"]
+}
+path "test/+/wildcard/+/*" {
+	capabilities = ["read"]
+}
+path "test/+/wildcardglob/+/end*" {
+	capabilities = ["read"]
 }
 `
 

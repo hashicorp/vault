@@ -208,7 +208,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// it. Vault core handles stripping this if we need to. This also
 		// handles all error cases; if we hit respondLogical, the request is a
 		// success.
-		resp, ok := request(core, w, r, req)
+		resp, ok, needsForward := request(core, w, r, req)
+		if needsForward {
+			forwardRequest(core, w, r)
+			return
+		}
 		if !ok {
 			return
 		}

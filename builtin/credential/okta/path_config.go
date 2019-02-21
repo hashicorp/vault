@@ -25,26 +25,32 @@ func pathConfig(b *backend) *framework.Path {
 			"organization": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "(DEPRECATED) Okta organization to authenticate against. Use org_name instead.",
+				Deprecated:  true,
 			},
 			"org_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the organization to be used in the Okta API.",
+				DisplayName: "Organization Name",
 			},
 			"token": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "(DEPRECATED) Okta admin API token.  Use api_token instead.",
+				Deprecated:  true,
 			},
 			"api_token": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
+				DisplayName: "API Token",
 			},
 			"base_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
+				DisplayName: "Base URL",
 			},
 			"production": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `(DEPRECATED) Use base_url.`,
+				Deprecated:  true,
 			},
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -57,6 +63,7 @@ func pathConfig(b *backend) *framework.Path {
 			"bypass_okta_mfa": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
+				DisplayName: "Bypass Okta MFA",
 			},
 		},
 

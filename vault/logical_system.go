@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -145,6 +146,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.remountPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, &framework.Path{
@@ -679,6 +681,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 	if rawVal, ok := entry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		entryConfig["passthrough_request_headers"] = rawVal.([]string)
 	}
+	if rawVal, ok := entry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		entryConfig["allowed_response_headers"] = rawVal.([]string)
+	}
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
@@ -858,6 +863,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
+	}
+	if len(apiConfig.AllowedResponseHeaders) > 0 {
+		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
 
 	// Create the mount entry
@@ -1049,6 +1057,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		resp.Data["passthrough_request_headers"] = rawVal.([]string)
+	}
+
+	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		resp.Data["allowed_response_headers"] = rawVal.([]string)
 	}
 
 	if len(mountEntry.Options) > 0 {
@@ -1331,6 +1343,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of passthrough_request_headers successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
+		headers := rawVal.([]string)
+
+		oldVal := mountEntry.Config.AllowedResponseHeaders
+		mountEntry.Config.AllowedResponseHeaders = headers
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.AllowedResponseHeaders = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of allowed_response_headers successful", "path", path)
 		}
 	}
 
@@ -1736,6 +1774,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	}
 	if len(apiConfig.PassthroughRequestHeaders) > 0 {
 		config.PassthroughRequestHeaders = apiConfig.PassthroughRequestHeaders
+	}
+	if len(apiConfig.AllowedResponseHeaders) > 0 {
+		config.AllowedResponseHeaders = apiConfig.AllowedResponseHeaders
 	}
 
 	// Create the mount entry
@@ -2173,7 +2214,7 @@ func (b *SystemBackend) handleRawWrite(ctx context.Context, req *logical.Request
 	}
 
 	value := data.Get("value").(string)
-	entry := &Entry{
+	entry := &logical.StorageEntry{
 		Key:   path,
 		Value: []byte(value),
 	}
@@ -2272,7 +2313,7 @@ func (b *SystemBackend) handleRotate(ctx context.Context, req *logical.Request, 
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := b.Core.barrier.Put(ctx, &Entry{
+	if err := b.Core.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
 	}); err != nil {
@@ -2471,6 +2512,14 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 	}
 
 	return response, nil
+}
+
+func (b *SystemBackend) handleMetrics(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	format := data.Get("format").(string)
+	if format == "" {
+		format = metricsutil.FormatFromRequest(req)
+	}
+	return b.Core.metricsHelper.ResponseForFormat(format)
 }
 
 func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2793,7 +2842,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
-		acl.globRules.WalkPrefix(path, walkFn)
+		acl.prefixRules.WalkPrefix(path, walkFn)
 	}
 
 	return aclCapabilitiesGiven
@@ -2824,10 +2873,6 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		// Load the ACL policies so we can walk the prefix for this mount
 		acl, te, entity, _, err = b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 		if err != nil {
-			if errwrap.ContainsType(err, new(TemplateError)) {
-				b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-				err = logical.ErrPermissionDenied
-			}
 			return nil, err
 		}
 		if entity != nil && entity.Disabled {
@@ -2846,7 +2891,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, ns.Path+me.Path)
+			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
 		}
 
 		return false
@@ -2854,7 +2899,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				secretMounts[entry.Path] = mountInfo(entry)
@@ -2871,7 +2916,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
-		if hasAccess(ctx, entry) && ns.ID == entry.NamespaceID {
+		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
 				authMounts[entry.Path] = mountInfo(entry)
@@ -2921,10 +2966,6 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	// Load the ACL policies so we can walk the prefix for this mount
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 	if entity != nil && entity.Disabled {
@@ -2951,10 +2992,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			b.Core.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		return nil, err
 	}
 
@@ -3048,7 +3085,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	}
 
 	acl.exactRules.Walk(exactWalkFn)
-	acl.globRules.Walk(globWalkFn)
+	acl.prefixRules.Walk(globWalkFn)
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
@@ -3828,7 +3865,11 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"passthrough_request_headers": {
-		"A list of headers to whitelist and pass from the request to the backend.",
+		"A list of headers to whitelist and pass from the request to the plugin.",
+		"",
+	},
+	"allowed_response_headers": {
+		"A list of headers to whitelist and allow a plugin to set on responses.",
 		"",
 	},
 	"token_type": {
@@ -3851,6 +3892,10 @@ This path responds to the following HTTP methods.
 	},
 	"internal-ui-resultant-acl": {
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"metrics": {
+		"Export the metrics aggregated for telemetry purpose.",
 		"",
 	},
 }

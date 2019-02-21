@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -25,6 +27,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
@@ -107,6 +110,16 @@ func (e *NonFatalError) Error() string {
 	return e.Err.Error()
 }
 
+// NewNonFatalError returns a new non-fatal error.
+func NewNonFatalError(err error) *NonFatalError {
+	return &NonFatalError{Err: err}
+}
+
+// IsFatalError returns true if the given error is a non-fatal error.
+func IsFatalError(err error) bool {
+	return !errwrap.ContainsType(err, new(NonFatalError))
+}
+
 // ErrInvalidKey is returned if there is a user-based error with a provided
 // unseal key. This will be shown to the user, so should not contain
 // information that is sensitive.
@@ -121,10 +134,10 @@ func (e *ErrInvalidKey) Error() string {
 type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth) error
 
 type activeAdvertisement struct {
-	RedirectAddr     string            `json:"redirect_addr"`
-	ClusterAddr      string            `json:"cluster_addr,omitempty"`
-	ClusterCert      []byte            `json:"cluster_cert,omitempty"`
-	ClusterKeyParams *clusterKeyParams `json:"cluster_key_params,omitempty"`
+	RedirectAddr     string                     `json:"redirect_addr"`
+	ClusterAddr      string                     `json:"cluster_addr,omitempty"`
+	ClusterCert      []byte                     `json:"cluster_cert,omitempty"`
+	ClusterKeyParams *certutil.ClusterKeyParams `json:"cluster_key_params,omitempty"`
 }
 
 type unlockInformation struct {
@@ -321,30 +334,16 @@ type Core struct {
 	clusterListenerAddrs []*net.TCPAddr
 	// The handler to use for request forwarding
 	clusterHandler http.Handler
-	// Tracks whether cluster listeners are running, e.g. it's safe to send a
-	// shutdown down the channel
-	clusterListenersRunning bool
-	// Shutdown channel for the cluster listeners
-	clusterListenerShutdownCh chan struct{}
-	// Shutdown success channel. We need this to be done serially to ensure
-	// that binds are removed before they might be reinstated.
-	clusterListenerShutdownSuccessCh chan struct{}
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
-	// Most recent leader UUID. Used to avoid repeatedly JSON parsing the same
-	// values.
-	clusterLeaderUUID string
-	// Most recent leader redirect addr
-	clusterLeaderRedirectAddr string
-	// Most recent leader cluster addr
-	clusterLeaderClusterAddr string
-	// Lock for the cluster leader values
-	clusterLeaderParamsLock sync.RWMutex
+	// Lock for the leader values, ensuring we don't run the parts of Leader()
+	// that change things concurrently
+	leaderParamsLock sync.RWMutex
+	// Current cluster leader values
+	clusterLeaderParams *atomic.Value
 	// Info on cluster members
 	clusterPeerClusterAddrsCache *cache.Cache
-	// Stores whether we currently have a server running
-	rpcServerActive *uint32
 	// The context for the client
 	rpcClientConnContext context.Context
 	// The function for canceling the client connection
@@ -390,6 +389,10 @@ type Core struct {
 	// Stores the sealunwrapper for downgrade needs
 	sealUnwrapper physical.Backend
 
+	// unsealwithStoredKeysLock is a mutex that prevents multiple processes from
+	// unsealing with stored keys are the same time.
+	unsealWithStoredKeysLock sync.Mutex
+
 	// Stores any funcs that should be run on successful postUnseal
 	postUnsealFuncs []func()
 
@@ -406,6 +409,20 @@ type Core struct {
 	// Stores loggers so we can reset the level
 	allLoggers     []log.Logger
 	allLoggersLock sync.RWMutex
+
+	// Can be toggled atomically to cause the core to never try to become
+	// active, or give up active as soon as it gets it
+	neverBecomeActive *uint32
+
+	// loadCaseSensitiveIdentityStore enforces the loading of identity store
+	// artifacts in a case sensitive manner. To be used only in testing.
+	loadCaseSensitiveIdentityStore bool
+
+	// clusterListener starts up and manages connections on the cluster ports
+	clusterListener *ClusterListener
+
+	// Telemetry objects
+	metricsHelper *metricsutil.MetricsHelper
 }
 
 // CoreConfig is used to parameterize a core
@@ -474,6 +491,9 @@ type CoreConfig struct {
 	DisableKeyEncodingChecks  bool
 
 	AllLoggers []log.Logger
+
+	// Telemetry objects
+	MetricsHelper *metricsutil.MetricsHelper
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -546,41 +566,41 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		entCore:                          entCore{},
-		devToken:                         conf.DevToken,
-		physical:                         conf.Physical,
-		underlyingPhysical:               conf.Physical,
-		redirectAddr:                     conf.RedirectAddr,
-		clusterAddr:                      conf.ClusterAddr,
-		seal:                             conf.Seal,
-		router:                           NewRouter(),
-		sealed:                           new(uint32),
-		standby:                          true,
-		baseLogger:                       conf.Logger,
-		logger:                           conf.Logger.Named("core"),
-		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
-		maxLeaseTTL:                      conf.MaxLeaseTTL,
-		cachingDisabled:                  conf.DisableCache,
-		clusterName:                      conf.ClusterName,
-		clusterListenerShutdownCh:        make(chan struct{}),
-		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		clusterPeerClusterAddrsCache:     cache.New(3*HeartbeatInterval, time.Second),
-		enableMlock:                      !conf.DisableMlock,
-		rawEnabled:                       conf.EnableRaw,
-		replicationState:                 new(uint32),
-		rpcServerActive:                  new(uint32),
-		atomicPrimaryClusterAddrs:        new(atomic.Value),
-		atomicPrimaryFailoverAddrs:       new(atomic.Value),
-		localClusterPrivateKey:           new(atomic.Value),
-		localClusterCert:                 new(atomic.Value),
-		localClusterParsedCert:           new(atomic.Value),
-		activeNodeReplicationState:       new(uint32),
-		keepHALockOnStepDown:             new(uint32),
-		replicationFailure:               new(uint32),
-		disablePerfStandby:               true,
-		activeContextCancelFunc:          new(atomic.Value),
-		allLoggers:                       conf.AllLoggers,
-		builtinRegistry:                  conf.BuiltinRegistry,
+		entCore:                      entCore{},
+		devToken:                     conf.DevToken,
+		physical:                     conf.Physical,
+		underlyingPhysical:           conf.Physical,
+		redirectAddr:                 conf.RedirectAddr,
+		clusterAddr:                  conf.ClusterAddr,
+		seal:                         conf.Seal,
+		router:                       NewRouter(),
+		sealed:                       new(uint32),
+		standby:                      true,
+		baseLogger:                   conf.Logger,
+		logger:                       conf.Logger.Named("core"),
+		defaultLeaseTTL:              conf.DefaultLeaseTTL,
+		maxLeaseTTL:                  conf.MaxLeaseTTL,
+		cachingDisabled:              conf.DisableCache,
+		clusterName:                  conf.ClusterName,
+		clusterPeerClusterAddrsCache: cache.New(3*HeartbeatInterval, time.Second),
+		enableMlock:                  !conf.DisableMlock,
+		rawEnabled:                   conf.EnableRaw,
+		replicationState:             new(uint32),
+		atomicPrimaryClusterAddrs:    new(atomic.Value),
+		atomicPrimaryFailoverAddrs:   new(atomic.Value),
+		localClusterPrivateKey:       new(atomic.Value),
+		localClusterCert:             new(atomic.Value),
+		localClusterParsedCert:       new(atomic.Value),
+		activeNodeReplicationState:   new(uint32),
+		keepHALockOnStepDown:         new(uint32),
+		replicationFailure:           new(uint32),
+		disablePerfStandby:           true,
+		activeContextCancelFunc:      new(atomic.Value),
+		allLoggers:                   conf.AllLoggers,
+		builtinRegistry:              conf.BuiltinRegistry,
+		neverBecomeActive:            new(uint32),
+		clusterLeaderParams:          new(atomic.Value),
+		metricsHelper:                conf.MetricsHelper,
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -590,6 +610,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.localClusterCert.Store(([]byte)(nil))
 	c.localClusterParsedCert.Store((*x509.Certificate)(nil))
 	c.localClusterPrivateKey.Store((*ecdsa.PrivateKey)(nil))
+
+	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 
@@ -1026,6 +1048,10 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
+	if err := c.startClusterListener(ctx); err != nil {
+		return false, err
+	}
+
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
@@ -1151,10 +1177,6 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 
 	acl, te, entity, identityPolicies, err := c.fetchACLTokenEntryAndEntity(ctx, req)
 	if err != nil {
-		if errwrap.ContainsType(err, new(TemplateError)) {
-			c.logger.Warn("permission denied due to a templated policy being invalid or containing directives not satisfied by the requestor", "error", err)
-			err = logical.ErrPermissionDenied
-		}
 		retErr = multierror.Append(retErr, err)
 		c.stateLock.RUnlock()
 		return retErr
@@ -1360,6 +1382,9 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 		}
 	}
 
+	// Stop the cluster listener
+	c.stopClusterListener()
+
 	c.logger.Debug("sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
 		c.logger.Error("error sealing barrier", "error", err)
@@ -1456,8 +1481,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		c.auditBroker = NewAuditBroker(c.logger)
 	}
 
-	if c.ha != nil || shouldStartClusterListener(c) {
-		if err := c.startClusterListener(ctx); err != nil {
+	if c.clusterListener != nil && (c.ha != nil || shouldStartClusterListener(c)) {
+		if err := c.startForwarding(ctx); err != nil {
 			return err
 		}
 	}
@@ -1548,7 +1573,7 @@ func (c *Core) preSeal() error {
 	}
 	c.clusterParamsLock.Unlock()
 
-	c.stopClusterListener()
+	c.stopForwarding()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))

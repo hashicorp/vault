@@ -97,19 +97,6 @@ func (c *TokenRenewCommand) Run(args []string) int {
 		// Use the local token
 	case 1:
 		token = strings.TrimSpace(args[0])
-	case 2:
-		// TODO: remove in 0.9.0 - backwards compat
-		if Format(c.UI) == "table" {
-			c.UI.Warn("Specifying increment as a second argument is deprecated. " +
-				"Please use -increment instead.")
-		}
-		token = strings.TrimSpace(args[0])
-		parsed, err := time.ParseDuration(appendDurationSuffix(args[1]))
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Invalid increment: %s", err))
-			return 1
-		}
-		increment = parsed
 	default:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
 		return 1

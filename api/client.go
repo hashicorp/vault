@@ -25,6 +25,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 const EnvVaultAddress = "VAULT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
@@ -56,6 +57,10 @@ type Config struct {
 	// HttpClient.
 	Address string
 
+	// AgentAddress is the address of the local Vault agent. This should be a
+	// complete URL such as "http://vault.example.com".
+	AgentAddress string
+
 	// HttpClient is the HTTP client to use. Vault sets sane defaults for the
 	// http.Client and its associated http.Transport created in DefaultConfig.
 	// If you must modify Vault's defaults, it is suggested that you start with
@@ -84,6 +89,14 @@ type Config struct {
 	// then that limiter will be used. Note that an empty Limiter
 	// is equivalent blocking all events.
 	Limiter *rate.Limiter
+
+	// OutputCurlString causes the actual request to return an error of type
+	// *OutputStringError. Type asserting the error message will allow
+	// fetching a cURL-compatible string for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputCurlString bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -215,6 +228,7 @@ func (c *Config) ConfigureTLS(t *TLSConfig) error {
 // there is an error, no configuration value is updated.
 func (c *Config) ReadEnvironment() error {
 	var envAddress string
+	var envAgentAddress string
 	var envCACert string
 	var envCAPath string
 	var envClientCert string
@@ -228,6 +242,9 @@ func (c *Config) ReadEnvironment() error {
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
+	}
+	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -296,6 +313,10 @@ func (c *Config) ReadEnvironment() error {
 		c.Address = envAddress
 	}
 
+	if envAgentAddress != "" {
+		c.AgentAddress = envAgentAddress
+	}
+
 	if envMaxRetries != nil {
 		c.MaxRetries = int(*envMaxRetries)
 	}
@@ -358,16 +379,31 @@ func NewClient(c *Config) (*Client, error) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	u, err := url.Parse(c.Address)
-	if err != nil {
-		return nil, err
-	}
-
 	if c.HttpClient == nil {
 		c.HttpClient = def.HttpClient
 	}
 	if c.HttpClient.Transport == nil {
 		c.HttpClient.Transport = def.HttpClient.Transport
+	}
+
+	address := c.Address
+	if c.AgentAddress != "" {
+		address = c.AgentAddress
+	}
+
+	if strings.HasPrefix(address, "unix://") {
+		socket := strings.TrimPrefix(address, "unix://")
+		transport := c.HttpClient.Transport.(*http.Transport)
+		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+			return net.Dial("unix", socket)
+		}
+		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
+		address = "http://unix"
+	}
+
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
 	}
 
 	client := &Client{
@@ -436,6 +472,24 @@ func (c *Client) SetClientTimeout(timeout time.Duration) {
 	c.modifyLock.RUnlock()
 
 	c.config.Timeout = timeout
+}
+
+func (c *Client) OutputCurlString() bool {
+	c.modifyLock.RLock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+	c.modifyLock.RUnlock()
+
+	return c.config.OutputCurlString
+}
+
+func (c *Client) SetOutputCurlString(curl bool) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.OutputCurlString = curl
 }
 
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
@@ -662,6 +716,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
+	outputCurlString := c.config.OutputCurlString
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -686,6 +741,11 @@ START:
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request created")
+	}
+
+	if outputCurlString {
+		LastOutputStringError = &OutputStringError{Request: req}
+		return nil, LastOutputStringError
 	}
 
 	if timeout != 0 {

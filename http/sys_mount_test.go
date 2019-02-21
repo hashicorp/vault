@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"github.com/go-test/deep"
 	"reflect"
 	"testing"
 
@@ -42,9 +43,10 @@ func TestSysMounts(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -91,9 +93,10 @@ func TestSysMounts(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -135,8 +138,8 @@ func TestSysMounts(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v\n", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 
@@ -194,9 +197,10 @@ func TestSysMount(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -255,9 +259,10 @@ func TestSysMount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -299,9 +304,10 @@ func TestSysMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v\n", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
+
 }
 
 func TestSysMount_put(t *testing.T) {
@@ -377,9 +383,10 @@ func TestSysRemount(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -438,9 +445,10 @@ func TestSysRemount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -483,7 +491,7 @@ func TestSysRemount(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\ngot\n%#v\nexpected\n%#v\n", actual, expected)
+		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
 	}
 }
 
@@ -529,9 +537,10 @@ func TestSysUnmount(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -578,9 +587,10 @@ func TestSysUnmount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -622,8 +632,8 @@ func TestSysUnmount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 
@@ -763,9 +773,10 @@ func TestSysTuneMount(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -824,9 +835,10 @@ func TestSysTuneMount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -868,8 +880,8 @@ func TestSysTuneMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 
 	// Shorter than system default
@@ -953,9 +965,10 @@ func TestSysTuneMount(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"type":        "system",
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -1014,9 +1027,10 @@ func TestSysTuneMount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -1059,8 +1073,8 @@ func TestSysTuneMount(t *testing.T) {
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	if diff := deep.Equal(actual, expected); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 
 	// Check simple configuration endpoint

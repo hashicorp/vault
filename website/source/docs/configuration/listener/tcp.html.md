@@ -43,8 +43,8 @@ advertise the correct address to other nodes.
   request duration allowed before Vault cancels the request. This overrides
   `default_max_request_duration` for this listener.
 
-- `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
-  protocol for the listener.
+- `proxy_protocol_behavior` `(string: "")` – When specified, enables a PROXY
+  protocol version 1 behavior for the listener.
   Accepted Values:
   - *use_always* - The client's IP address will always be used.
   - *allow_authorized* - If the source IP address is in the

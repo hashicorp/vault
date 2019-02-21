@@ -1,8 +1,9 @@
 package locksutil
 
 import (
-	"crypto/md5"
 	"sync"
+
+	"github.com/hashicorp/vault/helper/cryptoutil"
 )
 
 const (
@@ -34,9 +35,7 @@ func CreateLocks() []*LockEntry {
 }
 
 func LockIndexForKey(key string) uint8 {
-	hf := md5.New()
-	hf.Write([]byte(key))
-	return uint8(hf.Sum(nil)[0])
+	return uint8(cryptoutil.Blake2b256Hash(key)[0])
 }
 
 func LockForKey(locks []*LockEntry, key string) *LockEntry {
