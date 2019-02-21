@@ -15,12 +15,18 @@ secrets.
 
 ## Functionality
 
-Caching is performed on tokens created by authentication requests proxied through
-the agent, as well as any leased secrets that these tokens generate as long as
-the secret creation request is also proxied through the agent.
+Caching of tokens and its associated leased secrets are applicable under the
+following scenarios:
 
-Similarly, caching also applies to any leased secrets created by the token
-generated from [auto-auth](/docs/agent/autoauth/index.html) if that's enabled.
+1. Caching is performed on tokens created by authentication requests proxied
+   through the agent, as well as any leased secrets that these tokens generate
+   as long as the secret creation request is also proxied through the agent.
+
+2. Similarly, caching also applies to any leased secrets created by the token
+   generated from [auto-auth](/docs/agent/autoauth/index.html) if that's
+   enabled. For this second case, the proxied request will use the auto-auth
+   token if no token is explicitly provided (e.g. via the `X-Vault-Token`
+   header).
 
 ### Eviction
 
@@ -39,6 +45,10 @@ lease. Prefix-based revocation will evict all matching leases.
 
 Eviction can also be done manually through the `/agent/v1/cache-clear` endpoint
 that's available via the enabled listener(s).
+
+Eviction can be based on an exact value match for token, token accessor, and
+lease values, prefix match based on request path, or full cache eviction which
+will reset the underlying cache.
 
 The API endpoint accepts the following values in the request body as a  JSON
 object:
