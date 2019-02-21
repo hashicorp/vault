@@ -13,17 +13,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/sink/mock"
-	"github.com/hashicorp/vault/logical"
-
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/agent/sink/mock"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -233,7 +233,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
 	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid")))
 	server := &http.Server{

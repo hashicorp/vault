@@ -6,16 +6,11 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"time"
-
 	"os"
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/posener/complete"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -33,9 +28,13 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
+	"github.com/hashicorp/vault/helper/consts"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/version"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
 var _ cli.Command = (*AgentCommand)(nil)
@@ -381,7 +380,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Create a muxer and add paths relevant for the lease cache layer
 		mux := http.NewServeMux()
-		mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 
