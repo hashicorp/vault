@@ -151,9 +151,10 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 		data := map[string]interface{}{
 			"db_name":               role.DBName,
 			"creation_statements":   role.Statements.Creation,
-			"revocation_statements": role.Statements.Revocation,
-			"rollback_statements":   role.Statements.Rollback,
+                        "revocation_statements": role.Statements.Revocation,
+                        "rollback_statements":   role.Statements.Rollback,
                         "renew_statements":      role.Statements.Renewal,
+                        "rotation_statements":   role.Statements.Rotation,
                         "default_ttl":           role.DefaultTTL.Seconds(),
                         "max_ttl":               role.MaxTTL.Seconds(),
                 }
@@ -166,8 +167,11 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 		if len(role.Statements.Rollback) == 0 {
 			data["rollback_statements"] = []string{}
 		}
-		if len(role.Statements.Renewal) == 0 {
-			data["renew_statements"] = []string{}
+                if len(role.Statements.Renewal) == 0 {
+                        data["renew_statements"] = []string{}
+                }
+                if len(role.Statements.Renewal) == 0 {
+                        data["rotation_statements"] = []string{}
                 }
 
                 if role.StaticAccount != nil {
@@ -233,6 +237,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                         if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
                                 return logical.ErrorResponse("cannot update static account username. Delete role and recreate"), nil
                         }
+                        role.StaticAccount.Username = username
 
                         frequency := data.Get("rotation_frequency")
                         if frequency == nil {
@@ -366,20 +371,22 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
         defer db.RUnlock()
 
         config := dbplugin.StaticUserConfig{
-                Username: name,
+                Username: role.StaticAccount.Username,
         }
 
         // Create or rotate the user
         stmts := role.Statements.Creation
-        if createUser {
+        if !createUser {
                 stmts = role.Statements.Rotation
         }
 
-        username, password, restored, sterr := db.SetCredentials(ctx, config, stmts)
+        var sterr error
+        username, password, restored, sterr = db.SetCredentials(ctx, config, stmts)
         if sterr != nil {
                 b.CloseIfShutdown(db, sterr)
                 return "", "", false, sterr
         }
+        q.Q("returning:", username, password)
 
         return username, password, false, nil
 }

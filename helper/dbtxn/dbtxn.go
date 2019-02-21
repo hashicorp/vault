@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+        "github.com/y0ssar1an/q"
 )
 
 // ExecuteDBQuery handles executing one single statement, while properly releasing its resources.
@@ -31,10 +33,12 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, params map[string]string, q
 // - config: 	Optional, may be nil
 // - query: 	Required
 func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, params map[string]string, query string) error {
-
 	parsedQuery := parseQuery(params, query)
 
+        q.Q("query in ex tx:", query)
+        q.Q("params in ex tx:", params)
 	stmt, err := tx.PrepareContext(ctx, parsedQuery)
+        q.Q("statement in tx:", stmt)
 	if err != nil {
 		return err
 	}

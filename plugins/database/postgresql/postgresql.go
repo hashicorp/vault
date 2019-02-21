@@ -18,6 +18,7 @@ import (
         "github.com/hashicorp/vault/plugins/helper/database/credsutil"
         "github.com/hashicorp/vault/plugins/helper/database/dbutil"
         "github.com/lib/pq"
+        "github.com/y0ssar1an/q"
 )
 
 const (
@@ -103,7 +104,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
         // Grab the lock
         p.Lock()
         defer p.Unlock()
-
+        username = staticUser.Username
         password, err = p.GeneratePassword()
         if err != nil {
                 return "", "", false, err
@@ -134,7 +135,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
                         }
 
                         m := map[string]string{
-                                "name":     username,
+                                "name":     staticUser.Username,
                                 "password": password,
                         }
                         if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
@@ -148,6 +149,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
                 return "", "", false, err
         }
 
+        q.Q("returning aftr ex:", username, password)
         return username, password, false, nil
 }
 

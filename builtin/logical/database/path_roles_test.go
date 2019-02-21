@@ -179,8 +179,8 @@ func TestBackend_Static_Config(t *testing.T) {
                                         t.Fatalf("expected result to contain password, but none found")
                                 }
                                 delete(actual, "password")
-                                q.Q("actual:", actual)
-                                q.Q("expected:", expected)
+                                // q.Q("actual:", actual)
+                                // q.Q("expected:", expected)
                                 if diff := deep.Equal(expected, actual); diff != nil {
                                         t.Fatal(diff)
                                 }
@@ -251,7 +251,7 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
-  PASSWORD '{{password}}'
+  PASSWORD '{{password}}';
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
