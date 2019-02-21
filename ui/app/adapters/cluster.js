@@ -119,7 +119,7 @@ export default ApplicationAdapter.extend({
       options.headers = {
         'X-Vault-Token': token,
       };
-    } else if (backend === 'jwt') {
+    } else if (backend === 'jwt' || backend === 'oidc') {
       options.data = { role, jwt };
     } else {
       options.data = token ? { token, password } : { password };
@@ -142,6 +142,7 @@ export default ApplicationAdapter.extend({
     const authURLs = {
       github: 'login',
       jwt: 'login',
+      oidc: 'login',
       userpass: `login/${encodeURIComponent(username)}`,
       ldap: `login/${encodeURIComponent(username)}`,
       okta: `login/${encodeURIComponent(username)}`,

@@ -1,7 +1,6 @@
-import { next, later, run } from '@ember/runloop';
+import { later, run } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
-import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -89,7 +88,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   hooks.beforeEach(function() {
     this.owner.register('service:router', routerStub);
     this.server = new Pretender(function() {
-      this.get('/v1/auth/:path/oidc/callback', request => {
+      this.get('/v1/auth/:path/oidc/callback', function() {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify(OIDC_AUTH_RESPONSE)];
       });
       this.post('/v1/auth/:path/oidc/auth_url', request => {
@@ -169,8 +168,9 @@ module('Integration | Component | auth jwt', function(hooks) {
     await component.role('test');
     component.login();
 
-    next(() => {
+    later(async () => {
       run.cancelTimers();
+      await settled();
       let call = this.window.open.getCall(0);
       assert.deepEqual(
         call.args,
@@ -181,7 +181,8 @@ module('Integration | Component | auth jwt', function(hooks) {
         ],
         'called with expected args'
       );
-    });
+    }, 50);
+    await settled();
   });
 
   test('oidc: it calls error handler when popup is closed', async function(assert) {
@@ -190,11 +191,12 @@ module('Integration | Component | auth jwt', function(hooks) {
     await component.role('test');
     component.login();
 
-    next(async () => {
+    later(async () => {
       this.window.close();
       await settled();
       assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
-    });
+    }, 50);
+    await settled();
   });
 
   test('oidc: storage event fires with wrong key', async function(assert) {
@@ -202,11 +204,12 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    next(async () => {
+    later(async () => {
       run.cancelTimers();
       this.window.trigger('storage', { key: 'wrongThing' });
-      assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never callse removeItem');
-    });
+      assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
+    }, 50);
+    await settled();
   });
 
   test('oidc: storage event fires with correct key, wrong params', async function(assert) {
@@ -214,13 +217,13 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    // need next tick here to let ec tasks set up
-    next(async () => {
+    later(async () => {
       this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
       await settled();
       assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
       assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-    });
+    }, 50);
+    await settled();
   });
 
   test('oidc: storage event fires with correct key, correct params', async function(assert) {
@@ -228,8 +231,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    // need next tick here to let ec tasks set up
-    next(async () => {
+    later(async () => {
       this.window.trigger('storage', {
         key: 'oidcState',
         newValue: JSON.stringify({
@@ -242,6 +244,7 @@ module('Integration | Component | auth jwt', function(hooks) {
       assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
       assert.equal(this.token, 'token', 'calls onToken with token');
       assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
-    });
+    }, 50);
+    await settled();
   });
 });
