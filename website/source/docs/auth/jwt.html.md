@@ -4,7 +4,7 @@ page_title: "JWT - Auth Methods"
 sidebar_title: "JWT"
 sidebar_current: "docs-auth-jwt"
 description: |-
-  The JWT auth method allows authentication using JWTs, with support for OIDC Discovery for key fetching
+  The JWT auth method allows authentication using OIDC and user-provided JWTs
 ---
 
 # JWT Auth Method
@@ -16,7 +16,8 @@ This method may be initiated from the Vault UI or the command line. Alternativel
 directly. It will be cryptographically verified using locally-provided keys, or, if configured, an
 OIDC Discovery service can be used to fetch the appropriate keys. The choice of method is configured per role.
 
-Both methods allow additional processing of the claims data in the JWT. Some of the concepts common to both methods will be covered first, followed by specific examples of OIDC and JWT usage.
+Both methods allow additional processing of the claims data in the JWT. Some of the concepts common
+to both methods will be covered first, followed by specific examples of OIDC and JWT usage.
 
 ### Bound Claims
 
@@ -82,8 +83,9 @@ JSON Pointer can be used as a selector. Refer to the
 ## OIDC Authentication
 
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
-refer to the [JWT Authentication](/docs/auth/jwt.html#jwt-authentication) section below. Basic familarly of [OIDC concepts]
-(https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1) is assumed.
+refer to the [JWT Authentication](/docs/auth/jwt.html#jwt-authentication) section below. Basic
+familiarity with [OIDC concepts] (https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1)
+is assumed.
 
 Vault includes two built-in OIDC login flows: the Vault UI, and the CLI
 using a `vault login`.
@@ -119,12 +121,12 @@ they must be added as query parameters, for example:
 
 1. Select the "OIDC" login method.
 1. Enter a role name if necessary.
-1. Press "Sign In" and complete the authentication with the configured provider. 
+1. Press "Sign In" and complete the authentication with the configured provider.
 
 ### OIDC Login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI. 
+different path, specify `-path=/my-path` in the CLI.
 
 ```text
 $ vault login -method=oidc role=test
@@ -140,41 +142,9 @@ URL may be entered manually if the browser cannot be automatically opened.
 ### OIDC Provider Configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
-guide to configuring OAuth/OIDC applications is beyond the scope
-of this document, but brief overviews of how to set up an application is covered for some common
-providers.
-
-#### Auth0
-1. Select Create Application (Regular Web App).
-1. Configure Allowed Callback URLs.
-1. Copy client ID and secret.
-1. If you see Vault errors involving signature, check the application's Advanced > OAuth settings
- and verify that signing algorithm is "RS256".
-
-#### Gitlab
-1. Visit Settings > Applications.
-1. Fill out Name and Redirect URIs.
-1. Making sure to select the "openid" scope.
-1. Copy client ID and secret.
-
-#### Google
-Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/OAuth2)
-
-1. Visit the [Google API Console](https://console.developers.google.com).
-1. Create or a select a project.
-1. Create a new credential via Credentials > Create Credentials > OAuth Client ID.
-1. Configure the OAuth Consent Screen. Application Name is required. Save.
-1. Select application type: "Web Application".
-1. Configured Authorized Redirect URIs.
-1. Save client ID and secret.
-
-#### Okta
-
-1. Make sure an Authorization Server has been created.
-1. Visit Applications > Add Application (Web).
-1. Configure Login redirect URIs. Save.
-1. Save client ID and secret.
-
+guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
+collection of provider configuration steps has been collected to help get started:
+[OIDC Provider Setup](/docs/auth/jwt_oidc_providers.html)
 
 ## JWT Authentication
 
@@ -237,7 +207,8 @@ backend will be mounted at the chosen name.
     $ vault auth enable oidc
     ```
 
-1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys or an OIDC Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
+1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys or an OIDC
+Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
 list of available configuration options, please see the [API documentation](/api/auth/jwt/index.html).
 
     ```text
