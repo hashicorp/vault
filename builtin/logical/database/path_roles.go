@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/helper/queue"
-
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) *framework.Path {
@@ -77,10 +77,30 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a credential is valid for",
 			},
-
-			"static_account": &framework.FieldSchema{
-				Type:        framework.TypeMap,
-				Description: `Static account thing. only accpets a few things`,
+			// TODO: consider renaming to "static_username" for clarity
+			"username": {
+				Type: framework.TypeString,
+				Description: `Name of the static user account for Vault to manage.
+				Requires "rotation_frequency" to be specified`,
+			},
+			// TODO: verify if we should support this as input and use it to verify
+			// credentials before assuming managment of an account.
+			// "password": {
+			// 	Type:        framework.TypeString,
+			// 	Description: "Password of the static user account for Vault to manage.
+			// 	Not used yet",
+			// },
+			"rotation_frequency": {
+				Type: framework.TypeDurationSecond,
+				Description: `Frequency for automatic credential rotation of the given
+				username. Not valid unless used with "username".`,
+			},
+			"rotation_statements": {
+				Type: framework.TypeStringSlice,
+				Description: `Specifies the database statements to be executed to rotate
+				the accounts credentials. Not every plugin type will support this
+				functionality. See the plugin's API page for more information on support
+				and formatting for this parameter.`,
 			},
 		},
 
@@ -111,10 +131,38 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
-		err := req.Storage.Delete(ctx, "role/"+name)
+		if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
+			return nil, err
+		}
+
+		// if this role is a static account, we need to revoke the user from the
+		// database
+		// TODO: wrap this in a WAL
+		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
 		if err != nil {
 			return nil, err
 		}
+		if role.StaticAccount != nil {
+			q.Q("should revoke role")
+			// Get our connection
+			db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+			if err != nil {
+				return nil, err
+			}
+
+			db.RLock()
+			defer db.RUnlock()
+
+			q.Q("trying revoke")
+			if err := db.RevokeUser(ctx, role.Statements, role.StaticAccount.Username); err != nil {
+				q.Q(":: revoke failed")
+				b.CloseIfShutdown(db, err)
+				q.Q(":: closed worked")
+				return nil, err
+			}
+			q.Q("revoke worked")
+		}
+
 		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
 			if _, ok := err.(*queue.ErrItemNotFound); !ok {
 				return nil, err
@@ -141,6 +189,7 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 			"revocation_statements": role.Statements.Revocation,
 			"rollback_statements":   role.Statements.Rollback,
 			"renew_statements":      role.Statements.Renewal,
+			"rotation_statements":   role.Statements.Rotation,
 			"default_ttl":           role.DefaultTTL.Seconds(),
 			"max_ttl":               role.MaxTTL.Seconds(),
 		}
@@ -156,17 +205,22 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 		if len(role.Statements.Renewal) == 0 {
 			data["renew_statements"] = []string{}
 		}
+		if len(role.Statements.Renewal) == 0 {
+			data["rotation_statements"] = []string{}
+		}
 
 		if role.StaticAccount != nil {
-			sa := make(map[string]interface{})
-			sa["username"] = role.StaticAccount.Username
-			sa["rotation_frequency"] = role.StaticAccount.RotationFrequency.Nanoseconds()
-			if role.StaticAccount.Password != "" {
-				sa["password"] = role.StaticAccount.Password
+			q.Q("role.static has stuff")
+			data["username"] = role.StaticAccount.Username
+			data["rotation_frequency"] = role.StaticAccount.RotationFrequency.Nanoseconds()
+			if !role.StaticAccount.LastVaultRotation.IsZero() {
+				// TODO: formatting
+				data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 			}
-			data["static_account"] = sa
-			// TODO return LastVaultRotation once it's set
+		} else {
+			q.Q("role.static was nil")
 		}
+		q.Q("returning data:", data)
 
 		return &logical.Response{
 			Data: data,
@@ -208,35 +262,40 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		}
 
 		// Static Account information
-		staticRaw := data.Get("static_account").(map[string]interface{})
-		if len(staticRaw) > 0 && !createRole {
-			return logical.ErrorResponse("cannot change role to a static account"), nil
-		}
-
-		if len(staticRaw) > 0 {
-			var sa *staticAccount
-			sa = &staticAccount{}
-
-			if v, ok := staticRaw["username"].(string); ok {
-				sa.Username = v
-			} else {
-				return logical.ErrorResponse("username is a required field for static accounts"), nil
+		if username, ok := data.Get("username").(string); ok && username != "" {
+			q.Q("creating static account")
+			if role.StaticAccount == nil && !createRole {
+				return logical.ErrorResponse("cannot change an existing role to a static account"), nil
 			}
+			if role.StaticAccount == nil {
+				role.StaticAccount = &staticAccount{}
+			}
+			if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
+				return logical.ErrorResponse("cannot update static account username. Delete role and recreate"), nil
+			}
+			role.StaticAccount.Username = username
 
-			if v, ok := staticRaw["rotation_frequency"]; ok {
-				sa.RotationFrequency, err = parseutil.ParseDurationSecond(v)
-				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
-				}
-			} else {
+			frequency := data.Get("rotation_frequency")
+			if frequency == nil {
+				q.Q("here in not ok")
+				q.Q("freq:", frequency)
 				return logical.ErrorResponse("rotation_frequency is a required field for static accounts"), nil
 			}
 
-			if p, ok := staticRaw["password"].(string); ok {
-				sa.Password = p
+			role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(frequency)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
 			}
-			if sa != nil {
-				role.StaticAccount = sa
+
+			// TODO: not sure why the check on logical.CreateOperation here
+			if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
+				role.Statements.Rotation = rotationStmtsRaw.([]string)
+			} else if req.Operation == logical.CreateOperation {
+				role.Statements.Rotation = data.Get("rotation_statements").([]string)
+			}
+
+			if len(role.Statements.Rotation) == 0 {
+				return logical.ErrorResponse("rotation_statements is a required field for static accounts"), nil
 			}
 		}
 
@@ -305,7 +364,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 		if role.StaticAccount != nil {
 			// in create/update of static accounts, we only care if the operation
 			// err'd , and this call does not return credentials
-			_, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role)
+			_, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role, createRole)
 			if err != nil {
 				return nil, err
 			}
@@ -334,9 +393,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 	}
 }
 
-// TODO it seems like this is where the account should be added to the queue - in the role though
-func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry) (username, password string, restored bool, err error) {
-	// q.Q(">>> createUpdateStaticAcount called: ", role)
+func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry, createUser bool) (username, password string, restored bool, err error) {
 	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 	if err != nil {
 		return "", "", false, err
@@ -357,18 +414,25 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
 
 	db.RLock()
 	defer db.RUnlock()
+	q.Q("role in create/u/sa:", role)
 
 	config := dbplugin.StaticUserConfig{
-		Username: name,
+		Username: role.StaticAccount.Username,
 	}
 
-	// Create the user
-	username, password, restored, err = db.SetCredentials(ctx, role.Statements, config)
-	if err != nil {
-		b.CloseIfShutdown(db, err)
-		return "", "", false, err
+	// Create or rotate the user
+	stmts := role.Statements.Creation
+	if !createUser {
+		stmts = role.Statements.Rotation
 	}
-	// q.Q("returned values:", username, password, restored, err)
+
+	var sterr error
+	username, password, restored, sterr = db.SetCredentials(ctx, config, stmts)
+	if sterr != nil {
+		b.CloseIfShutdown(db, sterr)
+		return "", "", false, sterr
+	}
+	q.Q("returning:", username, password)
 
 	return username, password, false, nil
 }

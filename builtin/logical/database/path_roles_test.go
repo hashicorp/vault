@@ -9,7 +9,10 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/y0ssar1an/q"
 )
+
+var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_frequency"}
 
 func TestBackend_Static_Config(t *testing.T) {
 	cluster, sys := getCluster(t)
@@ -62,17 +65,17 @@ func TestBackend_Static_Config(t *testing.T) {
 		"normal": {},
 		"basic": {
 			account: map[string]interface{}{
-				"username":           "sa-test",
+				"username":           "SATest",
 				"rotation_frequency": "5400s",
 			},
 			expected: map[string]interface{}{
-				"username":           "sa-test",
+				"username":           "SATest",
 				"rotation_frequency": int64(5400000000000),
 			},
 		},
 		"missing rotation frequency": {
 			account: map[string]interface{}{
-				"username": "sa-test",
+				"username": "SATest",
 			},
 			err: errors.New("rotation_frequency is a required field for static accounts"),
 		},
@@ -88,11 +91,11 @@ func TestBackend_Static_Config(t *testing.T) {
 		},
 		"with password": {
 			account: map[string]interface{}{
-				"username":           "sa-test",
+				"username":           "SATest",
 				"rotation_frequency": "5400s",
 			},
 			expected: map[string]interface{}{
-				"username":           "sa-test",
+				"username":           "SATest",
 				"rotation_frequency": int64(5400000000000),
 			},
 		},
@@ -100,15 +103,23 @@ func TestBackend_Static_Config(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			q.Q(">>>")
 			data := map[string]interface{}{
 				"name":                  "plugin-role-test",
 				"db_name":               "plugin-test",
-				"creation_statements":   testStaticRoleCreate,
+				"creation_statements":   testRoleStaticCreate,
+				"rotation_statements":   testRoleStaticUpdate,
 				"revocation_statements": defaultRevocationSQL,
 				"default_ttl":           "5m",
 				"max_ttl":               "10m",
-				"static_account":        tc.account,
 			}
+
+			q.Q("tc.account", tc.account)
+			q.Q("tc.expected", tc.expected)
+			for k, v := range tc.account {
+				data[k] = v
+			}
+			q.Q("data input:", data)
 
 			req := &logical.Request{
 				Operation: logical.CreateOperation,
@@ -158,16 +169,23 @@ func TestBackend_Static_Config(t *testing.T) {
 			}
 
 			expected := tc.expected
-			actual := resp.Data["static_account"]
+			actual := make(map[string]interface{})
+			q.Q("resp.Data:", resp.Data)
+			for _, key := range dataKeys {
+				if v, ok := resp.Data[key]; ok {
+					actual[key] = v
+				}
+			}
 
 			if len(tc.expected) > 0 {
 				// verify a password is returned, but we don't care what it's value is
-				act := actual.(map[string]interface{})
-				if act["password"] == "" {
+				if actual["password"] == "" {
 					t.Fatalf("expected result to contain password, but none found")
 				}
-				delete(act, "password")
-				if diff := deep.Equal(expected, act); diff != nil {
+				delete(actual, "password")
+				// q.Q("actual:", actual)
+				// q.Q("expected:", expected)
+				if diff := deep.Equal(expected, actual); diff != nil {
 					t.Fatal(diff)
 				}
 			}
@@ -190,8 +208,13 @@ func TestBackend_Static_Config(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("err:%s resp:%#v\n", err, resp)
 			}
+			q.Q("<<<")
+			q.Q("")
 		})
 	}
+	q.Q("")
+	q.Q("     ------")
+	q.Q("")
 }
 
 // const testStaticRole = `
@@ -233,3 +256,14 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // const testStaticRoleUpdate = `
 // ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // `
+
+const testRoleStaticCreate = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}';
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+`
+
+const testRoleStaticUpdate = `
+ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+`

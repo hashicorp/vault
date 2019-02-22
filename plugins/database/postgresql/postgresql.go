@@ -96,18 +96,17 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, restored bool, err error) {
-	q.Q("postgresql SetCredentials called:")
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		return "", "", false, dbutil.ErrEmptyCreationStatement
+func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+	if len(statements) == 0 {
+		return "", "", false, errors.New("empty creation or rotation statements")
 	}
+
+	q.Q("SetCredentials input:", staticUser, statements)
 
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
-
+	username = staticUser.Username
 	password, err = p.GeneratePassword()
 	if err != nil {
 		return "", "", false, err
@@ -130,22 +129,21 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 	// Return the secret
 
 	// Execute each query
-	for _, stmt := range statements.Creation {
-		q.Q("stmt pre parsee:", stmt)
-		// for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-		stmt = strings.TrimSpace(stmt)
-		if len(stmt) == 0 {
-			continue
-		}
+	for _, stmt := range statements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-		m := map[string]string{
-			"name":     staticUser.Username,
-			"password": password,
+			m := map[string]string{
+				"name":     staticUser.Username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", false, err
+			}
 		}
-		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
-			return "", "", false, err
-		}
-		// }
 	}
 
 	// Commit the transaction
@@ -153,6 +151,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 		return "", "", false, err
 	}
 
+	q.Q("returning aftr ex:", username, password)
 	return username, password, false, nil
 }
 
@@ -279,6 +278,7 @@ func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Stateme
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
+	q.Q("username in revoke:", username)
 
 	statements = dbutil.StatementCompatibilityHelper(statements)
 
