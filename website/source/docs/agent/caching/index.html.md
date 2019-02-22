@@ -4,79 +4,123 @@ page_title: "Vault Agent Caching"
 sidebar_title: "Caching"
 sidebar_current: "docs-agent-caching"
 description: |-
-  Vault Agent's Caching functionality allows side-client caching of tokens and
-  secrets.
+  Vault Agent Caching allows client-side caching of responses containing newly
+  created tokens and responses containing leased secrets generated off of these
+  newly created tokens.
 ---
 
 # Vault Agent Caching
 
-Vault Agent's Caching functionality allows side-client caching of tokens and
-secrets.
+Vault Agent Caching allows client-side caching of responses containing newly
+created tokens and responses containing leased secrets generated off of these
+newly created tokens. The renewals of the secrets that are cached are also
+managed by the agent.
 
-## Functionality
+## Caching and Renewals
 
-Caching of tokens and its associated leased secrets are applicable under the
-following scenarios:
+Caching and renewals are managed by the agent only under these scenarios.
 
-1. Caching is performed on tokens created by authentication requests proxied
-   through the agent, as well as any leased secrets that these tokens generate
-   as long as the secret creation request is also proxied through the agent.
+1. Token creation requests are made through the agent and not directly to the
+   Vault server. Login endpoints from various auth methods also fall under this
+   category along with token creation endpoints of the token auth method.
 
-2. Similarly, caching also applies to any leased secrets created by the token
-   generated from [auto-auth](/docs/agent/autoauth/index.html) if that's
-   enabled. For this second case, the proxied request will use the auto-auth
-   token if no token is explicitly provided (e.g. via the `X-Vault-Token`
-   header).
+2. Leased secret creation requests are made through the agent using tokens that
+   are already managed by the agent.
 
-### Eviction
+## Using Auto-Auth Token
 
-Eviction of cached entries will occur automatically upon the expiration of the
-token's or lease's TTL. A token's expiration will trigger any of its related
-leases to be evicted to avoid having any stale entries.
+The requests that reach the agent, if they don't already bear a token as part
+of the request, the auto-auth token can be put to use. This feature is enabled
+by setting the `use_auto_auth_token`(see below) configuration field. Even if
+this configuration is set to `true`, if the requests that reach the agent
+already have a token attached on them, the attached token will be put to use
+instead of the auto-auth token.
 
-Eviction also occurs when a [token revocation](/api/auth/token/index.html) or
-[lease revocation](/api/system/leases.html) request is proxied through the
-agent, and said token or lease was kept track of by agent. Token revocation
-requests will result in eviction of the token entry as well as any of the leases
-created by the token. Lease revocation will result in eviction of the said
-lease. Prefix-based revocation will evict all matching leases.
+## Cache Evictions
 
-### Manual Eviction
+The eviction of cache entries will occur when the agent fails to renew secrets.
+This can happen when the secret that is cached hits it's maximum TTL or if the
+renewal results in an error.
 
-Eviction can also be done manually through the `/agent/v1/cache-clear` endpoint
-that's available via the enabled listener(s).
+Agent also does some best-effort cache evictions by observing specific request
+types and response codes. For example, if a token revocation request is made
+via the agent and if the request succeeds, then agent evicts all the cache
+entries associated with the revoked token. Similar behavior is exercised for
+lease revocations as well.
 
-Eviction can be based on an exact value match for token, token accessor, and
-lease values, prefix match based on request path, or full cache eviction which
-will reset the underlying cache.
+While agent tries to observe some requests and evicts cache entries
+automatically, it is possible that agent is completely unaware of revocations
+that happen outside of Agent's context. This is when stale entries are created
+in the agent.
 
-The API endpoint accepts the following values in the request body as a  JSON
-object:
+For managing the stale entries in the cache, an endpoint
+`/v1/agent/cache-clear`(see below) is made available to manually evict cache
+entries based on some of the criteria.
 
-- `type` `(strings: required)` - The lookup type on the entries to clear from
-  the cache. This is use alongside the value parameter. Valid values are
-  `request_path`, `lease`, `token`, and `token_accessor`, and `all`
+## API
 
-- `value` `(string: required-if-not-all)` - An exact or prefix value in which to
-  match the desired entries for eviction.
+### Cache Clear
+
+This endpoint clears the cache based on given parameters. To be able to use
+this API, some information on how the agent caches values should be known
+beforehand. Each response that gets cached in the agent are indexed on some
+factors depending on the type of request. Those factors can be the `token` that
+is being returned by the response, the `token_accessor` of the token being
+returned by the response, the `request_path` that resulted in the response, the
+`lease` that is attached to the response, the `namespace` to which the request
+belongs to, and a few more. This API exposes some factors through which
+associated cache entries are fetched and evicted.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/v1/agent/cache-clear`      | `200 application/json` |
+
+#### Parameters
+
+- `type` `(strings: required)` - The type of cache entries to evict. Valid
+  values are `request_path`, `lease`, `token`, and `token_accessor`, and `all`.
+  If the `type` is set to `all`, the entire cache is cleared.
+
+- `value` `(string: required)` - An exact value or the prefix of the value for
+  the `type` selected. This parameter is optional when the `type` is set
+  to `all`.
 
 - `namespace` `(string: optional)` - The namespace in which to match along with
   the provided request path. This is only applicable when the `type` is set to
   `request_path`.
 
+### Sample Payload
+
+```json
+{
+  "type": "token",
+  "value": "s.rlNjegSKykWcplOkwsjd8bP9"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:1234/v1/agent/cache-clear
+```
+
 ## Configuration
 
 The top level `cache` block has two configuration entries:
 
-- `use_auto_auth_token` `(bool: false)` - Whether to use the auto-auth token, if
-  present, for proxied requests. If set to true, requests made by client will
-  use this token unless a token is provided explicitly via `X-Vault-Token`.
+- `use_auto_auth_token (bool: false)` - If set, the requests made to agent
+  without a Vault token will be forwarded to Vault with the auto-auth token
+  attached. If the requests already bear a token, this configuration will be
+  ignored.
 
 - `listener` `(array of objects: required)` - Configuration for the listeners
 
 ### Configuration (Listeners)
 
-These configuration values are common to all Listeners:
+These configuration values are common to all Listeners.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
@@ -85,7 +129,7 @@ These configuration values are common to all Listeners:
 
 - `address` `(string: required)` - The address for the listener to listen to.
   This can either be a URL path when using `tcp` or a file path when using
-  `unix`.
+  `unix`. For example, `127.0.0.1:1234` or `/path/to/socket`.
 
 - `tls_disable` `(bool: false)` - Specifies if TLS will be disabled.
 
@@ -94,3 +138,23 @@ These configuration values are common to all Listeners:
 
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
+
+### Example Configuration
+
+An example configuration, with very contrived values, follows:
+
+```python
+cache {
+	use_auto_auth_token = true
+
+	listener "unix" {
+		address = "/path/to/socket"
+		tls_disable = true
+	}
+
+	listener "tcp" {
+		address = "127.0.0.1:8300"
+		tls_disable = true
+	}
+}
+```
