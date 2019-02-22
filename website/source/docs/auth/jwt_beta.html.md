@@ -126,14 +126,15 @@ they must be added as query parameters, for example:
 ### OIDC Login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI.
+different path, specify `-path=/my-path` in the CLI. The default local listening port is 8300. This
+can be changed with the `port` option.
 
 ```text
-$ vault login -method=oidc role=test
+$ vault login -method=oidc port=8400 role=test
 
 Complete the login via your OIDC provider. Launching browser to:
 
-    https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8300%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
+    https://myco.auth0.com/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8400%2Foidc%2Fcallback&client_id=r3qXc2bix9eF...
 ```
 
 The browser will open to the generated URL to complete the provider's login. The
