@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 
@@ -91,6 +92,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	replicationState := conf.System.ReplicationState()
 	if replicationState.IsLeader() {
 		b.Backend.PeriodicFunc = func(context.Context, *logical.Request) error {
+			// This will loop until either:
+			// - The queue of passwords needing rotation is completely empty.
+			// - It encounters the first password not yet needing rotation.
 			for {
 				item, err := b.credRotationQueue.PopItem()
 				if err != nil {
@@ -99,8 +103,17 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 					}
 					return err
 				}
-				// TODO need to actually do a call to rotate the password
-				fmt.Printf("item: %+v\n", item)
+				if item.Priority > time.Now().Unix() {
+					// We've found our first item not in need of rotation
+					// TODO is this logic correct? Need to also check the logic creating the priority.
+					return nil
+				}
+
+				role := item.Value.(*roleEntry)
+				for _, stmt := range role.Statements.Rotation {
+					// TODO need to actually do a call to rotate the password
+					fmt.Printf("stmt: %+v\n", stmt)
+				}
 			}
 		}
 	}

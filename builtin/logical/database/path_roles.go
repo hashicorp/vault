@@ -369,23 +369,21 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 				return nil, err
 			}
 
-			newItem := &queue.Item{
-				Key:      name,
-				Value:    role.StaticAccount.Password, // TODO is this what needs to be here?
-				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
-			}
+			// TODO need to check that we're only updating the revocation statements or rotation frequency
 
 			// In case this is an update, remove any previous version of the item from the queue
-			if prevItem, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+			if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
 				if _, ok := err.(*queue.ErrItemNotFound); !ok {
 					return nil, err
 				}
-			} else if prevItem != nil {
-				// TODO only allow update of rotation frequency and rotation statements
 			}
 
 			// Add their rotation to the queue
-			if err := b.credRotationQueue.PushItem(newItem); err != nil {
+			if err := b.credRotationQueue.PushItem(&queue.Item{
+				Key:      name,
+				Value:    role, // TODO is this what needs to be here?
+				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
+			}); err != nil {
 				// TODO rollback?
 				return nil, err
 			}
