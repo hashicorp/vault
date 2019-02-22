@@ -138,7 +138,7 @@ func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 		// if this role is a static account, we need to revoke the user from the
 		// database
 		// TODO: wrap this in a WAL
-		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+		role, err := b.Role(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -368,12 +368,24 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			if err != nil {
 				return nil, err
 			}
-			// Add their rotation to the queue
-			if err := b.credRotationQueue.PushItem(&queue.Item{
+
+			newItem := &queue.Item{
 				Key:      name,
 				Value:    role.StaticAccount.Password, // TODO is this what needs to be here?
 				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
-			}); err != nil {
+			}
+
+			// In case this is an update, remove any previous version of the item from the queue
+			if prevItem, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+				if _, ok := err.(*queue.ErrItemNotFound); !ok {
+					return nil, err
+				}
+			} else if prevItem != nil {
+				// TODO only allow update of rotation frequency and rotation statements
+			}
+
+			// Add their rotation to the queue
+			if err := b.credRotationQueue.PushItem(newItem); err != nil {
 				// TODO rollback?
 				return nil, err
 			}
