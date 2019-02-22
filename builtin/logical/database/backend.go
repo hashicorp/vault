@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -61,7 +62,6 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				// in them
 			},
 		},
-
 		Paths: []*framework.Path{
 			pathListPluginConnection(&b),
 			pathConfigurePluginConnection(&b),
@@ -82,6 +82,27 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
+
+	// Always populate the queue to guard against nil pointers.
+	b.credRotationQueue = queue.NewTimeQueue()
+
+	// But only execute cred rotation if we're the leader.
+	// TODO what if leadership changes during the lifecycle of the application?
+	if conf.System.ReplicationState().IsLeader() {
+		b.Backend.PeriodicFunc = func(context.Context, *logical.Request) error {
+			for {
+				item, err := b.credRotationQueue.PopItem()
+				if err != nil {
+					if err == queue.ErrEmpty {
+						return nil
+					}
+					return err
+				}
+				// TODO need to actually do a call to rotate the password
+				fmt.Printf("item: %+v\n", item)
+			}
+		}
+	}
 	return &b
 }
 
@@ -91,6 +112,7 @@ type databaseBackend struct {
 
 	*framework.Backend
 	sync.RWMutex
+	credRotationQueue queue.PriorityQueue
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

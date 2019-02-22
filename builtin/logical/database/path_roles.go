@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/queue"
+
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -108,9 +110,15 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+		name := data.Get("name").(string)
+		err := req.Storage.Delete(ctx, "role/"+name)
 		if err != nil {
 			return nil, err
+		}
+		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+			if _, ok := err.(*queue.ErrItemNotFound); !ok {
+				return nil, err
+			}
 		}
 
 		return nil, nil
@@ -301,6 +309,15 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			if err != nil {
 				return nil, err
 			}
+			// Add their rotation to the queue
+			if err := b.credRotationQueue.PushItem(&queue.Item{
+				Key:      name,
+				Value:    role.StaticAccount.Password, // TODO is this what needs to be here?
+				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
+			}); err != nil {
+				// TODO rollback?
+				return nil, err
+			}
 		}
 		// END create/update static account
 
@@ -317,6 +334,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 	}
 }
 
+// TODO it seems like this is where the account should be added to the queue - in the role though
 func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry) (username, password string, restored bool, err error) {
 	// q.Q(">>> createUpdateStaticAcount called: ", role)
 	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
