@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
@@ -17,6 +18,19 @@ import (
 )
 
 type CLIHandler struct{}
+
+// STS is a really weird service that used to only have global endpoints but now has regional endpoints as well.
+// For backwards compatibility, even if you request a region other than us-east-1, it'll still sign for us-east-1.
+// See, e.g., https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html#id_credentials_temp_enable-regions_writing_code
+// So we have to shim in this EndpointResolver to force it to sign for the right region
+func stsSigningResolver(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+	defaultEndpoint, err := endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+	if err != nil {
+		return defaultEndpoint, err
+	}
+	defaultEndpoint.SigningRegion = region
+	return defaultEndpoint, nil
+}
 
 // Generates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
@@ -27,6 +41,7 @@ func GenerateLoginData(creds *credentials.Credentials, headerValue, region strin
 	cfg := aws.Config{Credentials: creds}
 	if region != "" {
 		cfg.Region = &region
+		cfg.EndpointResolver = endpoints.ResolverFunc(stsSigningResolver)
 	}
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: cfg,
