@@ -649,6 +649,8 @@ The region used defaults to `us-east-1`, but you can specify a custom region lik
 ```
 $ vault login -method=aws region=us-west-2 role=dev-role-iam
 ```
+When using a custom region, be sure the designated region corresponds to that of the 
+STS endpoint you're using.
 
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli
