@@ -88,7 +88,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 	// But only execute cred rotation if we're the leader.
 	// TODO what if leadership changes during the lifecycle of the application?
-	if conf.System.ReplicationState().IsLeader() {
+	replicationState := conf.System.ReplicationState()
+	if replicationState.IsLeader() {
 		b.Backend.PeriodicFunc = func(context.Context, *logical.Request) error {
 			for {
 				item, err := b.credRotationQueue.PopItem()
