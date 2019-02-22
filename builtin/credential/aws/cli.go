@@ -34,17 +34,17 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 
 // Generates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
-func GenerateLoginData(creds *credentials.Credentials, headerValue, region string) (map[string]interface{}, error) {
+func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRegion string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
 
 	// Use the credentials we've found to construct an STS session
-	cfg := aws.Config{Credentials: creds}
-	if region != "" {
-		cfg.Region = &region
-		cfg.EndpointResolver = endpoints.ResolverFunc(stsSigningResolver)
-	}
+	region := awsutil.GetOrDefaultRegion(configuredRegion)
 	stsSession, err := session.NewSessionWithOptions(session.Options{
-		Config: cfg,
+		Config: aws.Config{
+			Credentials:      creds,
+			Region:           &region,
+			EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
+		},
 	})
 	if err != nil {
 		return nil, err
