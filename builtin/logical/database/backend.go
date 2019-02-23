@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/y0ssar1an/q"
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
@@ -76,9 +77,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-		Clean:       b.closeAllDBs,
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Clean:             b.closeAllDBs,
+		Invalidate:        b.invalidate,
+		BackendType:       logical.TypeLogical,
+		WALRollbackMinAge: 30 * time.Second,
 	}
 
 	b.logger = conf.Logger
@@ -91,30 +93,40 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	// TODO what if leadership changes during the lifecycle of the application?
 	replicationState := conf.System.ReplicationState()
 	if replicationState.IsLeader() {
-		b.Backend.PeriodicFunc = func(context.Context, *logical.Request) error {
+		b.Backend.PeriodicFunc = func(ctx context.Context, req *logical.Request) error {
+			q.Q("In periodic!!!")
 			// This will loop until either:
 			// - The queue of passwords needing rotation is completely empty.
 			// - It encounters the first password not yet needing rotation.
-			for {
-				item, err := b.credRotationQueue.PopItem()
-				if err != nil {
-					if err == queue.ErrEmpty {
-						return nil
+			for conn, instance := range b.connections {
+				q.Q(conn)
+				for {
+					item, err := b.credRotationQueue.PopItem()
+					if err != nil {
+						q.Q(err)
+						if err == queue.ErrEmpty {
+							return nil
+						}
+						return err
 					}
-					return err
-				}
-				if item.Priority > time.Now().Unix() {
-					// We've found our first item not in need of rotation
-					// TODO is this logic correct? Need to also check the logic creating the priority.
-					return nil
-				}
 
-				role := item.Value.(*roleEntry)
-				for _, stmt := range role.Statements.Rotation {
-					// TODO need to actually do a call to rotate the password
-					fmt.Printf("stmt: %+v\n", stmt)
+					role := item.Value.(*roleEntry)
+					q.Q(role)
+					c := dbplugin.StaticUserConfig{
+						Username: role.StaticAccount.Username,
+					}
+
+					if true || item.Priority > time.Now().Unix() {
+						q.Q("here")
+						// We've found our first item not in need of rotation
+						// TODO is this logic correct? Need to also check the logic creating the priority.
+						fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
+						instance.SetCredentials(ctx, c, role.Statements.Rotation)
+						defer b.credRotationQueue.PushItem(item)
+					}
 				}
 			}
+			return nil
 		}
 	}
 	return &b
