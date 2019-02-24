@@ -8,11 +8,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/y0ssar1an/q"
-
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -94,16 +92,13 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	replicationState := conf.System.ReplicationState()
 	if replicationState.IsLeader() {
 		b.Backend.PeriodicFunc = func(ctx context.Context, req *logical.Request) error {
-			q.Q("In periodic!!!")
 			// This will loop until either:
 			// - The queue of passwords needing rotation is completely empty.
 			// - It encounters the first password not yet needing rotation.
-			for conn, instance := range b.connections {
-				q.Q(conn)
+			for _, instance := range b.connections {
 				for {
 					item, err := b.credRotationQueue.PopItem()
 					if err != nil {
-						q.Q(err)
 						if err == queue.ErrEmpty {
 							return nil
 						}
@@ -111,18 +106,23 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 					}
 
 					role := item.Value.(*roleEntry)
-					q.Q(role)
 					c := dbplugin.StaticUserConfig{
 						Username: role.StaticAccount.Username,
 					}
 
-					if true || item.Priority > time.Now().Unix() {
-						q.Q("here")
+					if time.Now().Unix() > item.Priority {
 						// We've found our first item not in need of rotation
 						// TODO is this logic correct? Need to also check the logic creating the priority.
 						fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
 						instance.SetCredentials(ctx, c, role.Statements.Rotation)
-						defer b.credRotationQueue.PushItem(item)
+						b.credRotationQueue.PushItem(&queue.Item{
+							Key:      item.Key,
+							Value:    role, // TODO is this what needs to be here?
+							Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
+						})
+					} else {
+						b.credRotationQueue.PushItem(item)
+						return nil
 					}
 				}
 			}
