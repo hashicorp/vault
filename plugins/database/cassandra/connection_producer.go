@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/y0ssar1an/q"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
@@ -58,7 +57,6 @@ type cassandraConnectionProducer struct {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-	q.Q("connutil/caassandra SetCredentials called:", statements, staticUser)
 	return
 }
 
