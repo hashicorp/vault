@@ -339,7 +339,6 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
                 role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 
-                // TODO branch out and create static account in Database
                 if role.StaticAccount != nil {
                         // in create/update of static accounts, we only care if the operation
                         // err'd , and this call does not return credentials
