@@ -62,7 +62,7 @@ entries based on some of the criteria.
 
 This endpoint clears the cache based on given parameters. To be able to use
 this API, some information on how the agent caches values should be known
-beforehand. Each response that gets cached in the agent are indexed on some
+beforehand. Each response that gets cached in the agent is indexed on some
 factors depending on the type of request. Those factors can be the `token` that
 is being returned by the response, the `token_accessor` of the token being
 returned by the response, the `request_path` that resulted in the response, the
