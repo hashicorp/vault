@@ -119,7 +119,6 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 // func (m *MySQL) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
-// 	q.Q("MySQL.SetCredentials received")
 // 	return
 // }
 

@@ -41,7 +41,6 @@ type SQLConnectionProducer struct {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        // q.Q("connutil/sql SetCredentials called:", statements, staticUser, createUser)
         return
 }
 

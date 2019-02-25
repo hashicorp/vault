@@ -3,10 +3,9 @@ package dbutil
 import (
 	"errors"
 	"fmt"
-	"strings"
+        "strings"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-        "github.com/y0ssar1an/q"
+        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 )
 
 var (
@@ -47,9 +46,8 @@ func StatementCompatibilityHelper(statements dbplugin.Statements) dbplugin.State
 	switch {
 	case len(statements.Rollback) > 0 && len(statements.RollbackStatements) == 0:
 		statements.RollbackStatements = strings.Join(statements.Rollback, ";")
-	case len(statements.RollbackStatements) > 0:
-		statements.Rollback = []string{statements.RollbackStatements}
-	}
-        q.Q("statments in helper:", statements)
-	return statements
+        case len(statements.RollbackStatements) > 0:
+                statements.Rollback = []string{statements.RollbackStatements}
+        }
+        return statements
 }

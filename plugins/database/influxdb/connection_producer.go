@@ -12,10 +12,9 @@ import (
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	influx "github.com/influxdata/influxdb/client/v2"
-	"github.com/mitchellh/mapstructure"
-        "github.com/y0ssar1an/q"
+        "github.com/hashicorp/vault/plugins/helper/database/connutil"
+        influx "github.com/influxdata/influxdb/client/v2"
+        "github.com/mitchellh/mapstructure"
 )
 
 // influxdbConnectionProducer implements ConnectionProducer and provides an
@@ -56,7 +55,6 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, conf map[st
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        q.Q("connutil/influx SetCredentials called:", statements, staticUser)
         return
 }
 

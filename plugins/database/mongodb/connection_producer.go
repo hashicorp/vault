@@ -16,12 +16,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
         "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
-	"github.com/mitchellh/mapstructure"
-        "github.com/y0ssar1an/q"
+        "github.com/hashicorp/vault/plugins/helper/database/connutil"
+        "github.com/hashicorp/vault/plugins/helper/database/dbutil"
+        "github.com/mitchellh/mapstructure"
 
-	mgo "gopkg.in/mgo.v2"
+        mgo "gopkg.in/mgo.v2"
 )
 
 // mongoDBConnectionProducer implements ConnectionProducer and provides an
@@ -47,7 +46,6 @@ type mongoDBConnectionProducer struct {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *mongoDBConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        q.Q("connutil/sql SetCredentials called:", statements, staticUser)
         return
 }
 
