@@ -191,7 +191,7 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
                 if len(role.Statements.Renewal) == 0 {
                         data["renew_statements"] = []string{}
                 }
-                if len(role.Statements.Renewal) == 0 {
+                if len(role.Statements.Rotation) == 0 {
                         data["rotation_statements"] = []string{}
                 }
 

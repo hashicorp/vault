@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+        "github.com/y0ssar1an/q"
 )
 
 var (
@@ -49,5 +50,6 @@ func StatementCompatibilityHelper(statements dbplugin.Statements) dbplugin.State
 	case len(statements.RollbackStatements) > 0:
 		statements.Rollback = []string{statements.RollbackStatements}
 	}
+        q.Q("statments in helper:", statements)
 	return statements
 }
