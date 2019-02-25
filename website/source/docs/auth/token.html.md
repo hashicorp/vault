@@ -20,8 +20,9 @@ The token store can also be used to bypass any other auth method:
 you can create tokens directly, as well as perform a variety of other
 operations on tokens such as renewal and revocation.
 
-It is currently not possible to associate entities directly with tokens. 
-All auth methods are supported except the token auth.
+It is currently possible generate a token with all the Auth Methods except with 
+the Token Auth. You can use a different auth method, for instance username/password, 
+and generate a token which inherit the parent's entity.
 
 Please see the [token concepts](/docs/concepts/tokens.html) page dedicated
 to tokens.
