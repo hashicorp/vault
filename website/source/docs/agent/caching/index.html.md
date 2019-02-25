@@ -29,12 +29,12 @@ Caching and renewals are managed by the agent only under these scenarios.
 
 ## Using Auto-Auth Token
 
-The requests that reach the agent, if they don't already bear a token as part
-of the request, the auto-auth token can be put to use. This feature is enabled
-by setting the `use_auto_auth_token`(see below) configuration field. Even if
-this configuration is set to `true`, if the requests that reach the agent
-already have a token attached on them, the attached token will be put to use
-instead of the auto-auth token.
+Clients do not need to provide a Vault token along with the proxied request if
+the [auto-auth](/docs/autoauth/index.html) feature is enabled. This feature is
+enabled by setting the `use_auto_auth_token` (see below) configuration field.
+However, even when enabled, if requests that reach the agent already have a
+token attached on them, the attached token will be put to use instead of the
+auto-auth token.
 
 ## Cache Evictions
 
@@ -49,9 +49,8 @@ entries associated with the revoked token. Similar behavior is exercised for
 lease revocations as well.
 
 While agent tries to observe some requests and evicts cache entries
-automatically, it is possible that agent is completely unaware of revocations
-that happen outside of Agent's context. This is when stale entries are created
-in the agent.
+automatically, agent is completely unaware of revocations that happen outside of
+Agent's context. This is when stale entries are created in the agent.
 
 For managing the stale entries in the cache, an endpoint
 `/v1/agent/cache-clear`(see below) is made available to manually evict cache
@@ -143,18 +142,18 @@ These configuration values are common to all Listeners.
 
 An example configuration, with very contrived values, follows:
 
-```python
+```javascript
 cache {
-	use_auto_auth_token = true
+  use_auto_auth_token = true
 
-	listener "unix" {
-		address = "/path/to/socket"
-		tls_disable = true
-	}
+  listener "unix" {
+    address = "/path/to/socket"
+    tls_disable = true
+  }
 
-	listener "tcp" {
-		address = "127.0.0.1:8300"
-		tls_disable = true
-	}
+  listener "tcp" {
+    address = "127.0.0.1:8300"
+    tls_disable = true
+  Fpass-through lease response}
 }
 ```
