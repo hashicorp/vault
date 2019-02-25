@@ -65,17 +65,17 @@ func TestBackend_Static_Config(t *testing.T) {
                 "normal": {},
                 "basic": {
                         account: map[string]interface{}{
-                                "username":           "SATest",
+                                "username":           "statictest",
                                 "rotation_frequency": "5400s",
                         },
                         expected: map[string]interface{}{
-                                "username":           "SATest",
+                                "username":           "statictest",
                                 "rotation_frequency": int64(5400000000000),
                         },
                 },
                 "missing rotation frequency": {
                         account: map[string]interface{}{
-                                "username": "SATest",
+                                "username": "statictest",
                         },
                         err: errors.New("rotation_frequency is a required field for static accounts"),
                 },
@@ -91,11 +91,11 @@ func TestBackend_Static_Config(t *testing.T) {
                 },
                 "with password": {
                         account: map[string]interface{}{
-                                "username":           "SATest",
+                                "username":           "statictest",
                                 "rotation_frequency": "5400s",
                         },
                         expected: map[string]interface{}{
-                                "username":           "SATest",
+                                "username":           "statictest",
                                 "rotation_frequency": int64(5400000000000),
                         },
                 },
@@ -114,12 +114,9 @@ func TestBackend_Static_Config(t *testing.T) {
                                 "max_ttl":               "10m",
                         }
 
-                        q.Q("tc.account", tc.account)
-                        q.Q("tc.expected", tc.expected)
                         for k, v := range tc.account {
                                 data[k] = v
                         }
-                        q.Q("data input:", data)
 
                         req := &logical.Request{
                                 Operation: logical.CreateOperation,
@@ -170,7 +167,6 @@ func TestBackend_Static_Config(t *testing.T) {
 
                         expected := tc.expected
                         actual := make(map[string]interface{})
-                        q.Q("resp.Data:", resp.Data)
                         for _, key := range dataKeys {
                                 if v, ok := resp.Data[key]; ok {
                                         actual[key] = v
@@ -183,8 +179,6 @@ func TestBackend_Static_Config(t *testing.T) {
                                         t.Fatalf("expected result to contain password, but none found")
                                 }
                                 delete(actual, "password")
-                                // q.Q("actual:", actual)
-                                // q.Q("expected:", expected)
                                 if diff := deep.Equal(expected, actual); diff != nil {
                                         t.Fatal(diff)
                                 }

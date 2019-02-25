@@ -46,7 +46,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
                 // check static account.
                 // - if static, return password
                 if role.StaticAccount != nil {
-                        // q.Q("path creds create, static:", role.StaticAccount)
                         return &logical.Response{
                                 Data: map[string]interface{}{
                                         "username":            role.StaticAccount.Username,

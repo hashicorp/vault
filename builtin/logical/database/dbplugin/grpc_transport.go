@@ -300,9 +300,6 @@ func (c *gRPCClient) Close() error {
 }
 
 func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        // q.Q("grpc_transport:client SetCredentials called")
-        // return nil, status.Error(codes.Unimplemented, "not yet implemented")
-
         ctx, cancel := context.WithCancel(ctx)
         quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
         defer close(quitCh)
@@ -320,7 +317,6 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserCo
                 // Fall back to old call if not implemented
                 grpcStatus, ok := status.FromError(err)
                 if ok && grpcStatus.Code() == codes.Unimplemented {
-                        // q.Q("grpc_transport unimlemented in grpc/client")
                         // TODO: a better or const error type here
                         return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
                 }

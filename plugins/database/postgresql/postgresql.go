@@ -18,7 +18,6 @@ import (
         "github.com/hashicorp/vault/plugins/helper/database/credsutil"
         "github.com/hashicorp/vault/plugins/helper/database/dbutil"
         "github.com/lib/pq"
-        "github.com/y0ssar1an/q"
 )
 
 const (
@@ -101,8 +100,6 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
                 return "", "", false, errors.New("empty creation or rotation statements")
         }
 
-        q.Q("SetCredentials input:", staticUser, statements)
-
         // Grab the lock
         p.Lock()
         defer p.Unlock()
@@ -151,7 +148,6 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
                 return "", "", false, err
         }
 
-        q.Q("returning aftr ex:", username, password)
         return username, password, false, nil
 }
 
@@ -275,12 +271,11 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 }
 
 func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	// Grab the lock
-	p.Lock()
-	defer p.Unlock()
-        q.Q("username in revoke:", username)
+        // Grab the lock
+        p.Lock()
+        defer p.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
+        statements = dbutil.StatementCompatibilityHelper(statements)
 
 	if len(statements.Revocation) == 0 {
 		return p.defaultRevokeUser(ctx, username)
