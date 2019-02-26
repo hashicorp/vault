@@ -1,6 +1,7 @@
 import ApplicationAdapter from './application';
 import { inject as service } from '@ember/service';
 import { get } from '@ember/object';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   router: service(),
@@ -9,7 +10,7 @@ export default ApplicationAdapter.extend({
     let [path, role] = JSON.parse(id);
 
     let namespace = get(snapshot, 'adapterOptions.namespace');
-    let url = `/v1/auth/${path}/oidc/auth_url`;
+    let url = `/v1/auth/${encodePath(path)}/oidc/auth_url`;
     let redirect_uri = `${window.location.origin}${this.router.urlFor('vault.cluster.oidc-callback', {
       auth_path: path,
     })}`;
