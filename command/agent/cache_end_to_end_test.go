@@ -349,7 +349,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		cacheReqID := resp.RequestID
 
 		if origReqID != cacheReqID {
-			t.Fatalf("lease ID mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
+			t.Fatalf("request ID  mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
 		}
 	}
 
@@ -369,7 +369,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		cacheReqID := resp.RequestID
 
 		if origReqID != cacheReqID {
-			t.Fatalf("token mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
+			t.Fatalf("request ID mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
 		}
 	}
 }
