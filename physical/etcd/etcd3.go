@@ -14,6 +14,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 	"go.etcd.io/etcd/clientv3"
@@ -28,7 +29,7 @@ type EtcdBackend struct {
 	logger         log.Logger
 	path           string
 	haEnabled      bool
-	lockTimeout    int
+	lockTimeout    time.Duration
 	requestTimeout time.Duration
 
 	permitPool *physical.PermitPool
@@ -126,13 +127,12 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	if sReqTimeout == "" {
 		// etcd3 default request timeout is set to 5s. It should be long enough
 		// for most cases, even with internal retry.
-		sReqTimeout = "5"
+		sReqTimeout = "5s"
 	}
-	iReqTimeout, err := strconv.Atoi(sReqTimeout)
+	reqTimeout, err := parseutil.ParseDurationSecond(sReqTimeout)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'request_timeout' could not be understood: {{err}}", sReqTimeout), err)
 	}
-	reqTimeout := time.Duration(iReqTimeout) * time.Second
 
 	ssync, ok := conf["sync"]
 	if !ok {
@@ -155,9 +155,9 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	sLock := conf["lock_timeout"]
 	if sLock == "" {
 		// etcd3 default lease duration is 60s. set to 15s for faster recovery.
-		sLock = "15"
+		sLock = "15s"
 	}
-	lock, err := strconv.Atoi(sLock)
+	lock, err := parseutil.ParseDurationSecond(sLock)
 	if err != nil {
 		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'lock_timeout' could not be understood: {{err}}", sLock), err)
 	}
@@ -265,7 +265,7 @@ func (e *EtcdBackend) HAEnabled() bool {
 type EtcdLock struct {
 	lock           sync.Mutex
 	held           bool
-	timeout        int
+	timeout        time.Duration
 	requestTimeout time.Duration
 
 	etcdSession *concurrency.Session
@@ -370,7 +370,7 @@ func (c *EtcdLock) Value() (bool, string, error) {
 }
 
 func (c *EtcdLock) initMu() error {
-	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(c.timeout))
+	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(int(c.timeout.Seconds())))
 	if err != nil {
 		return err
 	}
