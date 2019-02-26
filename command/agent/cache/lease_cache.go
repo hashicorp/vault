@@ -17,6 +17,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
+	"github.com/hashicorp/vault/helper/base62"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -264,7 +265,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			entry.TokenParent = req.Token
 		}
 
-		renewCtxInfo = c.createCtxInfo(parentCtx, secret.Auth.ClientToken)
+		renewCtxInfo = c.createCtxInfo(parentCtx)
 		index.Token = secret.Auth.ClientToken
 		index.TokenAccessor = secret.Auth.Accessor
 
@@ -316,7 +317,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	return resp, nil
 }
 
-func (c *LeaseCache) createCtxInfo(ctx context.Context, token string) *ContextInfo {
+func (c *LeaseCache) createCtxInfo(ctx context.Context) *ContextInfo {
 	if ctx == nil {
 		ctx = c.baseCtxInfo.Ctx
 	}
@@ -814,4 +815,61 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 	}
 
 	return namespace, fmt.Sprintf("/v1%s", nonVersionedPath)
+}
+
+// RegisterAutoAuthToken adds the provided token into the cache.
+// This is primarily used to register an auto-auth token
+// and should be called within a sink's WriteToken func.
+func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
+	// Get the token from the cache
+	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
+	if err != nil {
+		return err
+	}
+
+	// If the index is found, defer its cancelFunc
+	if oldIndex != nil {
+		defer oldIndex.RenewCtxInfo.CancelFunc()
+	}
+
+	// The following randomly-generated values are required
+	// for index storage by the cache, but are not actually used
+	// We use random values to prevent accidental access.
+	id, err := base62.Random(5)
+	if err != nil {
+		return err
+	}
+	namespace, err := base62.Random(5)
+	if err != nil {
+		return err
+	}
+	requestPath, err := base62.Random(5)
+	if err != nil {
+		return err
+	}
+
+	index := &cachememdb.Index{
+		ID:          id,
+		Token:       token,
+		Namespace:   namespace,
+		RequestPath: requestPath,
+	}
+
+	ctxInfo := c.createCtxInfo(nil)
+
+	index.RenewCtxInfo = &cachememdb.ContextInfo{
+		Ctx:        ctxInfo.Ctx,
+		CancelFunc: ctxInfo.CancelFunc,
+		DoneCh:     ctxInfo.DoneCh,
+	}
+
+	// Store the index in the cache
+	c.logger.Debug("storing auto-auth token into the cache")
+	err = c.db.Set(index)
+	if err != nil {
+		c.logger.Error("failed to cache the auto-auth token", "error", err)
+		return err
+	}
+
+	return nil
 }
