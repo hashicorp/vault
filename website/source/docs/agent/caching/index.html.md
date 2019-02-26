@@ -36,6 +36,13 @@ However, even when enabled, if requests that reach the agent already have a
 token attached on them, the attached token will be put to use instead of the
 auto-auth token.
 
+-> **Note:** In Vault 1.1-beta, if the request doesn't already contain a Vault
+token, then the `auto-auth` token will used to make requests. The resulting
+secrets from these `auto-auth` token calls are not cached. They will be in the
+non-beta version. To test out the caching scenarios, please make a login
+request or a token creation request via the agent. The secrets generated from
+these new tokens will get cached.
+
 ## Cache Evictions
 
 The eviction of cache entries will occur when the agent fails to renew secrets.
