@@ -98,6 +98,23 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
         // verify username/password
         verifyPgConn(t, username, password, connURL)
 
+        // re-read the creds, verifying they aren't changing on read
+        data = map[string]interface{}{}
+        req = &logical.Request{
+                Operation: logical.ReadOperation,
+                Path:      "creds/plugin-role-test",
+                Storage:   config.StorageView,
+                Data:      data,
+        }
+        resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+        if err != nil || (resp != nil && resp.IsError()) {
+                t.Fatalf("err:%s resp:%#v\n", err, resp)
+        }
+
+        if username != resp.Data["username"].(string) || password != resp.Data["password"].(string) {
+                t.Fatal("expected re-read username/password to match, but didn't")
+        }
+
         // trigger rotation
         data = map[string]interface{}{"name": "plugin-role-test"}
         req = &logical.Request{
