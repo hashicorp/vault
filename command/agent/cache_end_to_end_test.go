@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/helper/consts"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -263,7 +264,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
-	mux.Handle("/v1/agent/cache-clear", leaseCache.HandleCacheClear(ctx))
+	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
 	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 	server := &http.Server{

@@ -156,7 +156,7 @@ export default Component.extend({
       let oidcWindow = win.open(
         this.role.authUrl,
         'vaultOIDCWindow',
-        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT}resizable,scrollbars=yes,top=${top},left=${left}`
+        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
 
       this.prepareForOIDC.perform(oidcWindow);
