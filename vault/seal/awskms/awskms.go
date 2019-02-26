@@ -87,7 +87,7 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
-	k.region = awsutil.GetOrDefaultRegion(config["region"])
+	k.region = awsutil.GetOrDefaultRegion(k.logger, config["region"])
 
 	// Check and set AWS access key, secret key, and session token
 	k.accessKey = config["access_key"]

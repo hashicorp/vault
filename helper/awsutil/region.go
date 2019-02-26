@@ -1,13 +1,15 @@
 package awsutil
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
-func GetOrDefaultRegion(configuredRegion string) string {
+func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 	// We default to us-east-1 because it's a widely used region
 	// and is also where AWS first rolls out new features.
 	defaultRegion := "us-east-1"
@@ -30,14 +32,18 @@ func GetOrDefaultRegion(configuredRegion string) string {
 	// Nothing was configured, let's try to get the region from EC2 instance metadata.
 	sess, err := session.NewSession(nil)
 	if err != nil {
-		// This is odd, let's do what we can to pluckily carry on.
+		logger.Warn(fmt.Sprintf("unable to start session, defaulting region to %s", defaultRegion))
 		return defaultRegion
 	}
 
-	// This will hang for ~10 seconds if we aren't running on an EC2 instance.
-	region, err := ec2metadata.New(sess).Region()
+	metadata := ec2metadata.New(sess)
+	if !metadata.Available() {
+		return defaultRegion
+	}
+
+	region, err := metadata.Region()
 	if err != nil {
-		// This means we're not on an EC2 instance.
+		logger.Warn("unable to retrieve region from instance metadata, defaulting region to %s", defaultRegion)
 		return defaultRegion
 	}
 	return region
