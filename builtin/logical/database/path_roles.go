@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -128,10 +129,15 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+		if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
+			return nil, err
+		}
+
 		// if this role is a static account, we need to revoke the user from the
 		// database
 		// TODO: wrap this in a WAL
-		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+		role, err := b.Role(ctx, req.Storage, name)
 		if err != nil {
 			return nil, err
 		}
@@ -150,9 +156,10 @@ func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 			}
 		}
 
-		err = req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
-		if err != nil {
-			return nil, err
+		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+			if _, ok := err.(*queue.ErrItemNotFound); !ok {
+				return nil, err
+			}
 		}
 
 		return nil, nil
@@ -344,6 +351,25 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			// err'd , and this call does not return credentials
 			_, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role, createRole)
 			if err != nil {
+				return nil, err
+			}
+
+			// TODO need to check that we're only updating the revocation statements or rotation frequency
+
+			// In case this is an update, remove any previous version of the item from the queue
+			if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+				if _, ok := err.(*queue.ErrItemNotFound); !ok {
+					return nil, err
+				}
+			}
+
+			// Add their rotation to the queue
+			if err := b.credRotationQueue.PushItem(&queue.Item{
+				Key:      name,
+				Value:    role, // TODO is this what needs to be here?
+				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
+			}); err != nil {
+				// TODO rollback?
 				return nil, err
 			}
 		}

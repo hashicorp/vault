@@ -24,7 +24,7 @@ type PriorityQueue interface {
 	PushItem(*Item) error
 
 	// PopItemByKey searchs the queue for an item with the given key and removes it
-	// from the queue if found. Returns ErrItemNotFound(key) if not found. This
+	// from the queue if found. Returns NewErrItemNotFound(key) if not found. This
 	// method must fix the queue after removal.
 	PopItemByKey(string) (*Item, error)
 
@@ -36,11 +36,21 @@ type PriorityQueue interface {
 	// Peek() (*Item, error)
 
 	// // Find searches and returns item from the queue, if found. This does not
-	// // remove the item. If no item is found, returns ErrItemNotFound
+	// // remove the item. If no item is found, returns NewErrItemNotFound
 	// Find(string) (*Item, error)
 }
 
-// ErrItemNotFound creates a "not found" error for the given key
-func ErrItemNotFound(key string) error {
-	return fmt.Errorf("queue item with key (%s) not found", key)
+// NewErrItemNotFound creates a "not found" error for the given key
+func NewErrItemNotFound(key string) error {
+	return &ErrItemNotFound{
+		Key: key,
+	}
+}
+
+type ErrItemNotFound struct {
+	Key string
+}
+
+func (e *ErrItemNotFound) Error() string {
+	return fmt.Sprintf("queue item with key (%s) not found", e.Key)
 }

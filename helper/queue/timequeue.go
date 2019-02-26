@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+var ErrEmpty = errors.New("queue is empty")
+
 // NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
 func NewTimeQueue() PriorityQueue {
 	tq := TimeQueue{
@@ -40,7 +42,7 @@ func (tq *TimeQueue) PopItem() (*Item, error) {
 	defer tq.dataMutex.Unlock()
 
 	if tq.Len() == 0 {
-		return nil, errors.New("queue is empty")
+		return nil, ErrEmpty
 	}
 
 	item := heap.Pop(tq).(*Item)
@@ -75,7 +77,7 @@ func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
 
 	item, ok := tq.dataMap[key]
 	if !ok {
-		return nil, ErrItemNotFound(key)
+		return nil, NewErrItemNotFound(key)
 	}
 
 	// remove the item the heap and delete it from the dataMap
@@ -88,7 +90,7 @@ func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
 
 	// TODO log that we found something but it wasn't an Item. Or just not bother
 	// type asserting
-	return nil, ErrItemNotFound(key)
+	return nil, NewErrItemNotFound(key)
 }
 
 //////
