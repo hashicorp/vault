@@ -94,6 +94,7 @@
     "ember-source": "~3.4.0",
     "ember-test-selectors": "^1.0.0",
     "ember-truth-helpers": "^2.1.0",
+    "escape-string-regexp": "^1.0.5",
     "eslint-config-prettier": "^3.1.0",
     "eslint-plugin-ember": "^5.2.0",
     "eslint-plugin-prettier": "^3.0.0",
