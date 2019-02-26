@@ -1,7 +1,0 @@
-<snippet>
-	<content><![CDATA[
-q.Q($1) // DEBUG
-]]></content>
-	<tabTrigger>qq</tabTrigger>
-	<scope>source.go</scope>
-</snippet>

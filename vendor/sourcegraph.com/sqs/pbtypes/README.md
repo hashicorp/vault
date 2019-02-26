@@ -1,4 +1,0 @@
-# pbtypes
-
-protobuf helper types
-
