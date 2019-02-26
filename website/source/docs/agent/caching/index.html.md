@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Caching"
-sidebar_title: "Caching <sup>Beta</sup>"
+sidebar_title: "Caching <sup>BETA</sup>"
 sidebar_current: "docs-agent-caching"
 description: |-
   Vault Agent Caching allows client-side caching of responses containing newly
