@@ -2,6 +2,7 @@ package database
 
 import (
         "context"
+        "time"
 
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
@@ -44,8 +45,20 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
                 if role.StaticAccount != nil {
                         // in create/update of static accounts, we only care if the operation
                         // err'd , and this call does not return credentials
+
+                        //TODO wrap in WAL, rollback
                         _, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role, false)
                         if err != nil {
+                                return nil, err
+                        }
+                        role.StaticAccount.LastVaultRotation = time.Now()
+
+                        // Store it
+                        entry, err := logical.StorageEntryJSON("role/"+name, role)
+                        if err != nil {
+                                return nil, err
+                        }
+                        if err := req.Storage.Put(ctx, entry); err != nil {
                                 return nil, err
                         }
                 } else {

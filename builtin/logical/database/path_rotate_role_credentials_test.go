@@ -7,7 +7,6 @@ import (
 
         "github.com/hashicorp/vault/helper/namespace"
         "github.com/hashicorp/vault/logical"
-        "github.com/y0ssar1an/q"
 
         "database/sql"
 
@@ -55,15 +54,12 @@ func TestBackend_Static_Account_Rotate(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        q.Q(">>>")
         data = map[string]interface{}{
                 "name":                  "plugin-role-test",
                 "db_name":               "plugin-test",
                 "creation_statements":   testRoleStaticCreate,
                 "rotation_statements":   testRoleStaticUpdate,
                 "revocation_statements": defaultRevocationSQL,
-                "default_ttl":           "5m",
-                "max_ttl":               "10m",
                 "username":              "statictest",
                 "rotation_frequency":    "5400s",
         }
@@ -92,22 +88,63 @@ func TestBackend_Static_Account_Rotate(t *testing.T) {
         if err != nil || (resp != nil && resp.IsError()) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
-        q.Q("respdata:", resp.Data)
 
         username := resp.Data["username"].(string)
         password := resp.Data["password"].(string)
-        q.Q("u/p:", username, password)
         if username == "" || password == "" {
                 t.Fatalf("empty username (%s) or password (%s)", username, password)
         }
 
-        cnUrl := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
-        db, err := sql.Open("postgres", cnUrl)
+        // verify username/password
+        verifyPgConn(t, username, password, connURL)
+
+        // trigger rotation
+        data = map[string]interface{}{"name": "plugin-role-test"}
+        req = &logical.Request{
+                Operation: logical.UpdateOperation,
+                Path:      "rotate-role/plugin-role-test",
+                Storage:   config.StorageView,
+                Data:      data,
+        }
+        resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+        if err != nil || (resp != nil && resp.IsError()) {
+                t.Fatalf("err:%s resp:%#v\n", err, resp)
+        }
+
+        if resp != nil {
+                t.Fatalf("Expected empty response from rotate-role: (%#v)", resp)
+        }
+
+        // Re-Read the creds
+        data = map[string]interface{}{}
+        req = &logical.Request{
+                Operation: logical.ReadOperation,
+                Path:      "creds/plugin-role-test",
+                Storage:   config.StorageView,
+                Data:      data,
+        }
+        resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+        if err != nil || (resp != nil && resp.IsError()) {
+                t.Fatalf("err:%s resp:%#v\n", err, resp)
+        }
+
+        newPassword := resp.Data["password"].(string)
+        if password == newPassword {
+                t.Fatalf("expected passwords to differ, got (%s)", newPassword)
+        }
+
+        // verify new username/password
+        verifyPgConn(t, username, newPassword, connURL)
+}
+
+func verifyPgConn(t *testing.T, username, password, connURL string) {
+        cURL := strings.Replace(connURL, "postgres:secret", username+":"+password, 1)
+        db, err := sql.Open("postgres", cURL)
         if err != nil {
                 t.Fatal(err)
         }
         if err := db.Ping(); err != nil {
                 t.Fatal(err)
         }
-        // disconnect, rotate cred
+        db.Close()
 }
