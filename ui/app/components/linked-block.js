@@ -1,6 +1,7 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 let LinkedBlockComponent = Component.extend({
   router: service(),
@@ -19,7 +20,13 @@ let LinkedBlockComponent = Component.extend({
       $target.closest('button', event.currentTarget).length > 0 ||
       $target.closest('a', event.currentTarget).length > 0;
     if (!isAnchorOrButton) {
-      const params = this.get('params');
+      let params = this.get('params');
+      params = params.map((param, index) => {
+        if (index === 0 || typeof param !== 'string') {
+          return param;
+        }
+        return encodePath(param);
+      });
       const queryParams = this.get('queryParams');
       if (queryParams) {
         params.push({ queryParams });
