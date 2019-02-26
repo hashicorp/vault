@@ -38,8 +38,6 @@ IMPROVEMENTS:
  * auth/jwt: The name "oidc" has been added as an alias for the jwt backend. Either
    name may be specified in the `auth enable` command.
  * core/metrics: Prometheus pull support using a new sys/metrics endpoint. [GH-5308]
- * namespace (enterprise): Clearing out identity store items upon namespace
-   deletion [[GH-850]](https://github.com/hashicorp/vault-enterprise/pull/850)
  * replication: The inital replication indexing process on newly initialized or upgraded
    clusters now runs asynchronously.
  * ui: The UI is now leveraging OpenAPI definitions to pull in fields for various forms.
@@ -49,6 +47,8 @@ IMPROVEMENTS:
 BUG FIXES:
  
  * identity: Fix a panic at login when external group has a nil alias. [GH-6230]
+ * namespace (enterprise): Clearing out identity store items upon namespace
+   deletion [[GH-850]](https://github.com/hashicorp/vault-enterprise/pull/850)
  * performance standby: Fixed a bug causing performance standbys to wait longer
    than necessary after forwarding a write to the active node.
  
