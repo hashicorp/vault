@@ -16,7 +16,7 @@ import (
 
 const (
 	// rollbackPeriod is how often we attempt rollbacks for all the backends
-	rollbackPeriod = time.Minute
+        rollbackPeriod = 10 * time.Second // TODO: reduced temporarily to speed up testing
 )
 
 // RollbackManager is responsible for performing rollbacks of partial
