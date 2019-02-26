@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/queue"
@@ -87,50 +87,51 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = make(map[string]*dbPluginInstance)
 
 	replicationState := conf.System.ReplicationState()
-	if (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+	if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
 		!replicationState.HasState(consts.ReplicationDRSecondary) &&
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 
 		b.credRotationQueue = queue.NewTimeQueue()
 
+		// TODO: is a there a context to use here?
+		b.populateRotationQueue(context.Background(), conf.StorageView)
+
 		b.Backend.PeriodicFunc = func(ctx context.Context, req *logical.Request) error {
 			// This will loop until either:
 			// - The queue of passwords needing rotation is completely empty.
 			// - It encounters the first password not yet needing rotation.
-			for _, instance := range b.connections {
-				for {
-					item, err := b.credRotationQueue.PopItem()
-					if err != nil {
-						if err == queue.ErrEmpty {
-							return nil
-						}
-						return err
-					}
-
-					role := item.Value.(*roleEntry)
-					c := dbplugin.StaticUserConfig{
-						Username: role.StaticAccount.Username,
-					}
-
-					if time.Now().Unix() > item.Priority {
-						// We've found our first item not in need of rotation
-						// TODO is this logic correct? Need to also check the logic creating the priority.
-						fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
-						instance.SetCredentials(ctx, c, role.Statements.Rotation)
-						b.credRotationQueue.PushItem(&queue.Item{
-							Key:      item.Key,
-							Value:    role, // TODO is this what needs to be here?
-							Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
-						})
-					} else {
-						b.credRotationQueue.PushItem(item)
+			for {
+				item, err := b.credRotationQueue.PopItem()
+				if err != nil {
+					if err == queue.ErrEmpty {
 						return nil
 					}
+					return err
+				}
+
+				role := item.Value.(*roleEntry)
+
+				if time.Now().Unix() > item.Priority {
+					// We've found our first item not in need of rotation
+					// TODO is this logic correct? Need to also check the logic creating the priority.
+					fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
+					if err := b.createUpdateStaticAccount(ctx, req.Storage, item.Key, role, false); err != nil {
+						// TODO: what to do?
+					}
+					b.credRotationQueue.PushItem(&queue.Item{
+						Key:      item.Key,
+						Value:    role, // TODO is this what needs to be here?
+						Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
+					})
+				} else {
+					b.credRotationQueue.PushItem(item)
+					return nil
 				}
 			}
 			return nil
 		}
 	}
+
 	return &b
 }
 
