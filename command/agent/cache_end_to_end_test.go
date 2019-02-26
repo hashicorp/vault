@@ -27,9 +27,13 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const policyKVAdmin = `
+const policyAutoAuthAppRole = `
 path "/kv/*" {
 	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
+}
+
+path "/auth/token/create" {
+	capabilities = ["create", "update"]
 }
 `
 
@@ -84,7 +88,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 
 	// Add an kv-admin policy
-	if err := client.Sys().PutPolicy("kv-admin", policyKVAdmin); err != nil {
+	if err := client.Sys().PutPolicy("test-autoauth", policyAutoAuthAppRole); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +104,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		"bind_secret_id": "true",
 		"token_ttl":      "3s",
 		"token_max_ttl":  "10s",
-		"policies":       []string{"kv-admin"},
+		"policies":       []string{"test-autoauth"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -328,22 +332,44 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatalf("failed to use the auto-auth token to perform lookup-self")
 	}
 
-	// Read the secret and create a lease
-	resp, err = testClient.Logical().Read("kv/foo")
-	if err != nil {
-		t.Fatal(err)
+	// The following block tests lease creation caching using the auto-auth token.
+	{
+		resp, err = testClient.Logical().Read("kv/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		origReqID := resp.RequestID
+
+		resp, err = testClient.Logical().Read("kv/foo")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cacheReqID := resp.RequestID
+
+		if origReqID != cacheReqID {
+			t.Fatalf("lease ID mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
+		}
 	}
 
-	origReqID := resp.RequestID
+	// The following block tests auth token creation caching (child, non-orphan
+	// tokens) using the auto-auth token.
+	{
+		resp, err = testClient.Logical().Write("auth/token/create", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		origReqID := resp.RequestID
 
-	resp, err = testClient.Logical().Read("kv/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
+		resp, err = testClient.Logical().Write("auth/token/create", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cacheReqID := resp.RequestID
 
-	cachedReqID := resp.RequestID
-
-	if origReqID != cachedReqID {
-		t.Fatalf("RequestID mismatch, expected second request to be a cached response: %s != %s", origReqID, cachedReqID)
+		if origReqID != cacheReqID {
+			t.Fatalf("token mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
+		}
 	}
 }
