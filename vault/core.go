@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -419,7 +420,7 @@ type Core struct {
 	loadCaseSensitiveIdentityStore bool
 
 	// clusterListener starts up and manages connections on the cluster ports
-	clusterListener *ClusterListener
+	clusterListener *cluster.ClusterListener
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -1036,20 +1037,18 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		c.logger.Info("vault is unsealed")
 	}
 
-	// If the storage backend needs to be unsealed
-	if unsealable, ok := c.underlyingPhysical.(physical.Unsealable); ok {
-		err := unsealable.Unseal(ctx, c.barrier)
-		if err != nil {
-			return false, err
-		}
-	}
-
 	if err := preUnsealInternal(ctx, c); err != nil {
 		return false, err
 	}
 
 	if err := c.startClusterListener(ctx); err != nil {
 		return false, err
+	}
+
+	if clusteredStorage, ok := c.underlyingPhysical.(physical.Clustered); ok {
+		if err := clusteredStorage.SetupCluster(ctx, c.clusterListener); err != nil {
+			return false, err
+		}
 	}
 
 	// Do post-unseal setup if HA is not enabled
@@ -1375,9 +1374,9 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock bool) error {
 	}
 
 	// If the storage backend needs to be sealed
-	if unsealable, ok := c.underlyingPhysical.(physical.Unsealable); ok {
-		err := unsealable.Seal(context.Background())
-		if err != nil {
+	if clustered, ok := c.underlyingPhysical.(physical.Clustered); ok {
+		if err := clustered.TeardownCluster(c.clusterListener); err != nil {
+			c.logger.Error("error stopping storage cluster", "error", err)
 			return err
 		}
 	}

@@ -1,12 +1,9 @@
 package logstore
 
 import (
-	"context"
 	"errors"
-	"fmt"
 
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/vault/physical"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -34,8 +31,6 @@ type BoltStore struct {
 
 	// The path to the Bolt database file
 	path string
-
-	encryptor physical.EncryptorHook
 }
 
 // Options contains all the configuraiton used to open the BoltDB
@@ -61,12 +56,12 @@ func (o *Options) readOnly() bool {
 }
 
 // NewBoltStore takes a file path and returns a connected Raft backend.
-func NewBoltStore(path string, encryptor physical.EncryptorHook) (*BoltStore, error) {
-	return New(Options{Path: path}, encryptor)
+func NewBoltStore(path string) (*BoltStore, error) {
+	return New(Options{Path: path})
 }
 
 // New uses the supplied options to open the BoltDB and prepare it for use as a raft backend.
-func New(options Options, encryptor physical.EncryptorHook) (*BoltStore, error) {
+func New(options Options) (*BoltStore, error) {
 	// Try to connect
 	handle, err := bolt.Open(options.Path, dbFileMode, options.BoltOptions)
 	if err != nil {
@@ -76,9 +71,8 @@ func New(options Options, encryptor physical.EncryptorHook) (*BoltStore, error) 
 
 	// Create the new store
 	store := &BoltStore{
-		conn:      handle,
-		path:      options.Path,
-		encryptor: encryptor,
+		conn: handle,
+		path: options.Path,
 	}
 
 	// If the store was opened read-only, don't try and create buckets
@@ -163,12 +157,7 @@ func (b *BoltStore) GetLog(idx uint64, log *raft.Log) error {
 		return raft.ErrLogNotFound
 	}
 
-	plaintext, err := b.encryptor.Decrypt(context.Background(), fmt.Sprintf("%d", idx), val)
-	if err != nil {
-		return err
-	}
-
-	return decodeMsgPack(plaintext, log)
+	return decodeMsgPack(val, log)
 }
 
 // StoreLog is used to store a single raft log
@@ -191,13 +180,8 @@ func (b *BoltStore) StoreLogs(logs []*raft.Log) error {
 			return err
 		}
 
-		ciphertext, err := b.encryptor.Encrypt(context.Background(), fmt.Sprintf("%d", log.Index), val.Bytes())
-		if err != nil {
-			return err
-		}
-
 		bucket := tx.Bucket(dbLogs)
-		if err := bucket.Put(key, ciphertext); err != nil {
+		if err := bucket.Put(key, val.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -239,13 +223,8 @@ func (b *BoltStore) Set(k, v []byte) error {
 	}
 	defer tx.Rollback()
 
-	ciphertext, err := b.encryptor.Encrypt(context.Background(), string(k), v)
-	if err != nil {
-		return err
-	}
-
 	bucket := tx.Bucket(dbConf)
-	if err := bucket.Put(k, ciphertext); err != nil {
+	if err := bucket.Put(k, v); err != nil {
 		return err
 	}
 
@@ -267,12 +246,7 @@ func (b *BoltStore) Get(k []byte) ([]byte, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	plaintext, err := b.encryptor.Decrypt(context.Background(), string(k), val)
-	if err != nil {
-		return nil, err
-	}
-
-	return append([]byte(nil), plaintext...), nil
+	return append([]byte(nil), val...), nil
 }
 
 // SetUint64 is like Set, but handles uint64 values

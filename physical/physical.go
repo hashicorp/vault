@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/vault/cluster"
 )
 
 const DefaultParallelOperations = 128
@@ -115,14 +116,9 @@ type Lock interface {
 	Value() (bool, string, error)
 }
 
-type EncryptorHook interface {
-	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
-	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
-}
-
-type Unsealable interface {
-	Unseal(context.Context, EncryptorHook) error
-	Seal(context.Context) error
+type Clustered interface {
+	SetupCluster(context.Context, cluster.ClusterHook) error
+	TeardownCluster(cluster.ClusterHook) error
 }
 
 // Factory is the factory function to create a physical backend.

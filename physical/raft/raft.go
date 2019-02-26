@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/consul/lib"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/helper/consts"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/vault/vault/cluster"
 
 	"github.com/hashicorp/vault/physical"
 )
@@ -20,7 +22,7 @@ import (
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.Unsealable = (*RaftBackend)(nil)
+var _ physical.Clustered = (*RaftBackend)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -36,9 +38,11 @@ type RaftBackend struct {
 	conf   map[string]string
 	l      sync.RWMutex
 
-	fsm          *FSM
-	raft         *raft.Raft
-	raftNotifyCh chan bool
+	fsm           *FSM
+	raft          *raft.Raft
+	raftNotifyCh  chan bool
+	raftLayer     *raftLayer
+	raftTransport *raft.NetworkTransport
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -57,7 +61,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}, nil
 }
 
-func (b *RaftBackend) Unseal(ctx context.Context, encryptor physical.EncryptorHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.ClusterHook) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -80,20 +84,22 @@ func (b *RaftBackend) Unseal(ctx context.Context, encryptor physical.EncryptorHo
 	}*/
 
 	// Create a transport layer.
-	trans, err := raft.NewTCPTransport("127.0.0.1:8202", nil, 3, 10*time.Second, nil)
-	if err != nil {
-		return err
+	/*	trans, err := raft.NewTCPTransport("127.0.0.1:8202", nil, 3, 10*time.Second, nil)
+		if err != nil {
+			return err
+		}*/
+
+	b.raftLayer = NewRaftLayer(b.logger, clusterListener.Addr())
+
+	transConfig := &raft.NetworkTransportConfig{
+		Stream:  b.raftLayer,
+		MaxPool: 3,
+		Timeout: 10 * time.Second,
+		//	ServerAddressProvider: serverAddressProvider,
 	}
 
-	/*	transConfig := &raft.NetworkTransportConfig{
-			Stream:  s.raftLayer,
-			MaxPool: 3,
-			Timeout: 10 * time.Second,
-			//	ServerAddressProvider: serverAddressProvider,
-		}
-
-		trans := raft.NewNetworkTransportWithConfig(transConfig)*/
-	//	s.raftTransport = trans
+	trans := raft.NewNetworkTransportWithConfig(transConfig)
+	b.raftTransport = trans
 
 	// Make sure we set the LogOutput.
 	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
@@ -123,7 +129,7 @@ func (b *RaftBackend) Unseal(ctx context.Context, encryptor physical.EncryptorHo
 		}
 
 		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"), encryptor)
+		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
 		if err != nil {
 			return err
 		}
@@ -178,10 +184,16 @@ func (b *RaftBackend) Unseal(ctx context.Context, encryptor physical.EncryptorHo
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
+	// Add Handler to the cluster
+	clusterListener.AddHandler(consts.RaftStorageALPN, b.raftLayer)
+
+	// Add Client to the cluster
+	clusterListener.AddClient(consts.RaftStorageALPN, b.raftLayer)
+
 	return nil
 }
 
-func (b *RaftBackend) Seal(ctx context.Context) error {
+func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error {
 	b.l.Lock()
 	future := b.raft.Shutdown()
 	b.raft = nil

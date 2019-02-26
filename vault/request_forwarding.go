@@ -15,28 +15,14 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-)
-
-const (
-	clusterListenerAcceptDeadline = 500 * time.Millisecond
-
-	// PerformanceReplicationALPN is the negotiated protocol used for
-	// performance replication.
-	PerformanceReplicationALPN = "replication_v1"
-
-	// DRReplicationALPN is the negotiated protocol used for
-	// dr replication.
-	DRReplicationALPN = "replication_dr_v1"
-
-	perfStandbyALPN = "perf_standby_v1"
-
-	requestForwardingALPN = "req_fw_sb-act_v1"
 )
 
 var (
@@ -190,7 +176,7 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 // Stop stops the request forwarding server and closes connections.
 func (rf *requestForwardingHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
-	time.Sleep(clusterListenerAcceptDeadline)
+	time.Sleep(cluster.ListenerAcceptDeadline)
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
 	return nil
@@ -221,15 +207,15 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return err
 	}
 
-	c.clusterListener.AddHandler(requestForwardingALPN, handler)
+	c.clusterListener.AddHandler(consts.RequestForwardingALPN, handler)
 
 	return nil
 }
 
 func (c *Core) stopForwarding() {
 	if c.clusterListener != nil {
-		c.clusterListener.StopHandler(requestForwardingALPN)
-		c.clusterListener.StopHandler(perfStandbyALPN)
+		c.clusterListener.StopHandler(consts.RequestForwardingALPN)
+		c.clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
 }
 
@@ -264,7 +250,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	}
 
 	if c.clusterListener != nil {
-		c.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{
+		c.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
 			core: c,
 		})
 	}
@@ -275,7 +261,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
+		grpc.WithDialer(c.getGRPCDialer(ctx, consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * HeartbeatInterval,
@@ -319,7 +305,7 @@ func (c *Core) clearForwardingClients() {
 	c.rpcForwardingClient = nil
 
 	if c.clusterListener != nil {
-		c.clusterListener.RemoveClient(requestForwardingALPN)
+		c.clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }
