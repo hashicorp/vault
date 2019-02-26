@@ -258,7 +258,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
                         frequency := data.Get("rotation_frequency")
                         if frequency == 0 && req.Operation == logical.CreateOperation {
-                                return logical.ErrorResponse("rotation_frequency is a required to create static accounts"), nil
+                                return logical.ErrorResponse("rotation_frequency is required to create static accounts"), nil
                         }
 
                         role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(frequency)

@@ -9,12 +9,11 @@ import (
         "github.com/hashicorp/vault/helper/namespace"
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
-        "github.com/y0ssar1an/q"
 )
 
 var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_frequency"}
 
-func TestBackend_Static_Config(t *testing.T) {
+func TestBackend_StaticRole_Config(t *testing.T) {
         cluster, sys := getCluster(t)
         defer cluster.Cleanup()
 
@@ -76,7 +75,7 @@ func TestBackend_Static_Config(t *testing.T) {
                         account: map[string]interface{}{
                                 "username": "statictest",
                         },
-                        err: errors.New("rotation_frequency is a required field for static accounts"),
+                        err: errors.New("rotation_frequency is required to create static accounts"),
                 },
                 "missing username frequency": {
                         account: map[string]interface{}{
@@ -102,7 +101,6 @@ func TestBackend_Static_Config(t *testing.T) {
 
         for name, tc := range testCases {
                 t.Run(name, func(t *testing.T) {
-                        q.Q(">>>")
                         data := map[string]interface{}{
                                 "name":                  "plugin-role-test",
                                 "db_name":               "plugin-test",
@@ -201,16 +199,11 @@ func TestBackend_Static_Config(t *testing.T) {
                         if err != nil || (resp != nil && resp.IsError()) {
                                 t.Fatalf("err:%s resp:%#v\n", err, resp)
                         }
-                        q.Q("<<<")
-                        q.Q("")
                 })
         }
-        q.Q("")
-        q.Q("     ------")
-        q.Q("")
 }
 
-func TestBackend_Static_Config_Update(t *testing.T) {
+func TestBackend_StaticRole_Config_Update(t *testing.T) {
         cluster, sys := getCluster(t)
         defer cluster.Cleanup()
 
@@ -251,7 +244,6 @@ func TestBackend_Static_Config_Update(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        q.Q(">>>")
         data = map[string]interface{}{
                 "name":                  "plugin-role-test",
                 "db_name":               "plugin-test",
