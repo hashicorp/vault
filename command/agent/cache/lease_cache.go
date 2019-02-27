@@ -817,9 +817,9 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 	return namespace, fmt.Sprintf("/v1%s", nonVersionedPath)
 }
 
-// RegisterAutoAuthToken adds the provided token into the cache.
-// This is primarily used to register an auto-auth token
-// and should be called within a sink's WriteToken func.
+// RegisterAutoAuthToken adds the provided auto-token into the cache. This is
+// primarily used to register the auto-auth token and should only be called
+// within a sink's WriteToken func.
 func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	// Get the token from the cache
 	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
@@ -832,9 +832,9 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 		defer oldIndex.RenewCtxInfo.CancelFunc()
 	}
 
-	// The following randomly-generated values are required
-	// for index storage by the cache, but are not actually used
-	// We use random values to prevent accidental access.
+	// The following randomly generated values are required for index stored by
+	// the cache, but are not actually used. We use random values to prevent
+	// accidental access.
 	id, err := base62.Random(5)
 	if err != nil {
 		return err
@@ -855,6 +855,7 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 		RequestPath: requestPath,
 	}
 
+	// Derive a context off of the lease cache's base context
 	ctxInfo := c.createCtxInfo(nil)
 
 	index.RenewCtxInfo = &cachememdb.ContextInfo{
