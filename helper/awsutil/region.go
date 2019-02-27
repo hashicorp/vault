@@ -2,49 +2,64 @@ package awsutil
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	hclog "github.com/hashicorp/go-hclog"
 )
 
+const DefaultRegion = "us-east-1"
+
+var (
+	RegionEnvKeys = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
+
+	ec2MetadataBaseURL = "http://169.254.169.254"
+)
+
 func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
-	// We default to us-east-1 because it's a widely used region
-	// and is also where AWS first rolls out new features.
-	defaultRegion := "us-east-1"
-
-	// We prefer env variables to configured ones because they
-	// serve as a way to change the application's configuration
-	// on the fly rather than via restarting some process.
-	if os.Getenv("AWS_REGION") != "" {
-		return os.Getenv("AWS_REGION")
-	}
-	if os.Getenv("AWS_DEFAULT_REGION") != "" {
-		return os.Getenv("AWS_DEFAULT_REGION")
-	}
-
-	// If a region was configured, it's time to use it.
 	if configuredRegion != "" {
 		return configuredRegion
 	}
 
-	// Nothing was configured, let's try to get the region from EC2 instance metadata.
-	sess, err := session.NewSession(nil)
-	if err != nil {
-		logger.Warn(fmt.Sprintf("unable to start session, defaulting region to %s", defaultRegion))
-		return defaultRegion
+	for _, envKey := range RegionEnvKeys {
+		envVal := os.Getenv(envKey)
+		if envVal != "" {
+			return envVal
+		}
 	}
 
-	metadata := ec2metadata.New(sess)
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		logger.Warn(fmt.Sprintf("unable to start session, defaulting region to %s", DefaultRegion))
+		return DefaultRegion
+	}
+
+	region := aws.StringValue(sess.Config.Region)
+	if region != "" {
+		return region
+	}
+
+	metadata := ec2metadata.New(sess, &aws.Config{
+		Endpoint:                          aws.String(ec2MetadataBaseURL + "/latest"),
+		EC2MetadataDisableTimeoutOverride: aws.Bool(true),
+		HTTPClient: &http.Client{
+			Timeout: time.Second,
+		},
+	})
 	if !metadata.Available() {
-		return defaultRegion
+		return DefaultRegion
 	}
 
-	region, err := metadata.Region()
+	region, err = metadata.Region()
 	if err != nil {
-		logger.Warn("unable to retrieve region from instance metadata, defaulting region to %s", defaultRegion)
-		return defaultRegion
+		logger.Warn("unable to retrieve region from instance metadata, defaulting region to %s", DefaultRegion)
+		return DefaultRegion
 	}
 	return region
 }
