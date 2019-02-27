@@ -373,6 +373,8 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			}
 			c.logger.Debug("renewal halted; evicting from cache", "path", req.Request.URL.Path)
 			return
+		case <-renewer.RenewCh():
+			c.logger.Debug("secret renewed", "path", req.Request.URL.Path)
 		case <-index.RenewCtxInfo.DoneCh:
 			// This case indicates the renewal process to shutdown and evict
 			// the cache entry. This is triggered when a specific secret
