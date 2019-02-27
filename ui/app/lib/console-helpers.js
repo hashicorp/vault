@@ -1,5 +1,5 @@
 import keys from 'vault/lib/keycodes';
-import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import argTokenizer from 'vault/utils/args-tokenizer';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
