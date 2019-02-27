@@ -51,6 +51,8 @@ BUG FIXES:
    deletion [[GH-850]](https://github.com/hashicorp/vault-enterprise/pull/850)
  * performance standby: Fixed a bug causing performance standbys to wait longer
    than necessary after forwarding a write to the active node.
+ * secrets/kv: Fix issue where a v1→v2 upgrade could run on a performance standby
+   when using a local mount.
  
 ## 1.0.3 (February 12th, 2019)
 
