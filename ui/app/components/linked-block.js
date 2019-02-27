@@ -12,6 +12,8 @@ let LinkedBlockComponent = Component.extend({
 
   queryParams: null,
 
+  encode: false,
+
   click(event) {
     const $target = this.$(event.target);
     const isAnchorOrButton =
@@ -21,12 +23,14 @@ let LinkedBlockComponent = Component.extend({
       $target.closest('a', event.currentTarget).length > 0;
     if (!isAnchorOrButton) {
       let params = this.get('params');
-      params = params.map((param, index) => {
-        if (index === 0 || typeof param !== 'string') {
-          return param;
-        }
-        return encodePath(param);
-      });
+      if (this.encode) {
+        params = params.map((param, index) => {
+          if (index === 0 || typeof param !== 'string') {
+            return param;
+          }
+          return encodePath(param);
+        });
+      }
       const queryParams = this.get('queryParams');
       if (queryParams) {
         params.push({ queryParams });
