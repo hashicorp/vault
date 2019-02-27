@@ -114,7 +114,7 @@
     "text-encoder-lite": "1.0.0",
     "walk-sync": "^0.3.3",
     "xstate": "^3.3.3",
-    "yargs-parser": "^12.0.0"
+    "yargs-parser": "^10.0.0"
   },
   "optionalDependencies": {
     "husky": "^1.1.3",
