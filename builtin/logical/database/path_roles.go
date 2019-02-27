@@ -156,9 +156,11 @@ func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 			}
 		}
 
-		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
-			if _, ok := err.(*queue.ErrItemNotFound); !ok {
-				return nil, err
+                if b.credRotationQueue != nil {
+                        if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+                                if _, ok := err.(*queue.ErrItemNotFound); !ok {
+                                        return nil, err
+                                }
 			}
 		}
 
@@ -355,22 +357,24 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			}
 
 			// TODO need to check that we're only updating the revocation statements or rotation frequency
+                        if b.credRotationQueue != nil {
 
-			// In case this is an update, remove any previous version of the item from the queue
-			if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
-				if _, ok := err.(*queue.ErrItemNotFound); !ok {
-					return nil, err
+                                // In case this is an update, remove any previous version of the item from the queue
+                                if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+                                        if _, ok := err.(*queue.ErrItemNotFound); !ok {
+                                                return nil, err
+                                        }
 				}
-			}
 
-			// Add their rotation to the queue
-			if err := b.credRotationQueue.PushItem(&queue.Item{
-				Key:      name,
-				Value:    role, // TODO is this what needs to be here?
-				Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
-			}); err != nil {
-				// TODO rollback?
-				return nil, err
+                                // Add their rotation to the queue
+                                if err := b.credRotationQueue.PushItem(&queue.Item{
+                                        Key:      name,
+                                        Value:    role, // TODO is this what needs to be here?
+                                        Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
+                                }); err != nil {
+                                        // TODO rollback?
+                                        return nil, err
+                                }
 			}
 		}
 		// END create/update static account

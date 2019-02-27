@@ -8,13 +8,14 @@ import (
 	"sync"
         "time"
 
-	"github.com/hashicorp/errwrap"
+        "github.com/hashicorp/errwrap"
         log "github.com/hashicorp/go-hclog"
-        "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+        uuid "github.com/hashicorp/go-uuid"
+        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+        "github.com/hashicorp/vault/helper/consts"
         "github.com/hashicorp/vault/helper/queue"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+        "github.com/hashicorp/vault/helper/strutil"
+        "github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
@@ -82,16 +83,16 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                 WALRollbackMinAge: 30 * time.Second,
 	}
 
-	b.logger = conf.Logger
-	b.connections = make(map[string]*dbPluginInstance)
+        b.logger = conf.Logger
+        b.connections = make(map[string]*dbPluginInstance)
 
-        // Always populate the queue to guard against nil pointers.
-        b.credRotationQueue = queue.NewTimeQueue()
-
-        // But only execute cred rotation if we're the leader.
-        // TODO what if leadership changes during the lifecycle of the application?
         replicationState := conf.System.ReplicationState()
-        if replicationState.IsLeader() {
+        if (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+                !replicationState.HasState(consts.ReplicationDRSecondary) &&
+                !replicationState.HasState(consts.ReplicationPerformanceStandby) {
+
+                b.credRotationQueue = queue.NewTimeQueue()
+
                 b.Backend.PeriodicFunc = func(ctx context.Context, req *logical.Request) error {
                         // This will loop until either:
                         // - The queue of passwords needing rotation is completely empty.
