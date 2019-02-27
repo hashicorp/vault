@@ -7,6 +7,8 @@ CHANGES:
    [JSONPointer](https://tools.ietf.org/html/rfc6901).
  * auth/jwt: Roles now have a "role type" parameter with a default type of "oidc". To
    configure new JWT roles, a role type of "jwt" must be explicitly specified.
+ * vault aws kms seal **breaking change**: user-configured regions will now be 
+   preferred over regions set in the enclosing environment.
 
 IMPROVEMENTS:
 

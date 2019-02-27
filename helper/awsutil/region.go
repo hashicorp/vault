@@ -12,16 +12,18 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 )
 
+// "us-east-1 is used because it's where AWS first provides support for new features,
+// is a widely used region, and is the most common one for some services like STS.
 const DefaultRegion = "us-east-1"
 
 var (
+	// Order here matters - if multiple values are set, the first one in this array wins.
 	RegionEnvKeys = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
 
 	ec2MetadataBaseURL = "http://169.254.169.254"
 )
 
 /*
-
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
 or well-defined. For example, boto3, the Python SDK (which the aws cli uses),
 loads `~/.aws/config` by default and only reads the `AWS_DEFAULT_REGION` environment
