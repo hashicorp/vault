@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -86,7 +87,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = make(map[string]*dbPluginInstance)
 
 	replicationState := conf.System.ReplicationState()
-	if b.System().LocalMount() || !replicationState.IsFollower() {
+	if (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 
 		b.credRotationQueue = queue.NewTimeQueue()
 

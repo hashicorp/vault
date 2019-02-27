@@ -118,13 +118,3 @@ func (r ReplicationState) HasState(flag ReplicationState) bool { return r&flag !
 func (r *ReplicationState) AddState(flag ReplicationState)     { *r |= flag }
 func (r *ReplicationState) ClearState(flag ReplicationState)   { *r &= ^flag }
 func (r *ReplicationState) ToggleState(flag ReplicationState)  { *r ^= flag }
-
-func (r *ReplicationState) IsFollower() bool {
-	if r.HasState(ReplicationPerformanceSecondary) {
-		return true
-	}
-	if r.HasState(ReplicationPerformanceStandby) {
-		return true
-	}
-	return false
-}
