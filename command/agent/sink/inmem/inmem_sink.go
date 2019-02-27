@@ -22,16 +22,10 @@ func New(conf *sink.SinkConfig, leaseCache *cache.LeaseCache) (sink.Sink, error)
 		return nil, errors.New("nil logger provided")
 	}
 
-	sink := &inmemSink{
+	return &inmemSink{
 		logger:     conf.Logger,
 		leaseCache: leaseCache,
-	}
-
-	if leaseCache != nil {
-		sink.leaseCache = leaseCache
-	}
-
-	return sink, nil
+	}, nil
 }
 
 func (s *inmemSink) WriteToken(token string) error {
