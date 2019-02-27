@@ -140,6 +140,24 @@ PASSPHRASECORRECT:
 		if err != nil {
 			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
 		}
+
+		// HTTP/2 with TLS 1.2 blacklists several cipher suites.
+		// https://tools.ietf.org/html/rfc7540#appendix-A
+		//
+		// Since the CLI (net/http) automatically uses HTTP/2 with TLS 1.2,
+		// we check here if all specified cipher suites are blacklisted.
+		badCiphersCount := 0
+		for _, cipher := range ciphers {
+			if isBadCipher(cipher) {
+				badCiphersCount++
+			}
+		}
+		if badCiphersCount == len(ciphers) {
+			ui.Warn(`WARNING! All cipher suites defined by 'tls_cipher_suites' are blacklisted by the
+HTTP/2 specification. HTTP/2 communication with TLS 1.2 will not work as intended 
+and Vault will be unavailable via the CLI. 
+Please see https://tools.ietf.org/html/rfc7540#appendix-A for further information.`)
+		}
 		tlsConf.CipherSuites = ciphers
 	}
 	if v, ok := config["tls_prefer_server_cipher_suites"]; ok {
