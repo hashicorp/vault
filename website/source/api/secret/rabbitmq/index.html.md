@@ -108,7 +108,7 @@ This endpoint creates or updates the role definition.
 
 - `tags` `(string: "")` – Specifies a comma-separated RabbitMQ management tags.
 
-- `vhost` `(string: "")` – Specifies a map of virtual hosts to
+- `vhosts` `(string: "")` – Specifies a map of virtual hosts to
   permissions.
 
 ### Sample Payload
