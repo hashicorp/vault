@@ -346,6 +346,9 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		// Sleep for a bit to allow renewer logic to kick in
+		time.Sleep(20 * time.Millisecond)
+
 		cacheReqID := resp.RequestID
 
 		if origReqID != cacheReqID {
@@ -361,6 +364,9 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 			t.Fatal(err)
 		}
 		origReqID := resp.RequestID
+
+		// Sleep for a bit to allow renewer logic to kick in
+		time.Sleep(20 * time.Millisecond)
 
 		resp, err = testClient.Logical().Write("auth/token/create", nil)
 		if err != nil {
