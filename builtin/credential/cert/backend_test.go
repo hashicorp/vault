@@ -1485,6 +1485,7 @@ type allowed struct {
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
 	ext                  string // required extensions in the certificate
+	sbjDnOids            string // required subject dn entries
 }
 
 func testAccStepCert(
@@ -1504,6 +1505,7 @@ func testAccStepCert(
 			"allowed_uri_sans":             testData.uris,
 			"allowed_organizational_units": testData.organizational_units,
 			"required_extensions":          testData.ext,
+			"required_subject_oids":        testData.sbjDnOids,
 			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {
@@ -1804,4 +1806,106 @@ func Test_Renew(t *testing.T) {
 	if !resp.IsError() {
 		t.Fatal("expected error")
 	}
+}
+
+// Test a self-signed client containing subject DN entries that is trusted by root CA.
+func TestBackend_subjectoids_singleCert(t *testing.T) {
+	connState, err := testConnState(
+		"test-fixtures/root/rootcawsubjoidscert.pem",
+		"test-fixtures/root/rootcawsubjoidskey.pem",
+		"test-fixtures/root/rootcacert.pem",
+	)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			// First set of cases check all available fields in the Subject DN
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:TheUID"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:TheUID,2.5.4.3:example.com"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:ExampleDivision2"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:Example*2,2.5.4.11:ExampleDivision3"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:Example*1,2.5.4.11:ExampleDivision2,2.5.4.11:ExampleDivision3,0.9.2342.19200300.100.1.25:ExampleDC"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:Example*2,2.5.4.11:ExampleDivision3,0.9.2342.19200300.100.1.25:ExampleDC,2.5.4.4:ExampleSN"}, false),
+			testAccStepLogin(t, connState),
+
+			//This Second set of test cases check for all available fields in the Subject DN for globbed pattern(s)
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:*UID"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:*UID,2.5.4.3:example*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org,2.5.4.11:*Division1"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org,2.5.4.11:*Division1,2.5.4.11:*Division2"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org,2.5.4.11:*Division1,2.5.4.11:*Division2,2.5.4.11:*Division3"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org,2.5.4.11:*Division1,2.5.4.11:*Division2,2.5.4.11:*Division3,0.9.2342.19200300.100.1.25:Example*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example*,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:*Org,2.5.4.11:*Division1,2.5.4.11:*Division2,2.5.4.11:*Division3,0.9.2342.19200300.100.1.25:*DC,2.5.4.4:Example*"}, false),
+			testAccStepLogin(t, connState),
+
+			// This Third set of test cases check for all non-matching entries of OIDs in Subject DN
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:NotTheUID"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "0.9.2342.19200300.100.1.1:TheUID,2.5.4.3:NotExample.com"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:NotExample.com"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:JP"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:WA"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:San Francisco,2.5.4.10:ExampleOrg"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:NotExampleOrg,2.5.4.11:ExampleDivision1"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:NotExampleDivision1,2.5.4.11:ExampleDivision2"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:NotExampleDivision2,2.5.4.11:ExampleDivision3"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:ExampleDivision2,2.5.4.11:NotExampleDivision3,0.9.2342.19200300.100.1.25:ExampleDC"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com,2.5.4.6:US,2.5.4.8:CA,2.5.4.7:Sunnyvale,2.5.4.10:ExampleOrg,2.5.4.11:ExampleDivision1,2.5.4.11:ExampleDivision2,2.5.4.11:ExampleDivision3,0.9.2342.19200300.100.1.25:NotExampleDC,2.5.4.4:ExampleSN"}, false),
+			testAccStepLoginInvalid(t, connState),
+
+			//+ve Tests for condition when both "allowed_common_names" and "required_subject_oids" are provided.
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com", common_names: "example.com"}, false),
+			testAccStepLogin(t, connState),
+
+			//-ve Tests for condition when both "allowed_common_names" and "required_subject_oids" are provided.
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:example.com", common_names: "Notexample.com"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{sbjDnOids: "2.5.4.3:Notexample.com", common_names: "example.com"}, false),
+			testAccStepLoginInvalid(t, connState),
+		},
+	})
 }

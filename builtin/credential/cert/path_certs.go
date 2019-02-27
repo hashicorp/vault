@@ -129,6 +129,12 @@ TTL will be set to the value of this parameter.`,
 				Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
 IP addresses which can perform the login operation.`,
 			},
+			"required_subject_oids": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or array of subject name entries
+formatted as "oid:value". Expects the oid value to be some type of ASN1 encoded string.
+All values much match. Supports globbing on "value".`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -198,6 +204,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 			"allowed_uri_sans":             cert.AllowedURISANs,
 			"allowed_organizational_units": cert.AllowedOrganizationalUnits,
 			"required_extensions":          cert.RequiredExtensions,
+			"required_subject_oids":        cert.RequiredSubjectOids,
 			"bound_cidrs":                  cert.BoundCIDRs,
 		},
 	}, nil
@@ -215,6 +222,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	allowedURISANs := d.Get("allowed_uri_sans").([]string)
 	allowedOrganizationalUnits := d.Get("allowed_organizational_units").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
+	requiredSubjectOids := d.Get("required_subject_oids").([]string)
 
 	var resp logical.Response
 
@@ -302,6 +310,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		MaxTTL:                     maxTTL,
 		Period:                     period,
 		BoundCIDRs:                 parsedCIDRs,
+		RequiredSubjectOids:        requiredSubjectOids,
 	}
 
 	// Store it
@@ -336,6 +345,7 @@ type CertEntry struct {
 	AllowedOrganizationalUnits []string
 	RequiredExtensions         []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
+	RequiredSubjectOids        []string
 }
 
 const pathCertHelpSyn = `
