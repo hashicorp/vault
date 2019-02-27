@@ -259,4 +259,44 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     await logout.visit();
   });
+
+  test('paths are properly encoded', async function(assert) {
+    let backend = 'kv';
+    let paths = [
+      '(',
+      ')',
+      '"',
+      "'",
+      '!',
+      '#',
+      '$',
+      '&',
+      '*',
+      '+',
+      '@',
+      '{',
+      '|',
+      '}',
+      '~',
+      '[',
+      '\\',
+      ']',
+      '^',
+      '_',
+    ].map(char => `${char}some`);
+    assert.expect(paths.length * 2);
+    let secretName = '2';
+    let commands = paths.map(path => `write ${backend}/${path}/${secretName} 3=4`);
+    await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
+    for (let path of paths) {
+      await listPage.visit({ backend, id: path });
+      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+      await listPage.secrets.filterBy('text', '2')[0].click();
+      assert.equal(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.show',
+        `${path}: show page renders correctly`
+      );
+    }
+  });
 });
