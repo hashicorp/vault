@@ -28,7 +28,7 @@ FEATURES:
    login may be initiatated from the Vault UI or through the `vault login` command.
  * **ACL Path Wildcard**: ACL paths can now use the `+` character to enable wild card 
    matching for a single directory in the path definition.
-   
+
 IMPROVEMENTS:
 
  * auth/jwt: A default role can be set. It will be used during JWT/OIDC logins if
@@ -43,12 +43,16 @@ IMPROVEMENTS:
  * ui: The UI is now leveraging OpenAPI definitions to pull in fields for various forms.
    This means, it will not be necessary to add fields on the go and JS sides in the future.
    [GH-6209]
-   
+
 BUG FIXES:
  
  * identity: Fix a panic at login when external group has a nil alias. [GH-6230]
+ * namespace (enterprise): Clearing out identity store items upon namespace
+   deletion [[GH-850]](https://github.com/hashicorp/vault-enterprise/pull/850)
  * performance standby: Fixed a bug causing performance standbys to wait longer
    than necessary after forwarding a write to the active node.
+ * secrets/kv: Fix issue where a v1→v2 upgrade could run on a performance standby
+   when using a local mount.
  
 ## 1.0.3 (February 12th, 2019)
 
