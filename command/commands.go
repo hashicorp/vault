@@ -66,6 +66,9 @@ const (
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
 
+	// flagNameAddress is the flag used in the base command to capture the
+	// address of the Vault server.
+	flagNameAddress = "address"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
