@@ -23,6 +23,14 @@ type Config struct {
 	ExitAfterAuth bool      `hcl:"exit_after_auth"`
 	PidFile       string    `hcl:"pid_file"`
 	Cache         *Cache    `hcl:"cache"`
+	Vault         *Vault    `hcl:"vault"`
+}
+
+type Vault struct {
+	Address       string `hcl:"address"`
+	CACert        string `hcl:"ca_cert"`
+	CAPath        string `hcl:"ca_path"`
+	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
 }
 
 type Cache struct {
@@ -107,7 +115,33 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
+	err = parseVault(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
+	}
+
 	return &result, nil
+}
+
+func parseVault(result *Config, list *ast.ObjectList) error {
+	name := "vault"
+
+	vaultList := list.Filter(name)
+	if len(vaultList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := vaultList.Items[0]
+
+	var v Vault
+	err := hcl.DecodeObject(&v, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.Vault = &v
+
+	return nil
 }
 
 func parseCache(result *Config, list *ast.ObjectList) error {

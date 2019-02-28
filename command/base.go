@@ -211,9 +211,9 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f := set.NewFlagSet("HTTP Options")
 
 			addrStringVar := &StringVar{
-				Name:       "address",
+				Name:       flagNameAddress,
 				Target:     &c.flagAddress,
-				EnvVar:     "VAULT_ADDR",
+				EnvVar:     api.EnvVaultAddress,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
@@ -227,17 +227,17 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
 				Target:     &c.flagAgentAddress,
-				EnvVar:     "VAULT_AGENT_ADDR",
+				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
 			}
 			f.StringVar(agentAddrStringVar)
 
 			f.StringVar(&StringVar{
-				Name:       "ca-cert",
+				Name:       flagNameCACert,
 				Target:     &c.flagCACert,
 				Default:    "",
-				EnvVar:     "VAULT_CACERT",
+				EnvVar:     api.EnvVaultCACert,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to verify the Vault server's SSL certificate. This " +
@@ -245,10 +245,10 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "ca-path",
+				Name:       flagNameCAPath,
 				Target:     &c.flagCAPath,
 				Default:    "",
-				EnvVar:     "VAULT_CAPATH",
+				EnvVar:     api.EnvVaultCAPath,
 				Completion: complete.PredictDirs("*"),
 				Usage: "Path on the local disk to a directory of PEM-encoded CA " +
 					"certificates to verify the Vault server's SSL certificate.",
@@ -258,7 +258,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "client-cert",
 				Target:     &c.flagClientCert,
 				Default:    "",
-				EnvVar:     "VAULT_CLIENT_CERT",
+				EnvVar:     api.EnvVaultClientCert,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to use for TLS authentication to the Vault server. If " +
@@ -269,7 +269,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "client-key",
 				Target:     &c.flagClientKey,
 				Default:    "",
-				EnvVar:     "VAULT_CLIENT_KEY",
+				EnvVar:     api.EnvVaultClientKey,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
 					"matching the client certificate from -client-cert.",
@@ -279,7 +279,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "namespace",
 				Target:     &c.flagNamespace,
 				Default:    notSetValue, // this can never be a real value
-				EnvVar:     "VAULT_NAMESPACE",
+				EnvVar:     api.EnvVaultNamespace,
 				Completion: complete.PredictAnything,
 				Usage: "The namespace to use for the command. Setting this is not " +
 					"necessary but allows using relative paths. -ns can be used as " +
@@ -299,17 +299,17 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "tls-server-name",
 				Target:     &c.flagTLSServerName,
 				Default:    "",
-				EnvVar:     "VAULT_TLS_SERVER_NAME",
+				EnvVar:     api.EnvVaultTLSServerName,
 				Completion: complete.PredictAnything,
 				Usage: "Name to use as the SNI host when connecting to the Vault " +
 					"server via TLS.",
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:    "tls-skip-verify",
+				Name:    flagNameTLSSkipVerify,
 				Target:  &c.flagTLSSkipVerify,
 				Default: false,
-				EnvVar:  "VAULT_SKIP_VERIFY",
+				EnvVar:  api.EnvVaultSkipVerify,
 				Usage: "Disable verification of TLS certificates. Using this option " +
 					"is highly discouraged and decreases the security of data " +
 					"transmissions to and from the Vault server.",
@@ -327,7 +327,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Name:       "wrap-ttl",
 				Target:     &c.flagWrapTTL,
 				Default:    0,
-				EnvVar:     "VAULT_WRAP_TTL",
+				EnvVar:     api.EnvVaultWrapTTL,
 				Completion: complete.PredictAnything,
 				Usage: "Wraps the response in a cubbyhole token with the requested " +
 					"TTL. The response is available via the \"vault unwrap\" command. " +

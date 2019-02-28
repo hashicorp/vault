@@ -67,6 +67,12 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				},
 			},
 		},
+		Vault: &Vault{
+			Address:       "http://127.0.0.1:1111",
+			CACert:        "config_ca_cert",
+			CAPath:        "config_ca_path",
+			TLSSkipVerify: true,
+		},
 		PidFile: "./pidfile",
 	}
 
