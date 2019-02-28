@@ -3,7 +3,6 @@ package awsutil
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,12 +15,7 @@ import (
 // is a widely used region, and is the most common one for some services like STS.
 const DefaultRegion = "us-east-1"
 
-var (
-	// Order here matters - if multiple values are set, the first one in this array wins.
-	RegionEnvKeys = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
-
-	ec2MetadataBaseURL = "http://169.254.169.254"
-)
+var ec2MetadataBaseURL = "http://169.254.169.254"
 
 /*
 It's impossible to mimic "normal" AWS behavior here because it's not consistent
@@ -46,13 +40,6 @@ This approach should be used in future updates to this logic.
 func GetOrDefaultRegion(logger hclog.Logger, configuredRegion string) string {
 	if configuredRegion != "" {
 		return configuredRegion
-	}
-
-	for _, envKey := range RegionEnvKeys {
-		envVal := os.Getenv(envKey)
-		if envVal != "" {
-			return envVal
-		}
 	}
 
 	sess, err := session.NewSessionWithOptions(session.Options{

@@ -20,6 +20,8 @@ var (
 	logger               = hclog.NewNullLogger()
 	expectedTestRegion   = "us-west-2"
 	unexpectedTestRegion = "us-east-2"
+	// Order here matters - if multiple values are set, the first one in this array wins.
+	regionEnvKeys = []string{"AWS_REGION", "AWS_DEFAULT_REGION"}
 )
 
 func TestGetOrDefaultRegion_UserConfigPreferredFirst(t *testing.T) {
@@ -131,13 +133,13 @@ func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *test
 }
 
 func setEnvRegion(t *testing.T, region string) (cleanup func()) {
-	for _, envKey := range RegionEnvKeys {
+	for _, envKey := range regionEnvKeys {
 		if err := os.Setenv(envKey, region); err != nil {
 			t.Fatal(err)
 		}
 	}
 	cleanup = func() {
-		for _, envKey := range RegionEnvKeys {
+		for _, envKey := range regionEnvKeys {
 			if err := os.Unsetenv(envKey); err != nil {
 				t.Fatal(err)
 			}
