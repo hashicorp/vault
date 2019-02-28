@@ -14,13 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/sink/mock"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
