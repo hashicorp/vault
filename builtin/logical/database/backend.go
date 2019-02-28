@@ -352,10 +352,11 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 // clean closes all connections from all database types
 // and cancels any rotation queue loading operation.
 func (b *databaseBackend) clean(ctx context.Context) {
+	// invalidateQueue acquires it's own lock
+	b.invalidateQueue()
+
 	b.Lock()
 	defer b.Unlock()
-
-	b.invalidateQueue()
 
 	for _, db := range b.connections {
 		db.Close()
