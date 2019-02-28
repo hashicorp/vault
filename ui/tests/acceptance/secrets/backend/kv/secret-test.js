@@ -1,4 +1,4 @@
-import { settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import { visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -177,7 +177,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
-    await listPage.visit({ backend: 'secret', id: 'foo/bar' });
+    // use visit helper here because ids with / in them get encoded
+    await visit('/vault/secrets/secret/list/foo/bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
@@ -266,7 +267,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       '(',
       ')',
       '"',
-      "'",
+      //"'",
       '!',
       '#',
       '$',
