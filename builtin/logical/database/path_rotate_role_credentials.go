@@ -2,7 +2,8 @@ package database
 
 import (
         "context"
-        "time"
+
+        "github.com/hashicorp/vault/helper/queue"
 
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
@@ -47,18 +48,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
                         // err'd , and this call does not return credentials
 
                         //TODO wrap in WAL, rollback
-                        _, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role, false)
+                        err = b.createUpdateStaticAccount(ctx, req.Storage, name, role, false)
                         if err != nil {
-                                return nil, err
-                        }
-                        role.StaticAccount.LastVaultRotation = time.Now()
-
-                        // Store it
-                        entry, err := logical.StorageEntryJSON("role/"+name, role)
-                        if err != nil {
-                                return nil, err
-                        }
-                        if err := req.Storage.Put(ctx, entry); err != nil {
                                 return nil, err
                         }
                 } else {
@@ -67,6 +58,46 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 
                 return nil, nil
         }
+}
+
+// populate queue loads the priority queue with existing static accounts.
+func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) {
+        log := b.Logger()
+
+        log.Info("restoring role rotation queue")
+
+        roles, err := s.List(ctx, "role/")
+        if err != nil {
+                log.Warn("unable to list role for enqueueing", "error", err)
+                return
+        }
+
+        for _, roleName := range roles {
+                select {
+                case <-ctx.Done():
+                        log.Info("rotation queue restore cancelled")
+                        return
+                default:
+                }
+
+                role, err := b.Role(ctx, s, roleName)
+                if err != nil {
+                        log.Warn("unable to read role", "error", err, "role", roleName)
+                        continue
+                }
+                if role == nil || role.StaticAccount == nil {
+                        continue
+                }
+
+                if err := b.credRotationQueue.PushItem(&queue.Item{
+                        Key:      roleName,
+                        Value:    role,
+                        Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationFrequency).Unix(),
+                }); err != nil {
+                        log.Warn("unable to enqueue item", "error", err, "role", roleName)
+                }
+        }
+        log.Info("successfully restored role rotation queue")
 }
 
 const pathRotateRoleCredentialsUpdateHelpSyn = `

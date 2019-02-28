@@ -10,7 +10,7 @@ import (
 
         "github.com/hashicorp/errwrap"
         log "github.com/hashicorp/go-hclog"
-        uuid "github.com/hashicorp/go-uuid"
+        "github.com/hashicorp/go-uuid"
         "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
         "github.com/hashicorp/vault/helper/consts"
         "github.com/hashicorp/vault/helper/queue"
@@ -21,6 +21,7 @@ import (
 )
 
 const databaseConfigPath = "database/config/"
+const databaseRolePath = "role/"
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -74,10 +75,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                         pathRotateRoleCredentials(&b),
 		},
 
-		Secrets: []*framework.Secret{
-			secretCreds(&b),
-		},
-                Clean:             b.closeAllDBs,
+                Secrets: []*framework.Secret{
+                        secretCreds(&b),
+                },
+                Clean:             b.clean,
                 Invalidate:        b.invalidate,
                 BackendType:       logical.TypeLogical,
                 WALRollbackMinAge: 30 * time.Second,
@@ -87,60 +88,65 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
         b.connections = make(map[string]*dbPluginInstance)
 
         replicationState := conf.System.ReplicationState()
-        if (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+        if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
                 !replicationState.HasState(consts.ReplicationDRSecondary) &&
                 !replicationState.HasState(consts.ReplicationPerformanceStandby) {
 
-                b.credRotationQueue = queue.NewTimeQueue()
+                b.initQueue(conf.StorageView)
 
                 b.Backend.PeriodicFunc = func(ctx context.Context, req *logical.Request) error {
+                        // Re-init queue if it was invalidated
+                        b.Lock()
+                        if b.credRotationQueue == nil {
+                                b.initQueue(req.Storage)
+                        }
+                        b.Unlock()
+
                         // This will loop until either:
                         // - The queue of passwords needing rotation is completely empty.
                         // - It encounters the first password not yet needing rotation.
-                        for _, instance := range b.connections {
-                                for {
-                                        item, err := b.credRotationQueue.PopItem()
-                                        if err != nil {
-                                                if err == queue.ErrEmpty {
-                                                        return nil
-                                                }
-                                                return err
-                                        }
-
-                                        role := item.Value.(*roleEntry)
-                                        c := dbplugin.StaticUserConfig{
-                                                Username: role.StaticAccount.Username,
-                                        }
-
-                                        if time.Now().Unix() > item.Priority {
-                                                // We've found our first item not in need of rotation
-                                                // TODO is this logic correct? Need to also check the logic creating the priority.
-                                                fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
-                                                instance.SetCredentials(ctx, c, role.Statements.Rotation)
-                                                b.credRotationQueue.PushItem(&queue.Item{
-                                                        Key:      item.Key,
-                                                        Value:    role, // TODO is this what needs to be here?
-                                                        Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
-                                                })
-                                        } else {
-                                                b.credRotationQueue.PushItem(item)
+                        for {
+                                item, err := b.credRotationQueue.PopItem()
+                                if err != nil {
+                                        if err == queue.ErrEmpty {
                                                 return nil
                                         }
+                                        return err
+                                }
+
+                                role := item.Value.(*roleEntry)
+
+                                if time.Now().Unix() > item.Priority {
+                                        // We've found our first item not in need of rotation
+                                        // TODO is this logic correct? Need to also check the logic creating the priority.
+                                        fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
+                                        if err := b.createUpdateStaticAccount(ctx, req.Storage, item.Key, role, false); err != nil {
+                                                // TODO: what to do?
+                                        }
+                                        b.credRotationQueue.PushItem(&queue.Item{
+                                                Key:      item.Key,
+                                                Value:    role, // TODO is this what needs to be here?
+                                                Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
+                                        })
+                                } else {
+                                        b.credRotationQueue.PushItem(item)
+                                        return nil
                                 }
                         }
-                        return nil
                 }
         }
-	return &b
+
+        return &b
 }
 
 type databaseBackend struct {
 	connections map[string]*dbPluginInstance
 	logger      log.Logger
 
-	*framework.Backend
-	sync.RWMutex
+        *framework.Backend
+        sync.RWMutex
         credRotationQueue queue.PriorityQueue
+        cancelQueue       context.CancelFunc
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -226,6 +232,8 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, databaseConfigPath):
 		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.ClearConnection(name)
+        case strings.HasPrefix(key, databaseRolePath):
+                b.invalidateQueue()
 	}
 }
 
@@ -280,6 +288,28 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 	return db, nil
 }
 
+// initQueue creates a new priority queue and starts a cancellable goroutine
+// to load existing static roles.
+//
+// This method is should not be called concurrently.
+func (b *databaseBackend) initQueue(s logical.Storage) {
+        b.credRotationQueue = queue.NewTimeQueue()
+        ctx, cancel := context.WithCancel(context.Background())
+        b.cancelQueue = cancel
+        go b.populateQueue(ctx, s)
+}
+
+// invalidateQueue cancels any background queue loading and destroys the queue.
+func (b *databaseBackend) invalidateQueue() {
+        b.Lock()
+        defer b.Unlock()
+
+        if b.cancelQueue != nil {
+                b.cancelQueue()
+        }
+        b.credRotationQueue = nil
+}
+
 // ClearConnection closes the database connection and
 // removes it from the b.connections map.
 func (b *databaseBackend) ClearConnection(name string) error {
@@ -319,10 +349,13 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	}
 }
 
-// closeAllDBs closes all connections from all database types
-func (b *databaseBackend) closeAllDBs(ctx context.Context) {
+// clean closes all connections from all database types
+// and cancels any rotation queue loading operation.
+func (b *databaseBackend) clean(ctx context.Context) {
 	b.Lock()
 	defer b.Unlock()
+
+        b.invalidateQueue()
 
 	for _, db := range b.connections {
 		db.Close()

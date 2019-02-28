@@ -244,7 +244,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
 		// createRole is a boolean to indicate if this is a new role creation. This
 		// is used to ensure we do not allow an existing role to be "migrated" to
-		// roel with a static account. If createRole is false and static_account
+                // role with a static account. If createRole is false and static_account
 		// data is given, return an error
 		var createRole bool
 		if role == nil {
@@ -348,17 +348,16 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 
 		role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 
-		if role.StaticAccount != nil {
-			// in create/update of static accounts, we only care if the operation
-			// err'd , and this call does not return credentials
-			_, role.StaticAccount.Password, _, err = b.createUpdateStaticAcount(ctx, req, name, role, createRole)
-			if err != nil {
-				return nil, err
-			}
+                if role.StaticAccount != nil {
+                        // in create/update of static accounts, we only care if the operation
+                        // err'd , and this call does not return credentials
+                        err = b.createUpdateStaticAccount(ctx, req.Storage, name, role, createRole)
+                        if err != nil {
+                                return nil, err
+                        }
 
-			// TODO need to check that we're only updating the revocation statements or rotation frequency
+                        // TODO need to check that we're only updating the revocation statements or rotation frequency
                         if b.credRotationQueue != nil {
-
                                 // In case this is an update, remove any previous version of the item from the queue
                                 if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
                                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
@@ -370,7 +369,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
                                 if err := b.credRotationQueue.PushItem(&queue.Item{
                                         Key:      name,
                                         Value:    role, // TODO is this what needs to be here?
-                                        Priority: time.Now().Add(time.Second * role.StaticAccount.RotationFrequency).Unix(),
+                                        Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
                                 }); err != nil {
                                         // TODO rollback?
                                         return nil, err
@@ -392,22 +391,24 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 	}
 }
 
-func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *logical.Request, name string, role *roleEntry, createUser bool) (username, password string, restored bool, err error) {
-	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
+func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logical.Storage, name string, role *roleEntry, createUser bool) error {
+        var password string
+
+        dbConfig, err := b.DatabaseConfig(ctx, s, role.DBName)
 	if err != nil {
-		return "", "", false, err
+                return err
 	}
 
 	// If role name isn't in the database's allowed roles, send back a
 	// permission denied.
 	if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
-		return "", "", false, fmt.Errorf("%q is not an allowed role", name)
+                return fmt.Errorf("%q is not an allowed role", name)
 	}
 
 	// Get the Database object
-	db, err := b.GetConnection(ctx, req.Storage, role.DBName)
+        db, err := b.GetConnection(ctx, s, role.DBName)
 	if err != nil {
-		return "", "", false, err
+                return err
 	}
 	// branch for static account around here
 
@@ -425,13 +426,25 @@ func (b *databaseBackend) createUpdateStaticAcount(ctx context.Context, req *log
 	}
 
 	var sterr error
-	username, password, restored, sterr = db.SetCredentials(ctx, config, stmts)
+        _, password, _, sterr = db.SetCredentials(ctx, config, stmts)
 	if sterr != nil {
 		b.CloseIfShutdown(db, sterr)
-		return "", "", false, sterr
+                return sterr
+        }
+
+        // Store updated role information
+        role.StaticAccount.LastVaultRotation = time.Now()
+        role.StaticAccount.Password = password
+
+        entry, err := logical.StorageEntryJSON("role/"+name, role)
+        if err != nil {
+                return err
+        }
+        if err := s.Put(ctx, entry); err != nil {
+                return err
 	}
 
-	return username, password, false, nil
+        return nil
 }
 
 type roleEntry struct {
