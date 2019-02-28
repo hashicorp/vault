@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -206,6 +207,29 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Check if the `-address` flag was set on the command
+	var vaultAddrFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == "address" {
+			vaultAddrFlagSet = true
+		}
+	})
+
+	// If Vault address is not supplied via the command flag, refer to env var
+	// and config field in decresing order of preference.
+	if !vaultAddrFlagSet {
+		if addr, vaultAddrEnvSet := os.LookupEnv(api.EnvVaultAddress); vaultAddrEnvSet {
+			// Use Vault address from `VAULT_ADDR` env var
+			c.flagAddress = addr
+		} else if config.Vault != nil && config.Vault.Address != "" {
+			// Use Vault address from agent's config
+			c.flagAddress = config.Vault.Address
+		} else {
+			// Use the default Vault address
+			c.flagAddress = "https://127.0.0.1:8200"
+		}
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = c.flagLogLevel
@@ -235,6 +259,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Ignore any setting of agent's address. This client is used by the agent
+	// to reach out to Vault. This should never loop back to agent.
+	c.flagAgentAddress = ""
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf(
