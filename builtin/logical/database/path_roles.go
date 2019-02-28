@@ -265,12 +265,16 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 			}
 			role.StaticAccount.Username = username
 
-			frequency := data.Get("rotation_frequency")
-			if frequency == 0 && req.Operation == logical.CreateOperation {
+			rotationFrequencySeconds := data.Get("rotation_frequency").(int)
+			if rotationFrequencySeconds == 0 && req.Operation == logical.CreateOperation {
 				return logical.ErrorResponse("rotation_frequency is required to create static accounts"), nil
 			}
+			if rotationFrequencySeconds < 60 {
+				// This must be at least 60 seconds because our periodic func runs about once a minute.
+				return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
+			}
 
-			role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(frequency)
+			role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(rotationFrequencySeconds)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
 			}
