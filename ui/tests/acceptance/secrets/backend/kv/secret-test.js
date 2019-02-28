@@ -300,4 +300,21 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       );
     }
   });
+
+  // the web cli does not handle a single quote in a path, so we test it here via the UI
+  test('creating a secret with a single quote works properly', async function(assert) {
+    await consoleComponent.runCommands('write sys/mounts/kv type=kv');
+    let path = "'some";
+    await listPage.visitRoot({ backend: 'kv' });
+    await listPage.create();
+    await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+    await listPage.visit({ backend: 'kv', id: path });
+    assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+    await listPage.secrets.filterBy('text', '2')[0].click();
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      `${path}: show page renders correctly`
+    );
+  });
 });
