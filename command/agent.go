@@ -366,22 +366,6 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
-		var inmemSink sink.Sink
-		if config.Cache.UseAutoAuthToken {
-			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
-			inmemSink, err = inmem.New(&sink.SinkConfig{
-				Logger: cacheLogger,
-			})
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
-				return 1
-			}
-			sinks = append(sinks, &sink.SinkConfig{
-				Logger: cacheLogger,
-				Sink:   inmemSink,
-			})
-		}
-
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 			Client: client,
@@ -403,6 +387,22 @@ func (c *AgentCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
+		}
+
+		var inmemSink sink.Sink
+		if config.Cache.UseAutoAuthToken {
+			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+			inmemSink, err = inmem.New(&sink.SinkConfig{
+				Logger: cacheLogger,
+			}, leaseCache)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+				return 1
+			}
+			sinks = append(sinks, &sink.SinkConfig{
+				Logger: cacheLogger,
+				Sink:   inmemSink,
+			})
 		}
 
 		// Create a muxer and add paths relevant for the lease cache layer
