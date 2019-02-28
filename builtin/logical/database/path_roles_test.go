@@ -4,6 +4,7 @@ import (
         "context"
         "errors"
         "testing"
+        "time"
 
         "github.com/go-test/deep"
         "github.com/hashicorp/vault/helper/namespace"
@@ -77,26 +78,13 @@ func TestBackend_StaticRole_Config(t *testing.T) {
                         },
                         err: errors.New("rotation_frequency is required to create static accounts"),
                 },
-                "missing username frequency": {
-                        account: map[string]interface{}{
-                                "rotation_frequency": int64(5400000000000),
-                        },
-                        err: errors.New("username is a required field for static accounts"),
-                },
-                "missing all": {
-                        account: map[string]interface{}{"fill": "stuff"},
-                        err:     errors.New("username is a required field for static accounts"),
-                },
-                "with password": {
-                        account: map[string]interface{}{
-                                "username":           "statictest",
-                                "rotation_frequency": "5400s",
-                        },
-                        expected: map[string]interface{}{
-                                "username":           "statictest",
-                                "rotation_frequency": int64(5400000000000),
-                        },
-                },
+                // skip for now, not sure this should error as opposed to just ignore
+                // "missing username": {
+                // 	account: map[string]interface{}{
+                // 		"rotation_frequency": int64(5400000000000),
+                // 	},
+                // 	err: errors.New("using rotation_frequency requires a username"),
+                // },
         }
 
         for name, tc := range testCases {
@@ -149,6 +137,12 @@ func TestBackend_StaticRole_Config(t *testing.T) {
                                 t.Fatalf("expected err message: (%s), got (%s), response error: (%s)", tc.err, err, resp.Error())
                         }
 
+                        if tc.err != nil {
+                                if err == nil || (resp == nil || !resp.IsError()) {
+                                        t.Fatal("expected error, got none")
+                                }
+                        }
+
                         // Read the role
                         data = map[string]interface{}{}
                         req = &logical.Request{
@@ -175,7 +169,14 @@ func TestBackend_StaticRole_Config(t *testing.T) {
                                 if actual["password"] == "" {
                                         t.Fatalf("expected result to contain password, but none found")
                                 }
+                                if v, ok := actual["last_vault_rotation"].(time.Time); !ok {
+                                        t.Fatalf("expected last_vault_rotation to be set to time.Time type, got: %#v", v)
+                                }
+
+                                // delete these values before the comparison, since we can't know them in
+                                // advance
                                 delete(actual, "password")
+                                delete(actual, "last_vault_rotation")
                                 if diff := deep.Equal(expected, actual); diff != nil {
                                         t.Fatal(diff)
                                 }
@@ -203,7 +204,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
         }
 }
 
-func TestBackend_StaticRole_Config_Update(t *testing.T) {
+func TestBackend_StaticRole_Updates(t *testing.T) {
         cluster, sys := getCluster(t)
         defer cluster.Cleanup()
 
