@@ -17,7 +17,7 @@ carefully.
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
-instructions](/guides/upgrading/index.html) this will
+instructions](/docs/upgrading/index.html) this will
 not be an issue.
 
 ## Health Endpoint Status Code Changes
