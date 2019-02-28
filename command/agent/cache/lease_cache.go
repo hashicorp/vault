@@ -411,6 +411,14 @@ func computeIndexID(req *SendRequest) (string, error) {
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.
 func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only handle POST/PUT requests
+		switch r.Method {
+		case http.MethodPost:
+		case http.MethodPut:
+		default:
+			return
+		}
+
 		req := new(cacheClearRequest)
 		if err := jsonutil.DecodeJSONFromReader(r.Body, req); err != nil {
 			if err == io.EOF {

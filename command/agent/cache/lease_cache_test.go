@@ -76,7 +76,7 @@ func TestCache_ComputeIndexID(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_EmptyToken(t *testing.T) {
+func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
 		&SendResponse{
 			Response: &api.Response{
@@ -106,7 +106,7 @@ func TestCache_LeaseCache_EmptyToken(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendCacheable(t *testing.T) {
+func TestLeaseCache_SendCacheable(t *testing.T) {
 	// Emulate 2 responses from the api proxy. One returns a new token and the
 	// other returns a lease.
 	responses := []*SendResponse{
@@ -187,7 +187,7 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendNonCacheable(t *testing.T) {
+func TesteaseCache_SendNonCacheable(t *testing.T) {
 	responses := []*SendResponse{
 		&SendResponse{
 			Response: &api.Response{
@@ -236,7 +236,7 @@ func TestCache_LeaseCache_SendNonCacheable(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
+func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	// Create the cache
 	responses := []*SendResponse{
 		&SendResponse{
@@ -291,7 +291,7 @@ func TestCache_LeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_HandleCacheClear(t *testing.T) {
+func TestLeaseCache_HandleCacheClear(t *testing.T) {
 	lc := testNewLeaseCache(t, nil)
 
 	handler := lc.HandleCacheClear(context.Background())
