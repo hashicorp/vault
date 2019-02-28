@@ -54,7 +54,7 @@ module('Acceptance | cluster', function(hooks) {
     await logout.visit();
   });
 
-  test('nav item links to first route that user has access to', async function(assert) {
+  test('enterprise nav item links to first route that user has access to', async function(assert) {
     const read_rgp_policy = `'
       path "sys/policies/rgp" {
         capabilities = ["read"]
