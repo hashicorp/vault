@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
-	badcipher "github.com/jefferai/isbadcipher"
+	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
 
@@ -149,7 +149,7 @@ PASSPHRASECORRECT:
 		// we check here if all or some specified cipher suites are blacklisted.
 		badCiphers := []string{}
 		for _, cipher := range ciphers {
-			if badcipher.IsBadCipher(cipher) {
+			if isbadcipher.IsBadCipher(cipher) {
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
