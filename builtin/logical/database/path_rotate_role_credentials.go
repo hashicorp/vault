@@ -60,24 +60,32 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 	}
 }
 
-func (b *databaseBackend) populateRotationQueue(ctx context.Context, s logical.Storage) {
+// populate queue loads the priority queue with existing static accounts.
+func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) {
 	log := b.Logger()
 
-	b.Lock()
-	defer b.Unlock()
+	log.Info("restoring role rotation queue")
 
 	roles, err := s.List(ctx, "role/")
 	if err != nil {
 		log.Warn("unable to list role for enqueueing", "error", err)
+		return
 	}
 
 	for _, roleName := range roles {
+		select {
+		case <-ctx.Done():
+			log.Info("rotation queue restore cancelled")
+			return
+		default:
+		}
+
 		role, err := b.Role(ctx, s, roleName)
 		if err != nil {
 			log.Warn("unable to read role", "error", err, "role", roleName)
 			continue
 		}
-		if role == nil {
+		if role == nil || role.StaticAccount == nil {
 			continue
 		}
 
@@ -89,6 +97,7 @@ func (b *databaseBackend) populateRotationQueue(ctx context.Context, s logical.S
 			log.Warn("unable to enqueue item", "error", err, "role", roleName)
 		}
 	}
+	log.Info("successfully restored role rotation queue")
 }
 
 const pathRotateRoleCredentialsUpdateHelpSyn = `

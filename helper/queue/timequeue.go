@@ -10,7 +10,7 @@ import (
 var ErrEmpty = errors.New("queue is empty")
 
 // NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
-func NewTimeQueue() PriorityQueue {
+func NewTimeQueue() *TimeQueue {
 	tq := TimeQueue{
 		data:    make([]*Item, 0),
 		dataMap: make(map[string]*Item),
