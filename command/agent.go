@@ -207,28 +207,36 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Check if the `-address` flag was set on the command
-	var vaultAddrFlagSet bool
-	f.Visit(func(f *flag.Flag) {
-		if f.Name == flagNameAddress {
-			vaultAddrFlagSet = true
-		}
-	})
-
-	vaultAddrEnvValue, vaultAddrEnvSet := os.LookupEnv(api.EnvVaultAddress)
-	switch {
-	case vaultAddrFlagSet:
-		// Don't do anything as the address is set from the command line
-	case vaultAddrEnvSet:
-		// Use Vault address from `VAULT_ADDR` env var
-		c.flagAddress = vaultAddrEnvValue
-	case config.Vault != nil && config.Vault.Address != "":
-		// Use Vault address from agent's config
-		c.flagAddress = config.Vault.Address
-	default:
-		// Use the default Vault address
-		c.flagAddress = "https://127.0.0.1:8200"
+	if config.Vault != nil {
+		c.setStringFlag(f, config.Vault.Address, &StringVar{
+			Name:    flagNameAddress,
+			Target:  &c.flagAddress,
+			Default: "https://127.0.0.1:8200",
+			EnvVar:  api.EnvVaultAddress,
+		})
+		c.setStringFlag(f, config.Vault.CACert, &StringVar{
+			Name:    flagNameCACert,
+			Target:  &c.flagCACert,
+			Default: "",
+			EnvVar:  api.EnvVaultCACert,
+		})
+		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+			Name:    flagNameCAPath,
+			Target:  &c.flagCAPath,
+			Default: "",
+			EnvVar:  api.EnvVaultCAPath,
+		})
+		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+			Name:    flagNameTLSSkipVerify,
+			Target:  &c.flagTLSSkipVerify,
+			Default: false,
+			EnvVar:  api.EnvVaultSkipVerify,
+		})
 	}
+	fmt.Printf("c.flagAddress: %q\n", c.flagAddress)
+	fmt.Printf("c.flagCAPath: %q\n", c.flagCAPath)
+	fmt.Printf("c.flagCACert: %q\n", c.flagCACert)
+	fmt.Printf("c.flagTLSSkipVerify: %t\n", c.flagTLSSkipVerify)
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -497,6 +505,54 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
+	var isFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == fVar.Name {
+			isFlagSet = true
+		}
+	})
+
+	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+	switch {
+	case isFlagSet:
+		// Don't do anything as the flag is already set from the command line
+	case flagEnvSet:
+		// Use value from env var
+		*fVar.Target = flagEnvValue
+	case configVal != "":
+		// Use value from config
+		*fVar.Target = configVal
+	default:
+		// Use the default value
+		*fVar.Target = fVar.Default
+	}
+}
+
+func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
+	var isFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == fVar.Name {
+			isFlagSet = true
+		}
+	})
+
+	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+	switch {
+	case isFlagSet:
+		// Don't do anything as the flag is already set from the command line
+	case flagEnvSet:
+		// Use value from env var
+		*fVar.Target = flagEnvValue != ""
+	case configVal == true:
+		// Use value from config
+		*fVar.Target = configVal
+	default:
+		// Use the default value
+		*fVar.Target = fVar.Default
+	}
 }
 
 // storePidFile is used to write out our PID to a file if necessary

@@ -234,7 +234,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(agentAddrStringVar)
 
 			f.StringVar(&StringVar{
-				Name:       "ca-cert",
+				Name:       flagNameCACert,
 				Target:     &c.flagCACert,
 				Default:    "",
 				EnvVar:     api.EnvVaultCACert,
@@ -245,7 +245,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "ca-path",
+				Name:       flagNameCAPath,
 				Target:     &c.flagCAPath,
 				Default:    "",
 				EnvVar:     api.EnvVaultCAPath,
@@ -306,7 +306,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:    "tls-skip-verify",
+				Name:    flagNameTLSSkipVerify,
 				Target:  &c.flagTLSSkipVerify,
 				Default: false,
 				EnvVar:  api.EnvVaultSkipVerify,

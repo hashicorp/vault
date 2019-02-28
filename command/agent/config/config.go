@@ -27,7 +27,10 @@ type Config struct {
 }
 
 type Vault struct {
-	Address string `hcl:"address"`
+	Address       string `hcl:"address"`
+	CACert        string `hcl:"ca_cert"`
+	CAPath        string `hcl:"ca_path"`
+	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
 }
 
 type Cache struct {
