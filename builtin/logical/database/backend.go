@@ -18,7 +18,6 @@ import (
         "github.com/hashicorp/vault/logical"
         "github.com/hashicorp/vault/logical/framework"
         "github.com/hashicorp/vault/plugins/helper/database/dbutil"
-        "github.com/mitchellh/mapstructure"
 )
 
 const databaseConfigPath = "database/config/"
@@ -386,24 +385,3 @@ cassandra, mssql, mysql, postgres
 After mounting this backend, configure it using the endpoints within
 the "database/config/" path.
 `
-
-type walSetCredentials struct {
-        Username          string    `json:"username"`
-        Password          string    `json:"password"`
-        RoleName          string    `json:"role_name"`
-        Statements        []string  `json:"statements"`
-        LastVaultRotation time.Time `json:"last_vault_rotation"`
-}
-
-func (b *databaseBackend) pathCredentialRollback(ctx context.Context, req *logical.Request, _kind string, data interface{}) error {
-        var entry walSetCredentials
-        if err := mapstructure.Decode(data, &entry); err != nil {
-                return err
-        }
-        // check the LastVaultRotation times. If the role has had a password change
-        // since the wal's LastVaultRotation, we can assume things are fine here
-
-        // attempt to rollback the password to a known value
-
-        return nil
-}
