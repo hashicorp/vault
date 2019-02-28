@@ -233,10 +233,6 @@ func (c *AgentCommand) Run(args []string) int {
 			EnvVar:  api.EnvVaultSkipVerify,
 		})
 	}
-	fmt.Printf("c.flagAddress: %q\n", c.flagAddress)
-	fmt.Printf("c.flagCAPath: %q\n", c.flagCAPath)
-	fmt.Printf("c.flagCACert: %q\n", c.flagCACert)
-	fmt.Printf("c.flagTLSSkipVerify: %t\n", c.flagTLSSkipVerify)
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
