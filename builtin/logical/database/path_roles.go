@@ -131,10 +131,6 @@ func (b *databaseBackend) pathRoleExistenceCheck() framework.ExistenceFunc {
 func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
-		if err := req.Storage.Delete(ctx, "role/"+name); err != nil {
-			return nil, err
-		}
-
 		// if this role is a static account, we need to revoke the user from the
 		// database
 		// TODO: wrap this in a WAL
@@ -142,6 +138,11 @@ func (b *databaseBackend) pathRoleDelete() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
+                if role == nil {
+                        return nil, nil
+                }
+
+                // clean up the static useraccount, if it exists
 		if role.StaticAccount != nil {
 			db, err := b.GetConnection(ctx, req.Storage, role.DBName)
 			if err != nil {
