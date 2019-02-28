@@ -115,7 +115,7 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
-	err = parseCache(&result, list)
+	err = parseVault(&result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
