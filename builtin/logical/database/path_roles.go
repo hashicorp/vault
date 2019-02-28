@@ -261,7 +261,7 @@ func (b *databaseBackend) pathRoleCreateUpdate() framework.OperationFunc {
 				role.StaticAccount = &staticAccount{}
 			}
 			if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
-				return logical.ErrorResponse("cannot update static account username. Delete role and recreate"), nil
+                                return logical.ErrorResponse("cannot update static account username"), nil
 			}
 			role.StaticAccount.Username = username
 

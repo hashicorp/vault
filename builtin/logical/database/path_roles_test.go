@@ -321,9 +321,10 @@ func TestBackend_StaticRole_Config_Update(t *testing.T) {
 
         // verify that rotation_frequency is only required when creating
         updateData = map[string]interface{}{
-                "name":     "plugin-role-test",
-                "db_name":  "plugin-test",
-                "username": "statictest",
+                "name":                "plugin-role-test",
+                "db_name":             "plugin-test",
+                "username":            "statictest",
+                "rotation_statements": testRoleStaticUpdateRotation,
         }
         req = &logical.Request{
                 Operation: logical.UpdateOperation,
@@ -336,47 +337,29 @@ func TestBackend_StaticRole_Config_Update(t *testing.T) {
         if err != nil || (resp != nil && resp.IsError()) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
+
+        // verify updating static username returns an error
+        updateData = map[string]interface{}{
+                "name":     "plugin-role-test",
+                "db_name":  "plugin-test",
+                "username": "statictestmodified",
+        }
+        req = &logical.Request{
+                Operation: logical.UpdateOperation,
+                Path:      "roles/plugin-role-test",
+                Storage:   config.StorageView,
+                Data:      updateData,
+        }
+
+        resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+        if err != nil || !resp.IsError() {
+                t.Fatal("expected error on updating name")
+        }
+        err = resp.Error()
+        if err.Error() != "cannot update static account username" {
+                t.Fatalf("expected error on updating name, got: %s", err)
+        }
 }
-
-// const testStaticRole = `
-// DO
-// $do$
-// BEGIN
-//    IF NOT EXISTS (
-//       SELECT
-//       FROM   pg_catalog.pg_roles
-//       WHERE  rolname = '{{name}}') THEN
-
-//       CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
-//    END IF;
-// END
-// $do$;
-// `
-var testStaticRoleCreate = []string{
-        `
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{{name}}') THEN
-        CREATE ROLE "{{name}}";
-    END IF;
-END
-$$;
-`,
-        `
-ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
-`,
-}
-
-// const testStaticRoleCreate = `
-// CREATE ROLE "{{name}}" WITH
-//   LOGIN
-//   PASSWORD '{{password}}';
-// GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
-// `
-
-// const testStaticRoleUpdate = `
-// ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
-// `
 
 const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
@@ -387,4 +370,8 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 
 const testRoleStaticUpdate = `
 ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+`
+
+const testRoleStaticUpdateRotation = `
+ALTER USER "{{name}}" WITH PASSWORD '{{password}}';GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
