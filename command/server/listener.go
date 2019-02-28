@@ -7,7 +7,6 @@ import (
 	_ "crypto/sha512"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
+	badcipher "github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
 
@@ -147,12 +147,9 @@ PASSPHRASECORRECT:
 		//
 		// Since the CLI (net/http) automatically uses HTTP/2 with TLS 1.2,
 		// we check here if all or some specified cipher suites are blacklisted.
-		badCiphersCount := 0
 		badCiphers := []string{}
 		for _, cipher := range ciphers {
-			if isBadCipher(cipher) {
-				badCiphersCount++
-
+			if badcipher.IsBadCipher(cipher) {
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
@@ -161,9 +158,12 @@ PASSPHRASECORRECT:
 				badCiphers = append(badCiphers, cipherStr)
 			}
 		}
-		if badCiphersCount == len(ciphers) {
-			return nil, nil, nil, errors.New("all defined cipher suites by 'tls_cipher_suites' are blacklisted by the HTTP/2 specification")
-		} else if badCiphersCount > 0 {
+		if len(badCiphers) == len(ciphers) {
+			ui.Warn(`WARNING! All cipher suites defined by 'tls_cipher_suites' are blacklisted by the
+HTTP/2 specification. HTTP/2 communication with TLS 1.2 will not work as intended
+and Vault will be unavailable via the CLI.
+Please see https://tools.ietf.org/html/rfc7540#appendix-A for further information.`)
+		} else if len(badCiphers) > 0 {
 			ui.Warn(fmt.Sprintf(`WARNING! The following cipher suites defined by 'tls_cipher_suites' are 
 blacklisted by the HTTP/2 specification: 
 %v
