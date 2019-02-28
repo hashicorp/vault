@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+        "github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/queue"
@@ -422,13 +423,41 @@ func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logic
 	// Create or rotate the user
 	stmts := role.Statements.Creation
 	if !createUser {
-		stmts = role.Statements.Rotation
-	}
+                stmts = role.Statements.Rotation
+        }
 
-	var sterr error
+        // Create a WAL to record the SetCredential attempt if we have the current
+        // password. Without the current password, we have nothing to rollback to.
+        //
+        // If we successfully rotate the credentials, but fail to save the results to
+        // Vault, the WAL will get kept and a rollback will be attempted.
+        //
+        // walID records the if of the WAL created, if any. It is later checked to be
+        // empty and if not, to delete the wal if all operations were successful
+        var walID string
+        if role.StaticAccount.Password != "" {
+                walID, err = framework.PutWAL(ctx, s, "setcreds", &walSetCredentials{
+                        RoleName:   name,
+                        Username:   config.Username,
+                        Password:   role.StaticAccount.Password,
+                        Statements: stmts,
+                })
+                if err != nil {
+                        return fmt.Errorf("error writing WAL entry: %s", err)
+                }
+        }
+
+        var sterr error
         _, password, _, sterr = db.SetCredentials(ctx, config, stmts)
-	if sterr != nil {
-		b.CloseIfShutdown(db, sterr)
+        if sterr != nil {
+                // we failed to rotate the credentials, so we can delete the log. The error
+                // propagates up and this rotation will be reattempted by the periodic
+                // function
+                if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
+                        setErr := errwrap.Wrapf("error setting credentials: {{err}}", sterr)
+                        return errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), setErr)
+                }
+                b.CloseIfShutdown(db, sterr)
                 return sterr
         }
 
@@ -442,7 +471,14 @@ func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logic
         }
         if err := s.Put(ctx, entry); err != nil {
                 return err
-	}
+        }
+
+        // Setting credentials succeeded, storing to Vault succeeded, delete the WAL
+        if walID != "" {
+                if err := framework.DeleteWAL(ctx, s, walID); err != nil {
+                        return fmt.Errorf("failed to delete WAL entry: %s", err)
+                }
+        }
 
         return nil
 }

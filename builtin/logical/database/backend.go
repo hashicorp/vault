@@ -16,8 +16,9 @@ import (
         "github.com/hashicorp/vault/helper/queue"
         "github.com/hashicorp/vault/helper/strutil"
         "github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+        "github.com/hashicorp/vault/logical/framework"
+        "github.com/hashicorp/vault/plugins/helper/database/dbutil"
+        "github.com/mitchellh/mapstructure"
 )
 
 const databaseConfigPath = "database/config/"
@@ -55,11 +56,14 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 func Backend(conf *logical.BackendConfig) *databaseBackend {
 	var b databaseBackend
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(backendHelp),
+                Help: strings.TrimSpace(backendHelp),
 
-		PathsSpecial: &logical.Paths{
-			SealWrapStorage: []string{
-				"config/*",
+                PathsSpecial: &logical.Paths{
+                        LocalStorage: []string{
+                                framework.WALPrefix,
+                        },
+                        SealWrapStorage: []string{
+                                "config/*",
                                 // TODO: will want to encrypt static accounts / roles with password info
                                 // in them
 			},
@@ -81,8 +85,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                 Clean:             b.clean,
                 Invalidate:        b.invalidate,
                 BackendType:       logical.TypeLogical,
-                WALRollbackMinAge: 30 * time.Second,
-	}
+                WALRollback:       b.walRollback,
+                WALRollbackMinAge: 2 * time.Minute,
+        }
 
         b.logger = conf.Logger
         b.connections = make(map[string]*dbPluginInstance)
@@ -105,6 +110,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                         // This will loop until either:
                         // - The queue of passwords needing rotation is completely empty.
                         // - It encounters the first password not yet needing rotation.
+
+                        // reQueue is a collection of any queue items that failed to rotate, to be
+                        // re-added at the end
+                        var reQueue []*queue.Item
                         for {
                                 item, err := b.credRotationQueue.PopItem()
                                 if err != nil {
@@ -118,14 +127,13 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
                                 if time.Now().Unix() > item.Priority {
                                         // We've found our first item not in need of rotation
-                                        // TODO is this logic correct? Need to also check the logic creating the priority.
-                                        fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
                                         if err := b.createUpdateStaticAccount(ctx, req.Storage, item.Key, role, false); err != nil {
-                                                // TODO: what to do?
+                                                b.logger.Warn("unable rotate credentials in periodic function", "error", err)
+                                                // add the item to the re-queue slice
+                                                reQueue = append(reQueue, item)
                                         }
                                         b.credRotationQueue.PushItem(&queue.Item{
                                                 Key:      item.Key,
-                                                Value:    role, // TODO is this what needs to be here?
                                                 Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
                                         })
                                 } else {
@@ -133,6 +141,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                                         return nil
                                 }
                         }
+
+                        // re-enqueue items that failed to rotate
+                        for _, item := range reQueue {
+                                b.credRotationQueue.PushItem(item)
+                        }
+                        return nil
                 }
         }
 
@@ -372,3 +386,24 @@ cassandra, mssql, mysql, postgres
 After mounting this backend, configure it using the endpoints within
 the "database/config/" path.
 `
+
+type walSetCredentials struct {
+        Username          string    `json:"username"`
+        Password          string    `json:"password"`
+        RoleName          string    `json:"role_name"`
+        Statements        []string  `json:"statements"`
+        LastVaultRotation time.Time `json:"last_vault_rotation"`
+}
+
+func (b *databaseBackend) pathCredentialRollback(ctx context.Context, req *logical.Request, _kind string, data interface{}) error {
+        var entry walSetCredentials
+        if err := mapstructure.Decode(data, &entry); err != nil {
+                return err
+        }
+        // check the LastVaultRotation times. If the role has had a password change
+        // since the wal's LastVaultRotation, we can assume things are fine here
+
+        // attempt to rollback the password to a known value
+
+        return nil
+}
