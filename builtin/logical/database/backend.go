@@ -58,6 +58,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
+			LocalStorage: []string{
+				framework.WALPrefix,
+			},
 			SealWrapStorage: []string{
 				"config/*",
 				// TODO: will want to encrypt static accounts / roles with password info
@@ -81,7 +84,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Clean:             b.clean,
 		Invalidate:        b.invalidate,
 		BackendType:       logical.TypeLogical,
-		WALRollbackMinAge: 30 * time.Second,
+		WALRollback:       b.walRollback,
+		WALRollbackMinAge: 2 * time.Minute,
 	}
 
 	b.logger = conf.Logger
@@ -105,6 +109,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			// This will loop until either:
 			// - The queue of passwords needing rotation is completely empty.
 			// - It encounters the first password not yet needing rotation.
+
+			// reQueue is a collection of any queue items that failed to rotate, to be
+			// re-added at the end
+			var reQueue []*queue.Item
 			for {
 				item, err := b.credRotationQueue.PopItem()
 				if err != nil {
@@ -118,14 +126,13 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 				if time.Now().Unix() > item.Priority {
 					// We've found our first item not in need of rotation
-					// TODO is this logic correct? Need to also check the logic creating the priority.
-					fmt.Printf("stmt: %+v\n", role.Statements.Rotation)
 					if err := b.createUpdateStaticAccount(ctx, req.Storage, item.Key, role, false); err != nil {
-						// TODO: what to do?
+						b.logger.Warn("unable rotate credentials in periodic function", "error", err)
+						// add the item to the re-queue slice
+						reQueue = append(reQueue, item)
 					}
 					b.credRotationQueue.PushItem(&queue.Item{
 						Key:      item.Key,
-						Value:    role, // TODO is this what needs to be here?
 						Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
 					})
 				} else {
@@ -133,6 +140,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 					return nil
 				}
 			}
+
+			// re-enqueue items that failed to rotate
+			for _, item := range reQueue {
+				b.credRotationQueue.PushItem(item)
+			}
+			return nil
 		}
 	}
 
