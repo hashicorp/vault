@@ -6,9 +6,11 @@ const {
 
 export function encodePath(path) {
   return path
-    .split('/')
-    .map(encodePathSegment)
-    .join('/');
+    ? path
+        .split('/')
+        .map(encodePathSegment)
+        .join('/')
+    : path;
 }
 
 export { normalizePath, encodePathSegment };

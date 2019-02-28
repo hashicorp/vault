@@ -1,5 +1,5 @@
 import keys from 'vault/lib/keycodes';
-import argTokenizer from 'vault/utils/args-tokenizer';
+import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['clearall', 'clear', 'fullscreen', 'refresh'];
@@ -56,11 +56,14 @@ export function executeUICommand(command, logAndOutput, clearLog, toggleFullscre
 }
 
 export function parseCommand(command, shouldThrow) {
-  let args = argTokenizer(command);
+  // encode everything but spaces
+  let cmd = encodeURIComponent(command).replace(/%20/g, decodeURIComponent);
+  let args = argTokenizer(cmd);
   if (args[0] === 'vault') {
     args.shift();
   }
 
+  args = args.map(decodeURIComponent);
   let [method, ...rest] = args;
   let path;
   let flags = [];
