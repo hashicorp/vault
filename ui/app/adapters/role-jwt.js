@@ -8,9 +8,10 @@ export default ApplicationAdapter.extend({
 
   findRecord(store, type, id, snapshot) {
     let [path, role] = JSON.parse(id);
+    path = encodePath(path);
 
     let namespace = get(snapshot, 'adapterOptions.namespace');
-    let url = `/v1/auth/${encodePath(path)}/oidc/auth_url`;
+    let url = `/v1/auth/${path}/oidc/auth_url`;
     let redirect_uri = `${window.location.origin}${this.router.urlFor('vault.cluster.oidc-callback', {
       auth_path: path,
     })}`;
