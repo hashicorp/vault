@@ -5,6 +5,7 @@ import { messageTypes } from 'vault/helpers/message-types';
 
 export default Component.extend({
   type: null,
+  message: null,
 
   classNames: ['message-inline'],
 

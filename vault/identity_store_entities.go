@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -155,7 +156,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, true, false, true)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
@@ -604,7 +605,7 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
-func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies bool) (error, error) {
+func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies, persist bool) (error, error) {
 	if grabLock {
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -651,6 +652,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
+	isPerfSecondaryOrStandby := i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby
 	for _, fromEntityID := range fromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -704,10 +706,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return nil, err
 		}
 
-		// Delete the entity which we are merging from in storage
-		err = i.entityPacker.DeleteItem(fromEntity.ID)
-		if err != nil {
-			return nil, err
+		if persist && !isPerfSecondaryOrStandby {
+			// Delete the entity which we are merging from in storage
+			err = i.entityPacker.DeleteItem(fromEntity.ID)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -717,19 +721,21 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return nil, err
 	}
 
-	// Persist the entity which we are merging to
-	toEntityAsAny, err := ptypes.MarshalAny(toEntity)
-	if err != nil {
-		return nil, err
-	}
-	item := &storagepacker.Item{
-		ID:      toEntity.ID,
-		Message: toEntityAsAny,
-	}
+	if persist && !isPerfSecondaryOrStandby {
+		// Persist the entity which we are merging to
+		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		if err != nil {
+			return nil, err
+		}
+		item := &storagepacker.Item{
+			ID:      toEntity.ID,
+			Message: toEntityAsAny,
+		}
 
-	err = i.entityPacker.PutItem(item)
-	if err != nil {
-		return nil, err
+		err = i.entityPacker.PutItem(item)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

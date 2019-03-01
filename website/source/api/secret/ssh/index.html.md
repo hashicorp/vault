@@ -206,7 +206,10 @@ This endpoint creates or updates a named role.
   available for use: '{{token_display_name}}' - The display name of the token used
   to make the request. '{{role_name}}' - The name of the role signing the request.
   '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
-  e.g. "custom-keyid-{{token_display_name}}",
+  e.g. "custom-keyid-{{token_display_name}}"
+
+- `allowed_user_key_lengths` `(map<string|int>: "")` – Specifies a map of ssh key types
+  and their expected sizes which are allowed to be signed by the CA type.
 
 ### Sample Payload
 

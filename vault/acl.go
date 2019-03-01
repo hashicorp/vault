@@ -25,6 +25,8 @@ type ACL struct {
 	// prefixRules contains the path policies that are a prefix
 	prefixRules *radix.Tree
 
+	segmentWildcardPaths map[string]interface{}
+
 	// root is enabled if the "root" named policy is present.
 	root bool
 
@@ -58,9 +60,10 @@ type ACLResults struct {
 func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	// Initialize
 	a := &ACL{
-		exactRules:  radix.New(),
-		prefixRules: radix.New(),
-		root:        false,
+		exactRules:           radix.New(),
+		prefixRules:          radix.New(),
+		segmentWildcardPaths: make(map[string]interface{}, len(policies)),
+		root:                 false,
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -100,20 +103,35 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 		}
 
 		for _, pc := range policy.Paths {
-			// Check which tree to use
-			tree := a.exactRules
-			if pc.IsPrefix {
-				tree = a.prefixRules
+			var raw interface{}
+			var ok bool
+			var tree *radix.Tree
+
+			switch {
+			case pc.HasSegmentWildcards:
+				raw, ok = a.segmentWildcardPaths[pc.Path]
+			default:
+				// Check which tree to use
+				tree = a.exactRules
+				if pc.IsPrefix {
+					tree = a.prefixRules
+				}
+
+				// Check for an existing policy
+				raw, ok = tree.Get(pc.Path)
 			}
 
-			// Check for an existing policy
-			raw, ok := tree.Get(pc.Path)
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
 					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
 				}
-				tree.Insert(pc.Path, clonedPerms)
+				switch {
+				case pc.HasSegmentWildcards:
+					a.segmentWildcardPaths[pc.Path] = clonedPerms
+				default:
+					tree.Insert(pc.Path, clonedPerms)
+				}
 				continue
 			}
 
@@ -242,7 +260,12 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 
 		INSERT:
-			tree.Insert(pc.Path, existingPerms)
+			switch {
+			case pc.HasSegmentWildcards:
+				a.segmentWildcardPaths[pc.Path] = existingPerms
+			default:
+				tree.Insert(pc.Path, existingPerms)
+			}
 		}
 	}
 	return a, nil
@@ -317,7 +340,17 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	}
 	path := ns.Path + req.Path
 
-	// Find an exact matching rule, look for glob if no match
+	// The request path should take care of this already but this is useful for
+	// tests and as defense in depth
+	for {
+		if len(path) > 0 && path[0] == '/' {
+			path = path[1:]
+		} else {
+			break
+		}
+	}
+
+	// Find an exact matching rule, look for prefix if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
@@ -334,13 +367,81 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
-	// Find a glob rule, default deny if no match
+	// Find a prefix rule, default deny if no match
 	_, raw, ok = a.prefixRules.LongestPrefix(path)
-	if !ok {
-		return
+	if ok {
+		permissions = raw.(*ACLPermissions)
+		capabilities = permissions.CapabilitiesBitmap
+		goto CHECK
 	}
-	permissions = raw.(*ACLPermissions)
-	capabilities = permissions.CapabilitiesBitmap
+
+	if len(a.segmentWildcardPaths) > 0 {
+		pathParts := strings.Split(path, "/")
+		for currWCPath := range a.segmentWildcardPaths {
+			if currWCPath == "" {
+				continue
+			}
+
+			var isPrefix bool
+			var invalid bool
+			origCurrWCPath := currWCPath
+
+			if currWCPath[len(currWCPath)-1] == '*' {
+				isPrefix = true
+				currWCPath = currWCPath[0 : len(currWCPath)-1]
+			}
+			splitCurrWCPath := strings.Split(currWCPath, "/")
+			if len(pathParts) < len(splitCurrWCPath) {
+				// The path coming in is shorter; it can't match
+				continue
+			}
+			if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
+				// If it's not a prefix we expect the same number of segments
+				continue
+			}
+			// We key off splitK here since it might be less than pathParts
+			for i, aclPart := range splitCurrWCPath {
+				if aclPart == "+" {
+					// Matches anything in the segment, so keep checking
+					continue
+				}
+				if i == len(splitCurrWCPath)-1 && isPrefix {
+					// In this case we may have foo* or just * depending on if
+					// originally it was foo* or foo/*.
+					if aclPart == "" {
+						// Ended in /*, so at this point we're at the final
+						// glob which will match anything, so return success
+						break
+					}
+					if !strings.HasPrefix(pathParts[i], aclPart) {
+						// E.g., the final part of the acl is foo* and the
+						// final part of the path is boofar
+						invalid = true
+						break
+					}
+					// Final prefixed matched and the rest is a wildcard,
+					// matches
+					break
+				}
+				if aclPart != pathParts[i] {
+					// Mismatch, exit out
+					invalid = true
+					break
+				}
+			}
+			// If invalid isn't set then we got through the full segmented path
+			// without finding a mismatch, so it's valid
+			if !invalid {
+				permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
+				capabilities = permissions.CapabilitiesBitmap
+				goto CHECK
+			}
+		}
+	}
+
+	// No exact, prefix, or segment wildcard paths found, return without
+	// setting allowed
+	return
 
 CHECK:
 	// Check if the minimum permissions are met

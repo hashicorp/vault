@@ -155,6 +155,7 @@ type OASSchema struct {
 	Format           string                `json:"format,omitempty"`
 	Pattern          string                `json:"pattern,omitempty"`
 	Enum             []interface{}         `json:"enum,omitempty"`
+	Default          interface{}           `json:"default,omitempty"`
 	Example          interface{}           `json:"example,omitempty"`
 	Deprecated       bool                  `json:"deprecated,omitempty"`
 	Required         bool                  `json:"required,omitempty"`
@@ -263,6 +264,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 					Type:             t.baseType,
 					Pattern:          t.pattern,
 					Enum:             field.AllowedValues,
+					Default:          field.Default,
 					DisplayName:      field.DisplayName,
 					DisplayValue:     field.DisplayValue,
 					DisplaySensitive: field.DisplaySensitive,
@@ -321,6 +323,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						Format:           openapiField.format,
 						Pattern:          openapiField.pattern,
 						Enum:             field.AllowedValues,
+						Default:          field.Default,
 						Required:         field.Required,
 						Deprecated:       field.Deprecated,
 						DisplayName:      field.DisplayName,

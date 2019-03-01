@@ -163,7 +163,7 @@ This endpoint deletes an alias from its corresponding entity.
 | :--------- | :------------------------------- | :----------------------|
 | `DELETE`   | `/identity/entity-alias/id/:id`  | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `id` `(string: <required>)` – Identifier of the entity alias.
 

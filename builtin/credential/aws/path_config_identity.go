@@ -16,12 +16,12 @@ func pathConfigIdentity(b *backend) *framework.Path {
 			"iam_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasIAMUniqueID,
-				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q and %q", identityAliasIAMUniqueID, identityAliasIAMFullArn),
+				Description: fmt.Sprintf("Configure how the AWS auth method generates entity aliases when using IAM auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn, identityAliasRoleID),
 			},
 			"ec2_alias": {
 				Type:        framework.TypeString,
 				Default:     identityAliasEC2InstanceID,
-				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q and %q", identityAliasEC2InstanceID, identityAliasEC2ImageID),
+				Description: fmt.Sprintf("Configure how the AWS auth method generates entity alias when using EC2 auth. Valid values are %q, %q, and %q. Defaults to %q.", identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID, identityAliasRoleID),
 			},
 		},
 
@@ -42,23 +42,18 @@ func identityConfigEntry(ctx context.Context, s logical.Storage) (*identityConfi
 	}
 
 	var entry identityConfig
-	if entryRaw == nil {
-		entry.IAMAlias = identityAliasIAMUniqueID
-		entry.EC2Alias = identityAliasEC2InstanceID
-		return &entry, nil
-	}
-
-	err = entryRaw.DecodeJSON(&entry)
-	if err != nil {
-		return nil, err
+	if entryRaw != nil {
+		if err := entryRaw.DecodeJSON(&entry); err != nil {
+			return nil, err
+		}
 	}
 
 	if entry.IAMAlias == "" {
-		entry.IAMAlias = identityAliasIAMUniqueID
+		entry.IAMAlias = identityAliasRoleID
 	}
 
 	if entry.EC2Alias == "" {
-		entry.EC2Alias = identityAliasEC2InstanceID
+		entry.EC2Alias = identityAliasRoleID
 	}
 
 	return &entry, nil
@@ -87,7 +82,7 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 	iamAliasRaw, ok := data.GetOk("iam_alias")
 	if ok {
 		iamAlias := iamAliasRaw.(string)
-		allowedIAMAliasValues := []string{identityAliasIAMUniqueID, identityAliasIAMFullArn}
+		allowedIAMAliasValues := []string{identityAliasRoleID, identityAliasIAMUniqueID, identityAliasIAMFullArn}
 		if !strutil.StrListContains(allowedIAMAliasValues, iamAlias) {
 			return logical.ErrorResponse(fmt.Sprintf("iam_alias of %q not in set of allowed values: %v", iamAlias, allowedIAMAliasValues)), nil
 		}
@@ -97,7 +92,7 @@ func pathConfigIdentityUpdate(ctx context.Context, req *logical.Request, data *f
 	ec2AliasRaw, ok := data.GetOk("ec2_alias")
 	if ok {
 		ec2Alias := ec2AliasRaw.(string)
-		allowedEC2AliasValues := []string{identityAliasEC2InstanceID, identityAliasEC2ImageID}
+		allowedEC2AliasValues := []string{identityAliasRoleID, identityAliasEC2InstanceID, identityAliasEC2ImageID}
 		if !strutil.StrListContains(allowedEC2AliasValues, ec2Alias) {
 			return logical.ErrorResponse(fmt.Sprintf("ec2_alias of %q not in set of allowed values: %v", ec2Alias, allowedEC2AliasValues)), nil
 		}
@@ -126,6 +121,7 @@ const identityAliasIAMUniqueID = "unique_id"
 const identityAliasIAMFullArn = "full_arn"
 const identityAliasEC2InstanceID = "instance_id"
 const identityAliasEC2ImageID = "image_id"
+const identityAliasRoleID = "role_id"
 
 const pathConfigIdentityHelpSyn = `
 Configure the way the AWS auth method interacts with the identity store

@@ -4,6 +4,8 @@ import { code } from 'vault/tests/pages/helpers/codemirror';
 
 export default create({
   ...Base,
+  deleteBtn: clickable('[data-test-secret-delete] button'),
+  confirmBtn: clickable('[data-test-confirm-button]'),
   rows: collection('data-test-row-label'),
   toggleJSON: clickable('[data-test-secret-json-toggle]'),
   toggleIsPresent: isPresent('[data-test-secret-json-toggle]'),
@@ -11,5 +13,8 @@ export default create({
   editIsPresent: isPresent('[data-test-secret-edit]'),
   editor: {
     content: code('[data-test-component="json-editor"]'),
+  },
+  deleteSecret() {
+    return this.deleteBtn().confirmBtn();
   },
 });
