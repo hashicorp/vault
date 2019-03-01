@@ -93,7 +93,7 @@ path "identity/entity/name/{{identity.entity.name}}" {
 }
 
 # Allow a token to list what it's allowed to see under a given path.
-path "sys/internal/ui/filtered-path" {
+path "sys/access/filtered-path" {
     capabilities = ["update"]
 }
 

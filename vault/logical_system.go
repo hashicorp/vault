@@ -3063,7 +3063,7 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
-func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) pathAccessFilteredPath(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	paths := d.Get("paths").([]string)
 	if len(paths) == 0 {
 		return logical.ErrorResponse("paths not set"), logical.ErrInvalidRequest
@@ -3939,8 +3939,8 @@ This path responds to the following HTTP methods.
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
-	"internal-ui-filtered-path": {
-		"Elements under the specified path which are either accessible, or whose subtree contains accessible elements",
+	"access-filtered-path": {
+		"Elements under the specified paths which are either accessible, or whose subtree contains accessible elements",
 		"",
 	},
 }

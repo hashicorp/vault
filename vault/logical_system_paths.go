@@ -825,7 +825,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
 		{
-			Pattern: "internal/ui/filtered-path",
+			Pattern: "access/filtered-path",
 			Fields: map[string]*framework.FieldSchema{
 				"paths": &framework.FieldSchema{
 					Type:        framework.TypeStringSlice,
@@ -834,11 +834,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.pathInternalUIFilteredPath,
+					Callback: b.pathAccessFilteredPath,
 				},
 			},
-			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-filtered-path"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-filtered-path"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["access-filtered-path"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["access-filtered-path"][1]),
 		},
 	}
 }

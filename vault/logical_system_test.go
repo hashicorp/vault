@@ -2550,19 +2550,19 @@ func testCreateSecret(t *testing.T, core *Core, token, path, key, value string) 
 	}
 }
 
-func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
-	core, b, rootToken := testCoreSystemBackend(t)
+func TestSystemBackend_AccessFilteredPath(t *testing.T) {
+	core, _, rootToken := testCoreSystemBackend(t)
 
 	less := func(s1, s2 string) bool { return s1 < s2 }
 	ignoreOrder := []cmp.Option{cmpopts.EquateEmpty(), cmpopts.SortSlices(less)}
-	filteredPath := "internal/ui/filtered-path"
+	filteredPath := "sys/access/filtered-path"
 	checkPaths := func(t *testing.T, token string, expectedKeys map[string][]string) {
 		t.Helper()
 		var paths []string
 		for path := range expectedKeys {
 			paths = append(paths, path)
 		}
-		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		resp, err := core.HandleRequest(namespace.RootContext(nil), &logical.Request{
 			Path: filteredPath,
 			Data: map[string]interface{}{
 				"paths": paths,
