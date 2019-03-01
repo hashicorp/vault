@@ -9,6 +9,12 @@ FEATURES:
 
  * **Transit Auto Unseal**: Vault can now be configured to use the Transit
    Secret Engine in another Vault cluster as an auto unseal provider.
+  
+IMPROVEMENTS:
+
+ * auth/token: A warning will be printed when 'tls_cipher_suites' includes a 
+   blacklisted cipher suite or all cipher suites are blacklisted by the HTTP/2
+   specification.
 
 BUG FIXES:
 
