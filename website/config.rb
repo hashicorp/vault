@@ -1,5 +1,7 @@
 set :base_url, "https://www.vaultproject.io/"
 
+proxy '_redirects', 'netlify-redirects', ignore: true
+
 activate :hashicorp do |h|
   h.name         = "vault"
   h.version      = "0.11.3"

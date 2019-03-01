@@ -106,6 +106,7 @@
 /intro/getting-started/acl.html /intro/getting-started/policies
 /intro/getting-started/secret-backends.html  /intro/getting-started/secrets-engines
 
+/guides/index.html                              https://learn.hashicorp.com/vault
 /guides/getting-started/index.html              https://learn.hashicorp.com/vault
 
 /guides/operations/index.html                   https://learn.hashicorp.com/vault/?track=operations#operations
@@ -172,6 +173,7 @@
 /intro/index.html https://learn.hashicorp.com/vault/#getting-started
 /intro/getting-started/ https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/index.html https://learn.hashicorp.com/vault/getting-started/install
+/intro/getting-started/install.html https://learn.hashicorp.com/vault/getting-started/install
 /intro/getting-started/dev-server.html https://learn.hashicorp.com/vault/getting-started/dev-server
 /intro/getting-started/first-secret.html https://learn.hashicorp.com/vault/getting-started/first-secret
 /intro/getting-started/secrets-engines.html https://learn.hashicorp.com/vault/getting-started/secrets-engines
