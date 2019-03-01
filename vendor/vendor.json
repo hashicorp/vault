@@ -1567,6 +1567,12 @@
 			"revisionTime": "2014-04-04T06:02:08Z"
 		},
 		{
+			"checksumSHA1": "5mxxAD+0HdT9xbByc3bG972/D2k=",
+			"path": "github.com/jefferai/isbadcipher",
+			"revision": "51d2077c035ffd4151fc97485fac1c63cf29b86e",
+			"revisionTime": "2019-02-26T16:06:19Z"
+		},
+		{
 			"checksumSHA1": "cIinEjB62s8j5cpY1u7sxtg4akg=",
 			"path": "github.com/jefferai/jsonx",
 			"revision": "9cc31c3135eef39b8e72585f37efa92b6ca314d0",
