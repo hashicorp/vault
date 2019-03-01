@@ -2985,7 +2985,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	counters, err := b.Core.loadAllRequestCounters(ctx)
+	counters, err := b.Core.loadAllRequestCounters(ctx, time.Now())
 	if err != nil {
 		return nil, err
 	}

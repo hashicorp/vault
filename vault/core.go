@@ -492,6 +492,8 @@ type CoreConfig struct {
 
 	// Telemetry objects
 	MetricsHelper *metricsutil.MetricsHelper
+
+	CounterSyncInterval time.Duration
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -524,6 +526,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisablePerformanceStandby: c.DisablePerformanceStandby,
 		DisableIndexing:           c.DisableIndexing,
 		AllLoggers:                c.AllLoggers,
+		CounterSyncInterval:       c.CounterSyncInterval,
 	}
 }
 
@@ -562,6 +565,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
+	syncInterval := conf.CounterSyncInterval
+	if syncInterval.Nanoseconds() == 0 {
+		syncInterval = 30 * time.Second
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:                      entCore{},
@@ -598,7 +606,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
-		counters:                     counters{requests: new(uint64)},
+		counters: counters{
+			requests:     new(uint64),
+			syncInterval: syncInterval,
+		},
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -1607,7 +1618,7 @@ func stopReplicationImpl(c *Core) error {
 // emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
-	writeTimer := time.Tick(1 * time.Minute)
+	writeTimer := time.Tick(c.counters.syncInterval)
 
 	for {
 		select {
@@ -1619,9 +1630,13 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
-			err := c.saveCurrentRequestCounters(context.Background(), time.Now())
-			if err != nil {
-				c.logger.Error("writing request counters to barrier", "err", err)
+			if couldForward(c) {
+				syncCounter(c)
+			} else {
+				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
+				if err != nil {
+					c.logger.Error("writing request counters to barrier", "err", err)
+				}
 			}
 
 		case <-stopCh:

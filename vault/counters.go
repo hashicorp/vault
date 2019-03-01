@@ -25,6 +25,9 @@ type counters struct {
 	// There's no lock because the only reader/writer of activePath is the goroutine
 	// doing background syncs.
 	activePath string
+	// syncInterval determines how often the counters get written to storage (on primary)
+	// or synced to primary.
+	syncInterval time.Duration
 }
 
 // RequestCounter stores the state of request counters for a single unspecified period.
@@ -43,15 +46,12 @@ type DatedRequestCounter struct {
 
 // loadAllRequestCounters returns all request counters found in storage,
 // ordered by time (oldest first.)
-func (c *Core) loadAllRequestCounters(ctx context.Context) ([]DatedRequestCounter, error) {
+func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]DatedRequestCounter, error) {
 	view := c.systemBarrierView.SubView("counters/requests/")
 
 	datepaths, err := view.List(ctx, "")
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
-	}
-	if datepaths == nil {
-		return nil, nil
 	}
 
 	var all []DatedRequestCounter
@@ -75,6 +75,17 @@ func (c *Core) loadAllRequestCounters(ctx context.Context) ([]DatedRequestCounte
 
 			all = append(all, DatedRequestCounter{StartTime: t, RequestCounter: *counter})
 		}
+	}
+
+	start, _ := time.Parse(requestCounterDatePathFormat, now.Format(requestCounterDatePathFormat))
+	idx := sort.Search(len(all), func(i int) bool {
+		return !all[i].StartTime.Before(start)
+	})
+	cur := atomic.LoadUint64(c.counters.requests)
+	if idx < len(all) {
+		all[idx].RequestCounter.Total = &cur
+	} else {
+		all = append(all, DatedRequestCounter{StartTime: start, RequestCounter: RequestCounter{Total: &cur}})
 	}
 
 	return all, nil

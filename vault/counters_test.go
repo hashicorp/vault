@@ -9,6 +9,7 @@ import (
 	"github.com/go-test/deep"
 )
 
+//noinspection SpellCheckingInspection
 func testParseTime(t *testing.T, format, timeval string) time.Time {
 	t.Helper()
 	tm, err := time.Parse(format, timeval)
@@ -87,9 +88,9 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 
 	decemberStartTime := testParseTime(t, requestCounterDatePathFormat, december2018.Format(requestCounterDatePathFormat))
 	expected2018 := []DatedRequestCounter{
-		DatedRequestCounter{decemberStartTime, RequestCounter{Total: &decemberRequests}},
+		{StartTime: decemberStartTime, RequestCounter: RequestCounter{Total: &decemberRequests}},
 	}
-	all, err := c.loadAllRequestCounters(context.Background())
+	all, err := c.loadAllRequestCounters(context.Background(), december2018)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestRequestCounterSaveCurrent(t *testing.T) {
 	januaryRequests := uint64(333)
 	storeSaveLoad(januaryRequests, januaryRequests, january2019)
 
-	all, err = c.loadAllRequestCounters(context.Background())
+	all, err = c.loadAllRequestCounters(context.Background(), january2019)
 	if err != nil {
 		t.Fatal(err)
 	}

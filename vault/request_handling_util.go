@@ -19,6 +19,13 @@ func shouldForward(c *Core, routeErr error) bool {
 	return false
 }
 
+func syncCounter(c *Core) {
+}
+
+func couldForward(c *Core) bool {
+	return false
+}
+
 func forward(ctx context.Context, c *Core, req *logical.Request) (*logical.Response, error) {
 	panic("forward called in OSS Vault")
 }
