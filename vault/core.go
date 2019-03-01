@@ -1607,9 +1607,7 @@ func stopReplicationImpl(c *Core) error {
 // emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
-	// TODO set writeTimer to a longer interval (5m?) once feature is complete.
-	// The current setting is helpful for debuging.
-	writeTimer := time.Tick(10 * time.Second)
+	writeTimer := time.Tick(1 * time.Minute)
 
 	for {
 		select {

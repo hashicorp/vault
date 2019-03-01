@@ -538,7 +538,6 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 			return forward(ctx, c, req)
 		}
 	}
-	c.logger.Info("requests counter incremented", "path", req.Path, "newvalue", atomic.AddUint64(c.counters.requests, 1))
 	return resp, err
 }
 
