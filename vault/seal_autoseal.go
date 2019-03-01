@@ -398,7 +398,7 @@ func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return nil
 }
 
-func (d *autoSeal) GetRecoveryKey(ctx context.Context) ([]byte, error) {
+func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
 	return d.getRecoveryKeyInternal(ctx)
 }
 

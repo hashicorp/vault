@@ -67,10 +67,10 @@ type Seal interface {
 	RecoveryKeySupported() bool
 	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
+	RecoveryKey(context.Context) ([]byte, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
-	GetRecoveryKey(context.Context) ([]byte, error)
 	VerifyRecoveryKey(context.Context, []byte) error
 }
 

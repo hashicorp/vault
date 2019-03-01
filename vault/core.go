@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/helper/metricsutil"
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
@@ -951,7 +952,7 @@ func (c *Core) unsealPart(ctx context.Context, seal Seal, key []byte, useRecover
 		switch {
 		case c.migrationSeal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
 			// Set the recovery and barrier keys to be the same.
-			recoveryKey, err := c.migrationSeal.GetRecoveryKey(ctx)
+			recoveryKey, err := c.migrationSeal.RecoveryKey(ctx)
 			if err != nil {
 				return nil, errwrap.Wrapf("error getting recovery key to set on new seal: {{err}}", err)
 			}
