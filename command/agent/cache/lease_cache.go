@@ -68,7 +68,7 @@ type LeaseCache struct {
 	proxier     Proxier
 	logger      hclog.Logger
 	db          *cachememdb.CacheMemDB
-	baseCtxInfo *ContextInfo
+	baseCtxInfo *cachememdb.ContextInfo
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -78,13 +78,6 @@ type LeaseCacheConfig struct {
 	BaseContext context.Context
 	Proxier     Proxier
 	Logger      hclog.Logger
-}
-
-// ContextInfo holds a derived context and cancelFunc pair.
-type ContextInfo struct {
-	Ctx        context.Context
-	CancelFunc context.CancelFunc
-	DoneCh     chan struct{}
 }
 
 // NewLeaseCache creates a new instance of a LeaseCache.
@@ -107,11 +100,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	// Create a base context for the lease cache layer
-	baseCtx, baseCancelFunc := context.WithCancel(conf.BaseContext)
-	baseCtxInfo := &ContextInfo{
-		Ctx:        baseCtx,
-		CancelFunc: baseCancelFunc,
-	}
+	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
 		client:      conf.Client,
@@ -215,7 +204,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	var renewCtxInfo *ContextInfo
+	var renewCtxInfo *cachememdb.ContextInfo
 	switch {
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "path", req.Request.URL.Path, "method", req.Request.Method)
@@ -231,10 +220,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		}
 
 		// Derive a context for renewal using the token's context
-		newCtxInfo := new(ContextInfo)
-		newCtxInfo.Ctx, newCtxInfo.CancelFunc = context.WithCancel(entry.RenewCtxInfo.Ctx)
-		newCtxInfo.DoneCh = make(chan struct{})
-		renewCtxInfo = newCtxInfo
+		renewCtxInfo = cachememdb.NewContextInfo(entry.RenewCtxInfo.Ctx)
 
 		index.Lease = secret.LeaseID
 		index.LeaseToken = req.Token
@@ -317,14 +303,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	return resp, nil
 }
 
-func (c *LeaseCache) createCtxInfo(ctx context.Context) *ContextInfo {
+func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
 	if ctx == nil {
 		ctx = c.baseCtxInfo.Ctx
 	}
-	ctxInfo := new(ContextInfo)
-	ctxInfo.Ctx, ctxInfo.CancelFunc = context.WithCancel(ctx)
-	ctxInfo.DoneCh = make(chan struct{})
-	return ctxInfo
+	return cachememdb.NewContextInfo(ctx)
 }
 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
@@ -495,7 +478,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 			return nil
 		}
 
-		c.logger.Debug("cancelling context of index attached to token")
+		c.logger.Debug("canceling context of index attached to token")
 
 		index.RenewCtxInfo.CancelFunc()
 
@@ -509,19 +492,19 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 			return nil
 		}
 
-		c.logger.Debug("cancelling context of index attached to accessor")
+		c.logger.Debug("canceling context of index attached to accessor")
 
 		index.RenewCtxInfo.CancelFunc()
 
 	case "all":
 		// Cancel the base context which triggers all the goroutines to
 		// stop and evict entries from cache.
-		c.logger.Debug("cancelling base context")
+		c.logger.Debug("canceling base context")
 		c.baseCtxInfo.CancelFunc()
 
 		// Reset the base context
 		baseCtx, baseCancel := context.WithCancel(ctx)
-		c.baseCtxInfo = &ContextInfo{
+		c.baseCtxInfo = &cachememdb.ContextInfo{
 			Ctx:        baseCtx,
 			CancelFunc: baseCancel,
 		}
