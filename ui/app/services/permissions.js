@@ -138,7 +138,9 @@ export default Service.extend({
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.get('globPaths');
     if (globPaths) {
-      const matchingPath = Object.keys(globPaths).find(k => pathName.includes(k));
+      const matchingPath = Object.keys(globPaths).find(k => {
+        return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
+      });
       const hasMatchingPath =
         (matchingPath && !this.isDenied(globPaths[matchingPath])) || globPaths.hasOwnProperty('');
 
