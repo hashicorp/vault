@@ -1,7 +1,6 @@
 package framework
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
@@ -345,15 +345,20 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 					for _, headerVal := range typedHeader {
 						header.Add(headerKey, headerVal)
 					}
+				case json.Number:
+					header.Add(headerKey, typedHeader.String())
 				case []interface{}:
 					for _, headerVal := range typedHeader {
-						strHeaderVal, ok := headerVal.(string)
-						if !ok {
+						switch typedHeader := headerVal.(type) {
+						case string:
+							header.Add(headerKey, typedHeader)
+						case json.Number:
+							header.Add(headerKey, typedHeader.String())
+						default:
 							// All header values should already be strings when they're being sent in.
 							// Even numbers and booleans will be treated as strings.
 							return nil, fmt.Errorf("received non-string value for header key:%s, val:%s", headerKey, headerValGroup)
 						}
-						header.Add(headerKey, strHeaderVal)
 					}
 				default:
 					return nil, fmt.Errorf("unrecognized type for %s", headerValGroup)
@@ -381,7 +386,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 				// b. It's not base64 encoded, it's a straight-out JSON string.
 				headerBytes = []byte(headerStr)
 			}
-			if err := json.NewDecoder(bytes.NewReader(headerBytes)).Decode(&resultMap); err != nil {
+			if err := jsonutil.DecodeJSON(headerBytes, &resultMap); err != nil {
 				return nil, false, err
 			}
 			result, err = toHeader(resultMap)

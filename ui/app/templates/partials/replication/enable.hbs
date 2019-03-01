@@ -141,11 +141,11 @@
         </select>
       </div>
       {{#if (eq mode 'secondary')}}
-          <AlertInline
-            @class="has-top"
-            @type="warning"
-            @message="This will immediately clear all data in this cluster!"
-          />
+        <AlertInline
+          @class="has-top"
+          @type="warning"
+          @message="This will immediately clear all data in this cluster!"
+        />
       {{/if}}
     </div>
     {{#if (eq mode 'primary')}}

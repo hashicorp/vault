@@ -20,9 +20,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
+	"github.com/armon/go-metrics/prometheus"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -94,6 +97,7 @@ type ServerCommand struct {
 	flagDevLatency       int
 	flagDevLatencyJitter int
 	flagDevLeasedKV      bool
+	flagDevKVV1          bool
 	flagDevSkipInit      bool
 	flagDevThreeNode     bool
 	flagDevFourCluster   bool
@@ -251,6 +255,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
+		Name:    "dev-kv-v1",
+		Target:  &c.flagDevKVV1,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
 		Name:    "dev-auto-seal",
 		Target:  &c.flagDevAutoSeal,
 		Default: false,
@@ -323,16 +334,18 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	var level log.Level
 	var logLevelWasNotSet bool
+	logLevelString := c.flagLogLevel
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
-	case notSetValue:
+	case notSetValue, "":
 		logLevelWasNotSet = true
+		logLevelString = "info"
 		level = log.Info
 	case "trace":
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "notice", "info", "":
+	case "notice", "info":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn
@@ -356,7 +369,7 @@ func (c *ServerCommand) Run(args []string) int {
 	allLoggers := []log.Logger{c.logger}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal {
+	if c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
 		c.flagDev = true
 	}
 
@@ -408,6 +421,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if config.LogLevel != "" && logLevelWasNotSet {
 		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
 		switch configLogLevel {
 		case "trace":
 			c.logger.SetLevel(log.Trace)
@@ -458,7 +472,8 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	if err := c.setupTelemetry(config); err != nil {
+	metricsHelper, err := c.setupTelemetry(config)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
@@ -484,7 +499,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 
 	var barrierSeal vault.Seal
@@ -492,8 +507,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		sealLogger := c.logger.Named(vaultseal.Test)
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		// Handle the case where no seal is provided
 		if len(config.Seals) == 0 {
@@ -570,6 +584,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
+		MetricsHelper:             metricsHelper,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -762,7 +777,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = c.flagLogLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
@@ -1372,25 +1386,29 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		return nil, err
 	}
 
-	// Upgrade the default K/V store
-	if !c.flagDevLeasedKV {
-		req := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: init.RootToken,
-			Path:        "sys/mounts/secret/tune",
-			Data: map[string]interface{}{
-				"options": map[string]string{
-					"version": "2",
-				},
+	kvVer := "2"
+	if c.flagDevKVV1 || c.flagDevLeasedKV {
+		kvVer = "1"
+	}
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": kvVer,
 			},
-		}
-		resp, err := core.HandleRequest(ctx, req)
-		if err != nil {
-			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
-		}
-		if resp.IsError() {
-			return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
-		}
+		},
+	}
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
+	}
+	if resp.IsError() {
+		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
 	}
 
 	return init, nil
@@ -1696,8 +1714,8 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-// setupTelemetry is used to setup the telemetry sub-systems
-func (c *ServerCommand) setupTelemetry(config *server.Config) error {
+// setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -1706,10 +1724,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	metrics.DefaultInmemSignal(inm)
 
 	var telConfig *server.Telemetry
-	if config.Telemetry == nil {
-		telConfig = &server.Telemetry{}
-	} else {
+	if config.Telemetry != nil {
 		telConfig = config.Telemetry
+	} else {
+		telConfig = &server.Telemetry{}
 	}
 
 	metricsConf := metrics.DefaultConfig("vault")
@@ -1717,10 +1735,28 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+	var prometheusEnabled bool
+
+	// Configure the Prometheus sink
+	if telConfig.PrometheusRetentionTime != 0 {
+		prometheusEnabled = true
+		prometheusOpts := prometheus.PrometheusOpts{
+			Expiration: telConfig.PrometheusRetentionTime,
+		}
+
+		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+		if err != nil {
+			return nil, err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
+
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1729,7 +1765,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1765,7 +1801,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
@@ -1780,21 +1816,29 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 
 	// Initialize the global sink
-	if len(fanout) > 0 {
-		fanout = append(fanout, inm)
-		metrics.NewGlobal(metricsConf, fanout)
+	if len(fanout) > 1 {
+		// Hostname enabled will create poor quality metrics name for prometheus
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		}
 	} else {
 		metricsConf.EnableHostname = false
-		metrics.NewGlobal(metricsConf, inm)
 	}
-	return nil
+	fanout = append(fanout, inm)
+	_, err := metrics.NewGlobal(metricsConf, fanout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {

@@ -141,11 +141,15 @@ group, the **group ID** or **group name** must be provided (e.g.
 Example:
 
 This policy allows users to change their own password given that the username
-and password are defined in the `userpass` auth method.
+and password are defined in the `userpass` auth method. The mount accessor
+value (`auth_userpass_6671d643` in this example) can be read from the `sys/auth` endpoint.
 
 ```hcl
-path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}/password" {
+path "auth/userpass/users/{{identity.entity.aliases.auth_userpass_6671d643.name}}" {
   capabilities = [ "update" ]
+  allowed_parameters = {
+    "password" = []
+  }
 }
 ```
 

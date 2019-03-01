@@ -81,22 +81,25 @@ For example, enable the "foo" auth method will make it accessible at
   this auth method. These are the possible values:
 
   - `default_lease_ttl` `(string: "")` - The default lease duration, specified
-     as a string duration like "5s" or "30m".
+    as a string duration like "5s" or "30m".
 
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
-     string duration like "5s" or "30m".
+    string duration like "5s" or "30m".
 
   - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-     that will not be HMAC'd by audit devices in the request data object.
+    that will not be HMAC'd by audit devices in the request data object.
 
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-     that will not be HMAC'd by audit devices in the response data object.
+    that will not be HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
-     in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-     to whitelist and pass from the request to the backend.
+    to whitelist and pass from the request to the plugin.
+
+  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist, allowing a plugin to include them in the response.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
@@ -109,6 +112,9 @@ relevant functionality is only supported in Vault Enterprise:
   method mount can assign policies to tokens that are valid on the replication
   primary if a request is forwarded. Never give untrusted administrators the
   ability to assign policies or configure authentication methods.
+
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
+  values stored by the mount to be wrapped by the seal's encryption capability.
 
 ### Sample Payload
 
@@ -221,10 +227,13 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount
-    in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
+   in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the backend.
+  to whitelist and pass from the request to the plugin.
+
+- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
+  to whitelist, allowing a plugin to include them in the response.
 
 - `token_type` `(string: "")` – Specifies the type of tokens that should be
   returned by the mount. The following values are available:

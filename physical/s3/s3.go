@@ -140,7 +140,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	if !ok {
 		kmsKeyId = ""
 	}
-	
+
 	s := &S3Backend{
 		client:     s3conn,
 		bucket:     bucket,
@@ -168,9 +168,9 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
 		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
 	}
-	
+
 	_, err := s.client.PutObject(putObjectInput)
-	
+
 	if err != nil {
 		return err
 	}

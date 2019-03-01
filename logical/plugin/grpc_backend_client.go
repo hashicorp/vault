@@ -16,6 +16,7 @@ import (
 )
 
 var ErrPluginShutdown = errors.New("plugin is shut down")
+var ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
 
 // Validate backendGRPCPluginClient satisfies the logical.Backend interface
 var _ logical.Backend = &backendGRPCPluginClient{}

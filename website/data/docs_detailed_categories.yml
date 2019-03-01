@@ -65,6 +65,7 @@
   docs:
     - docs/agent/index.html
     - docs/agent/autoauth/index.html
+    - docs/agent/caching/index.html
 -
   title: "Secret Engines"
   docs:

@@ -33,7 +33,7 @@ module('Acceptance | settings/auth/configure/section', function(hooks) {
     await withFlash(page.save(), () => {
       assert.equal(
         page.flash.latestMessage,
-        `The configuration options were saved successfully.`,
+        `The configuration was saved successfully.`,
         'success flash shows'
       );
     });

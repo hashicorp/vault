@@ -6,7 +6,6 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
@@ -14,7 +13,6 @@ import { create } from 'ember-cli-page-object';
 import authForm from '../../pages/components/auth-form';
 
 const component = create(authForm);
-const BACKENDS = supportedAuthBackends();
 
 const authService = Service.extend({
   authenticate() {
@@ -37,9 +35,6 @@ const routerService = Service.extend({
         return resolve();
       },
     };
-  },
-  replaceWith() {
-    return resolve();
   },
 });
 
@@ -112,7 +107,7 @@ module('Integration | Component | auth form', function(hooks) {
     });
   });
 
-  test('it renders all the supported tabs when no methods are passed', async function(assert) {
+  test('it renders no tabs when no methods are passed', async function(assert) {
     let methods = {
       'approle/': {
         type: 'approle',
@@ -123,10 +118,10 @@ module('Integration | Component | auth form', function(hooks) {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
-    await render(hbs`{{auth-form cluster=cluster}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} />`);
 
     await settled();
-    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
     server.shutdown();
   });
 
@@ -183,7 +178,7 @@ module('Integration | Component | auth form', function(hooks) {
     server.shutdown();
   });
 
-  test('it renders all the supported methods when no supported methods are present in passed methods', async function(assert) {
+  test('it renders no tabs when no supported methods are present in passed methods', async function(assert) {
     let methods = {
       'approle/': {
         type: 'approle',
@@ -195,10 +190,10 @@ module('Integration | Component | auth form', function(hooks) {
       });
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} />`);
     await settled();
     server.shutdown();
-    assert.equal(component.tabs.length, BACKENDS.length, 'renders a tab for every backend');
+    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
   });
 
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function(assert) {
@@ -222,7 +217,7 @@ module('Integration | Component | auth form', function(hooks) {
     let wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
+    await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
     later(() => run.cancelTimers(), 50);
     await settled();
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');

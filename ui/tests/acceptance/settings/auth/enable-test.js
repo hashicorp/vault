@@ -28,9 +28,11 @@ module('Acceptance | settings/auth/enable', function(hooks) {
     });
     assert.equal(
       currentRouteName(),
-      'vault.cluster.access.methods',
-      'redirects to the auth backend list page'
+      'vault.cluster.settings.auth.configure.section',
+      'redirects to the auth config page'
     );
+
+    await listPage.visit();
     assert.ok(listPage.findLinkById(path), 'mount is present in the list');
   });
 });
