@@ -5,6 +5,7 @@ import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 const routeFor = function(type, mode) {
   const MODES = {
@@ -43,8 +44,15 @@ export default Component.extend(FocusOnInsertMixin, {
   filterMatchesKey: null,
   firstPartialMatch: null,
 
-  transitionToRoute: function() {
-    this.get('router').transitionTo(...arguments);
+  transitionToRoute(...args) {
+    let params = args.map((param, index) => {
+      if (index === 0 || typeof param !== 'string') {
+        return param;
+      }
+      return encodePath(param);
+    });
+
+    this.get('router').transitionTo(...params);
   },
 
   shouldFocus: false,

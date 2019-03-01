@@ -2,11 +2,12 @@ import { assign } from '@ember/polyfills';
 import { get, set } from '@ember/object';
 import ApplicationAdapter from './application';
 import DS from 'ember-data';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   url(path) {
     const url = `${this.buildURL()}/auth`;
-    return path ? url + '/' + path : url;
+    return path ? url + '/' + encodePath(path) : url;
   },
 
   // used in updateRecord on the model#tune action
@@ -58,6 +59,6 @@ export default ApplicationAdapter.extend({
   },
 
   exchangeOIDC(path, state, code) {
-    return this.ajax(`/v1/auth/${path}/oidc/callback`, 'GET', { data: { state, code } });
+    return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
   },
 });
