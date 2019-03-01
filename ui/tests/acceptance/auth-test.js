@@ -73,7 +73,7 @@ module('Acceptance | auth', function(hooks) {
       let body = JSON.parse(lastRequest.requestBody);
       if (backend.type === 'token') {
         assert.ok(
-          Object.keys(lastRequest.requestHeaders).includes('X-Vault-Token'),
+          Object.keys(lastRequest.requestHeaders).includes('x-vault-token'),
           'token uses vault token header'
         );
       } else if (backend.type === 'github') {

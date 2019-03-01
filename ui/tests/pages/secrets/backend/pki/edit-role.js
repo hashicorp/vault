@@ -13,12 +13,12 @@ export default create({
   save: clickable('[data-test-role-create]'),
   deleteBtn: clickable('[data-test-role-delete] button'),
   confirmBtn: clickable('[data-test-confirm-button]'),
-  deleteRole() {
-    return this.deleteBtn().confirmBtn();
+  async deleteRole() {
+    return await this.deleteBtn().confirmBtn();
   },
 
-  createRole(name, allowedDomains) {
-    return this.toggleDomain()
+  async createRole(name, allowedDomains) {
+    return await this.toggleDomain()
       .toggleOptions()
       .name(name)
       .allowAnyName()
