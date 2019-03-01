@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { settled, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -42,8 +42,10 @@ elRplAzrMF4=
     await configPage.visit({ backend: path }).form.generateCA();
     await editPage.visitRoot({ backend: path });
     await editPage.createRole('role', 'example.com');
-    await generatePage.visit({ backend: path, id: roleName, action });
-    return path;
+    await settled();
+    return await generatePage.visit({ backend: path, id: roleName, action }).then(() => {
+      return path;
+    });
   };
 
   test('it issues a cert', async function(assert) {

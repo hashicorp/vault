@@ -22,7 +22,7 @@ export default {
   },
   async clickAll() {
     for (let message of this.messages) {
-      message.click();
+      await message.click();
     }
     await settled();
   },

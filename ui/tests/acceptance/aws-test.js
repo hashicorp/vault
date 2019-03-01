@@ -4,16 +4,20 @@ import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import confirmAction from 'vault/tests/pages/components/confirm-action';
+import { create } from 'ember-cli-page-object';
+
+const popup = create(confirmAction);
 
 module('Acceptance | aws secret backend', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
-  hooks.afterEach(function() {
-    return logout.visit();
+  hooks.afterEach(async function() {
+    await logout.visit();
   });
 
   const POLICY = {
@@ -69,6 +73,8 @@ module('Acceptance | aws secret backend', function(hooks) {
 
     // save the role
     await click('[data-test-role-aws-create]');
+    // wait for redirect
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/secrets/${path}/show/${roleName}`,
@@ -82,9 +88,12 @@ module('Acceptance | aws secret backend', function(hooks) {
 
     //and delete
     await click(`[data-test-secret-link="${roleName}"] [data-test-popup-menu-trigger]`);
-    await click(`[data-test-aws-role-delete="${roleName}"] button`);
+    // wait for permissions checks
+    await settled();
+    await popup.delete();
+    await popup.confirmDelete();
 
-    await click(`[data-test-confirm-button]`);
+    //wait for redirect
     await settled();
     assert.dom(`[data-test-secret-link="${roleName}"]`).doesNotExist(`aws: role is no longer in the list`);
   });

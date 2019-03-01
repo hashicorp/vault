@@ -35,18 +35,18 @@ export default {
 
   async generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return this.replaceCA()
+      return await this.replaceCA()
         .commonName(commonName)
         .caType('intermediate')
         .submit();
     }
-    return this.replaceCA()
+    return await this.replaceCA()
       .commonName(commonName)
       .submit();
   },
 
   async uploadCA(pem) {
-    return this.replaceCA()
+    return await this.replaceCA()
       .uploadCert()
       .enterCertAsText()
       .pemBundle(pem)
@@ -54,6 +54,6 @@ export default {
   },
 
   async signIntermediate(commonName) {
-    return this.signIntermediateBtn().commonName(commonName);
+    return await this.signIntermediateBtn().commonName(commonName);
   },
 };
