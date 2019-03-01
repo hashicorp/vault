@@ -2580,6 +2580,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		ExplicitMaxTTL: explicitMaxTTLToUse,
 		CreationPath:   te.Path,
 		TokenType:      te.Type,
+		Orphan:         te.Parent == "",
 	}
 
 	for _, p := range te.Policies {
