@@ -2595,9 +2595,6 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	policyName := "test"
 	policyBody := `
 		name = "test"
-		path "sys/internal/ui/filtered-path" {
-			capabilities = ["update"]
-		}
 		path "secret/bar" {
 			capabilities = ["list"]
 		}
