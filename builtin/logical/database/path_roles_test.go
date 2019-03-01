@@ -69,7 +69,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			},
 			expected: map[string]interface{}{
 				"username":        "statictest",
-				"rotation_period": int64(5400000000000),
+				"rotation_period": float64(5400),
 			},
 		},
 		"missing rotation period": {
@@ -246,7 +246,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 
 	data = map[string]interface{}{
-		"name":                  "plugin-role-test",
+		"name":                  "plugin-role-test-updates",
 		"db_name":               "plugin-test",
 		"creation_statements":   testRoleStaticCreate,
 		"rotation_statements":   testRoleStaticUpdate,
@@ -259,7 +259,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
 	req = &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -273,7 +273,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -282,17 +282,17 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotation := resp.Data["rotation_period"].(int64)
+	rotation := resp.Data["rotation_period"].(float64)
 	// update rotation_period
 	updateData := map[string]interface{}{
-		"name":            "plugin-role-test",
+		"name":            "plugin-role-test-updates",
 		"db_name":         "plugin-test",
 		"username":        "statictest",
 		"rotation_period": "6400s",
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}
@@ -306,7 +306,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -315,21 +315,21 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	newRotation := resp.Data["rotation_period"].(int64)
+	newRotation := resp.Data["rotation_period"].(float64)
 	if newRotation == rotation {
 		t.Fatalf("expected change in rotation, but got old value:  %#v", newRotation)
 	}
 
 	// verify that rotation_period is only required when creating
 	updateData = map[string]interface{}{
-		"name":                "plugin-role-test",
+		"name":                "plugin-role-test-updates",
 		"db_name":             "plugin-test",
 		"username":            "statictest",
 		"rotation_statements": testRoleStaticUpdateRotation,
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}
@@ -341,13 +341,13 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
 	// verify updating static username returns an error
 	updateData = map[string]interface{}{
-		"name":     "plugin-role-test",
+		"name":     "plugin-role-test-updates",
 		"db_name":  "plugin-test",
 		"username": "statictestmodified",
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}

@@ -154,6 +154,11 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	err = req.Storage.Delete(ctx, "role/"+name)
+	if err != nil {
+		return nil, err
+	}
+
 	if b.credRotationQueue != nil {
 		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
 			if _, ok := err.(*queue.ErrItemNotFound); !ok {
@@ -238,7 +243,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	// is used to ensure we do not allow an existing role to be "migrated" to
 	// role with a static account. If createRole is false and static_account
 	// data is given, return an error
-	var createRole bool
+	createRole := req.Operation == logical.CreateOperation
 	if role == nil {
 		role = &roleEntry{}
 		createRole = true
@@ -246,29 +251,34 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 
 	// Static Account information
 	if username, ok := data.Get("username").(string); ok && username != "" {
-		if role.StaticAccount == nil && !createRole {
-			return logical.ErrorResponse("cannot change an existing role to a static account"), nil
-		}
+		// If the role exists and there is no StaticAccount, return error
 		if role.StaticAccount == nil {
+			if !createRole {
+				return logical.ErrorResponse("cannot change an existing role to a static account"), nil
+			}
 			role.StaticAccount = &staticAccount{}
 		}
-		if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
-			return logical.ErrorResponse("cannot update static account username"), nil
-		}
-		role.StaticAccount.Username = username
 
+		// If it's a Create operation, both username and rotation_period must be included
 		rotationPeriodSecondsRaw, ok := data.GetOk("rotation_period")
-		if !ok && req.Operation == logical.CreateOperation {
+		if !ok && createRole {
 			return logical.ErrorResponse("rotation_period is required to create static accounts"), nil
 		}
 		if ok {
 			rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 			if rotationPeriodSeconds < 60 {
-				// This must be at least 60 seconds because our periodic func runs about once a minute.
+				// If rotation frequency is specified, and this is an update, the value
+				// must be at least 60 seconds because our periodic func runs about once a
+				// minute.
 				return logical.ErrorResponse("rotation_period must be 60 seconds or more"), nil
 			}
 			role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 		}
+
+		if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
+			return logical.ErrorResponse("cannot update static account username"), nil
+		}
+		role.StaticAccount.Username = username
 
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid rotation_period: %s", err)), nil
