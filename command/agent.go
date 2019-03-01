@@ -226,6 +226,18 @@ func (c *AgentCommand) Run(args []string) int {
 			Default: "",
 			EnvVar:  api.EnvVaultCAPath,
 		})
+		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+			Name:    flagNameClientCert,
+			Target:  &c.flagClientCert,
+			Default: "",
+			EnvVar:  api.EnvVaultClientCert,
+		})
+		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+			Name:    flagNameClientKey,
+			Target:  &c.flagClientKey,
+			Default: "",
+			EnvVar:  api.EnvVaultClientKey,
+		})
 		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
 			Name:    flagNameTLSSkipVerify,
 			Target:  &c.flagTLSSkipVerify,
