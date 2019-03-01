@@ -66,6 +66,18 @@ const (
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
 
+	// flagNameAddress is the flag used in the base command to read in the
+	// address of the Vault server.
+	flagNameAddress = "address"
+	// flagnameCACert is the flag used in the base command to read in the CA
+	// cert.
+	flagNameCACert = "ca-cert"
+	// flagnameCAPath is the flag used in the base command to read in the CA
+	// cert path.
+	flagNameCAPath = "ca-path"
+	// flagNameTLSSkipVerify is the flag used in the base command to read in
+	// the option to ignore TLS certificate verification.
+	flagNameTLSSkipVerify = "tls-skip-verify"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable

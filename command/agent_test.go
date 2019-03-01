@@ -188,15 +188,15 @@ cache {
 		}
 	}()
 
-	originalVaultAgentAddress := os.Getenv(api.EnvVaultAgentAddress)
+	originalVaultAgentAddress := os.Getenv(api.EnvVaultAgentAddr)
 
 	// Create a client that talks to the agent
-	os.Setenv(api.EnvVaultAgentAddress, socketf)
+	os.Setenv(api.EnvVaultAgentAddr, socketf)
 	testClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Setenv(api.EnvVaultAgentAddress, originalVaultAgentAddress)
+	os.Setenv(api.EnvVaultAgentAddr, originalVaultAgentAddress)
 
 	// Start the agent
 	go cmd.Run([]string{"-config", conf})

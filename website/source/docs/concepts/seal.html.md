@@ -91,7 +91,7 @@ For a list of examples and supported providers, please see the
 
 ## Seal Migration
 
-The seal can be migrated between Shamir keys and automatic migration and vice versa.
+The seal can be migrated from Shamir keys to Auto Unseal and vice versa.
 
   ~> **NOTE**: This is not currently supported when using replication. While
   the primary can be migrated without issue, the secondaries, depending on

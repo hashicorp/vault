@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -18,6 +19,7 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/sink/mock"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
@@ -50,13 +52,12 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 			DisableMlock: true,
 			DisableCache: true,
 			Logger:       logging.NewVaultLogger(hclog.Trace),
-			CredentialBackends: map[string]logical.Factory{
-				"userpass": userpass.Factory,
-			},
 		}
 	}
 
-	if coreConfig.CredentialBackends == nil {
+	// Always set up the userpass backend since we use that to generate an admin
+	// token for the client that will make proxied requests to through the agent.
+	if coreConfig.CredentialBackends == nil || coreConfig.CredentialBackends["userpass"] == nil {
 		coreConfig.CredentialBackends = map[string]logical.Factory{
 			"userpass": userpass.Factory,
 		}
@@ -935,7 +936,7 @@ func TestCache_NonCacheable(t *testing.T) {
 	}
 }
 
-func TestCache_AuthResponse(t *testing.T) {
+func TestCache_Caching_AuthResponse(t *testing.T) {
 	cleanup, _, testClient, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
@@ -985,7 +986,7 @@ func TestCache_AuthResponse(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseResponse(t *testing.T) {
+func TestCache_Caching_LeaseResponse(t *testing.T) {
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
@@ -1062,5 +1063,134 @@ func TestCache_LeaseResponse(t *testing.T) {
 		if diff := deep.Equal(proxiedResp, cachedResp); diff != nil {
 			t.Fatal(diff)
 		}
+	}
+}
+
+func TestCache_Caching_CacheClear(t *testing.T) {
+	t.Run("request_path", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "request_path")
+	})
+
+	t.Run("lease", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "lease")
+	})
+
+	t.Run("token", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "token")
+	})
+
+	t.Run("token_accessor", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "token_accessor")
+	})
+
+	t.Run("all", func(t *testing.T) {
+		testCachingCacheClearCommon(t, "all")
+	})
+}
+
+func testCachingCacheClearCommon(t *testing.T, clearType string) {
+	coreConfig := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		Logger:       hclog.NewNullLogger(),
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+
+	cleanup, client, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, coreConfig)
+	defer cleanup()
+
+	err := client.Sys().Mount("kv", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write data to the lease-kv backend
+	_, err = testClient.Logical().Write("kv/foo", map[string]interface{}{
+		"value": "bar",
+		"ttl":   "1h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Proxy this request, agent should cache the response
+	resp, err := testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotLeaseID := resp.LeaseID
+
+	// Verify the entry exists
+	idx, err := leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if idx == nil {
+		t.Fatalf("expected cached entry, got: %v", idx)
+	}
+
+	data := map[string]interface{}{
+		"type": clearType,
+	}
+
+	// We need to set the value here depending on what we're trying to test.
+	// Some values are be static, but others are dynamically generated at runtime.
+	switch clearType {
+	case "request_path":
+		data["value"] = "/v1/kv/foo"
+	case "lease":
+		data["value"] = resp.LeaseID
+	case "token":
+		data["value"] = testClient.Token()
+	case "token_accessor":
+		lookupResp, err := client.Auth().Token().Lookup(testClient.Token())
+		if err != nil {
+			t.Fatal(err)
+		}
+		data["value"] = lookupResp.Data["accessor"]
+	case "all":
+	default:
+		t.Fatalf("invalid type provided: %v", clearType)
+	}
+
+	r := testClient.NewRequest("PUT", consts.AgentPathCacheClear)
+	if err := r.SetJSONBody(data); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	apiResp, err := testClient.RawRequestWithContext(ctx, r)
+	if resp != nil {
+		defer apiResp.Body.Close()
+	}
+	if apiResp != nil && apiResp.StatusCode == 404 {
+		_, parseErr := api.ParseSecret(apiResp.Body)
+		switch parseErr {
+		case nil:
+		case io.EOF:
+		default:
+			t.Fatal(err)
+		}
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify the entry is cleared
+	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if idx != nil {
+		t.Fatalf("expected entry to be nil, got: %v", idx)
 	}
 }

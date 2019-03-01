@@ -42,3 +42,10 @@ cache {
 		tls_cert_file = "/path/to/cacert.pem"
 	}
 }
+
+vault {
+	address = "http://127.0.0.1:1111"
+	ca_cert = "config_ca_cert"
+	ca_path = "config_ca_path"
+	tls_skip_verify = "true"
+}

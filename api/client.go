@@ -25,14 +25,15 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 const EnvVaultAddress = "VAULT_ADDR"
+const EnvVaultAgentAddr = "VAULT_AGENT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+const EnvVaultSkipVerify = "VAULT_SKIP_VERIFY"
+const EnvVaultNamespace = "VAULT_NAMESPACE"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
@@ -243,7 +244,7 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
-	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
@@ -279,7 +280,7 @@ func (c *Config) ReadEnvironment() error {
 		}
 		envClientTimeout = clientTimeout
 	}
-	if v := os.Getenv(EnvVaultInsecure); v != "" {
+	if v := os.Getenv(EnvVaultSkipVerify); v != "" {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
