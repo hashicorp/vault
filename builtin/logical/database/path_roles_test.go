@@ -12,7 +12,7 @@ import (
         "github.com/hashicorp/vault/logical/framework"
 )
 
-var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_frequency"}
+var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_period"}
 
 func TestBackend_StaticRole_Config(t *testing.T) {
         cluster, sys := getCluster(t)
@@ -64,26 +64,26 @@ func TestBackend_StaticRole_Config(t *testing.T) {
                 "normal": {},
                 "basic": {
                         account: map[string]interface{}{
-                                "username":           "statictest",
-                                "rotation_frequency": "5400s",
+                                "username":        "statictest",
+                                "rotation_period": "5400s",
                         },
                         expected: map[string]interface{}{
-                                "username":           "statictest",
-                                "rotation_frequency": int64(5400000000000),
+                                "username":        "statictest",
+                                "rotation_period": float64(5400),
                         },
                 },
-                "missing rotation frequency": {
+                "missing rotation period": {
                         account: map[string]interface{}{
                                 "username": "statictest",
                         },
-                        err: errors.New("rotation_frequency is required to create static accounts"),
+                        err: errors.New("rotation_period is required to create static accounts"),
                 },
                 // skip for now, not sure this should error as opposed to just ignore
                 // "missing username": {
                 // 	account: map[string]interface{}{
-                // 		"rotation_frequency": int64(5400000000000),
+                // 		"rotation_period": int64(5400000000000),
                 // 	},
-                // 	err: errors.New("using rotation_frequency requires a username"),
+                // 	err: errors.New("using rotation_period requires a username"),
                 // },
         }
 
@@ -254,7 +254,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
                 "default_ttl":           "5m",
                 "max_ttl":               "10m",
                 "username":              "statictest",
-                "rotation_frequency":    "5400s",
+                "rotation_period":       "5400s",
         }
 
         req = &logical.Request{
@@ -282,13 +282,13 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        rotation := resp.Data["rotation_frequency"].(int64)
-        // update rotation_frequency
+        rotation := resp.Data["rotation_period"].(float64)
+        // update rotation_period
         updateData := map[string]interface{}{
-                "name":               "plugin-role-test-updates",
-                "db_name":            "plugin-test",
-                "username":           "statictest",
-                "rotation_frequency": "6400s",
+                "name":            "plugin-role-test-updates",
+                "db_name":         "plugin-test",
+                "username":        "statictest",
+                "rotation_period": "6400s",
         }
         req = &logical.Request{
                 Operation: logical.UpdateOperation,
@@ -315,12 +315,12 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
                 t.Fatalf("err:%s resp:%#v\n", err, resp)
         }
 
-        newRotation := resp.Data["rotation_frequency"].(int64)
+        newRotation := resp.Data["rotation_period"].(float64)
         if newRotation == rotation {
                 t.Fatalf("expected change in rotation, but got old value:  %#v", newRotation)
         }
 
-        // verify that rotation_frequency is only required when creating
+        // verify that rotation_period is only required when creating
         updateData = map[string]interface{}{
                 "name":                "plugin-role-test-updates",
                 "db_name":             "plugin-test",

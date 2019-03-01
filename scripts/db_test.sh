@@ -12,5 +12,6 @@ vault write database/roles/my-role \
     default_ttl="24h" \
     max_ttl="24h" \
     username="george" \
-    rotation_frequency="10s" \
+    rotation_period="10s" \
     rotation_statements="ALTER USER {{name}} WITH PASSWORD '{{password}}';"
+

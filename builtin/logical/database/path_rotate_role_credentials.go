@@ -92,7 +92,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
                 if err := b.credRotationQueue.PushItem(&queue.Item{
                         Key:      roleName,
                         Value:    role,
-                        Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationFrequency).Unix(),
+                        Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
                 }); err != nil {
                         log.Warn("unable to enqueue item", "error", err, "role", roleName)
                 }

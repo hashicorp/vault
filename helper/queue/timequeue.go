@@ -35,7 +35,7 @@ type TimeQueue struct {
 }
 
 // PopItem pops the highest priority item from the queue. This is a
-// wrapper/convienence method that calls heap.Pop, so consumers do not need to
+// wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
 func (tq *TimeQueue) PopItem() (*Item, error) {
 	tq.dataMutex.Lock()
@@ -50,7 +50,7 @@ func (tq *TimeQueue) PopItem() (*Item, error) {
 	return item, nil
 }
 
-// PushItem pushes an item on to the queue. This is a wrapper/convienence
+// PushItem pushes an item on to the queue. This is a wrapper/convenience
 // method that calls heap.Push, so consumers do not need to invoke heap
 // functions directly
 func (tq *TimeQueue) PushItem(i *Item) error {

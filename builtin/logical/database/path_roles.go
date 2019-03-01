@@ -6,11 +6,10 @@ import (
 	"time"
 
         "github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/queue"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+        "github.com/hashicorp/vault/helper/queue"
+        "github.com/hashicorp/vault/helper/strutil"
+        "github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
@@ -78,24 +77,24 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Description: "Maximum time a credential is valid for",
 			},
 			// TODO: consider renaming to "static_username" for clarity
-			"username": {
-				Type: framework.TypeString,
-				Description: `Name of the static user account for Vault to manage.
-                                Requires "rotation_frequency" to be specified`,
-			},
-			// TODO: verify if we should support this as input and use it to verify
-			// credentials before assuming managment of an account.
+                        "username": {
+                                Type: framework.TypeString,
+                                Description: `Name of the static user account for Vault to manage.
+                                Requires "rotation_period" to be specified`,
+                        },
+                        // TODO: verify if we should support this as input and use it to verify
+                        // credentials before assuming managment of an account.
 			// "password": {
 			// 	Type:        framework.TypeString,
-			// 	Description: "Password of the static user account for Vault to manage.
-			// 	Not used yet",
-			// },
-			"rotation_frequency": {
-				Type: framework.TypeDurationSecond,
-				Description: `Frequency for automatic credential rotation of the given
+                        // 	Description: "Password of the static user account for Vault to manage.
+                        // 	Not used yet",
+                        // },
+                        "rotation_period": {
+                                Type: framework.TypeDurationSecond,
+                                Description: `Period for automatic credential rotation of the given
                                 username. Not valid unless used with "username".`,
-			},
-			"rotation_statements": {
+                        },
+                        "rotation_statements": {
 				Type: framework.TypeStringSlice,
 				Description: `Specifies the database statements to be executed to rotate
                                 the accounts credentials. Not every plugin type will support this
@@ -208,7 +207,7 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 
         if role.StaticAccount != nil {
                 data["username"] = role.StaticAccount.Username
-                data["rotation_frequency"] = role.StaticAccount.RotationFrequency.Nanoseconds()
+                data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
                 if !role.StaticAccount.LastVaultRotation.IsZero() {
                         // TODO: formatting
                         data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
@@ -244,7 +243,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
         // is used to ensure we do not allow an existing role to be "migrated" to
         // role with a static account. If createRole is false and static_account
         // data is given, return an error
-        var createRole bool
+        createRole := req.Operation == logical.CreateOperation
         if role == nil {
                 role = &roleEntry{}
                 createRole = true
@@ -253,39 +252,36 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
         // Static Account information
         if username, ok := data.Get("username").(string); ok && username != "" {
                 // If the role exists and there is no StaticAccount, return error
-                if role.StaticAccount == nil && !createRole {
-                        return logical.ErrorResponse("cannot change an existing role to a static account"), nil
-                }
-                // If it's a Create operation, both username and rotation_frequency must be
-                // included
-                rotationFrequencySeconds := data.Get("rotation_frequency").(int)
-                if req.Operation == logical.CreateOperation {
-                        if rotationFrequencySeconds == 0 {
-                                return logical.ErrorResponse("rotation_frequency is required to create static accounts"), nil
-                        }
-                        if rotationFrequencySeconds < 60 {
-                                // This must be at least 60 seconds because our periodic func runs about once a minute.
-                                return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
-                        }
-                }
-                if req.Operation == logical.UpdateOperation && rotationFrequencySeconds != 0 && rotationFrequencySeconds < 60 {
-                        // If rotation frequency is specified, and this is an update, the value
-                        // must be at least 60 seconds because our periodic func runs about once a
-                        // minute.
-                        return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
-                }
-
                 if role.StaticAccount == nil {
+                        if !createRole {
+                                return logical.ErrorResponse("cannot change an existing role to a static account"), nil
+                        }
                         role.StaticAccount = &staticAccount{}
                 }
+
+                // If it's a Create operation, both username and rotation_period must be included
+                rotationPeriodSecondsRaw, ok := data.GetOk("rotation_period")
+                if !ok && createRole {
+                        return logical.ErrorResponse("rotation_period is required to create static accounts"), nil
+                }
+                if ok {
+                        rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
+                        if rotationPeriodSeconds < 60 {
+                                // If rotation frequency is specified, and this is an update, the value
+                                // must be at least 60 seconds because our periodic func runs about once a
+                                // minute.
+                                return logical.ErrorResponse("rotation_period must be 60 seconds or more"), nil
+                        }
+                        role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+                }
+
                 if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
                         return logical.ErrorResponse("cannot update static account username"), nil
                 }
                 role.StaticAccount.Username = username
 
-                role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(rotationFrequencySeconds)
                 if err != nil {
-                        return logical.ErrorResponse(fmt.Sprintf("invalid rotation_frequency: %s", err)), nil
+                        return logical.ErrorResponse(fmt.Sprintf("invalid rotation_period: %s", err)), nil
                 }
 
                 // TODO: not sure why the check on logical.CreateOperation here
@@ -369,7 +365,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
                         return nil, err
                 }
 
-                // TODO need to check that we're only updating the revocation statements or rotation frequency
+                // TODO need to check that we're only updating the revocation statements or rotation period
                 if b.credRotationQueue != nil {
                         // In case this is an update, remove any previous version of the item from the queue
                         if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
@@ -382,7 +378,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
                         if err := b.credRotationQueue.PushItem(&queue.Item{
                                 Key:      name,
                                 Value:    role, // TODO is this what needs to be here?
-                                Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
+                                Priority: time.Now().Add(role.StaticAccount.RotationPeriod).Unix(),
                         }); err != nil {
                                 // TODO rollback?
                                 return nil, err
@@ -519,10 +515,10 @@ type staticAccount struct {
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 	PasswordLastSet   time.Time `json:"password_last_set"`
 
-	// RotationFrequency is numer in seconds between each rotation, effectively a
+        // RotationPeriod is number in seconds between each rotation, effectively a
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
-	RotationFrequency time.Duration `json:"rotation_frequency"`
+        RotationPeriod time.Duration `json:"rotation_period"`
 
 	// previousPassword is used to preserve the previous password during a
 	// rotation. If any step in the process fails, we have record of the previous

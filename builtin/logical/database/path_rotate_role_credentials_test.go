@@ -61,7 +61,7 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
                 "rotation_statements":   testRoleStaticUpdate,
                 "revocation_statements": defaultRevocationSQL,
                 "username":              "statictest",
-                "rotation_frequency":    "5400s",
+                "rotation_period":       "5400s",
         }
 
         req = &logical.Request{

@@ -134,7 +134,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                                         }
                                         b.credRotationQueue.PushItem(&queue.Item{
                                                 Key:      item.Key,
-                                                Priority: time.Now().Add(role.StaticAccount.RotationFrequency).Unix(),
+                                                Value:    role,
+                                                Priority: time.Now().Add(role.StaticAccount.RotationPeriod).Unix(),
                                         })
                                 } else {
                                         b.credRotationQueue.PushItem(item)
