@@ -2555,18 +2555,26 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 
 	less := func(s1, s2 string) bool { return s1 < s2 }
 	ignoreOrder := []cmp.Option{cmpopts.EquateEmpty(), cmpopts.SortSlices(less)}
-	filteredPath := "internal/ui/filtered-path/"
+	filteredPath := "internal/ui/filtered-path"
 	checkFunc := func(t *testing.T, token, path string, expectedKeys []string) {
 		t.Helper()
 		resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
-			Path:        path,
-			Operation:   logical.ListOperation,
+			Path: filteredPath,
+			Data: map[string]interface{}{
+				"paths": []string{path},
+			},
+			Operation:   logical.UpdateOperation,
 			ClientToken: token,
 		})
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 		}
-		if diff := cmp.Diff(expectedKeys, resp.Data["keys"], ignoreOrder...); diff != "" {
+		expected := map[string]interface{}{
+			"paths": map[string][]string{
+				path: expectedKeys,
+			},
+		}
+		if diff := cmp.Diff(expected, resp.Data, ignoreOrder...); diff != "" {
 			t.Errorf("bad: filtered-path differs; (-want +got)\n%s", diff)
 		}
 	}
@@ -2586,7 +2594,7 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	policyBody := `
 		name = "test"
 		path "sys/internal/ui/filtered-path" {
-			capabilities = ["list"]
+			capabilities = ["update"]
 		}
 		path "secret/bar" {
 			capabilities = ["list"]
@@ -2616,19 +2624,19 @@ func TestSystemBackend_InternalUIFilteredPath(t *testing.T) {
 	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, token, "", []string{policyName})
 
 	// Expect root has full access regardless of policy
-	checkFunc(t, rootToken, filteredPath+"secret/foo", []string{"1", "2", "3"})
+	checkFunc(t, rootToken, "secret/foo", []string{"1", "2", "3"})
 
 	// Expect 2 hidden because it only has deny, 3 hidden because it has nothing.
-	checkFunc(t, token, filteredPath+"secret/foo", []string{"1"})
+	checkFunc(t, token, "secret/foo", []string{"1"})
 
 	// Expect full access to bar because bar has list, even though 2 has deny.
-	checkFunc(t, token, filteredPath+"secret/bar", []string{"1", "2"})
+	checkFunc(t, token, "secret/bar", []string{"1", "2"})
 
 	// Expect 2 hidden because only 1* has anything.
-	checkFunc(t, token, filteredPath+"secret/qux", []string{"1", "10"})
+	checkFunc(t, token, "secret/qux", []string{"1", "10"})
 
 	// Expect foo hidden because it has deny, baz hidden because it has nothing.
-	checkFunc(t, token, filteredPath+"secret", []string{"foo/", "bar/", "qux/"})
+	checkFunc(t, token, "secret", []string{"foo/", "bar/", "qux/"})
 }
 
 func BenchmarkHasAccess(b *testing.B) {

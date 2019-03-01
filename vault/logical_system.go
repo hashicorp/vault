@@ -3064,17 +3064,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	path := d.Get("path").(string)
-	if path == "" {
-		return logical.ErrorResponse("path not set"), logical.ErrInvalidRequest
-	}
-	path = sanitizeMountPath(path)
-
-	errResp := logical.ErrorResponse(fmt.Sprintf("preflight capability check returned 403, please ensure client's policies grant access to path %q", path))
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
+	paths := d.Get("paths").([]string)
+	if len(paths) == 0 {
+		return logical.ErrorResponse("paths not set"), logical.ErrInvalidRequest
 	}
 
 	// Load the ACL policies so we can walk the prefix for this mount
@@ -3085,34 +3077,58 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 
 	if entity != nil && entity.Disabled {
 		b.logger.Warn("permission denied as the entity on the token is disabled")
-		return errResp, logical.ErrPermissionDenied
+		return nil, logical.ErrPermissionDenied
 	}
 	if te != nil && te.EntityID != "" && entity == nil {
 		b.logger.Warn("permission denied as the entity on the token is invalid")
 		return nil, logical.ErrPermissionDenied
 	}
 
-	if !hasMountAccess(ctx, acl, ns.Path+path) {
-		return errResp, logical.ErrPermissionDenied
+	allowed := map[string][]string{}
+
+	for _, path := range paths {
+		filtered, err := b.filterPath(ctx, req, acl, sanitizeMountPath(path))
+		if err != nil {
+			return nil, err
+		}
+		allowed[path] = filtered
 	}
 
-	newreq := *req
-	newreq.Path = path
-	resp, _, _, err := b.Core.router.routeCommon(ctx, &newreq, false)
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"paths": allowed,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) filterPath(ctx context.Context, req *logical.Request, acl *ACL, path string) ([]string, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !hasMountAccess(ctx, acl, ns.Path+path) {
+		return nil, nil
+	}
+
+	listReq := *req
+	listReq.Operation = logical.ListOperation
+	listReq.Path = path
+	resp, _, _, err := b.Core.router.routeCommon(ctx, &listReq, false)
 	if err != nil {
 		return nil, err
 	}
 
 	keys, ok := resp.Data["keys"]
 	if !ok {
-		return logical.ListResponse(nil), nil
+		return nil, nil
 	}
 
 	unfiltered := keys.([]string)
 
 	// Return early if we have list access to the path.
-	if acl.AllowOperation(ctx, &newreq, false).Allowed {
-		return logical.ListResponse(unfiltered), nil
+	if acl.AllowOperation(ctx, &listReq, false).Allowed {
+		return unfiltered, nil
 	}
 
 	filtered := make([]string, 0, len(unfiltered))
@@ -3123,8 +3139,7 @@ func (b *SystemBackend) pathInternalUIFilteredPath(ctx context.Context, req *log
 			filtered = append(filtered, key)
 		}
 	}
-
-	return logical.ListResponse(filtered), nil
+	return filtered, nil
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
