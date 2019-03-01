@@ -155,6 +155,11 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
                 }
         }
 
+        err = req.Storage.Delete(ctx, "role/"+name)
+        if err != nil {
+                return nil, err
+        }
+
         if b.credRotationQueue != nil {
                 if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
@@ -247,9 +252,29 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 
         // Static Account information
         if username, ok := data.Get("username").(string); ok && username != "" {
+                // If the role exists and there is no StaticAccount, return error
                 if role.StaticAccount == nil && !createRole {
                         return logical.ErrorResponse("cannot change an existing role to a static account"), nil
                 }
+                // If it's a Create operation, both username and rotation_frequency must be
+                // included
+                rotationFrequencySeconds := data.Get("rotation_frequency").(int)
+                if req.Operation == logical.CreateOperation {
+                        if rotationFrequencySeconds == 0 {
+                                return logical.ErrorResponse("rotation_frequency is required to create static accounts"), nil
+                        }
+                        if rotationFrequencySeconds < 60 {
+                                // This must be at least 60 seconds because our periodic func runs about once a minute.
+                                return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
+                        }
+                }
+                if req.Operation == logical.UpdateOperation && rotationFrequencySeconds != 0 && rotationFrequencySeconds < 60 {
+                        // If rotation frequency is specified, and this is an update, the value
+                        // must be at least 60 seconds because our periodic func runs about once a
+                        // minute.
+                        return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
+                }
+
                 if role.StaticAccount == nil {
                         role.StaticAccount = &staticAccount{}
                 }
@@ -257,15 +282,6 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
                         return logical.ErrorResponse("cannot update static account username"), nil
                 }
                 role.StaticAccount.Username = username
-
-                rotationFrequencySeconds := data.Get("rotation_frequency").(int)
-                if rotationFrequencySeconds == 0 && req.Operation == logical.CreateOperation {
-                        return logical.ErrorResponse("rotation_frequency is required to create static accounts"), nil
-                }
-                if rotationFrequencySeconds < 60 {
-                        // This must be at least 60 seconds because our periodic func runs about once a minute.
-                        return logical.ErrorResponse("rotation rotation_frequency must be 60 seconds or more"), nil
-                }
 
                 role.StaticAccount.RotationFrequency, err = parseutil.ParseDurationSecond(rotationFrequencySeconds)
                 if err != nil {

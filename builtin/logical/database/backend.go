@@ -122,6 +122,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
                                         return err
                                 }
 
+                                // TODO: load role and don't just use the value
                                 role := item.Value.(*roleEntry)
 
                                 if time.Now().Unix() > item.Priority {

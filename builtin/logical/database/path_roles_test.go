@@ -246,7 +246,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
         }
 
         data = map[string]interface{}{
-                "name":                  "plugin-role-test",
+                "name":                  "plugin-role-test-updates",
                 "db_name":               "plugin-test",
                 "creation_statements":   testRoleStaticCreate,
                 "rotation_statements":   testRoleStaticUpdate,
@@ -259,7 +259,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
         req = &logical.Request{
                 Operation: logical.CreateOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      data,
         }
@@ -273,7 +273,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
         data = map[string]interface{}{}
         req = &logical.Request{
                 Operation: logical.ReadOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      data,
         }
@@ -285,14 +285,14 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
         rotation := resp.Data["rotation_frequency"].(int64)
         // update rotation_frequency
         updateData := map[string]interface{}{
-                "name":               "plugin-role-test",
+                "name":               "plugin-role-test-updates",
                 "db_name":            "plugin-test",
                 "username":           "statictest",
                 "rotation_frequency": "6400s",
         }
         req = &logical.Request{
                 Operation: logical.UpdateOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      updateData,
         }
@@ -306,7 +306,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
         data = map[string]interface{}{}
         req = &logical.Request{
                 Operation: logical.ReadOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      data,
         }
@@ -322,14 +322,14 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
         // verify that rotation_frequency is only required when creating
         updateData = map[string]interface{}{
-                "name":                "plugin-role-test",
+                "name":                "plugin-role-test-updates",
                 "db_name":             "plugin-test",
                 "username":            "statictest",
                 "rotation_statements": testRoleStaticUpdateRotation,
         }
         req = &logical.Request{
                 Operation: logical.UpdateOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      updateData,
         }
@@ -341,13 +341,13 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
         // verify updating static username returns an error
         updateData = map[string]interface{}{
-                "name":     "plugin-role-test",
+                "name":     "plugin-role-test-updates",
                 "db_name":  "plugin-test",
                 "username": "statictestmodified",
         }
         req = &logical.Request{
                 Operation: logical.UpdateOperation,
-                Path:      "roles/plugin-role-test",
+                Path:      "roles/plugin-role-test-updates",
                 Storage:   config.StorageView,
                 Data:      updateData,
         }
