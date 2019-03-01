@@ -127,6 +127,10 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	name := "vault"
 
 	vaultList := list.Filter(name)
+	if len(vaultList.Items) == 0 {
+		return nil
+	}
+
 	if len(vaultList.Items) > 1 {
 		return fmt.Errorf("one and only one %q block is required", name)
 	}
