@@ -197,7 +197,7 @@ func TestSealMigration(t *testing.T) {
 		t.Fatalf("expected nil error and non-nil entry, got error %#v and entry %#v", err, entry)
 	}
 
-	altTestSeal := seal.NewTestSeal(logger)
+	altTestSeal := seal.NewTestSeal(nil)
 	altTestSeal.Type = "test-alternate"
 	altSeal := vault.NewAutoSeal(altTestSeal)
 

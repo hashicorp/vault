@@ -73,7 +73,7 @@ func adjustCoreForSealMigration(core *vault.Core, barrierSeal, unwrapSeal vault.
 		newSeal.SetCachedRecoveryConfig(existBarrierSealConfig)
 
 	default:
-		if onEnterprise {
+		if onEnterprise && barrierSeal.BarrierType() == vaultseal.Shamir {
 			return errors.New("Migrating from autoseal to Shamir seal is not currently supported on Vault Enterprise")
 		}
 
