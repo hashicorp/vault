@@ -72,6 +72,8 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			CACert:        "config_ca_cert",
 			CAPath:        "config_ca_path",
 			TLSSkipVerify: true,
+			ClientCert:    "config_client_cert",
+			ClientKey:     "config_client_key",
 		},
 		PidFile: "./pidfile",
 	}

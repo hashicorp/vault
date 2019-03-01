@@ -31,6 +31,8 @@ type Vault struct {
 	CACert        string `hcl:"ca_cert"`
 	CAPath        string `hcl:"ca_path"`
 	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
+	ClientCert    string `hcl:"client_cert"`
+	ClientKey     string `hcl:"client_key"`
 }
 
 type Cache struct {

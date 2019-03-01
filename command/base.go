@@ -255,7 +255,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "client-cert",
+				Name:       flagNameClientCert,
 				Target:     &c.flagClientCert,
 				Default:    "",
 				EnvVar:     api.EnvVaultClientCert,
@@ -266,7 +266,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       "client-key",
+				Name:       flagNameClientKey,
 				Target:     &c.flagClientKey,
 				Default:    "",
 				EnvVar:     api.EnvVaultClientKey,
