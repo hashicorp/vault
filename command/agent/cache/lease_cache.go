@@ -100,11 +100,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	// Create a base context for the lease cache layer
-	baseCtx, baseCancelFunc := context.WithCancel(conf.BaseContext)
-	baseCtxInfo := &cachememdb.ContextInfo{
-		Ctx:        baseCtx,
-		CancelFunc: baseCancelFunc,
-	}
+	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
 		client:      conf.Client,
