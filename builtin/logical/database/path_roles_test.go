@@ -110,7 +110,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
                                 Data:      data,
                         }
 
-                        exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+                        exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
                                 Raw:    data,
                                 Schema: pathRoles(b).Fields,
                         })

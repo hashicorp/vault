@@ -851,7 +851,7 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+                exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
 			Raw:    data,
 			Schema: pathRoles(b).Fields,
 		})
@@ -921,7 +921,7 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+                exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
 			Raw:    data,
 			Schema: pathRoles(b).Fields,
 		})
@@ -995,7 +995,7 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
 
-		exists, err := b.pathRoleExistenceCheck()(context.Background(), req, &framework.FieldData{
+                exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
 			Raw:    data,
 			Schema: pathRoles(b).Fields,
 		})
