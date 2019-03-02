@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -69,6 +70,7 @@ type LeaseCache struct {
 	logger      hclog.Logger
 	db          *cachememdb.CacheMemDB
 	baseCtxInfo *cachememdb.ContextInfo
+	l           *sync.RWMutex
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -108,6 +110,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		logger:      conf.Logger,
 		db:          db,
 		baseCtxInfo: baseCtxInfo,
+		l:           &sync.RWMutex{},
 	}, nil
 }
 
@@ -305,7 +308,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
 	if ctx == nil {
+		c.l.RLock()
 		ctx = c.baseCtxInfo.Ctx
+		c.l.RUnlock()
 	}
 	return cachememdb.NewContextInfo(ctx)
 }
@@ -500,14 +505,15 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 		// Cancel the base context which triggers all the goroutines to
 		// stop and evict entries from cache.
 		c.logger.Debug("canceling base context")
+		c.l.Lock()
 		c.baseCtxInfo.CancelFunc()
-
 		// Reset the base context
 		baseCtx, baseCancel := context.WithCancel(ctx)
 		c.baseCtxInfo = &cachememdb.ContextInfo{
 			Ctx:        baseCtx,
 			CancelFunc: baseCancel,
 		}
+		c.l.Unlock()
 
 		// Reset the memdb instance
 		if err := c.db.Flush(); err != nil {
