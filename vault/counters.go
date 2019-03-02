@@ -61,6 +61,7 @@ func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]Dat
 		if err != nil {
 			return nil, errwrap.Wrapf("failed to read request counters: {{err}}", err)
 		}
+		sort.Strings(datesubpaths)
 		for _, datesubpath := range datesubpaths {
 			fullpath := datepath + datesubpath
 			counter, err := c.loadRequestCounters(ctx, fullpath)
