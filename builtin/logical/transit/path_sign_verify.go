@@ -23,7 +23,7 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" structs:"signature" mapstructure:"signature"`
 
-	PublicKey []byte `json:"publickey,omitempty" structs:"publickey" mapstructure:"publckey"`
+	PublicKey []byte `json:"publickey,omitempty" structs:"publickey" mapstructure:"publickey"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
@@ -309,7 +309,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			input = hf.Sum(nil)
 		}
 
-		contextRaw, _ := item["context"]
+		contextRaw := item["context"]
 		var context []byte
 		if len(contextRaw) != 0 {
 			context, err = base64.StdEncoding.DecodeString(contextRaw)
@@ -363,7 +363,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	batchInputRaw := d.Raw["batch_input"]
-	var batchInputItems []batchRequestSignItem
+	var batchInputItems []batchRequestVerifyItem
 	if batchInputRaw != nil {
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
@@ -377,8 +377,8 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		// use empty string if input is missing - not an error
 		inputB64 := d.Get("input").(string)
 
-		batchInputItems = make([]batchRequestSignItem, 1)
-		batchInputItems[0] = batchRequestSignItem{
+		batchInputItems = make([]batchRequestVerifyItem, 1)
+		batchInputItems[0] = batchRequestVerifyItem{
 			"input": inputB64,
 		}
 		if sig, ok := d.GetOk("signature"); ok {
@@ -426,6 +426,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	case missing && hmacFound:
 		return logical.ErrorResponse("some elements of batch_input are missing 'hmac'"), logical.ErrInvalidRequest
+
+	case missing:
+		return logical.ErrorResponse("batch_input elements must all provide 'signature' or all provide 'hmac'"), logical.ErrInvalidRequest
 
 	case hmacFound:
 		return b.pathHMACVerify(ctx, req, d)
@@ -505,7 +508,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			input = hf.Sum(nil)
 		}
 
-		contextRaw, _ := item["context"]
+		contextRaw := item["context"]
 		var context []byte
 		if len(contextRaw) != 0 {
 			context, err = base64.StdEncoding.DecodeString(contextRaw)
@@ -544,7 +547,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			p.Unlock()
 			if response[0].Error != "" {
 				return logical.ErrorResponse(response[0].Error), response[0].err
-			} 
+			}
 			return nil, response[0].err
 		}
 		resp.Data = map[string]interface{}{

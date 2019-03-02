@@ -136,16 +136,16 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
 
-	var hash_alg func() hash.Hash
+	var hashAlg func() hash.Hash
 	switch algorithm {
 	case "sha2-224":
-		hash_alg = sha256.New224
+		hashAlg = sha256.New224
 	case "sha2-256":
-		hash_alg = sha256.New
+		hashAlg = sha256.New
 	case "sha2-384":
-		hash_alg = sha512.New384
+		hashAlg = sha512.New384
 	case "sha2-512":
-		hash_alg = sha512.New
+		hashAlg = sha512.New
 	default:
 		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
@@ -194,7 +194,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			continue
 		}
 
-		var hf = hmac.New(hash_alg, key)
+		var hf = hmac.New(hashAlg, key)
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 
@@ -250,16 +250,16 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		p.Lock(false)
 	}
 
-	var hash_alg func() hash.Hash
+	var hashAlg func() hash.Hash
 	switch algorithm {
 	case "sha2-224":
-		hash_alg = sha256.New224
+		hashAlg = sha256.New224
 	case "sha2-256":
-		hash_alg = sha256.New
+		hashAlg = sha256.New
 	case "sha2-384":
-		hash_alg = sha512.New384
+		hashAlg = sha512.New384
 	case "sha2-512":
-		hash_alg = sha512.New
+		hashAlg = sha512.New
 	default:
 		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", algorithm)), nil
@@ -366,7 +366,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 			continue
 		}
 
-		var hf = hmac.New(hash_alg, key)
+		var hf = hmac.New(hashAlg, key)
 		hf.Write(input)
 		retBytes := hf.Sum(nil)
 		response[i].Valid = hmac.Equal(retBytes, verBytes)

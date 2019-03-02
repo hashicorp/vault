@@ -745,7 +745,8 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: nil)` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
   When this parameter is set, if the parameter 'input' is also set, it will be 
@@ -869,7 +870,8 @@ supports signing.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: nil)` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
   When this parameter is set, any supplied 'input' or 'context' parameters will be 

@@ -348,7 +348,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			if resp.IsError() {
 				return nil
 			}
-			t.Fatalf("bad: got error response: %#v", *resp)
+			t.Fatalf("bad: expected response, got: %#v", *resp)
 		}
 		if resp.IsError() {
 			t.Fatalf("bad: got error response: %#v", *resp)
@@ -361,11 +361,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		if _, ok := req.Data["batch_input"]; ok {
 			batchRequestItems := req.Data["batch_input"].([]batchRequestSignItem)
 
-			batch_results, ok := resp.Data["batch_results"]
+			batchResults, ok := resp.Data["batch_results"]
 			if !ok {
 				t.Fatalf("no batch_results in returned data, got resp data %#v", resp.Data)
 			}
-			batchResponseItems := batch_results.([]batchResponseSignItem)
+			batchResponseItems := batchResults.([]batchResponseSignItem)
 			if len(batchResponseItems) != len(batchRequestItems) {
 				t.Fatalf("Expected %d items in response. Got %d: %#v", len(batchRequestItems), len(batchResponseItems), resp)
 			}
@@ -407,7 +407,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		}
 		if errExpected {
 			if resp != nil && !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v\n%#v", *resp, req)
+				t.Fatalf("bad: expected error response, got: %#v\n%#v", *resp, req)
 			}
 			return
 		}
@@ -422,11 +422,11 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		if _, ok := req.Data["batch_input"]; ok {
 			batchRequestItems := req.Data["batch_input"].([]batchRequestSignItem)
 
-			batch_results, ok := resp.Data["batch_results"]
+			batchResults, ok := resp.Data["batch_results"]
 			if !ok {
 				t.Fatalf("no batch_results in returned data, got resp data %#v", resp.Data)
 			}
-			batchResponseItems := batch_results.([]batchResponseVerifyItem)
+			batchResponseItems := batchResults.([]batchResponseVerifyItem)
 			if len(batchResponseItems) != len(batchRequestItems) {
 				t.Fatalf("Expected %d items in response. Got %d: %#v", len(batchRequestItems), len(batchResponseItems), resp)
 			}
