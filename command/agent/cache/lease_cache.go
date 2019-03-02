@@ -227,13 +227,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	case secret.Auth != nil:
 		c.logger.Debug("processing auth response", "path", req.Request.URL.Path, "method", req.Request.Method)
-		isNonOrphanNewToken := strings.HasPrefix(req.Request.URL.Path, vaultPathTokenCreate) && resp.Response.StatusCode == http.StatusOK && !secret.Auth.Orphan
 
-		// If the new token is a result of token creation endpoints (not from
-		// login endpoints), and if its a non-orphan, then the new token's
-		// context should be derived from the context of the parent token.
+		// Check if this token creation request resulted in a non-orphan token, and if so
+		// correctly set the parentCtx to the request's token context.
 		var parentCtx context.Context
-		if isNonOrphanNewToken {
+		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
 			if err != nil {
 				return nil, err

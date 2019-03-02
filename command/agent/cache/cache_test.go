@@ -1194,3 +1194,107 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 		t.Fatalf("expected entry to be nil, got: %v", idx)
 	}
 }
+
+func TestCache_AuthTokenCreateOrphan(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
+		t.Run("managed", func(t *testing.T) {
+			cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+				NoParent: true,
+			}
+			resp, err := testClient.Auth().Token().Create(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+
+		t.Run("non-managed", func(t *testing.T) {
+			cleanup, clusterClient, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+				NoParent: true,
+			}
+
+			// Use the test client but set the token to one that's not managed by agent
+			testClient.SetToken(clusterClient.Token())
+
+			resp, err := testClient.Auth().Token().Create(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+	})
+
+	t.Run("create-orphan", func(t *testing.T) {
+		t.Run("managed", func(t *testing.T) {
+			cleanup, _, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+			}
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+
+		t.Run("non-managed", func(t *testing.T) {
+			cleanup, clusterClient, testClient, leaseCache := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
+			defer cleanup()
+
+			reqOpts := &api.TokenCreateRequest{
+				Policies: []string{"default"},
+			}
+
+			// Use the test client but set the token to one that's not managed by agent
+			testClient.SetToken(clusterClient.Token())
+
+			resp, err := testClient.Auth().Token().CreateOrphan(reqOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			token := resp.Auth.ClientToken
+
+			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if idx == nil {
+				t.Fatalf("expected entry to be non-nil, got: %#v", idx)
+			}
+		})
+	})
+}
