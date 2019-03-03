@@ -397,16 +397,11 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	hmacFound := false
 	missing := false
 	for _, v := range batchInputItems {
-		either := false
 		if _, ok := v["signature"]; ok {
 			sigFound = true
-			either = true
-		}
-		if _, ok := v["hmac"]; ok {
+		} else if _, ok := v["hmac"]; ok {
 			hmacFound = true
-			either = true
-		}
-		if !either {
+		} else {
 			missing = true
 		}
 	}
@@ -428,7 +423,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse("some elements of batch_input are missing 'hmac'"), logical.ErrInvalidRequest
 
 	case missing:
-		return logical.ErrorResponse("batch_input elements must all provide 'signature' or all provide 'hmac'"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("no batch_input elements have 'signature' or 'hmac'"), logical.ErrInvalidRequest
 
 	case hmacFound:
 		return b.pathHMACVerify(ctx, req, d)
