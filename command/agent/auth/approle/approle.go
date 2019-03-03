@@ -21,7 +21,6 @@ type approleMethod struct {
 
 	roleIDFilePath                 string
 	secretIDFilePath               string
-	secretIDLessMode               bool
 	cachedRoleID                   string
 	cachedSecretID                 string
 	removeSecretIDFileAfterReading bool
@@ -40,7 +39,6 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		logger:                         conf.Logger,
 		mountPath:                      conf.MountPath,
 		removeSecretIDFileAfterReading: true,
-		secretIDLessMode:               false,
 	}
 
 	roleIDFilePathRaw, ok := conf.Config["role_id_file_path"]
@@ -57,7 +55,6 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 	secretIDFilePathRaw, ok := conf.Config["secret_id_file_path"]
 	if !ok {
-		a.secretIDLessMode = true
 		return a, nil
 	}
 
@@ -66,7 +63,6 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("could not convert 'secret_id_file_path' config value to string")
 	}
 	if a.secretIDFilePath == "" {
-		a.secretIDLessMode = true
 		return a, nil
 	}
 
@@ -116,7 +112,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		return "", nil, errors.New("no known role ID")
 	}
 
-	if a.secretIDLessMode {
+	if a.secretIDFilePath == "" {
 		return fmt.Sprintf("%s/login", a.mountPath), map[string]interface{}{
 			"role_id": a.cachedRoleID,
 		}, nil
