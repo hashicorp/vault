@@ -9,7 +9,6 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical/framework"
 
 	"github.com/hashicorp/errwrap"
@@ -17,32 +16,37 @@ import (
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
 // Not all fields will be used by every integration.
-func ConfigFields(tokenFields bool) map[string]*framework.FieldSchema {
-	ret := map[string]*framework.FieldSchema{
+func ConfigFields() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
 		"url": {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
 			Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
+			DisplayName: "URL",
 		},
 
 		"userdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP domain to use for users (eg: ou=People,dc=example,dc=org)",
+			DisplayName: "User DN",
 		},
 
 		"binddn": {
 			Type:        framework.TypeString,
 			Description: "LDAP DN for searching for the user DN (optional)",
+			DisplayName: "Name of Object to bind (binddn)",
 		},
 
 		"bindpass": {
-			Type:        framework.TypeString,
-			Description: "LDAP password for searching for the user DN (optional)",
+			Type:             framework.TypeString,
+			Description:      "LDAP password for searching for the user DN (optional)",
+			DisplaySensitive: true,
 		},
 
 		"groupdn": {
 			Type:        framework.TypeString,
 			Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
+			DisplayName: "Group DN",
 		},
 
 		"groupfilter": {
@@ -61,17 +65,20 @@ Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}
 in order to enumerate user group membership.
 Examples: "cn" or "memberOf", etc.
 Default: cn`,
+			DisplayName: "Group Attribute",
 		},
 
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
+			DisplayName: "User Principal (UPN) Domain",
 		},
 
 		"userattr": {
 			Type:        framework.TypeString,
 			Default:     "cn",
 			Description: "Attribute used for users (default: cn)",
+			DisplayName: "User Attribute",
 		},
 
 		"certificate": {
@@ -82,28 +89,35 @@ Default: cn`,
 		"discoverdn": {
 			Type:        framework.TypeBool,
 			Description: "Use anonymous bind to discover the bind DN of a user (optional)",
+			DisplayName: "Discover DN",
 		},
 
 		"insecure_tls": {
 			Type:        framework.TypeBool,
 			Description: "Skip LDAP server SSL Certificate verification - VERY insecure (optional)",
+			DisplayName: "Insecure TLS",
 		},
 
 		"starttls": {
 			Type:        framework.TypeBool,
 			Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
+			DisplayName: "Issue StartTLS command after establishing an unencrypted connection",
 		},
 
 		"tls_min_version": {
-			Type:        framework.TypeString,
-			Default:     "tls12",
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Type:          framework.TypeString,
+			Default:       "tls12",
+			Description:   "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayName:   "Minimum TLS Version",
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"tls_max_version": {
-			Type:        framework.TypeString,
-			Default:     "tls12",
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Type:          framework.TypeString,
+			Default:       "tls12",
+			Description:   "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			DisplayName:   "Maxumum TLS Version",
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
 		},
 
 		"deny_null_bind": {
@@ -123,12 +137,6 @@ Default: cn`,
 			Description: "If true, use the Active Directory tokenGroups constructed attribute of the user to find the group memberships. This will find all security groups including nested ones.",
 		},
 	}
-
-	if tokenFields {
-		tokenhelper.AddTokenFields(ret)
-	}
-
-	return ret
 }
 
 /*
@@ -253,8 +261,6 @@ func NewConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 }
 
 type ConfigEntry struct {
-	tokenhelper.TokenParams
-
 	Url            string `json:"url"`
 	UserDN         string `json:"userdn"`
 	GroupDN        string `json:"groupdn"`

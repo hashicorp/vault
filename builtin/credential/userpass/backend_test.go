@@ -9,10 +9,7 @@ import (
 
 	"crypto/tls"
 
-	"github.com/go-test/deep"
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -22,63 +19,6 @@ const (
 	testSysTTL    = time.Hour * 10
 	testSysMaxTTL = time.Hour * 20
 )
-
-func TestBackend_UserUpgrade(t *testing.T) {
-	s := &logical.InmemStorage{}
-
-	config := logical.TestBackendConfig()
-	config.StorageView = s
-
-	ctx := context.Background()
-
-	b := Backend()
-	if b == nil {
-		t.Fatalf("failed to create backend")
-	}
-	if err := b.Setup(ctx, config); err != nil {
-		t.Fatal(err)
-	}
-
-	type B struct {
-		Policies   []string
-		TTL        time.Duration
-		MaxTTL     time.Duration
-		BoundCIDRs []*sockaddr.SockAddrMarshaler
-	}
-
-	foo := &B{
-		Policies:   []string{"foo"},
-		TTL:        time.Second,
-		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
-	}
-
-	entry, err := logical.StorageEntryJSON("user/foo", foo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	userEntry, err := b.user(ctx, s, "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	exp := &UserEntry{
-		TokenParams: tokenhelper.TokenParams{
-			Policies:   []string{"foo"},
-			TTL:        time.Second,
-			MaxTTL:     time.Second,
-			BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
-		},
-	}
-	if diff := deep.Equal(userEntry, exp); diff != nil {
-		t.Fatal(diff)
-	}
-}
 
 func TestBackend_TTL(t *testing.T) {
 	var resp *logical.Response

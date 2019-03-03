@@ -56,6 +56,9 @@ has a number of parameters to further configure a connection.
 
 - `connect_timeout` `(string: "5s")` – Specifies the connection timeout to use.
 
+- `socket_keep_alive` `(string: "0s")` – the keep-alive period for an active
+	network connection. If zero, keep-alives are not enabled.
+
 TLS works as follows:
 
 - If `tls` is set to true, the connection will use TLS; this happens

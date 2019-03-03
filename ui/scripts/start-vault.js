@@ -42,7 +42,10 @@ readline
     if (root && unseal) {
       fs.writeFile(
         path.join(process.cwd(), 'tests/helpers/vault-keys.js'),
-        `export default ${JSON.stringify({ unseal, root }, null, 2)}`
+        `export default ${JSON.stringify({ unseal, root }, null, 2)}`,
+        err => {
+          if (err) throw err;
+        }
       );
 
       console.log('VAULT SERVER READY');
@@ -71,4 +74,7 @@ process.on('exit', function() {
   vault.kill('SIGINT');
 });
 
-fs.writeFile(pidFile, process.pid);
+fs.writeFile(pidFile, process.pid, err => {
+  if (err) throw err;
+  console.log('The file has been saved!');
+});

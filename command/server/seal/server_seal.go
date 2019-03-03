@@ -34,6 +34,9 @@ func configureSeal(config *server.Config, infoKeys *[]string, info *map[string]s
 		case seal.AzureKeyVault:
 			return configureAzureKeyVaultSeal(config, infoKeys, info, logger, inseal)
 
+		case seal.Transit:
+			return configureTransitSeal(config, infoKeys, info, logger, inseal)
+
 		case seal.PKCS11:
 			return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
 

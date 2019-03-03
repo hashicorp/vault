@@ -14,9 +14,6 @@ import (
 // StrListContainsGlob looks for a string in a list of strings and allows
 // globs.
 func StrListContainsGlob(haystack []string, needle string) bool {
-	if len(haystack) == 0 {
-		return false
-	}
 	for _, item := range haystack {
 		if glob.Glob(item, needle) {
 			return true
@@ -27,9 +24,6 @@ func StrListContainsGlob(haystack []string, needle string) bool {
 
 // StrListContains looks for a string in a list of strings.
 func StrListContains(haystack []string, needle string) bool {
-	if len(haystack) == 0 {
-		return false
-	}
 	for _, item := range haystack {
 		if item == needle {
 			return true
@@ -391,8 +385,18 @@ func MergeSlices(args ...[]string) []string {
 // result will also remove any duplicated values in set A regardless of whether
 // that matches any values in set B.
 func Difference(a, b []string, lowercase bool) []string {
-	if len(a) == 0 || len(b) == 0 {
+	if len(a) == 0 {
 		return a
+	}
+	if len(b) == 0 {
+		if !lowercase {
+			return a
+		}
+		newA := make([]string, len(a))
+		for i, v := range a {
+			newA[i] = strings.ToLower(v)
+		}
+		return newA
 	}
 
 	a = RemoveDuplicates(a, lowercase)

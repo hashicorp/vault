@@ -3,7 +3,6 @@ package dbplugin
 import (
 	"context"
 	"fmt"
-	"net/rpc"
 	"time"
 
 	"google.golang.org/grpc"
@@ -72,8 +71,6 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		switch db.(*DatabasePluginClient).Database.(type) {
 		case *gRPCClient:
 			transport = "gRPC"
-		case *databasePluginRPCClient:
-			transport = "netRPC"
 		}
 
 	}
@@ -110,16 +107,8 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-var _ plugin.Plugin = &DatabasePlugin{}
-var _ plugin.GRPCPlugin = &DatabasePlugin{}
 var _ plugin.Plugin = &GRPCDatabasePlugin{}
 var _ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
-
-// DatabasePlugin implements go-plugin's Plugin interface. It has methods for
-// retrieving a server and a client instance of the plugin.
-type DatabasePlugin struct {
-	*GRPCDatabasePlugin
-}
 
 // GRPCDatabasePlugin is the plugin.Plugin implementation that only supports GRPC
 // transport
@@ -128,17 +117,6 @@ type GRPCDatabasePlugin struct {
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
-}
-
-func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	impl := &DatabaseErrorSanitizerMiddleware{
-		next: d.Impl,
-	}
-	return &databasePluginRPCServer{impl: impl}, nil
-}
-
-func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &databasePluginRPCClient{client: c}, nil
 }
 
 func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {

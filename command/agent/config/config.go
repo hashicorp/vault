@@ -22,6 +22,27 @@ type Config struct {
 	AutoAuth      *AutoAuth `hcl:"auto_auth"`
 	ExitAfterAuth bool      `hcl:"exit_after_auth"`
 	PidFile       string    `hcl:"pid_file"`
+	Cache         *Cache    `hcl:"cache"`
+	Vault         *Vault    `hcl:"vault"`
+}
+
+type Vault struct {
+	Address       string `hcl:"address"`
+	CACert        string `hcl:"ca_cert"`
+	CAPath        string `hcl:"ca_path"`
+	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
+	ClientCert    string `hcl:"client_cert"`
+	ClientKey     string `hcl:"client_key"`
+}
+
+type Cache struct {
+	UseAutoAuthToken bool        `hcl:"use_auto_auth_token"`
+	Listeners        []*Listener `hcl:"listeners"`
+}
+
+type Listener struct {
+	Type   string
+	Config map[string]interface{}
 }
 
 type AutoAuth struct {
@@ -91,7 +112,122 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
+	err = parseCache(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+	}
+
+	err = parseVault(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
+	}
+
 	return &result, nil
+}
+
+func parseVault(result *Config, list *ast.ObjectList) error {
+	name := "vault"
+
+	vaultList := list.Filter(name)
+	if len(vaultList.Items) == 0 {
+		return nil
+	}
+
+	if len(vaultList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := vaultList.Items[0]
+
+	var v Vault
+	err := hcl.DecodeObject(&v, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.Vault = &v
+
+	return nil
+}
+
+func parseCache(result *Config, list *ast.ObjectList) error {
+	name := "cache"
+
+	cacheList := list.Filter(name)
+	if len(cacheList.Items) == 0 {
+		return nil
+	}
+
+	if len(cacheList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := cacheList.Items[0]
+
+	var c Cache
+	err := hcl.DecodeObject(&c, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.Cache = &c
+
+	subs, ok := item.Val.(*ast.ObjectType)
+	if !ok {
+		return fmt.Errorf("could not parse %q as an object", name)
+	}
+	subList := subs.List
+
+	err = parseListeners(result, subList)
+	if err != nil {
+		return errwrap.Wrapf("error parsing 'listener' stanzas: {{err}}", err)
+	}
+
+	return nil
+}
+
+func parseListeners(result *Config, list *ast.ObjectList) error {
+	name := "listener"
+
+	listenerList := list.Filter(name)
+	if len(listenerList.Items) < 1 {
+		return fmt.Errorf("at least one %q block is required", name)
+	}
+
+	var listeners []*Listener
+	for _, item := range listenerList.Items {
+		var lnConfig map[string]interface{}
+		err := hcl.DecodeObject(&lnConfig, item.Val)
+		if err != nil {
+			return err
+		}
+
+		var lnType string
+		switch {
+		case lnConfig["type"] != nil:
+			lnType = lnConfig["type"].(string)
+			delete(lnConfig, "type")
+		case len(item.Keys) == 1:
+			lnType = strings.ToLower(item.Keys[0].Token.Value().(string))
+		default:
+			return errors.New("listener type must be specified")
+		}
+
+		switch lnType {
+		case "unix", "tcp":
+		default:
+			return fmt.Errorf("invalid listener type %q", lnType)
+		}
+
+		listeners = append(listeners, &Listener{
+			Type:   lnType,
+			Config: lnConfig,
+		})
+	}
+
+	result.Cache.Listeners = listeners
+
+	return nil
 }
 
 func parseAutoAuth(result *Config, list *ast.ObjectList) error {

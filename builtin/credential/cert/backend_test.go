@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"crypto/rand"
+	"github.com/hashicorp/go-sockaddr"
 	"net/http"
 
 	"golang.org/x/net/http2"
@@ -21,17 +22,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/tokenhelper"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -1203,6 +1201,7 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	name := "web"
+	boundCIDRs := []string{"127.0.0.1", "128.252.0.0/16"}
 
 	addCertReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1214,7 +1213,7 @@ func TestBackend_validCIDR(t *testing.T) {
 			"allowed_names":       "",
 			"required_extensions": "",
 			"lease":               1000,
-			"bound_cidrs":         []string{"127.0.0.1/32", "128.252.0.0/16"},
+			"bound_cidrs":         boundCIDRs,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{ConnState: &connState},
@@ -1223,6 +1222,21 @@ func TestBackend_validCIDR(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), addCertReq)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	readCertReq := &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "certs/" + name,
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
+
+	if cidrsResult[0].String() != boundCIDRs[0] ||
+		cidrsResult[1].String() != boundCIDRs[1] {
+		t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
 	}
 
 	loginReq := &logical.Request{
@@ -1789,70 +1803,5 @@ func Test_Renew(t *testing.T) {
 	}
 	if !resp.IsError() {
 		t.Fatal("expected error")
-	}
-}
-
-func TestBackend_CertUpgrade(t *testing.T) {
-	s := &logical.InmemStorage{}
-
-	config := logical.TestBackendConfig()
-	config.StorageView = s
-
-	ctx := context.Background()
-
-	b := Backend()
-	if b == nil {
-		t.Fatalf("failed to create backend")
-	}
-	if err := b.Setup(ctx, config); err != nil {
-		t.Fatal(err)
-	}
-
-	type B struct {
-		Policies   []string
-		TTL        time.Duration
-		MaxTTL     time.Duration
-		Period     time.Duration
-		BoundCIDRs []*sockaddr.SockAddrMarshaler
-	}
-
-	foo := &B{
-		Policies:   []string{"foo"},
-		TTL:        time.Second,
-		MaxTTL:     time.Second,
-		Period:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
-	}
-
-	entry, err := logical.StorageEntryJSON("cert/foo", foo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	certEntry, err := b.Cert(ctx, s, "foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	exp := &CertEntry{
-		TokenParams: tokenhelper.TokenParams{
-			Policies:   []string{"foo"},
-			TTL:        time.Second,
-			MaxTTL:     time.Second,
-			Period:     time.Second,
-			BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
-		},
-		OldPolicies:   nil,
-		OldTTL:        0,
-		OldMaxTTL:     0,
-		OldPeriod:     0,
-		OldBoundCIDRs: nil,
-	}
-	if diff := deep.Equal(certEntry, exp); diff != nil {
-		t.Fatal(diff)
 	}
 }

@@ -1100,6 +1100,24 @@ func (b *SystemBackend) remountPath() *framework.Path {
 	}
 }
 
+func (b *SystemBackend) metricsPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "metrics",
+		Fields: map[string]*framework.FieldSchema{
+			"format": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Format to export metrics into. Currently accept only \"prometheus\"",
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.handleMetrics,
+		},
+		HelpSynopsis:    strings.TrimSpace(sysHelp["metrics"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["metrics"][1]),
+	}
+
+}
+
 func (b *SystemBackend) authPaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -1148,6 +1166,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				"passthrough_request_headers": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+				},
+				"allowed_response_headers": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
 				},
 				"token_type": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -1438,6 +1460,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"passthrough_request_headers": &framework.FieldSchema{
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["passthrough_request_headers"][0]),
+				},
+				"allowed_response_headers": &framework.FieldSchema{
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_response_headers"][0]),
 				},
 				"token_type": &framework.FieldSchema{
 					Type:        framework.TypeString,

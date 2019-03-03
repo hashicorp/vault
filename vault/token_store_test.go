@@ -22,6 +22,24 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestTokenStore_CreateOrphanResponse(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "auth/token/create-orphan",
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"policies": "default",
+		},
+	})
+	if err != nil && (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v, resp: %#v", err, resp)
+	}
+	if !resp.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true in the response")
+	}
+}
+
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore

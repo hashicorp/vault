@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -16,7 +17,7 @@ type forwardedRequestRPCServer struct {
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
-	perfStandbyRepCluster *ReplicatedCluster
+	perfStandbyRepCluster *replication.Cluster
 	perfStandbyCache      *cache.Cache
 }
 
@@ -60,7 +61,9 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 		}
 	}
 
-	resp.LastRemoteWal = LastRemoteWAL(s.core)
+	// Performance standby nodes will use this value to do wait for WALs to ship
+	// in order to do a best-effort read after write gurantee
+	resp.LastRemoteWal = LastWAL(s.core)
 
 	return resp, nil
 }

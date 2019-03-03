@@ -265,6 +265,24 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, nil, errors.New("cannot access root path in unauthenticated request")
 	}
 
+	// At this point we won't be forwarding a raw request; we should delete
+	// authorization headers as appropriate
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		delete(req.Headers, consts.AuthHeaderName)
+	case logical.ClientTokenFromAuthzHeader:
+		if headers, ok := req.Headers["Authorization"]; ok {
+			retHeaders := make([]string, 0, len(headers))
+			for _, v := range headers {
+				if strings.HasPrefix(v, "Bearer ") {
+					continue
+				}
+				retHeaders = append(retHeaders, v)
+			}
+			req.Headers["Authorization"] = retHeaders
+		}
+	}
+
 	// When we receive a write of either type, rather than require clients to
 	// PUT/POST and trust the operation, we ask the backend to give us the real
 	// skinny -- if the backend implements an existence check, it can tell us
@@ -982,10 +1000,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		var entity *identity.Entity
 		auth = resp.Auth
-		// Only the token store can toggle this off, and that's via a
-		// different path since it's not a login request; it's explicitly
-		// disallowed above
-		auth.Renewable = true
 
 		mEntry := c.router.MatchingMountEntry(ctx, req.Path)
 
@@ -1062,7 +1076,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
+		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)
 		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
