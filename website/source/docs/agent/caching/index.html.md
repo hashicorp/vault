@@ -52,7 +52,7 @@ resulting secrets from these `auto-auth` token calls are not cached. This
 behavior will be changed so that they get cached in the upcoming versions. To
 test the caching scenarios in 1.1-beta1, please make login requests or token
 creation requests via the agent. These new tokens and their respective leased
-secrets will get cached.  
+secrets will get cached.
 
 ## Cache Evictions
 
@@ -89,8 +89,20 @@ parameters are modified. As long as the requests come in without any change,
 caching behavior should be consistent. Identical requests with differently
 ordered request values will result in duplicated cache entries. A heuristic
 assumption that the clients will use consistent mechanisms to make requests,
-thereby resulting in a consistent hash value is the idea upon which the caching
-behavior is currently built.
+thereby resulting in consistent hash values per request is the idea upon which
+the caching functionality is built upon.
+
+## Renewal Management
+
+The tokens and leases are renewed by the agent using the secret renewer that is
+made available via the Vault server's [Go
+API](https://godoc.org/github.com/hashicorp/vault/api#Renewer). Agent performs
+all operations in memory and does not persist anything to storage. This means
+that when the agent is shut down, all the renewal operations are immediately
+terminated and there is no way for agent to resume renewals after the fact.
+Note that shutting down the agent does not indicate revocations of the secrets,
+instead it only means that renewal responsibility for all the valid unrevoked
+secrets are no longer performed by the Vault agent.
 
 ## API
 
@@ -145,7 +157,7 @@ $ curl \
 
 ## Configuration
 
-The top level `cache` block has two configuration entries:
+The top level `cache` block has the following configuration entries:
 
 - `use_auto_auth_token (bool: false)` - If set, the requests made to agent
   without a Vault token will be forwarded to the Vault server with the
