@@ -104,6 +104,12 @@ Note that shutting down the agent does not indicate revocations of the secrets,
 instead it only means that renewal responsibility for all the valid unrevoked
 secrets are no longer performed by the Vault agent.
 
+### Agent CLI
+
+Agent's listener address will be picked up by the CLI through the
+`VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
+"http://127.0.0.1:8100".
+
 ## API
 
 ### Cache Clear
@@ -155,7 +161,7 @@ $ curl \
     http://127.0.0.1:1234/v1/agent/cache-clear
 ```
 
-## Configuration
+## Configuration (`cache`)
 
 The top level `cache` block has the following configuration entries:
 
@@ -167,9 +173,10 @@ The top level `cache` block has the following configuration entries:
 
 - `listener` `(array of objects: required)` - Configuration for the listeners
 
-### Configuration (Listeners)
+### Configuration (`listener`)
 
-These configuration values are common to all Listeners.
+There can be one or more `listener` blocks inside the top-level `cache` block.
+These configuration values are common to all `listener` blocks.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
@@ -187,6 +194,40 @@ These configuration values are common to all Listeners.
 
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
+
+### Configuration (`vault`)
+
+There can at most be one top level `vault` block and it has the following
+configuration entries:
+
+- `address (string: optional)` - The address of the Vault server. This should
+  be a complete URL such as `https://127.0.0.1:8200`. This value can be
+  overridden by setting the `VAULT_ADDR` environment variable.
+
+- `ca_cert (string: optional)` - Path on the local disk to a single PEM-encoded
+  CA certificate to verify the Vault server's SSL certificate. This value can
+  be overridden by setting the `VAULT_CACERT` environment variable.
+
+- `ca_path (string: optional)` - Path on the local disk to a directory of
+  PEM-encoded CA certificates to verify the Vault server's SSL certificate.
+  This value can be overridden by setting the `VAULT_CAPATH` environment
+  variable.
+
+- `client_cert (string: option)` - Path on the local disk to a single
+  PEM-encoded CA certificate to use for TLS authentication to the Vault server.
+  This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
+  variable.
+
+- `client_key (string: option)` - Path on the local disk to a single
+  PEM-encoded private key matching the client certificate from `client_cert`.
+  This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
+  variable.
+
+- `tls_skip_verify (string: optional)` - Disable verification of TLS
+  certificates. Using this option is highly discouraged as it decreases the
+  security of data transmissions to and from the Vault server. This value can
+  be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
+
 
 ### Example Configuration
 
@@ -206,10 +247,8 @@ cache {
     tls_disable = true
   }
 }
+
+vault {
+    address = "http://127.0.0.1:8200"
+}
 ```
-
-### Environment Variable
-
-Agent's listener address will be picked up by the CLI through the
-`VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8100".
