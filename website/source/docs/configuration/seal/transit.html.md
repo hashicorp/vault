@@ -82,7 +82,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `tls_server_name` `(string: "")`: Name to use as the SNI host when connecting 
   to the Vault server via TLS.  This may also be specified via the 
-  `VAULT_TLS_SERVER_NAME environment variable.
+  `VAULT_TLS_SERVER_NAME` environment variable.
 
 - `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates. 
   Using this option is highly discouraged and decreases the security of data 
