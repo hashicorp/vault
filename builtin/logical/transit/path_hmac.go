@@ -3,11 +3,8 @@ package transit
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
-	"hash"
 	"strconv"
 	"strings"
 
@@ -25,14 +22,14 @@ type batchRequestHMACItem map[string]string
 // BatchResponseItem represents a response item for batch processing
 type batchResponseHMACItem struct {
 	// HMAC for the input present in the corresponding batch request item
-	HMAC string `json:"hmac,omitempty" structs:"hmac" mapstructure:"hmac"`
+	HMAC string `json:"hmac,omitempty" mapstructure:"hmac"`
 
 	// Valid indicates whether signature matches the signature derived from the input string
-	Valid bool `json:"valid,omitempty" structs:"valid" mapstructure:"valid"`
+	Valid bool `json:"valid,omitempty" mapstructure:"valid"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
-	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+	Error string `json:"error,omitempty" mapstructure:"error"`
 
 	// The return paths in some cases are (nil, err) and others
 	// (logical.ErrorResponse(..),nil), and others (logical.ErrorResponse(..),err).
@@ -136,20 +133,13 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
 
-	var hashAlg func() hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hashAlg = sha256.New224
-	case "sha2-256":
-		hashAlg = sha256.New
-	case "sha2-384":
-		hashAlg = sha512.New384
-	case "sha2-512":
-		hashAlg = sha512.New
-	default:
+	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
+	if !ok {
 		p.Unlock()
-		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+		return logical.ErrorResponse("unsupported algorithm %q", hashAlgorithm), nil
 	}
+
+	hashAlg := keysutil.HashFuncMap[hashAlgorithm]
 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []batchRequestHMACItem
@@ -250,20 +240,13 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		p.Lock(false)
 	}
 
-	var hashAlg func() hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hashAlg = sha256.New224
-	case "sha2-256":
-		hashAlg = sha256.New
-	case "sha2-384":
-		hashAlg = sha512.New384
-	case "sha2-512":
-		hashAlg = sha512.New
-	default:
+	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
+	if !ok {
 		p.Unlock()
-		return logical.ErrorResponse(fmt.Sprintf("unsupported hash algorithm %s", algorithm)), nil
+		return logical.ErrorResponse("unsupported algorithm %q", hashAlgorithm), nil
 	}
+
+	hashAlg := keysutil.HashFuncMap[hashAlgorithm]
 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []batchRequestHMACItem
