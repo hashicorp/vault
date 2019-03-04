@@ -12,6 +12,6 @@ export default create({
   defaultTTLUnit: fillable('[data-test-input="config.defaultLeaseTtl"] [data-test-ttl-unit]'),
   enable: async function(type, path) {
     await this.visit();
-    return withFlash(this.mount(type, path));
+    await withFlash(this.mount(type, path));
   },
 });

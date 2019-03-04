@@ -19,7 +19,7 @@ module('Acceptance | settings/auth/enable', function(hooks) {
     const type = 'approle';
     await page.visit();
     assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
-    await withFlash(page.enable(type, path), () => {
+    await withFlash(page.mount(type, path), () => {
       assert.equal(
         page.flash.latestMessage,
         `Successfully mounted the ${type} auth method at ${path}.`,

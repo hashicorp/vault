@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { waitFor, settled, currentRouteName } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';
 import indexPage from 'vault/tests/pages/access/identity/index';
@@ -14,6 +14,8 @@ export const testCRUD = async (name, itemType, assert) => {
       )
     );
   });
+  // wait for redirect;
+  await settled();
   assert.equal(
     currentRouteName(),
     'vault.cluster.access.identity.show',
@@ -28,7 +30,10 @@ export const testCRUD = async (name, itemType, assert) => {
     `${itemType}: lists the entity in the entity list`
   );
   await indexPage.items.filterBy('name', name)[0].menu();
-  await indexPage.delete();
+  // wait for permission checks
+  await waitFor('[data-test-confirm-action-trigger]');
+  let btnIndex = itemType === 'groups' ? 0 : 1;
+  await indexPage.buttons[btnIndex].delete();
   await withFlash(indexPage.confirmDelete(), () => {
     assert.ok(
       indexPage.flashMessage.latestMessage.startsWith(
@@ -44,6 +49,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
 
   await withFlash(page.editForm.name(name).submit());
+
   await showPage.edit();
   assert.equal(
     currentRouteName(),

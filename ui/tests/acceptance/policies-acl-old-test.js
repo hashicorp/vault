@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL } from '@ember/test-helpers';
+import { waitFor, click, fillIn, findAll, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
@@ -18,13 +18,18 @@ module('Acceptance | policies (old)', function(hooks) {
     const policyLower = policyName.toLowerCase();
 
     await page.visit({ type: 'acl' });
+    // wait for permissions check
+    await waitFor('[data-test-policy-create-link]');
     // new policy creation
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
+    await settled();
     assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
     findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
+    // wait for redirect
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
@@ -42,6 +47,9 @@ module('Acceptance | policies (old)', function(hooks) {
     await click('[data-test-policy-edit-toggle]');
     await click('[data-test-policy-delete] button');
     await click('[data-test-confirm-button]');
+
+    //wait for redirect
+    await settled();
     assert.equal(currentURL(), `/vault/policies/acl`, 'navigates to policy list on successful deletion');
     assert
       .dom(`[data-test-policy-item="${policyLower}"]`)
@@ -56,10 +64,13 @@ module('Acceptance | policies (old)', function(hooks) {
 
     await page.visit({ type: 'acl' });
     // new policy creation
+    await waitFor('[data-test-policy-create-link]');
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
     findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
+    // await for redirect
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/policy/acl/${policyName}`,

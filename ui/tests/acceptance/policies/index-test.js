@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName } from '@ember/test-helpers';
+import { settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -38,6 +38,8 @@ module('Acceptance | policies/acl', function(hooks) {
     let policy = page.row.filterBy('name', policyName)[0];
     assert.ok(policy, 'policy is shown in the list');
     await policy.menu();
+    // wait for permissions to load
+    await settled();
     await page.delete().confirmDelete();
     assert.notOk(page.findPolicyByName(policyName), 'policy is deleted successfully');
   });

@@ -23,10 +23,10 @@ export default {
   async mount(type, path) {
     await this.selectType(type);
     if (path) {
-      return this.next()
+      return await this.next()
         .path(path)
         .submit();
     }
-    return this.next().submit();
+    return await this.next().submit();
   },
 };

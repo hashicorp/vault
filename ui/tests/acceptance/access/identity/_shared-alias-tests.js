@@ -48,6 +48,8 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   let item = aliasIndexPage.items.filterBy('name', name)[0];
   await item.menu();
 
+  // wait for permissions to load
+  await settled();
   await aliasIndexPage.delete();
   await withFlash(aliasIndexPage.confirmDelete(), () => {
     aliasIndexPage.flashMessage.latestMessage.startsWith(
