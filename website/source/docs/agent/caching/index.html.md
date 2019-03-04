@@ -31,8 +31,8 @@ Caching and renewals are managed by the agent only under these specific scenario
 
 2. Leased secret creation requests are made through the agent using tokens that
    are already managed by the agent. This means that any dynamic credentials
-   that are issued using the tokens managed by the agent, will be cached by the
-   agent and its renewals are taken care of.
+   that are issued using the tokens managed by the agent, will be cached and
+   its renewals are taken care of.
 
 ## Using Auto-Auth Token
 
@@ -42,62 +42,70 @@ environments using [Auto-Auth](/docs/agent/autoauth/index.html). By setting the
 to provide a Vault token to the requests made to the agent. When this
 configuration is set, if the request doesn't already bear a token, then the
 auto-auth token will be used to forward the request to the Vault server. This
-configuration will be overridden if the request already has a token attached.
-In this case, the token present in the request will be used to forward the
+configuration will be overridden if the request already has a token attached,
+in which case, the token present in the request will be used to forward the
 request to the Vault server.
 
--> **Note:** In Vault 1.1-beta, if the request doesn't already contain a Vault
-token, then the `auto-auth` token will used to make requests. The resulting
-secrets from these `auto-auth` token calls however are not cached. They will be
-cached in the non-beta version. To test the caching scenarios, please make
-a login request or a token creation request via the agent. The secrets
-generated from these new tokens will get cached.
+-> **Note:** In Vault 1.1-beta1, if the request doesn't already contain a Vault
+token, then the `auto-auth` token will used to make requests. However, the
+resulting secrets from these `auto-auth` token calls are not cached. This
+behavior will be changed so that they get cached in the upcoming versions. To
+test the caching scenarios in 1.1-beta1, please make login requests or token
+creation requests via the agent. These new tokens and their respective leased
+secrets will get cached.  
 
 ## Cache Evictions
 
-The eviction of cache entries pertaining to any secret will occur when the
-agent can no longer renew it.  This can happen when the cached secret hits it's
-maximum TTL or if the renewal results in any error.
+The eviction of cache entries pertaining to secrets will occur when the agent
+can no longer renew them. This can happen when the secrets hit their maximum
+TTL or if the renewals result in errors.
 
-Agent also does some best-effort cache evictions by observing specific request
-types and response codes. For example, if a token revocation request is made
-via the agent and if the request succeeds, then agent evicts all the cache
-entries associated with the revoked token. Similarly, any lease revocation
-operation will be intercepted by the agent and respective cache entries will be
-evicted.
+Agent does some best-effort cache evictions by observing specific request types
+and response codes. For example, if a token revocation request is made via the
+agent and if the forwarded request to the Vault server succeeds, then agent
+evicts all the cache entries associated with the revoked token. Similarly, any
+lease revocation operation will also be intercepted by the agent and the
+respective cache entries will be evicted.
 
-Note that while agent evicts the cache entries when the secret expires
-and by observing some revocation request pattern, it will be completely unaware
-of the revocations that happen through direct interactions with the Vault
-server. This could potentially lead to stale cache entries. For managing the
-stale entries in the cache, an endpoint `/v1/agent/cache-clear`(see below) is
-made available to manually evict cache entries based on some of the criteria.
+Note that while agent evicts the cache entries upon secret expirations and upon
+intercepting revocation requests, it is still possible for the agent to be
+completely unaware of the revocations that happen through direct client
+interactions with the Vault server. This could potentially lead to stale cache
+entries. For managing the stale entries in the cache, an endpoint
+`/v1/agent/cache-clear`(see below) is made available to manually evict cache
+entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request Uniqueness
 
-In order to detect a repeat request and return cached response, agent will need
+In order to detect repeat requests and return cached responses, agent will need
 to have a way to uniquely identify the requests. This computation as it stands
-now takes a simplistic approach (may change in future). The HTTP request that
-is received by the agent is serialized and hashed. This hash value is used as
-an index into the cache to check if the response is readily available. This
-implies that the hash value will differ if any data in the request is modified.
-This has the side-effect of resulting in false negatives if the ordering of the
-request parameters are modified. As long as the requests come in without any
-change, caching behavior should be consistent.
+today takes a simplistic approach (may change in future) of serializing and
+hashing the HTTP request along with all the headers and the request body. This
+hash value is then used as an index into the cache to check if the response is
+readily available. The consequence of this approach is that the hash value for
+any request will differ if any data in the request is modified. This has the
+side-effect of resulting in false negatives if say, the ordering of the request
+parameters are modified. As long as the requests come in without any change,
+caching behavior should be consistent. Identical requests with differently
+ordered request values will result in duplicated cache entries. A heuristic
+assumption that the clients will use consistent mechanisms to make requests,
+thereby resulting in a consistent hash value is the idea upon which the caching
+behavior is currently built.
 
 ## API
 
 ### Cache Clear
 
-This endpoint clears the cache based on given parameters. To be able to use
-this API, some information on how the agent caches values should be known
-beforehand. Each response that gets cached in the agent is indexed on some
+This endpoint clears the cache based on given criteria. To be able to use this
+API, some information on how the agent caches values should be known
+beforehand. Each response that gets cached in the agent will be indexed on some
 factors depending on the type of request. Those factors can be the `token` that
-is being returned by the response, the `token_accessor` of the token being
-returned by the response, the `request_path` that resulted in the response, the
-`lease` that is attached to the response, the `namespace` to which the request
-belongs to, and a few more. This API exposes some factors through which
-associated cache entries are fetched and evicted.
+is belonging to the cached response, the `token_accessor` of the token
+belonging to the cached response, the `request_path` that resulted in the
+cached response, the `lease` that is attached to the cached response, the
+`namespace` to which the cached response belongs to, and a few more. This API
+exposes some factors through which associated cache entries are fetched and
+evicted.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -113,9 +121,9 @@ associated cache entries are fetched and evicted.
   the `type` selected. This parameter is optional when the `type` is set
   to `all`.
 
-- `namespace` `(string: optional)` - The namespace in which to match along with
-  the provided request path. This is only applicable when the `type` is set to
-  `request_path`.
+- `namespace` `(string: optional)` - This is only applicable when the `type` is set to
+  `request_path`. The namespace of which the cache entries to be evicted for
+  the given request path.
 
 ### Sample Payload
 
@@ -140,9 +148,10 @@ $ curl \
 The top level `cache` block has two configuration entries:
 
 - `use_auto_auth_token (bool: false)` - If set, the requests made to agent
-  without a Vault token will be forwarded to Vault with the auto-auth token
-  attached. If the requests already bear a token, this configuration will be
-  ignored.
+  without a Vault token will be forwarded to the Vault server with the
+  auto-auth token attached. If the requests already bear a token, this
+  configuration will be overridden and the token in the request will be used to
+  forward the request to the Vault server.
 
 - `listener` `(array of objects: required)` - Configuration for the listeners
 
