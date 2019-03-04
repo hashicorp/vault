@@ -472,6 +472,11 @@ func (r *Router) RouteExistenceCheck(ctx context.Context, req *logical.Request) 
 	return resp, ok, exists, err
 }
 
+// routeCommon executes a request on the router or, if existenceCheck is true,
+// tests whether the path exists or not.  The bool return values only have
+// meaning when existenceCheck is true.  The first bool indicates whether an
+// existence check function was found for the backend; the second indicates
+// whether, if an existence check function was found, the item exists or not.
 func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenceCheck bool) (*logical.Response, bool, bool, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {

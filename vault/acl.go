@@ -314,8 +314,8 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 }
 
 // AllowOperation is used to check if the given operation is permitted.
-func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheckOnly bool) (ret *ACLResults) {
-	ret = new(ACLResults)
+func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheckOnly bool) (ret ACLResults) {
+	ret = ACLResults{}
 
 	// Fast-path root
 	if a.root {
@@ -576,7 +576,8 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 	// should be applied is if we are only processing EGPs against a login
 	// path in which case opts.Unauth will be set.
 	if acl != nil && !opts.Unauth {
-		ret.ACLResults = acl.AllowOperation(ctx, req, false)
+		results := acl.AllowOperation(ctx, req, false)
+		ret.ACLResults = &results
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {

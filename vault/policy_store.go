@@ -92,6 +92,10 @@ path "identity/entity/name/{{identity.entity.name}}" {
   capabilities = ["read"]
 }
 
+# Allow a token to list what it's allowed to see under a given path.
+path "sys/access/filtered-path" {
+    capabilities = ["update"]
+}
 
 # Allow a token to look up its resultant ACL from all policies. This is useful
 # for UIs. It is an internal path because the format may change at any time

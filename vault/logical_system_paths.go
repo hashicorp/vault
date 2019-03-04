@@ -824,6 +824,22 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
+		{
+			Pattern: "access/filtered-path",
+			Fields: map[string]*framework.FieldSchema{
+				"paths": &framework.FieldSchema{
+					Type:        framework.TypeStringSlice,
+					Description: "The paths to examine.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.pathAccessFilteredPath,
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["access-filtered-path"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["access-filtered-path"][1]),
+		},
 	}
 }
 

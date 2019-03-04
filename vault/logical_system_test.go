@@ -16,6 +16,8 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -2553,5 +2555,150 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	if doc.Paths["/rotate"] == nil {
 		t.Fatalf("expected to find path '/rotate'")
+	}
+}
+
+func testCreateSecret(t *testing.T, core *Core, token, path, key, value string) {
+	t.Helper()
+	req := logical.TestRequest(t, logical.UpdateOperation, path)
+	req.Data[key] = value
+	req.ClientToken = token
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestSystemBackend_AccessFilteredPath(t *testing.T) {
+	core, _, rootToken := testCoreSystemBackend(t)
+
+	less := func(s1, s2 string) bool { return s1 < s2 }
+	ignoreOrder := []cmp.Option{cmpopts.EquateEmpty(), cmpopts.SortSlices(less)}
+	filteredPath := "sys/access/filtered-path"
+	checkPaths := func(t *testing.T, token string, expectedKeys map[string][]string) {
+		t.Helper()
+		var paths []string
+		for path := range expectedKeys {
+			paths = append(paths, path)
+		}
+		resp, err := core.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			Path: filteredPath,
+			Data: map[string]interface{}{
+				"paths": paths,
+			},
+			Operation:   logical.UpdateOperation,
+			ClientToken: token,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+		expected := map[string]interface{}{
+			"paths": expectedKeys,
+		}
+		if diff := cmp.Diff(expected, resp.Data, ignoreOrder...); diff != "" {
+			t.Errorf("bad: filtered-path differs; (-want +got)\n%s", diff)
+		}
+	}
+
+	testCreateSecret(t, core, rootToken, "secret/foo", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/2", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/foo/3", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/bar/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/bar/2", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/baz/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/1", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/10", "k", "v")
+	testCreateSecret(t, core, rootToken, "secret/qux/2", "k", "v")
+
+	policyName := "test"
+	policyBody := `
+		name = "test"
+		path "secret/bar" {
+			capabilities = ["list"]
+		}
+		// The deny on bar/2 is irrelevant since we give list on bar/.
+		path "secret/bar/2" {
+			capabilities = ["deny"]
+		}
+		path "secret/foo" {
+			capabilities = ["deny"]
+		}
+		path "secret/foo/1" {
+			capabilities = ["delete"]
+		}
+        // We do not give list on foo/, so this deny is equivalent to no caps.
+		path "secret/foo/2" {
+			capabilities = ["deny"]
+		}
+		path "secret/qux/1*" {
+			capabilities = ["update"]
+		}
+	`
+	testCreatePolicy(t, core, policyName, policyBody)
+
+	// Create a non-root token
+	token := "tokenid"
+	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, token, "", []string{policyName})
+
+	// Expect root has full access regardless of policy
+	checkPaths(t, rootToken, map[string][]string{
+		"secret/foo": []string{"1", "2", "3"},
+	})
+
+	checkPaths(t, token, map[string][]string{
+		// Expect 2 hidden because it only has deny, 3 hidden because it has nothing.
+		"secret/foo": []string{"1"},
+		// Expect full access to bar because bar has list, even though 2 has deny.
+		"secret/bar": []string{"1", "2"},
+		// Expect 2 hidden because only 1* has anything.
+		"secret/qux": []string{"1", "10"},
+		// Expect foo hidden because it has deny, baz hidden because it has nothing.
+		"secret": []string{"foo/", "bar/", "qux/"},
+	})
+}
+
+func BenchmarkHasAccess(b *testing.B) {
+	b.ReportAllocs()
+	ns := namespace.RootNamespace
+	policy, err := ParseACLPolicy(ns, `
+name = "dev"
+path "foo/bar" {
+	policy = "write"
+}
+`)
+
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		hasAccess(ctx, acl, "/foo/bar")
+	}
+}
+
+func testCreatePolicy(t *testing.T, core *Core, name, body string) {
+	t.Helper()
+
+	var testPolicy = fmt.Sprintf(`
+		name = "%s"
+	`, name) + body
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, testPolicy)
+	if err != nil {
+		t.Fatalf("err parsing policy: %v", err)
+	}
+
+	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
+	if err != nil {
+		t.Fatalf("err storing policy: %v", err)
 	}
 }
