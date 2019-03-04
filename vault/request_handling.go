@@ -1043,9 +1043,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				}
 				auth.GroupAliases = validAliases
 			}
-
-			// Login requests always generates orphan tokens
-			auth.Orphan = true
 		}
 
 		// Determine the source of the login
@@ -1165,6 +1162,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	auth.ClientToken = te.ID
 	auth.Accessor = te.Accessor
 	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
 
 	switch auth.TokenType {
 	case logical.TokenTypeBatch:
