@@ -3064,11 +3064,14 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	pathSuffixInt, ok := data.GetOk("path_suffix")
 	if ok {
 		pathSuffix := pathSuffixInt.(string)
-		matched := pathSuffixSanitize.MatchString(pathSuffix)
-		if !matched && pathSuffix != "" {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"given role path suffix contains invalid characters; must match %s",
-				pathSuffixSanitize.String())), nil
+		switch {
+		case pathSuffix != "":
+			matched := pathSuffixSanitize.MatchString(pathSuffix)
+			if !matched {
+				return logical.ErrorResponse(fmt.Sprintf(
+					"given role path suffix contains invalid characters; must match %s",
+					pathSuffixSanitize.String())), nil
+			}
 		}
 		entry.PathSuffix = pathSuffix
 	} else if req.Operation == logical.CreateOperation {
