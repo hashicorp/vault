@@ -134,7 +134,7 @@ export default Component.extend(DEFAULTS, {
   methodsToShow: computed('methods', function() {
     let methods = this.get('methods') || [];
     let shownMethods = methods.filter(m =>
-      BACKENDS.find(b => get(b, 'type').toLowerCase() === get(m, 'type').toLowerCase())
+      BACKENDS.find(b => (get(b, 'type') || '').toLowerCase() === (get(m, 'type') || '').toLowerCase())
     );
     return shownMethods.length ? shownMethods : BACKENDS;
   }),
@@ -233,7 +233,9 @@ export default Component.extend(DEFAULTS, {
       );
       let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
-      data = assign(data, this.getProperties(...attributes));
+      if (Object.keys(attributes).length > 0) {
+        data = assign(data, this.getProperties(...attributes));
+      }
       if (passedData) {
         data = assign(data, passedData);
       }

@@ -64,6 +64,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     const path = `${prefix}pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await page.visit({ backend: path });
+    await settled();
     return path;
   };
 

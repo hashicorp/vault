@@ -9,7 +9,6 @@ export default create({
     if (token) {
       return await this.tokenInput(token).submit();
     }
-
     return await this.tokenInput('root').submit();
   },
 });
