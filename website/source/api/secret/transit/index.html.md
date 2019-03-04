@@ -745,7 +745,7 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: nil)` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
@@ -870,7 +870,7 @@ supports signing.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: nil)` – Specifies the **base64 encoded** input data. One of 
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
   `input` or `batch_input` must be supplied.
 
 - `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
@@ -1013,8 +1013,9 @@ data.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
-
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
+  
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
   supplied.
