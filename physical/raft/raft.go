@@ -194,6 +194,8 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.
 }
 
 func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error {
+	clusterListener.StopHandler(consts.RaftStorageALPN)
+	clusterListener.RemoveClient(consts.RaftStorageALPN)
 	b.l.Lock()
 	future := b.raft.Shutdown()
 	b.raft = nil
