@@ -1,4 +1,4 @@
-import { run } from '@ember/runloop';
+import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
@@ -23,7 +23,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
 
-  // set during init and potentially passed in via a query param
+  //  passed in via a query param
   selectedAuth: null,
   methods: null,
   cluster: null,
@@ -131,7 +131,9 @@ export default Component.extend(DEFAULTS, {
     try {
       let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('token', response.auth.client_token);
-      this.send('doSubmit');
+      next(() => {
+        this.send('doSubmit');
+      });
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
@@ -146,7 +148,7 @@ export default Component.extend(DEFAULTS, {
         },
       });
       this.set('methods', methods.map(m => m.serialize({ includeId: true })));
-      run.next(() => {
+      next(() => {
         store.unloadAll('auth-method');
       });
     } catch (e) {
@@ -154,7 +156,7 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
-  showLoading: or('authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
   handleError(e) {
     this.set('loading', false);
@@ -194,6 +196,15 @@ export default Component.extend(DEFAULTS, {
 
   actions: {
     doSubmit() {
+      let passedData, e;
+      if (arguments.length > 1) {
+        [passedData, e] = arguments;
+      } else {
+        [e] = arguments;
+      }
+      if (e) {
+        e.preventDefault();
+      }
       let data = {};
       this.setProperties({
         error: null,
@@ -205,10 +216,13 @@ export default Component.extend(DEFAULTS, {
       let attributes = get(backendMeta || {}, 'formAttributes') || {};
 
       data = assign(data, this.getProperties(...attributes));
+      if (passedData) {
+        data = assign(data, passedData);
+      }
       if (this.get('customPath') || get(backend, 'id')) {
         data.path = this.get('customPath') || get(backend, 'id');
       }
-      this.authenticate.perform(backend.type, data);
+      return this.authenticate.unlinked().perform(backend.type, data);
     },
   },
 });

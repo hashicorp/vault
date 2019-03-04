@@ -784,8 +784,7 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	return match == remain
 }
 
-// pathsToRadix converts a the mapping of special paths to a mapping
-// of special paths to radix trees.
+// pathsToRadix converts a list of special paths to a radix tree.
 func pathsToRadix(paths []string) *radix.Tree {
 	tree := radix.New()
 	for _, path := range paths {

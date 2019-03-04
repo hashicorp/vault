@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -310,7 +311,33 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 		t.Fatal("should not be sealed")
 	}
 
+	testCoreAddSecretMount(t, core, token)
+
 	return core, keys, token
+}
+
+func testCoreAddSecretMount(t testing.T, core *Core, token string) {
+	kvReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": "1",
+			},
+		},
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(nil), kvReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatal(err)
+	}
+
 }
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
@@ -920,6 +947,7 @@ type TestClusterCore struct {
 	ServerKeyPEM      []byte
 	TLSConfig         *tls.Config
 	UnderlyingStorage physical.Backend
+	Barrier           SecurityBarrier
 }
 
 type TestClusterOptions struct {
@@ -1404,6 +1432,29 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		TestWaitActive(t, cores[0])
 
+		// Existing tests rely on this; we can make a toggle to disable it
+		// later if we want
+		kvReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: testCluster.RootToken,
+			Path:        "sys/mounts/secret",
+			Data: map[string]interface{}{
+				"type":        "kv",
+				"path":        "secret/",
+				"description": "key/value secret storage",
+				"options": map[string]string{
+					"version": "1",
+				},
+			},
+		}
+		resp, err := cores[0].HandleRequest(namespace.RootContext(ctx), kvReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.IsError() {
+			t.Fatal(err)
+		}
+
 		// Unseal other cores unless otherwise specified
 		if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
 			for i := 1; i < numCores; i++ {
@@ -1491,6 +1542,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Server:          servers[i],
 			TLSConfig:       tlsConfigs[i],
 			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Barrier:         cores[i].barrier,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock

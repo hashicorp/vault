@@ -14,6 +14,7 @@ import (
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -31,7 +32,7 @@ func (c *Core) ensureWrappingKey(ctx context.Context) error {
 		return err
 	}
 
-	var keyParams clusterKeyParams
+	var keyParams certutil.ClusterKeyParams
 
 	if entry == nil {
 		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)

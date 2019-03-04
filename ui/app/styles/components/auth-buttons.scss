@@ -1,0 +1,22 @@
+.auth-button-tile {
+  height: 31px;
+  width: 31px;
+  background: $white;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.auth-button-type-google {
+  position: relative;
+  top: -10px;
+  left: -1.05rem;
+}
+
+.auth-button-type-auth0,
+.auth-button-type-gitlab {
+  position: relative;
+  top: -6px;
+  left: -0.75rem;
+}
+[class*='auth-button-type'] .text {
+  padding-left: $spacing-m;
+}

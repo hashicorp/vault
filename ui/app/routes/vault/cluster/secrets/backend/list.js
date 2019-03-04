@@ -1,11 +1,16 @@
 import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';
+import { getOwner } from '@ember/application';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { inject as service } from '@ember/service';
+import { normalizePath } from 'vault/utils/path-encoding-helpers';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 export default Route.extend({
+  templateName: 'vault/cluster/secrets/backend/list',
+  pathHelp: service('path-help'),
   queryParams: {
     page: {
       refreshModel: true,
@@ -18,25 +23,38 @@ export default Route.extend({
     },
   },
 
-  templateName: 'vault/cluster/secrets/backend/list',
+  secretParam() {
+    let { secret } = this.paramsFor(this.routeName);
+    return secret ? normalizePath(secret) : '';
+  },
+
+  enginePathParam() {
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    return backend;
+  },
 
   beforeModel() {
-    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    let { secret } = this.paramsFor(this.routeName);
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel && backendModel.get('engineType');
+    let owner = getOwner(this);
+    let secret = this.secretParam();
+    let backend = this.enginePathParam();
+    let { tab } = this.paramsFor('vault.cluster.secrets.backend');
+    let secretEngine = this.store.peekRecord('secret-engine', backend);
+    let type = secretEngine && secretEngine.get('engineType');
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    this.store.unloadAll('capabilities');
+    let modelType = this.getModelType(backend, tab);
+    return this.pathHelp.getNewModel(modelType, owner, backend).then(() => {
+      this.store.unloadAll('capabilities');
+    });
   },
 
   getModelType(backend, tab) {
-    let backendModel = this.store.peekRecord('secret-engine', backend);
-    let type = backendModel.get('engineType');
+    let secretEngine = this.store.peekRecord('secret-engine', backend);
+    let type = secretEngine.get('engineType');
     let types = {
       transit: 'transit-key',
       ssh: 'role-ssh',
@@ -44,15 +62,15 @@ export default Route.extend({
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: backendModel.get('modelTypeForKV'),
-      generic: backendModel.get('modelTypeForKV'),
+      kv: secretEngine.get('modelTypeForKV'),
+      generic: secretEngine.get('modelTypeForKV'),
     };
     return types[type];
   },
 
   model(params) {
-    const secret = params.secret ? params.secret : '';
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    const secret = this.secretParam() || '';
+    const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     return hash({
       secret,
@@ -82,7 +100,7 @@ export default Route.extend({
 
   afterModel(model) {
     const { tab } = this.paramsFor(this.routeName);
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    const backend = this.enginePathParam();
     if (!tab || tab !== 'certs') {
       return;
     }
@@ -107,7 +125,7 @@ export default Route.extend({
     let secretParams = this.paramsFor(this.routeName);
     let secret = resolvedModel.secret;
     let model = resolvedModel.secrets;
-    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let backend = this.enginePathParam();
     let backendModel = this.store.peekRecord('secret-engine', backend);
     let has404 = this.get('has404');
     // only clear store cache if this is a new model
@@ -148,8 +166,8 @@ export default Route.extend({
 
   actions: {
     error(error, transition) {
-      let { secret } = this.paramsFor(this.routeName);
-      let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let secret = this.secretParam();
+      let backend = this.enginePathParam();
       let is404 = error.httpStatus === 404;
       let hasModel = this.controllerFor(this.routeName).get('hasModel');
 

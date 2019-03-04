@@ -13,6 +13,7 @@ const (
 	AWSKMS        = "awskms"
 	GCPCKMS       = "gcpckms"
 	AzureKeyVault = "azurekeyvault"
+	Transit       = "transit"
 	Test          = "test-auto"
 
 	// HSMAutoDeprecated is a deprecated seal type prior to 0.9.0.
