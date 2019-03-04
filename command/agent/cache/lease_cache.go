@@ -416,7 +416,14 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 
 		c.logger.Debug("received cache-clear request", "type", req.Type, "namespace", req.Namespace, "value", req.Value)
 
-		if err := c.handleCacheClear(ctx, req.Type, req.Namespace, req.Value); err != nil {
+		in, err := parseClearInput(req)
+		if err != nil {
+			c.logger.Error("unable to parse clear input", "error", err)
+			respondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse clear input: {{err}}", err))
+			return
+		}
+
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			// Default to 500 on error, unless the user provided an invalid type,
 			// which would then be a 400.
 			httpStatus := http.StatusInternalServerError
@@ -431,35 +438,29 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 	})
 }
 
-func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, clearValues ...interface{}) error {
-	if len(clearValues) == 0 {
+func (c *LeaseCache) handleCacheClear(ctx context.Context, in *clearInput) error {
+	if in == nil {
 		return errors.New("no value(s) provided to clear corresponding cache entries")
 	}
 
-	// The value that we want to clear, for most cases, is the last one provided.
-	clearValue, ok := clearValues[len(clearValues)-1].(string)
-	if !ok {
-		return fmt.Errorf("unable to convert %v to type string", clearValue)
-	}
-
-	switch clearType {
+	switch in.ClearType {
 	case "request_path":
 		// For this particular case, we need to ensure that there are 2 provided
 		// indexers for the proper lookup.
-		if len(clearValues) != 2 {
-			return fmt.Errorf("clearing cache by request path requires 2 indexers, got %d", len(clearValues))
+		if in.RequestPath == "" {
+			return errors.New("request path not provided")
 		}
 
 		// The first value provided for this case will be the namespace, but if it's
 		// an empty value we need to overwrite it with "root/" to ensure proper
 		// cache lookup.
-		if clearValues[0].(string) == "" {
-			clearValues[0] = "root/"
+		if in.Namespace == "" {
+			in.Namespace = "root/"
 		}
 
 		// Find all the cached entries which has the given request path and
 		// cancel the contexts of all the respective renewers
-		indexes, err := c.db.GetByPrefix(clearType, clearValues...)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
 		if err != nil {
 			return err
 		}
@@ -468,12 +469,12 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 		}
 
 	case "token":
-		if clearValue == "" {
-			return nil
+		if in.Token == "" {
+			return errors.New("token not provided")
 		}
 
 		// Get the context for the given token and cancel its context
-		index, err := c.db.Get(cachememdb.IndexNameToken, clearValue)
+		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
 		if err != nil {
 			return err
 		}
@@ -485,9 +486,31 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 
 		index.RenewCtxInfo.CancelFunc()
 
-	case "token_accessor", "lease":
+	case "token_accessor":
+		if in.TokenAccessor == "" {
+			return errors.New("token accessor not provided")
+		}
+
 		// Get the cached index and cancel the corresponding renewer context
-		index, err := c.db.Get(clearType, clearValue)
+		index, err := c.db.Get(cachememdb.IndexNameToken, in.TokenAccessor)
+		if err != nil {
+			return err
+		}
+		if index == nil {
+			return nil
+		}
+
+		c.logger.Debug("canceling context of index attached to accessor")
+
+		index.RenewCtxInfo.CancelFunc()
+
+	case "lease":
+		if in.Lease == "" {
+			return errors.New("lease not provided")
+		}
+
+		// Get the cached index and cancel the corresponding renewer context
+		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
 		if err != nil {
 			return err
 		}
@@ -557,14 +580,22 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		if err := c.handleCacheClear(ctx, "token", token); err != nil {
+		in := &clearInput{
+			ClearType: "token",
+			Token:     token,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
 	case path == vaultPathTokenRevokeSelf:
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		if err := c.handleCacheClear(ctx, "token", req.Token); err != nil {
+		in := &clearInput{
+			ClearType: "token",
+			Token:     req.Token,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -582,7 +613,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected accessor in the request body to be string")
 		}
 
-		if err := c.handleCacheClear(ctx, "token_accessor", accessor); err != nil {
+		in := &clearInput{
+			ClearType:     "token_accessor",
+			TokenAccessor: accessor,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -653,7 +688,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		if !ok {
 			return false, fmt.Errorf("expected lease_id the request body to be string")
 		}
-		if err := c.handleCacheClear(ctx, "lease", leaseID); err != nil {
+		in := &clearInput{
+			ClearType: "lease",
+			Lease:     leaseID,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -812,4 +851,45 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	}
 
 	return nil
+}
+
+type clearInput struct {
+	ClearType string
+
+	RequestPath   string
+	Namespace     string
+	Token         string
+	TokenAccessor string
+	Lease         string
+}
+
+func parseClearInput(req *cacheClearRequest) (*clearInput, error) {
+	if req == nil {
+		return nil, errors.New("nil request options provided")
+	}
+
+	if req.Type == "" {
+		return nil, errors.New("no type provided")
+	}
+
+	in := &clearInput{
+		ClearType: req.Type,
+	}
+
+	if req.Namespace != "" {
+		in.Namespace = req.Namespace
+	}
+
+	switch req.Type {
+	case "request_path":
+		in.RequestPath = req.Value
+	case "token":
+		in.Token = req.Value
+	case "token_accessor":
+		in.TokenAccessor = req.Value
+	case "lease":
+		in.Lease = req.Value
+	}
+
+	return in, nil
 }
