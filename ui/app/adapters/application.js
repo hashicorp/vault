@@ -64,6 +64,7 @@ export default DS.RESTAdapter.extend({
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
     let isListRequest = type === 'GET' && options.data && options.data.list && !options.listRetry;
+
     // if we have a control group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
@@ -78,7 +79,13 @@ export default DS.RESTAdapter.extend({
         },
       };
     } else if (isListRequest) {
-      url = `/v1/sys/internal/ui/filtered-path/${intendedUrl.replace(/^\/v1\//, '')}`;
+      type = 'POST';
+      url = '/v1/sys/access/filtered-path';
+      options = {
+        data: {
+          paths: [intendedUrl.replace(/^\/v1\//, '')],
+        },
+      };
     }
 
     let opts = this._preRequest(url, options);
@@ -101,8 +108,7 @@ export default DS.RESTAdapter.extend({
         if (isListRequest && e.httpStatus === 403) {
           // recurse to do a retry but with options.listRetry = true
           // we recurse here instead of calling super so that control groups get checked again
-          opts.listRetry = true;
-          return this.ajax(intendedUrl, type, opts);
+          return this.ajax(intendedUrl, 'GET', { data: { list: true }, listRetry: true });
         }
         throw e;
       });
@@ -125,10 +131,20 @@ export default DS.RESTAdapter.extend({
 
   handleResponse(status, headers, payload, requestData) {
     const returnVal = this._super(...arguments);
+    let list;
     // ember data errors don't have the status code, so we add it here
     if (returnVal instanceof DS.AdapterError) {
       set(returnVal, 'httpStatus', status);
       set(returnVal, 'path', requestData.url);
+    }
+    if (requestData.url === '/v1/sys/access/filtered-path') {
+      list = Object.values(returnVal.data.paths)[0];
+      returnVal.data.keys = list;
+      if (!list) {
+        const error = new DS.AdapterError();
+        set(error, 'httpStatus', 404);
+        throw error;
+      }
     }
     return returnVal;
   },

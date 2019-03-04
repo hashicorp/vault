@@ -6,12 +6,8 @@ export default ApplicationAdapater.extend({
     return type;
   },
 
-  urlForQuery() {
-    return this._super(...arguments) + '?list=true';
-  },
-
   query(store, type) {
-    return this.ajax(this.buildURL(type.modelName, null, null, 'query'), 'GET');
+    return this.ajax(this.buildURL(type.modelName, null, null, 'query'), 'GET', { data: { list: true } });
   },
 
   buildURL(modelName, id, snapshot, requestType, query) {
