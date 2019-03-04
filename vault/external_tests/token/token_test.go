@@ -35,8 +35,8 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret.Auth.Orphan {
-		t.Fatalf("failed to set orphan as true")
+	if !secret.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true, got: %#v", secret.Auth)
 	}
 }
 

@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/vault/seal/awskms"
 )
 
-func configureAWSKMSSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
+func configureAWSKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
 	kms := awskms.NewSeal(logger)
-	kmsInfo, err := kms.SetConfig(config.Seal.Config)
+	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -21,7 +21,7 @@ func configureAWSKMSSeal(config *server.Config, infoKeys *[]string, info *map[st
 	autoseal := vault.NewAutoSeal(kms)
 	if kmsInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "AWS KMS Region", "AWS KMS KeyID")
-		(*info)["Seal Type"] = config.Seal.Type
+		(*info)["Seal Type"] = configSeal.Type
 		(*info)["AWS KMS Region"] = kmsInfo["region"]
 		(*info)["AWS KMS KeyID"] = kmsInfo["kms_key_id"]
 		if endpoint, ok := kmsInfo["endpoint"]; ok {

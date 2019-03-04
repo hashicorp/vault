@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -2800,39 +2801,19 @@ func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-// hasMountAccess returns true if path has a non-deny capability in acl,
-// or if there exist any non-deny capability beneath that path in acl.
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
-	return hasAccess(ctx, acl, path) || hasAccessChildren(ctx, acl, path)
-}
-
-// hasAccess returns true if path has a non-deny capability in acl.
-func hasAccess(ctx context.Context, acl *ACL, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return false
 	}
 
-	req := &logical.Request{
-		Path: ns.TrimmedPath(path),
-		// doesn't matter, but use List to trigger fallback behavior so we can
-		// model real behavior
-		Operation: logical.ListOperation,
-	}
-
-	res := acl.AllowOperation(ctx, req, true)
-	if res.IsRoot {
+	// If an earlier policy is giving us access to the mount path then we can do
+	// a fast return.
+	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
+	if !strutil.StrListContains(capabilities, DenyCapability) {
 		return true
 	}
-	if res.CapabilitiesBitmap&DenyCapabilityInt > 0 {
-		return false
-	}
-	return res.CapabilitiesBitmap > 0
-}
 
-// hasAccessChildren returns true if there exist any non-deny capability
-// beneath that path in acl.
-func hasAccessChildren(ctx context.Context, acl *ACL, path string) bool {
 	var aclCapabilitiesGiven bool
 	walkFn := func(s string, v interface{}) bool {
 		if v == nil {
@@ -3110,85 +3091,6 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	resp.Data["glob_paths"] = glob
 
 	return resp, nil
-}
-
-func (b *SystemBackend) pathAccessFilteredPath(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	paths := d.Get("paths").([]string)
-	if len(paths) == 0 {
-		return logical.ErrorResponse("paths not set"), logical.ErrInvalidRequest
-	}
-
-	// Load the ACL policies so we can walk the prefix for this mount
-	acl, te, entity, _, err := b.Core.fetchACLTokenEntryAndEntity(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	if entity != nil && entity.Disabled {
-		b.logger.Warn("permission denied as the entity on the token is disabled")
-		return nil, logical.ErrPermissionDenied
-	}
-	if te != nil && te.EntityID != "" && entity == nil {
-		b.logger.Warn("permission denied as the entity on the token is invalid")
-		return nil, logical.ErrPermissionDenied
-	}
-
-	allowed := map[string][]string{}
-
-	for _, path := range paths {
-		filtered, err := b.filterPath(ctx, req, acl, sanitizeMountPath(path))
-		if err != nil {
-			return nil, err
-		}
-		allowed[path] = filtered
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"paths": allowed,
-		},
-	}, nil
-}
-
-func (b *SystemBackend) filterPath(ctx context.Context, req *logical.Request, acl *ACL, path string) ([]string, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if !hasMountAccess(ctx, acl, ns.Path+path) {
-		return nil, nil
-	}
-
-	listReq := *req
-	listReq.Operation = logical.ListOperation
-	listReq.Path = path
-	resp, _, _, err := b.Core.router.routeCommon(ctx, &listReq, false)
-	if err != nil {
-		return nil, err
-	}
-
-	keys, ok := resp.Data["keys"]
-	if !ok {
-		return nil, nil
-	}
-
-	unfiltered := keys.([]string)
-
-	// Return early if we have list access to the path.
-	if acl.AllowOperation(ctx, &listReq, false).Allowed {
-		return unfiltered, nil
-	}
-
-	filtered := make([]string, 0, len(unfiltered))
-	for _, key := range unfiltered {
-		isSubTree := strings.HasSuffix(key, "/")
-		fullPath := ns.Path + filepath.Join(path, key)
-		if hasAccess(ctx, acl, fullPath) || (isSubTree && hasAccessChildren(ctx, acl, fullPath)) {
-			filtered = append(filtered, key)
-		}
-	}
-	return filtered, nil
 }
 
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -3992,10 +3894,6 @@ This path responds to the following HTTP methods.
 		"Information about a token's resultant ACL. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
-	"access-filtered-path": {
-		"Elements under the specified paths which are either accessible, or whose subtree contains accessible elements",
-    "",
-  },
 	"metrics": {
 		"Export the metrics aggregated for telemetry purpose.",
 		"",
