@@ -270,13 +270,6 @@ func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
 }
 
-func (d *defaultSeal) GetRecoveryKey(ctx context.Context) ([]byte, error) {
-	if d.PretendToAllowRecoveryKeys {
-		return d.PretendRecoveryKey, nil
-	}
-	return nil, fmt.Errorf("stored keys are not supported")
-}
-
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
 	// The type, for sanity checking
