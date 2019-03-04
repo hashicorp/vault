@@ -40,9 +40,8 @@ func testCases() (tc []*Item) {
 func TestNewTimeQueue(t *testing.T) {
         tq := NewTimeQueue()
 
-        tqi := tq.(*TimeQueue)
-        if len(tqi.data) != len(tqi.dataMap) || len(tqi.data) != 0 {
-                t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(tqi.data), len(tqi.dataMap))
+        if len(tq.data) != len(tq.dataMap) || len(tq.data) != 0 {
+                t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(tq.data), len(tq.dataMap))
         }
 
         if tq.Len() != 0 {
