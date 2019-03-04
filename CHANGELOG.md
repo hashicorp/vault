@@ -24,6 +24,7 @@ BUG FIXES:
    when using a local mount.
  * agent/caching: Do not trigger cache update when renewal of the cached lease
    is triggered. [[GH-6303]](https://github.com/hashicorp/vault/pull/6303)
+ * auth/token: Fix issue where empty values for token role update call were ignored. [[GH-6314]](https://github.com/hashicorp/vault/pull/6314)
 
 ## 1.1.0-beta1 (February 20th, 2019)
 
