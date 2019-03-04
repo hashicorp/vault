@@ -1043,6 +1043,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				}
 				auth.GroupAliases = validAliases
 			}
+
+			// Login requests always generates orphan tokens
+			auth.Orphan = true
 		}
 
 		// Determine the source of the login
