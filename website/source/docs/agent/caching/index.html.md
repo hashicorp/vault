@@ -18,16 +18,15 @@ managed by the agent.
 
 ## Caching and Renewals
 
-Caching and renewals are managed by the agent only under these specific scenarios.
+Response caching and renewals are managed by the agent only under these
+specific scenarios.
 
-1. Token creation requests are made through the agent and not directly to the
-   Vault server. This means that any login operations performed using various
-   auth methods and invoking the token creation endpoints of the token auth
-   method via the agent will result in the authentication response getting
-   cached by the agent. Note that the child tokens will only be cached by the
-   agent if the parent token is already being managed by the agent (the
-   exception to this is when an agent unmanaged token is used to create an
-   orphan token; the orphan token will be cached and managed by the agent).
+1. Token creation requests are made through the agent. This means that any
+   login operations performed using various auth methods and invoking the token
+   creation endpoints of the token auth method via the agent will result in the
+   response getting cached by the agent. Responses containing new tokens will
+   be cached by the agent only if the parent token is already being managed by
+   the agent or if the new token is an orphan token.
 
 2. Leased secret creation requests are made through the agent using tokens that
    are already managed by the agent. This means that any dynamic credentials
