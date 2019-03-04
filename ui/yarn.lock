@@ -5350,10 +5350,10 @@ ember-export-application-global@^2.0.0:
   dependencies:
     ember-cli-babel "^6.0.0-beta.7"
 
-ember-fetch@~6.2.0:
-  version "6.2.3"
-  resolved "https://registry.yarnpkg.com/ember-fetch/-/ember-fetch-6.2.3.tgz#f46c39111594e63143139b9e09cba5533a0bd99a"
-  integrity sha512-8/KzGFppE6jsSCg6llv1P9MEQRIEM3Ezy/XBI+8ydyngd6Hb8UHzaUObkTfvS/lHhB2on/jm6T0YsutUrbVZzw==
+ember-fetch@~6.4.0:
+  version "6.4.0"
+  resolved "https://registry.yarnpkg.com/ember-fetch/-/ember-fetch-6.4.0.tgz#806b2acfbda07f3b0dd48a9fcdbc575c5519611d"
+  integrity sha512-/GtJWQiUAAOX2HMGuLrWQMNWO9YRNH9+AiMzZYc5PrTHKdv+Ib5fciysz0+e97Dj9vyvF2mQa49mrosAPW9ziQ==
   dependencies:
     abortcontroller-polyfill "^1.2.1"
     broccoli-concat "^3.2.2"
@@ -5363,6 +5363,7 @@ ember-fetch@~6.2.0:
     broccoli-stew "^2.0.0"
     broccoli-templater "^2.0.1"
     calculate-cache-key-for-tree "^1.1.0"
+    caniuse-api "^3.0.0"
     ember-cli-babel "^6.8.2"
     node-fetch "^2.3.0"
     whatwg-fetch "^3.0.0"
