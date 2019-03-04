@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/vault/seal/transit"
 )
 
-func configureTransitSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
+func configureTransitSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
 	transitSeal := transit.NewSeal(logger)
-	sealInfo, err := transitSeal.SetConfig(config.Seal.Config)
+	sealInfo, err := transitSeal.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -21,7 +21,7 @@ func configureTransitSeal(config *server.Config, infoKeys *[]string, info *map[s
 	autoseal := vault.NewAutoSeal(transitSeal)
 	if sealInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "Transit Address", "Transit Mount Path", "Transit Key Name")
-		(*info)["Seal Type"] = config.Seal.Type
+		(*info)["Seal Type"] = configSeal.Type
 		(*info)["Transit Address"] = sealInfo["address"]
 		(*info)["Transit Mount Path"] = sealInfo["mount_path"]
 		(*info)["Transit Key Name"] = sealInfo["key_name"]

@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/vault/seal/gcpckms"
 )
 
-func configureGCPCKMSSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
+func configureGCPCKMSSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
 	kms := gcpckms.NewSeal(logger)
-	kmsInfo, err := kms.SetConfig(config.Seal.Config)
+	kmsInfo, err := kms.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -21,7 +21,7 @@ func configureGCPCKMSSeal(config *server.Config, infoKeys *[]string, info *map[s
 	autoseal := vault.NewAutoSeal(kms)
 	if kmsInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "GCP KMS Project", "GCP KMS Region", "GCP KMS Key Ring", "GCP KMS Crypto Key")
-		(*info)["Seal Type"] = config.Seal.Type
+		(*info)["Seal Type"] = configSeal.Type
 		(*info)["GCP KMS Project"] = kmsInfo["project"]
 		(*info)["GCP KMS Region"] = kmsInfo["region"]
 		(*info)["GCP KMS Key Ring"] = kmsInfo["key_ring"]
