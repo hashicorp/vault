@@ -1,9 +1,10 @@
+// +build !windows
+
 package transit
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -127,20 +128,19 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("err: %s", err)
 	}
 
-	var tempDir string
-	// Docker for Mac does not play nice with TempDir
-	if runtime.GOOS == "darwin" {
-		uniqueTempDir, err := uuid.GenerateUUID()
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
-		tempDir = path.Join("/tmp", uniqueTempDir)
-	} else {
-		tempDir, err = ioutil.TempDir("", "transit-autoseal-test")
-		if err != nil {
-			t.Fatal(err)
-		}
+	// docker has some limitations with temp folders, trying
+	// to workaround them
+	tempDir := "/tmp"
+	switch {
+	case runtime.GOOS == "darwin":
+	case os.Getenv("TMPDIR") != "":
+		tempDir = os.Getenv("TMPDIR")
 	}
+	uniqueTempDir, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	tempDir = path.Join(tempDir, uniqueTempDir)
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
