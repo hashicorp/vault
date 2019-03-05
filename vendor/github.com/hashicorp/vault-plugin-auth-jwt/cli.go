@@ -16,7 +16,7 @@ import (
 )
 
 const defaultMount = "oidc"
-const defaultPort = "8300"
+const defaultPort = "8250"
 
 var errorRegex = regexp.MustCompile(`(?s)Errors:.*\* *(.*)`)
 
@@ -202,7 +202,7 @@ Configuration:
       Vault role of type "OIDC" to use for authentication.
 
   port=<string>
-      Optional localhost port to use for OIDC callback (default: 8300).
+      Optional localhost port to use for OIDC callback (default: 8250).
 `
 
 	return strings.TrimSpace(help)
