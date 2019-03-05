@@ -87,7 +87,7 @@ or IAM role to assume`,
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Deprecated; use policy_document instead. IAM policy document",
-				Deprecated: true,
+				Deprecated:  true,
 			},
 		},
 

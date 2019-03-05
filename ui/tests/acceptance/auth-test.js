@@ -64,7 +64,7 @@ module('Acceptance | auth', function(hooks) {
       if (backend.type === 'github') {
         await component.token('token');
       }
-      if (backend.type === 'jwt') {
+      if (backend.type === 'jwt' || backend.type === 'oidc') {
         await jwtComponent.jwt('1');
         await jwtComponent.role('test');
       }
@@ -78,7 +78,7 @@ module('Acceptance | auth', function(hooks) {
         );
       } else if (backend.type === 'github') {
         assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
-      } else if (backend.type === 'jwt') {
+      } else if (backend.type === 'jwt' || backend.type === 'oidc') {
         assert.ok(Object.keys(body).includes('jwt'), `${backend.type} includes jwt`);
         assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
       } else {

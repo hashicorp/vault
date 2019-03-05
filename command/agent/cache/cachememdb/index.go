@@ -2,12 +2,6 @@ package cachememdb
 
 import "context"
 
-type ContextInfo struct {
-	Ctx        context.Context
-	CancelFunc context.CancelFunc
-	DoneCh     chan struct{}
-}
-
 // Index holds the response to be cached along with multiple other values that
 // serve as pointers to refer back to this index.
 type Index struct {
@@ -94,4 +88,21 @@ func validIndexName(indexName string) bool {
 		return false
 	}
 	return true
+}
+
+type ContextInfo struct {
+	Ctx        context.Context
+	CancelFunc context.CancelFunc
+	DoneCh     chan struct{}
+}
+
+func NewContextInfo(ctx context.Context) *ContextInfo {
+	if ctx == nil {
+		return nil
+	}
+
+	ctxInfo := new(ContextInfo)
+	ctxInfo.Ctx, ctxInfo.CancelFunc = context.WithCancel(ctx)
+	ctxInfo.DoneCh = make(chan struct{})
+	return ctxInfo
 }

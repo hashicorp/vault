@@ -20,15 +20,15 @@ const (
 )
 
 type MetricsHelper struct {
-	inMemSink	*metrics.InmemSink
+	inMemSink         *metrics.InmemSink
 	PrometheusEnabled bool
 }
 
-func NewMetricsHelper(inMem *metrics.InmemSink, enablePrometheus bool) *MetricsHelper{
+func NewMetricsHelper(inMem *metrics.InmemSink, enablePrometheus bool) *MetricsHelper {
 	return &MetricsHelper{inMem, enablePrometheus}
 }
 
-func FormatFromRequest(req *logical.Request) (string) {
+func FormatFromRequest(req *logical.Request) string {
 	acceptHeaders := req.Headers["Accept"]
 	if len(acceptHeaders) > 0 {
 		acceptHeader := acceptHeaders[0]
@@ -86,7 +86,7 @@ func (m *MetricsHelper) PrometheusResponse() (*logical.Response, error) {
 }
 
 func (m *MetricsHelper) GenericResponse() (*logical.Response, error) {
-	summary, err := m.inMemSink.DisplayMetrics(nil,nil)
+	summary, err := m.inMemSink.DisplayMetrics(nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while fetching the in-memory metrics: %s", err)
 	}

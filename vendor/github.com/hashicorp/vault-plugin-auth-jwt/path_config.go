@@ -173,15 +173,6 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 			}
 		}
 
-	case len(config.JWTSupportedAlgs) != 0:
-		for _, a := range config.JWTSupportedAlgs {
-			switch a {
-			case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
-			default:
-				return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
-			}
-		}
-
 	default:
 		return nil, errors.New("unknown condition")
 	}

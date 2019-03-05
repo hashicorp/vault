@@ -76,7 +76,7 @@ func TestCache_ComputeIndexID(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_EmptyToken(t *testing.T) {
+func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
 		&SendResponse{
 			Response: &api.Response{
@@ -106,7 +106,7 @@ func TestCache_LeaseCache_EmptyToken(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendCacheable(t *testing.T) {
+func TestLeaseCache_SendCacheable(t *testing.T) {
 	// Emulate 2 responses from the api proxy. One returns a new token and the
 	// other returns a lease.
 	responses := []*SendResponse{
@@ -114,27 +114,30 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 			Response: &api.Response{
 				Response: &http.Response{
 					StatusCode: http.StatusCreated,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "invalid", "auth": {"client_token": "testtoken", "renewable": true}}`)),
+					Body:       ioutil.NopCloser(strings.NewReader(`{"auth": {"client_token": "testtoken", "renewable": true}}`)),
 				},
 			},
-			ResponseBody: []byte(`{"value": "invalid", "auth": {"client_token": "testtoken", "renewable": true}}`),
+			ResponseBody: []byte(`{"auth": {"client_token": "testtoken", "renewable": true}}`),
 		},
 		&SendResponse{
 			Response: &api.Response{
 				Response: &http.Response{
 					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "output", "lease_id": "foo", "renewable": true}`)),
+					Body:       ioutil.NopCloser(strings.NewReader(`{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`)),
 				},
 			},
-			ResponseBody: []byte(`{"value": "output", "lease_id": "foo", "renewable": true}`),
+			ResponseBody: []byte(`{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
 		},
 	}
 	lc := testNewLeaseCache(t, responses)
+	// Register an token so that the token and lease requests are cached
+	lc.RegisterAutoAuthToken("autoauthtoken")
 
 	// Make a request. A response with a new token is returned to the lease
 	// cache and that will be cached.
 	urlPath := "http://example.com/v1/sample/api"
 	sendReq := &SendRequest{
+		Token:   "autoauthtoken",
 		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
 	}
 	resp, err := lc.Send(context.Background(), sendReq)
@@ -147,6 +150,7 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 
 	// Send the same request again to get the cached response
 	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
 		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
 	}
 	resp, err = lc.Send(context.Background(), sendReq)
@@ -158,10 +162,9 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 	}
 
 	// Modify the request a little bit to ensure the second response is
-	// returned to the lease cache. But make sure that the token in the request
-	// is valid.
+	// returned to the lease cache.
 	sendReq = &SendRequest{
-		Token:   "testtoken",
+		Token:   "autoauthtoken",
 		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
 	}
 	resp, err = lc.Send(context.Background(), sendReq)
@@ -175,7 +178,7 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 	// Make the same request again and ensure that the same reponse is returned
 	// again.
 	sendReq = &SendRequest{
-		Token:   "testtoken",
+		Token:   "autoauthtoken",
 		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
 	}
 	resp, err = lc.Send(context.Background(), sendReq)
@@ -187,7 +190,7 @@ func TestCache_LeaseCache_SendCacheable(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendNonCacheable(t *testing.T) {
+func TesteaseCache_SendNonCacheable(t *testing.T) {
 	responses := []*SendResponse{
 		&SendResponse{
 			Response: &api.Response{
@@ -236,7 +239,7 @@ func TestCache_LeaseCache_SendNonCacheable(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
+func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	// Create the cache
 	responses := []*SendResponse{
 		&SendResponse{
@@ -291,7 +294,7 @@ func TestCache_LeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	}
 }
 
-func TestCache_LeaseCache_HandleCacheClear(t *testing.T) {
+func TestLeaseCache_HandleCacheClear(t *testing.T) {
 	lc := testNewLeaseCache(t, nil)
 
 	handler := lc.HandleCacheClear(context.Background())

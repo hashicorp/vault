@@ -137,7 +137,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Required for all types]
 				Type of key used to login to hosts. It can be either 'otp', 'dynamic' or 'ca'.
 				'otp' type requires agent to be installed in remote hosts.`,
-				AllowedValues: []interface{}{"otp", "dynamic","ca"},
+				AllowedValues: []interface{}{"otp", "dynamic", "ca"},
 				DisplayValue:  "ca",
 			},
 			"key_bits": &framework.FieldSchema{
@@ -247,7 +247,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'user'.
 				`,
-				Default:     false,
+				Default: false,
 			},
 			"allow_host_certificates": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -255,7 +255,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'host'.
 				`,
-				Default:     false,
+				Default: false,
 			},
 			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,

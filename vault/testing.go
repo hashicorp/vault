@@ -947,6 +947,7 @@ type TestClusterCore struct {
 	ServerKeyPEM      []byte
 	TLSConfig         *tls.Config
 	UnderlyingStorage physical.Backend
+	Barrier           SecurityBarrier
 }
 
 type TestClusterOptions struct {
@@ -1541,6 +1542,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Server:          servers[i],
 			TLSConfig:       tlsConfigs[i],
 			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Barrier:         cores[i].barrier,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
