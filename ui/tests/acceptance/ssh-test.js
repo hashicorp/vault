@@ -1,4 +1,4 @@
-import { click, fillIn, findAll, currentURL, find, settled } from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, find, settled, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
@@ -76,6 +76,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
     assert.equal(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
     for (let role of ROLES) {
+      await waitFor('[ data-test-secret-create]');
       // create a role
       await click('[ data-test-secret-create]');
       assert.ok(
@@ -89,6 +90,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // save the role
       await click('[data-test-role-ssh-create]');
+      await settled();
       assert.equal(
         currentURL(),
         `/vault/secrets/${sshPath}/show/${role.name}`,
@@ -101,6 +103,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // generate creds
       await click('[data-test-secret-generate]');
+      await settled();
       role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button
@@ -111,6 +114,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       );
 
       await click('[data-test-secret-generate-cancel]');
+      await settled();
       assert.equal(
         currentURL(),
         `/vault/secrets/${sshPath}/list`,
@@ -123,6 +127,8 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       //and delete
       await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
+      // wait for capabilities check
+      await settled();
       await click(`[data-test-ssh-role-delete="${role.name}"] button`);
       await click(`[data-test-confirm-button]`);
 

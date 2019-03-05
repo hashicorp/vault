@@ -1,4 +1,4 @@
-import { click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
+import { settled, click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -56,6 +56,7 @@ module('Acceptance | tools', function(hooks) {
     await click('[data-test-tools-action-link="lookup"]');
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     let rows = document.querySelectorAll('[data-test-tools="token-lookup-row"]');
     assert.dom(rows[0]).hasText(/Creation path/, 'show creation path row');
     assert.dom(rows[1]).hasText(/Creation time/, 'show creation time row');
@@ -65,6 +66,7 @@ module('Acceptance | tools', function(hooks) {
     await click('[data-test-tools-action-link="rewrap"]');
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     assert.ok(find('[data-test-tools-input="rewrapped-token"]').value, 'has a new re-wrapped token');
     assert.notEqual(
       find('[data-test-tools-input="rewrapped-token"]').value,
@@ -77,6 +79,7 @@ module('Acceptance | tools', function(hooks) {
     await click('[data-test-tools-action-link="unwrap"]');
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
+    await settled();
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       JSON.parse(DATA_TO_WRAP),
@@ -90,6 +93,7 @@ module('Acceptance | tools', function(hooks) {
     await click('[data-test-tools-action-link="random"]');
     assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
     await click('[data-test-tools-submit]');
+    await settled();
     assert.ok(
       find('[data-test-tools-input="random-bytes"]').value,
       'shows the returned value of random bytes'
@@ -100,6 +104,7 @@ module('Acceptance | tools', function(hooks) {
     await fillIn('[data-test-tools-input="hash-input"]', 'foo');
     await click('[data-test-tools-b64-toggle="input"]');
     await click('[data-test-tools-submit]');
+    await settled();
     assert
       .dom('[data-test-tools-input="sum"]')
       .hasValue('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
@@ -107,6 +112,7 @@ module('Acceptance | tools', function(hooks) {
     await fillIn('[data-test-tools-input="hash-input"]', 'e2RhdGE6ImZvbyJ9');
 
     await click('[data-test-tools-submit]');
+    await settled();
     assert
       .dom('[data-test-tools-input="sum"]')
       .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
