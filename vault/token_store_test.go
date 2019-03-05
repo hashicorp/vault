@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -2710,8 +2712,12 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl":    int64(0),
 		"renewable":           true,
 		"token_type":          "default-service",
-		"bound_cidrs":         []string{"0.0.0.0/0"},
 	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2757,8 +2763,12 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"explicit_max_ttl":    int64(0),
 		"renewable":           false,
 		"token_type":          "default-service",
-		"bound_cidrs":         []string{"0.0.0.0/0"},
 	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2796,8 +2806,12 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"period":              int64(0),
 		"renewable":           false,
 		"token_type":          "default-service",
-		"bound_cidrs":         []string{"0.0.0.0/0"},
 	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)

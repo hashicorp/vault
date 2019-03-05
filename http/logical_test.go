@@ -217,6 +217,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"renewable":      false,
 			"entity_id":      "",
 			"token_type":     "service",
+			"orphan":         false,
 		},
 		"warnings": nilWarnings,
 	}

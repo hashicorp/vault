@@ -278,11 +278,6 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 					t.Fatal("secret file exists but was supposed to be removed")
 				}
 
-				client.SetToken(string(val))
-				_, err := client.Auth().Token().LookupSelf()
-				if err != nil {
-					t.Fatal(err)
-				}
 				return string(val)
 			}
 			time.Sleep(250 * time.Millisecond)
@@ -302,6 +297,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
+	// Passing a non-nil inmemsink tells the agent to use the auto-auth token
 	mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 	server := &http.Server{
 		Handler:           mux,
@@ -324,15 +320,22 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// Wait for listeners to come up
 	time.Sleep(2 * time.Second)
 
-	resp, err = testClient.Logical().Read("auth/token/lookup-self")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatalf("failed to use the auto-auth token to perform lookup-self")
+	// This block tests that no token on the client is detected by the agent
+	// and the auto-auth token is used
+	{
+		// Empty the token in the client to ensure that auto-auth token is used
+		testClient.SetToken("")
+
+		resp, err = testClient.Logical().Read("auth/token/lookup-self")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatalf("failed to use the auto-auth token to perform lookup-self")
+		}
 	}
 
-	// The following block tests lease creation caching using the auto-auth token.
+	// This block tests lease creation caching using the auto-auth token.
 	{
 		resp, err = testClient.Logical().Read("kv/foo")
 		if err != nil {
@@ -356,8 +359,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		}
 	}
 
-	// The following block tests auth token creation caching (child, non-orphan
-	// tokens) using the auto-auth token.
+	// This block tests auth token creation caching (child, non-orphan tokens)
+	// using the auto-auth token.
 	{
 		resp, err = testClient.Logical().Write("auth/token/create", nil)
 		if err != nil {
@@ -376,6 +379,21 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 		if origReqID != cacheReqID {
 			t.Fatalf("request ID mismatch, expected second request to be a cached response: %s != %s", origReqID, cacheReqID)
+		}
+	}
+
+	// This blocks tests that despite being allowed to use auto-auth token, the
+	// token on the request will be prioritized.
+	{
+		// Empty the token in the client to ensure that auto-auth token is used
+		testClient.SetToken(client.Token())
+
+		resp, err = testClient.Logical().Read("auth/token/lookup-self")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Data["id"] != client.Token() {
+			t.Fatalf("failed to use the cluster client token to perform lookup-self")
 		}
 	}
 }

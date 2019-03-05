@@ -25,6 +25,8 @@ BUG FIXES:
  * agent/caching: Do not trigger cache update when renewal of the cached lease
    is triggered. [[GH-6303]](https://github.com/hashicorp/vault/pull/6303)
  * auth/token: Fix issue where empty values for token role update call were ignored. [[GH-6314]](https://github.com/hashicorp/vault/pull/6314)
+ * ui: fix an issue where the policies tab was erroneously hidden [GH-6301]
+ * ui: fix encoding issues with kv interfaces [GH-6294]
 
 ## 1.1.0-beta1 (February 20th, 2019)
 
