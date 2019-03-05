@@ -1630,7 +1630,7 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			c.metricsMutex.Unlock()
 
 		case <-writeTimer:
-			if couldForward(c) {
+			if c.perfStandby {
 				syncCounter(c)
 			} else {
 				err := c.saveCurrentRequestCounters(context.Background(), time.Now())

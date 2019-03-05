@@ -10,7 +10,11 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-const requestCounterDatePathFormat = "2006/01"
+const (
+	requestCounterDatePathFormat = "2006/01"
+	countersPath                 = systemBarrierPrefix + "counters"
+	requestCountersRelPath       = "counters/requests/"
+)
 
 type counters struct {
 	// requests counts requests seen by Vault this month; does not include requests
@@ -47,7 +51,7 @@ type DatedRequestCounter struct {
 // loadAllRequestCounters returns all request counters found in storage,
 // ordered by time (oldest first.)
 func (c *Core) loadAllRequestCounters(ctx context.Context, now time.Time) ([]DatedRequestCounter, error) {
-	view := c.systemBarrierView.SubView("counters/requests/")
+	view := c.systemBarrierView.SubView(requestCountersRelPath)
 
 	datepaths, err := view.List(ctx, "")
 	if err != nil {
@@ -112,7 +116,7 @@ func (c *Core) loadCurrentRequestCounters(ctx context.Context, now time.Time) er
 // If nothing is found at that path, that isn't an error: a reference to a zero
 // RequestCounter is returned.
 func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*RequestCounter, error) {
-	view := c.systemBarrierView.SubView("counters/requests/")
+	view := c.systemBarrierView.SubView(requestCountersRelPath)
 
 	out, err := view.Get(ctx, datepath)
 	if err != nil {
@@ -136,7 +140,7 @@ func (c *Core) loadRequestCounters(ctx context.Context, datepath string) (*Reque
 // we've entered a new month.
 // now should be the current time; it is a parameter to facilitate testing.
 func (c *Core) saveCurrentRequestCounters(ctx context.Context, now time.Time) error {
-	view := c.systemBarrierView.SubView("counters/requests/")
+	view := c.systemBarrierView.SubView(requestCountersRelPath)
 	requests := atomic.LoadUint64(c.counters.requests)
 	curDatePath := now.Format(requestCounterDatePathFormat)
 

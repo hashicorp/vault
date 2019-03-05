@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -537,6 +538,7 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 			return forward(ctx, c, req)
 		}
 	}
+	atomic.AddUint64(c.counters.requests, 1)
 	return resp, err
 }
 
