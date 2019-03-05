@@ -60,7 +60,6 @@ FEATURES:
    login may be initiatated from the Vault UI or through the `vault login` command.
  * **ACL Path Wildcard**: ACL paths can now use the `+` character to enable wild card 
    matching for a single directory in the path definition.
->>>>>>> opensource-master
 
 IMPROVEMENTS:
 
