@@ -1,5 +1,6 @@
 import { text, triggerable, clickable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
+import { settled } from '@ember/test-helpers';
 
 import keys from 'vault/lib/keycodes';
 
@@ -44,6 +45,7 @@ export default {
     for (let command of toExecute) {
       await this.consoleInput(command);
       await this.enter();
+      await settled();
     }
   },
 };

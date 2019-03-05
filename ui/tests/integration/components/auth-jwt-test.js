@@ -156,6 +156,7 @@ module('Integration | Component | auth jwt', function(hooks) {
     await renderIt(this);
     await settled();
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     await settled();
     assert.notOk(component.jwtPresent, 'does not show jwt input for OIDC type login');
@@ -170,6 +171,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   test('oidc: it calls window.open popup window on login', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     component.login();
 
@@ -193,6 +195,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   test('oidc: it calls error handler when popup is closed', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     component.login();
 
@@ -207,6 +210,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   test('oidc: storage event fires with wrong key', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     component.login();
     later(async () => {
@@ -220,6 +224,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   test('oidc: storage event fires with correct key, wrong params', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     component.login();
     later(async () => {
@@ -234,6 +239,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   test('oidc: storage event fires with correct key, correct params', async function(assert) {
     await renderIt(this);
     this.set('selectedAuthPath', 'foo');
+    await settled();
     await component.role('test');
     component.login();
     later(async () => {

@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
@@ -8,8 +8,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | engine/disable', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   test('disable engine', async function(assert) {
@@ -22,9 +22,12 @@ module('Acceptance | engine/disable', function(hooks) {
     await backendsPage.visit();
     let row = backendsPage.rows.filterBy('path', `${enginePath}/`)[0];
     await row.menu();
+    // wait for capabilities check
+    await settled();
     await backendsPage.disableButton();
     await backendsPage.confirmDisable();
 
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
 
     assert.equal(

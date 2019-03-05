@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import { settled } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { later } from '@ember/runloop';
 import { setupApplicationTest } from 'ember-qunit';
@@ -11,19 +12,17 @@ const consoleComponent = create(consoleClass);
 module('Acceptance | console', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   test("refresh reloads the current route's data", async function(assert) {
     await enginesPage.visit();
+    await settled();
     let numEngines = enginesPage.rows.length;
     await consoleComponent.toggle();
     let now = Date.now();
-    for (let num of [1, 2, 3]) {
-      let inputString = `write sys/mounts/${now + num} type=kv`;
-      await consoleComponent.runCommands(inputString);
-    }
+    await consoleComponent.runCommands([1, 2, 3].map(num => `write sys/mounts/${now + num} type=kv`));
     await consoleComponent.runCommands('refresh');
     assert.equal(enginesPage.rows.length, numEngines + 3, 'new engines were added to the page');
   });
@@ -71,7 +70,6 @@ module('Acceptance | console', function(hooks) {
   });
 
   test('boolean output is correctly formatted', async function(assert) {
-    await consoleComponent.toggle();
     await consoleComponent.runCommands('read -field=orphan /auth/token/lookup-self');
 
     // have to wrap in a later so that we can wait for the CSS transition to finish
