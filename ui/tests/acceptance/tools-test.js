@@ -9,8 +9,8 @@ import logout from 'vault/tests/pages/logout';
 module('Acceptance | tools', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   hooks.afterEach(function() {
@@ -41,6 +41,7 @@ module('Acceptance | tools', function(hooks) {
   test('tools functionality', async function(assert) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
+    await settled();
     assert.equal(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach(action => {
       assert.ok(find(`[data-test-tools-action-link="${action}"]`), `${action} link renders`);

@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { settled, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
@@ -23,6 +23,7 @@ module('Acceptance | settings/configure/secrets/pki/urls', function(hooks) {
       .input('foo')
       .change();
     await page.form.submit();
+    await settled();
 
     assert.ok(page.form.hasError, 'shows error on invalid input');
 

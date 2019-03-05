@@ -59,6 +59,7 @@ let generateTransitKeys = async () => {
   ];
 
   for (let key of keys) {
+    await settled();
     await click('[data-test-secret-create]');
     await fillIn('[data-test-transit-key-name]', key.name);
     await fillIn('[data-test-transit-key-type]', key.type);
@@ -72,11 +73,12 @@ let generateTransitKeys = async () => {
       await click('[data-test-transit-key-convergent-encryption]');
     }
     await click('[data-test-transit-key-create]');
+    await settled();
 
     // link back to the list
     await click('[data-test-secret-root-link]');
+    await settled();
   }
-  await settled();
   return keys;
 };
 
@@ -203,7 +205,9 @@ const testEncryption = async (assert, keyName) => {
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
+    await settled();
     await click('[data-test-button-encrypt]');
+    await settled();
     if (testCase.assertAfterEncrypt) {
       testCase.assertAfterEncrypt(keyName);
     }
@@ -211,7 +215,9 @@ const testEncryption = async (assert, keyName) => {
     if (testCase.assertBeforeDecrypt) {
       testCase.assertBeforeDecrypt(keyName);
     }
+    await settled();
     await click('[data-test-button-decrypt]');
+    await settled();
 
     if (testCase.assertAfterDecrypt) {
       if (testCase.decodeAfterDecrypt) {
@@ -242,6 +248,8 @@ module('Acceptance | transit', function(hooks) {
       await visit(`vault/secrets/${hooks.transitPath}/show/${key.name}`);
       if (index === 0) {
         await click('[data-test-transit-link="versions"]');
+        // wait for capabilities
+        await settled();
         assert
           .dom('[data-test-transit-key-version-row]')
           .exists({ count: 1 }, `${key.name}: only one key version`);
