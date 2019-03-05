@@ -101,7 +101,7 @@ be set up depending on the installation.
 **CLI**
 
 If you plan to support authentication via `vault login -method=oidc`, a localhost redirect URI
-must be set. This can usually be: `http://localhost:8300/oidc/callback`. Logins via the CLI may
+must be set. This can usually be: `http://localhost:8250/oidc/callback`. Logins via the CLI may
 specify a different listening port if needed, and a URI with this port must match one of the
 configured redirected URIs. These same "localhost" URIs must be added to the provider as well.
 
@@ -126,7 +126,7 @@ they must be added as query parameters, for example:
 ### OIDC Login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI. The default local listening port is 8300. This
+different path, specify `-path=/my-path` in the CLI. The default local listening port is 8250. This
 can be changed with the `port` option.
 
 ```text

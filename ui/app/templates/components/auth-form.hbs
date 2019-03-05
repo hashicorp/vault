@@ -65,6 +65,7 @@
       @onSubmit={{action "doSubmit"}}
       @onRoleName={{action (mut this.roleName)}}
       @roleName={{this.roleName}}
+      @selectedAuthType={{this.selectedAuthBackend.type}}
       @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
       @disabled={{authenticate.isRunning}}
     >

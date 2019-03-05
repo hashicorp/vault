@@ -164,6 +164,9 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	testClient.SetToken(resp.Auth.ClientToken)
 
 	cleanup := func() {
+		// We wait for a tiny bit for things such as agent renewal to exit properly
+		time.Sleep(50 * time.Millisecond)
+
 		cluster.Cleanup()
 		os.Setenv(api.EnvVaultAddress, origEnvVaultAddress)
 		os.Setenv(api.EnvVaultCACert, origEnvVaultCACert)

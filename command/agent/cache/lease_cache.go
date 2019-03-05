@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -410,7 +411,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == io.EOF {
 				err = errors.New("empty JSON provided")
 			}
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse JSON input: {{err}}", err))
+			logical.RespondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse JSON input: {{err}}", err))
 			return
 		}
 
@@ -430,7 +431,7 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 			if err == errInvalidType {
 				httpStatus = http.StatusBadRequest
 			}
-			respondError(w, httpStatus, errwrap.Wrapf("failed to clear cache: {{err}}", err))
+			logical.RespondError(w, httpStatus, errwrap.Wrapf("failed to clear cache: {{err}}", err))
 			return
 		}
 

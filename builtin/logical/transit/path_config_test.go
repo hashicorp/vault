@@ -101,6 +101,7 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 	req.Data = map[string]interface{}{
 		"plaintext": "abcd",
+		"input":     "abcd",
 		"context":   "abcd",
 	}
 
