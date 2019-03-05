@@ -159,7 +159,7 @@ cache {
   }
 
   listener "tcp" {
-    address = "127.0.0.1:8100"
+    address = "127.0.0.1:8007"
     tls_disable = true
   }
 }
@@ -169,4 +169,4 @@ cache {
 
 Agent's listener address will be picked up by the CLI through the
 `VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8100".
+"http://127.0.0.1:8007".
