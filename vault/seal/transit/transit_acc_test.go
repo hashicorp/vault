@@ -1,5 +1,3 @@
-// +build !windows
-
 package transit
 
 import (
@@ -7,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
 	"time"
 
@@ -128,19 +126,14 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("err: %s", err)
 	}
 
-	// docker has some limitations with temp folders, trying
-	// to workaround them
-	tempDir := "/tmp"
-	switch {
-	case runtime.GOOS == "darwin":
-	case os.Getenv("TMPDIR") != "":
-		tempDir = os.Getenv("TMPDIR")
-	}
 	uniqueTempDir, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	tempDir = path.Join(tempDir, uniqueTempDir)
+	tempDir, err := filepath.Abs(path.Join(".", "test-tmp", uniqueTempDir))
+	if err != nil {
+		t.Fatalf("unable to find temp fixture path: %s", err)
+	}
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
