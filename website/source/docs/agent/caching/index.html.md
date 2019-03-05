@@ -16,6 +16,13 @@ created tokens and responses containing leased secrets generated off of these
 newly created tokens. The renewals of the cached tokens and leases are also
 managed by the agent.
 
+-> **Note:** Vault Agent Caching works best with servers/clusters that are
+running on Vault 1.1-beta2 and above due to changes that were introduced
+alongside this feature, such as the exposure of the `orphan` field in token
+creation responses. Agent caching functionality was tested against changes
+introduced within 1.1 and thus full caching capabilities may not behave as
+expected when paired with older server versions.
+
 ## Caching and Renewals
 
 Response caching and renewals are managed by the agent only under these
