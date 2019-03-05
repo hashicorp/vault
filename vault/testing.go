@@ -1292,6 +1292,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableCache = base.DisableCache
 
 		coreConfig.DevToken = base.DevToken
+		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 	}
 
 	if coreConfig.Physical == nil {
