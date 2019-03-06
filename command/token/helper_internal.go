@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"path/filepath"
-	
+	"strings"
+
 	homedir "github.com/mitchellh/go-homedir"
 )
 
@@ -22,11 +22,11 @@ type InternalTokenHelper struct {
 // populateTokenPath figures out the token path using homedir to get the user's
 // home directory
 func (i *InternalTokenHelper) populateTokenPath() {
-        homePath, err := homedir.Dir()
-        if err != nil {
-                panic(fmt.Sprintf("error getting user's home directory: %v", err))
-        }
-	i.tokenPath = filepath.Join(homePath,".vault-token")
+	homePath, err := homedir.Dir()
+	if err != nil {
+		panic(fmt.Sprintf("error getting user's home directory: %v", err))
+	}
+	i.tokenPath = filepath.Join(homePath, ".vault-token")
 }
 
 func (i *InternalTokenHelper) Path() string {
