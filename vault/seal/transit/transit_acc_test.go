@@ -148,8 +148,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		Tag:        "latest",
 		Cmd: []string{"server", "-log-level=trace", "-dev", "-dev-three-node", fmt.Sprintf("-dev-root-token-id=%s", testToken),
 			"-dev-listen-address=0.0.0.0:8200"},
-		Env: []string{"VAULT_DEV_TEMP_DIR=/tmp"},
-		//<src>:<dst>
+		Env:    []string{"VAULT_DEV_TEMP_DIR=/tmp"},
 		Mounts: []string{fmt.Sprintf("%s:/tmp", tempDir)},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
