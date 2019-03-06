@@ -159,6 +159,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
+	// If this is a 3xx or if the returned response does not contain JSON payload,
+	// we skip caching
+	if (resp.Response.StatusCode > 300 && resp.Response.StatusCode < 400) ||
+		resp.Response.Header.Get("Content-Type") != "application/json" {
+		return resp, err
+	}
+
 	// Get the namespace from the request header
 	namespace := req.Request.Header.Get(consts.NamespaceHeaderName)
 	// We need to populate an empty value since go-memdb will skip over indexes

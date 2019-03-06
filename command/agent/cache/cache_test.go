@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -196,25 +194,10 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	response1 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup-self"}}`
 	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response1)),
-				},
-			},
-			ResponseBody: []byte(response1),
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response2)),
-				},
-			},
-			ResponseBody: []byte(response2),
-		},
+		newTestSendResponse(http.StatusOK, response1),
+		newTestSendResponse(http.StatusOK, response2),
 	}
+
 	leaseCache := testNewLeaseCache(t, responses)
 
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
