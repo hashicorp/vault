@@ -137,6 +137,13 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	if err := os.Mkdir(tempDir, 0777); err != nil {
 		t.Fatal(err)
 	}
+	if stats, err := os.Stat(tempDir); os.IsNotExist(err) {
+		t.Fatal(tempDir + " does not exist")
+	} else if err != nil {
+		t.Fatalf("err checking %s: %s", tempDir, err)
+	} else {
+		fmt.Printf("%s was made! %+v\n", tempDir, stats)
+	}
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
