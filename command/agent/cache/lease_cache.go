@@ -417,10 +417,10 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 
 		c.logger.Debug("received cache-clear request", "type", req.Type, "namespace", req.Namespace, "value", req.Value)
 
-		in, err := parseClearInput(req)
+		in, err := parseCacheClearInput(req)
 		if err != nil {
 			c.logger.Error("unable to parse clear input", "error", err)
-			respondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse clear input: {{err}}", err))
+			logical.RespondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse clear input: {{err}}", err))
 			return
 		}
 
@@ -439,12 +439,12 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 	})
 }
 
-func (c *LeaseCache) handleCacheClear(ctx context.Context, in *clearInput) error {
+func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) error {
 	if in == nil {
 		return errors.New("no value(s) provided to clear corresponding cache entries")
 	}
 
-	switch in.ClearType {
+	switch in.Type {
 	case "request_path":
 		// For this particular case, we need to ensure that there are 2 provided
 		// indexers for the proper lookup.
@@ -581,8 +581,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		in := &clearInput{
-			ClearType: "token",
+		in := &cacheClearInput{
+			Type: "token",
 			Token:     token,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
@@ -592,8 +592,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 	case path == vaultPathTokenRevokeSelf:
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		in := &clearInput{
-			ClearType: "token",
+		in := &cacheClearInput{
+			Type: "token",
 			Token:     req.Token,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
@@ -614,8 +614,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected accessor in the request body to be string")
 		}
 
-		in := &clearInput{
-			ClearType:     "token_accessor",
+		in := &cacheClearInput{
+			Type:     "token_accessor",
 			TokenAccessor: accessor,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
@@ -689,8 +689,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		if !ok {
 			return false, fmt.Errorf("expected lease_id the request body to be string")
 		}
-		in := &clearInput{
-			ClearType: "lease",
+		in := &cacheClearInput{
+			Type: "lease",
 			Lease:     leaseID,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
@@ -854,8 +854,8 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	return nil
 }
 
-type clearInput struct {
-	ClearType string
+type cacheClearInput struct {
+	Type string
 
 	RequestPath   string
 	Namespace     string
@@ -864,7 +864,7 @@ type clearInput struct {
 	Lease         string
 }
 
-func parseClearInput(req *cacheClearRequest) (*clearInput, error) {
+func parseCacheClearInput(req *cacheClearRequest) (*cacheClearInput, error) {
 	if req == nil {
 		return nil, errors.New("nil request options provided")
 	}
@@ -873,12 +873,9 @@ func parseClearInput(req *cacheClearRequest) (*clearInput, error) {
 		return nil, errors.New("no type provided")
 	}
 
-	in := &clearInput{
-		ClearType: req.Type,
-	}
-
-	if req.Namespace != "" {
-		in.Namespace = req.Namespace
+	in := &cacheClearInput{
+		Type: req.Type,
+		Namespace: req.Namespace,
 	}
 
 	switch req.Type {
