@@ -40,6 +40,7 @@
     "@ember/jquery": "^0.5.2",
     "@ember/optional-features": "^0.6.3",
     "@storybook/addon-actions": "^5.0.0",
+    "@storybook/addon-knobs": "^5.0.0",
     "@storybook/addon-links": "^5.0.0",
     "@storybook/addons": "^5.0.0",
     "@storybook/ember": "^5.0.0",
