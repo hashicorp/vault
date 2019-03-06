@@ -128,7 +128,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM database.sys.schemas WHERE name = '" + schema + "'").Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
