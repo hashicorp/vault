@@ -42,6 +42,7 @@
     "@storybook/addon-actions": "^5.0.0",
     "@storybook/addon-knobs": "^5.0.0",
     "@storybook/addon-links": "^5.0.0",
+    "@storybook/addon-storysource": "^5.0.0",
     "@storybook/addons": "^5.0.0",
     "@storybook/ember": "^5.0.0",
     "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook",
