@@ -3,14 +3,18 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 
 storiesOf('ToggleButton', module)
-  .add('showOptions', () => ({
-    template: hbs`
+  .add(
+    'showOptions',
+    () => ({
+      template: hbs`
     <ToggleButton
       @toggleAttr="showOptions"
       @toggleTarget={{this}}
       />
     `,
-  }))
+    }),
+    { notes: 'My notes on some bold text' }
+  )
   .add('with label', () => ({
     template: hbs`
     <ToggleButton

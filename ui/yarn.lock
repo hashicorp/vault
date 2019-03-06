@@ -1551,6 +1551,20 @@
     prop-types "^15.6.2"
     qs "^6.5.2"
 
+"@storybook/addon-notes@^5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@storybook/addon-notes/-/addon-notes-5.0.0.tgz#f3e5dc02a09395f5a898e6c67ed6344fab23a17f"
+  integrity sha512-c3sxq5U8UmPYKbcBAW0rucZFIihmCA2PFUhtuqyFOsrTIhOo9ZVcQrnAFCKCEVuhDj5pNQgoBUK3byb4INP7zw==
+  dependencies:
+    "@storybook/addons" "5.0.0"
+    "@storybook/client-logger" "5.0.0"
+    "@storybook/components" "5.0.0"
+    "@storybook/core-events" "5.0.0"
+    "@storybook/theming" "5.0.0"
+    markdown-to-jsx "^6.9.1"
+    prop-types "^15.6.2"
+    util-deprecate "^1.0.2"
+
 "@storybook/addon-storysource@^5.0.0":
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/@storybook/addon-storysource/-/addon-storysource-5.0.0.tgz#96906f8019609e224250927aa2a09ca0cc2f7366"
