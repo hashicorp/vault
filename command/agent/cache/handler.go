@@ -47,7 +47,14 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			// If this is a api.Response error, don't wrap the response.
+			if resp != nil && resp.Response.Error() != nil {
+				copyHeader(w.Header(), resp.Response.Header)
+				w.WriteHeader(resp.Response.StatusCode)
+				io.Copy(w, resp.Response.Body)
+			} else {
+				logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			}
 			return
 		}
 
