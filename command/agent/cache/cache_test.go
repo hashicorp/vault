@@ -920,6 +920,22 @@ func TestCache_NonCacheable(t *testing.T) {
 		t.Logf("response #2: %#v", newMounts)
 		t.Fatal("expected requests to be not cached")
 	}
+
+	// Query a non-existing mount, expect an error from api.Response
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	r := testClient.NewRequest("GET", "/v1/kv-invalid")
+
+	apiResp, err := testClient.RawRequestWithContext(ctx, r)
+	if apiResp != nil {
+		defer apiResp.Body.Close()
+	}
+	if apiResp.Error() == nil || (apiResp != nil && apiResp.StatusCode != 404) {
+		t.Fatalf("expected an error response and a 404 from requesting an invalid path, got: %#v", apiResp)
+	}
+	if err == nil {
+		t.Fatal("expected an error from requesting an invalid path")
+	}
 }
 
 func TestCache_Caching_AuthResponse(t *testing.T) {
@@ -1152,7 +1168,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	apiResp, err := testClient.RawRequestWithContext(ctx, r)
-	if resp != nil {
+	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
 	if apiResp != nil && apiResp.StatusCode == 404 {
