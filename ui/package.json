@@ -19,7 +19,9 @@
     "test-oss": "yarn run test -f='!enterprise'",
     "fmt-js": "prettier-eslint --single-quote --no-use-tabs --trailing-comma es5 --print-width=110 --write '{app,tests,config,lib}/**/*.js'",
     "fmt-styles": "prettier --write app/styles/**/*.*",
-    "fmt": "yarn run fmt-js && yarn run fmt-styles"
+    "fmt": "yarn run fmt-js && yarn run fmt-styles",
+    "build-storybook": "build-storybook -s ../pkg/web_ui",
+    "storybook": "start-storybook -p 6006 -s ../pkg/web_ui"
   },
   "lint-staged": {
     "linters": {
@@ -34,10 +36,17 @@
     }
   },
   "devDependencies": {
+    "@babel/core": "^7.3.4",
     "@ember/jquery": "^0.5.2",
     "@ember/optional-features": "^0.6.3",
+    "@storybook/addon-actions": "^5.0.0",
+    "@storybook/addon-links": "^5.0.0",
+    "@storybook/addons": "^5.0.0",
+    "@storybook/ember": "^5.0.0",
+    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook",
     "Duration.js": "icholy/Duration.js#golang_compatible",
     "autosize": "^4.0.0",
+    "babel-loader": "^8.0.5",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "base64-js": "1.2.1",
     "broccoli-asset-rev": "^2.7.0",
@@ -133,5 +142,6 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  }
+  },
+  "dependencies": {}
 }
