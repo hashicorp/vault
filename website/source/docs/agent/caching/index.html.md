@@ -78,7 +78,7 @@ intercepting revocation requests, it is still possible for the agent to be
 completely unaware of the revocations that happen through direct client
 interactions with the Vault server. This could potentially lead to stale cache
 entries. For managing the stale entries in the cache, an endpoint
-`/v1/agent/cache-clear`(see below) is made available to manually evict cache
+`/agent/v1/cache-clear`(see below) is made available to manually evict cache
 entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request Uniqueness
@@ -133,7 +133,7 @@ evicted.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/v1/agent/cache-clear`      | `200 application/json` |
+| `POST`   | `/agent/v1/cache-clear`      | `200 application/json` |
 
 #### Parameters
 
@@ -164,7 +164,7 @@ evicted.
 $ curl \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:1234/v1/agent/cache-clear
+    http://127.0.0.1:1234/agent/v1/cache-clear
 ```
 
 ## Configuration (`cache`)
