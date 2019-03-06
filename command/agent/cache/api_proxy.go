@@ -45,14 +45,15 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	// Make the request to Vault and get the response
 	ap.logger.Info("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
+
+	var sendResponse *SendResponse
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
+	if resp != nil {
+		sendResponse = &SendResponse{Response: resp}
+	}
 	if err != nil {
 		// Bubble back the api.Response as well for error checking/handling at the handler layer.
-		return &SendResponse{Response: resp}, err
-	}
-
-	sendResponse := &SendResponse{
-		Response: resp,
+		return sendResponse, err
 	}
 
 	// Set SendResponse.ResponseBody if the response body is non-nil
