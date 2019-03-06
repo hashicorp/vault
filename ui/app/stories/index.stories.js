@@ -24,7 +24,7 @@ storiesOf('Button', module)
     template: hbs`
         <button {{action onClick}}>
           <span role="img" aria-label="so cool">
-            😀 😎 👍 💯
+            😀 😎 💯
           </span>
         </button>
       `,
