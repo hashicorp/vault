@@ -3,13 +3,14 @@ package transit
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/ory/dockertest/docker"
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -144,6 +145,15 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
+	if err := pool.Client.Logs(docker.LogsOptions{
+		Stderr:       true,
+		Stdout:       true,
+		OutputStream: os.Stdout,
+		ErrorStream:  os.Stderr,
+	}); err != nil {
+		t.Fatalf("unable to set log options: %s", err)
+	}
+
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "vault",
 		Tag:        "latest",
@@ -155,14 +165,6 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {
 		t.Fatalf("Could not start local Vault docker container: %s", err)
-	}
-	b, err := ioutil.ReadFile(resource.Container.LogPath)
-	if err != nil {
-		t.Fatalf("unable to read logs: %s", err)
-	} else {
-		fmt.Println("-----CONTAINER LOGS-----")
-		fmt.Printf("\n%s\n", b)
-		fmt.Println("-----END CONTAINER LOGS-----")
 	}
 
 	cleanup = func() {
