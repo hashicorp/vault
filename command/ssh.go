@@ -467,11 +467,11 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		return 2
 	}
 
-	args := append([]string{
+	args := []string{
 		"-i", c.flagPrivateKeyPath,
 		"-i", signedPublicKeyPath,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-	})
+	}
 
 	if userKnownHostsFile != "" {
 		args = append(args,
