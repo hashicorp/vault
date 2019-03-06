@@ -134,6 +134,9 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	if err != nil {
 		t.Fatalf("unable to find temp fixture path: %s", err)
 	}
+	if err := os.Mkdir(tempDir, 0777); err != nil {
+		t.Fatal(err)
+	}
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {
@@ -145,7 +148,8 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		Tag:        "latest",
 		Cmd: []string{"server", "-log-level=trace", "-dev", "-dev-three-node", fmt.Sprintf("-dev-root-token-id=%s", testToken),
 			"-dev-listen-address=0.0.0.0:8200"},
-		Env:    []string{"VAULT_DEV_TEMP_DIR=/tmp"},
+		Env: []string{"VAULT_DEV_TEMP_DIR=/tmp"},
+		//<src>:<dst>
 		Mounts: []string{fmt.Sprintf("%s:/tmp", tempDir)},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
