@@ -25,14 +25,15 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
 const EnvVaultAddress = "VAULT_ADDR"
+const EnvVaultAgentAddr = "VAULT_AGENT_ADDR"
 const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+const EnvVaultSkipVerify = "VAULT_SKIP_VERIFY"
+const EnvVaultNamespace = "VAULT_NAMESPACE"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
@@ -243,7 +244,7 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
-	if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
@@ -279,7 +280,7 @@ func (c *Config) ReadEnvironment() error {
 		}
 		envClientTimeout = clientTimeout
 	}
-	if v := os.Getenv(EnvVaultInsecure); v != "" {
+	if v := os.Getenv(EnvVaultSkipVerify); v != "" {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
@@ -391,19 +392,25 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
 	if strings.HasPrefix(address, "unix://") {
 		socket := strings.TrimPrefix(address, "unix://")
 		transport := c.HttpClient.Transport.(*http.Transport)
 		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
 			return net.Dial("unix", socket)
 		}
-		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
-		address = "http://unix"
-	}
 
-	u, err := url.Parse(address)
-	if err != nil {
-		return nil, err
+		// Since the address points to a unix domain socket, the scheme in the
+		// *URL would be set to `unix`. The *URL in the client is expected to
+		// be pointing to the protocol used in the application layer and not to
+		// the transport layer. Hence, setting the fields accordingly.
+		u.Scheme = "http"
+		u.Host = socket
+		u.Path = ""
 	}
 
 	client := &Client{

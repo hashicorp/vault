@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
-func TestCache_APIProxy(t *testing.T) {
+func TestAPIProxy(t *testing.T) {
 	cleanup, client, _, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 

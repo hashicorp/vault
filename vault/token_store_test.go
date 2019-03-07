@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -21,6 +23,24 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestTokenStore_CreateOrphanResponse(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "auth/token/create-orphan",
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"policies": "default",
+		},
+	})
+	if err != nil && (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v, resp: %#v", err, resp)
+	}
+	if !resp.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true in the response")
+	}
+}
 
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
@@ -2658,6 +2678,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"period":           "72h",
 		"allowed_policies": "test1,test2",
 		"path_suffix":      "happenin",
+		"bound_cidrs":      []string{"0.0.0.0/0"},
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2692,6 +2713,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":           true,
 		"token_type":          "default-service",
 	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2739,6 +2765,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_type":          "default-service",
 	}
 
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
+
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2772,6 +2803,49 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies":    []string{"test3"},
 		"disallowed_policies": []string{},
 		"path_suffix":         "happenin",
+		"period":              int64(0),
+		"renewable":           false,
+		"token_type":          "default-service",
+	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
+
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update path_suffix and bound_cidrs with empty values
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"path_suffix": "",
+		"bound_cidrs": []string{},
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Data = map[string]interface{}{}
+
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+
+	expected = map[string]interface{}{
+		"name":                "test",
+		"orphan":              true,
+		"explicit_max_ttl":    int64(5),
+		"allowed_policies":    []string{"test3"},
+		"disallowed_policies": []string{},
+		"path_suffix":         "",
 		"period":              int64(0),
 		"renewable":           false,
 		"token_type":          "default-service",

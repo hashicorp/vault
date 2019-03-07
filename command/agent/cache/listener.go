@@ -63,7 +63,7 @@ func tcpListener(config map[string]interface{}, _ io.Writer, ui cli.Ui) (net.Lis
 	var addr string
 	addrRaw, ok := config["address"]
 	if !ok {
-		addr = "127.0.0.1:8300"
+		addr = "127.0.0.1:8007"
 	} else {
 		addr = addrRaw.(string)
 	}

@@ -14,6 +14,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/physical"
 	"go.etcd.io/etcd/clientv3"
@@ -25,22 +26,16 @@ import (
 // prefix within etcd. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
 type EtcdBackend struct {
-	logger    log.Logger
-	path      string
-	haEnabled bool
+	logger         log.Logger
+	path           string
+	haEnabled      bool
+	lockTimeout    time.Duration
+	requestTimeout time.Duration
 
 	permitPool *physical.PermitPool
 
 	etcd *clientv3.Client
 }
-
-const (
-	// etcd3 default lease duration is 60s. set to 15s for faster recovery.
-	etcd3LockTimeoutInSeconds = 15
-	// etcd3 default request timeout is set to 5s. It should be long enough
-	// for most cases, even with internal retry.
-	etcd3RequestTimeout = 5 * time.Second
-)
 
 // Verify EtcdBackend satisfies the correct interfaces
 var _ physical.Backend = (*EtcdBackend)(nil)
@@ -128,6 +123,17 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		return nil, err
 	}
 
+	sReqTimeout := conf["request_timeout"]
+	if sReqTimeout == "" {
+		// etcd3 default request timeout is set to 5s. It should be long enough
+		// for most cases, even with internal retry.
+		sReqTimeout = "5s"
+	}
+	reqTimeout, err := parseutil.ParseDurationSecond(sReqTimeout)
+	if err != nil {
+		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'request_timeout' could not be understood: {{err}}", sReqTimeout), err)
+	}
+
 	ssync, ok := conf["sync"]
 	if !ok {
 		ssync = "true"
@@ -138,7 +144,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	if sync {
-		ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), reqTimeout)
 		err := etcd.Sync(ctx)
 		cancel()
 		if err != nil {
@@ -146,12 +152,24 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
+	sLock := conf["lock_timeout"]
+	if sLock == "" {
+		// etcd3 default lease duration is 60s. set to 15s for faster recovery.
+		sLock = "15s"
+	}
+	lock, err := parseutil.ParseDurationSecond(sLock)
+	if err != nil {
+		return nil, errwrap.Wrapf(fmt.Sprintf("value [%v] of 'lock_timeout' could not be understood: {{err}}", sLock), err)
+	}
+
 	return &EtcdBackend{
-		path:       path,
-		etcd:       etcd,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-		logger:     logger,
-		haEnabled:  haEnabledBool,
+		path:           path,
+		etcd:           etcd,
+		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
+		logger:         logger,
+		haEnabled:      haEnabledBool,
+		lockTimeout:    lock,
+		requestTimeout: reqTimeout,
 	}, nil
 }
 
@@ -161,7 +179,7 @@ func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	_, err := c.etcd.Put(ctx, path.Join(c.path, entry.Key), string(entry.Value))
 	return err
@@ -173,7 +191,7 @@ func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, err
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	resp, err := c.etcd.Get(ctx, path.Join(c.path, key))
 	if err != nil {
@@ -198,7 +216,7 @@ func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	_, err := c.etcd.Delete(ctx, path.Join(c.path, key))
 	if err != nil {
@@ -213,7 +231,7 @@ func (c *EtcdBackend) List(ctx context.Context, prefix string) ([]string, error)
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	prefix = path.Join(c.path, prefix) + "/"
 	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
@@ -245,8 +263,10 @@ func (e *EtcdBackend) HAEnabled() bool {
 
 // EtcdLock implements a lock using and etcd backend.
 type EtcdLock struct {
-	lock sync.Mutex
-	held bool
+	lock           sync.Mutex
+	held           bool
+	timeout        time.Duration
+	requestTimeout time.Duration
 
 	etcdSession *concurrency.Session
 	etcdMu      *concurrency.Mutex
@@ -261,9 +281,11 @@ type EtcdLock struct {
 func (c *EtcdBackend) LockWith(key, value string) (physical.Lock, error) {
 	p := path.Join(c.path, key)
 	return &EtcdLock{
-		prefix: p,
-		value:  value,
-		etcd:   c.etcd,
+		prefix:         p,
+		value:          value,
+		etcd:           c.etcd,
+		timeout:        c.lockTimeout,
+		requestTimeout: c.requestTimeout,
 	}, nil
 }
 
@@ -305,7 +327,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		return nil, err
 	}
 
-	pctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	pctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	if _, err := c.etcd.Put(pctx, c.etcdMu.Key(), c.value, clientv3.WithLease(c.etcdSession.Lease())); err != nil {
 		return nil, err
@@ -324,13 +346,13 @@ func (c *EtcdLock) Unlock() error {
 		return EtcdLockNotHeldError
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	return c.etcdMu.Unlock(ctx)
 }
 
 func (c *EtcdLock) Value() (bool, string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 
 	resp, err := c.etcd.Get(ctx,
@@ -348,7 +370,7 @@ func (c *EtcdLock) Value() (bool, string, error) {
 }
 
 func (c *EtcdLock) initMu() error {
-	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
+	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(int(c.timeout.Seconds())))
 	if err != nil {
 		return err
 	}

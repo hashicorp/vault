@@ -20,6 +20,9 @@ const PERMISSIONS_RESPONSE = {
       'baz/biz': {
         capabilities: ['read'],
       },
+      'ends/in/slash/': {
+        capabilities: ['list'],
+      },
     },
   },
 };
@@ -74,6 +77,13 @@ module('Unit | Service | permissions', function(hooks) {
     let service = this.owner.lookup('service:permissions');
     service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
     assert.equal(service.hasPermission('boo'), false);
+  });
+
+  test('it returns true if passed path does not end in a slash but globPath does', function(assert) {
+    let service = this.owner.lookup('service:permissions');
+    service.set('globPaths', PERMISSIONS_RESPONSE.data.glob_paths);
+    assert.equal(service.hasPermission('ends/in/slash'), true, 'matches without slash');
+    assert.equal(service.hasPermission('ends/in/slash/'), true, 'matches with slash');
   });
 
   test('it returns false if a policy does not includes access to a path', function(assert) {

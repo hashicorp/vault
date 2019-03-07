@@ -16,6 +16,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
 export default Component.extend({
   store: service(),
   selectedAuthPath: null,
+  selectedAuthType: null,
   roleName: null,
   role: null,
   onRoleName() {},
@@ -52,7 +53,7 @@ export default Component.extend({
       // debounce
       yield timeout(WAIT_TIME);
     }
-    let path = this.selectedAuthPath || 'jwt';
+    let path = this.selectedAuthPath || this.selectedAuthType;
     let id = JSON.stringify([path, roleName]);
     let role = null;
     try {
@@ -156,7 +157,7 @@ export default Component.extend({
       let oidcWindow = win.open(
         this.role.authUrl,
         'vaultOIDCWindow',
-        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT}resizable,scrollbars=yes,top=${top},left=${left}`
+        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
 
       this.prepareForOIDC.perform(oidcWindow);

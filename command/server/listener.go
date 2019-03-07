@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
 
@@ -139,6 +140,34 @@ PASSPHRASECORRECT:
 		ciphers, err := tlsutil.ParseCiphers(v.(string))
 		if err != nil {
 			return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+		}
+
+		// HTTP/2 with TLS 1.2 blacklists several cipher suites.
+		// https://tools.ietf.org/html/rfc7540#appendix-A
+		//
+		// Since the CLI (net/http) automatically uses HTTP/2 with TLS 1.2,
+		// we check here if all or some specified cipher suites are blacklisted.
+		badCiphers := []string{}
+		for _, cipher := range ciphers {
+			if isbadcipher.IsBadCipher(cipher) {
+				// Get the name of the current cipher.
+				cipherStr, err := tlsutil.GetCipherName(cipher)
+				if err != nil {
+					return nil, nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+				}
+				badCiphers = append(badCiphers, cipherStr)
+			}
+		}
+		if len(badCiphers) == len(ciphers) {
+			ui.Warn(`WARNING! All cipher suites defined by 'tls_cipher_suites' are blacklisted by the
+HTTP/2 specification. HTTP/2 communication with TLS 1.2 will not work as intended
+and Vault will be unavailable via the CLI.
+Please see https://tools.ietf.org/html/rfc7540#appendix-A for further information.`)
+		} else if len(badCiphers) > 0 {
+			ui.Warn(fmt.Sprintf(`WARNING! The following cipher suites defined by 'tls_cipher_suites' are 
+blacklisted by the HTTP/2 specification: 
+%v
+Please see https://tools.ietf.org/html/rfc7540#appendix-A for further information.`, badCiphers))
 		}
 		tlsConf.CipherSuites = ciphers
 	}
