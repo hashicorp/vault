@@ -5,6 +5,8 @@ BUG FIXES:
    the server are no longer wrapped and returned by Agent Caching as 500 
    Internal Server Error responses.
    [[GH-6353]](https://github.com/hashicorp/vault/pull/6353)
+ * core: The `operator migrate` command will no longer hang on empty key names.
+   [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
 
 ## 1.1.0-beta2 (March 5th, 2019)
 

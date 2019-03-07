@@ -26,7 +26,7 @@ type OperatorInitCommand struct {
 	flagPGPKeys         []string
 	flagRootTokenPGPKey string
 
-	// HSM
+	// Auto Unseal
 	flagRecoveryShares    int
 	flagRecoveryThreshold int
 	flagRecoveryPGPKeys   []string
@@ -161,8 +161,8 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 			"registered.",
 	})
 
-	// HSM Options
-	f = set.NewFlagSet("HSM Options")
+	// Auto Unseal Options
+	f = set.NewFlagSet("Auto Unseal Options")
 
 	f.IntVar(&IntVar{
 		Name:       "recovery-shares",
@@ -170,7 +170,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Default:    5,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the recovery key into. " +
-			"This is only used in HSM mode.",
+			"This is only used in auto-unseal mode.",
 	})
 
 	f.IntVar(&IntVar{
@@ -179,7 +179,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Default:    3,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares required to reconstruct the recovery key. " +
-			"This is only used in HSM mode.",
+			"This is only used in Auto Unseal mode.",
 	})
 
 	f.VarFlag(&VarFlag{
@@ -187,7 +187,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagRecoveryPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Behaves like -pgp-keys, but for the recovery key shares. This " +
-			"is only used in HSM mode.",
+			"is only used in Auto Unseal mode.",
 	})
 
 	return set

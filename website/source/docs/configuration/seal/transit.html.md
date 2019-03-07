@@ -4,7 +4,7 @@ page_title: "Vault Transit - Seals - Configuration"
 sidebar_title: "Vault Transit"
 sidebar_current: "docs-configuration-seal-transit"
 description: |-
-  The Transit seal configures Vault to use Vault's Transit Secret Engine as the 
+  The Transit seal configures Vault to use Vault's Transit Secret Engine as the
   autoseal mechanism.
 ---
 
@@ -57,22 +57,22 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   environment variable.
 
 - `mount_path` `(string: <required>)`: The mount path to the transit secret engine.  
-  This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment 
+  This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment
   variable.
 
 - `namespace` `(string: "")`: The namespace path to the transit secret engine.  
   This may also be supplied using the `VAULT_NAMESPACE` environment variable.
 
 - `disable_renewal` `(string: "false")`: Disables the automatic renewal of the token
-  in case the lifecyle of the token is managed with some other mechanism outside of 
-  Vault, such as Vault Agent.  This may also be specfied using the 
+  in case the lifecyle of the token is managed with some other mechanism outside of
+  Vault, such as Vault Agent.  This may also be specfied using the
   `VAULT_TRANSIT_SEAL_DISABLE_RENEWAL` environment variable.
 
 - `tls_ca_cert` `(string: "")`: Specifies the path to the CA certificate file used
   for communication with the Vault server.  This may also be specified using the
   `VAULT_CA_CERT` environment variable.
 
-- `tls_client_cert` `(string: "")`: Specifies the path to the client certificate 
+- `tls_client_cert` `(string: "")`: Specifies the path to the client certificate
   for communication with the Vault server.  This may also be specified using the
   `VAULT_CLIENT_CERT` environment variable.
 
@@ -80,12 +80,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   communication with the Vault server.  This may also be specified using the
   `VAULT_CLIENT_KEY` environment variable.
 
-- `tls_server_name` `(string: "")`: Name to use as the SNI host when connecting 
-  to the Vault server via TLS.  This may also be specified via the 
+- `tls_server_name` `(string: "")`: Name to use as the SNI host when connecting
+  to the Vault server via TLS.  This may also be specified via the
   `VAULT_TLS_SERVER_NAME` environment variable.
 
-- `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates. 
-  Using this option is highly discouraged and decreases the security of data 
+- `tls_skip_verify` `(bool: "false")`: Disable verification of TLS certificates.
+  Using this option is highly discouraged and decreases the security of data
   transmissions to and from the Vault server.  This may also be specified using the
   `VAULT_TLS_SKIP_VERIFY` environment variable.
 
@@ -95,25 +95,24 @@ Authentication-related values must be provided, either as environment
 variables or as configuration parameters.
 
 ~> **Note:** Although the configuration file allows you to pass in
-`VAULT_TOKEN` as part of the seal's parameters, it is *strongly* recommended 
+`VAULT_TOKEN` as part of the seal's parameters, it is *strongly* recommended
 to set these values via environment variables.
 
-The Vault token used to authenticate needs the following permissions on the 
+The Vault token used to authenticate needs the following permissions on the
 transit key:
 
 ```hcl
 path "<mount path>/encrypt/<key name>" {
-  capabilities = ["write"]
+  capabilities = ["update"]
 }
 
 path "<mount path>/decrypt/<key name>" {
-  capabilities = ["write"]
+  capabilities = ["update"]
 }
 ```
 
 ## Key Rotation
 
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints.  See
-[doc](/api/secret/transit/index.html#rotate-key). Old keys must not be disabled or deleted and are 
-used to decrypt older data. 
-
+[doc](/api/secret/transit/index.html#rotate-key). Old keys must not be disabled or deleted and are
+used to decrypt older data.
