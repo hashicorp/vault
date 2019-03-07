@@ -711,7 +711,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 // createAccessor is used to create an identifier for the token ID.
 // A storage index, mapping the accessor to the token ID is also created.
 func (ts *TokenStore) createAccessor(ctx context.Context, entry *logical.TokenEntry) error {
-	defer metrics.MeasureSince([]string{"token", "createAccessor"}, time.Now())
+	defer metrics.MeasureSince([]string{"token", "create_accessor"}, time.Now())
 
 	var err error
 	// Create a random accessor
