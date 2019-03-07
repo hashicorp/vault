@@ -145,26 +145,27 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
 
-	if err := pool.Client.Logs(docker.LogsOptions{
-		Stderr:       true,
-		Stdout:       true,
-		OutputStream: os.Stdout,
-		ErrorStream:  os.Stderr,
-	}); err != nil {
-		t.Fatalf("unable to set log options: %s", err)
-	}
-
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "vault",
 		Tag:        "latest",
 		Cmd: []string{"server", "-log-level=trace", "-dev", "-dev-three-node", fmt.Sprintf("-dev-root-token-id=%s", testToken),
 			"-dev-listen-address=0.0.0.0:8200"},
-		Env:    []string{"VAULT_DEV_TEMP_DIR=/tmp"},
-		Mounts: []string{fmt.Sprintf("%s:/tmp", tempDir)},
+		Env:    []string{"VAULT_DEV_TEMP_DIR=/tmp/certs"},
+		Mounts: []string{fmt.Sprintf("%s:/tmp/certs", tempDir)},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {
 		t.Fatalf("Could not start local Vault docker container: %s", err)
+	}
+
+	if err := pool.Client.Logs(docker.LogsOptions{
+		Stderr:       true,
+		Stdout:       true,
+		OutputStream: os.Stdout,
+		ErrorStream:  os.Stderr,
+		Container:    resource.Container.ID,
+	}); err != nil {
+		t.Fatalf("unable to set log options: %s", err)
 	}
 
 	cleanup = func() {
