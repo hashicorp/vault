@@ -499,7 +499,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		}
 
 		// Get the cached index and cancel the corresponding renewer context
-		index, err := c.db.Get(cachememdb.IndexNameToken, in.TokenAccessor)
+		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
 		if err != nil {
 			return err
 		}
@@ -588,8 +588,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
 		in := &cacheClearInput{
-			Type: "token",
-			Token:     token,
+			Type:  "token",
+			Token: token,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
@@ -599,8 +599,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
 		in := &cacheClearInput{
-			Type: "token",
-			Token:     req.Token,
+			Type:  "token",
+			Token: req.Token,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
@@ -621,7 +621,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 
 		in := &cacheClearInput{
-			Type:     "token_accessor",
+			Type:          "token_accessor",
 			TokenAccessor: accessor,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
@@ -696,8 +696,8 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected lease_id the request body to be string")
 		}
 		in := &cacheClearInput{
-			Type: "lease",
-			Lease:     leaseID,
+			Type:  "lease",
+			Lease: leaseID,
 		}
 		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
@@ -880,7 +880,7 @@ func parseCacheClearInput(req *cacheClearRequest) (*cacheClearInput, error) {
 	}
 
 	in := &cacheClearInput{
-		Type: req.Type,
+		Type:      req.Type,
 		Namespace: req.Namespace,
 	}
 
