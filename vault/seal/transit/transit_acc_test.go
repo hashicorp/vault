@@ -3,14 +3,10 @@ package transit
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/ory/dockertest/docker"
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
@@ -20,17 +16,14 @@ import (
 )
 
 func TestTransitSeal_Lifecycle(t *testing.T) {
-	cleanup, retAddress, token, mountPath, keyName, tlsConfig := prepareTestContainer(t)
+	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
 	defer cleanup()
 
 	sealConfig := map[string]string{
-		"address":         retAddress,
-		"token":           token,
-		"mount_path":      mountPath,
-		"key_name":        keyName,
-		"tls_ca_cert":     tlsConfig.CACert,
-		"tls_client_cert": tlsConfig.ClientCert,
-		"tls_client_key":  tlsConfig.ClientKey,
+		"address":    retAddress,
+		"token":      token,
+		"mount_path": mountPath,
+		"key_name":   keyName,
 	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err := s.SetConfig(sealConfig)
@@ -81,13 +74,10 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 	}
 
 	sealConfig := map[string]string{
-		"address":         retAddress,
-		"token":           rsp.Auth.ClientToken,
-		"mount_path":      mountPath,
-		"key_name":        keyName,
-		"tls_ca_cert":     tlsConfig.CACert,
-		"tls_client_cert": tlsConfig.ClientCert,
-		"tls_client_key":  tlsConfig.ClientKey,
+		"address":    retAddress,
+		"token":      rsp.Auth.ClientToken,
+		"mount_path": mountPath,
+		"key_name":   keyName,
 	}
 	s := NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err = s.SetConfig(sealConfig)
@@ -128,18 +118,6 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 		t.Fatalf("err: %s", err)
 	}
 
-	uniqueTempDir, err := uuid.GenerateUUID()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	tempDir, err := filepath.Abs(path.Join(".", "test-tmp", uniqueTempDir))
-	if err != nil {
-		t.Fatalf("unable to find temp fixture path: %s", err)
-	}
-	if err := os.Mkdir(tempDir, 0777); err != nil {
-		t.Fatal(err)
-	}
-
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
@@ -148,41 +126,23 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "vault",
 		Tag:        "latest",
-		Cmd: []string{"server", "-log-level=trace", "-dev", "-dev-three-node", fmt.Sprintf("-dev-root-token-id=%s", testToken),
+		Cmd: []string{"server", "-log-level=trace", "-dev", fmt.Sprintf("-dev-root-token-id=%s", testToken),
 			"-dev-listen-address=0.0.0.0:8200"},
-		Env:    []string{"VAULT_DEV_TEMP_DIR=/tmp/certs"},
-		Mounts: []string{fmt.Sprintf("%s:/tmp/certs", tempDir)},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
 	if err != nil {
 		t.Fatalf("Could not start local Vault docker container: %s", err)
 	}
 
-	if err := pool.Client.Logs(docker.LogsOptions{
-		Stderr:       true,
-		Stdout:       true,
-		OutputStream: os.Stdout,
-		ErrorStream:  os.Stderr,
-		Container:    resource.Container.ID,
-	}); err != nil {
-		t.Fatalf("unable to set log options: %s", err)
-	}
-
 	cleanup = func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("error removing temp directory: %s", err)
-		}
-
 		if err := pool.Purge(resource); err != nil {
 			t.Fatalf("Failed to cleanup local container: %s", err)
 		}
 	}
 
-	retAddress = fmt.Sprintf("https://127.0.0.1:%s", resource.GetPort("8200/tcp"))
+	retAddress = fmt.Sprintf("http://127.0.0.1:%s", resource.GetPort("8200/tcp"))
 	tlsConfig = &api.TLSConfig{
-		CACert:     path.Join(tempDir, "ca_cert.pem"),
-		ClientCert: path.Join(tempDir, "node1_port_8200_cert.pem"),
-		ClientKey:  path.Join(tempDir, "node1_port_8200_key.pem"),
+		Insecure: true,
 	}
 
 	// exponential backoff-retry
