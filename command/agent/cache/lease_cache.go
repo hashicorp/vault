@@ -74,8 +74,8 @@ type LeaseCache struct {
 	baseCtxInfo *cachememdb.ContextInfo
 	l           *sync.RWMutex
 
-	// idLocks is used during cache lookup to ensure that identical
-	// requests made in parallel won't be cached multiple times.
+	// idLocks is used during cache lookup to ensure that identical requests made
+	// in parallel won't trigger multiple renewal goroutines.
 	idLocks []*locksutil.LockEntry
 }
 
