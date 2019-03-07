@@ -372,16 +372,6 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
-		// Ensure that the connection from agent to Vault server doesn't loop
-		// back to agent.
-		apiConfig := api.DefaultConfig()
-		apiConfig.AgentAddress = ""
-		client, err := api.NewClient(apiConfig)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error creating API client for cache: %v", err))
-			return 1
-		}
-
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 			Client: client,
