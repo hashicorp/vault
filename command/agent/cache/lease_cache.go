@@ -156,7 +156,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)
 	if err != nil {
-		return nil, err
+		return resp, err
+	}
+
+	// If this is a non-2xx or if the returned response does not contain JSON payload,
+	// we skip caching
+	if resp.Response.StatusCode >= 300 || resp.Response.Header.Get("Content-Type") != "application/json" {
+		return resp, err
 	}
 
 	// Get the namespace from the request header
