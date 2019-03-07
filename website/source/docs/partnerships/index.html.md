@@ -54,7 +54,7 @@ Here are links to resources, documentation, examples and best practices to guide
 **Secrets Engines**
 
 * [Secret engine documentation](https://www.vaultproject.io/docs/secrets/index.html)
-* [Sample plugin code](https://github.com/hashicorp/vault-auth-plugin-example)
+* There is currently no empty sample secrets plugin; however, the [AliCloud Secrets Plugin](https://github.com/hashicorp/vault-plugin-secrets-alicloud) was written recently and is fairly simple
 
 **Authentication Methods**
 
