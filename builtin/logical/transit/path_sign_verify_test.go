@@ -3,10 +3,11 @@ package transit
 import (
 	"context"
 	"encoding/base64"
-	"golang.org/x/crypto/ed25519"
 	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -347,7 +348,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			if resp.IsError() {
 				return nil
 			}
-			t.Fatalf("bad: expected response, got: %#v", *resp)
+			t.Fatalf("bad: expected error response, got: %#v", *resp)
 		}
 		if resp.IsError() {
 			t.Fatalf("bad: got error response: %#v", *resp)

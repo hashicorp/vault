@@ -95,7 +95,7 @@ func (s *Seal) SetConfig(config map[string]string) (map[string]string, error) {
 		apiConfig.Address = config["address"]
 	}
 	if config["tls_ca_cert"] != "" || config["tls_ca_path"] != "" || config["tls_client_cert"] != "" || config["tls_client_key"] != "" ||
-		config["tls_server_name"] != "" || config["tls_skip_veriry"] != "" {
+		config["tls_server_name"] != "" || config["tls_skip_verify"] != "" {
 		var tlsSkipVerify bool
 		if config["tls_skip_verify"] != "" {
 			var err error

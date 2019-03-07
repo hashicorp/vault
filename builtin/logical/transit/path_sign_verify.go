@@ -21,13 +21,13 @@ type batchRequestSignItem map[string]string
 type batchResponseSignItem struct {
 	// signature for the input present in the corresponding batch
 	// request item
-	Signature string `json:"signature,omitempty" structs:"signature" mapstructure:"signature"`
+	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
-	PublicKey []byte `json:"publickey,omitempty" structs:"publickey" mapstructure:"publickey"`
+	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
-	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+	Error string `json:"error,omitempty" mapstructure:"error"`
 
 	// The return paths through WriteSign in some cases are (nil, err) and others
 	// (logical.ErrorResponse(..),nil), and others (logical.ErrorResponse(..),err).
@@ -43,11 +43,11 @@ type batchRequestVerifyItem map[string]string
 // BatchResponseVerifyItem represents a response item for batch processing
 type batchResponseVerifyItem struct {
 	// Valid indicates whether signature matches the signature derived from the input string
-	Valid bool `json:"valid" structs:"valid" mapstructure:"valid"`
+	Valid bool `json:"valid" mapstructure:"valid"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
-	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+	Error string `json:"error,omitempty" mapstructure:"error"`
 
 	// The return paths through WriteSign in some cases are (nil, err) and others
 	// (logical.ErrorResponse(..),nil), and others (logical.ErrorResponse(..),err).

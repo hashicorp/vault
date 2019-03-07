@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/consts"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -34,7 +33,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		reqBody, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
-			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
 		}
 		if r.Body != nil {
 			r.Body.Close()
@@ -48,13 +47,20 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			// If this is a api.Response error, don't wrap the response.
+			if resp != nil && resp.Response.Error() != nil {
+				copyHeader(w.Header(), resp.Response.Header)
+				w.WriteHeader(resp.Response.StatusCode)
+				io.Copy(w, resp.Response.Body)
+			} else {
+				logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			}
 			return
 		}
 
 		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
+			logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
 			return
 		}
 
@@ -163,19 +169,4 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, v)
 		}
 	}
-}
-
-func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &vaulthttp.ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
 }

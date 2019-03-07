@@ -13,73 +13,127 @@ description: |-
 
 Vault Agent Caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
-newly created tokens. The renewals of the secrets that are cached are also
+newly created tokens. The renewals of the cached tokens and leases are also
 managed by the agent.
+
+-> **Note:** Vault Agent Caching works best with servers/clusters that are
+running on Vault 1.1-beta2 and above due to changes that were introduced
+alongside this feature, such as the exposure of the `orphan` field in token
+creation responses. Agent caching functionality was tested against changes
+introduced within 1.1 and thus full caching capabilities may not behave as
+expected when paired with older server versions.
 
 ## Caching and Renewals
 
-Caching and renewals are managed by the agent only under these scenarios.
+Response caching and renewals are managed by the agent only under these
+specific scenarios.
 
-1. Token creation requests are made through the agent and not directly to the
-   Vault server. Login endpoints from various auth methods also fall under this
-   category along with token creation endpoints of the token auth method.
+1. Token creation requests are made through the agent. This means that any
+   login operations performed using various auth methods and invoking the token
+   creation endpoints of the token auth method via the agent will result in the
+   response getting cached by the agent. Responses containing new tokens will
+   be cached by the agent only if the parent token is already being managed by
+   the agent or if the new token is an orphan token.
 
 2. Leased secret creation requests are made through the agent using tokens that
-   are already managed by the agent.
+   are already managed by the agent. This means that any dynamic credentials
+   that are issued using the tokens managed by the agent, will be cached and
+   its renewals are taken care of.
 
 ## Using Auto-Auth Token
 
-Clients do not need to provide a Vault token along with the proxied request if
-the [auto-auth](/docs/autoauth/index.html) feature is enabled. This feature is
-enabled by setting the `use_auto_auth_token` (see below) configuration field.
-However, even when enabled, if requests that reach the agent already have a
-token attached on them, the attached token will be put to use instead of the
-auto-auth token.
+Vault Agent allows for easy authentication to Vault in a wide variety of
+environments using [Auto-Auth](/docs/agent/autoauth/index.html). By setting the
+`use_auto_auth_token` (see below) configuration, clients will not be required
+to provide a Vault token to the requests made to the agent. When this
+configuration is set, if the request doesn't already bear a token, then the
+auto-auth token will be used to forward the request to the Vault server. This
+configuration will be overridden if the request already has a token attached,
+in which case, the token present in the request will be used to forward the
+request to the Vault server.
 
--> **Note:** In Vault 1.1-beta, if the request doesn't already contain a Vault
-token, then the `auto-auth` token will used to make requests. The resulting
-secrets from these `auto-auth` token calls are not cached. They will be in the
-non-beta version. To test out the caching scenarios, please make a login
-request or a token creation request via the agent. The secrets generated from
-these new tokens will get cached.
+-> **Note:** In Vault 1.1-beta1, if the request doesn't already contain a Vault
+token, then the `auto-auth` token will used to make requests. However, the
+resulting secrets from these `auto-auth` token calls are not cached. This
+behavior will be changed so that they get cached in the upcoming versions. To
+test the caching scenarios in 1.1-beta1, please make login requests or token
+creation requests via the agent. These new tokens and their respective leased
+secrets will get cached.
 
 ## Cache Evictions
 
-The eviction of cache entries will occur when the agent fails to renew secrets.
-This can happen when the secret that is cached hits it's maximum TTL or if the
-renewal results in an error.
+The eviction of cache entries pertaining to secrets will occur when the agent
+can no longer renew them. This can happen when the secrets hit their maximum
+TTL or if the renewals result in errors.
 
-Agent also does some best-effort cache evictions by observing specific request
-types and response codes. For example, if a token revocation request is made
-via the agent and if the request succeeds, then agent evicts all the cache
-entries associated with the revoked token. Similar behavior is exercised for
-lease revocations as well.
+Agent does some best-effort cache evictions by observing specific request types
+and response codes. For example, if a token revocation request is made via the
+agent and if the forwarded request to the Vault server succeeds, then agent
+evicts all the cache entries associated with the revoked token. Similarly, any
+lease revocation operation will also be intercepted by the agent and the
+respective cache entries will be evicted.
 
-While agent tries to observe some requests and evicts cache entries
-automatically, agent is completely unaware of revocations that happen outside of
-Agent's context. This is when stale entries are created in the agent.
+Note that while agent evicts the cache entries upon secret expirations and upon
+intercepting revocation requests, it is still possible for the agent to be
+completely unaware of the revocations that happen through direct client
+interactions with the Vault server. This could potentially lead to stale cache
+entries. For managing the stale entries in the cache, an endpoint
+`/agent/v1/cache-clear`(see below) is made available to manually evict cache
+entries based on some of the query criteria used for indexing the cache entries.
 
-For managing the stale entries in the cache, an endpoint
-`/v1/agent/cache-clear`(see below) is made available to manually evict cache
-entries based on some of the criteria.
+## Request Uniqueness
+
+In order to detect repeat requests and return cached responses, agent will need
+to have a way to uniquely identify the requests. This computation as it stands
+today takes a simplistic approach (may change in future) of serializing and
+hashing the HTTP request along with all the headers and the request body. This
+hash value is then used as an index into the cache to check if the response is
+readily available. The consequence of this approach is that the hash value for
+any request will differ if any data in the request is modified. This has the
+side-effect of resulting in false negatives if say, the ordering of the request
+parameters are modified. As long as the requests come in without any change,
+caching behavior should be consistent. Identical requests with differently
+ordered request values will result in duplicated cache entries. A heuristic
+assumption that the clients will use consistent mechanisms to make requests,
+thereby resulting in consistent hash values per request is the idea upon which
+the caching functionality is built upon.
+
+## Renewal Management
+
+The tokens and leases are renewed by the agent using the secret renewer that is
+made available via the Vault server's [Go
+API](https://godoc.org/github.com/hashicorp/vault/api#Renewer). Agent performs
+all operations in memory and does not persist anything to storage. This means
+that when the agent is shut down, all the renewal operations are immediately
+terminated and there is no way for agent to resume renewals after the fact.
+Note that shutting down the agent does not indicate revocations of the secrets,
+instead it only means that renewal responsibility for all the valid unrevoked
+secrets are no longer performed by the Vault agent.
+
+### Agent CLI
+
+Agent's listener address will be picked up by the CLI through the
+`VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
+"http://127.0.0.1:8007".
 
 ## API
 
 ### Cache Clear
 
-This endpoint clears the cache based on given parameters. To be able to use
-this API, some information on how the agent caches values should be known
-beforehand. Each response that gets cached in the agent is indexed on some
+This endpoint clears the cache based on given criteria. To be able to use this
+API, some information on how the agent caches values should be known
+beforehand. Each response that gets cached in the agent will be indexed on some
 factors depending on the type of request. Those factors can be the `token` that
-is being returned by the response, the `token_accessor` of the token being
-returned by the response, the `request_path` that resulted in the response, the
-`lease` that is attached to the response, the `namespace` to which the request
-belongs to, and a few more. This API exposes some factors through which
-associated cache entries are fetched and evicted.
+is belonging to the cached response, the `token_accessor` of the token
+belonging to the cached response, the `request_path` that resulted in the
+cached response, the `lease` that is attached to the cached response, the
+`namespace` to which the cached response belongs to, and a few more. This API
+exposes some factors through which associated cache entries are fetched and
+evicted.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/v1/agent/cache-clear`      | `200 application/json` |
+| `POST`   | `/agent/v1/cache-clear`      | `200 application/json` |
 
 #### Parameters
 
@@ -91,9 +145,9 @@ associated cache entries are fetched and evicted.
   the `type` selected. This parameter is optional when the `type` is set
   to `all`.
 
-- `namespace` `(string: optional)` - The namespace in which to match along with
-  the provided request path. This is only applicable when the `type` is set to
-  `request_path`.
+- `namespace` `(string: optional)` - This is only applicable when the `type` is set to
+  `request_path`. The namespace of which the cache entries to be evicted for
+  the given request path.
 
 ### Sample Payload
 
@@ -110,23 +164,25 @@ associated cache entries are fetched and evicted.
 $ curl \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:1234/v1/agent/cache-clear
+    http://127.0.0.1:1234/agent/v1/cache-clear
 ```
 
-## Configuration
+## Configuration (`cache`)
 
-The top level `cache` block has two configuration entries:
+The top level `cache` block has the following configuration entries:
 
 - `use_auto_auth_token (bool: false)` - If set, the requests made to agent
-  without a Vault token will be forwarded to Vault with the auto-auth token
-  attached. If the requests already bear a token, this configuration will be
-  ignored.
+  without a Vault token will be forwarded to the Vault server with the
+  auto-auth token attached. If the requests already bear a token, this
+  configuration will be overridden and the token in the request will be used to
+  forward the request to the Vault server.
 
 - `listener` `(array of objects: required)` - Configuration for the listeners
 
-### Configuration (Listeners)
+### Configuration (`listener`)
 
-These configuration values are common to all Listeners.
+There can be one or more `listener` blocks inside the top-level `cache` block.
+These configuration values are common to all `listener` blocks.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
   are `tcp` and `unix`.
@@ -135,7 +191,8 @@ These configuration values are common to all Listeners.
 
 - `address` `(string: required)` - The address for the listener to listen to.
   This can either be a URL path when using `tcp` or a file path when using
-  `unix`. For example, `127.0.0.1:1234` or `/path/to/socket`.
+  `unix`. For example, `127.0.0.1:8007` or `/path/to/socket`. Defaults to
+  `127.0.0.1:8007`.
 
 - `tls_disable` `(bool: false)` - Specifies if TLS will be disabled.
 
@@ -144,6 +201,40 @@ These configuration values are common to all Listeners.
 
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
+
+### Configuration (`vault`)
+
+There can at most be one top level `vault` block and it has the following
+configuration entries:
+
+- `address (string: optional)` - The address of the Vault server. This should
+  be a complete URL such as `https://127.0.0.1:8200`. This value can be
+  overridden by setting the `VAULT_ADDR` environment variable.
+
+- `ca_cert (string: optional)` - Path on the local disk to a single PEM-encoded
+  CA certificate to verify the Vault server's SSL certificate. This value can
+  be overridden by setting the `VAULT_CACERT` environment variable.
+
+- `ca_path (string: optional)` - Path on the local disk to a directory of
+  PEM-encoded CA certificates to verify the Vault server's SSL certificate.
+  This value can be overridden by setting the `VAULT_CAPATH` environment
+  variable.
+
+- `client_cert (string: option)` - Path on the local disk to a single
+  PEM-encoded CA certificate to use for TLS authentication to the Vault server.
+  This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
+  variable.
+
+- `client_key (string: option)` - Path on the local disk to a single
+  PEM-encoded private key matching the client certificate from `client_cert`.
+  This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
+  variable.
+
+- `tls_skip_verify (string: optional)` - Disable verification of TLS
+  certificates. Using this option is highly discouraged as it decreases the
+  security of data transmissions to and from the Vault server. This value can
+  be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
+
 
 ### Example Configuration
 
@@ -159,14 +250,12 @@ cache {
   }
 
   listener "tcp" {
-    address = "127.0.0.1:8100"
+    address = "127.0.0.1:8007"
     tls_disable = true
   }
 }
+
+vault {
+    address = "http://127.0.0.1:8200"
+}
 ```
-
-### Environment Variable
-
-Agent's listener address will be picked up by the CLI through the
-`VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8100".
