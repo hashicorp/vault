@@ -148,6 +148,13 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 				return nil
 			}
 
+			// Wait to get a lock for each of the secretIDs to make sure we avoid a race conditon
+			// where the accessor has been written but not yet the secretIDHMAC
+			for _, lock := range b.secretIDLocks {
+				lock.Lock()
+				lock.Unlock()
+			}
+
 			for _, roleNameHMAC := range roleNameHMACs {
 				logger.Trace("listing secret ID HMACs", "role_hmac", roleNameHMAC)
 				secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
@@ -166,61 +173,15 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 			// to clean up the dangling accessor entries.
 			if len(accessorMap) > 0 {
 				logger.Trace(fmt.Sprintf("dangling accessorMap length: %d", len(accessorMap)))
-				// Wait to get a lock for each of the secretIDs to make sure we avoid a race conditon
-				// where the accessor has been written but not yet the secret
-				for _, lock := range b.secretIDLocks {
-					lock.Lock()
-					lock.Unlock()
-				}
-				// Now that we waited for a lock get a fresh list of all of the secretIDHMACs
-				// so that we can be sure if the accessor is dangling or not
-				allSecretIDHMACs := make([]string, 0)
-				for _, roleNameHMAC := range roleNameHMACs {
-					secretIDHMACs, err := s.List(ctx, fmt.Sprintf("%s%s", secretIDPrefixToUse, roleNameHMAC))
-					if err != nil {
-						return err
-					}
-					for _, v := range secretIDHMACs {
-						allSecretIDHMACs = append(allSecretIDHMACs, v)
-					}
-				}
 				for accessorHash := range accessorMap {
-					logger.Trace("found dangling accessor, verifying", accessorHash)
-					var entry secretIDAccessorStorageEntry
+					logger.Trace("found dangling accessor, removing", accessorHash)
 					entryIndex := accessorIDPrefixToUse + accessorHash
-					se, err := s.Get(ctx, entryIndex)
+					err = s.Delete(ctx, entryIndex)
 					if err != nil {
 						return err
-					}
-					if se != nil {
-						err = se.DecodeJSON(&entry)
-						if err != nil {
-							return err
-						}
-
-						// The storage entry doesn't store the role ID, so we have
-						// to go about this the long way; fortunately we shouldn't
-						// actually hit this very often
-						var found bool
-					searchloop:
-						for _, v := range allSecretIDHMACs {
-							if v == entry.SecretIDHMAC {
-								found = true
-								logger.Trace("accessor verified, not removing")
-								break searchloop
-							}
-						}
-						if !found {
-							logger.Trace("could not verify dangling accessor, removing")
-							err = s.Delete(ctx, entryIndex)
-							if err != nil {
-								return err
-							}
-						}
 					}
 				}
 			}
-
 			return nil
 		}
 
