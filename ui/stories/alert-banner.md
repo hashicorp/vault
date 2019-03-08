@@ -16,6 +16,7 @@
     @message="{{model.keyId}} is not a valid lease ID"
   />
 ```
+https://github.com/hashicorp/vault/search?l=Handlebars&q=AlertBanner
 
 ## Source
 https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-banner.js

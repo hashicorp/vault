@@ -3,7 +3,7 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const GLYPHS_WITH_SVG_TAG = [
+export const GLYPHS_WITH_SVG_TAG = [
   'cancel-square-outline',
   'cancel-square-fill',
   'check-circle-fill',
