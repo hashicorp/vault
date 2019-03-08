@@ -151,11 +151,19 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
+	if opts.Logger != nil {
+		conf.Logger = opts.Logger
+	}
+
 	for k, v := range opts.LogicalBackends {
 		conf.LogicalBackends[k] = v
 	}
 	for k, v := range opts.CredentialBackends {
 		conf.CredentialBackends[k] = v
+	}
+
+	for k, v := range opts.AuditBackends {
+		conf.AuditBackends[k] = v
 	}
 
 	c, err := NewCore(conf)
