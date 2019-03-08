@@ -432,12 +432,12 @@
       <li<%= sidebar_current("docs-secrets") %>>
         <a href="/docs/secrets/index.html">Secrets Engines</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-secrets-ad") %>>
-            <a href="/docs/secrets/ad/index.html">Active Directory</a>
-          </li>
-
           <li<%= sidebar_current("docs-secrets-alicloud") %>>
             <a href="/docs/secrets/alicloud/index.html">AliCloud</a>
+          </li>
+
+          <li<%= sidebar_current("docs-secrets-ad") %>>
+            <a href="/docs/secrets/ad/index.html">Active Directory</a>
           </li>
 
           <li<%= sidebar_current("docs-secrets-aws") %>>
@@ -495,6 +495,11 @@
           <li<%= sidebar_current("docs-secrets-gcpkms") %>>
             <a href="/docs/secrets/gcpkms/index.html">Google Cloud KMS</a>
           </li>
+
+          <li<%= sidebar_current("docs-secrets-identity") %>>
+            <a href="/docs/secrets/identity/index.html">Identity</a>
+          </li>
+
           <li<%= sidebar_current("docs-secrets-kv") %>>
             <a href="/docs/secrets/kv/index.html">Key/Value</a>
             <ul class="nav">
@@ -505,10 +510,6 @@
                 <a href="/docs/secrets/kv/kv-v2.html">K/V Version 2</a>
               </li>
             </ul>
-          </li>
-
-          <li<%= sidebar_current("docs-secrets-identity") %>>
-            <a href="/docs/secrets/identity/index.html">Identity</a>
           </li>
 
           <li<%= sidebar_current("docs-secrets-nomad") %>>
@@ -573,12 +574,12 @@
       <li<%= sidebar_current("docs-auth") %>>
         <a href="/docs/auth/index.html">Auth Methods</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-auth-approle") %>>
-            <a href="/docs/auth/approle.html">AppRole</a>
-          </li>
-
           <li<%= sidebar_current("docs-auth-alicloud") %>>
             <a href="/docs/auth/alicloud.html">AliCloud</a>
+          </li>
+
+          <li<%= sidebar_current("docs-auth-approle") %>>
+            <a href="/docs/auth/approle.html">AppRole</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-aws") %>>
@@ -587,6 +588,10 @@
 
           <li<%= sidebar_current("docs-auth-azure") %>>
             <a href="/docs/auth/azure.html">Azure</a>
+          </li>
+
+          <li<%= sidebar_current("docs-auth-github") %>>
+            <a href="/docs/auth/github.html">GitHub</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-gcp") %>>
@@ -599,10 +604,6 @@
 
           <li<%= sidebar_current("docs-auth-kubernetes") %>>
             <a href="/docs/auth/kubernetes.html">Kubernetes</a>
-          </li>
-
-          <li<%= sidebar_current("docs-auth-github") %>>
-            <a href="/docs/auth/github.html">GitHub</a>
           </li>
 
           <li<%= sidebar_current("docs-auth-ldap") %>>

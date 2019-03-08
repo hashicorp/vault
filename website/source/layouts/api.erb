@@ -71,17 +71,6 @@
           <li<%= sidebar_current("api-http-secret-gcpkms") %>>
             <a href="/api/secret/gcpkms/index.html">Google Cloud KMS <sup>1.0 BETA</sup></a>
           </li>
-          <li<%= sidebar_current("api-http-secret-kv") %>>
-              <a href="/api/secret/kv/index.html">Key/Value</a>
-              <ul class="nav">
-              <li<%= sidebar_current("api-http-secret-kv-v1") %>>
-                <a href="/api/secret/kv/kv-v1.html">K/V Version 1</a>
-              </li>
-              <li<%= sidebar_current("api-http-secret-kv-v2") %>>
-                <a href="/api/secret/kv/kv-v2.html">K/V Version 2</a>
-              </li>
-            </ul>
-          </li>
           <li<%= sidebar_current("api-http-secret-identity") %>>
             <a href="/api/secret/identity/index.html">Identity</a>
             <ul class="nav">
@@ -100,6 +89,17 @@
                 <li<%= sidebar_current("api-http-secret-identity-lookup") %>>
                   <a href="/api/secret/identity/lookup.html">Lookup</a>
                 </li>
+            </ul>
+          </li>
+          <li<%= sidebar_current("api-http-secret-kv") %>>
+              <a href="/api/secret/kv/index.html">Key/Value</a>
+              <ul class="nav">
+              <li<%= sidebar_current("api-http-secret-kv-v1") %>>
+                <a href="/api/secret/kv/kv-v1.html">K/V Version 1</a>
+              </li>
+              <li<%= sidebar_current("api-http-secret-kv-v2") %>>
+                <a href="/api/secret/kv/kv-v2.html">K/V Version 2</a>
+              </li>
             </ul>
           </li>
           <li<%= sidebar_current("api-http-secret-nomad") %>>
@@ -144,11 +144,11 @@
       <li<%= sidebar_current("api-http-auth") %>>
         <a href="/api/auth/index.html">Auth Methods</a>
         <ul class="nav">
-          <li<%= sidebar_current("api-http-auth-approle") %>>
-            <a href="/api/auth/approle/index.html">AppRole</a>
-          </li>
           <li<%= sidebar_current("api-http-auth-alicloud") %>>
             <a href="/api/auth/alicloud/index.html">AliCloud</a>
+          </li>
+          <li<%= sidebar_current("api-http-auth-approle") %>>
+            <a href="/api/auth/approle/index.html">AppRole</a>
           </li>
           <li<%= sidebar_current("api-http-auth-aws") %>>
             <a href="/api/auth/aws/index.html">AWS</a>
