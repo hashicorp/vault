@@ -12,8 +12,8 @@ const consoleComponent = create(consoleClass);
 module('Acceptance | policies/acl', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   test('it lists default and root acls', async function(assert) {
@@ -42,7 +42,7 @@ module('Acceptance | policies/acl', function(hooks) {
     // wait for permissions to load
     await settled();
     await page.delete().confirmDelete();
-    assert.notOk(page.findPolicyByName(policyName), 'policy is deleted successfully');
     await settled();
+    assert.notOk(page.findPolicyByName(policyName), 'policy is deleted successfully');
   });
 });
