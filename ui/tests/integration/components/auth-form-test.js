@@ -166,8 +166,8 @@ module('Integration | Component | auth form', function(hooks) {
     });
 
     this.set('cluster', EmberObject.create({}));
-    this.set('selectedAuth', 'foo/');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+    this.set('selectedAuth', 'foo/');
     await component.login();
 
     await settled();

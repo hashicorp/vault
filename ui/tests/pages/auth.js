@@ -1,4 +1,5 @@
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 
 export default create({
   visit: visitable('/vault/auth'),
@@ -6,6 +7,7 @@ export default create({
   tokenInput: fillable('[data-test-token]'),
   login: async function(token) {
     await this.visit({ with: 'token' });
+    await settled();
     if (token) {
       return await this.tokenInput(token).submit();
     }

@@ -103,7 +103,7 @@ export default Component.extend(DEFAULTS, {
     let selectedAuth = this.get('selectedAuth');
     let keyIsPath = this.get('selectedAuthIsPath');
     if (!methods) {
-      return {};
+      return;
     }
     if (keyIsPath) {
       return methods.findBy('path', selectedAuth);
