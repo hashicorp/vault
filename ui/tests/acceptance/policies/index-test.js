@@ -35,6 +35,7 @@ module('Acceptance | policies/acl', function(hooks) {
     let policyName = 'list.policy';
     await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy='${POLICY}'`]);
     await page.visit({ type: 'acl' });
+    await settled();
     let policy = page.row.filterBy('name', policyName)[0];
     assert.ok(policy, 'policy is shown in the list');
     await policy.menu();
@@ -42,5 +43,6 @@ module('Acceptance | policies/acl', function(hooks) {
     await settled();
     await page.delete().confirmDelete();
     assert.notOk(page.findPolicyByName(policyName), 'policy is deleted successfully');
+    await settled();
   });
 });
