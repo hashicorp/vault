@@ -77,8 +77,6 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 				accessorMap[accessorHash] = true
 			}
 
-			time.Sleep(b.testTidyDelay)
-
 			secretIDCleanupFunc := func(secretIDHMAC, roleNameHMAC, secretIDPrefixToUse string) error {
 				checkCount++
 				lock := b.secretIDLock(secretIDHMAC)
@@ -168,6 +166,9 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 					}
 				}
 			}
+
+			// Fake delay added during testing to simulate a race condition where the accessor has been written but not yet the secretIDHMAC
+			time.Sleep(b.testTidyDelay)
 
 			// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
 			// to clean up the dangling accessor entries.
