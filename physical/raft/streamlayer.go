@@ -44,6 +44,10 @@ func NewRaftLayer(logger log.Logger, addr net.Addr) *raftLayer {
 	return layer
 }
 
+func (l *raftLayer) SetAddr(addr net.Addr) {
+	l.addr = addr
+}
+
 func (l *raftLayer) ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	return nil, nil
 }

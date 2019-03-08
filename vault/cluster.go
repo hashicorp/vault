@@ -310,6 +310,7 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("stopping cluster listeners")
 
 	c.clusterListener.Stop()
+	c.clusterListener = nil
 
 	c.logger.Info("cluster listeners successfully shut down")
 }

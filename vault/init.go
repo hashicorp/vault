@@ -8,6 +8,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/hashicorp/vault/physical/raft"
+
+	"github.com/hashicorp/vault/physical"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -129,6 +133,21 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// Avoid an initialization race
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
+
+	// If we have clustered storage, set it up now
+	if clusteredStorage, ok := c.underlyingPhysical.(physical.Clustered); ok {
+		if err := c.startClusterListener(ctx); err != nil {
+			return nil, errwrap.Wrapf("could not start cluster listener: {{err}}", err)
+		}
+
+		if err := c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, c.clusterListener.Addr(), nil); err != nil {
+			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+		}
+
+		if err := clusteredStorage.SetupCluster(ctx, c.clusterListener); err != nil {
+			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+		}
+	}
 
 	// Check if we are initialized
 	init, err := c.Initialized(ctx)
