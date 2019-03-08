@@ -426,10 +426,7 @@ func NewClient(c *Config) (*Client, error) {
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
-	}
-
-	// get and poll token from agent sink if it is available
-	if agentSinkPath := os.Getenv(EnvAgentFileSinkPath); agentSinkPath != "" {
+	} else if agentSinkPath := os.Getenv(EnvAgentFileSinkPath); agentSinkPath != "" { // get and poll token from agent sink if it is available
 		token, err := readAgentTokenFromFile(agentSinkPath)
 		if err != nil {
 			return nil, err
@@ -449,10 +446,12 @@ func (c *Client) pollFileForToken(filePath string) {
 	go func() {
 		for {
 			time.Sleep(pollingInterval)
-			token, _ := readAgentTokenFromFile(filePath) // todo - what to do with the error?
-			// update the client's token if it has changed
-			if token != c.token {
+			token, err := readAgentTokenFromFile(filePath) // todo - what to do with the error?
+			// update the client's token if it has changed and there was no error reading the file
+			if err == nil && token != c.token {
+				c.modifyLock.Lock()
 				c.token = token
+				c.modifyLock.Unlock()
 			}
 		}
 	}()
