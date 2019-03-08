@@ -1,6 +1,7 @@
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -20,8 +21,10 @@ module('Acceptance | cluster', function(hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function() {
+    await authPage.login();
+  });
+  hooks.afterEach(async function() {
     await logout.visit();
-    return authPage.login();
   });
 
   test('hides nav item if user does not have permission', async function(assert) {
@@ -36,7 +39,6 @@ module('Acceptance | cluster', function(hooks) {
     await authPage.login(userToken);
 
     assert.dom('[data-test-navbar-item=policies]').doesNotExist();
-    await logout.visit();
   });
 
   test('enterprise nav item links to first route that user has access to', async function(assert) {
@@ -51,6 +53,5 @@ module('Acceptance | cluster', function(hooks) {
     await authPage.login(userToken);
 
     assert.dom('[data-test-navbar-item=policies]').hasAttribute('href', '/ui/vault/policies/rgp');
-    await logout.visit();
   });
 });

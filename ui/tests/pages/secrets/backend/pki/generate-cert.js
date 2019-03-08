@@ -1,5 +1,6 @@
 import { Base } from '../credentials';
 import { clickable, text, value, create, fillable, isPresent } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 
 export default create({
   ...Base,
@@ -18,13 +19,15 @@ export default create({
       .toggleOptions()
       .fillInField('unit', 'h')
       .submit();
+    await settled();
   },
 
   sign: async function(commonName, csr) {
-    return this.csr(csr)
+    await this.csr(csr)
       .commonName(commonName)
       .toggleOptions()
       .fillInField('unit', 'h')
       .submit();
+    await settled();
   },
 });

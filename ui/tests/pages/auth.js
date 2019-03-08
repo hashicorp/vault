@@ -9,8 +9,11 @@ export default create({
     await this.visit({ with: 'token' });
     await settled();
     if (token) {
-      return await this.tokenInput(token).submit();
+      await this.tokenInput(token).submit();
+      await settled();
+      return;
     }
-    return await this.tokenInput('root').submit();
+    await this.tokenInput('root').submit();
+    await settled();
   },
 });

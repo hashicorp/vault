@@ -12,8 +12,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | secrets/pki/list?tab=certs', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
   // important for this comment to stay here otherwise the formatting mangles the CSR
   // prettier-ignore
@@ -40,12 +40,13 @@ elRplAzrMF4=
     const roleName = 'role';
     await enablePage.enable('pki', path);
     await configPage.visit({ backend: path }).form.generateCA();
+    await settled();
     await editPage.visitRoot({ backend: path });
     await editPage.createRole('role', 'example.com');
     await settled();
-    return await generatePage.visit({ backend: path, id: roleName, action }).then(() => {
-      return path;
-    });
+    await generatePage.visit({ backend: path, id: roleName, action });
+    await settled();
+    return path;
   };
 
   test('it issues a cert', async function(assert) {
