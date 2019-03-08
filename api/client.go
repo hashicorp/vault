@@ -100,6 +100,10 @@ type Config struct {
 	// Note: It is not thread-safe to set this and make concurrent requests
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
+
+	// AgentFileSinkPath specifies a file path that vault agent is writing
+	// tokens to.
+	AgentFileSinkPath string
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -424,15 +428,24 @@ func NewClient(c *Config) (*Client, error) {
 		config: c,
 	}
 
-	if token := os.Getenv(EnvVaultToken); token != "" {
-		client.token = token
-	} else if agentSinkPath := os.Getenv(EnvAgentFileSinkPath); agentSinkPath != "" { // get and poll token from agent sink if it is available
+	agentSinkPath := ""
+	// order of precedence could change
+	switch {
+	case os.Getenv(EnvVaultToken) != "":
+		client.token = os.Getenv(EnvVaultToken)
+	case c.AgentFileSinkPath != "":
+		agentSinkPath = c.AgentFileSinkPath
+	case os.Getenv(EnvAgentFileSinkPath) != "":
+		agentSinkPath = os.Getenv(EnvAgentFileSinkPath)
+	}
+
+	// set and poll token from agent sink if it is available
+	if agentSinkPath != "" {
 		token, err := readAgentTokenFromFile(agentSinkPath)
 		if err != nil {
 			return nil, err
 		}
 		client.token = token
-
 		// poll file for updates
 		client.pollFileForToken(agentSinkPath)
 	}
