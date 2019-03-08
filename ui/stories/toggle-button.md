@@ -28,6 +28,7 @@
     </div>
   {{/if}}
 ```
+https://github.com/hashicorp/vault/search?l=Handlebars&q=ToggleButton
 
 ## Source
 https://github.com/hashicorp/vault/blob/master/ui/app/components/toggle-button.js
