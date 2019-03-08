@@ -1,27 +1,40 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
+import notes from './toggle-button.md';
 
 storiesOf('ToggleButton', module)
   .add(
-    'showOptions',
+    'ToggleButton',
     () => ({
       template: hbs`
-    <ToggleButton
-      @toggleAttr="showOptions"
-      @toggleTarget={{this}}
-      />
-    `,
+        <ToggleButton
+          @toggleAttr="showOptions"
+          @toggleTarget={{this}}
+          />
+        `,
     }),
-    { notes: 'My notes on some bold text' }
+    { notes }
   )
-  .add('with label', () => ({
-    template: hbs`
-    <ToggleButton
-      @openLabel="Expand Options"
-      @closedLabel="Hide Options"
-      @toggleTarget={{this}}
-      @toggleAttr="use_pgp"
-      />
-    `,
-  }));
+  .add(
+    'ToggleButton with content',
+    () => ({
+      template: hbs`
+        <ToggleButton
+          @openLabel="Hide me!"
+          @closedLabel="Show me!"
+          @toggleTarget={{this}}
+          @toggleAttr="showOptions"
+        />
+
+        {{#if showOptions}}
+          <div>
+            <p>
+              I will be toggled!
+            </p>
+          </div>
+        {{/if}}
+        `,
+    }),
+    { notes }
+  );
