@@ -1,13 +1,25 @@
 import { set } from '@ember/object';
 import { hash, resolve } from 'rsvp';
+import { inject as service } from '@ember/service';
+import DS from 'ember-data';
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
+import { getOwner } from '@ember/application';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import DS from 'ember-data';
+import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
+  pathHelp: service('path-help'),
+  secretParam() {
+    let { secret } = this.paramsFor(this.routeName);
+    return secret ? normalizePath(secret) : '';
+  },
+  enginePathParam() {
+    let { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    return backend;
+  },
   capabilities(secret) {
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    const backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
     let backendType = backendModel.get('engineType');
     if (backendType === 'kv' || backendType === 'cubbyhole' || backendType === 'generic') {
@@ -34,16 +46,29 @@ export default Route.extend(UnloadModelRoute, {
     // currently there is no recursive delete for folders in vault, so there's no need to 'edit folders'
     // perhaps in the future we could recurse _for_ users, but for now, just kick them
     // back to the list
-    const { secret } = this.paramsFor(this.routeName);
-    const parentKey = utils.parentKeyForKey(secret);
-    const mode = this.routeName.split('.').pop();
-    if (mode === 'edit' && utils.keyIsFolder(secret)) {
-      if (parentKey) {
-        return this.transitionTo('vault.cluster.secrets.backend.list', parentKey);
-      } else {
-        return this.transitionTo('vault.cluster.secrets.backend.list-root');
+    let secret = this.secretParam();
+    return this.buildModel(secret).then(() => {
+      const parentKey = utils.parentKeyForKey(secret);
+      const mode = this.routeName.split('.').pop();
+      if (mode === 'edit' && utils.keyIsFolder(secret)) {
+        if (parentKey) {
+          return this.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
+        } else {
+          return this.transitionTo('vault.cluster.secrets.backend.list-root');
+        }
       }
+    });
+  },
+
+  buildModel(secret) {
+    const backend = this.enginePathParam();
+
+    let modelType = this.modelType(backend, secret);
+    if (['secret', 'secret-v2'].includes(modelType)) {
+      return resolve();
     }
+    let owner = getOwner(this);
+    return this.pathHelp.getNewModel(modelType, owner, backend);
   },
 
   modelType(backend, secret) {
@@ -62,10 +87,10 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   model(params) {
-    let { secret } = params;
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let secret = this.secretParam();
+    let backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    const modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret);
 
     if (!secret) {
       secret = '\u0020';
@@ -124,8 +149,8 @@ export default Route.extend(UnloadModelRoute, {
 
   setupController(controller, model) {
     this._super(...arguments);
-    const { secret } = this.paramsFor(this.routeName);
-    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    let secret = this.secretParam();
+    let backend = this.enginePathParam();
     const preferAdvancedEdit =
       this.controllerFor('vault.cluster.secrets.backend').get('preferAdvancedEdit') || false;
     const backendType = this.backendType();
@@ -153,8 +178,8 @@ export default Route.extend(UnloadModelRoute, {
 
   actions: {
     error(error) {
-      const { secret } = this.paramsFor(this.routeName);
-      const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+      let secret = this.secretParam();
+      let backend = this.enginePathParam();
       set(error, 'keyId', backend + '/' + secret);
       set(error, 'backend', backend);
       return true;

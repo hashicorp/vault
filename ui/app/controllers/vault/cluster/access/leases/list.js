@@ -2,19 +2,12 @@ import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller, { inject as controller } from '@ember/controller';
 import utils from 'vault/lib/key-utils';
+import ListController from 'vault/mixins/list-controller';
 
-export default Controller.extend({
+export default Controller.extend(ListController, {
   flashMessages: service(),
   store: service(),
   clusterController: controller('vault.cluster'),
-  queryParams: {
-    page: 'page',
-    pageFilter: 'pageFilter',
-  },
-
-  page: 1,
-  pageFilter: null,
-  filter: null,
 
   backendCrumb: computed(function() {
     return {
@@ -26,24 +19,6 @@ export default Controller.extend({
   }),
 
   isLoading: false,
-
-  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
-    return !!(content.length && content.findBy('id', filter));
-  }),
-
-  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
-    var filter = this.get('filter');
-    var content = this.get('model');
-    var filterMatchesKey = this.get('filterMatchesKey');
-    var re = new RegExp('^' + filter);
-    return filterMatchesKey
-      ? null
-      : content.find(function(key) {
-          return re.test(key.get('id'));
-        });
-  }),
 
   filterIsFolder: computed('filter', function() {
     return !!utils.keyIsFolder(this.get('filter'));
@@ -65,14 +40,6 @@ export default Controller.extend({
   }),
 
   actions: {
-    setFilter(val) {
-      this.set('filter', val);
-    },
-
-    setFilterFocus(bool) {
-      this.set('filterFocused', bool);
-    },
-
     revokePrefix(prefix, isForce) {
       const adapter = this.get('store').adapterFor('lease');
       const method = isForce ? 'forceRevokePrefix' : 'revokePrefix';

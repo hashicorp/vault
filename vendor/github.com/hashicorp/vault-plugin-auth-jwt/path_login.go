@@ -29,9 +29,14 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
-			logical.AliasLookaheadOperation: b.pathLogin,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+				Summary:  pathLoginHelpSyn,
+			},
+			logical.AliasLookaheadOperation: &framework.PathOperation{
+				Callback: b.pathLogin,
+			},
 		},
 
 		HelpSynopsis:    pathLoginHelpSyn,
@@ -40,13 +45,19 @@ func pathLogin(b *jwtAuthBackend) *framework.Path {
 }
 
 func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	token := d.Get("jwt").(string)
-	if len(token) == 0 {
-		return logical.ErrorResponse("missing token"), nil
+	config, err := b.config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
 	roleName := d.Get("role").(string)
-	if len(roleName) == 0 {
+	if roleName == "" {
+		roleName = config.DefaultRole
+	}
+	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
 	}
 
@@ -55,19 +66,16 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse("role could not be found"), nil
+		return logical.ErrorResponse("role %q could not be found", roleName), nil
+	}
+
+	token := d.Get("jwt").(string)
+	if len(token) == 0 {
+		return logical.ErrorResponse("missing token"), nil
 	}
 
 	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
 		return logical.ErrorResponse("request originated from invalid CIDR"), nil
-	}
-
-	config, err := b.config(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if config == nil {
-		return logical.ErrorResponse("could not load configuration"), nil
 	}
 
 	// Here is where things diverge. If it is using OIDC Discovery, validate
@@ -130,119 +138,37 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 	case config.OIDCDiscoveryURL != "":
-		provider, err := b.getProvider(ctx, config)
+		allClaims, err = b.verifyOIDCToken(ctx, config, role, token)
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
-		}
-
-		verifier := provider.Verifier(&oidc.Config{
-			SkipClientIDCheck:    true,
-			SupportedSigningAlgs: config.JWTSupportedAlgs,
-		})
-
-		idToken, err := verifier.Verify(ctx, token)
-		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error validating signature: {{err}}", err).Error()), nil
-		}
-
-		if err := idToken.Claims(&allClaims); err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("unable to successfully parse all claims from token: {{err}}", err).Error()), nil
-		}
-
-		if role.BoundSubject != "" && role.BoundSubject != idToken.Subject {
-			return logical.ErrorResponse("sub claim does not match bound subject"), nil
-		}
-		if len(role.BoundAudiences) != 0 {
-			var found bool
-			for _, v := range role.BoundAudiences {
-				if strutil.StrListContains(idToken.Audience, v) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return logical.ErrorResponse("aud claim does not match any bound audience"), nil
-			}
+			return logical.ErrorResponse(err.Error()), nil
 		}
 
 	default:
 		return nil, errors.New("unhandled case during login")
 	}
 
-	userClaimRaw, ok := allClaims[role.UserClaim]
-	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("%q claim not found in token", role.UserClaim)), nil
-	}
-	userName, ok := userClaimRaw.(string)
-	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("%q claim could not be converted to string", role.UserClaim)), nil
+	alias, groupAliases, err := b.createIdentity(allClaims, role)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	var groupAliases []*logical.Alias
-	if role.GroupsClaim != "" {
-		mapPath, err := parseClaimWithDelimiters(role.GroupsClaim, role.GroupsClaimDelimiterPattern)
-		if err != nil {
-			return logical.ErrorResponse(errwrap.Wrapf("error parsing delimiters for groups claim: {{err}}", err).Error()), nil
-		}
-		if len(mapPath) < 1 {
-			return logical.ErrorResponse("unexpected length 0 of claims path after parsing groups claim against delimiters"), nil
-		}
-		var claimKey string
-		claimMap := allClaims
-		for i, key := range mapPath {
-			if i == len(mapPath)-1 {
-				claimKey = key
-				break
-			}
-			nextMapRaw, ok := claimMap[key]
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("map via key %q not found while navigating group claim delimiters", key)), nil
-			}
-			nextMap, ok := nextMapRaw.(map[string]interface{})
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("key %q does not reference a map while navigating group claim delimiters", key)), nil
-			}
-			claimMap = nextMap
-		}
-
-		groupsClaimRaw, ok := claimMap[claimKey]
-		if !ok {
-			return logical.ErrorResponse(fmt.Sprintf("%q claim not found in token", role.GroupsClaim)), nil
-		}
-		groups, ok := groupsClaimRaw.([]interface{})
-		if !ok {
-			return logical.ErrorResponse(fmt.Sprintf("%q claim could not be converted to string list", role.GroupsClaim)), nil
-		}
-		for _, groupRaw := range groups {
-			group, ok := groupRaw.(string)
-			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("value %v in groups claim could not be parsed as string", groupRaw)), nil
-			}
-			if group == "" {
-				continue
-			}
-			groupAliases = append(groupAliases, &logical.Alias{
-				Name: group,
-			})
-		}
+	tokenMetadata := map[string]string{"role": roleName}
+	for k, v := range alias.Metadata {
+		tokenMetadata[k] = v
 	}
 
 	resp := &logical.Response{
 		Auth: &logical.Auth{
-			Policies:    role.Policies,
-			DisplayName: userName,
-			Period:      role.Period,
-			NumUses:     role.NumUses,
-			Alias: &logical.Alias{
-				Name: userName,
-			},
+			Policies:     role.Policies,
+			DisplayName:  alias.Name,
+			Period:       role.Period,
+			NumUses:      role.NumUses,
+			Alias:        alias,
 			GroupAliases: groupAliases,
 			InternalData: map[string]interface{}{
 				"role": roleName,
 			},
-			Metadata: map[string]string{
-				"role": roleName,
-			},
+			Metadata: tokenMetadata,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       role.TTL,
@@ -275,6 +201,120 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 	resp.Auth.MaxTTL = role.MaxTTL
 	resp.Auth.Period = role.Period
 	return resp, nil
+}
+
+func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
+	allClaims := make(map[string]interface{})
+
+	provider, err := b.getProvider(ctx, config)
+	if err != nil {
+		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
+	}
+
+	oidcConfig := &oidc.Config{
+		SupportedSigningAlgs: config.JWTSupportedAlgs,
+	}
+
+	if role.RoleType == "oidc" {
+		oidcConfig.ClientID = config.OIDCClientID
+	} else {
+		oidcConfig.SkipClientIDCheck = true
+	}
+	verifier := provider.Verifier(oidcConfig)
+
+	idToken, err := verifier.Verify(ctx, rawToken)
+	if err != nil {
+		return nil, errwrap.Wrapf("error validating signature: {{err}}", err)
+	}
+
+	if err := idToken.Claims(&allClaims); err != nil {
+		return nil, errwrap.Wrapf("unable to successfully parse all claims from token: {{err}}", err)
+	}
+
+	if role.BoundSubject != "" && role.BoundSubject != idToken.Subject {
+		return nil, errors.New("sub claim does not match bound subject")
+	}
+	if len(role.BoundAudiences) > 0 {
+		var found bool
+		for _, v := range role.BoundAudiences {
+			if strutil.StrListContains(idToken.Audience, v) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.New("aud claim does not match any bound audience")
+		}
+	}
+
+	if len(role.BoundClaims) > 0 {
+		for claim, expValue := range role.BoundClaims {
+			actValue := getClaim(b.Logger(), allClaims, claim)
+			if actValue == nil {
+				return nil, fmt.Errorf("claim is missing: %s", claim)
+			}
+
+			if expValue != actValue {
+				return nil, fmt.Errorf("claim '%s' does not match associated bound claim", claim)
+			}
+		}
+	}
+
+	return allClaims, nil
+}
+
+// createIdentity creates an alias and set of groups aliass based on the role
+// definition and received claims.
+func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *jwtRole) (*logical.Alias, []*logical.Alias, error) {
+	userClaimRaw, ok := allClaims[role.UserClaim]
+	if !ok {
+		return nil, nil, fmt.Errorf("claim %q not found in token", role.UserClaim)
+	}
+	userName, ok := userClaimRaw.(string)
+	if !ok {
+		return nil, nil, fmt.Errorf("claim %q could not be converted to string", role.UserClaim)
+	}
+
+	metadata, err := extractMetadata(b.Logger(), allClaims, role.ClaimMappings)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	alias := &logical.Alias{
+		Name:     userName,
+		Metadata: metadata,
+	}
+
+	var groupAliases []*logical.Alias
+
+	if role.GroupsClaim == "" {
+		return alias, groupAliases, nil
+	}
+
+	groupsClaimRaw := getClaim(b.Logger(), allClaims, role.GroupsClaim)
+
+	if groupsClaimRaw == nil {
+		return nil, nil, fmt.Errorf("%q claim not found in token", role.GroupsClaim)
+	}
+	groups, ok := groupsClaimRaw.([]interface{})
+
+	if !ok {
+		return nil, nil, fmt.Errorf("%q claim could not be converted to string list", role.GroupsClaim)
+	}
+	for _, groupRaw := range groups {
+		group, ok := groupRaw.(string)
+		if !ok {
+			return nil, nil, fmt.Errorf("value %v in groups claim could not be parsed as string", groupRaw)
+		}
+		if group == "" {
+			continue
+		}
+		groupAliases = append(groupAliases, &logical.Alias{
+			Name: group,
+		})
+	}
+
+	return alias, groupAliases, nil
 }
 
 const (

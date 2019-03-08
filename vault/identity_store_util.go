@@ -105,6 +105,24 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
+			// Remove dangling groups
+			if group.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+				ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
+				if err != nil {
+					return err
+				}
+				if ns == nil {
+					// Group's namespace doesn't exist anymore but the group
+					// from the namespace still exists.
+					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
+					err = i.groupPacker.DeleteItem(group.ID)
+					if err != nil {
+						return err
+					}
+					continue
+				}
+			}
+
 			// Ensure that there are no groups with duplicate names
 			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
 			if err != nil {
@@ -249,9 +267,26 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-
 				if entity == nil {
 					continue
+				}
+
+				// Remove dangling entities
+				if entity.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+					ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+					if err != nil {
+						return err
+					}
+					if ns == nil {
+						// Entity's namespace doesn't exist anymore but the
+						// entity from the namespace still exists.
+						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
+						err = i.entityPacker.DeleteItem(entity.ID)
+						if err != nil {
+							return err
+						}
+						continue
+					}
 				}
 
 				// Ensure that there are no entities with duplicate names

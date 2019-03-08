@@ -30,6 +30,19 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The CA certificate or chain of certificates, in PEM format, to use to validate conections to the OIDC Discovery URL. If not set, system certificates are used.",
 			},
+			"oidc_client_id": {
+				Type:        framework.TypeString,
+				Description: "The OAuth Client ID configured with your OIDC provider.",
+			},
+			"oidc_client_secret": {
+				Type:             framework.TypeString,
+				Description:      "The OAuth Client Secret configured with your OIDC provider.",
+				DisplaySensitive: true,
+			},
+			"default_role": {
+				Type:        framework.TypeString,
+				Description: "The default role to use if none is provided during login. If not set, a role is required during login.",
+			},
 			"jwt_validation_pubkeys": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with "oidc_discovery_url".`,
@@ -44,9 +57,17 @@ func pathConfig(b *jwtAuthBackend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.UpdateOperation: b.pathConfigWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				Summary:  "Read the current JWT authentication backend configuration.",
+			},
+
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:    b.pathConfigWrite,
+				Summary:     "Configure the JWT authentication backend.",
+				Description: confHelpDesc,
+			},
 		},
 
 		HelpSynopsis:    confHelpSyn,
@@ -103,6 +124,8 @@ func (b *jwtAuthBackend) pathConfigRead(ctx context.Context, req *logical.Reques
 		Data: map[string]interface{}{
 			"oidc_discovery_url":     config.OIDCDiscoveryURL,
 			"oidc_discovery_ca_pem":  config.OIDCDiscoveryCAPEM,
+			"oidc_client_id":         config.OIDCClientID,
+			"default_role":           config.DefaultRole,
 			"jwt_validation_pubkeys": config.JWTValidationPubKeys,
 			"jwt_supported_algs":     config.JWTSupportedAlgs,
 			"bound_issuer":           config.BoundIssuer,
@@ -116,6 +139,9 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 	config := &jwtConfig{
 		OIDCDiscoveryURL:     d.Get("oidc_discovery_url").(string),
 		OIDCDiscoveryCAPEM:   d.Get("oidc_discovery_ca_pem").(string),
+		OIDCClientID:         d.Get("oidc_client_id").(string),
+		OIDCClientSecret:     d.Get("oidc_client_secret").(string),
+		DefaultRole:          d.Get("default_role").(string),
 		JWTValidationPubKeys: d.Get("jwt_validation_pubkeys").([]string),
 		JWTSupportedAlgs:     d.Get("jwt_supported_algs").([]string),
 		BoundIssuer:          d.Get("bound_issuer").(string),
@@ -127,11 +153,18 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 		config.OIDCDiscoveryURL != "" && len(config.JWTValidationPubKeys) != 0:
 		return logical.ErrorResponse("exactly one of 'oidc_discovery_url' and 'jwt_validation_pubkeys' must be set"), nil
 
+	case config.OIDCClientID != "" && config.OIDCClientSecret == "",
+		config.OIDCClientID == "" && config.OIDCClientSecret != "":
+		return logical.ErrorResponse("both 'oidc_client_id' and 'oidc_client_secret' must be set for OIDC"), nil
+
 	case config.OIDCDiscoveryURL != "":
 		_, err := b.createProvider(config)
 		if err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error checking discovery URL: {{err}}", err).Error()), nil
 		}
+
+	case config.OIDCClientID != "" && config.OIDCDiscoveryURL == "":
+		return logical.ErrorResponse("'oidc_discovery_url' must be set for OIDC"), nil
 
 	case len(config.JWTValidationPubKeys) != 0:
 		for _, v := range config.JWTValidationPubKeys {
@@ -140,17 +173,16 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 			}
 		}
 
-	case len(config.JWTSupportedAlgs) != 0:
-		for _, a := range config.JWTSupportedAlgs {
-			switch a {
-			case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
-			default:
-				return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
-			}
-		}
-
 	default:
 		return nil, errors.New("unknown condition")
+	}
+
+	for _, a := range config.JWTSupportedAlgs {
+		switch a {
+		case oidc.RS256, oidc.RS384, oidc.RS512, oidc.ES256, oidc.ES384, oidc.ES512, oidc.PS256, oidc.PS384, oidc.PS512:
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("Invalid supported algorithm: %s", a)), nil
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON(configPath, config)
@@ -197,9 +229,12 @@ func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, erro
 type jwtConfig struct {
 	OIDCDiscoveryURL     string   `json:"oidc_discovery_url"`
 	OIDCDiscoveryCAPEM   string   `json:"oidc_discovery_ca_pem"`
+	OIDCClientID         string   `json:"oidc_client_id"`
+	OIDCClientSecret     string   `json:"oidc_client_secret"`
 	JWTValidationPubKeys []string `json:"jwt_validation_pubkeys"`
 	JWTSupportedAlgs     []string `json:"jwt_supported_algs"`
 	BoundIssuer          string   `json:"bound_issuer"`
+	DefaultRole          string   `json:"default_role"`
 
 	ParsedJWTPubKeys []interface{} `json:"-"`
 }

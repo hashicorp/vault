@@ -20,6 +20,10 @@ type Sink interface {
 	WriteToken(string) error
 }
 
+type SinkReader interface {
+	Token() string
+}
+
 type SinkConfig struct {
 	Sink
 	Logger             hclog.Logger
