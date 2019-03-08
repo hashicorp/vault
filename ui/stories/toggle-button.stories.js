@@ -4,6 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './toggle-button.md';
 
 storiesOf('ToggleButton', module)
+  .addParameters({ options: { showPanel: false } })
   .add(
     'ToggleButton',
     () => ({
