@@ -3,10 +3,12 @@ import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-banner.md';
 
-storiesOf('AlertBanner/', module).add(
-  'AlertBanner',
-  () => ({
-    template: hbs`
+storiesOf('AlertBanner/', module)
+  .addParameters({ options: { showPanel: false } })
+  .add(
+    'AlertBanner',
+    () => ({
+      template: hbs`
       <h1>Warning</h1>
       <AlertBanner @type="warning" @message={{message}}/>
       <h1>Info</h1>
@@ -16,9 +18,9 @@ storiesOf('AlertBanner/', module).add(
       <h1>Success</h1>
       <AlertBanner @type="success" @message={{message}}/>
     `,
-    context: {
-      message: 'Here is a message.',
-    },
-  }),
-  { notes }
-);
+      context: {
+        message: 'Here is a message.',
+      },
+    }),
+    { notes }
+  );
