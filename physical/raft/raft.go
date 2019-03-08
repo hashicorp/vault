@@ -47,7 +47,6 @@ type RaftBackend struct {
 	snapStore       raft.SnapshotStore
 	logStore        raft.LogStore
 	stableStore     raft.StableStore
-	raftConfig      *raft.Config
 	bootstrapConfig *raft.Configuration
 }
 
@@ -65,19 +64,10 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		return nil, fmt.Errorf("'path' must be set")
 	}
 
-	raftConfig := raft.DefaultConfig()
-	raftConfig.SnapshotThreshold = 1
-
 	/*var serverAddressProvider raft.ServerAddressProvider = nil
 	if s.config.RaftConfig.ProtocolVersion >= 3 { //ServerAddressProvider needs server ids to work correctly, which is only supported in protocol version 3 or higher
 		serverAddressProvider = s.serverLookup
 	}*/
-
-	// Create a transport layer.
-	/*	trans, err := raft.NewTCPTransport("127.0.0.1:8202", nil, 3, 10*time.Second, nil)
-		if err != nil {
-			return err
-		}*/
 
 	raftLayer := NewRaftLayer(logger, nil)
 
@@ -88,10 +78,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		//	ServerAddressProvider: serverAddressProvider,
 	}
 	transport := raft.NewNetworkTransportWithConfig(transConfig)
-
-	// Make sure we set the LogOutput.
-	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
-	//raftConfig.Logger = logger
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
@@ -143,7 +129,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		logStore:      log,
 		stableStore:   stable,
 		snapStore:     snap,
-		raftConfig:    raftConfig,
 	}, nil
 }
 
@@ -160,13 +145,11 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, localAddr net.Addr, servers
 		return errors.New("error bootstrapping cluster: cluster already has state")
 	}
 
-	b.raftLayer.SetAddr(localAddr)
-	b.raftConfig.LocalID = raft.ServerID(b.raftTransport.LocalAddr())
 	b.bootstrapConfig = &raft.Configuration{
 		Servers: []raft.Server{
 			{
-				ID:      raft.ServerID(b.raftTransport.LocalAddr()),
-				Address: b.raftTransport.LocalAddr(),
+				ID:      raft.ServerID(localAddr.String()),
+				Address: raft.ServerAddress(localAddr.String()),
 			},
 		},
 	}
@@ -183,36 +166,44 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.
 		return nil
 	}
 
+	raftConfig := raft.DefaultConfig()
+	// Make sure we set the LogOutput.
+	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
+	//raftConfig.Logger = logger
+
+	// Set the local address and localID in the streaming layer and the raft config.
 	b.raftLayer.SetAddr(clusterListener.Addr())
+	raftConfig.LocalID = raft.ServerID(clusterListener.Addr().String())
+
 	// Set up a channel for reliable leader notifications.
 	raftNotifyCh := make(chan bool, 1)
-	b.raftConfig.NotifyCh = raftNotifyCh
+	raftConfig.NotifyCh = raftNotifyCh
 
+	// If we have a bootstrapConfig set we should bootstrap now.
 	if b.bootstrapConfig != nil {
 		bootstrapConfig := b.bootstrapConfig
 		b.bootstrapConfig = nil
 
-		if err := raft.BootstrapCluster(b.raftConfig, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *bootstrapConfig); err != nil {
+		if err := raft.BootstrapCluster(raftConfig, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *bootstrapConfig); err != nil {
 			return err
 		}
 		if len(bootstrapConfig.Servers) == 1 {
-			b.raftConfig.StartAsLeader = true
-			defer func() { b.raftConfig.StartAsLeader = false }()
+			raftConfig.StartAsLeader = true
 		}
 	}
 
 	// Setup the Raft store.
-	raftObj, err := raft.NewRaft(b.raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
+	raftObj, err := raft.NewRaft(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	if err != nil {
 		return err
 	}
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
-	// Add Handler to the cluster
+	// Add Handler to the cluster.
 	clusterListener.AddHandler(consts.RaftStorageALPN, b.raftLayer)
 
-	// Add Client to the cluster
+	// Add Client to the cluster.
 	clusterListener.AddClient(consts.RaftStorageALPN, b.raftLayer)
 
 	return nil
