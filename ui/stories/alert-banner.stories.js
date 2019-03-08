@@ -1,26 +1,24 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import { withKnobs, text, select } from '@storybook/addon-knobs';
+import notes from './alert-banner.md';
 
-const TYPE_OPTIONS = ['warning', 'info', 'success', 'danger'];
-
-storiesOf('AlertBanner', module)
-  .addDecorator(
-    withKnobs({
-      escapeHTML: false,
-    })
-  )
-  .add(
-    'type',
-    () => ({
-      template: hbs`
-      <AlertBanner @type={{type}} @message={{message}}/>
+storiesOf('AlertBanner/', module).add(
+  'AlertBanner',
+  () => ({
+    template: hbs`
+      <h1>Warning</h1>
+      <AlertBanner @type="warning" @message={{message}}/>
+      <h1>Info</h1>
+      <AlertBanner @type="info" @message={{message}}/>
+      <h1>Danger</h1>
+      <AlertBanner @type="danger" @message={{message}}/>
+      <h1>Success</h1>
+      <AlertBanner @type="success" @message={{message}}/>
     `,
-      context: {
-        type: select('type', TYPE_OPTIONS, 'warning'),
-        message: text('message', 'Here is a message.'),
-      },
-    }),
-    { notes: 'These are some notes.' }
-  );
+    context: {
+      message: 'Here is a message.',
+    },
+  }),
+  { notes }
+);
