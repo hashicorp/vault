@@ -7,6 +7,9 @@ BUG FIXES:
    [[GH-6353]](https://github.com/hashicorp/vault/pull/6353)
  * core: The `operator migrate` command will no longer hang on empty key names.
    [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
+ * agent/caching: Add locking during cache lookup to prevent identical
+   non-cached requests made in parallel launch multiple rewener goroutines.
+   [[GH-6374]](https://github.com/hashicorp/vault/pull/6374)
 
 ## 1.1.0-beta2 (March 5th, 2019)
 
