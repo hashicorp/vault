@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -40,6 +41,7 @@ const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
+const EnvAgentFileSinkPath = "AGENT_FILE_SINK_PATH"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -364,6 +366,10 @@ type Client struct {
 // If the environment variable `VAULT_TOKEN` is present, the token will be
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
+//
+// If the environment variable `AGENT_FILE_SINK_PATH` is present and contains
+// a valid filepath, that filepath will be used to set the client's token and
+// continue to be polled and update the client's token
 func NewClient(c *Config) (*Client, error) {
 	def := DefaultConfig()
 	if def == nil {
@@ -422,7 +428,43 @@ func NewClient(c *Config) (*Client, error) {
 		client.token = token
 	}
 
+	// get and poll token from agent sink if it is available
+	if agentSinkPath := os.Getenv(EnvAgentFileSinkPath); agentSinkPath != "" {
+		token, err := readAgentTokenFromFile(agentSinkPath)
+		if err != nil {
+			return nil, err
+		}
+		client.token = token
+
+		// poll file for updates
+		client.pollFileForToken(agentSinkPath)
+	}
+
 	return client, nil
+}
+
+// starts a go routine to poll the specified file for a token
+func (c *Client) pollFileForToken(filePath string) {
+	pollingInterval := 30 * time.Second //todo - what should this be?
+	go func() {
+		for {
+			time.Sleep(pollingInterval)
+			token, _ := readAgentTokenFromFile(filePath) // todo - what to do with the error?
+			// update the client's token if it has changed
+			if token != c.token {
+				c.token = token
+			}
+		}
+	}()
+}
+
+func readAgentTokenFromFile(filePath string) (string, error) {
+	tokenBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	tokenString := strings.TrimSpace(string(tokenBytes))
+	return tokenString, nil
 }
 
 // Sets the address of Vault in the client. The format of address should be
