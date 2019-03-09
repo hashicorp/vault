@@ -1,94 +1,122 @@
 <PageHeader as |p|>
   <p.levelLeft>
-    <h1 class="title is-3" data-test-mount-form-header=true>
-      {{#if showConfig}}
-        {{#with (find-by 'type' mountModel.type mountTypes) as |typeInfo|}}
-          <ICon @size=24 @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}} @class="has-text-grey-light" />
+    <h1 class="title is-3" data-test-mount-form-header="true">
+      {{#if showEnable}}
+        {{#with (find-by "type" mountModel.type mountTypes) as |typeInfo|}}
+          <ICon
+            @size="24"
+            @glyph={{concat "enable/" (or typeInfo.glyph typeInfo.type)}}
+            @class="has-text-grey-light"
+           />
+
           {{#if (eq mountType "auth")}}
-            Enable {{typeInfo.displayName}} authentication method
+            {{concat "Enable " typeInfo.displayName " authentication method"}}
           {{else}}
-            Enable {{typeInfo.displayName}} secrets engine
+            {{concat "Enable " typeInfo.displayName " secrets engine"}}
           {{/if}}
         {{/with}}
+      {{else if (eq mountType "auth")}}
+        Enable an authentication method
       {{else}}
-        {{#if (eq mountType "auth")}}
-          Enable an authentication method
-        {{else}}
-          Enable a secrets engine
-        {{/if}}
+        Enable a secrets engine
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 <form {{action (perform mountBackend) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="enable" @noun={{if (eq mountType "auth") "auth method" "secret engine"}} />
+    <NamespaceReminder
+      @mode="enable"
+      @noun={{if (eq mountType "auth") "auth method" "secret engine"}}
+     />
+
     {{message-error model=mountModel}}
-    {{#if showConfig}}
-      {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="default"}}
-      {{#if mountModel.authConfigs.firstObject}}
-        {{form-field-groups model=mountModel.authConfigs.firstObject}}
-      {{/if}}
-      {{form-field-groups model=mountModel onChange=(action "onTypeChange") renderGroup="Method Options"}}
+    {{#if showEnable}}
+      {{form-field-groups
+        model=mountModel
+        onChange=(action "onTypeChange")
+        renderGroup="default"
+      }}
+      {{form-field-groups
+        model=mountModel
+        onChange=(action "onTypeChange")
+        renderGroup="Method Options"
+      }}
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
         <h3 class="title box-radio-header">
           {{capitalize category}}
         </h3>
         <div class="box-radio-container">
-        {{#each (filter-by "category" category mountTypes) as |type|}}
-          <label
-            for={{type.type}}
-            class="box-radio{{if (eq mountModel.type type.type) " is-selected"}}"
-            data-test-mount-type-radio
-            data-test-mount-type={{type.type}}
-          >
-            <ICon @size=36 @excludeIconClass={{true}} @glyph={{concat "enable/" (or type.glyph type.type)}} @class="has-text-grey-light" />
-            {{type.displayName}}
-            <RadioButton
-              @value={{type.type}}
-              @radioClass="radio"
-              @groupValue={{mountModel.type}}
-              @changed={{queue (action (mut mountModel.type)) (action "onTypeChange" "type")}}
-              @name="mount-type"
-              @radioId={{type.type}}
-            />
-            <label for={{type.type}}></label>
-          </label>
-        {{/each}}
+          {{#each (filter-by "category" category mountTypes) as |type|}}
+            <label
+              for={{type.type}}
+              class="box-radio
+                {{if (eq mountModel.type type.type) " is-selected"}}"
+              data-test-mount-type-radio
+              data-test-mount-type={{type.type}}
+            >
+              <ICon
+                @size="36"
+                @excludeIconClass={{true}}
+                @glyph={{concat "enable/" (or type.glyph type.type)}}
+                @class="has-text-grey-light"
+               />
+
+              {{type.displayName}}
+              <RadioButton
+                @value={{type.type}}
+                @radioClass="radio"
+                @groupValue={{mountModel.type}}
+                @changed={{queue
+                  (action (mut mountModel.type))
+                  (action "onTypeChange" "type")
+                }}
+                @name="mount-type"
+                @radioId={{type.type}}
+               />
+
+              <label for={{type.type}}></label>
+            </label>
+          {{/each}}
         </div>
       {{/each}}
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    {{#if showConfig}}
-    <div class="control">
-      <button type="submit" data-test-mount-submit=true class="button is-primary {{if mountBackend.isRunning 'loading'}}" disabled={{mountBackend.isRunning}}>
-        {{#if (eq mountType "auth")}}
-          Enable Method
-        {{else}}
-          Enable Engine
-        {{/if}}
-      </button>
-    </div>
-    <div class="control">
-      <button
-        data-test-mount-back
-        type="button"
-        class="button"
-        onclick={{action "toggleShowConfig" false}}
-       >
-         Back
-      </button>
-    </div>
+    {{#if showEnable}}
+      <div class="control">
+        <button
+          type="submit"
+          data-test-mount-submit="true"
+          class="button is-primary {{if mountBackend.isRunning "loading"}}"
+          disabled={{mountBackend.isRunning}}
+        >
+          {{#if (eq mountType "auth")}}
+            Enable Method
+          {{else}}
+            Enable Engine
+          {{/if}}
+        </button>
+      </div>
+      <div class="control">
+        <button
+          data-test-mount-back
+          type="button"
+          class="button"
+          onclick={{action "toggleShowEnable" false}}
+        >
+          Back
+        </button>
+      </div>
     {{else}}
       <button
         data-test-mount-next
         type="button"
         class="button is-primary"
-        onclick={{action "toggleShowConfig" true}}
+        onclick={{action "toggleShowEnable" true}}
         disabled={{not mountModel.type}}
-        >
+      >
         Next
       </button>
     {{/if}}

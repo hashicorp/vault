@@ -180,3 +180,155 @@ func TestTransit_HMAC(t *testing.T) {
 		t.Fatalf("expected invalid request error, got %v", err)
 	}
 }
+
+func TestTransit_batchHMAC(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	// First create a key
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now, change the key value to something we control
+	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    "foo",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We don't care as we're the only one using this
+	latestVersion := strconv.Itoa(p.LatestVersion)
+	keyEntry := p.Keys[latestVersion]
+	keyEntry.HMACKey = []byte("01234567890123456789012345678901")
+	p.Keys[latestVersion] = keyEntry
+	if err = p.Persist(context.Background(), storage); err != nil {
+		t.Fatal(err)
+	}
+
+	req.Path = "hmac/foo"
+	batchInput := []batchRequestHMACItem{
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		{"input": ""},
+		{"input": ":;.?"},
+		{},
+	}
+
+	expected := []batchResponseHMACItem{
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
+		{HMAC: "vault:v1:BCfVv6rlnRsIKpjCZCxWvh5iYwSSabRXpX9XJniuNgc="},
+		{Error: "unable to decode input as base64: illegal base64 data at input byte 0"},
+		{Error: "missing input for HMAC"},
+	}
+
+	req.Data = map[string]interface{}{
+		"batch_input": batchInput,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	batchResponseItems := resp.Data["batch_results"].([]batchResponseHMACItem)
+
+	if len(batchResponseItems) != len(batchInput) {
+		t.Fatalf("Expected %d items in response. Got %d", len(batchInput), len(batchResponseItems))
+	}
+
+	for i, m := range batchResponseItems {
+		if expected[i].Error == "" && expected[i].HMAC != m.HMAC {
+			t.Fatalf("Expected HMAC %s got %s in result %d", expected[i].HMAC, m.HMAC, i)
+		}
+		if expected[i].Error != "" && expected[i].Error != m.Error {
+			t.Fatalf("Expected Error '%s' got '%s' in result %d", expected[i].Error, m.Error, i)
+		}
+	}
+
+	// Verify a previous version
+	req.Path = "verify/foo"
+	good_hmac := "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="
+	bad_hmac := "vault:v1:UcBvm4VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="
+	verifyBatch := []batchRequestHMACItem{
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "hmac": good_hmac},
+	}
+
+	req.Data = map[string]interface{}{
+		"batch_input": verifyBatch,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("%v: %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+
+	batchHMACVerifyResponseItems := resp.Data["batch_results"].([]batchResponseHMACItem)
+
+	if !batchHMACVerifyResponseItems[0].Valid {
+		t.Fatalf("error validating hmac\nreq\n%#v\nresp\n%#v", *req, *resp)
+	}
+
+	// Try a bad value
+	verifyBatch[0]["hmac"] = bad_hmac
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("%v: %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+
+	batchHMACVerifyResponseItems = resp.Data["batch_results"].([]batchResponseHMACItem)
+
+	if batchHMACVerifyResponseItems[0].Valid {
+		t.Fatalf("expected error validating hmac\nreq\n%#v\nresp\n%#v", *req, *resp)
+	}
+
+	// Rotate
+	err = p.Rotate(context.Background(), storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyEntry = p.Keys["2"]
+	// Set to another value we control
+	keyEntry.HMACKey = []byte("12345678901234567890123456789012")
+	p.Keys["2"] = keyEntry
+	if err = p.Persist(context.Background(), storage); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set min decryption version, attempt to verify
+	p.MinDecryptionVersion = 2
+	if err = p.Persist(context.Background(), storage); err != nil {
+		t.Fatal(err)
+	}
+
+	// supply a good hmac, but with expired key version
+	verifyBatch[0]["hmac"] = good_hmac
+
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("%v: %v", err, resp)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+
+	batchHMACVerifyResponseItems = resp.Data["batch_results"].([]batchResponseHMACItem)
+
+	if batchHMACVerifyResponseItems[0].Valid {
+		t.Fatalf("expected error validating hmac\nreq\n%#v\nresp\n%#v", *req, *resp)
+	}
+}

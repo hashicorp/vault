@@ -31,6 +31,11 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
+			"backend": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Backend Type",
+			},
+
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role",
@@ -42,11 +47,13 @@ func pathRoles(b *backend) *framework.Path {
 requested. The lease duration controls the expiration
 of certificates issued by this backend. Defaults to
 the value of max_ttl.`,
+				DisplayName: "TTL",
 			},
 
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
+				DisplayName: "Max TTL",
 			},
 
 			"allow_localhost": &framework.FieldSchema{
@@ -107,17 +114,20 @@ CN and SANs. Defaults to true.`,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted.`,
+				DisplayName: "Allow IP Subject Alternative Names",
 			},
 
 			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
+				DisplayName: "Allowed URI Subject Alternative Names",
 			},
 
 			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
+				DisplayName: "Allowed Other Subject Alternative Names",
 			},
 
 			"allowed_serial_numbers": &framework.FieldSchema{
@@ -156,6 +166,7 @@ protection use. Defaults to false.`,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec"},
 			},
 
 			"key_bits": &framework.FieldSchema{
@@ -175,6 +186,7 @@ https://golang.org/pkg/crypto/x509/#KeyUsage
 -- simply drop the "KeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
+				DisplayValue: "DigitalSignature,KeyAgreement,KeyEncipherment",
 			},
 
 			"ext_key_usage": &framework.FieldSchema{
@@ -185,11 +197,13 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 To remove all key usages from being set, set
 this value to an empty list.`,
+				DisplayName: "Extended Key Usage",
 			},
 
 			"ext_key_usage_oids": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of extended key usage oids.`,
+				DisplayName: "Extended Key Usage OIDs",
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
@@ -199,6 +213,7 @@ this value to an empty list.`,
 the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
+				DisplayName: "Use CSR Common Name",
 			},
 
 			"use_csr_sans": &framework.FieldSchema{
@@ -207,12 +222,14 @@ Names. Defaults to true.`,
 				Description: `If set, when used with a signing profile,
 the SANs in the CSR will be used. This does *not*
 include the Common Name (cn). Defaults to true.`,
+				DisplayName: "Use CSR Subject Alternative Names",
 			},
 
 			"ou": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
+				DisplayName: "Organizational Unit",
 			},
 
 			"organization": &framework.FieldSchema{
@@ -231,12 +248,14 @@ this value in certificates issued by this role.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Locality will be set to
 this value in certificates issued by this role.`,
+				DisplayName: "Locality/City",
 			},
 
 			"province": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Province will be set to
 this value in certificates issued by this role.`,
+				DisplayName: "Province/State",
 			},
 
 			"street_address": &framework.FieldSchema{
@@ -263,6 +282,7 @@ to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
 			},
+
 			"no_store": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `
@@ -273,18 +293,23 @@ or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
+
 			"require_cn": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
+				DisplayName: "Use CSR Common Name",
 			},
+
 			"policy_identifiers": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy oids.`,
 			},
+
 			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
+				DisplayName: "Basic Constraints Valid for Non-CA",
 			},
 			"not_before_duration": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,

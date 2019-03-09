@@ -29,9 +29,6 @@ type TokenCreateCommand struct {
 	flagType            string
 	flagMetadata        map[string]string
 	flagPolicies        []string
-
-	// Deprecated flags
-	flagLease time.Duration
 }
 
 func (c *TokenCreateCommand) Synopsis() string {
@@ -179,15 +176,6 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 			"specified multiple times to attach multiple policies.",
 	})
 
-	// Deprecated flags
-	// TODO: remove in 0.9.0
-	f.DurationVar(&DurationVar{
-		Name:    "lease", // prefer -ttl
-		Target:  &c.flagLease,
-		Default: 0,
-		Hidden:  true,
-	})
-
 	return set
 }
 
@@ -211,14 +199,6 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	if len(args) > 0 {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", len(args)))
 		return 1
-	}
-
-	// TODO: remove in 0.9.0
-	if c.flagLease != 0 {
-		if Format(c.UI) == "table" {
-			c.UI.Warn("The -lease flag is deprecated. Please use -ttl instead.")
-			c.flagTTL = c.flagLease
-		}
 	}
 
 	if c.flagType == "batch" {

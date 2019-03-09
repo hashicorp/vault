@@ -1,4 +1,4 @@
-import { settled, currentURL, currentRouteName } from '@ember/test-helpers';
+import { visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -137,6 +137,29 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'navigates to the ancestor created earlier'
     );
   });
+  test('first level secrets redirect properly upon deletion', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'test';
+    // mount version 1 engine
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await withFlash(
+      mountSecrets
+        .next()
+        .path(enginePath)
+        .version(1)
+        .submit()
+    );
+
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+    await showPage.deleteSecret();
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'redirected to the list page on delete'
+    );
+  });
 
   // https://github.com/hashicorp/vault/issues/5994
   test('version 1: key named keys', async function(assert) {
@@ -154,7 +177,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
-    await listPage.visit({ backend: 'secret', id: 'foo/bar' });
+    // use visit helper here because ids with / in them get encoded
+    await visit('/vault/secrets/secret/list/foo/bar');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
   });
@@ -235,5 +259,62 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     await logout.visit();
+  });
+
+  test('paths are properly encoded', async function(assert) {
+    let backend = 'kv';
+    let paths = [
+      '(',
+      ')',
+      '"',
+      //"'",
+      '!',
+      '#',
+      '$',
+      '&',
+      '*',
+      '+',
+      '@',
+      '{',
+      '|',
+      '}',
+      '~',
+      '[',
+      '\\',
+      ']',
+      '^',
+      '_',
+    ].map(char => `${char}some`);
+    assert.expect(paths.length * 2);
+    let secretName = '2';
+    let commands = paths.map(path => `write ${backend}/${path}/${secretName} 3=4`);
+    await consoleComponent.runCommands(['write sys/mounts/kv type=kv', ...commands]);
+    for (let path of paths) {
+      await listPage.visit({ backend, id: path });
+      assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+      await listPage.secrets.filterBy('text', '2')[0].click();
+      assert.equal(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.show',
+        `${path}: show page renders correctly`
+      );
+    }
+  });
+
+  // the web cli does not handle a single quote in a path, so we test it here via the UI
+  test('creating a secret with a single quote works properly', async function(assert) {
+    await consoleComponent.runCommands('write sys/mounts/kv type=kv');
+    let path = "'some";
+    await listPage.visitRoot({ backend: 'kv' });
+    await listPage.create();
+    await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+    await listPage.visit({ backend: 'kv', id: path });
+    assert.ok(listPage.secrets.filterBy('text', '2')[0], `${path}: secret is displayed properly`);
+    await listPage.secrets.filterBy('text', '2')[0].click();
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      `${path}: show page renders correctly`
+    );
   });
 });

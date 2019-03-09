@@ -1,5 +1,6 @@
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
+import escapeStringRegexp from 'escape-string-regexp';
 
 export default Mixin.create({
   queryParams: {
@@ -10,6 +11,7 @@ export default Mixin.create({
   page: 1,
   pageFilter: null,
   filter: null,
+  filterFocused: false,
 
   isLoading: false,
 
@@ -23,7 +25,7 @@ export default Mixin.create({
     var filter = this.get('filter');
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');
-    var re = new RegExp('^' + filter);
+    var re = new RegExp('^' + escapeStringRegexp(filter));
     return filterMatchesKey
       ? null
       : content.find(function(key) {

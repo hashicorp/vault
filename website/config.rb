@@ -4,7 +4,7 @@ proxy '_redirects', 'netlify-redirects', ignore: true
 
 activate :hashicorp do |h|
   h.name         = "vault"
-  h.version      = "0.11.3"
+  h.version      = "1.0.3"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
 end

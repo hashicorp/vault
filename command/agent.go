@@ -2,19 +2,20 @@ package command
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
 	"sync"
-
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/posener/complete"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/auth/alicloud"
 	"github.com/hashicorp/vault/command/agent/auth/approle"
@@ -23,12 +24,18 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
+	"github.com/hashicorp/vault/command/agent/cache"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agent/sink/inmem"
+	"github.com/hashicorp/vault/helper/consts"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/version"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
 var _ cli.Command = (*AgentCommand)(nil)
@@ -200,6 +207,45 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	if config.Vault != nil {
+		c.setStringFlag(f, config.Vault.Address, &StringVar{
+			Name:    flagNameAddress,
+			Target:  &c.flagAddress,
+			Default: "https://127.0.0.1:8200",
+			EnvVar:  api.EnvVaultAddress,
+		})
+		c.setStringFlag(f, config.Vault.CACert, &StringVar{
+			Name:    flagNameCACert,
+			Target:  &c.flagCACert,
+			Default: "",
+			EnvVar:  api.EnvVaultCACert,
+		})
+		c.setStringFlag(f, config.Vault.CAPath, &StringVar{
+			Name:    flagNameCAPath,
+			Target:  &c.flagCAPath,
+			Default: "",
+			EnvVar:  api.EnvVaultCAPath,
+		})
+		c.setStringFlag(f, config.Vault.ClientCert, &StringVar{
+			Name:    flagNameClientCert,
+			Target:  &c.flagClientCert,
+			Default: "",
+			EnvVar:  api.EnvVaultClientCert,
+		})
+		c.setStringFlag(f, config.Vault.ClientKey, &StringVar{
+			Name:    flagNameClientKey,
+			Target:  &c.flagClientKey,
+			Default: "",
+			EnvVar:  api.EnvVaultClientKey,
+		})
+		c.setBoolFlag(f, config.Vault.TLSSkipVerify, &BoolVar{
+			Name:    flagNameTLSSkipVerify,
+			Target:  &c.flagTLSSkipVerify,
+			Default: false,
+			EnvVar:  api.EnvVaultSkipVerify,
+		})
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = c.flagLogLevel
@@ -218,19 +264,6 @@ func (c *AgentCommand) Run(args []string) int {
 		info["cgo"] = "enabled"
 	}
 
-	// Server configuration output
-	padding := 24
-	sort.Strings(infoKeys)
-	c.UI.Output("==> Vault agent configuration:\n")
-	for _, k := range infoKeys {
-		c.UI.Output(fmt.Sprintf(
-			"%s%s: %s",
-			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
-			info[k]))
-	}
-	c.UI.Output("")
-
 	// Tests might not want to start a vault server and just want to verify
 	// the configuration.
 	if c.flagTestVerifyOnly {
@@ -242,6 +275,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Ignore any setting of agent's address. This client is used by the agent
+	// to reach out to Vault. This should never loop back to agent.
+	c.flagAgentAddress = ""
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf(
@@ -332,9 +368,113 @@ func (c *AgentCommand) Run(args []string) int {
 		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 	})
 
-	// Start things running
+	// Parse agent listener configurations
+	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
+		cacheLogger := c.logger.Named("cache")
+
+		// Create the API proxier
+		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
+			Client: client,
+			Logger: cacheLogger.Named("apiproxy"),
+		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
+			return 1
+		}
+
+		// Create the lease cache proxier and set its underlying proxier to
+		// the API proxier.
+		leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
+			Client:      client,
+			BaseContext: ctx,
+			Proxier:     apiProxy,
+			Logger:      cacheLogger.Named("leasecache"),
+		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
+			return 1
+		}
+
+		var inmemSink sink.Sink
+		if config.Cache.UseAutoAuthToken {
+			cacheLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+			inmemSink, err = inmem.New(&sink.SinkConfig{
+				Logger: cacheLogger,
+			}, leaseCache)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating inmem sink for cache: %v", err))
+				return 1
+			}
+			sinks = append(sinks, &sink.SinkConfig{
+				Logger: cacheLogger,
+				Sink:   inmemSink,
+			})
+		}
+
+		// Create a muxer and add paths relevant for the lease cache layer
+		mux := http.NewServeMux()
+		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+
+		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
+
+		var listeners []net.Listener
+		for i, lnConfig := range config.Cache.Listeners {
+			listener, props, _, err := cache.ServerListener(lnConfig, c.logWriter, c.UI)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error parsing listener configuration: %v", err))
+				return 1
+			}
+
+			listeners = append(listeners, listener)
+
+			scheme := "https://"
+			if props["tls"] == "disabled" {
+				scheme = "http://"
+			}
+			if lnConfig.Type == "unix" {
+				scheme = "unix://"
+			}
+
+			infoKey := fmt.Sprintf("api address %d", i+1)
+			info[infoKey] = scheme + listener.Addr().String()
+			infoKeys = append(infoKeys, infoKey)
+
+			cacheLogger.Info("starting listener", "addr", listener.Addr().String())
+			server := &http.Server{
+				Handler:           mux,
+				ReadHeaderTimeout: 10 * time.Second,
+				ReadTimeout:       30 * time.Second,
+				IdleTimeout:       5 * time.Minute,
+				ErrorLog:          cacheLogger.StandardLogger(nil),
+			}
+			go server.Serve(listener)
+		}
+
+		// Ensure that listeners are closed at all the exits
+		listenerCloseFunc := func() {
+			for _, ln := range listeners {
+				ln.Close()
+			}
+		}
+		defer c.cleanupGuard.Do(listenerCloseFunc)
+	}
+
+	// Start auto-auth and sink servers
 	go ah.Run(ctx, method)
 	go ss.Run(ctx, ah.OutputCh, sinks)
+
+	// Server configuration output
+	padding := 24
+	sort.Strings(infoKeys)
+	c.UI.Output("==> Vault agent configuration:\n")
+	for _, k := range infoKeys {
+		c.UI.Output(fmt.Sprintf(
+			"%s%s: %s",
+			strings.Repeat(" ", padding-len(k)),
+			strings.Title(k),
+			info[k]))
+	}
+	c.UI.Output("")
 
 	// Release the log gate.
 	c.logGate.Flush()
@@ -363,6 +503,54 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
+	var isFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == fVar.Name {
+			isFlagSet = true
+		}
+	})
+
+	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+	switch {
+	case isFlagSet:
+		// Don't do anything as the flag is already set from the command line
+	case flagEnvSet:
+		// Use value from env var
+		*fVar.Target = flagEnvValue
+	case configVal != "":
+		// Use value from config
+		*fVar.Target = configVal
+	default:
+		// Use the default value
+		*fVar.Target = fVar.Default
+	}
+}
+
+func (c *AgentCommand) setBoolFlag(f *FlagSets, configVal bool, fVar *BoolVar) {
+	var isFlagSet bool
+	f.Visit(func(f *flag.Flag) {
+		if f.Name == fVar.Name {
+			isFlagSet = true
+		}
+	})
+
+	flagEnvValue, flagEnvSet := os.LookupEnv(fVar.EnvVar)
+	switch {
+	case isFlagSet:
+		// Don't do anything as the flag is already set from the command line
+	case flagEnvSet:
+		// Use value from env var
+		*fVar.Target = flagEnvValue != ""
+	case configVal == true:
+		// Use value from config
+		*fVar.Target = configVal
+	default:
+		// Use the default value
+		*fVar.Target = fVar.Default
+	}
 }
 
 // storePidFile is used to write out our PID to a file if necessary

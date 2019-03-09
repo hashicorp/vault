@@ -1,23 +1,23 @@
 package vault
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	math "math"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	cache "github.com/patrickmn/go-cache"
-
-	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/vault/replication"
+	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -44,11 +44,156 @@ var (
 	HeartbeatInterval = 5 * time.Second
 )
 
-type SecondaryConnsCacheVals struct {
-	ID         string
-	Token      string
-	Connection net.Conn
-	Mode       consts.ReplicationState
+type requestForwardingHandler struct {
+	fws         *http2.Server
+	fwRPCServer *grpc.Server
+	logger      log.Logger
+	ha          bool
+	core        *Core
+	stopCh      chan struct{}
+}
+
+type requestForwardingClusterClient struct {
+	core *Core
+}
+
+// NewRequestForwardingHandler creates a cluster handler for use with request
+// forwarding.
+func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster, perfStandbyCache *cache.Cache) (*requestForwardingHandler, error) {
+	// Resolve locally to avoid races
+	ha := c.ha != nil
+
+	fwRPCServer := grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time: 2 * HeartbeatInterval,
+		}),
+		grpc.MaxRecvMsgSize(math.MaxInt32),
+		grpc.MaxSendMsgSize(math.MaxInt32),
+	)
+
+	if ha && c.clusterHandler != nil {
+		RegisterRequestForwardingServer(fwRPCServer, &forwardedRequestRPCServer{
+			core:                  c,
+			handler:               c.clusterHandler,
+			perfStandbySlots:      perfStandbySlots,
+			perfStandbyRepCluster: perfStandbyRepCluster,
+			perfStandbyCache:      perfStandbyCache,
+		})
+	}
+
+	return &requestForwardingHandler{
+		fws:         fws,
+		fwRPCServer: fwRPCServer,
+		ha:          ha,
+		logger:      c.logger.Named("request-forward"),
+		core:        c,
+		stopCh:      make(chan struct{}),
+	}, nil
+}
+
+// ClientLookup satisfies the ClusterClient interface and returns the ha tls
+// client certs.
+func (c *requestForwardingClusterClient) ClientLookup(ctx context.Context, requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	parsedCert := c.core.localClusterParsedCert.Load().(*x509.Certificate)
+	if parsedCert == nil {
+		return nil, nil
+	}
+	currCert := c.core.localClusterCert.Load().([]byte)
+	if len(currCert) == 0 {
+		return nil, nil
+	}
+	localCert := make([]byte, len(currCert))
+	copy(localCert, currCert)
+
+	for _, subj := range requestInfo.AcceptableCAs {
+		if bytes.Equal(subj, parsedCert.RawIssuer) {
+			return &tls.Certificate{
+				Certificate: [][]byte{localCert},
+				PrivateKey:  c.core.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
+				Leaf:        c.core.localClusterParsedCert.Load().(*x509.Certificate),
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// ServerLookup satisfies the ClusterHandler interface and returns the server's
+// tls certs.
+func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	currCert := rf.core.localClusterCert.Load().([]byte)
+	if len(currCert) == 0 {
+		return nil, fmt.Errorf("got forwarding connection but no local cert")
+	}
+
+	localCert := make([]byte, len(currCert))
+	copy(localCert, currCert)
+
+	return &tls.Certificate{
+		Certificate: [][]byte{localCert},
+		PrivateKey:  rf.core.localClusterPrivateKey.Load().(*ecdsa.PrivateKey),
+		Leaf:        rf.core.localClusterParsedCert.Load().(*x509.Certificate),
+	}, nil
+}
+
+// CALookup satisfies the ClusterHandler interface and returns the ha ca cert.
+func (rf *requestForwardingHandler) CALookup(ctx context.Context) (*x509.Certificate, error) {
+	parsedCert := rf.core.localClusterParsedCert.Load().(*x509.Certificate)
+
+	if parsedCert == nil {
+		return nil, fmt.Errorf("forwarding connection client but no local cert")
+	}
+
+	return parsedCert, nil
+}
+
+// Handoff serves a request forwarding connection.
+func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *sync.WaitGroup, closeCh chan struct{}, tlsConn *tls.Conn) error {
+	if !rf.ha {
+		tlsConn.Close()
+		return nil
+	}
+
+	rf.logger.Debug("got request forwarding connection")
+
+	shutdownWg.Add(2)
+	// quitCh is used to close the connection and the second
+	// goroutine if the server closes before closeCh.
+	quitCh := make(chan struct{})
+	go func() {
+		select {
+		case <-quitCh:
+		case <-closeCh:
+		case <-rf.stopCh:
+		}
+		tlsConn.Close()
+		shutdownWg.Done()
+	}()
+
+	go func() {
+		rf.fws.ServeConn(tlsConn, &http2.ServeConnOpts{
+			Handler: rf.fwRPCServer,
+			BaseConfig: &http.Server{
+				ErrorLog: rf.logger.StandardLogger(nil),
+			},
+		})
+
+		// close the quitCh which will close the connection and
+		// the other goroutine.
+		close(quitCh)
+		shutdownWg.Done()
+	}()
+
+	return nil
+}
+
+// Stop stops the request forwarding server and closes connections.
+func (rf *requestForwardingHandler) Stop() error {
+	// Give some time for existing RPCs to drain.
+	time.Sleep(clusterListenerAcceptDeadline)
+	close(rf.stopCh)
+	rf.fwRPCServer.Stop()
+	return nil
 }
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -62,267 +207,30 @@ func (c *Core) startForwarding(ctx context.Context) error {
 	c.requestForwardingConnectionLock.Unlock()
 
 	// Resolve locally to avoid races
-	ha := c.ha != nil
-
-	var perfStandbyRepCluster *ReplicatedCluster
-	if ha {
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return err
-		}
-
-		perfStandbyRepCluster = &ReplicatedCluster{
-			State:              consts.ReplicationPerformanceStandby,
-			ClusterID:          id,
-			PrimaryClusterAddr: c.clusterAddr,
-		}
-		if err = c.setupReplicatedClusterPrimary(perfStandbyRepCluster); err != nil {
-			return err
-		}
-	}
-
-	// Get our TLS config
-	tlsConfig, err := c.ClusterTLSConfig(ctx, nil, perfStandbyRepCluster)
-	if err != nil {
-		c.logger.Error("failed to get tls configuration when starting forwarding", "error", err)
-		return err
-	}
-
-	// The server supports all of the possible protos
-	tlsConfig.NextProtos = []string{"h2", requestForwardingALPN, perfStandbyALPN, PerformanceReplicationALPN, DRReplicationALPN}
-
-	if !atomic.CompareAndSwapUint32(c.rpcServerActive, 0, 1) {
-		c.logger.Warn("forwarding rpc server already running")
+	if c.ha == nil || c.clusterListener == nil {
 		return nil
 	}
 
-	fwRPCServer := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * HeartbeatInterval,
-		}),
-		grpc.MaxRecvMsgSize(math.MaxInt32),
-		grpc.MaxSendMsgSize(math.MaxInt32),
-	)
-
-	// Setup performance standby RPC servers
-	perfStandbyCount := 0
-	if !c.IsDRSecondary() && !c.disablePerfStandby {
-		perfStandbyCount = c.perfStandbyCount()
-	}
-	perfStandbySlots := make(chan struct{}, perfStandbyCount)
-
-	perfStandbyCache := cache.New(2*HeartbeatInterval, 1*time.Second)
-	perfStandbyCache.OnEvicted(func(secondaryID string, _ interface{}) {
-		c.logger.Debug("removing performance standby", "id", secondaryID)
-		c.removePerfStandbySecondary(context.Background(), secondaryID)
-		select {
-		case <-perfStandbySlots:
-		default:
-			c.logger.Warn("perf secondary timeout hit but no slot to free")
-		}
-	})
-
-	perfStandbyReplicationRPCServer := perfStandbyRPCServer(c, perfStandbyCache)
-
-	if ha && c.clusterHandler != nil {
-		RegisterRequestForwardingServer(fwRPCServer, &forwardedRequestRPCServer{
-			core:                  c,
-			handler:               c.clusterHandler,
-			perfStandbySlots:      perfStandbySlots,
-			perfStandbyRepCluster: perfStandbyRepCluster,
-			perfStandbyCache:      perfStandbyCache,
-		})
+	perfStandbyRepCluster, perfStandbyCache, perfStandbySlots, err := c.perfStandbyClusterHandler()
+	if err != nil {
+		return err
 	}
 
-	// Create the HTTP/2 server that will be shared by both RPC and regular
-	// duties. Doing it this way instead of listening via the server and gRPC
-	// allows us to re-use the same port via ALPN. We can just tell the server
-	// to serve a given conn and which handler to use.
-	fws := &http2.Server{
-		// Our forwarding connections heartbeat regularly so anything else we
-		// want to go away/get cleaned up pretty rapidly
-		IdleTimeout: 5 * HeartbeatInterval,
+	handler, err := NewRequestForwardingHandler(c, c.clusterListener.Server(), perfStandbySlots, perfStandbyRepCluster, perfStandbyCache)
+	if err != nil {
+		return err
 	}
 
-	// Shutdown coordination logic
-	shutdown := new(uint32)
-	shutdownWg := &sync.WaitGroup{}
-
-	for _, addr := range c.clusterListenerAddrs {
-		shutdownWg.Add(1)
-
-		// Force a local resolution to avoid data races
-		laddr := addr
-
-		// Start our listening loop
-		go func() {
-			defer shutdownWg.Done()
-
-			// closeCh is used to shutdown the spawned goroutines once this
-			// function returns
-			closeCh := make(chan struct{})
-			defer func() {
-				close(closeCh)
-			}()
-
-			if c.logger.IsInfo() {
-				c.logger.Info("starting listener", "listener_address", laddr)
-			}
-
-			// Create a TCP listener. We do this separately and specifically
-			// with TCP so that we can set deadlines.
-			tcpLn, err := net.ListenTCP("tcp", laddr)
-			if err != nil {
-				c.logger.Error("error starting listener", "error", err)
-				return
-			}
-
-			// Wrap the listener with TLS
-			tlsLn := tls.NewListener(tcpLn, tlsConfig)
-			defer tlsLn.Close()
-
-			if c.logger.IsInfo() {
-				c.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
-			}
-
-			for {
-				if atomic.LoadUint32(shutdown) > 0 {
-					return
-				}
-
-				// Set the deadline for the accept call. If it passes we'll get
-				// an error, causing us to check the condition at the top
-				// again.
-				tcpLn.SetDeadline(time.Now().Add(clusterListenerAcceptDeadline))
-
-				// Accept the connection
-				conn, err := tlsLn.Accept()
-				if err != nil {
-					if err, ok := err.(net.Error); ok && !err.Timeout() {
-						c.logger.Debug("non-timeout error accepting on cluster port", "error", err)
-					}
-					if conn != nil {
-						conn.Close()
-					}
-					continue
-				}
-				if conn == nil {
-					continue
-				}
-
-				// Type assert to TLS connection and handshake to populate the
-				// connection state
-				tlsConn := conn.(*tls.Conn)
-
-				// Set a deadline for the handshake. This will cause clients
-				// that don't successfully auth to be kicked out quickly.
-				// Cluster connections should be reliable so being marginally
-				// aggressive here is fine.
-				err = tlsConn.SetDeadline(time.Now().Add(30 * time.Second))
-				if err != nil {
-					if c.logger.IsDebug() {
-						c.logger.Debug("error setting deadline for cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				err = tlsConn.Handshake()
-				if err != nil {
-					if c.logger.IsDebug() {
-						c.logger.Debug("error handshaking cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				// Now, set it back to unlimited
-				err = tlsConn.SetDeadline(time.Time{})
-				if err != nil {
-					if c.logger.IsDebug() {
-						c.logger.Debug("error setting deadline for cluster connection", "error", err)
-					}
-					tlsConn.Close()
-					continue
-				}
-
-				switch tlsConn.ConnectionState().NegotiatedProtocol {
-				case requestForwardingALPN:
-					if !ha {
-						tlsConn.Close()
-						continue
-					}
-
-					c.logger.Debug("got request forwarding connection")
-
-					shutdownWg.Add(2)
-					// quitCh is used to close the connection and the second
-					// goroutine if the server closes before closeCh.
-					quitCh := make(chan struct{})
-					go func() {
-						select {
-						case <-quitCh:
-						case <-closeCh:
-						}
-						tlsConn.Close()
-						shutdownWg.Done()
-					}()
-
-					go func() {
-						fws.ServeConn(tlsConn, &http2.ServeConnOpts{
-							Handler: fwRPCServer,
-							BaseConfig: &http.Server{
-								ErrorLog: c.logger.StandardLogger(nil),
-							},
-						})
-						// close the quitCh which will close the connection and
-						// the other goroutine.
-						close(quitCh)
-						shutdownWg.Done()
-					}()
-
-				case PerformanceReplicationALPN, DRReplicationALPN, perfStandbyALPN:
-					handleReplicationConn(ctx, c, shutdownWg, closeCh, fws, perfStandbyReplicationRPCServer, perfStandbyCache, tlsConn)
-				default:
-					c.logger.Debug("unknown negotiated protocol on cluster port")
-					tlsConn.Close()
-					continue
-				}
-			}
-		}()
-	}
-
-	// This is in its own goroutine so that we don't block the main thread, and
-	// thus we use atomic and channels to coordinate
-	// However, because you can't query the status of a channel, we set a bool
-	// here while we have the state lock to know whether to actually send a
-	// shutdown (e.g. whether the channel will block). See issue #2083.
-	c.clusterListenersRunning = true
-	go func() {
-		// If we get told to shut down...
-		<-c.clusterListenerShutdownCh
-
-		// Stop the RPC server
-		c.logger.Info("shutting down forwarding rpc listeners")
-		fwRPCServer.Stop()
-
-		// Set the shutdown flag. This will cause the listeners to shut down
-		// within the deadline in clusterListenerAcceptDeadline
-		atomic.StoreUint32(shutdown, 1)
-		c.logger.Info("forwarding rpc listeners stopped")
-
-		// Wait for them all to shut down
-		shutdownWg.Wait()
-		c.logger.Info("rpc listeners successfully shut down")
-
-		// Clear us up to run this function again
-		atomic.StoreUint32(c.rpcServerActive, 0)
-
-		// Tell the main thread that shutdown is done.
-		c.clusterListenerShutdownSuccessCh <- struct{}{}
-	}()
+	c.clusterListener.AddHandler(requestForwardingALPN, handler)
 
 	return nil
+}
+
+func (c *Core) stopForwarding() {
+	if c.clusterListener != nil {
+		c.clusterListener.StopHandler(requestForwardingALPN)
+		c.clusterListener.StopHandler(perfStandbyALPN)
+	}
 }
 
 // refreshRequestForwardingConnection ensures that the client/transport are
@@ -349,13 +257,25 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		return err
 	}
 
+	parsedCert := c.localClusterParsedCert.Load().(*x509.Certificate)
+	if parsedCert == nil {
+		c.logger.Error("no request forwarding cluster certificate found")
+		return errors.New("no request forwarding cluster certificate found")
+	}
+
+	if c.clusterListener != nil {
+		c.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{
+			core: c,
+		})
+	}
+
 	// Set up grpc forwarding handling
 	// It's not really insecure, but we have to dial manually to get the
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, "", nil, nil, nil)),
+		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * HeartbeatInterval,
@@ -398,6 +318,9 @@ func (c *Core) clearForwardingClients() {
 	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
 
+	if c.clusterListener != nil {
+		c.clusterListener.RemoveClient(requestForwardingALPN)
+	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }
 
@@ -449,33 +372,4 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	}
 
 	return int(resp.StatusCode), header, resp.Body, nil
-}
-
-// getGRPCDialer is used to return a dialer that has the correct TLS
-// configuration. Otherwise gRPC tries to be helpful and stomps all over our
-// NextProtos.
-func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate, repClusters *ReplicatedClusters, perfStandbyCluster *ReplicatedCluster) func(string, time.Duration) (net.Conn, error) {
-	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		tlsConfig, err := c.ClusterTLSConfig(ctx, repClusters, perfStandbyCluster)
-		if err != nil {
-			c.logger.Error("failed to get tls configuration", "error", err)
-			return nil, err
-		}
-		if serverName != "" {
-			tlsConfig.ServerName = serverName
-		}
-		if caCert != nil {
-			pool := x509.NewCertPool()
-			pool.AddCert(caCert)
-			tlsConfig.RootCAs = pool
-			tlsConfig.ClientCAs = pool
-		}
-		c.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
-		tlsConfig.NextProtos = []string{alpnProto}
-		dialer := &net.Dialer{
-			Timeout: timeout,
-		}
-		return tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
-	}
 }

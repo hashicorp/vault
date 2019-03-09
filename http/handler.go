@@ -665,18 +665,19 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 // Returns true if the token was sourced from a Bearer header.
 func getTokenFromReq(r *http.Request) (string, bool) {
 	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
-		r.Header.Del(consts.AuthHeaderName)
 		return token, false
 	}
-	if v := r.Header.Get("Authorization"); v != "" {
+	if headers, ok := r.Header["Authorization"]; ok {
 		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
 
 		// If string does not start by 'Bearer ', it is not one we would use,
 		// but might be used by plugins
-		if !strings.HasPrefix(v, "Bearer ") {
-			return "", false
+		for _, v := range headers {
+			if !strings.HasPrefix(v, "Bearer ") {
+				continue
+			}
+			return strings.TrimSpace(v[7:]), true
 		}
-		return strings.TrimSpace(v[7:]), true
 	}
 	return "", false
 }
@@ -687,6 +688,10 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 	token, fromAuthzHeader := getTokenFromReq(r)
 	if token != "" {
 		req.ClientToken = token
+		req.ClientTokenSource = logical.ClientTokenFromVaultHeader
+		if fromAuthzHeader {
+			req.ClientTokenSource = logical.ClientTokenFromAuthzHeader
+		}
 
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
@@ -700,10 +705,6 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
 			req.SetTokenEntry(te)
-			if fromAuthzHeader {
-				// This was a valid token in an authz header
-				r.Header.Del("Authorization")
-			}
 		}
 	}
 
@@ -802,18 +803,7 @@ func parseMFAHeader(req *logical.Request) error {
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
+	logical.RespondError(w, status, err)
 }
 
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
@@ -836,8 +826,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-type ErrorResponse struct {
-	Errors []string `json:"errors"`
 }

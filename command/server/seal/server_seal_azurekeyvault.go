@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/vault/vault/seal/azurekeyvault"
 )
 
-func configureAzureKeyVaultSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
+func configureAzureKeyVaultSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (vault.Seal, error) {
 	kv := azurekeyvault.NewSeal(logger)
-	kvInfo, err := kv.SetConfig(config.Seal.Config)
+	kvInfo, err := kv.SetConfig(configSeal.Config)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -21,7 +21,7 @@ func configureAzureKeyVaultSeal(config *server.Config, infoKeys *[]string, info 
 	autoseal := vault.NewAutoSeal(kv)
 	if kvInfo != nil {
 		*infoKeys = append(*infoKeys, "Seal Type", "Azure Environment", "Azure Vault Name", "Azure Key Name")
-		(*info)["Seal Type"] = config.Seal.Type
+		(*info)["Seal Type"] = configSeal.Type
 		(*info)["Azure Environment"] = kvInfo["environment"]
 		(*info)["Azure Vault Name"] = kvInfo["vault_name"]
 		(*info)["Azure Key Name"] = kvInfo["key_name"]

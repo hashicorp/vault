@@ -159,12 +159,7 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 
 	initCommands(ui, serverCmdUi, runOpts)
 
-	// Calculate hidden commands from the deprecated ones
-	hiddenCommands := make([]string, 0, len(DeprecatedCommands)+1)
-	for k := range DeprecatedCommands {
-		hiddenCommands = append(hiddenCommands, k)
-	}
-	hiddenCommands = append(hiddenCommands, "version")
+	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
