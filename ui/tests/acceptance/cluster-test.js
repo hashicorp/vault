@@ -1,7 +1,6 @@
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { settled } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';

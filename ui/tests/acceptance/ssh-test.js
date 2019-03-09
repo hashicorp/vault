@@ -132,7 +132,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
       // wait for capabilities check
       await settled();
-      await click(`[data-test-ssh-role-delete="${role.name}"] button`);
+      await click(`[data-test-confirm-action-trigger]`);
       await click(`[data-test-confirm-button]`);
 
       await settled();
