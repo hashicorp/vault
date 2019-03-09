@@ -8,8 +8,8 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 module('Acceptance | settings/configure/secrets/pki/cert', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   //prettier-ignore
@@ -60,7 +60,7 @@ ZzkXwRCdcJARkaKulTfjby7+oGpQydP8iZr+CNKFxwf838UbhhsXHnN6rc62qzYD
 BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
 -----END RSA PRIVATE KEY-----`;
 
-  const mountAndNav = async (assert, prefix) => {
+  const mountAndNav = async (assert, prefix = '') => {
     const path = `${prefix}pki-${new Date().getTime()}`;
     await enablePage.enable('pki', path);
     await page.visit({ backend: path });
@@ -99,11 +99,9 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
-    await settled();
 
     const intermediatePath = await mountAndNav(assert, 'intermediate-');
     await page.form.generateCA('Intermediate CA', 'intermediate');
-    await settled();
     // cache csr
     csrVal = page.form.csr;
     await page.form.back();

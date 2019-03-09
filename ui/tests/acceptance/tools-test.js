@@ -6,6 +6,21 @@ import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 
+const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
+const TOOLS_ACTIONS = toolsActions();
+
+const createTokenStore = () => {
+  let token;
+  return {
+    set(val) {
+      token = val;
+    },
+    get() {
+      return token;
+    },
+  };
+};
+
 module('Acceptance | tools', function(hooks) {
   setupApplicationTest(hooks);
 
@@ -13,31 +28,10 @@ module('Acceptance | tools', function(hooks) {
     await authPage.login();
   });
 
-  hooks.afterEach(function() {
-    return logout.visit();
+  hooks.afterEach(async function() {
+    await logout.visit();
   });
 
-  const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });
-  const TOOLS_ACTIONS = toolsActions();
-
-  /*
-  data-test-tools-input="wrapping-token"
-  data-test-tools-input="rewrapped-token"
-  data-test-tools="token-lookup-row"
-  data-test-tools-action-link=supportedAction
-  */
-
-  var createTokenStore = () => {
-    let token;
-    return {
-      set(val) {
-        token = val;
-      },
-      get() {
-        return token;
-      },
-    };
-  };
   test('tools functionality', async function(assert) {
     var tokenStore = createTokenStore();
     await visit('/vault/tools');
@@ -50,6 +44,7 @@ module('Acceptance | tools', function(hooks) {
 
     // wrap
     await click('[data-test-tools-submit]');
+    await settled();
     tokenStore.set(find('[data-test-tools-input="wrapping-token"]').value);
     assert.ok(find('[data-test-tools-input="wrapping-token"]').value, 'has a wrapping token');
 
@@ -118,42 +113,57 @@ module('Acceptance | tools', function(hooks) {
       .dom('[data-test-tools-input="sum"]')
       .hasValue('JmSi2Hhbgu2WYOrcOyTqqMdym7KT3sohCwAwaMonVrc=', 'hashes the data, passes b64 input through');
   });
+});
 
-  const AUTH_RESPONSE = {
-    request_id: '39802bc4-235c-2f0b-87f3-ccf38503ac3e',
-    lease_id: '',
-    renewable: false,
+const AUTH_RESPONSE = {
+  request_id: '39802bc4-235c-2f0b-87f3-ccf38503ac3e',
+  lease_id: '',
+  renewable: false,
+  lease_duration: 0,
+  data: null,
+  wrap_info: null,
+  warnings: null,
+  auth: {
+    client_token: 'ecfc2758-588e-981d-50f4-a25883bbf03c',
+    accessor: '6299780b-f2b2-1a3f-7b83-9d3d67629249',
+    policies: ['root'],
+    metadata: null,
     lease_duration: 0,
-    data: null,
-    wrap_info: null,
-    warnings: null,
-    auth: {
-      client_token: 'ecfc2758-588e-981d-50f4-a25883bbf03c',
-      accessor: '6299780b-f2b2-1a3f-7b83-9d3d67629249',
-      policies: ['root'],
-      metadata: null,
-      lease_duration: 0,
-      renewable: false,
-      entity_id: '',
-    },
-  };
+    renewable: false,
+    entity_id: '',
+  },
+};
 
-  test('ensure unwrap with auth block works properly', async function(assert) {
-    this.server = new Pretender(function() {
+module('Acceptance | tools unwrap', function(hooks) {
+  setupApplicationTest(hooks);
+  let server;
+
+  hooks.beforeEach(async function() {
+    server = new Pretender(function() {
+      this.get('/v1/**', this.passthrough);
       this.post('/v1/sys/wrapping/unwrap', response => {
         return [response, { 'Content-Type': 'application/json' }, JSON.stringify(AUTH_RESPONSE)];
       });
     });
+    await authPage.login();
+  });
+
+  hooks.afterEach(async function() {
+    server.shutdown();
+    await logout.visit();
+  });
+
+  test('ensure unwrap with auth block works properly', async function(assert) {
     await visit('/vault/tools');
     //unwrap
     await click('[data-test-tools-action-link="unwrap"]');
     await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');
+    await settled();
     assert.deepEqual(
       JSON.parse(findAll('.CodeMirror')[0].CodeMirror.getValue()),
       AUTH_RESPONSE.auth,
       'unwrapped data equals input data'
     );
-    this.server.shutdown();
   });
 });

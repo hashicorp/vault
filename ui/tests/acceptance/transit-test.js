@@ -79,6 +79,7 @@ let generateTransitKeys = async () => {
     await click('[data-test-secret-root-link]');
     await settled();
   }
+  await settled();
   return keys;
 };
 
@@ -205,17 +206,16 @@ const testEncryption = async (assert, keyName) => {
     if (testCase.encodeContext) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
-    await settled();
     await click('[data-test-button-encrypt]');
     await settled();
     if (testCase.assertAfterEncrypt) {
       testCase.assertAfterEncrypt(keyName);
     }
     await click('[data-test-transit-action-link="decrypt"]');
+    await settled();
     if (testCase.assertBeforeDecrypt) {
       testCase.assertBeforeDecrypt(keyName);
     }
-    await settled();
     await click('[data-test-button-decrypt]');
     await settled();
 
@@ -246,6 +246,7 @@ module('Acceptance | transit', function(hooks) {
     assert.expect(47);
     for (let [index, key] of hooks.transitKeys.entries()) {
       await visit(`vault/secrets/${hooks.transitPath}/show/${key.name}`);
+      await settled();
       if (index === 0) {
         await click('[data-test-transit-link="versions"]');
         // wait for capabilities
@@ -253,13 +254,16 @@ module('Acceptance | transit', function(hooks) {
         assert
           .dom('[data-test-transit-key-version-row]')
           .exists({ count: 1 }, `${key.name}: only one key version`);
-        await click('[data-test-transit-key-rotate] button');
+        await click('[data-test-confirm-action-trigger');
         await click('[data-test-confirm-button]');
+        // wait for rotate call
+        await settled();
         assert
           .dom('[data-test-transit-key-version-row]')
           .exists({ count: 2 }, `${key.name}: two key versions after rotate`);
       }
       await click('[data-test-transit-key-actions-link]');
+      await settled();
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${hooks.transitPath}/actions/${key.name}`),
         `${key.name}: navigates to tranist actions`
@@ -284,5 +288,7 @@ module('Acceptance | transit', function(hooks) {
         await testEncryption(assert, key.name);
       }
     }
+
+    await settled();
   });
 });

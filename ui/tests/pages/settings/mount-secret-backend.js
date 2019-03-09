@@ -1,4 +1,5 @@
 import { create, visitable, fillable } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 import mountForm from 'vault/tests/pages/components/mount-backend-form';
 
 export default create({
@@ -12,5 +13,6 @@ export default create({
   enable: async function(type, path) {
     await this.visit();
     await this.mount(type, path);
+    await settled();
   },
 });

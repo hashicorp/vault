@@ -1,5 +1,5 @@
 import { clickable, collection, fillable, text, selectable, isPresent } from 'ember-cli-page-object';
-
+import { settled } from '@ember/test-helpers';
 import fields from './form-field';
 
 export default {
@@ -35,25 +35,30 @@ export default {
 
   async generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return await this.replaceCA()
+      await this.replaceCA()
         .commonName(commonName)
         .caType('intermediate')
         .submit();
+      await settled();
+      return;
     }
-    return await this.replaceCA()
+    await this.replaceCA()
       .commonName(commonName)
       .submit();
+    await settled();
   },
 
   async uploadCA(pem) {
-    return await this.replaceCA()
+    await this.replaceCA()
       .uploadCert()
       .enterCertAsText()
       .pemBundle(pem)
       .submit();
+    await settled();
   },
 
   async signIntermediate(commonName) {
-    return await this.signIntermediateBtn().commonName(commonName);
+    await this.signIntermediateBtn().commonName(commonName);
+    await settled();
   },
 };

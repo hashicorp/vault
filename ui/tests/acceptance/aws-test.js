@@ -38,6 +38,7 @@ module('Acceptance | aws secret backend', function(hooks) {
     await enablePage.enable('aws', path);
 
     await click('[data-test-secret-backend-configure]');
+    await settled();
     assert.equal(currentURL(), `/vault/settings/secrets/configure/${path}`);
     assert.ok(findAll('[data-test-aws-root-creds-form]').length, 'renders the empty root creds form');
     assert.ok(findAll('[data-test-aws-link="root-creds"]').length, 'renders the root creds link');
@@ -60,9 +61,11 @@ module('Acceptance | aws secret backend', function(hooks) {
     );
 
     await click('[data-test-backend-view-link]');
+    await settled();
     assert.equal(currentURL(), `/vault/secrets/${path}/list`, `navigates to the roles list`);
 
     await click('[ data-test-secret-create]');
+    await settled();
     assert.ok(
       find('[data-test-secret-header]').textContent.includes('AWS Role'),
       `aws: renders the create page`
@@ -82,6 +85,7 @@ module('Acceptance | aws secret backend', function(hooks) {
     );
 
     await click('[data-test-secret-root-link]');
+    await settled();
 
     assert.equal(currentURL(), `/vault/secrets/${path}/list`);
     assert.ok(findAll(`[data-test-secret-link="${roleName}"]`).length, `aws: role shows in the list`);
