@@ -445,11 +445,7 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 
 		// Create a muxer and add paths relevant for the lease cache layer
-		mux := http.NewServeMux()
-		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
-
-		mux.Handle("/sys/agentsinks", cache.SinkQueryHandler(ctx, cacheLogger, publishedFileSinks))
-		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
+		mux := cache.AgentMux(ctx, cacheLogger, leaseCache, inmemSink, publishedFileSinks)
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Cache.Listeners {
