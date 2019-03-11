@@ -14,6 +14,10 @@ ea_version: 1.0
 This deployment guide covers the steps required to install and configure a single HashiCorp Vault cluster as defined in the [Vault Reference Architecture](/guides/operations/reference-architecture.html).
 
 Below are instructions for installing and configuring Vault on Linux hosts running the systemd system and service manager.
+This guide has been tested on these operating systems and versions:
+* Ubuntu 18.04 LTS
+* Centos 7
+* Amazon Linux 2
 
 ## Reference Material
 
