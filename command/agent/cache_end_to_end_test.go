@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -27,18 +27,137 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-const policyAutoAuthAppRole = `
-path "/kv/*" {
-	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
+type (
+	testAuthHelper struct {
+		authHandler          *auth.AuthHandler
+		roleID, secretID     string
+		roleFile, secretFile string
+		cleanup              func()
+	}
+)
+
+func newTestAuthHelper(ctx context.Context, client *api.Client, policyBody string) (*testAuthHelper, error) {
+	logger := logging.NewVaultLogger(log.Trace)
+
+	// Add an kv-admin policy
+	if err := client.Sys().PutPolicy("test-autoauth", policyBody); err != nil {
+		return nil, err
+	}
+
+	// Enable approle
+	err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+		Type: "approle",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
+		"bind_secret_id": "true",
+		"token_ttl":      "3s",
+		"token_max_ttl":  "10s",
+		"policies":       []string{"test-autoauth"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
+	if err != nil {
+		return nil, err
+	}
+	secretID1 := resp.Data["secret_id"].(string)
+
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
+	if err != nil {
+		return nil, err
+	}
+	roleID1 := resp.Data["role_id"].(string)
+
+	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
+	if err != nil {
+		return nil, err
+	}
+	role := rolef.Name()
+	rolef.Close() // WriteFile doesn't need it open
+
+	secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+	if err != nil {
+		return nil, err
+	}
+	secret := secretf.Name()
+	secretf.Close()
+
+	am, err := agentapprole.NewApproleAuthMethod(&auth.AuthConfig{
+		Logger:    logger.Named("auth.approle"),
+		MountPath: "auth/approle",
+		Config: map[string]interface{}{
+			"role_id_file_path":                   role,
+			"secret_id_file_path":                 secret,
+			"remove_secret_id_file_after_reading": true,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ahConfig := &auth.AuthHandlerConfig{
+		Logger: logger.Named("auth.handler"),
+		Client: client,
+	}
+	authHandler := auth.NewAuthHandler(ahConfig)
+	go authHandler.Run(ctx, am)
+	go func() {
+		<-ctx.Done()
+		<-authHandler.DoneCh
+	}()
+
+	return &testAuthHelper{
+		authHandler: authHandler,
+		roleFile:    role,
+		roleID:      roleID1,
+		secretFile:  secret,
+		secretID:    secretID1,
+		cleanup: func() {
+			os.Remove(role)
+			os.Remove(secret)
+		},
+	}, nil
 }
 
-path "/auth/token/create" {
-	capabilities = ["create", "update"]
+func (tah *testAuthHelper) getToken(tokenFile string) (string, error) {
+	if err := ioutil.WriteFile(tah.roleFile, []byte(tah.roleID), 0600); err != nil {
+		return "", err
+	}
+
+	if err := ioutil.WriteFile(tah.secretFile, []byte(tah.secretID), 0600); err != nil {
+		return "", err
+	}
+
+	timeout := time.Now().Add(10 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			return "", fmt.Errorf("did not find a written token after timeout")
+		}
+		val, err := ioutil.ReadFile(tokenFile)
+		if err == nil {
+			os.Remove(tokenFile)
+			if len(val) == 0 {
+				return "", fmt.Errorf("written token was empty")
+			}
+
+			_, err = os.Stat(tah.secretFile)
+			if err == nil {
+				return "", fmt.Errorf("secret file exists but was supposed to be removed")
+			}
+
+			return string(val), nil
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
 }
-`
 
 func TestCache_UsingAutoAuthToken(t *testing.T) {
-	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
@@ -59,11 +178,8 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	client := cluster.Cores[0].Client
 
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Setenv(api.EnvVaultAddress, client.Address())
@@ -71,7 +187,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	defer os.Setenv(api.EnvVaultCACert, os.Getenv(api.EnvVaultCACert))
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
-	err = client.Sys().Mount("kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -87,83 +203,12 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Add an kv-admin policy
-	if err := client.Sys().PutPolicy("test-autoauth", policyAutoAuthAppRole); err != nil {
-		t.Fatal(err)
-	}
-
-	// Enable approle
-	err = client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
-		Type: "approle",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
-		"bind_secret_id": "true",
-		"token_ttl":      "3s",
-		"token_max_ttl":  "10s",
-		"policies":       []string{"test-autoauth"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	secretID1 := resp.Data["secret_id"].(string)
-
-	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
-	if err != nil {
-		t.Fatal(err)
-	}
-	roleID1 := resp.Data["role_id"].(string)
-
-	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	role := rolef.Name()
-	rolef.Close() // WriteFile doesn't need it open
-	defer os.Remove(role)
-	t.Logf("input role_id_file_path: %s", role)
-
-	secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	secret := secretf.Name()
-	secretf.Close()
-	defer os.Remove(secret)
-	t.Logf("input secret_id_file_path: %s", secret)
-
-	// We close these right away because we're just basically testing
-	// permissions and finding a usable file name
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
-	if err != nil {
-		t.Fatal(err)
-	}
-	out := ouf.Name()
-	ouf.Close()
-	os.Remove(out)
-	t.Logf("output: %s", out)
-
+	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	timer := time.AfterFunc(30*time.Second, func() {
 		cancelFunc()
 	})
 	defer timer.Stop()
-
-	conf := map[string]interface{}{
-		"role_id_file_path":                   role,
-		"secret_id_file_path":                 secret,
-		"remove_secret_id_file_after_reading": true,
-	}
-
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
 
 	// Create the API proxier
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
@@ -186,24 +231,19 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	am, err := agentapprole.NewApproleAuthMethod(&auth.AuthConfig{
-		Logger:    logger.Named("auth.approle"),
-		MountPath: "auth/approle",
-		Config:    conf,
-	})
-	if err != nil {
-		t.Fatal(err)
+	var out string
+	{
+		// We close and rm this file right away because we're just basically testing
+		// permissions and finding a usable file name for the sink to use below.
+		ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = ouf.Name()
+		ouf.Close()
+		os.Remove(out)
+		t.Logf("output: %s", out)
 	}
-	ahConfig := &auth.AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
-		Client: client,
-	}
-	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
-	defer func() {
-		<-ah.DoneCh
-	}()
-
 	config := &sink.SinkConfig{
 		Logger: logger.Named("sink.file"),
 		Config: map[string]interface{}{
@@ -231,7 +271,19 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 	inmemSinkConfig.Sink = inmemSink
 
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
+	policyBody := `
+path "/kv/*" {
+	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
+}
+
+path "/auth/token/create" {
+	capabilities = ["create", "update"]
+}
+`
+	testAuthHelper, err := newTestAuthHelper(ctx, client, policyBody)
+	defer testAuthHelper.cleanup()
+
+	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, []*sink.SinkConfig{config, inmemSinkConfig})
 	defer func() {
 		<-ss.DoneCh
 	}()
@@ -248,43 +300,11 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
+	token, err := testAuthHelper.getToken(out)
+	if err != nil {
 		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test role 1", "path", role)
 	}
-
-	if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
-		t.Fatal(err)
-	} else {
-		logger.Trace("wrote test secret 1", "path", secret)
-	}
-
-	getToken := func() string {
-		timeout := time.Now().Add(10 * time.Second)
-		for {
-			if time.Now().After(timeout) {
-				t.Fatal("did not find a written token after timeout")
-			}
-			val, err := ioutil.ReadFile(out)
-			if err == nil {
-				os.Remove(out)
-				if len(val) == 0 {
-					t.Fatal("written token was empty")
-				}
-
-				_, err = os.Stat(secret)
-				if err == nil {
-					t.Fatal("secret file exists but was supposed to be removed")
-				}
-
-				return string(val)
-			}
-			time.Sleep(250 * time.Millisecond)
-		}
-	}
-
-	t.Logf("auto-auth token: %q", getToken())
+	t.Logf("auto-auth token: %q", token)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -326,7 +346,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		// Empty the token in the client to ensure that auto-auth token is used
 		testClient.SetToken("")
 
-		resp, err = testClient.Logical().Read("auth/token/lookup-self")
+		resp, err := testClient.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,7 +357,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// This block tests lease creation caching using the auto-auth token.
 	{
-		resp, err = testClient.Logical().Read("kv/foo")
+		resp, err := testClient.Logical().Read("kv/foo")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -362,7 +382,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// This block tests auth token creation caching (child, non-orphan tokens)
 	// using the auto-auth token.
 	{
-		resp, err = testClient.Logical().Write("auth/token/create", nil)
+		resp, err := testClient.Logical().Write("auth/token/create", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,7 +408,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		// Empty the token in the client to ensure that auto-auth token is used
 		testClient.SetToken(client.Token())
 
-		resp, err = testClient.Logical().Read("auth/token/lookup-self")
+		resp, err := testClient.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			t.Fatal(err)
 		}
