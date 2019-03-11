@@ -130,6 +130,12 @@ func (b *backend) removeZeroAddressRole(ctx context.Context, s logical.Storage, 
 		return err
 	}
 
+	// Empty out the zeroAddressEntry if we just cleared the last role
+	if len(zeroAddressEntry.Roles) == 0 {
+		zeroAddressEntry = nil
+		return nil
+	}
+
 	return b.putZeroAddressRoles(ctx, s, zeroAddressEntry.Roles)
 }
 
