@@ -41,7 +41,8 @@ const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
-const EnvAgentFileSinkPath = "AGENT_FILE_SINK_PATH"
+const EnvTokenFileSinkPath = "TOKEN_FILE_SINK_PATH"
+const EnvAgentAddr = "VAULT_AGENT_ADDR"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -104,6 +105,9 @@ type Config struct {
 	// AgentFileSinkPath specifies a file path that vault agent is writing
 	// tokens to.
 	AgentFileSinkPath string
+
+	// AgentSinkName names an AgentSink to query for sink details
+	AgentSinkName string
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -371,7 +375,7 @@ type Client struct {
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 //
-// If the environment variable `AGENT_FILE_SINK_PATH` is present and contains
+// If the environment variable `TOKEN_FILE_SINK_PATH` is present and contains
 // a valid filepath, that filepath will be used to set the client's token and
 // continue to be polled and update the client's token
 func NewClient(c *Config) (*Client, error) {
@@ -428,34 +432,46 @@ func NewClient(c *Config) (*Client, error) {
 		config: c,
 	}
 
-	agentSinkPath := ""
+	// determine how to get a token
 	// order of precedence could change
+	tokenSinkPath := ""
 	switch {
 	case os.Getenv(EnvVaultToken) != "":
 		client.token = os.Getenv(EnvVaultToken)
-	case c.AgentFileSinkPath != "":
-		agentSinkPath = c.AgentFileSinkPath
-	case os.Getenv(EnvAgentFileSinkPath) != "":
-		agentSinkPath = os.Getenv(EnvAgentFileSinkPath)
+	case c.AgentFileSinkPath != "": // todo rename AgentFileSinkPath (could be from not an agent)
+		tokenSinkPath = c.AgentFileSinkPath
+	case os.Getenv(EnvTokenFileSinkPath) != "":
+		tokenSinkPath = os.Getenv(EnvTokenFileSinkPath)
+	case os.Getenv(EnvAgentAddr) != "":
+		tokenSinkPath = getSinkPathFromAgent(os.Getenv(EnvAgentAddr))
+	case c.AgentAddress != "":
+		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentAddress))
+	case c.AgentSinkName != "":
+		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentSinkName))
 	}
 
-	// set and poll token from agent sink if it is available
-	if agentSinkPath != "" {
-		token, err := readAgentTokenFromFile(agentSinkPath)
+	// set and poll token from file sink if it is available
+	if tokenSinkPath != "" {
+		token, err := readAgentTokenFromFile(tokenSinkPath)
 		if err != nil {
 			return nil, err
 		}
 		client.token = token
 		// poll file for updates
-		client.pollFileForToken(agentSinkPath)
+		client.pollFileForToken(tokenSinkPath)
 	}
 
 	return client, nil
 }
 
+// contacts agent for a file sink path
+func (c *Client) getSinkPathFromAgent(agentAddress) (string, error) {
+
+}
+
 // starts a go routine to poll the specified file for a token
 func (c *Client) pollFileForToken(filePath string) {
-	pollingInterval := 30 * time.Second //todo - what should this be?
+	pollingInterval := 60 * time.Second //todo - what should this be?
 	go func() {
 		for {
 			time.Sleep(pollingInterval)
