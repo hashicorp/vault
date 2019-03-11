@@ -10,6 +10,7 @@ auto_auth {
 	}
 
 	sink "file" {
+		do_not_publish = true
 		config = {
 			path = "/tmp/file-foo"
 		}
@@ -19,7 +20,8 @@ auto_auth {
 	}
 
 	sink "file" {
-		wrap_ttl = "5m" 
+		name = "nonauto"
+		wrap_ttl = "5m"
 		aad_env_var = "TEST_AAD_ENV"
 		dh_type = "curve25519"
 		dh_path = "/tmp/file-foo-dhpath2"
@@ -27,4 +29,11 @@ auto_auth {
 			path = "/tmp/file-bar"
 		}
 	}
+
+    sink "file" {
+        auto = true
+        name = "auto"
+        type = "file"
+        wrap_ttl = "5m"
+    }
 }

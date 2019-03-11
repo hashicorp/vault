@@ -115,15 +115,17 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 			Sinks: []*Sink{
 				&Sink{
-					Type:   "file",
-					DHType: "curve25519",
-					DHPath: "/tmp/file-foo-dhpath",
-					AAD:    "foobar",
+					DoNotPublish: true,
+					Type:         "file",
+					DHType:       "curve25519",
+					DHPath:       "/tmp/file-foo-dhpath",
+					AAD:          "foobar",
 					Config: map[string]interface{}{
 						"path": "/tmp/file-foo",
 					},
 				},
 				&Sink{
+					Name:    "nonauto",
 					Type:    "file",
 					WrapTTL: 5 * time.Minute,
 					DHType:  "curve25519",
@@ -132,6 +134,12 @@ func TestLoadConfigFile(t *testing.T) {
 					Config: map[string]interface{}{
 						"path": "/tmp/file-bar",
 					},
+				},
+				&Sink{
+					Auto:    true,
+					Name:    "auto",
+					Type:    "file",
+					WrapTTL: 5 * time.Minute,
 				},
 			},
 		},
