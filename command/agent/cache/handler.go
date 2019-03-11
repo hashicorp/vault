@@ -19,6 +19,14 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func AgentMux(ctx context.Context, logger hclog.Logger, leaseCache *LeaseCache, inmemSink sink.Sink, pubSinks []*sink.SinkConfig) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+	mux.Handle(consts.AgentPathFileSinks, SinkQueryHandler(ctx, logger, pubSinks))
+	mux.Handle("/", Handler(ctx, logger, leaseCache, inmemSink))
+	return mux
+}
+
 func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "path", r.URL.Path, "method", r.Method)
