@@ -31,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
-	"github.com/hashicorp/vault/helper/consts"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/version"
