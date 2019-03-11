@@ -31,7 +31,7 @@ auto_auth {
 	}
 
     sink "file" {
-        auto = true
+        dh_auto = true
         name = "auto"
         type = "file"
         wrap_ttl = "5m"

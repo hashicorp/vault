@@ -63,12 +63,12 @@ type Method struct {
 }
 
 type Sink struct {
-	Auto         bool
 	DoNotPublish bool `hcl:"do_not_publish"`
 	Name         string
 	Type         string
 	WrapTTLRaw   interface{}   `hcl:"wrap_ttl"`
 	WrapTTL      time.Duration `hcl:"-"`
+	DHAuto       bool          `hcl:"dh_auto"`
 	DHType       string        `hcl:"dh_type"`
 	DHPath       string        `hcl:"dh_path"`
 	AAD          string        `hcl:"aad"`

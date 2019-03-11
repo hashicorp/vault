@@ -92,9 +92,11 @@ func SinkQueryHandler(ctx context.Context, logger hclog.Logger, sinks []*sink.Si
 					break
 				}
 			}
-			logical.RespondError(w, http.StatusBadRequest,
-				fmt.Errorf("sink name %q not found", desiredSink))
-			return
+			if foundSink == nil {
+				logical.RespondError(w, http.StatusBadRequest,
+					fmt.Errorf("sink name %q not found", desiredSink))
+				return
+			}
 		} else if len(sinks) == 1 {
 			foundSink = sinks[0]
 		} else {

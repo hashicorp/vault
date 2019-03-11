@@ -136,7 +136,7 @@ func TestLoadConfigFile(t *testing.T) {
 					},
 				},
 				&Sink{
-					Auto:    true,
+					DHAuto:  true,
 					Name:    "auto",
 					Type:    "file",
 					WrapTTL: 5 * time.Minute,

@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -293,7 +295,7 @@ func (c *AgentCommand) Run(args []string) int {
 		switch sc.Type {
 		case "file":
 			config := &sink.SinkConfig{
-				Auto:    sc.Auto,
+				DHAuto:  sc.DHAuto,
 				Name:    sc.Name,
 				Logger:  c.logger.Named("sink.file"),
 				Config:  sc.Config,
@@ -302,6 +304,32 @@ func (c *AgentCommand) Run(args []string) int {
 				DHType:  sc.DHType,
 				DHPath:  sc.DHPath,
 				AAD:     sc.AAD,
+			}
+			if config.DHAuto {
+				if config.DHType == "" {
+					config.DHType = "curve25519"
+				}
+
+				if config.Config == nil {
+					config.Config = make(map[string]interface{})
+				}
+
+				if config.DHPath == "" || config.Config["path"] == "" {
+					dir, err := ioutil.TempDir("", "sinkauto")
+					if err != nil {
+						c.UI.Error(errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err).Error())
+						return 1
+					}
+
+					if config.DHPath == "" {
+						config.DHPath = filepath.Join(dir, "token-dh")
+					}
+
+					if config.Config["path"] == nil {
+						config.Config["path"] = filepath.Join(dir, "token-file")
+					}
+				}
+
 			}
 			s, err := file.NewFileSink(config)
 			if err != nil {
