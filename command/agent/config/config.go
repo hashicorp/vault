@@ -19,11 +19,18 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth `hcl:"auto_auth"`
-	ExitAfterAuth bool      `hcl:"exit_after_auth"`
-	PidFile       string    `hcl:"pid_file"`
-	Cache         *Cache    `hcl:"cache"`
-	Vault         *Vault    `hcl:"vault"`
+	AutoAuth      *AutoAuth    `hcl:"auto_auth"`
+	ExitAfterAuth bool         `hcl:"exit_after_auth"`
+	PidFile       string       `hcl:"pid_file"`
+	Cache         *Cache       `hcl:"cache"`
+	Vault         *Vault       `hcl:"vault"`
+	UnixSockets   *UnixSockets `hcl:"unix_sockets"`
+}
+
+type UnixSockets struct {
+	User  string `hcl:"user"`
+	Mode  string `hcl:"mode"`
+	Group string `hcl:"group"`
 }
 
 type Vault struct {
@@ -122,7 +129,37 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
 	}
 
+	err = parseUnixSockets(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("err parsing `unix_sockets`: {{err}}", err)
+	}
+
 	return &result, nil
+}
+
+func parseUnixSockets(result *Config, list *ast.ObjectList) error {
+	name := "unix_sockets"
+
+	unixSocketsList := list.Filter(name)
+	if len(unixSocketsList.Items) == 0 {
+		return nil
+	}
+
+	if len(unixSocketsList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := unixSocketsList.Items[0]
+
+	var u UnixSockets
+	err := hcl.DecodeObject(&u, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.UnixSockets = &u
+
+	return nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {

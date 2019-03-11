@@ -75,6 +75,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			ClientCert:    "config_client_cert",
 			ClientKey:     "config_client_key",
 		},
+		UnixSockets: &UnixSockets{
+			Mode:  "configmode",
+			User:  "configuser",
+			Group: "configgroup",
+		},
 		PidFile: "./pidfile",
 	}
 

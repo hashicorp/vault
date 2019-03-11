@@ -51,3 +51,9 @@ vault {
 	client_cert = "config_client_cert"
 	client_key = "config_client_key"
 }
+
+unix_sockets {
+	mode = "configmode"
+	user = "configuser"
+	group = "configgroup"
+}
