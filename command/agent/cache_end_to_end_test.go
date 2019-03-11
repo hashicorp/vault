@@ -172,7 +172,8 @@ func (tah *testAuthHelper) getToken(tokenFile string) (string, error) {
 	}
 }
 
-func testAutoAuthCluster(t *testing.T) *vault.TestCluster {
+func testhelperAutoAuth(t *testing.T, fileSinks []*sink.SinkConfig, tokenFile string, tokenTtl time.Duration) (cleanup func(), client *api.Client, agentAddr string) {
+	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
@@ -192,7 +193,7 @@ func testAutoAuthCluster(t *testing.T) *vault.TestCluster {
 	cluster.Start()
 
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	client := cluster.Cores[0].Client
+	client = cluster.Cores[0].Client
 
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Setenv(api.EnvVaultAddress, client.Address())
@@ -282,6 +283,20 @@ path "/auth/token/create" {
 }
 `
 	testAuthHelper, err := newTestAuthHelper(ctx, client, policyBody, tokenTtl)
+
+	sinks := append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
+	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
+
+	// Check that no sink file exists
+	_, err = os.Lstat(tokenFile)
+	if err == nil {
+		t.Fatal("expected err")
+	}
+	if !os.IsNotExist(err) {
+		t.Fatal("expected notexist err")
+	}
+
+	token, err := testAuthHelper.getToken(tokenFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,43 +320,60 @@ path "/auth/token/create" {
 	}
 	go server.Serve(listener)
 
-	cleanup := func() {
+	cleanup = func() {
+		os.Remove(tokenFile)
 		listener.Close()
 		cancelFunc()
 		<-ss.DoneCh
 		testAuthHelper.cleanup()
 		timer.Stop()
+		cluster.Cleanup()
 	}
 
-	return &testAutoAuthHelper{
-		testAuthHelper: testAuthHelper,
-		cleanup:        cleanup,
-		client:         client,
-		agentAddr:      "http://" + listener.Addr().String(),
-	}
+	return cleanup, client, "http://" + listener.Addr().String()
 }
 
 func TestCache_UsingAutoAuthToken(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	cluster := testAutoAuthCluster(t)
-	defer cluster.Cleanup()
 
-	sink1 := newFileSink(t, logger)
-	out := sink1.Config["path"].(string)
+	var out string
+	{
+		// We close and rm this file right away because we're just basically testing
+		// permissions and finding a usable file name for the sink to use below.
+		ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+		if err != nil {
+			t.Fatal(err)
+		}
+		out = ouf.Name()
+		ouf.Close()
+		os.Remove(out)
+		t.Logf("output: %s", out)
+	}
+	config := &sink.SinkConfig{
+		Logger: logger.Named("sink.file"),
+		Config: map[string]interface{}{
+			"path": out,
+		},
+	}
+	fs, err := file.NewFileSink(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.Sink = fs
 
 	tokenTtl := 3 * time.Second
-	autoAuthHelper := newTestAutoAuthHelper(t, cluster, []*sink.SinkConfig{sink1}, tokenTtl)
-	defer autoAuthHelper.cleanup()
+	cleanup, realClient, agentAddr := testhelperAutoAuth(t, []*sink.SinkConfig{config}, out, tokenTtl)
+	defer cleanup()
 
-	autoAuthHelper.testAuthHelper.getToken(out)
-	defer os.Remove(out)
+	// Wait for listeners to come up
+	time.Sleep(2 * time.Second)
 
 	testClient, err := api.NewClient(api.DefaultConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := testClient.SetAddress(autoAuthHelper.agentAddr); err != nil {
+	if err := testClient.SetAddress(agentAddr); err != nil {
 		t.Fatal(err)
 	}
 
@@ -411,19 +443,21 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// token on the request will be prioritized.
 	{
 		// Empty the token in the client to ensure that auto-auth token is used
-		testClient.SetToken(autoAuthHelper.client.Token())
+		testClient.SetToken(realClient.Token())
 
 		resp, err := testClient.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if resp == nil || resp.Data["id"] != autoAuthHelper.client.Token() {
+		if resp == nil || resp.Data["id"] != realClient.Token() {
 			t.Fatalf("failed to use the cluster client token to perform lookup-self")
 		}
 	}
 }
 
-func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
+func TestCache_ClientAutoAuth(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Trace)
+
 	var out string
 	{
 		// We close and rm this file right away because we're just basically testing
@@ -435,10 +469,10 @@ func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
 		out = ouf.Name()
 		ouf.Close()
 		os.Remove(out)
+		t.Logf("output: %s", out)
 	}
-
 	config := &sink.SinkConfig{
-		Logger: logger,
+		Logger: logger.Named("sink.file"),
 		Config: map[string]interface{}{
 			"path": out,
 		},
@@ -449,23 +483,12 @@ func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
 	}
 	config.Sink = fs
 
-	return config
-}
-
-func TestCache_ClientAutoAuth(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
-	cluster := testAutoAuthCluster(t)
-	defer cluster.Cleanup()
-
-	sink1 := newFileSink(t, logger)
-	out := sink1.Config["path"].(string)
-
 	tokenTtl := 200 * time.Millisecond
-	autoAuthHelper := newTestAutoAuthHelper(t, cluster, []*sink.SinkConfig{sink1}, tokenTtl)
-	defer autoAuthHelper.cleanup()
+	cleanup, _, agentAddr := testhelperAutoAuth(t, []*sink.SinkConfig{config}, out, tokenTtl)
+	defer cleanup()
 
-	autoAuthHelper.testAuthHelper.getToken(out)
-	defer os.Remove(out)
+	// Wait for listeners to come up
+	time.Sleep(2 * time.Second)
 
 	clientConfig := api.DefaultConfig()
 	clientConfig.AgentFileSinkPath = out
@@ -474,7 +497,7 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testClient.SetAddress(autoAuthHelper.agentAddr); err != nil {
+	if err := testClient.SetAddress(agentAddr); err != nil {
 		t.Fatal(err)
 	}
 
@@ -491,124 +514,5 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	}
-}
-
-func TestCache_ClientChooseSinks(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
-	cluster := testAutoAuthCluster(t)
-	defer cluster.Cleanup()
-
-	tokenTtl := 200 * time.Millisecond
-
-	// Test that multiple sinks returns an error when no AgentSinkName given
-	{
-		sink1 := newFileSink(t, logger)
-		sink1.Name = "sink1"
-		out := sink1.Config["path"].(string)
-
-		sink2 := newFileSink(t, logger)
-		sink2.Name = "sink2"
-
-		autoAuthHelper := newTestAutoAuthHelper(t, cluster, []*sink.SinkConfig{sink1, sink2}, tokenTtl)
-		autoAuthHelper.testAuthHelper.getToken(out)
-		defer os.Remove(out)
-
-		clientConfig := api.DefaultConfig()
-		clientConfig.AgentAddress = autoAuthHelper.agentAddr
-		_, err := api.NewClient(clientConfig)
-		if err == nil {
-			t.Fatalf("expected error: multiple published sinks but no name or filepath given")
-		}
-
-		autoAuthHelper.cleanup()
-	}
-
-	// Test that with multiple sinks we choose the right one when AgentSinkName given
-	{
-		sink1 := newFileSink(t, logger)
-		sink1.Name = "sink1"
-		out := sink1.Config["path"].(string)
-
-		sink2 := newFileSink(t, logger)
-		sink2.Name = "sink2"
-
-		autoAuthHelper := newTestAutoAuthHelper(t, cluster, []*sink.SinkConfig{sink1, sink2}, tokenTtl)
-		autoAuthHelper.testAuthHelper.getToken(out)
-		os.Remove(out)
-
-		clientConfig := api.DefaultConfig()
-		clientConfig.AgentAddress = autoAuthHelper.agentAddr
-
-		// TODO uncomment once AgentSinkName is supported
-		// clientConfig.AgentSinkName = "sink2"
-
-		client, err := api.NewClient(clientConfig)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		_, err = client.Logical().Read("kv/foo")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		autoAuthHelper.cleanup()
-	}
-}
-
-func TestCache_ClientAutoAuthEnc(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
-	cluster := testAutoAuthCluster(t)
-	defer cluster.Cleanup()
-
-	tokenTtl := 200 * time.Millisecond
-
-	// Test that with DHAuto=true the agent will setup an encrypted token for us.
-	{
-		sink1 := newFileSink(t, logger)
-		sink1.DHAuto = true
-		out := sink1.Config["path"].(string)
-
-		autoAuthHelper := newTestAutoAuthHelper(t, cluster, []*sink.SinkConfig{sink1}, tokenTtl)
-		encToken, err := autoAuthHelper.testAuthHelper.getToken(out)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-		os.Setenv(api.EnvVaultAddress, cluster.Cores[0].Client.Address())
-
-		defer os.Setenv(api.EnvVaultCACert, os.Getenv(api.EnvVaultCACert))
-		os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
-
-		// Because we're not setting $VAULT_AGENT_ADDR, Config.AgentAddress,
-		// or Config.AgentSinkName, NewClient won't query the file-sinks
-		// endpoint and won't try to read the token file itself.
-		clientConfig := api.DefaultConfig()
-		client, err := api.NewClient(clientConfig)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		client.SetToken(encToken)
-		_, err = client.Logical().Read("kv/foo")
-		if err == nil {
-			t.Fatal("expected auth to fail with encrypted token")
-		}
-
-		// Now that we set AgentAddress it should work.
-		clientConfig.AgentAddress = autoAuthHelper.agentAddr
-		client, err = api.NewClient(clientConfig)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = client.Logical().Read("kv/foo")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		autoAuthHelper.cleanup()
-		os.Remove(out)
 	}
 }
