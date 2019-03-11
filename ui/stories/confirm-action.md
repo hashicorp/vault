@@ -1,6 +1,6 @@
 # ConfirmAction
 
-`ConfirmAction` are glyphs used to indicate important information.
+`ConfirmAction` is a button followed by a confirmation message and button used to prevent users from performing actions they do not intend to.
 
 ## Properties
 | Property | Required | Default value | Type | Description | Example |

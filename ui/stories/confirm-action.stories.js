@@ -29,7 +29,7 @@ storiesOf('ConfirmAction/', module)
         onComfirmAction: () => {
           console.log('Action!');
         },
-        confirmButtonText: text('confirmButtonText', 'Delete'),
+        confirmButtonText: text('confirmButtonText', 'Yes'),
         confirmMessage: text('confirmMessage', 'Are you sure you want to do this?'),
         cancelButtonText: text('cancelButtonText', 'Cancel'),
         disabled: boolean('disabled', false),
