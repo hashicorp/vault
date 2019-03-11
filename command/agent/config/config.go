@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/parseutil"
 
 	"github.com/hashicorp/hcl"
@@ -63,14 +63,17 @@ type Method struct {
 }
 
 type Sink struct {
-	Type       string
-	WrapTTLRaw interface{}   `hcl:"wrap_ttl"`
-	WrapTTL    time.Duration `hcl:"-"`
-	DHType     string        `hcl:"dh_type"`
-	DHPath     string        `hcl:"dh_path"`
-	AAD        string        `hcl:"aad"`
-	AADEnvVar  string        `hcl:"aad_env_var"`
-	Config     map[string]interface{}
+	Auto         bool
+	DoNotPublish bool `hcl:"do_not_publish"`
+	Name         string
+	Type         string
+	WrapTTLRaw   interface{}   `hcl:"wrap_ttl"`
+	WrapTTL      time.Duration `hcl:"-"`
+	DHType       string        `hcl:"dh_type"`
+	DHPath       string        `hcl:"dh_path"`
+	AAD          string        `hcl:"aad"`
+	AADEnvVar    string        `hcl:"aad_env_var"`
+	Config       map[string]interface{}
 }
 
 // LoadConfig loads the configuration at the given path, regardless if
@@ -325,11 +328,19 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	}
 
 	var ts []*Sink
+	names := make(map[string]struct{})
 
 	for _, item := range sinkList.Items {
 		var s Sink
 		if err := hcl.DecodeObject(&s, item.Val); err != nil {
 			return err
+		}
+
+		if s.Name != "" {
+			if _, ok := names[s.Name]; ok {
+				return fmt.Errorf("sink name %q occurs more than once", s.Name)
+			}
+			names[s.Name] = struct{}{}
 		}
 
 		if s.Type == "" {

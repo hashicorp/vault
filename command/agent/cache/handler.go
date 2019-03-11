@@ -103,6 +103,70 @@ func setHeaders(w http.ResponseWriter, resp *SendResponse) {
 	w.WriteHeader(resp.Response.StatusCode)
 }
 
+func SinkQueryHandler(ctx context.Context, logger hclog.Logger, sinks []*sink.SinkConfig) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.Info("received request", "path", r.URL.Path, "method", r.Method)
+
+		if err := r.ParseForm(); err != nil {
+			logical.RespondError(w, http.StatusInternalServerError,
+				fmt.Errorf("error parsing params"))
+			return
+		}
+
+		desiredSink := r.Form.Get("sinkName")
+		var foundSink *sink.SinkConfig
+		if desiredSink != "" {
+			for _, sink := range sinks {
+				if sink.Name == desiredSink {
+					foundSink = sink
+					break
+				}
+			}
+			logical.RespondError(w, http.StatusBadRequest,
+				fmt.Errorf("sink name %q not found", desiredSink))
+			return
+		} else if len(sinks) == 1 {
+			foundSink = sinks[0]
+		} else {
+			logical.RespondError(w, http.StatusBadRequest,
+				fmt.Errorf("multiple sinks found and no desired sink name specified"))
+			return
+		}
+
+		var tokenFilePath string
+		if path, ok := foundSink.Config["path"].(string); ok {
+			tokenFilePath = path
+		} else {
+			logical.RespondError(w, http.StatusInternalServerError,
+				fmt.Errorf("invalid file sink found"))
+			return
+		}
+
+		retSink := &api.AgentSink{
+			Name:          foundSink.Name,
+			TokenFilePath: tokenFilePath,
+			DHType:        foundSink.DHType,
+			DHPath:        foundSink.DHPath,
+		}
+
+		b, err := json.Marshal(retSink)
+		if err != nil {
+			logical.RespondError(w, http.StatusInternalServerError,
+				fmt.Errorf("error marshalling response"))
+			return
+		}
+
+		if _, err := w.Write(b); err != nil {
+			logger.Info("writing response", "sinks", string(b))
+			logical.RespondError(w, http.StatusInternalServerError,
+				fmt.Errorf("error writing response"))
+			return
+		}
+
+		return
+	})
+}
+
 // processTokenLookupResponse checks if the request was one of token
 // lookup-self. If the auto-auth token was used to perform lookup-self, the
 // identifier of the token and its accessor same will be stripped off of the

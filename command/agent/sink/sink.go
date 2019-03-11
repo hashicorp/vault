@@ -26,6 +26,8 @@ type SinkReader interface {
 
 type SinkConfig struct {
 	Sink
+	Auto               bool
+	Name               string
 	Logger             hclog.Logger
 	Config             map[string]interface{}
 	Client             *api.Client

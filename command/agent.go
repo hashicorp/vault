@@ -288,11 +288,13 @@ func (c *AgentCommand) Run(args []string) int {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
-	var sinks []*sink.SinkConfig
+	var sinks, publishedFileSinks []*sink.SinkConfig
 	for _, sc := range config.AutoAuth.Sinks {
 		switch sc.Type {
 		case "file":
 			config := &sink.SinkConfig{
+				Auto:    sc.Auto,
+				Name:    sc.Name,
 				Logger:  c.logger.Named("sink.file"),
 				Config:  sc.Config,
 				Client:  client,
@@ -308,6 +310,9 @@ func (c *AgentCommand) Run(args []string) int {
 			}
 			config.Sink = s
 			sinks = append(sinks, config)
+			if !sc.DoNotPublish {
+				publishedFileSinks = append(publishedFileSinks, config)
+			}
 		default:
 			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
 			return 1
@@ -415,6 +420,7 @@ func (c *AgentCommand) Run(args []string) int {
 		mux := http.NewServeMux()
 		mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
+		mux.Handle("/sys/agentsinks", cache.SinkQueryHandler(ctx, cacheLogger, publishedFileSinks))
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 
 		var listeners []net.Listener
