@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -96,7 +95,6 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "TestPlugin_GRPC_Main", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin-netRPC", consts.PluginTypeDatabase, "TestPlugin_NetRPC_Main", []string{}, "")
 
 	return cluster, sys
 }
@@ -119,31 +117,6 @@ func TestPlugin_GRPC_Main(t *testing.T) {
 	flags.Parse(args)
 
 	plugins.Serve(plugin, apiClientMeta.GetTLSConfig())
-}
-
-// This is not an actual test case, it's a helper function that will be executed
-// by the go-plugin client via an exec call.
-func TestPlugin_NetRPC_Main(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	os.Unsetenv(pluginutil.PluginVaultVersionEnv)
-	p := &mockPlugin{
-		users: make(map[string][]string),
-	}
-
-	args := []string{"--tls-skip-verify=true"}
-
-	apiClientMeta := &pluginutil.APIClientMeta{}
-	flags := apiClientMeta.FlagSet()
-	flags.Parse(args)
-
-	tlsProvider := pluginutil.VaultPluginTLSProvider(apiClientMeta.GetTLSConfig())
-	serveConf := dbplugin.ServeConfig(p, tlsProvider)
-	serveConf.GRPCServer = nil
-
-	plugin.Serve(serveConf)
 }
 
 func TestPlugin_Init(t *testing.T) {
@@ -249,146 +222,6 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer db.Close()
-
-	connectionDetails := map[string]interface{}{
-		"test": 1,
-	}
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	usernameConf := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	us, _, err := db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), dbplugin.Statements{}, us)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// Try adding the same username back so we can verify it was removed
-	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-// Test the code is still compatible with an old netRPC plugin
-func TestPlugin_NetRPC_Init(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
-
-	dbRaw, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	connectionDetails := map[string]interface{}{
-		"test": 1,
-	}
-
-	_, err = dbRaw.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = dbRaw.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func TestPlugin_NetRPC_CreateUser(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
-
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer db.Close()
-
-	connectionDetails := map[string]interface{}{
-		"test": 1,
-	}
-
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	usernameConf := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	us, pw, err := db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if us != "test" || pw != "test" {
-		t.Fatal("expected username and password to be 'test'")
-	}
-
-	// try and save the same user again to verify it saved the first time, this
-	// should return an error
-	_, _, err = db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
-	if err == nil {
-		t.Fatal("expected an error, user wasn't created correctly")
-	}
-}
-
-func TestPlugin_NetRPC_RenewUser(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
-
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer db.Close()
-
-	connectionDetails := map[string]interface{}{
-		"test": 1,
-	}
-	_, err = db.Init(context.Background(), connectionDetails, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	usernameConf := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	us, _, err := db.CreateUser(context.Background(), dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.RenewUser(context.Background(), dbplugin.Statements{}, us, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-}
-
-func TestPlugin_NetRPC_RevokeUser(t *testing.T) {
-	cluster, sys := getCluster(t)
-	defer cluster.Cleanup()
-
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin-netRPC", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

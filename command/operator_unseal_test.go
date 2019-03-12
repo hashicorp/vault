@@ -167,7 +167,7 @@ func TestOperatorUnsealCommand_Format(t *testing.T) {
 		Client: client,
 	}
 
-	args, format, _ := setupEnv([]string{"unseal", "-format", "json"})
+	args, format, _ := setupEnv([]string{"operator", "unseal", "-format", "json"})
 	if format != "json" {
 		t.Fatalf("expected %q, got %q", "json", format)
 	}

@@ -175,7 +175,8 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
 		// is treated as special and excluded from the registry.
-		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential)) + 1
+		// Subtract 1 to account for "oidc" which is an alias of "jwt" and not a separate plugin.
+		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential))
 		if len(backends) != expected {
 			t.Fatalf("expected %d credential backends, got %d", expected, len(backends))
 		}

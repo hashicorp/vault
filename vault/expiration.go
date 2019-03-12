@@ -827,11 +827,11 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return logical.ErrorResponse("lease does not correspond to a secret"), nil
 	}
 
-	reqNS, err := namespace.FromContext(ctx)
+	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if reqNS.ID != le.namespace.ID {
+	if ns.ID != le.namespace.ID {
 		return nil, errors.New("cannot renew a lease across namespaces")
 	}
 

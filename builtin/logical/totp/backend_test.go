@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ func createKey() (string, error) {
 
 	key := keyUrl.Secret()
 
-	return key, err
+	return strings.ToLower(key), err
 }
 
 func generateCode(key string, period uint, digits otplib.Digits, algorithm otplib.Algorithm) (string, error) {

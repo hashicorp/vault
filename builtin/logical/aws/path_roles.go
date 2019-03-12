@@ -36,6 +36,7 @@ func pathRoles(b *backend) *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the policy",
+				DisplayName: "Policy Name",
 			},
 
 			"credential_type": &framework.FieldSchema{
@@ -46,11 +47,13 @@ func pathRoles(b *backend) *framework.Path {
 			"role_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is " + assumedRoleCred,
+				DisplayName: "Role ARNs",
 			},
 
 			"policy_arns": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: "ARNs of AWS policies to attach to IAM users. Only valid when credential_type is " + iamUserCred,
+				DisplayName: "Policy ARNs",
 			},
 
 			"policy_document": &framework.FieldSchema{
@@ -65,22 +68,26 @@ GetFederationToken API call, acting as a filter on permissions available.`,
 			"default_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Default TTL for %s and %s credential types when no TTL is explicitly requested with the credentials", assumedRoleCred, federationTokenCred),
+				DisplayName: "Default TTL",
 			},
 
 			"max_sts_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: fmt.Sprintf("Max allowed TTL for %s and %s credential types", assumedRoleCred, federationTokenCred),
+				DisplayName: "Max TTL",
 			},
 
 			"arn": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Deprecated; use role_arns or policy_arns instead. ARN Reference to a managed policy
 or IAM role to assume`,
+				Deprecated: true,
 			},
 
 			"policy": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Deprecated; use policy_document instead. IAM policy document",
+				Deprecated:  true,
 			},
 		},
 

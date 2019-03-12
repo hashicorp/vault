@@ -92,23 +92,6 @@ $ curl \
 }
 ```
 
-## Delete Config
-
-Deletes all GCP configuration data. This operation is idempotent.
-
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/gcp/config`           | `204 (empty body)`     |
-
-### Sample Request
-
-```
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request DELETE \
-    http://127.0.0.1:8200/v1/auth/gcp/config
-```
-
 ## Create Role
 
 Registers a role in the method. Role types have specific entities

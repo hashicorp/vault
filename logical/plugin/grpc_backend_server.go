@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
@@ -10,6 +11,8 @@ import (
 	"github.com/hashicorp/vault/logical/plugin/pb"
 	"google.golang.org/grpc"
 )
+
+var ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
 
 type backendGRPCPluginServer struct {
 	broker  *plugin.GRPCBroker

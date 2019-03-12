@@ -168,9 +168,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -203,8 +204,8 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options":   map[string]string(nil),
 		},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
+		t.Fatalf("bad, diff: %#v", diff)
 	}
 }
 
@@ -260,9 +261,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"description": "system endpoints used for control, policy and debugging",
 			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
-				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-				"force_no_cache":    false,
+				"default_lease_ttl":           resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+				"max_lease_ttl":               resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []string{"Accept"},
 			},
 			"local":     false,
 			"seal_wrap": false,
@@ -310,8 +312,8 @@ func TestSystemBackend_mount(t *testing.T) {
 			},
 		},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", resp.Data, exp)
+	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
+		t.Fatalf("bad: diff: %#v", diff)
 	}
 
 }
@@ -2283,9 +2285,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"description": "system endpoints used for control, policy and debugging",
 				"accessor":    resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["accessor"],
 				"config": map[string]interface{}{
-					"default_lease_ttl": resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
-					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
-					"force_no_cache":    false,
+					"default_lease_ttl":           resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
+					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []string{"Accept"},
 				},
 				"local":     false,
 				"seal_wrap": false,
