@@ -59,7 +59,7 @@ func NewSendResponse(apiResponse *api.Response, responseBody []byte) (*SendRespo
 	}
 
 	// If a response body is separately provided we set that as the SendResponse.ResponseBody,
-	// otherwiese we will do an ioutil.ReadAll to extract the response body from apiResponse.
+	// otherwise we will do an ioutil.ReadAll to extract the response body from apiResponse.
 	switch {
 	case len(responseBody) > 0:
 		resp.ResponseBody = responseBody
