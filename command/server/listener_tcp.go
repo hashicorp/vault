@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/listenerutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/mitchellh/cli"
@@ -94,12 +95,12 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		config["x_forwarded_for_reject_not_authorized"] = true
 	}
 
-	listener, props, reloadFunc, _, err := ListenerWrapTLS(ln, props, config, ui)
+	ln, props, reloadFunc, _, err := listenerutil.WrapTLS(ln, props, config, ui)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return listener, props, reloadFunc, nil
+	return ln, props, reloadFunc, nil
 }
 
 // TCPKeepAliveListener sets TCP keep-alive timeouts on accepted
