@@ -144,7 +144,7 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 
 	sendResp, err := NewSendResponse(&api.Response{Response: resp}, index.Response)
 	if err != nil {
-		c.logger.Error("failed to create new SendResponse", "error", err)
+		c.logger.Error("failed to create new send response", "error", err)
 		return nil, err
 	}
 	sendResp.CacheMeta.Hit = true
