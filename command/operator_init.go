@@ -461,7 +461,7 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 		c.UI.Output("")
 		c.UI.Warn(wrapAtLength(
 			"WARNING! -key-shares and -key-threshold is ignored when " +
-				"Auto Unseal is used. Use instead -recovery-shares and -recovery-threshold.",
+				"Auto Unseal is used. Use -recovery-shares and -recovery-threshold instead.",
 		))
 	}
 
