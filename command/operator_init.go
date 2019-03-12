@@ -452,6 +452,14 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 			req.RecoveryThreshold)))
 	}
 
+	if resp.AutoUnseal && (req.SecretShares != req.RecoveryShares || req.SecretThreshold != req.RecoveryThreshold) {
+		c.UI.Output("")
+		c.UI.Warn(wrapAtLength(
+			"WARNING! -key-shares and -key-threshold is ignored when " +
+				"Auto Unseal is used.",
+		))
+	}
+
 	return 0
 }
 

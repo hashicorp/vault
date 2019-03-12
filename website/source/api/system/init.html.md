@@ -108,6 +108,7 @@ provided) master keys, base 64 encoded master keys and initial root token:
 {
   "keys": ["one", "two", "three"],
   "keys_base64": ["cR9No5cBC", "F3VLrkOo", "zIDSZNGv"],
-  "root_token": "foo"
+  "root_token": "foo",
+  "auto_unseal": false
 }
 ```
