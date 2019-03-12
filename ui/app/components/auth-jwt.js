@@ -31,10 +31,10 @@ export default Component.extend({
       let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
       if (oldSelectedAuthPath !== selectedAuthPath) {
         this.set('role', null);
-        this.onRoleName(null);
+        this.onRoleName(this.roleName);
         this.fetchRole.perform(null, { debounce: false });
       } else if (shouldDebounce) {
-        this.fetchRole.perform(null);
+        this.fetchRole.perform(this.roleName);
       }
       this.set('oldSelectedAuthPath', selectedAuthPath);
     });
