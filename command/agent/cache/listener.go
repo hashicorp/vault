@@ -23,7 +23,7 @@ func StartListener(lnConfig *config.Listener, unixSocketsConfig *config.UnixSock
 	switch lnConfig.Type {
 	case "tcp":
 		if addr == "" {
-			addr = "127.0.0.1:8007"
+			addr = "127.0.0.1:8200"
 		}
 
 		// If they've passed 0.0.0.0, we only want to bind on IPv4
