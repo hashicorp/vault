@@ -39,6 +39,10 @@ IMPROVEMENTS:
  * secrets/transit: Multiple HMAC, Sign or Verify operations can now be performed
    with one API call using the new `batch_input` parameter
    [[GH-5875]](https://github.com/hashicorp/vault/pull/5875).
+ * agent/caching: Agent Caching will now return `X-Cache` and `Age` headers on
+   responses to indicates whether a response was a cache hit or miss, and
+   the freshness of the cached response when applicable.
+   [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
 
 BUG FIXES:
 
