@@ -21,6 +21,7 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -43,6 +44,7 @@ const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
 const EnvTokenFileSinkPath = "TOKEN_FILE_SINK_PATH"
 const EnvAgentAddr = "VAULT_AGENT_ADDR"
+const EnvAgentSinkName = "VAULT_AGENT_SINK_NAME"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -102,11 +104,10 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
-	// AgentFileSinkPath specifies a file path that vault agent is writing
-	// tokens to.
-	AgentFileSinkPath string
+	// TokenFileSinkPath specified a file to poll for vault tokens
+	TokenFileSinkPath string
 
-	// AgentSinkName names an AgentSink to query for sink details
+	// AgentSinkName names a Sink written to by an Agent and is needed when an Agent is writing to multiple sinks
 	AgentSinkName string
 }
 
@@ -248,6 +249,8 @@ func (c *Config) ReadEnvironment() error {
 	var envInsecure bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
+	var envTokenFileSinkPath string
+	var envAgentSinkName string
 	var limit *rate.Limiter
 
 	// Parse the environment variables
@@ -297,6 +300,12 @@ func (c *Config) ReadEnvironment() error {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
 	}
+	if v := os.Getenv(EnvTokenFileSinkPath); v != "" {
+		envTokenFileSinkPath = v
+	}
+	if v := os.Getenv(EnvAgentSinkName); v != "" {
+		envAgentSinkName = v
+	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
@@ -334,6 +343,14 @@ func (c *Config) ReadEnvironment() error {
 
 	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
+	}
+
+	if envTokenFileSinkPath != "" {
+		c.TokenFileSinkPath = envTokenFileSinkPath
+	}
+
+	if envAgentSinkName != "" {
+		c.AgentSinkName = envAgentSinkName
 	}
 
 	return nil
@@ -438,16 +455,13 @@ func NewClient(c *Config) (*Client, error) {
 	switch {
 	case os.Getenv(EnvVaultToken) != "":
 		client.token = os.Getenv(EnvVaultToken)
-	case c.AgentFileSinkPath != "": // todo rename AgentFileSinkPath (could be from not an agent)
-		tokenSinkPath = c.AgentFileSinkPath
-	case os.Getenv(EnvTokenFileSinkPath) != "":
-		tokenSinkPath = os.Getenv(EnvTokenFileSinkPath)
-	case os.Getenv(EnvAgentAddr) != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(EnvAgentAddr))
+	case c.TokenFileSinkPath != "":
+		tokenSinkPath = c.TokenFileSinkPath
 	case c.AgentAddress != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentAddress))
-	case c.AgentSinkName != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentSinkName))
+		tokenSinkPath, err = client.getSinkPathFromAgent(c.AgentAddress)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", c.AgentAddress), err)
+		}
 	}
 
 	// set and poll token from file sink if it is available
@@ -465,8 +479,32 @@ func NewClient(c *Config) (*Client, error) {
 }
 
 // contacts agent for a file sink path
-func (c *Client) getSinkPathFromAgent(agentAddress) (string, error) {
+func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
+	uri := fmt.Sprintf("%s%s", agentAddress, consts.AgentPathFileSinks)
+	if c.config.AgentSinkName != "" {
+		uri = fmt.Sprintf("%s?sinkName=%s", uri, url.QueryEscape(c.config.AgentSinkName))
+	}
 
+	response, err := c.config.HttpClient.Get(uri)
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	responseBodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if response.StatusCode != 200 {
+		return "", fmt.Errorf("received error code %d from agent: %s", response.StatusCode, string(responseBodyBytes))
+	}
+
+	agentSink := AgentSink{}
+	if err := jsonutil.DecodeJSON(responseBodyBytes, &agentSink); err != nil {
+		return "", err
+	}
+
+	return agentSink.TokenFilePath, nil
 }
 
 // starts a go routine to poll the specified file for a token
