@@ -70,7 +70,14 @@ func StartListener(lnConfig *config.Listener, unixSocketsConfig *config.UnixSock
 	var err error
 	switch addrType := netAddr.(type) {
 	case *net.UnixAddr:
-		ln, err = listenerutil.UnixSocketListener(addrType.Name, unixSocketsConfig)
+		var uConfig *listenerutil.UnixSocketsConfig
+		if unixSocketsConfig != nil {
+			uConfig.Mode = unixSocketsConfig.Mode
+			uConfig.User = unixSocketsConfig.User
+			uConfig.Group = unixSocketsConfig.Group
+		}
+
+		ln, err = listenerutil.UnixSocketListener(addrType.Name, uConfig)
 		if err != nil {
 			return nil, nil, err
 		}

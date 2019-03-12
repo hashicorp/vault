@@ -11,13 +11,18 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
+
+type UnixSocketsConfig struct {
+	User  string `hcl:"user"`
+	Mode  string `hcl:"mode"`
+	Group string `hcl:"group"`
+}
 
 // rmListener is an implementation of net.Listener that forwards most
 // calls to the listener but also removes a file as part of the close. We
@@ -37,7 +42,7 @@ func (l *rmListener) Close() error {
 	return os.Remove(l.Path)
 }
 
-func UnixSocketListener(path string, unixSocketsConfig *config.UnixSockets) (net.Listener, error) {
+func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.Listener, error) {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("failed to remove socket file: %v", err)
 	}
