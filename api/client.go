@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -21,6 +22,7 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -42,7 +44,7 @@ const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
 const EnvTokenFileSinkPath = "TOKEN_FILE_SINK_PATH"
-const EnvAgentAddr = "VAULT_AGENT_ADDR"
+const EnvAgentSinkName = "VAULT_AGENT_SINK_NAME"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -102,11 +104,10 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
-	// AgentFileSinkPath specifies a file path that vault agent is writing
-	// tokens to.
-	AgentFileSinkPath string
+	// TokenFileSinkPath specified a file to poll for vault tokens
+	TokenFileSinkPath string
 
-	// AgentSinkName names an AgentSink to query for sink details
+	// AgentSinkName names a Sink written to by an Agent and is needed when an Agent is writing to multiple sinks
 	AgentSinkName string
 }
 
@@ -248,6 +249,8 @@ func (c *Config) ReadEnvironment() error {
 	var envInsecure bool
 	var envTLSServerName string
 	var envMaxRetries *uint64
+	var envTokenFileSinkPath string
+	var envAgentSinkName string
 	var limit *rate.Limiter
 
 	// Parse the environment variables
@@ -297,6 +300,12 @@ func (c *Config) ReadEnvironment() error {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
 	}
+	if v := os.Getenv(EnvTokenFileSinkPath); v != "" {
+		envTokenFileSinkPath = v
+	}
+	if v := os.Getenv(EnvAgentSinkName); v != "" {
+		envAgentSinkName = v
+	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
@@ -334,6 +343,14 @@ func (c *Config) ReadEnvironment() error {
 
 	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
+	}
+
+	if envTokenFileSinkPath != "" {
+		c.TokenFileSinkPath = envTokenFileSinkPath
+	}
+
+	if envAgentSinkName != "" {
+		c.AgentSinkName = envAgentSinkName
 	}
 
 	return nil
@@ -438,55 +455,93 @@ func NewClient(c *Config) (*Client, error) {
 	switch {
 	case os.Getenv(EnvVaultToken) != "":
 		client.token = os.Getenv(EnvVaultToken)
-	case c.AgentFileSinkPath != "": // todo rename AgentFileSinkPath (could be from not an agent)
-		tokenSinkPath = c.AgentFileSinkPath
-	case os.Getenv(EnvTokenFileSinkPath) != "":
-		tokenSinkPath = os.Getenv(EnvTokenFileSinkPath)
-	case os.Getenv(EnvAgentAddr) != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(EnvAgentAddr))
+	case c.TokenFileSinkPath != "":
+		tokenSinkPath = c.TokenFileSinkPath
 	case c.AgentAddress != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentAddress))
-	case c.AgentSinkName != "":
-		tokenSinkPath = getSinkPathFromAgent(os.Getenv(c.AgentSinkName))
+		tokenSinkPath, err = client.getSinkPathFromAgent(c.AgentAddress)
+		if err != nil {
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", c.AgentAddress), err)
+		}
+		c.TokenFileSinkPath = tokenSinkPath
 	}
 
 	// set and poll token from file sink if it is available
 	if tokenSinkPath != "" {
-		token, err := readAgentTokenFromFile(tokenSinkPath)
+		token, err := readTokenFromFile(tokenSinkPath)
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", tokenSinkPath), err)
 		}
 		client.token = token
 		// poll file for updates
-		client.pollFileForToken(tokenSinkPath)
+		client.pollingChannel = make(chan int)
+		client.pollFileForToken(tokenSinkPath, client.pollingChannel)
 	}
 
 	return client, nil
 }
 
 // contacts agent for a file sink path
-func (c *Client) getSinkPathFromAgent(agentAddress) (string, error) {
+func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
+	uri, err := url.Parse(agentAddress)
+	if err != nil {
+		return "", err
+	}
+	if uri.Path != "" {
+		return "", errors.New("configured agent address url should not specify a path")
+	}
+	uri.Path = consts.AgentPathFileSinks
+	if c.config.AgentSinkName != "" {
+		v := url.Values{}
+		v.Set("sinkName", c.config.AgentSinkName)
+		uri.RawQuery = v.Encode()
+	}
 
+	response, err := c.config.HttpClient.Get(uri.String())
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	responseBodyBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("received error code %d from agent: %s", response.StatusCode, string(responseBodyBytes))
+	}
+
+	agentSink := AgentSink{}
+	if err := jsonutil.DecodeJSON(responseBodyBytes, &agentSink); err != nil {
+		return "", err
+	}
+
+	return agentSink.TokenFilePath, nil
 }
 
 // starts a go routine to poll the specified file for a token
-func (c *Client) pollFileForToken(filePath string) {
+func (c *Client) pollFileForToken(filePath string, quit chan int) {
 	pollingInterval := 60 * time.Second //todo - what should this be?
 	go func() {
 		for {
-			time.Sleep(pollingInterval)
-			token, err := readAgentTokenFromFile(filePath) // todo - what to do with the error?
-			// update the client's token if it has changed and there was no error reading the file
-			if err == nil && token != c.token {
-				c.modifyLock.Lock()
-				c.token = token
-				c.modifyLock.Unlock()
+			select {
+			case <-quit:
+				quit <- 1
+				return
+			default:
+				time.Sleep(pollingInterval)
+				token, err := readTokenFromFile(filePath) // todo - what to do with the error?
+				// update the client's token if it has changed and there was no error reading the file
+				if err == nil && token != c.token {
+					c.modifyLock.Lock()
+					c.token = token
+					c.modifyLock.Unlock()
+				}
 			}
 		}
 	}()
 }
 
-func readAgentTokenFromFile(filePath string) (string, error) {
+func readTokenFromFile(filePath string) (string, error) {
 	tokenBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", err
@@ -620,19 +675,47 @@ func (c *Client) Token() string {
 
 // SetToken sets the token directly. This won't perform any auth
 // verification, it simply sets the token properly for future requests.
+// Setting a token will kill any routine polling a sink for a token.
 func (c *Client) SetToken(v string) {
-	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
+	switch {
+	// no op
+	case v == "" && c.config.TokenFileSinkPath == "":
 
-	c.token = v
+	// a token is provided and should cancel polling
+	case v != "":
+		if c.pollingChannel != nil {
+			c.pollingChannel <- 1
+			<-c.pollingChannel // this is to avoid grabbing c.modifyLock at the same time as the pollFileForToken routine
+		}
+		c.modifyLock.Lock()
+		defer c.modifyLock.Unlock()
+		c.token = v
+
+	// case a token is not provided and should return to polling if possible
+	case v == "" && c.config.TokenFileSinkPath != "":
+		// ensure polling channel is setup
+		if c.pollingChannel == nil {
+			c.pollingChannel = make(chan int)
+		}
+		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
+	}
 }
 
-// ClearToken deletes the token if it is set or does nothing otherwise.
+// ClearToken deletes the token if it is set and returns to polling if a
+// tokenFileSinkPath was configured
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
-
 	c.token = ""
+	c.modifyLock.Unlock()
+
+	// was a file sink used previously
+	if c.config.TokenFileSinkPath != "" {
+		// ensure polling channel is setup
+		if c.pollingChannel == nil {
+			c.pollingChannel = make(chan int)
+		}
+		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
+	}
 }
 
 // Headers gets the current set of headers used for requests. This returns a
