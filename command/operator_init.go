@@ -36,6 +36,11 @@ type OperatorInitCommand struct {
 	flagConsulService string
 }
 
+const (
+	defKeyShares    = 5
+	defKeyThreshold = 3
+)
+
 func (c *OperatorInitCommand) Synopsis() string {
 	return "Initializes a server"
 }
@@ -95,7 +100,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:       "key-shares",
 		Aliases:    []string{"n"},
 		Target:     &c.flagKeyShares,
-		Default:    5,
+		Default:    defKeyShares,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the generated master key into. " +
 			"This is the number of \"unseal keys\" to generate.",
@@ -105,7 +110,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:       "key-threshold",
 		Aliases:    []string{"t"},
 		Target:     &c.flagKeyThreshold,
-		Default:    3,
+		Default:    defKeyThreshold,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares required to reconstruct the master key. " +
 			"This must be less than or equal to -key-shares.",
@@ -452,11 +457,11 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 			req.RecoveryThreshold)))
 	}
 
-	if resp.AutoUnseal && (req.SecretShares != req.RecoveryShares || req.SecretThreshold != req.RecoveryThreshold) {
+	if len(resp.RecoveryKeys) > 0 && (req.SecretShares != defKeyShares || req.SecretThreshold != defKeyThreshold) {
 		c.UI.Output("")
 		c.UI.Warn(wrapAtLength(
 			"WARNING! -key-shares and -key-threshold is ignored when " +
-				"Auto Unseal is used.",
+				"Auto Unseal is used. Use instead -recovery-shares and -recovery-threshold.",
 		))
 	}
 

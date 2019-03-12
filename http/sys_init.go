@@ -135,11 +135,6 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// Inform client that auto unseal was used
-	if core.SealAccess().StoredKeysSupported() {
-		resp.AutoUnseal = true
-	}
-
 	if err := core.UnsealWithStoredKeys(ctx); err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
@@ -165,7 +160,6 @@ type InitResponse struct {
 	RecoveryKeys    []string `json:"recovery_keys,omitempty"`
 	RecoveryKeysB64 []string `json:"recovery_keys_base64,omitempty"`
 	RootToken       string   `json:"root_token"`
-	AutoUnseal      bool     `json:"auto_unseal,omitempty"`
 }
 
 type InitStatusResponse struct {
