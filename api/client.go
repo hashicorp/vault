@@ -43,7 +43,6 @@ const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
 const EnvTokenFileSinkPath = "TOKEN_FILE_SINK_PATH"
-const EnvAgentAddr = "VAULT_AGENT_ADDR"
 const EnvAgentSinkName = "VAULT_AGENT_SINK_NAME"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
