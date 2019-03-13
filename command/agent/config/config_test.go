@@ -140,6 +140,9 @@ func TestLoadConfigFile(t *testing.T) {
 					Name:    "auto",
 					Type:    "file",
 					WrapTTL: 5 * time.Minute,
+					Config: map[string]interface{}{
+						"path": "/tmp/file-baz",
+					},
 				},
 			},
 		},

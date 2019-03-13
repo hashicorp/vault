@@ -37,5 +37,8 @@ auto_auth {
 		name = "auto"
 		type = "file"
 		wrap_ttl = "5m"
+		config = {
+			path = "/tmp/file-baz"
+		}
 	}
 }
