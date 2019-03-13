@@ -309,26 +309,15 @@ func (c *AgentCommand) Run(args []string) int {
 					config.DHType = "curve25519"
 				}
 
-				if config.Config == nil {
-					config.Config = make(map[string]interface{})
-				}
-
-				if config.DHPath == "" || config.Config["path"] == "" {
+				if config.DHPath == "" {
 					dir, err := ioutil.TempDir("", "sinkauto")
 					if err != nil {
 						c.UI.Error(errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err).Error())
 						return 1
 					}
 
-					if config.DHPath == "" {
-						config.DHPath = filepath.Join(dir, "token-dh")
-					}
-
-					if config.Config["path"] == nil {
-						config.Config["path"] = filepath.Join(dir, "token-file")
-					}
+					config.DHPath = filepath.Join(dir, "token-dh")
 				}
-
 			}
 			s, err := file.NewFileSink(config)
 			if err != nil {
