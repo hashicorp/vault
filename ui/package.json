@@ -111,6 +111,7 @@
     "eslint-plugin-prettier": "^3.0.0",
     "flat": "^4.1.0",
     "ivy-codemirror": "2.1.0",
+    "jsdoc-to-markdown": "^4.0.1",
     "jsonlint": "1.6.0",
     "loader.js": "^4.7.0",
     "node-sass": "^4.10.0",
