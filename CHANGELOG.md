@@ -13,6 +13,13 @@ BUG FIXES:
    [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
  * secret/totp: Uppercase provided keys so they don't fail base32 validation
    [GH-6400]
+   
+IMPROVEMENTS:
+
+ * agent/caching: Agent Caching will now return `X-Cache` and `Age` headers on
+   responses to indicates whether a response was a cache hit or miss, and
+   the freshness of the cached response when applicable.
+   [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
 
 ## 1.1.0-beta2 (March 5th, 2019)
 
