@@ -5,7 +5,7 @@ import { set, get, defineProperty, computed } from '@ember/object';
  * @module ToggleButton
  * `ToggleButton` components are used to expand and collapse content with a toggle.
  *
- * @example ```hbs
+ * @example ```js
  *   <ToggleButton @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @toggleTarget={{this}} @toggleAttr="showOptions"/>
  *  {{#if showOptions}}
  *     <div>
