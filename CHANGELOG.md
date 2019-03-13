@@ -13,6 +13,8 @@ BUG FIXES:
    [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
  * secret/totp: Uppercase provided keys so they don't fail base32 validation
    [GH-6400]
+ * ui: Fix for a bug where you couldn't access the data tab after clicking on
+   wrap details on the tool > unwrap page [GH-6404]
    
 IMPROVEMENTS:
 
