@@ -46,8 +46,11 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 				&Listener{
 					Type: "unix",
 					Config: map[string]interface{}{
-						"address":     "/path/to/socket",
-						"tls_disable": true,
+						"address":      "/path/to/socket",
+						"tls_disable":  true,
+						"socket_mode":  "configmode",
+						"socket_user":  "configuser",
+						"socket_group": "configgroup",
 					},
 				},
 				&Listener{
@@ -74,11 +77,6 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			TLSSkipVerify: true,
 			ClientCert:    "config_client_cert",
 			ClientKey:     "config_client_key",
-		},
-		UnixSockets: &UnixSockets{
-			Mode:  "configmode",
-			User:  "configuser",
-			Group: "configgroup",
 		},
 		PidFile: "./pidfile",
 	}

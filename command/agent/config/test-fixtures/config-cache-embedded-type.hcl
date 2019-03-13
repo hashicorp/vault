@@ -27,6 +27,9 @@ cache {
 		type = "unix"
 		address = "/path/to/socket"
 		tls_disable = true
+		socket_mode = "configmode"
+		socket_user = "configuser"
+		socket_group = "configgroup"
 	}
 
 	listener {
@@ -50,10 +53,4 @@ vault {
 	tls_skip_verify = "true"
 	client_cert = "config_client_cert"
 	client_key = "config_client_key"
-}
-
-unix_sockets {
-	mode = "configmode"
-	user = "configuser"
-	group = "configgroup"
 }

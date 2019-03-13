@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/listenerutil"
 )
 
-func StartListener(lnConfig *config.Listener, unixSocketsConfig *config.UnixSockets) (net.Listener, *tls.Config, error) {
+func StartListener(lnConfig *config.Listener) (net.Listener, *tls.Config, error) {
 	addr, ok := lnConfig.Config["address"].(string)
 	if !ok {
 		return nil, nil, fmt.Errorf("invalid address")
@@ -41,14 +41,15 @@ func StartListener(lnConfig *config.Listener, unixSocketsConfig *config.UnixSock
 
 	case "unix":
 		var uConfig *listenerutil.UnixSocketsConfig
-		if unixSocketsConfig != nil {
+		if lnConfig.Config["socket_mode"] != nil &&
+			lnConfig.Config["socket_user"] != nil &&
+			lnConfig.Config["socket_group"] != nil {
 			uConfig = &listenerutil.UnixSocketsConfig{
-				Mode:  unixSocketsConfig.Mode,
-				User:  unixSocketsConfig.User,
-				Group: unixSocketsConfig.Group,
+				Mode:  lnConfig.Config["socket_mode"].(string),
+				User:  lnConfig.Config["socket_user"].(string),
+				Group: lnConfig.Config["socket_group"].(string),
 			}
 		}
-
 		ln, err = listenerutil.UnixSocketListener(addr, uConfig)
 		if err != nil {
 			return nil, nil, err
