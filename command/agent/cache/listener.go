@@ -42,9 +42,11 @@ func StartListener(lnConfig *config.Listener, unixSocketsConfig *config.UnixSock
 	case "unix":
 		var uConfig *listenerutil.UnixSocketsConfig
 		if unixSocketsConfig != nil {
-			uConfig.Mode = unixSocketsConfig.Mode
-			uConfig.User = unixSocketsConfig.User
-			uConfig.Group = unixSocketsConfig.Group
+			uConfig = &listenerutil.UnixSocketsConfig{
+				Mode:  unixSocketsConfig.Mode,
+				User:  unixSocketsConfig.User,
+				Group: unixSocketsConfig.Group,
+			}
 		}
 
 		ln, err = listenerutil.UnixSocketListener(addr, uConfig)

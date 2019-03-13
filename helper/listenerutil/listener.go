@@ -238,10 +238,19 @@ func setFilePermissions(path string, user, group, mode string) error {
 
 GROUP:
 	if group != "" {
-		if gid, err = strconv.Atoi(group); err != nil {
-			return fmt.Errorf("invalid group specified: %v", group)
+		if gid, err = strconv.Atoi(group); err == nil {
+			goto OWN
 		}
+
+		// Try looking up the user by name
+		g, err := osuser.LookupGroup(group)
+		if err != nil {
+			return fmt.Errorf("failed to look up group %q: %v", user, err)
+		}
+		gid, _ = strconv.Atoi(g.Gid)
 	}
+
+OWN:
 	if err := os.Chown(path, uid, gid); err != nil {
 		return fmt.Errorf("failed setting ownership to %d:%d on %q: %v",
 			uid, gid, path, err)
