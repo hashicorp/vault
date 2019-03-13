@@ -1,22 +1,18 @@
-# AlertBanner
+<a name="AlertBanner
+`AlertBanner` components are used to inform users of important messages.module_"></a>
 
-`AlertBanners` are used to inform users of important messages.
+## AlertBanner
+`AlertBanner` components are used to inform users of important messages.
 
-## Properties
-| Property | Required | Default value | Type | Description | Example |
-|---|---|---|---|---|
-| type | [x] | `null` | string | The banner type. Should either be `info`, `warning`, `success`, or `danger`. | `info` |
-| message ||| string | The message to display within the banner. | `Hello!` |
+**Properties**
 
-## Usage
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| [AlertBanner.type] | <code>String</code> | <code></code> | The banner type. Should either be `info`, `warning`, `success`, or `danger`. |
+| [AlertBanner.message] | <code>String</code> | <code></code> | The message to display within the banner. |
 
-```javascript
-<AlertBanner
-    @type="danger"
-    @message="{{model.keyId}} is not a valid lease ID"
-  />
+**Example** 
+
+```js
+<AlertBanner @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
 ```
-https://github.com/hashicorp/vault/search?l=Handlebars&q=AlertBanner
-
-## Source
-https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-banner.js
