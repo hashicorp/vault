@@ -9,6 +9,11 @@ description: |-
 
 # JWT Auth Method
 
+-> **NOTE**: The JWT method is receiving a number of improvements in Vault 1.1 including OIDC 
+authentication, arbitrary bound claims, copying of metadata and more. These features are available
+now in the Vault 1.1 beta. Refer to [JWT Auth Method (Beta)](/docs/auth/jwt_beta.html) for 
+documentation that includes these beta features.
+
 The `jwt` auth method can be used to authenticate with Vault using a JWT. This
 JWT can be cryptographically verified using locally-provided keys, or, if
 configured, an OIDC Discovery service can be used to fetch the appropriate

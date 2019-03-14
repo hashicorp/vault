@@ -2,6 +2,19 @@ package consts
 
 import "time"
 
+const (
+	//N.B. This needs to be excluded from replication despite the name; it's
+	//merely saying that this is cluster information for the replicated
+	//cluster.
+	CoreReplicatedClusterPrefix   = "core/cluster/replicated/"
+	CoreReplicatedClusterPrefixDR = "core/cluster/replicated-dr/"
+
+	CoreReplicatedClusterInfoPath            = CoreReplicatedClusterPrefix + "info"
+	CoreReplicatedClusterSecondariesPrefix   = CoreReplicatedClusterPrefix + "secondaries/"
+	CoreReplicatedClusterInfoPathDR          = CoreReplicatedClusterPrefixDR + "info"
+	CoreReplicatedClusterSecondariesPrefixDR = CoreReplicatedClusterPrefixDR + "secondaries/"
+)
+
 type ReplicationState uint32
 
 var ReplicationStaleReadTimeout = 2 * time.Second
@@ -16,7 +29,7 @@ const (
 	// ensure no overlap between old and new values.
 
 	ReplicationUnknown            ReplicationState = 0
-	ReplicationPerformancePrimary ReplicationState = 1 << iota
+	ReplicationPerformancePrimary ReplicationState = 1 << iota // Note -- iota is 5 here!
 	ReplicationPerformanceSecondary
 	OldSplitReplicationBootstrapping
 	ReplicationDRPrimary
@@ -27,6 +40,18 @@ const (
 	ReplicationDRDisabled
 	ReplicationPerformanceStandby
 )
+
+// We verify no change to the above values are made
+func init() {
+
+	if OldReplicationBootstrapping != 3 {
+		panic("Replication Constants have changed")
+	}
+
+	if ReplicationPerformancePrimary != 1<<5 {
+		panic("Replication Constants have changed")
+	}
+}
 
 func (r ReplicationState) string() string {
 	switch r {
@@ -49,6 +74,39 @@ func (r ReplicationState) string() string {
 	}
 
 	return "unknown"
+}
+
+func (r ReplicationState) StateStrings() []string {
+	var ret []string
+	if r.HasState(ReplicationPerformanceSecondary) {
+		ret = append(ret, "perf-secondary")
+	}
+	if r.HasState(ReplicationPerformancePrimary) {
+		ret = append(ret, "perf-primary")
+	}
+	if r.HasState(ReplicationPerformanceBootstrapping) {
+		ret = append(ret, "perf-bootstrapping")
+	}
+	if r.HasState(ReplicationPerformanceDisabled) {
+		ret = append(ret, "perf-disabled")
+	}
+	if r.HasState(ReplicationDRPrimary) {
+		ret = append(ret, "dr-primary")
+	}
+	if r.HasState(ReplicationDRSecondary) {
+		ret = append(ret, "dr-secondary")
+	}
+	if r.HasState(ReplicationDRBootstrapping) {
+		ret = append(ret, "dr-bootstrapping")
+	}
+	if r.HasState(ReplicationDRDisabled) {
+		ret = append(ret, "dr-disabled")
+	}
+	if r.HasState(ReplicationPerformanceStandby) {
+		ret = append(ret, "perfstandby")
+	}
+
+	return ret
 }
 
 func (r ReplicationState) GetDRString() string {

@@ -2,7 +2,6 @@ package seal
 
 import (
 	"fmt"
-	"os"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/server"
@@ -11,36 +10,33 @@ import (
 )
 
 var (
-	ConfigureSeal func(*server.Config, *[]string, *map[string]string, log.Logger, vault.Seal) (vault.Seal, error) = configureSeal
+	ConfigureSeal = configureSeal
 )
 
-func configureSeal(config *server.Config, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (outseal vault.Seal, err error) {
-	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
-		if config.Seal == nil {
-			config.Seal = &server.Seal{
-				Type: os.Getenv("VAULT_SEAL_TYPE"),
-			}
-		}
-		switch config.Seal.Type {
-		case seal.AliCloudKMS:
-			return configureAliCloudKMSSeal(config, infoKeys, info, logger, inseal)
+func configureSeal(configSeal *server.Seal, infoKeys *[]string, info *map[string]string, logger log.Logger, inseal vault.Seal) (outseal vault.Seal, err error) {
+	switch configSeal.Type {
+	case seal.AliCloudKMS:
+		return configureAliCloudKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
-		case seal.AWSKMS:
-			return configureAWSKMSSeal(config, infoKeys, info, logger, inseal)
+	case seal.AWSKMS:
+		return configureAWSKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
-		case seal.GCPCKMS:
-			return configureGCPCKMSSeal(config, infoKeys, info, logger, inseal)
+	case seal.GCPCKMS:
+		return configureGCPCKMSSeal(configSeal, infoKeys, info, logger, inseal)
 
-		case seal.AzureKeyVault:
-			return configureAzureKeyVaultSeal(config, infoKeys, info, logger, inseal)
+	case seal.AzureKeyVault:
+		return configureAzureKeyVaultSeal(configSeal, infoKeys, info, logger, inseal)
 
-		case seal.PKCS11:
-			return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
+	case seal.Transit:
+		return configureTransitSeal(configSeal, infoKeys, info, logger, inseal)
 
-		default:
-			return nil, fmt.Errorf("Unknown seal type %q", config.Seal.Type)
-		}
+	case seal.PKCS11:
+		return nil, fmt.Errorf("Seal type 'pkcs11' requires the Vault Enterprise HSM binary")
+
+	case seal.Shamir:
+		return inseal, nil
+
+	default:
+		return nil, fmt.Errorf("Unknown seal type %q", configSeal.Type)
 	}
-
-	return inseal, nil
 }

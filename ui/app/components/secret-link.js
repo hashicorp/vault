@@ -1,5 +1,6 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export function linkParams({ mode, secret, queryParams }) {
   let params;
@@ -8,7 +9,7 @@ export function linkParams({ mode, secret, queryParams }) {
   if (!secret || secret === ' ') {
     params = [route + '-root'];
   } else {
-    params = [route, secret];
+    params = [route, encodePath(secret)];
   }
 
   if (queryParams) {

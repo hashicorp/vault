@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
@@ -265,6 +266,24 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, nil, errors.New("cannot access root path in unauthenticated request")
 	}
 
+	// At this point we won't be forwarding a raw request; we should delete
+	// authorization headers as appropriate
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		delete(req.Headers, consts.AuthHeaderName)
+	case logical.ClientTokenFromAuthzHeader:
+		if headers, ok := req.Headers["Authorization"]; ok {
+			retHeaders := make([]string, 0, len(headers))
+			for _, v := range headers {
+				if strings.HasPrefix(v, "Bearer ") {
+					continue
+				}
+				retHeaders = append(retHeaders, v)
+			}
+			req.Headers["Authorization"] = retHeaders
+		}
+	}
+
 	// When we receive a write of either type, rather than require clients to
 	// PUT/POST and trust the operation, we ask the backend to give us the real
 	// skinny -- if the backend implements an existence check, it can tell us
@@ -511,6 +530,18 @@ func isControlGroupRun(req *logical.Request) bool {
 	return req.ControlGroup != nil
 }
 
+func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	// If we're replicating and we get a read-only error from a backend, need to forward to primary
+	resp, err := c.router.Route(ctx, req)
+	if err != nil {
+		if shouldForward(c, err) {
+			return forward(ctx, c, req)
+		}
+	}
+	atomic.AddUint64(c.counters.requests, 1)
+	return resp, err
+}
+
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
@@ -644,12 +675,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(ctx, req)
-	// If we're replicating and we get a read-only error from a backend, need to forward to primary
-	if routeErr != nil {
-		resp, routeErr = possiblyForward(ctx, c, req, resp, routeErr)
-	}
+	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
+
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
 		var wrapFormat, creationPath string
@@ -925,11 +953,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	// Route the request
-	resp, routeErr := c.router.Route(ctx, req)
-	// If we're replicating and we get a read-only error from a backend, need to forward to primary
-	if routeErr != nil {
-		resp, routeErr = possiblyForward(ctx, c, req, resp, routeErr)
-	}
+	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -1144,6 +1168,7 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 	auth.ClientToken = te.ID
 	auth.Accessor = te.Accessor
 	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
 
 	switch auth.TokenType {
 	case logical.TokenTypeBatch:

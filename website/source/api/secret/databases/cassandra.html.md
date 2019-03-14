@@ -24,6 +24,7 @@ has a number of parameters to further configure a connection.
 | `POST`   | `/database/config/:name`     | `204 (empty body)` |
 
 ### Parameters
+
 - `hosts` `(string: <required>)` – Specifies a set of comma-delineated Cassandra
   hosts to connect to.
 
@@ -59,6 +60,14 @@ has a number of parameters to further configure a connection.
 - `local_datacenter` `(string: "")` – If set, enables host selection policy 
 which will prioritize and use hosts which are in the local datacenter before 
 hosts in all other datacenters (for example "dc-01").
+
+- `socket_keep_alive` `(string: "0s")` – the keep-alive period for an active
+	network connection. If zero, keep-alives are not enabled.
+
+- `consistency` `(string: "")` – Specifies the consistency option to use.  See
+  the [gocql
+  definition](https://github.com/gocql/gocql/blob/master/frame.go#L188) for
+  valid options.
 
 TLS works as follows:
 

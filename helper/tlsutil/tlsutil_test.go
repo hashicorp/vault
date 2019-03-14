@@ -28,3 +28,21 @@ func TestParseCiphers(t *testing.T) {
 		t.Fatal("cipher order is not preserved")
 	}
 }
+
+func TestGetCipherName(t *testing.T) {
+	testOkCipherStr := "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA"
+	testOkCipher := tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+	cipherStr, err := GetCipherName(testOkCipher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cipherStr != testOkCipherStr {
+		t.Fatalf("cipher string should be %s but is %s", testOkCipherStr, cipherStr)
+	}
+
+	var testBadCipher uint16 = 0xC022
+	cipherStr, err = GetCipherName(testBadCipher)
+	if err == nil {
+		t.Fatal("should fail on unsupported cipher 0xC022")
+	}
+}

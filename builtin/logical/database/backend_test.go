@@ -1156,8 +1156,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// update connection with glob allowed roles connection
@@ -1254,8 +1254,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// Get creds from allowed role, should work.

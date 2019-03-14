@@ -27,8 +27,8 @@ cache:
   - ui/node_modules
 
 before_install:
-  - nvm install 8
-  - nvm use 8
+  - nvm install 10
+  - nvm use 10
   - curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.12.1
   - export PATH="$HOME/.yarn/bin:$PATH"
 

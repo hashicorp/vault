@@ -17,11 +17,20 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/errutil"
 )
+
+// This can be one of a few key types so the different params may or may not be filled
+type ClusterKeyParams struct {
+	Type string   `json:"type" structs:"type" mapstructure:"type"`
+	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
+	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
+	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
+}
 
 // Secret is used to attempt to unmarshal a Vault secret
 // JSON response, as a convenience

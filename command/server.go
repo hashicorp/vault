@@ -20,9 +20,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
+	"github.com/armon/go-metrics/prometheus"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -331,16 +334,18 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	var level log.Level
 	var logLevelWasNotSet bool
+	logLevelString := c.flagLogLevel
 	c.flagLogLevel = strings.ToLower(strings.TrimSpace(c.flagLogLevel))
 	switch c.flagLogLevel {
-	case notSetValue:
+	case notSetValue, "":
 		logLevelWasNotSet = true
+		logLevelString = "info"
 		level = log.Info
 	case "trace":
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "notice", "info", "":
+	case "notice", "info":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn
@@ -416,6 +421,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if config.LogLevel != "" && logLevelWasNotSet {
 		configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
+		logLevelString = configLogLevel
 		switch configLogLevel {
 		case "trace":
 			c.logger.SetLevel(log.Trace)
@@ -466,7 +472,8 @@ func (c *ServerCommand) Run(args []string) int {
 				"in a Docker container, provide the IPC_LOCK cap to the container."))
 	}
 
-	if err := c.setupTelemetry(config); err != nil {
+	metricsHelper, err := c.setupTelemetry(config)
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
@@ -492,48 +499,64 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
-	info["log level"] = c.flagLogLevel
+	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := vaultseal.Shamir
-	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
-		if config.Seal == nil {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-		} else {
-			sealType = config.Seal.Type
-		}
-	}
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
 
-	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		sealLogger := c.logger.Named(vaultseal.Test)
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(sealLogger))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
-		sealLogger := c.logger.Named(sealType)
-		allLoggers = append(allLoggers, sealLogger)
-		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+		// Handle the case where no seal is provided
+		if len(config.Seals) == 0 {
+			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		}
+		for _, configSeal := range config.Seals {
+			sealType := vaultseal.Shamir
+			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+				sealType = os.Getenv("VAULT_SEAL_TYPE")
+			} else {
+				sealType = configSeal.Type
+			}
+
+			var seal vault.Seal
+			sealLogger := c.logger.Named(sealType)
+			allLoggers = append(allLoggers, sealLogger)
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+			if sealConfigError != nil {
+				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+					c.UI.Error(fmt.Sprintf(
+						"Error parsing Seal configuration: %s", sealConfigError))
+					return 1
+				}
+			}
+			if seal == nil {
 				c.UI.Error(fmt.Sprintf(
-					"Error parsing Seal configuration: %s", sealConfigError))
+					"After configuring seal nil returned, seal type was %s", sealType))
 				return 1
 			}
+
+			if configSeal.Disabled {
+				unwrapSeal = seal
+			} else {
+				barrierSeal = seal
+			}
+
+			// Ensure that the seal finalizer is called, even if using verify-only
+			defer func() {
+				err = seal.Finalize(context.Background())
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				}
+			}()
+
 		}
 	}
 
-	// Ensure that the seal finalizer is called, even if using verify-only
-	defer func() {
-		if seal != nil {
-			err = seal.Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}
-	}()
-
-	if seal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+	if barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -541,7 +564,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
 		HAPhysical:                nil,
-		Seal:                      seal,
+		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -561,6 +584,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AllLoggers:                allLoggers,
 		BuiltinRegistry:           builtinplugins.Registry,
 		DisableKeyEncodingChecks:  config.DisablePrintableCheck,
+		MetricsHelper:             metricsHelper,
 	}
 	if c.flagDev {
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -753,7 +777,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
-	info["log level"] = c.flagLogLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
@@ -932,7 +955,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+	if err := adjustCoreForSealMigration(core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -941,27 +964,29 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	go func() {
-		for {
-			err := core.UnsealWithStoredKeys(context.Background())
-			if err == nil {
-				return
-			}
+	if !core.IsInSealMigration() {
+		go func() {
+			for {
+				err := core.UnsealWithStoredKeys(context.Background())
+				if err == nil {
+					return
+				}
 
-			if vault.IsFatalError(err) {
-				c.logger.Error("error unsealing core", "error", err)
-				return
-			} else {
-				c.logger.Warn("failed to unseal core", "error", err)
-			}
+				if vault.IsFatalError(err) {
+					c.logger.Error("error unsealing core", "error", err)
+					return
+				} else {
+					c.logger.Warn("failed to unseal core", "error", err)
+				}
 
-			select {
-			case <-c.ShutdownCh:
-				return
-			case <-time.After(5 * time.Second):
+				select {
+				case <-c.ShutdownCh:
+					return
+				case <-time.After(5 * time.Second):
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
@@ -1361,25 +1386,29 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		return nil, err
 	}
 
-	// Upgrade the default K/V store
-	if !c.flagDevLeasedKV && !c.flagDevKVV1 {
-		req := &logical.Request{
-			Operation:   logical.UpdateOperation,
-			ClientToken: init.RootToken,
-			Path:        "sys/mounts/secret/tune",
-			Data: map[string]interface{}{
-				"options": map[string]string{
-					"version": "2",
-				},
+	kvVer := "2"
+	if c.flagDevKVV1 || c.flagDevLeasedKV {
+		kvVer = "1"
+	}
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": kvVer,
 			},
-		}
-		resp, err := core.HandleRequest(ctx, req)
-		if err != nil {
-			return nil, errwrap.Wrapf("error upgrading default K/V store: {{err}}", err)
-		}
-		if resp.IsError() {
-			return nil, errwrap.Wrapf("failed to upgrade default K/V store: {{err}}", resp.Error())
-		}
+		},
+	}
+	resp, err := core.HandleRequest(ctx, req)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating default K/V store: {{err}}", err)
+	}
+	if resp.IsError() {
+		return nil, errwrap.Wrapf("failed to create default K/V store: {{err}}", resp.Error())
 	}
 
 	return init, nil
@@ -1685,8 +1714,8 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	return url.String(), nil
 }
 
-// setupTelemetry is used to setup the telemetry sub-systems
-func (c *ServerCommand) setupTelemetry(config *server.Config) error {
+// setupTelemetry is used to setup the telemetry sub-systems and returns the in-memory sink to be used in http configuration
+func (c *ServerCommand) setupTelemetry(config *server.Config) (*metricsutil.MetricsHelper, error) {
 	/* Setup telemetry
 	Aggregate on 10 second intervals for 1 minute. Expose the
 	metrics over stderr when there is a SIGUSR1 received.
@@ -1695,10 +1724,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	metrics.DefaultInmemSignal(inm)
 
 	var telConfig *server.Telemetry
-	if config.Telemetry == nil {
-		telConfig = &server.Telemetry{}
-	} else {
+	if config.Telemetry != nil {
 		telConfig = config.Telemetry
+	} else {
+		telConfig = &server.Telemetry{}
 	}
 
 	metricsConf := metrics.DefaultConfig("vault")
@@ -1706,10 +1735,28 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 	// Configure the statsite sink
 	var fanout metrics.FanoutSink
+	var prometheusEnabled bool
+
+	// Configure the Prometheus sink
+	if telConfig.PrometheusRetentionTime != 0 {
+		prometheusEnabled = true
+		prometheusOpts := prometheus.PrometheusOpts{
+			Expiration: telConfig.PrometheusRetentionTime,
+		}
+
+		sink, err := prometheus.NewPrometheusSinkFrom(prometheusOpts)
+		if err != nil {
+			return nil, err
+		}
+		fanout = append(fanout, sink)
+	}
+
+	metricHelper := metricsutil.NewMetricsHelper(inm, prometheusEnabled)
+
 	if telConfig.StatsiteAddr != "" {
 		sink, err := metrics.NewStatsiteSink(telConfig.StatsiteAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1718,7 +1765,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	if telConfig.StatsdAddr != "" {
 		sink, err := metrics.NewStatsdSink(telConfig.StatsdAddr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		fanout = append(fanout, sink)
 	}
@@ -1754,7 +1801,7 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := circonus.NewCirconusSink(cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sink.Start()
 		fanout = append(fanout, sink)
@@ -1769,21 +1816,29 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
+			return nil, errwrap.Wrapf("failed to start DogStatsD sink: {{err}}", err)
 		}
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 
 	// Initialize the global sink
-	if len(fanout) > 0 {
-		fanout = append(fanout, inm)
-		metrics.NewGlobal(metricsConf, fanout)
+	if len(fanout) > 1 {
+		// Hostname enabled will create poor quality metrics name for prometheus
+		if !telConfig.DisableHostname {
+			c.UI.Warn("telemetry.disable_hostname has been set to false. Recommended setting is true for Prometheus to avoid poorly named metrics.")
+		}
 	} else {
 		metricsConf.EnableHostname = false
-		metrics.NewGlobal(metricsConf, inm)
 	}
-	return nil
+	fanout = append(fanout, inm)
+	_, err := metrics.NewGlobal(metricsConf, fanout)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return metricHelper, nil
 }
 
 func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]reload.ReloadFunc, configPath []string) error {

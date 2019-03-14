@@ -589,31 +589,6 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	identityAlias := ""
-
-	switch identityConfigEntry.EC2Alias {
-	case identityAliasEC2InstanceID:
-		identityAlias = identityDocParsed.InstanceID
-	case identityAliasEC2ImageID:
-		identityAlias = identityDocParsed.AmiID
-	}
-
-	// If we're just looking up for MFA, return the Alias info
-	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
-			Auth: &logical.Auth{
-				Alias: &logical.Alias{
-					Name: identityAlias,
-				},
-			},
-		}, nil
-	}
-
 	roleName := data.Get("role").(string)
 
 	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for
@@ -632,6 +607,33 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 	if roleEntry.AuthType != ec2AuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method ec2 not allowed for role %s", roleName)), nil
+	}
+
+	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	identityAlias := ""
+
+	switch identityConfigEntry.EC2Alias {
+	case identityAliasRoleID:
+		identityAlias = roleEntry.RoleID
+	case identityAliasEC2InstanceID:
+		identityAlias = identityDocParsed.InstanceID
+	case identityAliasEC2ImageID:
+		identityAlias = identityDocParsed.AmiID
+	}
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityAlias,
+				},
+			},
+		}, nil
 	}
 
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
@@ -1193,33 +1195,6 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
 
-	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
-	// (in the case of an IAM user).
-	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
-	identityAlias := ""
-	switch identityConfigEntry.IAMAlias {
-	case identityAliasIAMUniqueID:
-		identityAlias = callerUniqueId
-	case identityAliasIAMFullArn:
-		identityAlias = callerID.Arn
-	}
-
-	// If we're just looking up for MFA, return the Alias info
-	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
-			Auth: &logical.Auth{
-				Alias: &logical.Alias{
-					Name: identityAlias,
-				},
-			},
-		}, nil
-	}
-
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing arn %q: %v", callerID.Arn, err)), nil
@@ -1240,6 +1215,35 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	if roleEntry.AuthType != iamAuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method iam not allowed for role %s", roleName)), nil
+	}
+
+	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
+	// (in the case of an IAM user).
+	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+	identityAlias := ""
+	switch identityConfigEntry.IAMAlias {
+	case identityAliasRoleID:
+		identityAlias = roleEntry.RoleID
+	case identityAliasIAMUniqueID:
+		identityAlias = callerUniqueId
+	case identityAliasIAMFullArn:
+		identityAlias = callerID.Arn
+	}
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityAlias,
+				},
+			},
+		}, nil
 	}
 
 	// The role creation should ensure that either we're inferring this is an EC2 instance
@@ -1326,9 +1330,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				"inferred_entity_id":   inferredEntityID,
 				"inferred_aws_region":  roleEntry.InferredAWSRegion,
 				"account_id":           entity.AccountNumber,
+				"role_id":              roleEntry.RoleID,
 			},
 			InternalData: map[string]interface{}{
 				"role_name": roleName,
+				"role_id":   roleEntry.RoleID,
 			},
 			DisplayName: entity.FriendlyName,
 			LeaseOptions: logical.LeaseOptions{

@@ -1,5 +1,6 @@
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -26,12 +27,16 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = `${this.buildURL()}/${backend}/`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/`;
     if (!isEmpty(id)) {
-      url = url + id;
+      url = url + encodePath(id);
     }
 
     return url;
+  },
+
+  pathForType() {
+    return 'mounts';
   },
 
   optionsForQuery(id, action, wrapTTL) {

@@ -15,6 +15,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
 		Data:     input.Data,
 		Warnings: input.Warnings,
+		Headers:  input.Headers,
 	}
 
 	if input.Secret != nil {
@@ -37,6 +38,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 			Renewable:        input.Auth.Renewable,
 			EntityID:         input.Auth.EntityID,
 			TokenType:        input.Auth.TokenType.String(),
+			Orphan:           input.Auth.Orphan,
 		}
 	}
 
@@ -47,6 +49,7 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 	logicalResp := &Response{
 		Data:     input.Data,
 		Warnings: input.Warnings,
+		Headers:  input.Headers,
 	}
 
 	if input.LeaseID != "" {
@@ -66,6 +69,7 @@ func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 			IdentityPolicies: input.Auth.IdentityPolicies,
 			Metadata:         input.Auth.Metadata,
 			EntityID:         input.Auth.EntityID,
+			Orphan:           input.Auth.Orphan,
 		}
 		logicalResp.Auth.Renewable = input.Auth.Renewable
 		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
@@ -88,6 +92,7 @@ type HTTPResponse struct {
 	Data          map[string]interface{} `json:"data"`
 	WrapInfo      *HTTPWrapInfo          `json:"wrap_info"`
 	Warnings      []string               `json:"warnings"`
+	Headers       map[string][]string    `json:"-"`
 	Auth          *HTTPAuth              `json:"auth"`
 }
 
@@ -102,6 +107,7 @@ type HTTPAuth struct {
 	Renewable        bool              `json:"renewable"`
 	EntityID         string            `json:"entity_id"`
 	TokenType        string            `json:"token_type"`
+	Orphan           bool              `json:"orphan"`
 }
 
 type HTTPWrapInfo struct {

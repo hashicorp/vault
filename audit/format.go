@@ -371,8 +371,10 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
+			Warnings: resp.Warnings,
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
+			Headers:  resp.Headers,
 		},
 	}
 
@@ -425,8 +427,10 @@ type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
+	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers  map[string][]string    `json:"headers"`
 }
 
 type AuditAuth struct {

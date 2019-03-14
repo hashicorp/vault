@@ -326,6 +326,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 				},
 				"name": {
 					Type:        TypeNameString,
+					Default:     "Larry",
 					Description: "the name",
 				},
 				"age": {

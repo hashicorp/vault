@@ -16,6 +16,17 @@ enumerated on this page.
 
 The following properties are available for use in Sentinel policies.
 
+## Namespace Properties
+
+The `namespace` (Sentinel) namespace gives access to information about the
+namespace in which the request is running. (This may or may not match the
+client's chosen namespace, if a request reaches into a child namespace).
+
+| Name | Type   | Description                    |
+| :----| :------| :------------------------------|
+| `id`   | `string` | The namespace ID               |
+| `path` | `string` | The root path of the namespace |
+
 ## Request Properties
 
 The following properties are available in the `request` namespace.

@@ -62,6 +62,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	}
 
 	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
+		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
 		"user_claim":      "https://vault/user",

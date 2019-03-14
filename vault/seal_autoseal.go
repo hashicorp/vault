@@ -353,24 +353,9 @@ func (d *autoSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 		return fmt.Errorf("recovery key to verify is nil")
 	}
 
-	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
+	pt, err := d.getRecoveryKeyInternal(ctx)
 	if err != nil {
-		d.core.logger.Error("autoseal: failed to read recovery key", "error", err)
-		return errwrap.Wrapf("failed to read recovery key: {{err}}", err)
-	}
-	if pe == nil {
-		d.core.logger.Warn("autoseal: no recovery key found")
-		return fmt.Errorf("no recovery key found")
-	}
-
-	blobInfo := &physical.EncryptedBlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return errwrap.Wrapf("failed to proto decode recovery keys: {{err}}", err)
-	}
-
-	pt, err := d.Decrypt(ctx, blobInfo)
-	if err != nil {
-		return errwrap.Wrapf("failed to decrypt encrypted recovery keys: {{err}}", err)
+		return err
 	}
 
 	if subtle.ConstantTimeCompare(key, pt) != 1 {
@@ -411,6 +396,34 @@ func (d *autoSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	}
 
 	return nil
+}
+
+func (d *autoSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
+	return d.getRecoveryKeyInternal(ctx)
+}
+
+func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
+	pe, err := d.core.physical.Get(ctx, recoveryKeyPath)
+	if err != nil {
+		d.core.logger.Error("autoseal: failed to read recovery key", "error", err)
+		return nil, errwrap.Wrapf("failed to read recovery key: {{err}}", err)
+	}
+	if pe == nil {
+		d.core.logger.Warn("autoseal: no recovery key found")
+		return nil, fmt.Errorf("no recovery key found")
+	}
+
+	blobInfo := &physical.EncryptedBlobInfo{}
+	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+		return nil, errwrap.Wrapf("failed to proto decode stored keys: {{err}}", err)
+	}
+
+	pt, err := d.Decrypt(ctx, blobInfo)
+	if err != nil {
+		return nil, errwrap.Wrapf("failed to decrypt encrypted stored keys: {{err}}", err)
+	}
+
+	return pt, nil
 }
 
 // migrateRecoveryConfig is a helper func to migrate the recovery config to

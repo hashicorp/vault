@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -150,11 +151,19 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
+	if opts.Logger != nil {
+		conf.Logger = opts.Logger
+	}
+
 	for k, v := range opts.LogicalBackends {
 		conf.LogicalBackends[k] = v
 	}
 	for k, v := range opts.CredentialBackends {
 		conf.CredentialBackends[k] = v
+	}
+
+	for k, v := range opts.AuditBackends {
+		conf.AuditBackends[k] = v
 	}
 
 	c, err := NewCore(conf)
@@ -310,7 +319,33 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 		t.Fatal("should not be sealed")
 	}
 
+	testCoreAddSecretMount(t, core, token)
+
 	return core, keys, token
+}
+
+func testCoreAddSecretMount(t testing.T, core *Core, token string) {
+	kvReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": "1",
+			},
+		},
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(nil), kvReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatal(err)
+	}
+
 }
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
@@ -688,7 +723,7 @@ func TestWaitActiveWithError(core *Core) error {
 	start := time.Now()
 	var standby bool
 	var err error
-	for time.Now().Sub(start) < time.Second {
+	for time.Now().Sub(start) < 30*time.Second {
 		standby, err = core.Standby()
 		if err != nil {
 			return err
@@ -785,6 +820,13 @@ func (c *TestCluster) UnsealCoresWithError() error {
 func (c *TestCluster) EnsureCoresSealed(t testing.T) {
 	t.Helper()
 	if err := c.ensureCoresSealed(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (c *TestClusterCore) Seal(t testing.T) {
+	t.Helper()
+	if err := c.Core.sealInternal(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -913,6 +955,7 @@ type TestClusterCore struct {
 	ServerKeyPEM      []byte
 	TLSConfig         *tls.Config
 	UnderlyingStorage physical.Backend
+	Barrier           SecurityBarrier
 }
 
 type TestClusterOptions struct {
@@ -1257,6 +1300,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableCache = base.DisableCache
 
 		coreConfig.DevToken = base.DevToken
+		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 	}
 
 	if coreConfig.Physical == nil {
@@ -1397,6 +1441,29 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		TestWaitActive(t, cores[0])
 
+		// Existing tests rely on this; we can make a toggle to disable it
+		// later if we want
+		kvReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: testCluster.RootToken,
+			Path:        "sys/mounts/secret",
+			Data: map[string]interface{}{
+				"type":        "kv",
+				"path":        "secret/",
+				"description": "key/value secret storage",
+				"options": map[string]string{
+					"version": "1",
+				},
+			},
+		}
+		resp, err := cores[0].HandleRequest(namespace.RootContext(ctx), kvReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.IsError() {
+			t.Fatal(err)
+		}
+
 		// Unseal other cores unless otherwise specified
 		if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
 			for i := 1; i < numCores; i++ {
@@ -1484,6 +1551,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Server:          servers[i],
 			TLSConfig:       tlsConfigs[i],
 			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Barrier:         cores[i].barrier,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
