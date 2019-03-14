@@ -82,7 +82,7 @@ This is an unauthenticated endpoint.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/ca_chain`              | `200 application/binary` |
+| `GET`    | `/pki/ca_chain`              | `200 application/binary or 204 (empty body) if no additional chain material is present` |
 
 ### Sample Request
 
