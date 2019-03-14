@@ -1,7 +1,6 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
-import { isEmpty } from '@ember/utils';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
