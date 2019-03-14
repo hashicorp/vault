@@ -57,6 +57,10 @@ has a number of parameters to further configure a connection.
 
 - `connect_timeout` `(string: "5s")` – Specifies the connection timeout to use.
 
+- `local_datacenter` `(string: "")` – If set, enables host selection policy 
+which will prioritize and use hosts which are in the local datacenter before 
+hosts in all other datacenters (for example "dc-01").
+
 - `socket_keep_alive` `(string: "0s")` – the keep-alive period for an active
 	network connection. If zero, keep-alives are not enabled.
 
