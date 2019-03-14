@@ -2,12 +2,14 @@ import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
 import { isEmpty } from '@ember/utils';
+import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
   // expand all attributes
   for (let prop in props) {
     let details = props[prop];
+    let attrKey = camelize(prop);
     if (details.deprecated === true) {
       continue;
     }
@@ -18,23 +20,25 @@ export const expandOpenApiProps = function(props) {
     if (details.format === 'seconds') {
       editType = 'ttl';
     } else if (details.items) {
-      editType = details.items.type + details.type.capitalize();
+      editType = details.items.type + capitalize(details.type);
     }
-    attrs[prop.camelize()] = {
+    attrs[attrKey] = {
       editType: editType,
       type: details.type,
+      helpText: details.description,
+      sensitive: Boolean(details['x-vault-displaySensitive']),
     };
     if (details['x-vault-displayName']) {
-      attrs[prop.camelize()].label = details['x-vault-displayName'];
+      attrs[attrKey].label = details['x-vault-displayName'];
     }
     if (details['enum']) {
-      attrs[prop.camelize()].possibleValues = details['enum'];
+      attrs[attrKey].possibleValues = details['enum'];
     }
     if (details['x-vault-displayValue']) {
-      attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
+      attrs[attrKey].defaultValue = details['x-vault-displayValue'];
     } else {
       if (!isEmpty(details['default'])) {
-        attrs[prop.camelize()].defaultValue = details['default'];
+        attrs[attrKey].defaultValue = details['default'];
       }
     }
   }
