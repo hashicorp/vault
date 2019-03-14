@@ -9,7 +9,6 @@ export const expandOpenApiProps = function(props) {
   // expand all attributes
   for (let prop in props) {
     let details = props[prop];
-    let attrKey = camelize(prop);
     if (details.deprecated === true) {
       continue;
     }
@@ -22,25 +21,22 @@ export const expandOpenApiProps = function(props) {
     } else if (details.items) {
       editType = details.items.type + capitalize(details.type);
     }
-    attrs[attrKey] = {
+    let attrDefn = {
       editType: editType,
       type: details.type,
       helpText: details.description,
-      sensitive: Boolean(details['x-vault-displaySensitive']),
+      sensitive: details['x-vault-displaySensitive'],
+      label: details['x-vault-displayName'],
+      possibleValues: details['enum'],
+      defaultValue: details['x-vault-displayValue'] || details['default'],
     };
-    if (details['x-vault-displayName']) {
-      attrs[attrKey].label = details['x-vault-displayName'];
-    }
-    if (details['enum']) {
-      attrs[attrKey].possibleValues = details['enum'];
-    }
-    if (details['x-vault-displayValue']) {
-      attrs[attrKey].defaultValue = details['x-vault-displayValue'];
-    } else {
-      if (!isEmpty(details['default'])) {
-        attrs[attrKey].defaultValue = details['default'];
+    // loop to remove empty vals
+    for (let attrProp in attrDefn) {
+      if (attrDefn[attrProp] == null) {
+        delete attrDefn[attrProp];
       }
     }
+    attrs[camelize(prop)] = attrDefn;
   }
   return attrs;
 };
