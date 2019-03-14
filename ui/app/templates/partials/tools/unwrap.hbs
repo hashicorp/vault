@@ -11,10 +11,10 @@
     <nav class="tabs">
       <ul>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "data") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab)}}>Data</button>
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "data"}} data-test-button-data>Data</button>
         </li>
         <li role="tab" aria-selected={{if (eq unwrapActiveTab "data") "true" "false"}} class="{{if (eq unwrapActiveTab "details") "is-active"}}">
-          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}}>Wrap Details</button>
+          <button class="link link-plain tab has-text-weight-semibold" {{action (mut unwrapActiveTab) "details"}} data-test-button-details>Wrap Details</button>
         </li>
       </ul>
     </nav>
@@ -75,6 +75,7 @@
           class="input"
           id="token"
           name="token"
+          autocomplete="off"
           data-test-tools-input="wrapping-token"
         }}
       </div>
