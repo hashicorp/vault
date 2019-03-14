@@ -11,6 +11,9 @@ BUG FIXES:
    [[GH-6374]](https://github.com/hashicorp/vault/pull/6374)
  * core: The `operator migrate` command will no longer hang on empty key names.
    [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
+ * secret/ssh: Fix for a bug where attempting to delete the last ssh role
+   in the zeroaddress configuration could fail.
+   [[GH-6390]](https://github.com/hashicorp/vault/pull/6390)
  * secret/totp: Uppercase provided keys so they don't fail base32 validation
    [GH-6400]
  * ui: Fix for a bug where you couldn't access the data tab after clicking on

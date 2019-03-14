@@ -114,7 +114,7 @@ secrets are no longer performed by the Vault agent.
 
 Agent's listener address will be picked up by the CLI through the
 `VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8007".
+"http://127.0.0.1:8200".
 
 ## API
 
@@ -191,8 +191,8 @@ These configuration values are common to all `listener` blocks.
 
 - `address` `(string: required)` - The address for the listener to listen to.
   This can either be a URL path when using `tcp` or a file path when using
-  `unix`. For example, `127.0.0.1:8007` or `/path/to/socket`. Defaults to
-  `127.0.0.1:8007`.
+  `unix`. For example, `127.0.0.1:8200` or `/path/to/socket`. Defaults to
+  `127.0.0.1:8200`.
 
 - `tls_disable` `(bool: false)` - Specifies if TLS will be disabled.
 
@@ -250,7 +250,7 @@ cache {
   }
 
   listener "tcp" {
-    address = "127.0.0.1:8007"
+    address = "127.0.0.1:8200"
     tls_disable = true
   }
 }

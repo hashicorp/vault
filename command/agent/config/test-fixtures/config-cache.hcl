@@ -26,6 +26,9 @@ cache {
 	listener "unix" {
 		address = "/path/to/socket"
 		tls_disable = true
+		socket_mode = "configmode"
+		socket_user = "configuser"
+		socket_group = "configgroup"
 	}
 
 	listener "tcp" {

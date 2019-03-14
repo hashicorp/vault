@@ -467,11 +467,11 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		return 2
 	}
 
-	args := append([]string{
+	args := []string{
 		"-i", c.flagPrivateKeyPath,
 		"-i", signedPublicKeyPath,
 		"-o StrictHostKeyChecking=" + strictHostKeyChecking,
-	})
+	}
 
 	if userKnownHostsFile != "" {
 		args = append(args,
@@ -725,6 +725,10 @@ func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileM
 
 	if err := ioutil.WriteFile(f.Name(), data, perms); err != nil {
 		return "", errors.Wrap(err, "writing temporary key"), closer
+	}
+
+	if err := f.Close(); err != nil {
+		return "", errors.Wrap(err, "closing temporary key"), closer
 	}
 
 	return f.Name(), nil, closer
