@@ -727,6 +727,10 @@ func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileM
 		return "", errors.Wrap(err, "writing temporary key"), closer
 	}
 
+	if err := f.Close(); err != nil {
+		return "", errors.Wrap(err, "closing temporary key"), closer
+	}
+
 	return f.Name(), nil, closer
 }
 
