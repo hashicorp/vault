@@ -85,7 +85,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Target:     &c.flagTTL,
 		Completion: complete.PredictAnything,
 		Usage: "Initial TTL to associate with the token. Token renewals may be " +
-			"able to extend beyond this value, depending on the configured maximum" +
+			"able to extend beyond this value, depending on the configured maximum " +
 			"TTLs. This is specified as a numeric string with suffix like \"30s\" " +
 			"or \"5m\".",
 	})
