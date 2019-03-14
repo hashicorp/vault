@@ -2,10 +2,12 @@ import { computed } from '@ember/object';
 import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 const { attr } = DS;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   oidcDiscoveryUrl: attr('string', {
     label: 'OIDC discovery URL',
     helpText:
@@ -26,7 +28,7 @@ export default AuthConfig.extend({
     helpText: 'The value against which to match the iss claim in a JWT',
   }),
   fieldGroups: computed(function() {
-    const groups = [
+    let groups = [
       {
         default: ['oidcDiscoveryUrl'],
       },
@@ -34,6 +36,10 @@ export default AuthConfig.extend({
         'JWT Options': ['oidcDiscoveryCaPem', 'jwtValidationPubkeys', 'boundIssuer'],
       },
     ];
+
+    if (this.newFields) {
+      groups = combineFieldGroups(groups, this.newFields, []);
+    }
     return fieldToAttrs(this, groups);
   }),
 });
