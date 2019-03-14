@@ -18,6 +18,10 @@ BUG FIXES:
    [GH-6400]
  * ui: Fix for a bug where you couldn't access the data tab after clicking on
    wrap details on the tool > unwrap page [GH-6404]
+ * sys: `sys/internal/ui/mounts` will no longer return secret or auth mounts
+   that have been filtered. Similarly, `sys/internal/ui/mount/:path` will
+   return a error response if a filtered mount path is requested.
+   [[GH-6412]](https://github.com/hashicorp/vault/pull/6412)
    
 IMPROVEMENTS:
 
