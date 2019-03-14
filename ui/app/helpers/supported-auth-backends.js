@@ -35,7 +35,7 @@ const SUPPORTED_AUTH_BACKENDS = [
   },
   {
     type: 'jwt',
-    typeDisplay: 'JWT/OIDC',
+    typeDisplay: 'JWT',
     description: 'Authenticate using JWT or OIDC provider.',
     tokenPath: 'client_token',
     displayNamePath: 'display_name',
