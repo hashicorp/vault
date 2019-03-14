@@ -10,8 +10,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | secrets/pki/create', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   const mountAndNav = async function() {
@@ -27,7 +27,6 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await editPage.createRole('role', 'example.com');
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
-    await settled();
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     assert.ok(showPage.generateCertIsPresent, 'shows the generate button');
     assert.ok(showPage.signCertIsPresent, 'shows the sign button');
@@ -63,14 +62,15 @@ module('Acceptance | secrets/pki/create', function(hooks) {
     await mountAndNav(assert);
     await editPage.createRole('role', 'example.com');
     // wait for permission check to render edit button
-    await settled();
+    await waitFor('[data-test-edit-link]');
     await showPage.edit();
+    await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.edit', 'navs to the edit page');
 
     await waitFor('[data-test-role-delete]');
     await editPage.deleteRole();
     // wait for redirect
-    await settled();
+    await waitFor('[data-test-list-container]');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects to list page');
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });
