@@ -24,8 +24,8 @@ client's chosen namespace, if a request reaches into a child namespace).
 
 | Name | Type   | Description                    |
 | :----| :------| :------------------------------|
-| `id`   | `string` | The namespace ID
-| `path` | `string` | The root path of the namespace
+| `id`   | `string` | The namespace ID               |
+| `path` | `string` | The root path of the namespace |
 
 ## Request Properties
 
