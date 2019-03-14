@@ -419,35 +419,37 @@ func (c *AgentCommand) Run(args []string) int {
 
 		var listeners []net.Listener
 		for i, lnConfig := range config.Cache.Listeners {
-			listener, props, _, err := cache.ServerListener(lnConfig, c.logWriter, c.UI)
+			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error parsing listener configuration: %v", err))
+				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
 				return 1
 			}
 
-			listeners = append(listeners, listener)
+			listeners = append(listeners, ln)
 
 			scheme := "https://"
-			if props["tls"] == "disabled" {
+			if tlsConf == nil {
 				scheme = "http://"
 			}
-			if lnConfig.Type == "unix" {
+			if ln.Addr().Network() == "unix" {
 				scheme = "unix://"
 			}
 
 			infoKey := fmt.Sprintf("api address %d", i+1)
-			info[infoKey] = scheme + listener.Addr().String()
+			info[infoKey] = scheme + ln.Addr().String()
 			infoKeys = append(infoKeys, infoKey)
 
-			cacheLogger.Info("starting listener", "addr", listener.Addr().String())
 			server := &http.Server{
+				Addr:              ln.Addr().String(),
+				TLSConfig:         tlsConf,
 				Handler:           mux,
 				ReadHeaderTimeout: 10 * time.Second,
 				ReadTimeout:       30 * time.Second,
 				IdleTimeout:       5 * time.Minute,
 				ErrorLog:          cacheLogger.StandardLogger(nil),
 			}
-			go server.Serve(listener)
+
+			go server.Serve(ln)
 		}
 
 		// Ensure that listeners are closed at all the exits
