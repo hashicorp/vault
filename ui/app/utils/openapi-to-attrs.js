@@ -1,6 +1,7 @@
 import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
+import { isEmpty } from '@ember/utils';
 import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
@@ -27,7 +28,8 @@ export const expandOpenApiProps = function(props) {
       sensitive: details['x-vault-displaySensitive'],
       label: details['x-vault-displayName'],
       possibleValues: details['enum'],
-      defaultValue: details['x-vault-displayValue'] || details['default'],
+      defaultValue:
+        details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
     };
     // loop to remove empty vals
     for (let attrProp in attrDefn) {
