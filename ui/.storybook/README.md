@@ -11,7 +11,7 @@ You will need to have all the dependencies for the [Vault UI](../README.md#prere
 | Command | Description |
 |---|---|
 | `yarn` | install dependencies |
-| `yarn run storybook` | run storybook |
+| `yarn storybook` | run storybook |
 | `ember generate story [name-of-component]` | generate a new story |
 | TBA | update a story notes file |
 
