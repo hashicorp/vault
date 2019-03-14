@@ -47,7 +47,7 @@ const MOUNTABLE_AUTH_METHODS = [
   {
     displayName: 'OIDC',
     value: 'oidc',
-    type: 'jwt',
+    type: 'oidc',
     glyph: 'auth',
     category: 'generic',
   },
