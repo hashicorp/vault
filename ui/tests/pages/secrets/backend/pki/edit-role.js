@@ -1,8 +1,10 @@
 import { Base } from '../create';
+import confirmAction from 'vault/tests/pages/components/confirm-action';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
 export default create({
   ...Base,
+  ...confirmAction,
   visitEdit: visitable('/vault/secrets/:backend/edit/:id'),
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   toggleDomain: clickable('[data-test-toggle-group="Domain Handling"]'),
@@ -11,14 +13,13 @@ export default create({
   allowAnyName: clickable('[data-test-input="allowAnyName"]'),
   allowedDomains: fillable('[data-test-input="allowedDomains"] input'),
   save: clickable('[data-test-role-create]'),
-  deleteBtn: clickable('[data-test-role-delete] button'),
-  confirmBtn: clickable('[data-test-confirm-button]'),
   async deleteRole() {
-    return await this.deleteBtn().confirmBtn();
+    await this.delete();
+    await this.confirmDelete();
   },
 
   async createRole(name, allowedDomains) {
-    return await this.toggleDomain()
+    await this.toggleDomain()
       .toggleOptions()
       .name(name)
       .allowAnyName()
