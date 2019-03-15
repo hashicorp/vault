@@ -78,6 +78,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		BackendType: logical.TypeLogical,
 	}
 
+	b.id = conf.BackendUUID
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
 	return &b
@@ -86,6 +87,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 type databaseBackend struct {
 	connections map[string]*dbPluginInstance
 	logger      log.Logger
+	id          string
 
 	*framework.Backend
 	sync.RWMutex

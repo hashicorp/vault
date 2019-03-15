@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/structs"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -197,6 +198,17 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 					config.ConnectionDetails["connection_url"] = strings.Replace(connURL, password, "*****", -1)
 				}
 			}
+		}
+
+		// Get the password field, perform HMAC-SHA256, and return that as the hashed password value
+		if configPwd, ok := config.ConnectionDetails["password"]; ok && configPwd.(string) != "" {
+			hashedPwd, err := cryptoutil.HMACSHA256Hash(b.id, configPwd.(string))
+			if err != nil {
+				return nil, err
+			}
+
+			// Hash the password and return is as `hashed_password`
+			config.ConnectionDetails["hashed_password"] = hashedPwd
 		}
 
 		delete(config.ConnectionDetails, "password")

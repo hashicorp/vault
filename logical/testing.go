@@ -77,8 +77,9 @@ func TestSystemView() *StaticSystemView {
 
 func TestBackendConfig() *BackendConfig {
 	bc := &BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
-		System: TestSystemView(),
+		Logger:      logging.NewVaultLogger(log.Trace),
+		System:      TestSystemView(),
+		BackendUUID: "testuuid",
 	}
 
 	return bc

@@ -620,7 +620,7 @@ func TestBackend_basic(t *testing.T) {
 	}
 }
 
-func TestBackend_connectionCrud(t *testing.T) {
+func TestBackend_connectionCRUD(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -717,8 +717,9 @@ func TestBackend_connectionCrud(t *testing.T) {
 	expected := map[string]interface{}{
 		"plugin_name": "postgresql-database-plugin",
 		"connection_details": map[string]interface{}{
-			"username":       "postgres",
-			"connection_url": connURL,
+			"username":        "postgres",
+			"hashed_password": "f572948d91bfcd02899875e32846cfad68504d3f6b657974d0ad0bccc9d37e08",
+			"connection_url":  connURL,
 		},
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string(nil),
