@@ -2,6 +2,21 @@
 <link rel="stylesheet" href="/assets/vendor.css" />
 <link rel="stylesheet" href="/assets/vault.css" />
 <link rel="icon" href="/favicon.png" />
+<script>
+            (function() {
+              var srcUrl = null;
+              var host = location.hostname || 'localhost';
+              var defaultPort = location.protocol === 'https:' ? 443 : 80;
+              var port = 4200;
+              var path = '';
+              var prefixURL = '';
+              var src = srcUrl || prefixURL + '/_lr/livereload.js?port=' + port + '&host=' + host + path;
+              var script = document.createElement('script');
+              script.type = 'text/javascript';
+              script.src = location.protocol + '//' + host + ':4200' + src;
+              document.getElementsByTagName('head')[0].appendChild(script);
+            }());
+          </script>
 <script>runningTests = true;</script>
 <script src="/assets/vendor.js"></script>
 <script src="/assets/vault.js"></script>

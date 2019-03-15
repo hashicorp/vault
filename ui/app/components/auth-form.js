@@ -23,7 +23,7 @@ const BACKENDS = supportedAuthBackends();
  * @property redirectTo=`null` {String} - The name of the route to redirect to.
  * @property selectedAuth=`null` {String} - The auth method that is currently selected in the dropdown.
  * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthForm|Uses of AuthForm}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-button.js|AuthForm Source Code}
+ * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-form.js|AuthForm Source Code}
  */
 
 const DEFAULTS = {

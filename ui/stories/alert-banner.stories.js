@@ -6,7 +6,7 @@ import notes from './alert-banner.md';
 const TYPES = ['warning', 'info', 'danger', 'success'];
 
 storiesOf('AlertBanner/', module)
-  .addParameters({ options: { showPanel: true } })
+  .addParameters({ options: { showPanel: false } })
   .add(
     'AlertBanner',
     () => ({
