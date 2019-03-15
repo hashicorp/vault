@@ -5,7 +5,19 @@ CHANGES:
    any matched audience, as documented and handled in OIDC logins.
    [[GH-30]](https://github.com/hashicorp/vault-plugin-auth-jwt/issues/30)
  * auth/jwt: Apply `bound_audiences` checks to OIDC paths.
+   
+FEATURES:
 
+ * core: on non-windows platforms a SIGUSR2 will make the server log a dump of
+   all running goroutines' stack traces for debugging purposes.
+ 
+IMPROVEMENTS:
+
+ * agent/caching: Agent Caching will now return `X-Cache` and `Age` headers on
+   responses to indicates whether a response was a cache hit or miss, and
+   the freshness of the cached response when applicable.
+   [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
+   
 BUG FIXES:
 
  * agent/caching: Non-2xx (e.g. redirects) and non-JSON responses returned by
@@ -23,24 +35,12 @@ BUG FIXES:
    [[GH-6390]](https://github.com/hashicorp/vault/pull/6390)
  * secret/totp: Uppercase provided keys so they don't fail base32 validation
    [GH-6400]
- * ui: Fix for a bug where you couldn't access the data tab after clicking on
-   wrap details on the tool > unwrap page [GH-6404]
  * sys: `sys/internal/ui/mounts` will no longer return secret or auth mounts
    that have been filtered. Similarly, `sys/internal/ui/mount/:path` will
    return a error response if a filtered mount path is requested.
    [[GH-6412]](https://github.com/hashicorp/vault/pull/6412)
-   
-FEATURES:
-
- * core: on non-windows platforms a SIGUSR2 will make the server log a dump of
-   all running goroutines' stack traces for debugging purposes.
- 
-IMPROVEMENTS:
-
- * agent/caching: Agent Caching will now return `X-Cache` and `Age` headers on
-   responses to indicates whether a response was a cache hit or miss, and
-   the freshness of the cached response when applicable.
-   [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
+ * ui: Fix for a bug where you couldn't access the data tab after clicking on
+   wrap details on the tool > unwrap page [GH-6404]
 
 ## 1.1.0-beta2 (March 5th, 2019)
 
