@@ -19,16 +19,7 @@ You will need to have all the dependencies for the [Vault UI](../README.md#prere
 
 ### Writing Stories
 
-For the most part, each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`. 
-
-#### Which components should have stories?
-
-- Components that are heavily reused
-
-#### Which shouldn't?
-
-- Components which are overly complex
-- Components that are only used once
+Each component in `vault/ui/app/components` should have a corresponding `[component-name].stories.js` and `[component-name].md` files within `vault/ui/stories`. 
 
 #### Adding a new story
 
