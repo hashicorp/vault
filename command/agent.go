@@ -207,7 +207,7 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 	if config.AutoAuth == nil {
-		c.UI.Info("No auto_auth block found in config file, not starting auto_auth")
+		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
 	if config.Vault != nil {
