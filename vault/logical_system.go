@@ -2171,6 +2171,12 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 		}
 	}
 
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
+	}
+
 	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleErrorNoReadOnlyForward(err)
@@ -2255,6 +2261,12 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 			err := fmt.Sprintf("cannot list '%s'", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
+	}
+
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
 	}
 
 	keys, err := b.Core.barrier.List(ctx, path)
