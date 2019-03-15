@@ -7,8 +7,8 @@ import authPage from 'vault/tests/pages/auth';
 module('Acceptance | policies (old)', function(hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
-    return authPage.login();
+  hooks.beforeEach(async function() {
+    await authPage.login();
   });
 
   test('policies', async function(assert) {
@@ -24,7 +24,7 @@ module('Acceptance | policies (old)', function(hooks) {
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
-    await settled();
+    await waitFor('[data-test-error]');
     assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
     findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
