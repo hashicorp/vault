@@ -24,7 +24,7 @@ $ vault agent -h
 ## Auto-Auth
 
 Vault Agent allows for easy authentication to Vault in a wide variety of
-environments. Please see the [Auto-Auth docs](/docs/agent/autoauth/index.html)
+environments. Please see the [Auto-Auth docs][autoauth]
 for information.
 
 Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
@@ -33,7 +33,7 @@ Auto-Auth functionality takes place within an `auto_auth` configuration stanza.
 
 Vault Agent allows client-side caching of responses containing newly created tokens 
 and responses containing leased secrets generated off of these newly created tokens.
-Please see the [Caching docs](/docs/agent/caching/index.html) for information.
+Please see the [Caching docs][caching] for information.
 
 ## Configuration
 
