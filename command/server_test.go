@@ -90,6 +90,7 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		},
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
+		SigUSR2Ch:  MakeSigUSR2Ch(),
 		PhysicalBackends: map[string]physical.Factory{
 			"inmem":    physInmem.NewInmem,
 			"inmem_ha": physInmem.NewInmemHA,

@@ -70,6 +70,7 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	WaitGroup *sync.WaitGroup
 
@@ -1262,6 +1263,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
 
