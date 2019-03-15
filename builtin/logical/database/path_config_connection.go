@@ -207,7 +207,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 				return nil, err
 			}
 
-			// Hash the password and return is as `hashed_password`
+			// Hash the password and return it as `hashed_password`
 			config.ConnectionDetails["hashed_password"] = hashedPwd
 		}
 
