@@ -122,6 +122,16 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
 	}
 
+	if result.Cache != nil {
+		if len(result.Listeners) < 1 {
+			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		}
+
+		if result.Cache.UseAutoAuthToken && result.AutoAuth == nil {
+			return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+		}
+	}
+
 	err = parseVault(&result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'vault':{{err}}", err)
@@ -183,9 +193,6 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 	name := "listener"
 
 	listenerList := list.Filter(name)
-	if len(listenerList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
-	}
 
 	var listeners []*Listener
 	for _, item := range listenerList.Items {
@@ -227,8 +234,11 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	name := "auto_auth"
 
 	autoAuthList := list.Filter(name)
-	if len(autoAuthList.Items) != 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
+	if len(autoAuthList.Items) == 0 {
+		return nil
+	}
+	if len(autoAuthList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
 	}
 
 	// Get our item
