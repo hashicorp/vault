@@ -23,7 +23,8 @@ module('Acceptance | ssh secret backend', function(hooks) {
       async fillInGenerate() {
         await fillIn('[data-test-input="publicKey"]', PUB_KEY);
       },
-      assertAfterGenerate(assert, sshPath) {
+      async assertAfterGenerate(assert, sshPath) {
+        await waitFor('[data-test-row-label="Signed key"]');
         assert.equal(currentURL(), `/vault/secrets/${sshPath}/sign/${this.name}`, 'ca sign url is correct');
         assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
         assert
@@ -45,7 +46,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
         await fillIn('[data-test-input="username"]', 'admin');
         await fillIn('[data-test-input="ip"]', '1.2.3.4');
       },
-      assertAfterGenerate(assert, sshPath) {
+      async assertAfterGenerate(assert, sshPath) {
         assert.equal(
           currentURL(),
           `/vault/secrets/${sshPath}/credentials/${this.name}`,
@@ -106,8 +107,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // generate creds
       await click('[data-test-secret-generate]');
-      await settled();
-      role.assertAfterGenerate(assert, sshPath);
+      await role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button
       await click('[data-test-secret-generate-back]');
