@@ -43,32 +43,30 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		Cache: &Cache{
 			UseAutoAuthToken: true,
 		},
-		Listeners: &Listeners{
-			Listeners: []*Listener{
-				&Listener{
-					Type: "unix",
-					Config: map[string]interface{}{
-						"address":      "/path/to/socket",
-						"tls_disable":  true,
-						"socket_mode":  "configmode",
-						"socket_user":  "configuser",
-						"socket_group": "configgroup",
-					},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "unix",
+				Config: map[string]interface{}{
+					"address":      "/path/to/socket",
+					"tls_disable":  true,
+					"socket_mode":  "configmode",
+					"socket_user":  "configuser",
+					"socket_group": "configgroup",
 				},
-				&Listener{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":     "127.0.0.1:8300",
-						"tls_disable": true,
-					},
+			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
 				},
-				&Listener{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":       "127.0.0.1:8400",
-						"tls_key_file":  "/path/to/cakey.pem",
-						"tls_cert_file": "/path/to/cacert.pem",
-					},
+			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":       "127.0.0.1:8400",
+					"tls_key_file":  "/path/to/cakey.pem",
+					"tls_cert_file": "/path/to/cacert.pem",
 				},
 			},
 		},

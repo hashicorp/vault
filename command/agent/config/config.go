@@ -19,12 +19,12 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth  `hcl:"auto_auth"`
-	ExitAfterAuth bool       `hcl:"exit_after_auth"`
-	PidFile       string     `hcl:"pid_file"`
-	Listeners     *Listeners `hcl:"listeners"`
-	Cache         *Cache     `hcl:"cache"`
-	Vault         *Vault     `hcl:"vault"`
+	AutoAuth      *AutoAuth   `hcl:"auto_auth"`
+	ExitAfterAuth bool        `hcl:"exit_after_auth"`
+	PidFile       string      `hcl:"pid_file"`
+	Listeners     []*Listener `hcl:"listeners"`
+	Cache         *Cache      `hcl:"cache"`
+	Vault         *Vault      `hcl:"vault"`
 }
 
 type Vault struct {
@@ -38,10 +38,6 @@ type Vault struct {
 
 type Cache struct {
 	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
-}
-
-type Listeners struct {
-	Listeners []*Listener `hcl:"listeners"`
 }
 
 type Listener struct {
@@ -184,41 +180,6 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 }
 
 func parseListeners(result *Config, list *ast.ObjectList) error {
-	name := "listeners"
-
-	listenersList := list.Filter(name)
-	if len(listenersList.Items) == 0 {
-		return nil
-	}
-
-	if len(listenersList.Items) > 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
-	}
-
-	item := listenersList.Items[0]
-
-	var l Listeners
-	err := hcl.DecodeObject(&l, item.Val)
-	if err != nil {
-		return err
-	}
-
-	result.Listeners = &l
-
-	subs, ok := item.Val.(*ast.ObjectType)
-	if !ok {
-		return fmt.Errorf("could not parse %q as an object", name)
-	}
-	subList := subs.List
-
-	err = parseListenersList(result, subList)
-	if err != nil {
-		return errwrap.Wrapf("error parsing 'listener' stanzas: {{err}}", err)
-	}
-	return nil
-}
-
-func parseListenersList(result *Config, list *ast.ObjectList) error {
 	name := "listener"
 
 	listenerList := list.Filter(name)
@@ -257,7 +218,7 @@ func parseListenersList(result *Config, list *ast.ObjectList) error {
 		})
 	}
 
-	result.Listeners.Listeners = listeners
+	result.Listeners = listeners
 
 	return nil
 }
