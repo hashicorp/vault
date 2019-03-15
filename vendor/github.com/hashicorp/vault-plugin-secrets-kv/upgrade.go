@@ -18,6 +18,15 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func (b *versionedKVBackend) perfSecondaryCheck() bool {
+	replState := b.System().ReplicationState()
+	if (!b.System().LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary)) ||
+		replState.HasState(consts.ReplicationPerformanceStandby) {
+		return true
+	}
+	return false
+}
+
 func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		if atomic.LoadUint32(b.upgrading) == 1 {
@@ -28,7 +37,11 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 			time.Sleep(15 * time.Millisecond)
 
 			if atomic.LoadUint32(b.upgrading) == 1 {
-				return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				if b.perfSecondaryCheck() {
+					return logical.ErrorResponse("Waiting for the primary to upgrade from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service when the primary is finished."), logical.ErrInvalidRequest
+				} else {
+					return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				}
 			}
 		}
 
@@ -74,8 +87,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 
 	// If we are a replication secondary or performance standby, wait until the primary has finished
 	// upgrading.
-	if (!b.System().LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary)) ||
-		replState.HasState(consts.ReplicationPerformanceStandby) {
+	if b.perfSecondaryCheck() {
 		b.Logger().Info("upgrade not running on performance replication secondary or performance standby")
 
 		go func() {
