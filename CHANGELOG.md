@@ -1,5 +1,11 @@
 ## 1.1.0 (Unreleased)
 
+CHANGES:
+ * auth/jwt: Update `bound_audiences` validation during non-OIDC logins to accept
+   any matched audience, as documented and handled in OIDC logins.
+   [[GH-30]](https://github.com/hashicorp/vault-plugin-auth-jwt/issues/30)
+ * auth/jwt: Apply `bound_audiences` checks to OIDC paths.
+
 BUG FIXES:
 
  * agent/caching: Non-2xx (e.g. redirects) and non-JSON responses returned by
@@ -9,6 +15,7 @@ BUG FIXES:
  * agent/caching: Add locking during cache lookup to prevent identical
    non-cached requests made in parallel launch multiple rewener goroutines.
    [[GH-6374]](https://github.com/hashicorp/vault/pull/6374)
+ * auth/jwt: Apply `bound_claims` validation across all login paths.
  * core: The `operator migrate` command will no longer hang on empty key names.
    [[GH-6371]](https://github.com/hashicorp/vault/pull/6371)
  * secret/ssh: Fix for a bug where attempting to delete the last ssh role
@@ -23,6 +30,11 @@ BUG FIXES:
    return a error response if a filtered mount path is requested.
    [[GH-6412]](https://github.com/hashicorp/vault/pull/6412)
    
+FEATURES:
+
+ * core: on non-windows platforms a SIGUSR2 will make the server log a dump of
+   all running goroutines' stack traces for debugging purposes.
+ 
 IMPROVEMENTS:
 
  * agent/caching: Agent Caching will now return `X-Cache` and `Age` headers on

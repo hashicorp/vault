@@ -179,6 +179,8 @@ The top level `cache` block has the following configuration entries:
 
 ## Configuration (`listener`)
 
+- `listener` `(array of objects: required)` - Configuration for the listeners.
+
 There can be one or more `listener` blocks at the top level.
 These configuration values are common to all `listener` blocks.
 
@@ -199,40 +201,6 @@ These configuration values are common to all `listener` blocks.
 
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
-
-### Configuration (`vault`)
-
-There can at most be one top level `vault` block and it has the following
-configuration entries:
-
-- `address (string: optional)` - The address of the Vault server. This should
-  be a complete URL such as `https://127.0.0.1:8200`. This value can be
-  overridden by setting the `VAULT_ADDR` environment variable.
-
-- `ca_cert (string: optional)` - Path on the local disk to a single PEM-encoded
-  CA certificate to verify the Vault server's SSL certificate. This value can
-  be overridden by setting the `VAULT_CACERT` environment variable.
-
-- `ca_path (string: optional)` - Path on the local disk to a directory of
-  PEM-encoded CA certificates to verify the Vault server's SSL certificate.
-  This value can be overridden by setting the `VAULT_CAPATH` environment
-  variable.
-
-- `client_cert (string: option)` - Path on the local disk to a single
-  PEM-encoded CA certificate to use for TLS authentication to the Vault server.
-  This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
-  variable.
-
-- `client_key (string: option)` - Path on the local disk to a single
-  PEM-encoded private key matching the client certificate from `client_cert`.
-  This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
-  variable.
-
-- `tls_skip_verify (string: optional)` - Disable verification of TLS
-  certificates. Using this option is highly discouraged as it decreases the
-  security of data transmissions to and from the Vault server. This value can
-  be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
-
 
 ### Example Configuration
 

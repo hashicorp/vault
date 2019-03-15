@@ -1379,16 +1379,16 @@
 			"revisionTime": "2018-09-07T13:02:40Z"
 		},
 		{
-			"checksumSHA1": "NRGHY73VI2kEgy+FSDOuSsixS4k=",
+			"checksumSHA1": "X+7nogMjQUasRQaYh+0TGgbSrU8=",
 			"path": "github.com/hashicorp/vault-plugin-auth-alicloud",
-			"revision": "f278a59ca3e8aeafeda7cb9a14e8815359d25fcd",
-			"revisionTime": "2018-11-09T18:06:36Z"
+			"revision": "98628998247dcf8ab75c5134a493230f852746a7",
+			"revisionTime": "2019-03-11T15:55:55Z"
 		},
 		{
 			"checksumSHA1": "xdrSQoX7B7Hr4iWm9T2+5wHVpHQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-alicloud/tools",
-			"revision": "f278a59ca3e8aeafeda7cb9a14e8815359d25fcd",
-			"revisionTime": "2018-11-09T18:06:36Z"
+			"revision": "98628998247dcf8ab75c5134a493230f852746a7",
+			"revisionTime": "2019-03-11T15:55:55Z"
 		},
 		{
 			"checksumSHA1": "UgLfwpXoRLpMOF0rzaj+cRcTtdo=",
@@ -1457,22 +1457,22 @@
 			"revisionTime": "2018-12-07T23:25:00Z"
 		},
 		{
-			"checksumSHA1": "tFP1EEyVlomSSx46NHDZWGPzUz0=",
+			"checksumSHA1": "QRHQkEIrTKzFEO3CNwo0jYNizxE=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "d6445459e80cd8b24c9e828a0a19f77e9f836206",
-			"revisionTime": "2018-09-21T17:32:00Z"
+			"revision": "621231cb86fe0c4bb5d77f6a0be4bf7daef5f078",
+			"revisionTime": "2019-03-11T20:06:49Z"
 		},
 		{
-			"checksumSHA1": "zwKMP2eBB2fKeOXMf0afsbw1bS0=",
+			"checksumSHA1": "itK0aDL54CoWfKfpkCAp/7MdTgk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "d6445459e80cd8b24c9e828a0a19f77e9f836206",
-			"revisionTime": "2018-09-21T17:32:00Z"
+			"revision": "621231cb86fe0c4bb5d77f6a0be4bf7daef5f078",
+			"revisionTime": "2019-03-11T20:06:49Z"
 		},
 		{
 			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "d6445459e80cd8b24c9e828a0a19f77e9f836206",
-			"revisionTime": "2018-09-21T17:32:00Z"
+			"revision": "621231cb86fe0c4bb5d77f6a0be4bf7daef5f078",
+			"revisionTime": "2019-03-11T20:06:49Z"
 		},
 		{
 			"checksumSHA1": "StwRTX92gyH7iHkyZk4df+dLISM=",
@@ -1481,10 +1481,10 @@
 			"revisionTime": "2019-01-16T16:49:38Z"
 		},
 		{
-			"checksumSHA1": "yhUUqN5rbEXnfI8WfGUofXToD+o=",
+			"checksumSHA1": "YUwm53u80o5Z065tAIH8qI5DxWk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "edbfe287c5d9277cecf2c91c79ffcc34f19d2049",
-			"revisionTime": "2019-01-15T20:37:47Z"
+			"revision": "76a82948fe5be8744e41164d4e989dd09589ca67",
+			"revisionTime": "2019-02-27T05:28:36Z"
 		},
 		{
 			"checksumSHA1": "ldkAQ1CpiAaQ9sti0qIch+UyRsI=",

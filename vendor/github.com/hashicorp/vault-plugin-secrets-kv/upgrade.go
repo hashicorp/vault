@@ -37,6 +37,8 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 }
 
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
+	replState := b.System().ReplicationState()
+
 	// Don't run if the plugin is in metadata mode.
 	if pluginutil.InMetadataMode() {
 		b.Logger().Info("upgrade not running while plugin is in metadata mode")
@@ -44,7 +46,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 	}
 
 	// Don't run while on a DR secondary.
-	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+	if replState.HasState(consts.ReplicationDRSecondary) {
 		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
 		return nil
 	}
@@ -53,10 +55,11 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		return errors.New("upgrade already in process")
 	}
 
-	// If we are a replication secondary, wait until the primary has finished
+	// If we are a replication secondary or performance standby, wait until the primary has finished
 	// upgrading.
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-		b.Logger().Info("upgrade not running on performace replication secondary")
+	if (!b.System().LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary)) ||
+		replState.HasState(consts.ReplicationPerformanceStandby) {
+		b.Logger().Info("upgrade not running on performance replication secondary or performance standby")
 
 		go func() {
 			for {
