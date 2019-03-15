@@ -6,6 +6,7 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import withTestWaiter from 'ember-concurrency-test-waiter/with-test-waiter';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
@@ -139,22 +140,24 @@ export default Component.extend(DEFAULTS, {
     }
   }),
 
-  fetchMethods: task(function*() {
-    let store = this.get('store');
-    try {
-      let methods = yield store.findAll('auth-method', {
-        adapterOptions: {
-          unauthenticated: true,
-        },
-      });
-      this.set('methods', methods.map(m => m.serialize({ includeId: true })));
-      next(() => {
-        store.unloadAll('auth-method');
-      });
-    } catch (e) {
-      this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
-    }
-  }),
+  fetchMethods: withTestWaiter(
+    task(function*() {
+      let store = this.get('store');
+      try {
+        let methods = yield store.findAll('auth-method', {
+          adapterOptions: {
+            unauthenticated: true,
+          },
+        });
+        this.set('methods', methods.map(m => m.serialize({ includeId: true })));
+        next(() => {
+          store.unloadAll('auth-method');
+        });
+      } catch (e) {
+        this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
+      }
+    })
+  ),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
@@ -174,27 +177,29 @@ export default Component.extend(DEFAULTS, {
     this.set('error', `Authentication failed: ${errors.join('.')}`);
   },
 
-  authenticate: task(function*(backendType, data) {
-    let clusterId = this.cluster.id;
-    let targetRoute = this.redirectTo || 'vault.cluster';
-    try {
-      let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
+  authenticate: withTestWaiter(
+    task(function*(backendType, data) {
+      let clusterId = this.cluster.id;
+      let targetRoute = this.redirectTo || 'vault.cluster';
+      try {
+        let authResponse = yield this.auth.authenticate({ clusterId, backend: backendType, data });
 
-      let { isRoot, namespace } = authResponse;
-      let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
-      // returning this w/then because if we keep it
-      // in the task, it will get cancelled when the component in un-rendered
-      return transition.followRedirects().then(() => {
-        if (isRoot) {
-          this.flashMessages.warning(
-            'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
-          );
-        }
-      });
-    } catch (e) {
-      this.handleError(e);
-    }
-  }),
+        let { isRoot, namespace } = authResponse;
+        let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
+        // returning this w/then because if we keep it
+        // in the task, it will get cancelled when the component in un-rendered
+        return transition.followRedirects().then(() => {
+          if (isRoot) {
+            this.flashMessages.warning(
+              'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+            );
+          }
+        });
+      } catch (e) {
+        this.handleError(e);
+      }
+    })
+  ),
 
   actions: {
     doSubmit() {
