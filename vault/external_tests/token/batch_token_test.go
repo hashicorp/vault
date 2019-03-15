@@ -300,6 +300,8 @@ path "kv/*" {
 		t.Fatal(err)
 	}
 
+	time.Sleep(1 * time.Second)
+
 	// Verify the batch token is not usable anymore
 	client.SetToken(rootToken)
 	_, err = client.Auth().Token().Lookup(batchToken)
