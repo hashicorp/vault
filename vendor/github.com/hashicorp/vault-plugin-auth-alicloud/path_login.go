@@ -84,7 +84,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	roleNameIfc, ok := data.GetOk("role")
 	if ok {
 		roleName = roleNameIfc.(string)
-	} else {
+	}
+	if roleName == "" {
 		roleName = parsedARN.RoleName
 	}
 
