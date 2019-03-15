@@ -369,7 +369,7 @@ func (c *AgentCommand) Run(args []string) int {
 	})
 
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
+	if config.Cache != nil && len(config.Listeners.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -418,7 +418,7 @@ func (c *AgentCommand) Run(args []string) int {
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 
 		var listeners []net.Listener
-		for i, lnConfig := range config.Cache.Listeners {
+		for i, lnConfig := range config.Listeners.Listeners {
 			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))

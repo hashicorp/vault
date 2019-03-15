@@ -22,7 +22,9 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = true
+}
 
+listeners {
 	listener {
 		type = "unix"
 		address = "/path/to/socket"

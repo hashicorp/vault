@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/parseutil"
 
 	"github.com/hashicorp/hcl"
@@ -19,11 +19,12 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth `hcl:"auto_auth"`
-	ExitAfterAuth bool      `hcl:"exit_after_auth"`
-	PidFile       string    `hcl:"pid_file"`
-	Cache         *Cache    `hcl:"cache"`
-	Vault         *Vault    `hcl:"vault"`
+	AutoAuth      *AutoAuth  `hcl:"auto_auth"`
+	ExitAfterAuth bool       `hcl:"exit_after_auth"`
+	PidFile       string     `hcl:"pid_file"`
+	Listeners     *Listeners `hcl:"listeners"`
+	Cache         *Cache     `hcl:"cache"`
+	Vault         *Vault     `hcl:"vault"`
 }
 
 type Vault struct {
@@ -36,8 +37,11 @@ type Vault struct {
 }
 
 type Cache struct {
-	UseAutoAuthToken bool        `hcl:"use_auto_auth_token"`
-	Listeners        []*Listener `hcl:"listeners"`
+	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
+}
+
+type Listeners struct {
+	Listeners []*Listener `hcl:"listeners"`
 }
 
 type Listener struct {
@@ -112,6 +116,11 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
+	err = parseListeners(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
+	}
+
 	err = parseCache(&result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
@@ -171,6 +180,30 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Cache = &c
+	return nil
+}
+
+func parseListeners(result *Config, list *ast.ObjectList) error {
+	name := "listeners"
+
+	listenersList := list.Filter(name)
+	if len(listenersList.Items) == 0 {
+		return nil
+	}
+
+	if len(listenersList.Items) > 1 {
+		return fmt.Errorf("one and only one %q block is required", name)
+	}
+
+	item := listenersList.Items[0]
+
+	var l Listeners
+	err := hcl.DecodeObject(&l, item.Val)
+	if err != nil {
+		return err
+	}
+
+	result.Listeners = &l
 
 	subs, ok := item.Val.(*ast.ObjectType)
 	if !ok {
@@ -178,15 +211,14 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	}
 	subList := subs.List
 
-	err = parseListeners(result, subList)
+	err = parseListenersList(result, subList)
 	if err != nil {
 		return errwrap.Wrapf("error parsing 'listener' stanzas: {{err}}", err)
 	}
-
 	return nil
 }
 
-func parseListeners(result *Config, list *ast.ObjectList) error {
+func parseListenersList(result *Config, list *ast.ObjectList) error {
 	name := "listener"
 
 	listenerList := list.Filter(name)
@@ -225,7 +257,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		})
 	}
 
-	result.Cache.Listeners = listeners
+	result.Listeners.Listeners = listeners
 
 	return nil
 }

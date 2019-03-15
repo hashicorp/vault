@@ -42,6 +42,8 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		},
 		Cache: &Cache{
 			UseAutoAuthToken: true,
+		},
+		Listeners: &Listeners{
 			Listeners: []*Listener{
 				&Listener{
 					Type: "unix",
