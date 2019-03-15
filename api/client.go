@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -465,9 +466,9 @@ func NewClient(c *Config) (*Client, error) {
 
 	// set and poll token from file sink if it is available
 	if tokenSinkPath != "" {
-		token, err := readAgentTokenFromFile(tokenSinkPath)
+		token, err := readTokenFromFile(tokenSinkPath)
 		if err != nil {
-			return nil, err
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", tokenSinkPath), err)
 		}
 		client.token = token
 		// poll file for updates
@@ -479,12 +480,21 @@ func NewClient(c *Config) (*Client, error) {
 
 // contacts agent for a file sink path
 func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
-	uri := fmt.Sprintf("%s%s", agentAddress, consts.AgentPathFileSinks)
+	uri, err := url.Parse(agentAddress)
+	if err != nil {
+		return "", err
+	}
+	if uri.Path != "" {
+		return "", errors.New("configured agent address url should not specify a path")
+	}
+	uri.Path = consts.AgentPathFileSinks
 	if c.config.AgentSinkName != "" {
-		uri = fmt.Sprintf("%s?sinkName=%s", uri, url.QueryEscape(c.config.AgentSinkName))
+		v := url.Values{}
+		v.Set("sinkName", c.config.AgentSinkName)
+		uri.RawQuery = v.Encode()
 	}
 
-	response, err := c.config.HttpClient.Get(uri)
+	response, err := c.config.HttpClient.Get(uri.String())
 	if response != nil {
 		defer response.Body.Close()
 	}
@@ -494,7 +504,7 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 		return "", err
 	}
 
-	if response.StatusCode != 200 {
+	if response.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("received error code %d from agent: %s", response.StatusCode, string(responseBodyBytes))
 	}
 
@@ -523,7 +533,7 @@ func (c *Client) pollFileForToken(filePath string) {
 	}()
 }
 
-func readAgentTokenFromFile(filePath string) (string, error) {
+func readTokenFromFile(filePath string) (string, error) {
 	tokenBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", err
