@@ -1,6 +1,8 @@
 ## 1.1.0 (Unreleased)
 
 CHANGES:
+ * agent/caching: Move listeners config out of cache{} block to top level.  
+   Allow running agent with cache enabled and auto-auth disabled.
  * auth/jwt: Update `bound_audiences` validation during non-OIDC logins to accept
    any matched audience, as documented and handled in OIDC logins.
    [[GH-30]](https://github.com/hashicorp/vault-plugin-auth-jwt/issues/30)
