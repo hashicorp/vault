@@ -177,11 +177,11 @@ The top level `cache` block has the following configuration entries:
   configuration will be overridden and the token in the request will be used to
   forward the request to the Vault server.
 
+## Configuration (`listener`)
+
 - `listener` `(array of objects: required)` - Configuration for the listeners.
 
-### Configuration (`listener`)
-
-There can be one or more `listener` blocks inside the top-level `cache` block.
+There can be one or more `listener` blocks at the top level.
 These configuration values are common to all `listener` blocks.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
@@ -207,17 +207,38 @@ These configuration values are common to all `listener` blocks.
 An example configuration, with very contrived values, follows:
 
 ```javascript
+auto_auth {
+  method {
+    type = "aws"
+    wrap_ttl = 300
+    config = {
+      role = "foobar"
+    }
+  }
+
+  sink {
+    type = "file"
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+}
+
 cache {
   use_auto_auth_token = true
+}
 
-  listener "unix" {
-    address = "/path/to/socket"
-    tls_disable = true
-  }
+listener "unix" {
+  address = "/path/to/socket"
+  tls_disable = true
+}
 
-  listener "tcp" {
-    address = "127.0.0.1:8200"
-    tls_disable = true
-  }
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_disable = true
+}
+
+vault {
+  address = "http://127.0.0.1:8200"
 }
 ```

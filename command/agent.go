@@ -202,9 +202,12 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
-	if config.AutoAuth == nil {
-		c.UI.Error("No auto_auth block found in config file")
+	if config.AutoAuth == nil && config.Cache == nil {
+		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
+	}
+	if config.AutoAuth == nil {
+		c.UI.Info("No auto_auth block found in config file, not starting automatic authentication feature")
 	}
 
 	if config.Vault != nil {
@@ -288,60 +291,62 @@ func (c *AgentCommand) Run(args []string) int {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
+	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
-	for _, sc := range config.AutoAuth.Sinks {
-		switch sc.Type {
-		case "file":
-			config := &sink.SinkConfig{
-				Logger:  c.logger.Named("sink.file"),
-				Config:  sc.Config,
-				Client:  client,
-				WrapTTL: sc.WrapTTL,
-				DHType:  sc.DHType,
-				DHPath:  sc.DHPath,
-				AAD:     sc.AAD,
-			}
-			s, err := file.NewFileSink(config)
-			if err != nil {
-				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+	if config.AutoAuth != nil {
+		for _, sc := range config.AutoAuth.Sinks {
+			switch sc.Type {
+			case "file":
+				config := &sink.SinkConfig{
+					Logger:  c.logger.Named("sink.file"),
+					Config:  sc.Config,
+					Client:  client,
+					WrapTTL: sc.WrapTTL,
+					DHType:  sc.DHType,
+					DHPath:  sc.DHPath,
+					AAD:     sc.AAD,
+				}
+				s, err := file.NewFileSink(config)
+				if err != nil {
+					c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
+					return 1
+				}
+				config.Sink = s
+				sinks = append(sinks, config)
+			default:
+				c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
 				return 1
 			}
-			config.Sink = s
-			sinks = append(sinks, config)
+		}
+
+		authConfig := &auth.AuthConfig{
+			Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
+			MountPath: config.AutoAuth.Method.MountPath,
+			Config:    config.AutoAuth.Method.Config,
+		}
+		switch config.AutoAuth.Method.Type {
+		case "alicloud":
+			method, err = alicloud.NewAliCloudAuthMethod(authConfig)
+		case "aws":
+			method, err = aws.NewAWSAuthMethod(authConfig)
+		case "azure":
+			method, err = azure.NewAzureAuthMethod(authConfig)
+		case "gcp":
+			method, err = gcp.NewGCPAuthMethod(authConfig)
+		case "jwt":
+			method, err = jwt.NewJWTAuthMethod(authConfig)
+		case "kubernetes":
+			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
+		case "approle":
+			method, err = approle.NewApproleAuthMethod(authConfig)
 		default:
-			c.UI.Error(fmt.Sprintf("Unknown sink type %q", sc.Type))
+			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
 			return 1
 		}
-	}
-
-	var method auth.AuthMethod
-	authConfig := &auth.AuthConfig{
-		Logger:    c.logger.Named(fmt.Sprintf("auth.%s", config.AutoAuth.Method.Type)),
-		MountPath: config.AutoAuth.Method.MountPath,
-		Config:    config.AutoAuth.Method.Config,
-	}
-	switch config.AutoAuth.Method.Type {
-	case "alicloud":
-		method, err = alicloud.NewAliCloudAuthMethod(authConfig)
-	case "aws":
-		method, err = aws.NewAWSAuthMethod(authConfig)
-	case "azure":
-		method, err = azure.NewAzureAuthMethod(authConfig)
-	case "gcp":
-		method, err = gcp.NewGCPAuthMethod(authConfig)
-	case "jwt":
-		method, err = jwt.NewJWTAuthMethod(authConfig)
-	case "kubernetes":
-		method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
-	case "approle":
-		method, err = approle.NewApproleAuthMethod(authConfig)
-	default:
-		c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
-		return 1
-	}
-	if err != nil {
-		c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
-		return 1
+		if err != nil {
+			c.UI.Error(errwrap.Wrapf(fmt.Sprintf("Error creating %s auth method: {{err}}", config.AutoAuth.Method.Type), err).Error())
+			return 1
+		}
 	}
 
 	// Output the header that the server has started
@@ -355,21 +360,8 @@ func (c *AgentCommand) Run(args []string) int {
 	default:
 	}
 
-	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger:        c.logger.Named("sink.server"),
-		Client:        client,
-		ExitAfterAuth: config.ExitAfterAuth,
-	})
-
-	ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-		Logger:                       c.logger.Named("auth.handler"),
-		Client:                       c.client,
-		WrapTTL:                      config.AutoAuth.Method.WrapTTL,
-		EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-	})
-
 	// Parse agent listener configurations
-	if config.Cache != nil && len(config.Cache.Listeners) != 0 {
+	if config.Cache != nil && len(config.Listeners) != 0 {
 		cacheLogger := c.logger.Named("cache")
 
 		// Create the API proxier
@@ -418,7 +410,7 @@ func (c *AgentCommand) Run(args []string) int {
 		mux.Handle("/", cache.Handler(ctx, cacheLogger, leaseCache, inmemSink))
 
 		var listeners []net.Listener
-		for i, lnConfig := range config.Cache.Listeners {
+		for i, lnConfig := range config.Listeners {
 			ln, tlsConf, err := cache.StartListener(lnConfig)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error starting listener: %v", err))
@@ -461,9 +453,27 @@ func (c *AgentCommand) Run(args []string) int {
 		defer c.cleanupGuard.Do(listenerCloseFunc)
 	}
 
+	var ssDoneCh, ahDoneCh chan struct{}
 	// Start auto-auth and sink servers
-	go ah.Run(ctx, method)
-	go ss.Run(ctx, ah.OutputCh, sinks)
+	if method != nil {
+		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       c.client,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
+		})
+		ahDoneCh = ah.DoneCh
+
+		ss := sink.NewSinkServer(&sink.SinkServerConfig{
+			Logger:        c.logger.Named("sink.server"),
+			Client:        client,
+			ExitAfterAuth: config.ExitAfterAuth,
+		})
+		ssDoneCh = ss.DoneCh
+
+		go ah.Run(ctx, method)
+		go ss.Run(ctx, ah.OutputCh, sinks)
+	}
 
 	// Server configuration output
 	padding := 24
@@ -494,14 +504,18 @@ func (c *AgentCommand) Run(args []string) int {
 	}()
 
 	select {
-	case <-ss.DoneCh:
+	case <-ssDoneCh:
 		// This will happen if we exit-on-auth
 		c.logger.Info("sinks finished, exiting")
 	case <-c.ShutdownCh:
 		c.UI.Output("==> Vault agent shutdown triggered")
 		cancelFunc()
-		<-ah.DoneCh
-		<-ss.DoneCh
+		if ahDoneCh != nil {
+			<-ahDoneCh
+		}
+		if ssDoneCh != nil {
+			<-ssDoneCh
+		}
 	}
 
 	return 0
