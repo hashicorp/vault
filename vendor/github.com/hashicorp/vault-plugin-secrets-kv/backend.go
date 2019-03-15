@@ -149,23 +149,6 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 	return b, nil
 }
 
-func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
-	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
-	if err != nil {
-		return false, err
-	}
-
-	var upgradeInfo UpgradeInfo
-	if upgradeEntry != nil {
-		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	return upgradeInfo.Done, nil
-}
-
 func pathInvalid(b *versionedKVBackend) []*framework.Path {
 	handler := func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		switch req.Path {

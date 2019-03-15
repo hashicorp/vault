@@ -36,6 +36,23 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 	}
 }
 
+func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
+	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return false, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgradeInfo.Done, nil
+}
+
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
 	replState := b.System().ReplicationState()
 
@@ -68,7 +85,14 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 				done, err := b.upgradeDone(ctx, s)
 				if err != nil {
 					b.Logger().Error("upgrading resulted in error", "error", err)
-					return
+
+					// If we failed because the context is closed we are
+					// shutting down. Close this go routine and set the upgrade
+					// flag back to 0 for good measure.
+					if ctx.Err() != nil {
+						atomic.StoreUint32(b.upgrading, 0)
+						return
+					}
 				}
 
 				if done {
