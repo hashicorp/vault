@@ -1,4 +1,5 @@
 import { waitFor, click, fillIn, findAll, currentURL, settled } from '@ember/test-helpers';
+import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
@@ -26,7 +27,7 @@ module('Acceptance | policies (old)', function(hooks) {
     await click('[data-test-policy-save]');
     await waitFor('[data-test-error]');
     assert.dom('[data-test-error]').exists({ count: 1 }, 'renders error messages on save');
-    findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
+    await run(() => findAll('.CodeMirror')[0].CodeMirror.setValue(policyString));
     await click('[data-test-policy-save]');
     // wait for redirect
     await settled();
@@ -67,7 +68,7 @@ module('Acceptance | policies (old)', function(hooks) {
     await waitFor('[data-test-policy-create-link]');
     await click('[data-test-policy-create-link]');
     await fillIn('[data-test-policy-input="name"]', policyName);
-    findAll('.CodeMirror')[0].CodeMirror.setValue(policyString);
+    await run(() => findAll('.CodeMirror')[0].CodeMirror.setValue(policyString));
     await click('[data-test-policy-save]');
     // await for redirect
     await settled();
