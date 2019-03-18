@@ -63,7 +63,7 @@ type rollbackState struct {
 	rollbackFunc func(context.Context) error
 }
 
-// Run the rollback once, retrun true if we were the one that ran it. Caller
+// Run the rollback once, return true if we were the one that ran it. Caller
 // should hold the statelock.
 func (rs *rollbackState) run(ctx context.Context) (ran bool, err error) {
 	rs.once.Do(func() {
