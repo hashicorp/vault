@@ -288,12 +288,12 @@ path "/auth/token/create" {
 		t.Fatal("expected notexist err")
 	}
 
-	token, err := testAuthHelper.getToken(tokenFile)
+	_, err = testAuthHelper.getToken(tokenFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sinks := append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
+	sinks = append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
 	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -469,7 +469,7 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 	defer cleanup()
 
 	clientConfig := api.DefaultConfig()
-	clientConfig.AgentFileSinkPath = out
+	clientConfig.TokenFileSinkPath = out
 	testClient, err := api.NewClient(clientConfig)
 	if err != nil {
 		t.Fatal(err)
