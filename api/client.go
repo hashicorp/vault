@@ -381,6 +381,7 @@ type Client struct {
 	wrappingLookupFunc WrappingLookupFunc
 	mfaCreds           []string
 	policyOverride     bool
+	pollingChannel     chan int
 }
 
 // NewClient returns a new client for the given configuration.
@@ -462,6 +463,7 @@ func NewClient(c *Config) (*Client, error) {
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", c.AgentAddress), err)
 		}
+		c.TokenFileSinkPath = tokenSinkPath
 	}
 
 	// set and poll token from file sink if it is available
@@ -472,7 +474,8 @@ func NewClient(c *Config) (*Client, error) {
 		}
 		client.token = token
 		// poll file for updates
-		client.pollFileForToken(tokenSinkPath)
+		client.pollingChannel = make(chan int)
+		client.pollFileForToken(tokenSinkPath, client.pollingChannel)
 	}
 
 	return client, nil
@@ -517,17 +520,23 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 }
 
 // starts a go routine to poll the specified file for a token
-func (c *Client) pollFileForToken(filePath string) {
+func (c *Client) pollFileForToken(filePath string, quit chan int) {
 	pollingInterval := 60 * time.Second //todo - what should this be?
 	go func() {
 		for {
-			time.Sleep(pollingInterval)
-			token, err := readAgentTokenFromFile(filePath) // todo - what to do with the error?
-			// update the client's token if it has changed and there was no error reading the file
-			if err == nil && token != c.token {
-				c.modifyLock.Lock()
-				c.token = token
-				c.modifyLock.Unlock()
+			select {
+			case <-quit:
+				quit <- 1
+				return
+			default:
+				time.Sleep(pollingInterval)
+				token, err := readTokenFromFile(filePath) // todo - what to do with the error?
+				// update the client's token if it has changed and there was no error reading the file
+				if err == nil && token != c.token {
+					c.modifyLock.Lock()
+					c.token = token
+					c.modifyLock.Unlock()
+				}
 			}
 		}
 	}()
@@ -667,19 +676,47 @@ func (c *Client) Token() string {
 
 // SetToken sets the token directly. This won't perform any auth
 // verification, it simply sets the token properly for future requests.
+// Setting a token will kill any routine polling a sink for a token.
 func (c *Client) SetToken(v string) {
-	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
+	switch {
+	// no op
+	case v == "" && c.config.TokenFileSinkPath == "":
 
-	c.token = v
+	// a token is provided and should cancel polling
+	case v != "":
+		if c.pollingChannel != nil {
+			c.pollingChannel <- 1
+			<-c.pollingChannel // this is to avoid grabbing c.modifyLock at the same time as the pollFileForToken routine
+		}
+		c.modifyLock.Lock()
+		defer c.modifyLock.Unlock()
+		c.token = v
+
+	// case a token is not provided and should return to polling if possible
+	case v == "" && c.config.TokenFileSinkPath != "":
+		// ensure polling channel is setup
+		if c.pollingChannel == nil {
+			c.pollingChannel = make(chan int)
+		}
+		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
+	}
 }
 
-// ClearToken deletes the token if it is set or does nothing otherwise.
+// ClearToken deletes the token if it is set and returns to polling if a
+// tokenFileSinkPath was configured
 func (c *Client) ClearToken() {
 	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
-
 	c.token = ""
+	c.modifyLock.Unlock()
+
+	// was a file sink used previously
+	if c.config.TokenFileSinkPath != "" {
+		// ensure polling channel is setup
+		if c.pollingChannel == nil {
+			c.pollingChannel = make(chan int)
+		}
+		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
+	}
 }
 
 // Headers gets the current set of headers used for requests. This returns a
