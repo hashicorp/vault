@@ -7,7 +7,7 @@
 **See**
 
 - [Uses of AlertBanner](https://github.com/hashicorp/vault/search?l=Handlebars&q=AlertBanner)
-- [AlertBanner Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-popup.js)
+- [AlertBanner Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-banner.js)
 
 **Properties**
 
