@@ -20,6 +20,8 @@ IMPROVEMENTS:
    responses to indicates whether a response was a cache hit or miss, and
    the freshness of the cached response when applicable.
    [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
+ * sentinel: add token namespace id and path, available in rules as 
+   token.namespace.id and token.namespace.path.
 
 BUG FIXES:
 
