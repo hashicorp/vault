@@ -138,7 +138,7 @@ func (m *RollbackManager) triggerRollbacks() {
 	}
 }
 
-// startRollback is used to start an async rollback attempt.
+// startOrLookupRollback is used to start an async rollback attempt.
 // This must be called with the inflightLock held.
 func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath string, grabStatelock bool) *rollbackState {
 	m.inflightLock.Lock()
