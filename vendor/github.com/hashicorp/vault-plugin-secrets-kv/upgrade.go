@@ -94,17 +94,17 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 			for {
 				time.Sleep(time.Second)
 
+				// If we failed because the context is closed we are
+				// shutting down. Close this go routine and set the upgrade
+				// flag back to 0 for good measure.
+				if ctx.Err() != nil {
+					atomic.StoreUint32(b.upgrading, 0)
+					return
+				}
+
 				done, err := b.upgradeDone(ctx, s)
 				if err != nil {
 					b.Logger().Error("upgrading resulted in error", "error", err)
-
-					// If we failed because the context is closed we are
-					// shutting down. Close this go routine and set the upgrade
-					// flag back to 0 for good measure.
-					if ctx.Err() != nil {
-						atomic.StoreUint32(b.upgrading, 0)
-						return
-					}
 				}
 
 				if done {
