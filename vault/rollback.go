@@ -59,7 +59,8 @@ type RollbackManager struct {
 type rollbackState struct {
 	lastError error
 	sync.WaitGroup
-	cancelLockGrabCh chan struct{}
+	cancelLockGrabCtx       context.Context
+	cancelLockGrabCtxCancel context.CancelFunc
 }
 
 // NewRollbackManager is used to create a new rollback manager
@@ -148,8 +149,10 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 		return rsInflight
 	}
 
+	cancelCtx, cancelFunc := context.WithCancel(context.Background())
 	rs := &rollbackState{
-		cancelLockGrabCh: make(chan struct{}),
+		cancelLockGrabCtx:       cancelCtx,
+		cancelLockGrabCtxCancel: cancelFunc,
 	}
 
 	// If no inflight rollback is already running, kick one off
@@ -201,7 +204,7 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 
 			select {
 			case <-m.shutdownCh:
-			case <-rs.cancelLockGrabCh:
+			case <-rs.cancelLockGrabCtx.Done():
 			case <-doneCh:
 			}
 		}()
@@ -259,7 +262,7 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	// Since we have the statelock held, tell any inflight rollback to give up
 	// trying to aquire it. This will prevent deadlocks in the case where we
 	// have the write lock.
-	close(rs.cancelLockGrabCh)
+	rs.cancelLockGrabCtxCancel()
 
 	// It's safe to do this, since the other thread either already has the lock
 	// held, or we just canceled it above.
