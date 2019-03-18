@@ -261,7 +261,9 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 
 	// Since we have the statelock held, tell any inflight rollback to give up
 	// trying to aquire it. This will prevent deadlocks in the case where we
-	// have the write lock.
+	// have the write lock. In the case where it was waiting to grab
+	// a read lock it will then simply continue with the rollback
+	// operation under the protection of our write lock.
 	rs.cancelLockGrabCtxCancel()
 
 	// It's safe to do this, since the other thread either already has the lock
