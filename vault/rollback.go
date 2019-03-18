@@ -59,18 +59,7 @@ type RollbackManager struct {
 type rollbackState struct {
 	lastError error
 	sync.WaitGroup
-	once         sync.Once
-	rollbackFunc func(context.Context) error
-}
-
-// Run the rollback once, return true if we were the one that ran it. Caller
-// should hold the statelock.
-func (rs *rollbackState) run(ctx context.Context) (ran bool, err error) {
-	rs.once.Do(func() {
-		ran = true
-		err = rs.rollbackFunc(ctx)
-	})
-	return
+	cancelLockGrabCh chan struct{}
 }
 
 // NewRollbackManager is used to create a new rollback manager
@@ -160,40 +149,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	}
 
 	rs := &rollbackState{
-		rollbackFunc: func(ctx context.Context) error {
-			ns, err := namespace.FromContext(ctx)
-			if err != nil {
-				return err
-			}
-			if ns == nil {
-				return namespace.ErrNoNamespace
-			}
-
-			// Invoke a RollbackOperation
-			req := &logical.Request{
-				Operation: logical.RollbackOperation,
-				Path:      ns.TrimmedPath(fullPath),
-			}
-
-			var cancelFunc context.CancelFunc
-			ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
-			_, err = m.router.Route(ctx, req)
-			cancelFunc()
-
-			// If the error is an unsupported operation, then it doesn't
-			// matter, the backend doesn't support it.
-			if err == logical.ErrUnsupportedOperation {
-				err = nil
-			}
-			// If we failed due to read-only storage, we can't do anything; ignore
-			if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
-				err = nil
-			}
-			if err != nil {
-				m.logger.Error("error rolling back", "path", fullPath, "error", err)
-			}
-			return nil
-		},
+		cancelLockGrabCh: make(chan struct{}),
 	}
 
 	// If no inflight rollback is already running, kick one off
@@ -220,26 +176,76 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 		m.inflightLock.Unlock()
 	}()
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if ns == nil {
+		return namespace.ErrNoNamespace
+	}
+
+	// Invoke a RollbackOperation
+	req := &logical.Request{
+		Operation: logical.RollbackOperation,
+		Path:      ns.TrimmedPath(fullPath),
+	}
+
+	releaseLock := true
 	if grabStatelock {
+		doneCh := make(chan struct{})
+		defer close(doneCh)
+
+		stopCh := make(chan struct{})
+		go func() {
+			defer close(stopCh)
+
+			select {
+			case <-m.shutdownCh:
+			case <-rs.cancelLockGrabCh:
+			case <-doneCh:
+			}
+		}()
+
 		// Grab the statelock or stop
-		if stopped := grabLockOrStop(m.core.stateLock.RLock, m.core.stateLock.RUnlock, m.shutdownCh); stopped {
-			return errors.New("rollback shutting down")
+		if stopped := grabLockOrStop(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh); stopped {
+			// If we stopped due to shutdown, return. Otherwise another thread
+			// is holding the lock for us, continue on.
+			select {
+			case <-m.shutdownCh:
+				return errors.New("rollback shutting down")
+			default:
+				releaseLock = false
+			}
 		}
 	}
 
-	// Run the rollback
-	_, err = rs.run(ctx)
-
-	if grabStatelock {
+	var cancelFunc context.CancelFunc
+	ctx, cancelFunc = context.WithTimeout(ctx, DefaultMaxRequestDuration)
+	_, err = m.router.Route(ctx, req)
+	if grabStatelock && releaseLock {
 		m.core.stateLock.RUnlock()
 	}
+	cancelFunc()
 
+	// If the error is an unsupported operation, then it doesn't
+	// matter, the backend doesn't support it.
+	if err == logical.ErrUnsupportedOperation {
+		err = nil
+	}
+	// If we failed due to read-only storage, we can't do anything; ignore
+	if err != nil && strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+		err = nil
+	}
+	if err != nil {
+		m.logger.Error("error rolling back", "path", fullPath, "error", err)
+	}
 	return
 }
 
 // Rollback is used to trigger an immediate rollback of the path,
 // or to join an existing rollback operation if in flight. Caller should have
-// core's statelock held
+// core's statelock held (write OR read). If an already inflight rollback is
+// happening this function will simply wait for it to complete
 func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -250,18 +256,13 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	// Check for an existing attempt or start one if none
 	rs := m.startOrLookupRollback(ctx, fullPath, false)
 
-	// Do a run here in the event an already inflight rollback is blocked on
-	// grabbing the statelock. This prevents a deadlock in some cases where the
-	// caller of this function holds the write statelock.
-	ran, err := rs.run(ctx)
-	// If we were the runner, return the error
-	if ran {
-		return err
-	}
+	// Since we have the statelock held, tell any inflight rollback to give up
+	// trying to aquire it. This will prevent deadlocks in the case where we
+	// have the write lock.
+	close(rs.cancelLockGrabCh)
 
-	// If we weren't the runner, wait for the inflight attempt to finish. It's
-	// safe to do this, since if the other thread starts the run they are
-	// already in possession of the statelock and we are not deadlocked.
+	// It's safe to do this, since the other thread either already has the lock
+	// held, or we just canceled it above.
 	rs.Wait()
 
 	// Return the last error
