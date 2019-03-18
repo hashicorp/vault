@@ -1,13 +1,14 @@
 ## 1.1.0 (Unreleased)
 
 CHANGES:
- * agent/caching: Move listeners config out of cache{} block to top level.  
+
+ * agent/caching: Move listeners config out of cache{} block to top level.
    Allow running agent with cache enabled and auto-auth disabled.
  * auth/jwt: Update `bound_audiences` validation during non-OIDC logins to accept
    any matched audience, as documented and handled in OIDC logins.
    [[GH-30]](https://github.com/hashicorp/vault-plugin-auth-jwt/issues/30)
  * auth/jwt: Apply `bound_audiences` checks to OIDC paths.
-   
+
 FEATURES:
 
  * core: on non-windows platforms a SIGUSR2 will make the server log a dump of
@@ -19,7 +20,7 @@ IMPROVEMENTS:
    responses to indicates whether a response was a cache hit or miss, and
    the freshness of the cached response when applicable.
    [[GH-6394]](https://github.com/hashicorp/vault/pull/6394)
-   
+
 BUG FIXES:
 
  * agent/caching: Non-2xx (e.g. redirects) and non-JSON responses returned by
