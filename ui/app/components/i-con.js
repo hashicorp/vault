@@ -3,6 +3,20 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
+/**
+ * @module ICon
+ * `ICon` components are glyphs used to indicate important information.
+ *
+ * @example
+ * ```js
+ * <ICon @glyph="cancel-square-outline" />
+ * ```
+ * @property [ICon.glyph=null]{String} - The glyph type.
+ *
+ * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=ICon|Uses of ICon}
+ * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/i-con.js|ICon Source Code}
+ */
+
 export const GLYPHS_WITH_SVG_TAG = [
   'cancel-square-outline',
   'cancel-square-fill',

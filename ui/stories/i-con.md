@@ -1,18 +1,22 @@
-# ICon
+<a name="ICon
+`ICon` components are glyphs used to indicate important information.module_"></a>
 
-`ICons` are glyphs used to indicate important information.
+## ICon
+`ICon` components are glyphs used to indicate important information.
 
-## Properties
-| Property | Required | Default value | Type | Description | Example |
-|---|---|---|---|---|
-| glyph | [x] | `null` | string | The glyph type. | `'cancel-square-outline'` |
+**See**
 
-## Usage
+- [Uses of ICon](https://github.com/hashicorp/vault/search?l=Handlebars&q=ICon)
+- [ICon Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/i-con.js)
 
-```javascript
+**Properties**
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| [ICon.glyph] | <code>String</code> | <code></code> | The glyph type. |
+
+**Example**
+
+```js
 <ICon @glyph="cancel-square-outline" />
 ```
-https://github.com/hashicorp/vault/search?l=Handlebars&q=ICon
-
-## Source
-https://github.com/hashicorp/vault/blob/master/ui/app/components/i-con.js
