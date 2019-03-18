@@ -67,6 +67,7 @@ BUG FIXES:
    ignored [GH-6314]
  * core: The `operator migrate` command will no longer hang on empty key names
    [GH-6371]
+ * core: Fix locking issue with rollback manager [GH-6426]
  * identity: Fix a panic at login when external group has a nil alias [GH-6230]
  * namespaces: Clear out identity store items upon namespace deletion
  * replication/perfstandby: Fixed a bug causing performance standbys to wait
