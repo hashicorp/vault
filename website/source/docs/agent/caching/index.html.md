@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Caching"
-sidebar_title: "Caching <sup>BETA</sup>"
+sidebar_title: "Caching"
 sidebar_current: "docs-agent-caching"
 description: |-
   Vault Agent Caching allows client-side caching of responses containing newly
@@ -17,11 +17,9 @@ newly created tokens. The renewals of the cached tokens and leases are also
 managed by the agent.
 
 -> **Note:** Vault Agent Caching works best with servers/clusters that are
-running on Vault 1.1-beta2 and above due to changes that were introduced
+running on Vault 1.1 and above due to changes that were introduced
 alongside this feature, such as the exposure of the `orphan` field in token
-creation responses. Agent caching functionality was tested against changes
-introduced within 1.1 and thus full caching capabilities may not behave as
-expected when paired with older server versions.
+creation responses.
 
 ## Caching and Renewals
 
@@ -51,14 +49,6 @@ auto-auth token will be used to forward the request to the Vault server. This
 configuration will be overridden if the request already has a token attached,
 in which case, the token present in the request will be used to forward the
 request to the Vault server.
-
--> **Note:** In Vault 1.1-beta1, if the request doesn't already contain a Vault
-token, then the `auto-auth` token will be used to make requests. However, the
-resulting secrets from these `auto-auth` token calls are not cached. This
-behavior will be changed so that they get cached in the upcoming versions. To
-test the caching scenarios in 1.1-beta1, please make login requests or token
-creation requests via the agent. These new tokens and their respective leased
-secrets will get cached.
 
 ## Cache Evictions
 
