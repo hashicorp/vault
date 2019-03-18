@@ -20,7 +20,7 @@
 
 **Example**  
 
-```hbs
+```js
   <ToggleButton @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @toggleTarget={{this}} @toggleAttr="showOptions"/>
  {{#if showOptions}}
     <div>
@@ -28,4 +28,5 @@
         I will be toggled!
       </p>
     </div>
-  {{/if}}```
+  {{/if}}
+  ```

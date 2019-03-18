@@ -5,7 +5,8 @@ import { set, get, defineProperty, computed } from '@ember/object';
  * @module ToggleButton
  * `ToggleButton` components are used to expand and collapse content with a toggle.
  *
- * @example ```js
+ * @example
+ * ```js
  *   <ToggleButton @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @toggleTarget={{this}} @toggleAttr="showOptions"/>
  *  {{#if showOptions}}
  *     <div>
@@ -13,12 +14,13 @@ import { set, get, defineProperty, computed } from '@ember/object';
  *         I will be toggled!
  *       </p>
  *     </div>
- *   {{/if}}```
+ *   {{/if}}
+ * ```
  *
  * @property toggleAttr=null {String} - The attribute upon which to toggle.
  * @property attrTarget=null {Object} - The target upon which the event handler should be added.
- * @property [openLabel=Hide options]{String} - The message to display when the toggle is open.
- * @property [closedLabel=More options]{String} - The message to display when the toggle is closed.
+ * @property [openLabel=Hide options] {String} - The message to display when the toggle is open.
+ * @property [closedLabel=More options] {String} - The message to display when the toggle is closed.
  * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=ToggleButton|Uses of ToggleButton}
  * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/toggle-button.js|ToggleButton Source Code}
  */
