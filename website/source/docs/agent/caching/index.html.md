@@ -53,7 +53,7 @@ in which case, the token present in the request will be used to forward the
 request to the Vault server.
 
 -> **Note:** In Vault 1.1-beta1, if the request doesn't already contain a Vault
-token, then the `auto-auth` token will used to make requests. However, the
+token, then the `auto-auth` token will be used to make requests. However, the
 resulting secrets from these `auto-auth` token calls are not cached. This
 behavior will be changed so that they get cached in the upcoming versions. To
 test the caching scenarios in 1.1-beta1, please make login requests or token
@@ -120,9 +120,9 @@ Agent's listener address will be picked up by the CLI through the
 
 ### Cache Clear
 
-This endpoint clears the cache based on given criteria. To be able to use this
+This endpoint clears the cache based on given criteria. To use this
 API, some information on how the agent caches values should be known
-beforehand. Each response that gets cached in the agent will be indexed on some
+beforehand. Each response that is cached in the agent will be indexed on some
 factors depending on the type of request. Those factors can be the `token` that
 is belonging to the cached response, the `token_accessor` of the token
 belonging to the cached response, the `request_path` that resulted in the
@@ -138,8 +138,8 @@ evicted.
 #### Parameters
 
 - `type` `(strings: required)` - The type of cache entries to evict. Valid
-  values are `request_path`, `lease`, `token`, and `token_accessor`, and `all`.
-  If the `type` is set to `all`, the entire cache is cleared.
+  values are `request_path`, `lease`, `token`, `token_accessor`, and `all`.
+  If the `type` is set to `all`, the _entire cache_ is cleared.
 
 - `value` `(string: required)` - An exact value or the prefix of the value for
   the `type` selected. This parameter is optional when the `type` is set
