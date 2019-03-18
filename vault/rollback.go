@@ -63,7 +63,7 @@ type rollbackState struct {
 	rollbackFunc func(context.Context) error
 }
 
-// Run the rollback once, retrun true if we were the one that ran it. Caller
+// Run the rollback once, return true if we were the one that ran it. Caller
 // should hold the statelock.
 func (rs *rollbackState) run(ctx context.Context) (ran bool, err error) {
 	rs.once.Do(func() {
@@ -250,7 +250,7 @@ func (m *RollbackManager) Rollback(ctx context.Context, path string) error {
 	// Check for an existing attempt or start one if none
 	rs := m.startOrLookupRollback(ctx, fullPath, false)
 
-	// Do a run here in the event an allready inflight rollback is blocked on
+	// Do a run here in the event an already inflight rollback is blocked on
 	// grabbing the statelock. This prevents a deadlock in some cases where the
 	// caller of this function holds the write statelock.
 	ran, err := rs.run(ctx)
