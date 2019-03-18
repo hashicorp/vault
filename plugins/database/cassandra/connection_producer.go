@@ -33,7 +33,7 @@ type cassandraConnectionProducer struct {
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
 	TLSMinVersion      string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency        string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
-  LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
+	LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
 	PemBundle          string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
 	PemJSON            string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
