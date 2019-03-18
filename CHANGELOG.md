@@ -67,7 +67,6 @@ BUG FIXES:
    ignored [GH-6314]
  * core: The `operator migrate` command will no longer hang on empty key names
    [GH-6371]
- * core: Fix locking issue with rollback manager [GH-6426]
  * identity: Fix a panic at login when external group has a nil alias [GH-6230]
  * namespaces: Clear out identity store items upon namespace deletion
  * replication/perfstandby: Fixed a bug causing performance standbys to wait
@@ -89,6 +88,18 @@ BUG FIXES:
    wrap details on the unwrap page [GH-6404]
  * ui: Fix an issue where the policies tab was erroneously hidden [GH-6301]
  * ui: Fix encoding issues with kv interfaces [GH-6294]
+
+## 1.0.3.1 (March 14th, 2019) (Enterprise Only)
+
+SECURITY:
+
+ * A regression was fixed in replication mount filter code introduced in Vault
+   1.0 that caused the underlying filtered data to be replicated to
+   secondaries. This data was not accessible to users via Vault's API but via a
+   combination of privileged configuration file changes/Vault commands it could
+   be read.  Upgrading to this version or 1.1 will fix this issue and cause the
+   replicated data to be deleted from filtered secondaries. More information
+   was sent to customer contacts on file.
  
 ## 1.0.3 (February 12th, 2019)
 
