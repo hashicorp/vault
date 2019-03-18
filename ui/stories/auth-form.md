@@ -7,7 +7,7 @@ The `AuthForm` is used to sign users into Vault.
 **See**
 
 - [Uses of AuthForm](https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthForm)
-- [AuthForm Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-button.js)
+- [AuthForm Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-form.js)
 
 **Properties**
 

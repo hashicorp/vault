@@ -14,7 +14,7 @@
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | [AlertBanner.type] | <code>String</code> | <code></code> | The banner type. This comes from the message-types helper. |
-| [AlertBanner.message] | <code>String</code> | <code></code> | The message to display within the banner. |
+| message | <code>String</code> | <code></code> | The message to display within the banner. |
 
 **Example**
 
