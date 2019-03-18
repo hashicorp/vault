@@ -3,6 +3,21 @@ import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
+/**
+ * @module AuthConfigForm/Config
+ * The `AuthConfigForm/Config` is the base form to configure auth methods.
+ *
+ * @example
+ * ```js
+ * {{auth-config-form/config model.model}}
+ * ```
+ *
+ * @property model=null {String} - The corresponding auth model that is being configured.
+ *
+ * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=auth-config-form/config|Uses of AuthConfigForm/Config}
+ * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-config-form/config.js|AuthConfigForm/Config Source Code}
+ */
+
 const AuthConfigBase = Component.extend({
   tagName: '',
   model: null,
