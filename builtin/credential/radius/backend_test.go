@@ -214,7 +214,7 @@ func TestBackend_acceptance(t *testing.T) {
 		PreCheck:          testAccPreCheck(t, host, port),
 		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
-			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
+			// Login with valid but unknown user will fail because unregistered_user_policies is empty
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),
 			testAccUserLogin(t, username, dataRealpassword, true),
 			// Once the user is registered auth will succeed

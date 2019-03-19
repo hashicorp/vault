@@ -305,7 +305,7 @@ func SetupTwoClusterPerfReplication(t testing.T, perfPrimary, perfSecondary *vau
 
 	token := secret.WrapInfo.Token
 
-	// enable performace secondary
+	// enable performance secondary
 	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
 		"token":   token,
 		"ca_file": perfPrimary.CACertPEMFile,

@@ -94,7 +94,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()

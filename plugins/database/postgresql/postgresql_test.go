@@ -76,7 +76,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -186,7 +186,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Sleep longer than the inital expiration time
+	// Sleep longer than the initial expiration time
 	time.Sleep(2 * time.Second)
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
@@ -207,7 +207,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Sleep longer than the inital expiration time
+	// Sleep longer than the initial expiration time
 	time.Sleep(2 * time.Second)
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
@@ -239,7 +239,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !connProducer.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)

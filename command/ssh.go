@@ -310,7 +310,7 @@ func (c *SSHCommand) Run(args []string) int {
 	}
 
 	// If no mode was given, perform the old-school lookup. Keep this now for
-	// backwards-compatability, but print a warning.
+	// backwards-compatibility, but print a warning.
 	//
 	// TODO: remove in 0.9.0, convert to validation error
 	if c.flagMode == "" {
@@ -863,7 +863,7 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 			continue
 		} else {
 			// The second bare argument is the command to run on the remote host.
-			// We need to break out and stop parsing arugments now
+			// We need to break out and stop parsing arguments now
 			break
 		}
 
