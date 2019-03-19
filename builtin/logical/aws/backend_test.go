@@ -250,7 +250,7 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	// 1. Create user, without any permissions or credentials. At this point,
 	//	  nobody cares if creds compromised because this user can do nothing.
 	// 2. Attach the timebomb policy. This grants no access but puts a time limit
-	//	  on validitity of compromised credentials. If this fails, nobody cares
+	//	  on validity of compromised credentials. If this fails, nobody cares
 	//	  because the user has no permissions to do anything anyway
 	// 3. Attach the AdminAccess policy. The IAM user still has no credentials to
 	//	  do anything
