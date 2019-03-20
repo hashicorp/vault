@@ -271,30 +271,6 @@
 			"revisionTime": "2018-09-09T23:36:13Z"
 		},
 		{
-			"checksumSHA1": "t+uej2kiyqRyQYguygI8t9nJH2w=",
-			"path": "github.com/SermoDigital/jose",
-			"revision": "803625baeddc3526d01d321b5066029f53eafc81",
-			"revisionTime": "2018-01-04T20:38:59Z"
-		},
-		{
-			"checksumSHA1": "u92C5yEz1FLBeoXp8jujn3tUNFI=",
-			"path": "github.com/SermoDigital/jose/crypto",
-			"revision": "803625baeddc3526d01d321b5066029f53eafc81",
-			"revisionTime": "2018-01-04T20:38:59Z"
-		},
-		{
-			"checksumSHA1": "FJP5enLaw1JzZNu6Fen+eEKY7Lo=",
-			"path": "github.com/SermoDigital/jose/jws",
-			"revision": "803625baeddc3526d01d321b5066029f53eafc81",
-			"revisionTime": "2018-01-04T20:38:59Z"
-		},
-		{
-			"checksumSHA1": "3gGGWQ3PcKHE+2cVlkJmIlBfBlw=",
-			"path": "github.com/SermoDigital/jose/jwt",
-			"revision": "803625baeddc3526d01d321b5066029f53eafc81",
-			"revisionTime": "2018-01-04T20:38:59Z"
-		},
-		{
 			"checksumSHA1": "YCtIqzuVlzVA7jh1GQF6BWaom6E=",
 			"path": "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
 			"revision": "c5825d35a94a5a25d936ebe6bed5779255d02cf4",
