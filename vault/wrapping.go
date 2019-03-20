@@ -11,9 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/crypto"
-	"github.com/SermoDigital/jose/jws"
-	"github.com/SermoDigital/jose/jwt"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
@@ -338,63 +335,35 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
 	// internal client token from it and use that during lookup.
 	if strings.Count(token, ".") == 2 {
-		{
-			// Implement the jose library way
-			parsedJWT, err := squarejwt.ParseSigned(token)
-			if err != nil {
-				goto FALLBACK
-			}
-			var claims squarejwt.Claims
-			var allClaims = make(map[string]interface{})
-			if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
-				goto FALLBACK
-			}
-			typeClaimRaw, ok := allClaims["type"]
-			if !ok {
-				return false, errors.New("could not validate type claim")
-			}
-			typeClaim, ok := typeClaimRaw.(string)
-			if !ok {
-				return false, errors.New("could not parse type claim")
-			}
-			if typeClaim != "wrapping" {
-				return false, errors.New("unexpected type claim")
-			}
-			if !thirdParty {
-				req.ClientToken = claims.ID
-			} else {
-				req.Data["token"] = claims.ID
-			}
-			goto JWTDONE
+		// Implement the jose library way
+		parsedJWT, err := squarejwt.ParseSigned(token)
+		if err != nil {
+			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
 		}
-	FALLBACK:
-		// Eventually simply rejig the signature to be the right format. Look at asymmetric.go in the square library, function signPayload, to see what it's doing
-		{
-			// This is fallback because the SermoDigital library produces
-			// invalid signatures, so we keep this for previously wrapped
-			// tokens
-			wt, err := jws.ParseJWT([]byte(token))
-			// If there's an error we simply fall back to attempting to use it as a regular token
-			if err == nil && wt != nil {
-				validator := &jwt.Validator{}
-				validator.SetClaim("type", "wrapping")
-				if err = wt.Validate(&c.wrappingJWTKey.PublicKey, crypto.SigningMethodES512, []*jwt.Validator{validator}...); err != nil {
-					return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
-				}
-				token, _ = wt.Claims().JWTID()
-				// We override the given request client token so that the rest of
-				// Vault sees the real value. This also ensures audit logs are
-				// consistent with the actual token that was issued.
-				if !thirdParty {
-					req.ClientToken = token
-				} else {
-					req.Data["token"] = token
-				}
-			}
+		var claims squarejwt.Claims
+		var allClaims = make(map[string]interface{})
+		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
+			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
 		}
+		typeClaimRaw, ok := allClaims["type"]
+		if !ok {
+			return false, errors.New("could not validate type claim")
+		}
+		typeClaim, ok := typeClaimRaw.(string)
+		if !ok {
+			return false, errors.New("could not parse type claim")
+		}
+		if typeClaim != "wrapping" {
+			return false, errors.New("unexpected type claim")
+		}
+		if !thirdParty {
+			req.ClientToken = claims.ID
+		} else {
+			req.Data["token"] = claims.ID
+		}
+		token = claims.ID
 	}
 
-JWTDONE:
 	if token == "" {
 		return false, fmt.Errorf("token is empty")
 	}

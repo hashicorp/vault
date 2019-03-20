@@ -14,7 +14,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/SermoDigital/jose/jws"
+	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -133,22 +134,23 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		// Parse the JWT and retrieve the vault address
-		wt, err := jws.ParseJWT([]byte(unwrapToken))
+		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
 		if err != nil {
-			return nil, errwrap.Wrapf("error decoding token: {{err}}", err)
-		}
-		if wt == nil {
-			return nil, errors.New("nil decoded token")
+			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
 
-		addrRaw := wt.Claims().Get("addr")
-		if addrRaw == nil {
-			return nil, errors.New("decoded token does not contain the active node's api_addr")
+		var allClaims = make(map[string]interface{})
+		if err = parsedJWT.UnsafeClaimsWithoutVerification(&allClaims); err != nil {
+			return nil, errwrap.Wrapf("error parsing claims from wrapping token: {{err}}", err)
 		}
-		vaultAddr, ok := addrRaw.(string)
+
+		addrClaimRaw, ok := allClaims["addr"]
 		if !ok {
-			return nil, errors.New("decoded token's api_addr not valid")
+			return nil, errors.New("could not validate addr claim")
+		}
+		vaultAddr, ok := addrClaimRaw.(string)
+		if !ok {
+			return nil, errors.New("could not parse addr claim")
 		}
 		if vaultAddr == "" {
 			return nil, errors.New(`no vault api_addr found`)
