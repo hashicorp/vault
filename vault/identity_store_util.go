@@ -270,7 +270,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 						// Group's namespace doesn't exist anymore but the group
 						// from the namespace still exists.
 						i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
-						err = i.groupPacker.DeleteItem(group.ID)
+						err = i.groupPacker.DeleteItem(ctx, group.ID)
 						if err != nil {
 							return err
 						}
@@ -446,7 +446,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						// Entity's namespace doesn't exist anymore but the
 						// entity from the namespace still exists.
 						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
-						err = i.entityPacker.DeleteItem(entity.ID)
+						err = i.entityPacker.DeleteItem(ctx, entity.ID)
 						if err != nil {
 							return err
 						}
