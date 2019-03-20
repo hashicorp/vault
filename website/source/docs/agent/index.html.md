@@ -43,7 +43,7 @@ These are the currently-available general configuration option:
 
 - `auto-auth` <tt>([auto-auth][autoauth]: \<optional\>)</tt> - Specifies the method and other options used for Auto-Auth functionality.
 
-- `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies the listener address and other options used for Caching functionality. 
+- `cache` <tt>([cache][caching]: \<optional\>)</tt> - Specifies options used for Caching functionality. 
 
 - `pid_file` `(string: "")` - Path to the file in which the agent's Process ID
   (PID) should be stored
