@@ -80,6 +80,17 @@ func testSealedFunc(sealedPct float64) physical.SealedFunction {
 	}
 }
 
+func testPerformanceStandbyFunc(perfPct float64) physical.PerformanceStandbyFunction {
+	return func() bool {
+		var ps bool
+		unsealedProb := rand.Float64()
+		if unsealedProb > perfPct {
+			ps = true
+		}
+		return ps
+	}
+}
+
 func TestConsul_ServiceTags(t *testing.T) {
 	consulConfig := map[string]string{
 		"path":                 "seaTech/",
@@ -106,14 +117,24 @@ func TestConsul_ServiceTags(t *testing.T) {
 	}
 
 	expected := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
-	actual := c.fetchServiceTags(false)
+	actual := c.fetchServiceTags(false, false)
 	if !strutil.EquivalentSlices(actual, append(expected, "standby")) {
 		t.Fatalf("bad: expected:%s actual:%s", append(expected, "standby"), actual)
 	}
 
-	actual = c.fetchServiceTags(true)
+	actual = c.fetchServiceTags(true, false)
 	if !strutil.EquivalentSlices(actual, append(expected, "active")) {
 		t.Fatalf("bad: expected:%s actual:%s", append(expected, "active"), actual)
+	}
+
+	actual = c.fetchServiceTags(false, true)
+	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
+		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
+	}
+
+	actual = c.fetchServiceTags(true, true)
+	if !strutil.EquivalentSlices(actual, append(expected, "performance-standby")) {
+		t.Fatalf("bad: expected:%s actual:%s", append(expected, "performance-standby"), actual)
 	}
 }
 
@@ -254,7 +275,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		var shutdownCh physical.ShutdownChannel
 		waitGroup := &sync.WaitGroup{}
-		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
+		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5), testPerformanceStandbyFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
@@ -283,23 +304,36 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 func TestConsul_serviceTags(t *testing.T) {
 	tests := []struct {
-		active bool
-		tags   []string
+		active      bool
+		perfStandby bool
+		tags        []string
 	}{
 		{
-			active: true,
-			tags:   []string{"active"},
+			active:      true,
+			perfStandby: false,
+			tags:        []string{"active"},
 		},
 		{
-			active: false,
-			tags:   []string{"standby"},
+			active:      false,
+			perfStandby: false,
+			tags:        []string{"standby"},
+		},
+		{
+			active:      false,
+			perfStandby: true,
+			tags:        []string{"performance-standby"},
+		},
+		{
+			active:      true,
+			perfStandby: true,
+			tags:        []string{"performance-standby"},
 		},
 	}
 
 	c := testConsulBackend(t)
 
 	for _, test := range tests {
-		tags := c.fetchServiceTags(test.active)
+		tags := c.fetchServiceTags(test.active, test.perfStandby)
 		if !reflect.DeepEqual(tags[:], test.tags[:]) {
 			t.Errorf("Bad %v: %v %v", test.active, tags, test.tags)
 		}
@@ -524,22 +558,24 @@ func TestConsulHABackend(t *testing.T) {
 	}()
 
 	logger := logging.NewVaultLogger(log.Debug)
-
-	b, err := NewConsulBackend(map[string]string{
+	config := map[string]string{
 		"address":      conf.Address,
 		"path":         randPath,
 		"max_parallel": "-1",
 		"token":        conf.Token,
-	}, logger)
+	}
+
+	b, err := NewConsulBackend(config, logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	ha, ok := b.(physical.HABackend)
-	if !ok {
-		t.Fatalf("consul does not implement HABackend")
+	b2, err := NewConsulBackend(config, logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	physical.ExerciseHABackend(t, ha, ha)
+
+	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 
 	detect, ok := b.(physical.RedirectDetect)
 	if !ok {

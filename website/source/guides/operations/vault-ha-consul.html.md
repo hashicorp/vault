@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault HA with Consul - Guides"
+sidebar_title: "Vault HA with Consul"
 sidebar_current: "guides-operations-vault-ha"
 description: |-
   This guide will walk you through a simple Vault Highly Available (HA) cluster
@@ -23,13 +24,21 @@ and ***active***. Within a Vault cluster, only a single instance will be
 _active_ and handles all requests (reads and writes) and all _standby_ nodes
 redirect requests to the _active_ node.
 
-![Reference Architecture](/assets/images/vault-ha-consul-3.png)
+![Reference Architecture](/img/vault-ha-consul-3.png)
+
+> **NOTE:** As of version **0.11**, those standby nodes can handle most
+read-only requests and behave as read-replica nodes. This **Performance Standby
+Nodes** feature is included in _Vault Enterprise Premium_, and also available
+for _Vault Enterprise Pro_ with additional fee. This is particularly useful for
+processing high volume Encryption as a Service ([Transit secrets
+engine](/docs/secrets/transit/index.html)) requests. Read [Performance Standby
+Nodes](/docs/enterprise/performance-standby/index.html) documentation and a [guide](/guides/operations/performance-nodes.html) for more details.
 
 
 ~> This guide will walk you through a simple Vault Highly Available (HA) cluster
 implementation. While this is not an exhaustive or prescriptive guide that can
-be used as a drop-in production example, it covers the **basics** enough to inform
-your own production setup.
+be used as a drop-in production example, it covers the **basics** enough to
+inform your own production setup.
 
 
 ## Reference Materials
@@ -61,7 +70,7 @@ consisting of the following:
 
 This diagram lays out the simple architecture details for reference:
 
-![Reference Architecture](/assets/images/vault-ha-consul.png)
+![Reference Architecture](/img/vault-ha-consul.png)
 
 You perform the following:
 
@@ -127,7 +136,7 @@ this guide would be `10.1.42.101`, `10.1.42.102`, and `10.1.42.103` respectively
 
 
 Note that the web user interface is enabled (`"ui": true`), and Consul will be
-logging at DEBBUG level to the system log (`"log_level": "DEBUG"`). For the
+logging at DEBUG level to the system log (`"log_level": "DEBUG"`). For the
 purpose of this guide, the **`acl_enforce_version_8`** is set to `false` so that
 we do not need to be concerned with ACLs in this guide. However, you would want
 to enable ACLs in a production environment and follow the [Consul ACL Guide](https://www.consul.io/docs/guides/acl.html#acl-agent-master-token) for
@@ -221,7 +230,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir -p /var/run/consul
 ExecStartPre=/bin/chown -R consul:consul /var/run/consul
 ExecStart=/usr/local/bin/consul agent \
-    -config-file=/usr/local/etc/consul/server_agent.json \
+    -config-file=/usr/local/etc/consul/client_agent.json \
     -pid-file=/var/run/consul/consul.pid
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
@@ -259,7 +268,7 @@ system and verify the status:
        Memory: 13.6M
           CPU: 0m 52.784s
        CGroup: /system.slice/consul.service
-               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/server_agent.json -pid-file=/var/run/consul/consul.pid
+               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
 
 After starting all Consul server agents, let’s check the Consul cluster status:
 
@@ -286,7 +295,7 @@ this example.  Now, you are good to move on to the Vault server configuration.
 
 The Vault server nodes require **both** the Consul and Vault binaries on each node. Consul will be configured as a **client** agent and Vault will be configured as a server.
 
-![Reference Architecture](/assets/images/vault-ha-consul-2.png)
+![Reference Architecture](/img/vault-ha-consul-2.png)
 
 
 #### Consul Client Agent Configuration
@@ -489,7 +498,7 @@ We're setting the following parameters for our `tcp` listener:
 - `cluster_address` (string: "127.0.0.1:8201") – Specifies the address to bind to for cluster server-to-server requests. This defaults to one port higher than the value of address. This does not usually need to be set, but can be useful in case Vault servers are isolated from each other in such a way that they need to hop through a TCP load balancer or some other scheme in order to talk.
 
 This configuration allows for listening on all interfaces (such that a Vault
-command against the loopback address would succeed, for example). Specifical
+command against the loopback address would succeed, for example).
 
 We're also explicitly setting Vault's [HA parameters](/docs/configuration/index.html#high-availability-parameters) (`api_addr` and `cluster_addr`). Often, it's not necessary to configure these two parameters when using Consul as Vault's storage backend, as Consul will attempt to automatically discover and advertise the address of the active Vault node. However, certain cluster configurations might require them to be explicitly set (accesing Vault through a load balancer, for example).
 

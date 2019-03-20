@@ -9,10 +9,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -115,6 +116,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
+			pathConfigIdentity(b),
 			pathConfigSts(b),
 			pathListSts(b),
 			pathConfigTidyRoletagBlacklist(b),
@@ -146,7 +148,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
-		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 			// safety_buffer defaults to 180 days for roletag blacklist
 			safety_buffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)
@@ -233,14 +235,14 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	}
 	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
 	if err != nil {
-		return "", err
+		return "", awsutil.AppendLogicalError(err)
 	}
 
 	switch entity.Type {
 	case "user":
 		userInfo, err := iamClient.GetUser(&iam.GetUserInput{UserName: &entity.FriendlyName})
 		if err != nil {
-			return "", err
+			return "", awsutil.AppendLogicalError(err)
 		}
 		if userInfo == nil {
 			return "", fmt.Errorf("got nil result from GetUser")
@@ -249,7 +251,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	case "role":
 		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
-			return "", err
+			return "", awsutil.AppendLogicalError(err)
 		}
 		if roleInfo == nil {
 			return "", fmt.Errorf("got nil result from GetRole")
@@ -258,7 +260,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	case "instance-profile":
 		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
-			return "", err
+			return "", awsutil.AppendLogicalError(err)
 		}
 		if profileInfo == nil {
 			return "", fmt.Errorf("got nil result from GetInstanceProfile")
@@ -286,12 +288,21 @@ func getAnyRegionForAwsPartition(partitionId string) *endpoints.Region {
 }
 
 const backendHelp = `
-aws-ec2 auth method takes in PKCS#7 signature of an AWS EC2 instance and a client
-created nonce to authenticates the EC2 instance with Vault.
+The aws auth method uses either AWS IAM credentials or AWS-signed EC2 metadata
+to authenticate clients, which are IAM principals or EC2 instances.
 
 Authentication is backed by a preconfigured role in the backend. The role
 represents the authorization of resources by containing Vault's policies.
 Role can be created using 'role/<role>' endpoint.
+
+Authentication of IAM principals, either IAM users or roles, is done using a
+specifically signed AWS API request using clients' AWS IAM credentials. IAM
+principals can then be assigned to roles within Vault. This is known as the
+"iam" auth method.
+
+Authentication of EC2 instances is done using either a signed PKCS#7 document
+or a detached RSA signature of an AWS EC2 instance's identity document along
+with a client-created nonce. This is known as the "ec2" auth method.
 
 If there is need to further restrict the capabilities of the role on the instance
 that is using the role, 'role_tag' option can be enabled on the role, and a tag

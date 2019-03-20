@@ -1,7 +1,8 @@
 ---
 layout: "intro"
 page_title: "Dynamic Secrets - Getting Started"
-sidebar_current: "gettingstarted-dynamicsecrets"
+sidebar_title: "Dynamic Secrets"
+sidebar_current: "gettingstarted-dynamic-secrets"
 description: |-
   On this page we introduce dynamic secrets by showing you how to create AWS access keys with Vault.
 ---
@@ -77,14 +78,9 @@ is okay - just use this one for now.
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "Stmt1426528957000",
       "Effect": "Allow",
-      "Action": [
-        "ec2:*"
-      ],
-      "Resource": [
-        "*"
-      ]
+      "Action": "ec2:*",
+      "Resource": "*"
     }
   ]
 }
@@ -94,19 +90,16 @@ As mentioned above, we need to map this policy document to a named role. To do
 that, write to `aws/roles/:name`:
 
 ```text
-$ vault write aws/roles/my-role policy=-<<EOF
+$ vault write aws/roles/my-role \
+    credential_type=iam_user \
+    policy_document=-<<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "Stmt1426528957000",
       "Effect": "Allow",
-      "Action": [
-        "ec2:*"
-      ],
-      "Resource": [
-        "*"
-      ]
+      "Action": "ec2:*",
+      "Resource": "*"
     }
   ]
 }
@@ -153,7 +146,7 @@ Vault will automatically revoke this credential after 768 hours (see
 `lease_duration` in the output), but perhaps we want to revoke it early. Once
 the secret is revoked, the access keys are no longer valid.
 
-To revoke the secret, use `vault revoke` with the lease ID that was outputted
+To revoke the secret, use `vault lease revoke` with the lease ID that was outputted
 from `vault read` when you ran it:
 
 ```text

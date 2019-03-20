@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "RabbitMQ - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-rabbitmq"
+sidebar_title: "RabbitMQ"
+sidebar_current: "api-http-secret-rabbitmq"
 description: |-
   This is the API documentation for the Vault RabbitMQ secrets engine.
 ---
@@ -107,7 +108,7 @@ This endpoint creates or updates the role definition.
 
 - `tags` `(string: "")` – Specifies a comma-separated RabbitMQ management tags.
 
-- `vhost` `(string: "")` – Specifies a map of virtual hosts to
+- `vhosts` `(string: "")` – Specifies a map of virtual hosts to
   permissions.
 
 ### Sample Payload

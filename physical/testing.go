@@ -103,6 +103,15 @@ func ExerciseBackend(t testing.TB, b Backend) {
 		t.Fatalf("nested put failed: %v", err)
 	}
 
+	// Get should work
+	out, err = b.Get(context.Background(), "foo/bar")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if !reflect.DeepEqual(out, e) {
+		t.Errorf("bad: %v expected: %v", out, e)
+	}
+
 	keys, err = b.List(context.Background(), "")
 	if err != nil {
 		t.Fatalf("list multi failed: %v", err)
@@ -336,7 +345,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 		t.Fatalf("stop lock 2: %v", err)
 	}
 	if leaderCh2 != nil {
-		t.Errorf("should not have gotten leaderCh: %v", leaderCh)
+		t.Errorf("should not have gotten leaderCh: %v", leaderCh2)
 	}
 
 	// Release the first lock
@@ -352,7 +361,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 	}
 
 	// Check the value
-	held, val, err = lock.Value()
+	held, val, err = lock2.Value()
 	if err != nil {
 		t.Fatalf("value: %v", err)
 	}
@@ -360,7 +369,7 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 		t.Errorf("should still be held")
 	}
 	if val != "baz" {
-		t.Errorf("expected value baz: %v", err)
+		t.Errorf("expected: baz, got: %v", val)
 	}
 
 	// Cleanup

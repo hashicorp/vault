@@ -1,6 +1,8 @@
-import Ember from 'ember';
+import { set } from '@ember/object';
+import { hash } from 'rsvp';
+import Route from '@ember/routing/route';
 
-export default Ember.Route.extend({
+export default Route.extend({
   queryParams: {
     page: {
       refreshModel: true,
@@ -15,14 +17,13 @@ export default Ember.Route.extend({
   model(params) {
     const prefix = params.prefix || '';
     if (this.modelFor('vault.cluster.access.leases').get('canList')) {
-      return Ember.RSVP.hash({
+      return hash({
         leases: this.store
           .lazyPaginatedQuery('lease', {
             prefix,
             responsePath: 'data.keys',
             page: params.page,
             pageFilter: params.pageFilter,
-            size: 100,
           })
           .then(model => {
             this.set('has404', false);
@@ -35,7 +36,7 @@ export default Ember.Route.extend({
               throw err;
             }
           }),
-        capabilities: Ember.RSVP.hash({
+        capabilities: hash({
           revokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-prefix/${prefix}`),
           forceRevokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-force/${prefix}`),
         }),
@@ -80,7 +81,7 @@ export default Ember.Route.extend({
     error(error, transition) {
       const { prefix } = this.paramsFor(this.routeName);
 
-      Ember.set(error, 'keyId', prefix);
+      set(error, 'keyId', prefix);
       const hasModel = this.controllerFor(this.routeName).get('hasModel');
       // only swallow the error if we have a previous model
       if (hasModel && error.httpStatus === 404) {

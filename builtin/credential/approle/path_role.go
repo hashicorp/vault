@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -84,6 +84,9 @@ type roleStorageEntry struct {
 	// SecretIDPrefix is the storage prefix for persisting secret IDs. This
 	// differs based on whether the secret IDs are cluster local or not.
 	SecretIDPrefix string `json:"secret_id_prefix" mapstructure:"secret_id_prefix"`
+
+	// TokenType is the type of token to generate
+	TokenType string `json:"token_type" mapstructure:"token_type"`
 }
 
 // roleIDStorageEntry represents the reverse mapping from RoleID to Role
@@ -195,6 +198,11 @@ TTL will be set to the value of this parameter.`,
 					Type: framework.TypeBool,
 					Description: `If set, the secret IDs generated using this role will be cluster local. This
 can only be set during role creation and once set, it can't be reset later.`,
+				},
+				"token_type": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Default:     "default",
+					Description: `The type of token to generate ("service" or "batch"), or "default" to use the default`,
 				},
 			},
 			ExistenceCheck: b.pathRoleExistenceCheck,
@@ -491,6 +499,11 @@ specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
 				},
+				"token_bound_cidrs": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
@@ -595,6 +608,11 @@ formatted string containing metadata in key value pairs.`,
 specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
 list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
 the role.`,
+				},
+				"token_bound_cidrs": &framework.FieldSchema{
+					Type: framework.TypeCommaStringSlice,
+					Description: `Comma separated string or list of CIDR blocks. If set, specifies the blocks of
+IP addresses which can use the returned token. Should be a subset of the token CIDR blocks listed on the role, if any.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -773,7 +791,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 	// a new one is created
 	if previousRoleID != "" && previousRoleID != role.RoleID {
 		if err = b.roleIDEntryDelete(ctx, s, previousRoleID); err != nil {
-			return fmt.Errorf("failed to delete previous role ID index")
+			return errwrap.Wrapf("failed to delete previous role ID index: {{err}}", err)
 		}
 	}
 
@@ -829,7 +847,7 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
-	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), &role)
 		if err != nil {
 			return nil, err
@@ -997,6 +1015,30 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		role.TokenMaxTTL = time.Second * time.Duration(data.Get("token_max_ttl").(int))
 	}
 
+	tokenType := role.TokenType
+	if tokenTypeRaw, ok := data.GetOk("token_type"); ok {
+		tokenType = tokenTypeRaw.(string)
+		switch tokenType {
+		case "":
+			tokenType = "default"
+		case "service", "batch", "default":
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'token_type' value %q", tokenType)), nil
+		}
+	} else if req.Operation == logical.CreateOperation {
+		tokenType = data.Get("token_type").(string)
+	}
+	role.TokenType = tokenType
+
+	if role.TokenType == "batch" {
+		if role.Period != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate periodic tokens"), nil
+		}
+		if role.TokenNumUses != 0 {
+			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with limited use count"), nil
+		}
+	}
+
 	// Check that the TokenTTL value provided is less than the TokenMaxTTL.
 	// Sanitizing the TTL and MaxTTL is not required now and can be performed
 	// at credential issue time.
@@ -1051,6 +1093,7 @@ func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *
 		"token_num_uses":        role.TokenNumUses,
 		"token_ttl":             role.TokenTTL / time.Second,
 		"local_secret_ids":      false,
+		"token_type":            role.TokenType,
 	}
 
 	if role.SecretIDPrefix == secretIDLocalPrefix {
@@ -1222,6 +1265,7 @@ func (entry *secretIDStorageEntry) ToResponseData() map[string]interface{} {
 		"last_updated_time":  entry.LastUpdatedTime,
 		"metadata":           entry.Metadata,
 		"cidr_list":          entry.CIDRList,
+		"token_bound_cidrs":  entry.TokenBoundCIDRs,
 	}
 }
 
@@ -2278,9 +2322,23 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
 		}
 	}
-
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
 	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.SecretIDBoundCIDRs); err != nil {
+		return nil, err
+	}
+
+	secretIDTokenCIDRs := data.Get("token_bound_cidrs").([]string)
+	if len(secretIDTokenCIDRs) != 0 {
+		valid, err := cidrutil.ValidateCIDRListSlice(secretIDTokenCIDRs)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed to validate token CIDR blocks: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate token CIDR blocks"), nil
+		}
+	}
+	// Ensure that the token CIDRs on the secret ID are a subset of that of role's
+	if err := verifyCIDRRoleSecretIDSubset(secretIDTokenCIDRs, role.TokenBoundCIDRs); err != nil {
 		return nil, err
 	}
 
@@ -2289,6 +2347,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		SecretIDTTL:     role.SecretIDTTL,
 		Metadata:        make(map[string]string),
 		CIDRList:        secretIDCIDRs,
+		TokenBoundCIDRs: secretIDTokenCIDRs,
 	}
 
 	if err = strutil.ParseArbitraryKeyValues(data.Get("metadata").(string), secretIDStorage.Metadata, ","); err != nil {

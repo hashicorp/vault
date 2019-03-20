@@ -2,9 +2,9 @@ package http
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -30,6 +30,7 @@ func TestSysRotate(t *testing.T) {
 		"data": map[string]interface{}{
 			"term": json.Number("2"),
 		},
+		"term": json.Number("2"),
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -40,10 +41,11 @@ func TestSysRotate(t *testing.T) {
 		t.Fatal("install_time missing in data")
 	}
 	expected["data"].(map[string]interface{})["install_time"] = actualInstallTime
+	expected["install_time"] = actualInstallTime
 
 	expected["request_id"] = actual["request_id"]
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad:\nexpected: %#v\nactual: %#v", expected, actual)
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

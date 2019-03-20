@@ -54,9 +54,4 @@ fmtcheck:
 fmt:
 	gofmt -w $(GOFMT_FILES)
 
-# TODO: remove once the docs are moved into the Vault repo
-copy_website:
-	cp website-docs/docs.html.md ../vault/website/source/docs/secrets/azure/index.html.md
-	cp website-docs/api.html.md ../vault/website/source/api/secret/azure/index.html.md
-
 .PHONY: bin default generate test vet bootstrap fmt fmtcheck

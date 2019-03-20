@@ -45,4 +45,5 @@ message Response {
 	// Added in 0.6.2 to ensure that the content-type is set appropriately, as
 	// well as any other information
 	map<string, HeaderEntry> header_entries = 4;
+	uint64 last_remote_wal = 5;
 }

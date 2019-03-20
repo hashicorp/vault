@@ -14,8 +14,8 @@ import (
 )
 
 func TestGRPCBackendPlugin_impl(t *testing.T) {
-	var _ gplugin.Plugin = new(BackendPlugin)
-	var _ logical.Backend = new(backendPluginClient)
+	var _ gplugin.Plugin = new(GRPCBackendPlugin)
+	var _ logical.Backend = new(backendGRPCPluginClient)
 }
 
 func TestGRPCBackendPlugin_HandleRequest(t *testing.T) {
@@ -140,7 +140,7 @@ func TestGRPCBackendPlugin_Setup(t *testing.T) {
 func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	// Create a mock provider
 	pluginMap := map[string]gplugin.Plugin{
-		"backend": &BackendPlugin{
+		"backend": &GRPCBackendPlugin{
 			Factory: mock.Factory,
 			Logger: log.New(&log.LoggerOptions{
 				Level:      log.Debug,

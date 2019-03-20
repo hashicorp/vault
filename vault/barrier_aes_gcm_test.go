@@ -8,6 +8,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/inmem"
 )
@@ -125,7 +126,10 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 	// Protect with master key
 	master, _ := b.GenerateKey()
 	gcm, _ := b.aeadFromKey(master)
-	value := b.encrypt(barrierInitPath, initialKeyTerm, gcm, buf)
+	value, err := b.encrypt(barrierInitPath, initialKeyTerm, gcm, buf)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Write to the physical backend
 	pe := &physical.Entry{
@@ -136,9 +140,13 @@ func TestAESGCMBarrier_BackwardsCompatible(t *testing.T) {
 
 	// Create a fake key
 	gcm, _ = b.aeadFromKey(encrypt)
+	value, err = b.encrypt("test/foo", initialKeyTerm, gcm, []byte("test"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	pe = &physical.Entry{
 		Key:   "test/foo",
-		Value: b.encrypt("test/foo", initialKeyTerm, gcm, []byte("test")),
+		Value: value,
 	}
 	inm.Put(context.Background(), pe)
 
@@ -202,7 +210,7 @@ func TestAESGCMBarrier_Confidential(t *testing.T) {
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -242,7 +250,7 @@ func TestAESGCMBarrier_Integrity(t *testing.T) {
 	b.Unseal(context.Background(), key)
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -287,7 +295,7 @@ func TestAESGCMBarrier_MoveIntegrityV1(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -331,7 +339,7 @@ func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -375,7 +383,7 @@ func TestAESGCMBarrier_UpgradeV1toV2(t *testing.T) {
 	}
 
 	// Put a logical entry
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	err = b.Put(context.Background(), entry)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -425,12 +433,18 @@ func TestEncrypt_Unique(t *testing.T) {
 		t.Fatalf("barrier is sealed")
 	}
 
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	term := b.keyring.ActiveTerm()
 	primary, _ := b.aeadForTerm(term)
 
-	first := b.encrypt("test", term, primary, entry.Value)
-	second := b.encrypt("test", term, primary, entry.Value)
+	first, err := b.encrypt("test", term, primary, entry.Value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := b.encrypt("test", term, primary, entry.Value)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if bytes.Equal(first, second) == true {
 		t.Fatalf("improper random seeding detected")

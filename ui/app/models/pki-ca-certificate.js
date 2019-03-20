@@ -1,22 +1,24 @@
+import { and } from '@ember/object/computed';
+import { computed } from '@ember/object';
 import Certificate from './pki-certificate';
-import Ember from 'ember';
 import DS from 'ember-data';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
-const { computed } = Ember;
 const { attr } = DS;
 
 export default Certificate.extend({
-  DISPLAY_FIELDS: [
-    'csr',
-    'certificate',
-    'expiration',
-    'issuingCa',
-    'caChain',
-    'privateKey',
-    'privateKeyType',
-    'serialNumber',
-  ],
+  DISPLAY_FIELDS: computed(function() {
+    return [
+      'csr',
+      'certificate',
+      'expiration',
+      'issuingCa',
+      'caChain',
+      'privateKey',
+      'privateKeyType',
+      'serialNumber',
+    ];
+  }),
   backend: attr('string', {
     readOnly: true,
   }),
@@ -146,6 +148,6 @@ export default Certificate.extend({
   }),
   expiration: attr(),
 
-  deletePath: lazyCapabilities( apiPath`${'backend'}/root`, 'backend'),
-  canDeleteRoot: computed.and('deletePath.canDelete', 'deletePath.canSudo'),
+  deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
+  canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),
 });

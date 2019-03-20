@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_AUTH_BACKENDS = [
   {
@@ -34,6 +34,22 @@ const SUPPORTED_AUTH_BACKENDS = [
     formAttributes: ['username', 'password'],
   },
   {
+    type: 'jwt',
+    typeDisplay: 'JWT',
+    description: 'Authenticate using JWT or OIDC provider.',
+    tokenPath: 'client_token',
+    displayNamePath: 'display_name',
+    formAttributes: ['role', 'jwt'],
+  },
+  {
+    type: 'oidc',
+    typeDisplay: 'OIDC',
+    description: 'Authenticate using JWT or OIDC provider.',
+    tokenPath: 'client_token',
+    displayNamePath: 'display_name',
+    formAttributes: ['role', 'jwt'],
+  },
+  {
     type: 'github',
     typeDisplay: 'GitHub',
     description: 'GitHub authentication.',
@@ -47,4 +63,4 @@ export function supportedAuthBackends() {
   return SUPPORTED_AUTH_BACKENDS;
 }
 
-export default Ember.Helper.helper(supportedAuthBackends);
+export default buildHelper(supportedAuthBackends);

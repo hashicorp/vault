@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Lease, Renew, and Revoke"
+sidebar_title: "Lease, Renew, and Revoke"
 sidebar_current: "docs-concepts-lease"
 description: |-
   Vault provides a lease with every secret. When this lease is expired, Vault will revoke that secret.
@@ -8,12 +9,12 @@ description: |-
 
 # Lease, Renew, and Revoke
 
-With every dynamic secret and authentication token, Vault creates a _lease_:
-metadata containing information such as a time duration, renewability, and
-more. Vault promises that the data will be valid for the given duration, or
-Time To Live (TTL). Once the lease is expired, Vault can automatically revoke
-the data, and the consumer of the secret can no longer be certain that it is
-valid.
+With every dynamic secret and `service` type authentication token, Vault
+creates a _lease_: metadata containing information such as a time duration,
+renewability, and more. Vault promises that the data will be valid for the
+given duration, or Time To Live (TTL). Once the lease is expired, Vault can
+automatically revoke the data, and the consumer of the secret can no longer be
+certain that it is valid.
 
 The benefit should be clear: consumers of secrets need to check in with
 Vault routinely to either renew the lease (if allowed) or request a
@@ -35,7 +36,8 @@ or automatically by Vault. When a lease is expired, Vault will automatically
 revoke that lease.
 
 **Note**: The [Key/Value Backend](/docs/secrets/kv/index.html) which stores
-arbitrary secrets does not issue leases.
+arbitrary secrets does not issue leases although it will sometimes return a
+lease duration; see the documentation for more information.
 
 ## Lease IDs
 
@@ -49,9 +51,15 @@ Along with the lease ID, a _lease duration_ can be read. The lease duration is
 a Time To Live value: the time in seconds for which the lease is valid.  A
 consumer of this secret must renew the lease within that time.
 
-When renewing the lease, the user can request a specific amount of time from
-now to extend the lease. For example: `vault renew my-lease-id 3600` would
-request to extend the lease of "my-lease-id" by 1 hour (3600 seconds).
+When renewing the lease, the user can request a specific amount of time they
+want remaining on the lease, termed the `increment`. This is not an increment
+at the end of the current TTL; it is an increment _from the current time_. For
+example, `vault renew my-lease-id 3600` would request that the TTL of the lease
+be adjusted to 1 hour (3600 seconds). Having the increment be rooted at the
+current time instead of the end of the lease makes it easy for users to reduce
+the length of leases if they don't actually need credentials for the full
+possible lease period, allowing those credentials to expire sooner and
+resources to be cleaned up earlier.
 
 The requested increment is completely advisory. The backend in charge of the
 secret can choose to completely ignore it. For most secrets, the backend does
@@ -60,14 +68,6 @@ so often.
 
 As a result, the return value of renewals should be carefully inspected to
 determine what the new lease is.
-
-**Note**: Prior to version 0.3, Vault documentation and help text did not
-distinguish sufficiently between a _lease_ and a _lease duration_.  Starting
-with version 0.3, Vault will start migrating to the term _ttl_ to describe
-lease durations, at least for user-facing text. As _lease duration_ is still a
-legitimate (but more verbose) description, there are currently no plans to
-change the JSON key used in responses, in order to retain
-backwards-compatibility.
 
 ## Prefix-based Revocation
 

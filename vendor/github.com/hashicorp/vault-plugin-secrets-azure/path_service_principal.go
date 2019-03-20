@@ -8,19 +8,32 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 const (
-	SecretTypeSP = "service_principal"
+	SecretTypeSP       = "service_principal"
+	SecretTypeStaticSP = "static_service_principal"
 )
+
+// SPs will be created with a far-future expiration in Azure
+var spExpiration = 10 * 365 * 24 * time.Hour
 
 func secretServicePrincipal(b *azureSecretBackend) *framework.Secret {
 	return &framework.Secret{
 		Type:   SecretTypeSP,
 		Renew:  b.spRenew,
 		Revoke: b.spRevoke,
+	}
+}
+
+func secretStaticServicePrincipal(b *azureSecretBackend) *framework.Secret {
+	return &framework.Secret{
+		Type:   SecretTypeStaticSP,
+		Renew:  b.spRenew,
+		Revoke: b.staticSPRevoke,
 	}
 }
 
@@ -41,19 +54,15 @@ func pathServicePrincipal(b *azureSecretBackend) *framework.Path {
 	}
 }
 
-// pathSPRead generates Azure an service principal and credentials.
-//
-// This is a multistep process of:
-//   1. Create an Azure application
-//   2. Create a service principal associated with the new App
-//   3. Assign roles
+// pathSPRead generates Azure credentials based on the role credential type.
 func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, err := b.getClient(ctx, req.Storage)
+	client, err := b.getClient(ctx, req.Storage)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	roleName := d.Get("role").(string)
+
 	role, err := getRole(ctx, roleName, req.Storage)
 	if err != nil {
 		return nil, err
@@ -63,6 +72,26 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 		return logical.ErrorResponse(fmt.Sprintf("role '%s' does not exists", roleName)), nil
 	}
 
+	var resp *logical.Response
+
+	if role.ApplicationObjectID != "" {
+		resp, err = b.createStaticSPSecret(ctx, client, roleName, role)
+	} else {
+		resp, err = b.createSPSecret(ctx, client, roleName, role)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Secret.TTL = role.TTL
+	resp.Secret.MaxTTL = role.MaxTTL
+
+	return resp, nil
+}
+
+// createSPSecret generates a new App/Service Principal.
+func (b *azureSecretBackend) createSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
 	// Create the App, which is the top level object to be tracked in the secret
 	// and deleted upon revocation. If any subsequent step fails, the App is deleted.
 	app, err := c.createApp(ctx)
@@ -72,38 +101,61 @@ func (b *azureSecretBackend) pathSPRead(ctx context.Context, req *logical.Reques
 	appID := to.String(app.AppID)
 	appObjID := to.String(app.ObjectID)
 
-	// Create the SP. A far future credential expiration is set on the Azure side.
-	sp, password, err := c.createSP(ctx, app, 10*365*24*time.Hour)
+	// Create a service principal associated with the new App
+	sp, password, err := c.createSP(ctx, app, spExpiration)
 	if err != nil {
 		c.deleteApp(ctx, appObjID)
 		return nil, err
 	}
 
+	// Assign Azure roles to the new SP
 	raIDs, err := c.assignRoles(ctx, sp, role.AzureRoles)
 	if err != nil {
 		c.deleteApp(ctx, appObjID)
 		return nil, err
 	}
 
-	resp := b.Secret(SecretTypeSP).Response(map[string]interface{}{
+	data := map[string]interface{}{
 		"client_id":     appID,
 		"client_secret": password,
-	}, map[string]interface{}{
+	}
+	internalData := map[string]interface{}{
 		"app_object_id":       appObjID,
 		"role_assignment_ids": raIDs,
 		"role":                roleName,
-	})
+	}
 
-	resp.Secret.TTL = role.TTL
-	resp.Secret.MaxTTL = role.MaxTTL
+	return b.Secret(SecretTypeSP).Response(data, internalData), nil
+}
 
-	return resp, nil
+// createStaticSPSecret adds a new password to the App associated with the role.
+func (b *azureSecretBackend) createStaticSPSecret(ctx context.Context, c *client, roleName string, role *Role) (*logical.Response, error) {
+	lock := locksutil.LockForKey(b.appLocks, role.ApplicationObjectID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	keyID, password, err := c.addAppPassword(ctx, role.ApplicationObjectID, spExpiration)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]interface{}{
+		"client_id":     role.ApplicationID,
+		"client_secret": password,
+	}
+	internalData := map[string]interface{}{
+		"app_object_id": role.ApplicationObjectID,
+		"key_id":        keyID,
+		"role":          roleName,
+	}
+
+	return b.Secret(SecretTypeStaticSP).Response(data, internalData), nil
 }
 
 func (b *azureSecretBackend) spRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, errors.New("internal data not found")
+		return nil, errors.New("internal data 'role' not found")
 	}
 
 	role, err := getRole(ctx, roleRaw.(string), req.Storage)
@@ -127,7 +179,7 @@ func (b *azureSecretBackend) spRevoke(ctx context.Context, req *logical.Request,
 
 	appObjectIDRaw, ok := req.Secret.InternalData["app_object_id"]
 	if !ok {
-		return nil, errors.New("internal data not found")
+		return nil, errors.New("internal data 'app_object_id' not found")
 	}
 
 	appObjectID := appObjectIDRaw.(string)
@@ -155,12 +207,38 @@ func (b *azureSecretBackend) spRevoke(ctx context.Context, req *logical.Request,
 	return resp, err
 }
 
+func (b *azureSecretBackend) staticSPRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	appObjectIDRaw, ok := req.Secret.InternalData["app_object_id"]
+	if !ok {
+		return nil, errors.New("internal data 'app_object_id' not found")
+	}
+
+	appObjectID := appObjectIDRaw.(string)
+
+	c, err := b.getClient(ctx, req.Storage)
+	if err != nil {
+		return nil, errwrap.Wrapf("error during revoke: {{err}}", err)
+	}
+
+	keyIDRaw, ok := req.Secret.InternalData["key_id"]
+	if !ok {
+		return nil, errors.New("internal data 'key_id' not found")
+	}
+
+	lock := locksutil.LockForKey(b.appLocks, appObjectID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	return nil, c.deleteAppPassword(ctx, appObjectID, keyIDRaw.(string))
+}
+
 const pathServicePrincipalHelpSyn = `
 Request Service Principal credentials for a given Vault role.
 `
 
 const pathServicePrincipalHelpDesc = `
-This path creates a Service Principal and assigns Azure roles for a
-given Vault role, returning the associated login credentials. The
-Service Principal will be automatically deleted when the lease has expired.
+This path creates or updates dynamic Service Principal credentials.
+The associated role can be configured to create a new App/Service Principal,
+or add a new password to an existing App. The Service Principal or password
+will be automatically deleted when the lease has expired.
 `

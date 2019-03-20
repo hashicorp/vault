@@ -1,18 +1,22 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
-const { inject } = Ember;
 
-export default Ember.Route.extend(UnloadModel, {
-  version: inject.service(),
+export default Route.extend(UnloadModel, {
+  version: service(),
 
   beforeModel() {
-    return this.get('version').fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
+    return this.get('version')
+      .fetchFeatures()
+      .then(() => {
+        return this._super(...arguments);
+      });
   },
 
   model(params) {
-    return this.get('version.isOSS') ? null : this.store.findRecord('control-group', params.accessor);
+    return this.get('version').hasFeature('Control Groups')
+      ? this.store.findRecord('control-group', params.accessor)
+      : null;
   },
 
   actions: {

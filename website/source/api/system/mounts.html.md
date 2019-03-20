@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "/sys/mounts - HTTP API"
-sidebar_current: "docs-http-system-mounts"
+sidebar_title: "<code>/sys/mounts</code>"
+sidebar_current: "api-http-system-mounts"
 description: |-
   The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 ---
@@ -37,7 +38,6 @@ $ curl \
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
       "force_no_cache": false,
-      "plugin_name": "",
       "seal_wrap": false
     }
   },
@@ -48,7 +48,6 @@ $ curl \
       "default_lease_ttl": 0,
       "max_lease_ttl": 0,
       "force_no_cache": false,
-      "plugin_name": "",
       "seal_wrap": false
     }
   }
@@ -71,6 +70,8 @@ This endpoint enables a new secrets engine at the given path.
 - `path` `(string: <required>)` – Specifies the path where the secrets engine
   will be mounted. This is specified as part of the URL.
 
+    !> **NOTE:** Use ASCII printable characters to specify the desired path.
+
 - `type` `(string: <required>)` – Specifies the type of the backend, such as
   "aws".
 
@@ -78,53 +79,39 @@ This endpoint enables a new secrets engine at the given path.
   mount.
 
 - `config` `(map<string|string>: nil)` – Specifies configuration options for
-  this mount. This is an object with four possible values:
+  this mount; if set on a specific mount, values will override any global
+  defaults (e.g. the system TTL/Max TTL)
 
   - `default_lease_ttl` `(string: "")` - The default lease duration, specified
-     as a string duration like "5s" or "30m".
+    as a string duration like "5s" or "30m".
 
   - `max_lease_ttl` `(string: "")` - The maximum lease duration, specified as a
-     string duration like "5s" or "30m".
+    string duration like "5s" or "30m".
 
   - `force_no_cache` `(bool: false)` - Disable caching.
 
-  - `plugin_name` `(string: "")` - The name of the plugin in the plugin catalog
-     to use.
-
   - `audit_non_hmac_request_keys` `(array: [])` - Comma-separated list of keys
-     that will not be HMAC'd by audit devices in the request data object.
+    that will not be HMAC'd by audit devices in the request data object.
 
   - `audit_non_hmac_response_keys` `(array: [])` - Comma-separated list of keys
-     that will not be HMAC'd by audit devices in the response data object.
+    that will not be HMAC'd by audit devices in the response data object.
 
-  - `listing_visibility` `(string: "")` - Speficies whether to show this mount
+  - `listing_visibility` `(string: "")` - Specifies whether to show this mount
     in the UI-specific listing endpoint. Valid values are `"unauth"` or
     `"hidden"`.  If not set, behaves like `"hidden"`.
 
   - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-     to whitelist and pass from the request to the backend.
+    to whitelist and pass from the request to the plugin.
 
-    These control the default and maximum lease time-to-live, force
-    disabling backend caching, and option plugin name for plugin backends
-    respectively. The first three options override the global defaults if
-    set on a specific mount. The plugin_name can be provided in the config
-    map or as a top-level option, with the former taking precedence.
+  - `allowed_response_headers` `(array: [])` - Comma-separated list of headers
+    to whitelist, allowing a plugin to include them in the response.
 
-    When used with supported seals (`pkcs11`, `awskms`, etc.), `seal_wrap`
-    causes key material for supporting mounts to be wrapped by the seal's
-    encryption capability. This is currently only supported for `transit` and
-    `pki` backends. This is only available in Vault Enterprise.
+  - `options` `(map<string|string>: nil)` - Specifies mount type specific options
+    that are passed to the backend.
 
-- `options` `(map<string|string>: nil)` - Specifies mount type specific options
-  that are passed to the backend. 
-  
-    *Key/Value (KV)*  
+    *Key/Value (KV)*
     - `version` `(string: "1")` - The version of the KV to mount. Set to "2" for mount
       KV v2.
-
-- `plugin_name` `(string: "")` – Specifies the name of the plugin to
-  use based from the name in the plugin catalog. Applies only to plugin
-  backends.
 
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
@@ -133,7 +120,8 @@ relevant functionality is only supported in Vault Enterprise:
   only. Local mounts are not replicated nor (if a secondary) removed by
   replication.
 
-- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount.
+- `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
+  values stored by the mount to be wrapped by the seal's encryption capability.
 
 ### Sample Payload
 
@@ -230,12 +218,15 @@ This endpoint tunes configuration parameters for a given mount point.
   list of keys that will not be HMAC'd by audit devices in the response data
   object.
 
-- `listing_visibility` `(string: "")` - Speficies whether to show this mount in
+- `listing_visibility` `(string: "")` - Specifies whether to show this mount in
   the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
   If not set, behaves like `"hidden"`.
 
 - `passthrough_request_headers` `(array: [])` - Comma-separated list of headers
-    to whitelist and pass from the request to the backend.
+  to whitelist and pass from the request to the plugin.
+
+- `allowed_response_headers` `(array: [])` - Comma-separated list of headers
+  to whitelist, allowing a plugin to include them in the response.
 
 ### Sample Payload
 

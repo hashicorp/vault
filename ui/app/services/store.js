@@ -1,21 +1,29 @@
+import { schedule } from '@ember/runloop';
+import { copy } from 'ember-copy';
+import { resolve, Promise } from 'rsvp';
+import { dasherize } from '@ember/string';
+import { assert } from '@ember/debug';
+import { set, get, computed } from '@ember/object';
 import DS from 'ember-data';
-import Ember from 'ember';
 import clamp from 'vault/utils/clamp';
+import config from 'vault/config/environment';
 
-const { assert, computed, get, set } = Ember;
+const { DEFAULT_PAGE_SIZE } = config.APP;
 
 export function normalizeModelName(modelName) {
-  return Ember.String.dasherize(modelName);
+  return dasherize(modelName);
 }
 
 export function keyForCache(query) {
   /*eslint no-unused-vars: ["error", { "ignoreRestSiblings": true }]*/
   // we want to ignore size, page, responsePath, and pageFilter in the cacheKey
   const { size, page, responsePath, pageFilter, ...queryForCache } = query;
-  const cacheKeyObject = Object.keys(queryForCache).sort().reduce((result, key) => {
-    result[key] = queryForCache[key];
-    return result;
-  }, {});
+  const cacheKeyObject = Object.keys(queryForCache)
+    .sort()
+    .reduce((result, key) => {
+      result[key] = queryForCache[key];
+      return result;
+    }, {});
   return JSON.stringify(cacheKeyObject);
 }
 
@@ -64,10 +72,12 @@ export default DS.Store.extend({
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');
-    assert('size is required', query.size);
+    if (!query.size) {
+      query.size = DEFAULT_PAGE_SIZE;
+    }
 
     if (dataCache) {
-      return Ember.RSVP.resolve(this.fetchPage(modelName, query));
+      return resolve(this.fetchPage(modelName, query));
     }
     return adapter
       .query(this, { modelName }, query)
@@ -105,7 +115,7 @@ export default DS.Store.extend({
   constructResponse(modelName, query) {
     const { pageFilter, responsePath, size, page } = query;
     let { response, dataset } = this.getDataset(modelName, query);
-    response = Ember.copy(response, true);
+    response = copy(response, true);
     const data = this.filterData(pageFilter, dataset);
 
     const lastPage = Math.ceil(data.length / size);
@@ -134,8 +144,8 @@ export default DS.Store.extend({
     this.peekAll(modelName).forEach(record => {
       record.unloadRecord();
     });
-    return new Ember.RSVP.Promise(resolve => {
-      Ember.run.schedule('destroy', () => {
+    return new Promise(resolve => {
+      schedule('destroy', () => {
         this.push(
           this.serializerFor(modelName).normalizeResponse(
             this,

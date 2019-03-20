@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "policy list - Command"
+sidebar_title: "<code>list</code>"
 sidebar_current: "docs-commands-policy-list"
 description: |-
   The "policy list" command Lists the names of the policies that are installed

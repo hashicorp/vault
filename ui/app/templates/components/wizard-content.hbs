@@ -1,0 +1,40 @@
+<div class="wizard-header">
+  {{#unless hidePopup}}
+    <PopupMenu @class="wizard-dismiss-menu">
+      <nav class="menu">
+        <ul class="menu-list">
+          <li class="action">
+            <button type="button" class="button link " onclick={{action "dismissWizard"}}>
+              Dismiss
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </PopupMenu>
+  {{/unless}}
+  <h1 class="title is-5">
+    <ICon @glyph={{glyph}} @size="21" /> {{headerText}}
+  </h1>
+  {{#if showProgress}}
+    <ToolTip @verticalPosition="below" as |T|>
+      <T.trigger @tabindex=false>
+        <WizardProgress @currentFeatureProgress={{currentFeatureProgress}} @progressBar={{progressBar}} />
+      </T.trigger>
+      <T.content @class="tool-tip">
+        <div class="box">
+          {{#if currentTutorialProgress}}
+            {{currentTutorialProgress.text}}
+          {{else}}
+            <p>{{capitalize currentFeatureProgress.feature}}</p>
+            {{currentFeatureProgress.text}}
+          {{/if}}
+        </div>
+      </T.content>
+    </ToolTip>
+  {{else}}
+    {{#if selectProgress}}
+      <WizardProgress @noProgress={{true}} @progressBar={{selectProgress}} />
+    {{/if}}
+  {{/if}}
+</div>
+{{yield}}

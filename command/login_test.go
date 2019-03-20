@@ -10,6 +10,7 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/vault"
 )
 
 func testLoginCommand(tb testing.TB) (*cli.MockUi, *LoginCommand) {
@@ -78,7 +79,7 @@ func TestLoginCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(storedToken), 36; l != exp {
+		if l, exp := len(storedToken), vault.TokenLength+2; l != exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
 		}
 	})
@@ -205,7 +206,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Verify only the token was printed
 		token := ui.OutputWriter.String()
-		if l, exp := len(token), 36; l != exp {
+		if l, exp := len(token), vault.TokenLength+2; l != exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, token)
 		}
 
@@ -439,51 +440,6 @@ func TestLoginCommand_Run(t *testing.T) {
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
-		}
-	})
-
-	// Deprecations
-	// TODO: remove in 0.9.0
-	t.Run("deprecated_no_verify", func(t *testing.T) {
-		t.Parallel()
-
-		client, closer := testVaultServer(t)
-		defer closer()
-
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-			Policies: []string{"default"},
-			TTL:      "30m",
-			NumUses:  1,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		token := secret.Auth.ClientToken
-
-		_, cmd := testLoginCommand(t)
-		cmd.client = client
-
-		code := cmd.Run([]string{
-			"-no-verify",
-			token,
-		})
-		if exp := 0; code != exp {
-			t.Errorf("expected %d to be %d", code, exp)
-		}
-
-		lookup, err := client.Auth().Token().Lookup(token)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// There was 1 use to start, make sure we didn't use it (verifying would
-		// use it).
-		uses, err := lookup.TokenRemainingUses()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if uses != 1 {
-			t.Errorf("expected %d to be %d", uses, 1)
 		}
 	})
 

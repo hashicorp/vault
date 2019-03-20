@@ -1,8 +1,7 @@
+import { computed } from '@ember/object';
 import DS from 'ember-data';
-import Ember from 'ember';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const { attr } = DS;
-const { computed } = Ember;
 const CREATE_FIELDS = [
   'publicKey',
   'keyId',
@@ -19,7 +18,10 @@ export default DS.Model.extend({
   role: attr('object', {
     readOnly: true,
   }),
-  publicKey: attr('string'),
+  publicKey: attr('string', {
+    label: 'Public Key',
+    editType: 'textarea',
+  }),
   ttl: attr({
     label: 'TTL',
     editType: 'ttl',

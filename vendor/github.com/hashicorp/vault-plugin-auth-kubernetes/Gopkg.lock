@@ -2,8 +2,7 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:e26170d7ec7d444d7b74a5b1dbd6437fd8e552d27efce9327f733311737c4ae9"
+  digest = "1:a69ab3f1445ffd4815add4bd31ba05b65b3b9fec1ade5057d5d717f30e6efd6d"
   name = "github.com/SermoDigital/jose"
   packages = [
     ".",
@@ -12,7 +11,8 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "803625baeddc3526d01d321b5066029f53eafc81"
+  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
+  version = "1.1"
 
 [[projects]]
   branch = "master"
@@ -23,16 +23,17 @@
   revision = "7fddfc383310abc091d79a27f116d30cf0424032"
 
 [[projects]]
-  digest = "1:b12a893d64eb4c4c1980240c5706026032f505fef4ecd7d4cbfa2ed60ecd40c9"
+  branch = "master"
+  digest = "1:fb6bb07f738b9ec248ffa7b737dd983df2028001ebd0dad29dfb0830576cef12"
   name = "github.com/briankassouf/jose"
   packages = [
+    ".",
     "crypto",
     "jws",
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
-  version = "1.1"
+  revision = "d2569464773f2b9de32e57a79d87318bca5b56c0"
 
 [[projects]]
   digest = "1:34e709f36fd4f868fb00dbaf8a6cab4c1ae685832d392874ba9d7c5dec2429d1"
@@ -202,7 +203,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d00de8725219a569ffbb5dd1042e4ced1f3b5ccee2b07218371f71026cc7609a"
+  digest = "1:7be65468c591c5e836ec7ff70b6e7665452a6e700d5f0d5bb9edec8aa57b58e2"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -213,6 +214,7 @@
     "helper/errutil",
     "helper/hclutil",
     "helper/jsonutil",
+    "helper/license",
     "helper/locksutil",
     "helper/logging",
     "helper/mlock",
@@ -232,7 +234,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "add60e6dc7ff7b94487f3b5b680d00d7c05fe621"
+  revision = "c0739a0f2367d5fdd20cef502b628e01bdb90470"
 
 [[projects]]
   branch = "master"
@@ -273,6 +275,17 @@
   pruneopts = "UT"
   revision = "4dadeb3030eda0273a12382bb2348ffc7c9d1a39"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:c7a5e79396b6eb570159df7a1d487ce5775bf43b7907976fbef6de544ea160ad"
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32",
+  ]
+  pruneopts = "UT"
+  revision = "473cd7ce01a1113208073166464b98819526150e"
+  version = "v2.0.8"
 
 [[projects]]
   digest = "1:0e792eea6c96ec55ff302ef33886acbaa5006e900fefe82689e88d96439dcd84"
@@ -433,7 +446,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/SermoDigital/jose/jws",
     "github.com/briankassouf/jose/crypto",
     "github.com/briankassouf/jose/jws",
     "github.com/briankassouf/jose/jwt",

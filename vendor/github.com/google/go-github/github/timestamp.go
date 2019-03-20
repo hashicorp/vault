@@ -28,9 +28,9 @@ func (t *Timestamp) UnmarshalJSON(data []byte) (err error) {
 	str := string(data)
 	i, err := strconv.ParseInt(str, 10, 64)
 	if err == nil {
-		(*t).Time = time.Unix(i, 0)
+		t.Time = time.Unix(i, 0)
 	} else {
-		(*t).Time, err = time.Parse(`"`+time.RFC3339+`"`, str)
+		t.Time, err = time.Parse(`"`+time.RFC3339+`"`, str)
 	}
 	return
 }

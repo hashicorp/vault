@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "High Availability"
+sidebar_title: "High Availability"
 sidebar_current: "docs-internals-ha"
 description: |-
   Learn about the high availability design of Vault.
@@ -47,3 +48,22 @@ then one of the standbys will take over and become the active instance.
 It is important to note that only _unsealed_ servers act as a standby.
 If a server is still in the sealed state, then it cannot act as a standby
 as it would be unable to serve any requests should the active server fail.
+
+# Performance Standby Nodes (Enterprise)
+
+Performance Standby Nodes are just like traditional High Availability standby
+nodes but they can service read-only requests from users or applications.
+Read-only requests are requests that do not modify Vault's storage. This allows
+for Vault to quickly scale its ability to service these kinds of operations,
+providing near-linear request-per-second scaling in many common scenarios for
+some secrets engines like K/V and Transit. By spreading traffic across
+performance standby nodes, clients can scale these IOPS horizontally to handle
+extremely high traffic workloads.  
+
+If a request comes into a Performance Standby Node that causes a storage write
+the request will be forwarded onto the active server. If the request is
+read-only the request will be serviced locally on the Performance Standby.
+
+Just like traditional HA standbys if the active node is sealed, fails, or loses
+network connectivity then a performance standby can take over and become the
+active instance.

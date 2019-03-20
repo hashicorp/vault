@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Azure - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-azure"
+sidebar_title: "Azure"
+sidebar_current: "api-http-secret-azure"
 description: |-
   This is the API documentation for the Vault Azure secrets engine.
 ---
@@ -111,9 +112,10 @@ $ curl \
 
 ## Create/Update Role
 
-Create or update a Vault role. The provided Azure roles must exist
-for this call to succeed. See the Azure secrets [roles docs][roles]
-for more information about roles.
+Create or update a Vault role. Either `application_object_id` or
+`azure_roles` must be provided, and these resources must exist for this
+call to succeed. See the Azure secrets [roles docs][roles] for more
+information about roles.
 
 | Method   | Path                     | Produces                  |
 | :------- | :------------------------| :------------------------ |
@@ -122,9 +124,12 @@ for more information about roles.
 
 ### Parameters
 
-- `name` (`string: <required>`) - Required. Name of the role. Cannot be updated.
-- `azure_roles` (`array: <required>`) - List of Azure roles to be assigned to the generated service
-   principal. See [roles docs][roles] for details on role definition.
+- `azure_roles` (`string: ""`) - List of Azure roles to be assigned to the generated service
+   principal. The array must be in JSON format, properly escaped as a string. See [roles docs][roles]
+   for details on role definition.
+- `application_object_id` (`string: ""`) - Application Object ID for an existing service principal that will
+   be used instead of creating dynamic service principals. If present, `azure_roles` will be ignored. See
+   [roles docs][roles] for details on role definition.
 - `ttl` (`string: ""`) – Specifies the default TTL for service principals generated using this role.
    Accepts time suffixed strings ("1h") or an integer number of seconds. Defaults to the system/engine default TTL time.
 - `max_ttl` (`string: ""`) – Specifies the maximum TTL for service principals generated using this role. Accepts time
@@ -134,16 +139,16 @@ for more information about roles.
 
 ```json
 {
-  "azure_roles": [
+  "azure_roles": "[
     {
-    	"role_name": "Contributor",
-    	"scope":  "/subscriptions/<uuid>/resourceGroup/Website"
+      \"role_name\": \"Contributor\",
+      \"scope\":  \"/subscriptions/<uuid>/resourceGroup/Website\"
     },
     {
-    	"role_id": "/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>",
-    	"scope":  "/subscriptions/<uuid>"
+      \"role_id\": \"/subscriptions/<uuid>/providers/Microsoft.Authorization/roleDefinitions/<uuid>\",
+      \"scope\":  \"/subscriptions/<uuid>\"
     }
-  ],
+  ]",
   "ttl": 3600,
   "max_ttl": "24h"
 }

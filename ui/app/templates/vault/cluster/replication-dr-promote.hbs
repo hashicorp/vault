@@ -25,9 +25,13 @@
       </ul>
     </nav>
     {{#if (eq action 'promote')}}
-      <MessageInPage data-test-cluster-status @type="warning" @class="unseal-warning">
-        <em>Caution</em>: Vault replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
-      </MessageInPage>
+      <AlertBanner
+        @type="warning"
+        @title="Caution"
+        @message="Vault replication is not designed for active-active usage and enabling two performance primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected."
+        @class="unseal-warning"
+        data-test-cluster-status
+      />
       <ReplicationActions
         @replicationMode="dr"
         @selectedAction="promote"

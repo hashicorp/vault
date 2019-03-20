@@ -1,10 +1,10 @@
-import Ember from 'ember';
+import Route from '@ember/routing/route';
 
-export default Ember.Route.extend({
+export default Route.extend({
   beforeModel: function(transition) {
     if (transition.targetName === this.routeName) {
       transition.abort();
-      this.replaceWith('vault.cluster.settings.mount-secret-backend');
+      return this.replaceWith('vault.cluster.settings.mount-secret-backend');
     }
   },
 });

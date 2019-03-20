@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-sockaddr"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -72,6 +72,12 @@ At least one must exist in the SANs. Supports globbing.`,
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of URIs.
 At least one must exist in the SANs. Supports globbing.`,
+			},
+
+			"allowed_organizational_units": &framework.FieldSchema{
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of Organizational Units names.
+At least one must exist in the OU field.`,
 			},
 
 			"required_extensions": &framework.FieldSchema{
@@ -179,18 +185,20 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"certificate":          cert.Certificate,
-			"display_name":         cert.DisplayName,
-			"policies":             cert.Policies,
-			"ttl":                  cert.TTL / time.Second,
-			"max_ttl":              cert.MaxTTL / time.Second,
-			"period":               cert.Period / time.Second,
-			"allowed_names":        cert.AllowedNames,
-			"allowed_common_names": cert.AllowedCommonNames,
-			"allowed_dns_sans":     cert.AllowedDNSSANs,
-			"allowed_email_sans":   cert.AllowedEmailSANs,
-			"allowed_uri_sans":     cert.AllowedURISANs,
-			"required_extensions":  cert.RequiredExtensions,
+			"certificate":                  cert.Certificate,
+			"display_name":                 cert.DisplayName,
+			"policies":                     cert.Policies,
+			"ttl":                          cert.TTL / time.Second,
+			"max_ttl":                      cert.MaxTTL / time.Second,
+			"period":                       cert.Period / time.Second,
+			"allowed_names":                cert.AllowedNames,
+			"allowed_common_names":         cert.AllowedCommonNames,
+			"allowed_dns_sans":             cert.AllowedDNSSANs,
+			"allowed_email_sans":           cert.AllowedEmailSANs,
+			"allowed_uri_sans":             cert.AllowedURISANs,
+			"allowed_organizational_units": cert.AllowedOrganizationalUnits,
+			"required_extensions":          cert.RequiredExtensions,
+			"bound_cidrs":                  cert.BoundCIDRs,
 		},
 	}, nil
 }
@@ -205,6 +213,7 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	allowedDNSSANs := d.Get("allowed_dns_sans").([]string)
 	allowedEmailSANs := d.Get("allowed_email_sans").([]string)
 	allowedURISANs := d.Get("allowed_uri_sans").([]string)
+	allowedOrganizationalUnits := d.Get("allowed_organizational_units").([]string)
 	requiredExtensions := d.Get("required_extensions").([]string)
 
 	var resp logical.Response
@@ -278,20 +287,21 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	certEntry := &CertEntry{
-		Name:               name,
-		Certificate:        certificate,
-		DisplayName:        displayName,
-		Policies:           policies,
-		AllowedNames:       allowedNames,
-		AllowedCommonNames: allowedCommonNames,
-		AllowedDNSSANs:     allowedDNSSANs,
-		AllowedEmailSANs:   allowedEmailSANs,
-		AllowedURISANs:     allowedURISANs,
-		RequiredExtensions: requiredExtensions,
-		TTL:                ttl,
-		MaxTTL:             maxTTL,
-		Period:             period,
-		BoundCIDRs:         parsedCIDRs,
+		Name:                       name,
+		Certificate:                certificate,
+		DisplayName:                displayName,
+		Policies:                   policies,
+		AllowedNames:               allowedNames,
+		AllowedCommonNames:         allowedCommonNames,
+		AllowedDNSSANs:             allowedDNSSANs,
+		AllowedEmailSANs:           allowedEmailSANs,
+		AllowedURISANs:             allowedURISANs,
+		AllowedOrganizationalUnits: allowedOrganizationalUnits,
+		RequiredExtensions:         requiredExtensions,
+		TTL:                        ttl,
+		MaxTTL:                     maxTTL,
+		Period:                     period,
+		BoundCIDRs:                 parsedCIDRs,
 	}
 
 	// Store it
@@ -311,20 +321,21 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 type CertEntry struct {
-	Name               string
-	Certificate        string
-	DisplayName        string
-	Policies           []string
-	TTL                time.Duration
-	MaxTTL             time.Duration
-	Period             time.Duration
-	AllowedNames       []string
-	AllowedCommonNames []string
-	AllowedDNSSANs     []string
-	AllowedEmailSANs   []string
-	AllowedURISANs     []string
-	RequiredExtensions []string
-	BoundCIDRs         []*sockaddr.SockAddrMarshaler
+	Name                       string
+	Certificate                string
+	DisplayName                string
+	Policies                   []string
+	TTL                        time.Duration
+	MaxTTL                     time.Duration
+	Period                     time.Duration
+	AllowedNames               []string
+	AllowedCommonNames         []string
+	AllowedDNSSANs             []string
+	AllowedEmailSANs           []string
+	AllowedURISANs             []string
+	AllowedOrganizationalUnits []string
+	RequiredExtensions         []string
+	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
 }
 
 const pathCertHelpSyn = `

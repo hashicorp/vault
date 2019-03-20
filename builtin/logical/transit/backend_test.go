@@ -205,11 +205,8 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"hash_algorithm": "invalid",
 	}
 	resp, err = b.HandleRequest(context.Background(), signReq)
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatal("expected an error response")
 	}
 
 	signReq.Data = map[string]interface{}{
@@ -251,7 +248,7 @@ func testTransit_RSA(t *testing.T, keyType string) {
 func TestBackend_basic(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
@@ -278,7 +275,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_upsert(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepReadPolicy(t, "test", true, false),
 			testAccStepListPolicy(t, "test", true),
@@ -293,7 +290,7 @@ func TestBackend_upsert(t *testing.T) {
 func TestBackend_datakey(t *testing.T) {
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
@@ -317,7 +314,7 @@ func testBackendRotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
@@ -380,7 +377,7 @@ func testBackendRotation(t *testing.T) {
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		LogicalFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", true),

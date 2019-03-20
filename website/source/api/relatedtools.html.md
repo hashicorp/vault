@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Related Tools"
-sidebar_current: "docs-http-related"
+sidebar_title: "Related Tools"
+sidebar_current: "api-http-related"
 description: |-
   Short list of third-party tools that work with or are related to Vault.
 ---
@@ -29,5 +30,7 @@ The following list of tools is maintained by the community of Vault users; Hashi
 * [vault-migrator](https://github.com/nebtex/vault-migrator) - A tool to migrate data between different Vault storage mechanisms
 * [Cryptr](https://github.com/adobe/cryptr) - a desktop Vault UI for Mac, Windows and Linux
 * [sequelize-vault](https://github.com/linyows/sequelize-vault) - A Sequelize plugin for easily integrating Vault secrets.
+* [ansible-modules-hashivault](https://github.com/TerryHowe/ansible-modules-hashivault) - An Ansible module for configuring most things in Vault including secrets, backends and policies.
+* [Docker credential helper](https://github.com/morningconsult/docker-credential-vault-login) - A program that automatically reads Docker credentials from your Vault server and passes them to the Docker daemon to authenticate to your Docker registry when pulling an image
 
 Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/master/website/source/api/relatedtools.html.md).

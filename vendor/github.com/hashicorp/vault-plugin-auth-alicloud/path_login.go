@@ -84,7 +84,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	roleNameIfc, ok := data.GetOk("role")
 	if ok {
 		roleName = roleNameIfc.(string)
-	} else {
+	}
+	if roleName == "" {
 		roleName = parsedARN.RoleName
 	}
 
@@ -114,7 +115,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				"identity_type": callerIdentity.IdentityType,
 				"principal_id":  callerIdentity.PrincipalId,
 				"request_id":    callerIdentity.RequestId,
-				"role_name":     parsedARN.RoleName,
+				"role_name":     roleName,
 			},
 			DisplayName: callerIdentity.PrincipalId,
 			LeaseOptions: logical.LeaseOptions{

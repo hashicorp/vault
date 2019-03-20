@@ -15,21 +15,20 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	"github.com/elazarl/go-bindata-assetfs"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/pathmanager"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 const (
-	// AuthHeaderName is the name of the header containing the token.
-	AuthHeaderName = "X-Vault-Token"
-
 	// WrapTTLHeaderName is the name of the header containing a directive to
 	// wrap the response
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
@@ -62,10 +61,36 @@ const (
 )
 
 var (
-	ReplicationStaleReadTimeout = 2 * time.Second
-
 	// Set to false by stub_asset if the ui build tag isn't enabled
 	uiBuiltIn = true
+
+	// perfStandbyAlwaysForwardPaths is used to check a requested path against
+	// the always forward list
+	perfStandbyAlwaysForwardPaths = pathmanager.New()
+
+	injectDataIntoTopRoutes = []string{
+		"/v1/sys/audit",
+		"/v1/sys/audit/",
+		"/v1/sys/audit-hash/",
+		"/v1/sys/auth",
+		"/v1/sys/auth/",
+		"/v1/sys/config/cors",
+		"/v1/sys/config/auditing/request-headers/",
+		"/v1/sys/config/auditing/request-headers",
+		"/v1/sys/capabilities",
+		"/v1/sys/capabilities-accessor",
+		"/v1/sys/capabilities-self",
+		"/v1/sys/key-status",
+		"/v1/sys/mounts",
+		"/v1/sys/mounts/",
+		"/v1/sys/policy",
+		"/v1/sys/policy/",
+		"/v1/sys/rekey/backup",
+		"/v1/sys/rekey/recovery-key-backup",
+		"/v1/sys/remount",
+		"/v1/sys/rotate",
+		"/v1/sys/wrapping/wrap",
+	}
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -90,27 +115,29 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
-	mux.Handle("/v1/sys/wrapping/lookup", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/rewrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, wrappingVerificationFunc)))
-	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, nil)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, nil)))
+	for _, path := range injectDataIntoTopRoutes {
+		mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
+	}
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
 	if core.UIEnabled() == true {
 		if uiBuiltIn {
 			mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
+			mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
 		} else {
 			mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 		}
-		mux.Handle("/", handleRootRedirect())
+		mux.Handle("/ui", handleUIRedirect())
+		mux.Handle("/", handleUIRedirect())
 	}
+
+	additionalRoutes(mux, core)
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
-	// Wrap the help wrapped handler with another layer with a generic
-	// handler
-	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler, props.MaxRequestSize, props.MaxRequestDuration)
+	genericWrappedHandler := genericWrapping(core, corsWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
@@ -125,7 +152,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 // wrapGenericHandler wraps the handler with an extra layer of handler where
 // tasks that should be commonly handled for all the requests and/or responses
 // are performed.
-func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
+func wrapGenericHandler(core *vault.Core, h http.Handler, maxRequestSize int64, maxRequestDuration time.Duration) http.Handler {
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
 	}
@@ -143,7 +170,26 @@ func wrapGenericHandler(h http.Handler, maxRequestSize int64, maxRequestDuration
 		if maxRequestSize > 0 {
 			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
+		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
+
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/v1/"):
+			newR, status := adjustRequest(core, r)
+			if status != 0 {
+				respondError(w, status, nil)
+				cancelFunc()
+				return
+			}
+			r = newR
+
+		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
+		default:
+			respondError(w, http.StatusNotFound, nil)
+			cancelFunc()
+			return
+		}
+
 		h.ServeHTTP(w, r)
 		cancelFunc()
 		return
@@ -241,12 +287,12 @@ func WrapForwardedForHandler(h http.Handler, authorizedAddrs []*sockaddr.SockAdd
 // A lookup on a token that is about to expire returns nil, which means by the
 // time we can validate a wrapping token lookup will return nil since it will
 // be revoked after the call. So we have to do the validation here.
-func wrappingVerificationFunc(core *vault.Core, req *logical.Request) error {
+func wrappingVerificationFunc(ctx context.Context, core *vault.Core, req *logical.Request) error {
 	if req == nil {
 		return fmt.Errorf("invalid request")
 	}
 
-	valid, err := core.ValidateWrappingToken(req)
+	valid, err := core.ValidateWrappingToken(ctx, req)
 	if err != nil {
 		return errwrap.Wrapf("error validating wrapping token: {{err}}", err)
 	}
@@ -307,12 +353,67 @@ func handleUIStub() http.Handler {
 	stubHTML := `
 	<!DOCTYPE html>
 	<html>
-	<p>Vault UI is not available in this binary. To get Vault UI do one of the following:</p>
+	<style>
+	body {
+	color: #1F2124;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+	}
+
+	.wrapper {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 500px;
+	}
+
+	.content ul {
+	line-height: 1.5;
+	}
+
+	a {
+	color: #1563ff;
+	text-decoration: none;
+	}
+
+	.header {
+	display: flex;
+	color: #6a7786;
+	align-items: center;
+	}
+
+	.header svg {
+	padding-right: 12px;
+	}
+
+	.alert {
+	transform: scale(0.07);
+	fill: #6a7786;
+	}
+
+	h1 {
+	font-weight: 500;
+	}
+
+	p {
+	margin-top: 0px;
+	}
+	</style>
+	<div class="wrapper">
+	<div class="content">
+	<div class="header">
+	<svg width="36px" height="36px" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+	<path class="alert" d="M476.7 422.2L270.1 72.7c-2.9-5-8.3-8.7-14.1-8.7-5.9 0-11.3 3.7-14.1 8.7L35.3 422.2c-2.8 5-4.8 13-1.9 17.9 2.9 4.9 8.2 7.9 14 7.9h417.1c5.8 0 11.1-3 14-7.9 3-4.9 1-13-1.8-17.9zM288 400h-64v-48h64v48zm0-80h-64V176h64v144z"/>
+	</svg>
+	<h1>Vault UI is not available in this binary.</h1>
+	</div>
+	<p>To get Vault UI do one of the following:</p>
 	<ul>
 	<li><a href="https://www.vaultproject.io/downloads.html">Download an official release</a></li>
 	<li>Run <code>make release</code> to create your own release binaries.
 	<li>Run <code>make dev-ui</code> to create a development binary with the UI.
 	</ul>
+	</div>
+	</div>
 	</html>
 	`
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -320,7 +421,7 @@ func handleUIStub() http.Handler {
 	})
 }
 
-func handleRootRedirect() http.Handler {
+func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/ui/", 307)
 		return
@@ -369,16 +470,25 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
-			handler.ServeHTTP(w, r)
-			return
-		}
-
-		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
-			// Forwarding explicitly disabled, fall back to previous behavior
-			core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
-			handler.ServeHTTP(w, r)
-			return
+		// If we are a performance standby we can handle the request.
+		if core.PerfStandby() {
+			ns, err := namespace.FromContext(r.Context())
+			if err != nil {
+				respondError(w, http.StatusBadRequest, err)
+				return
+			}
+			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
+			switch {
+			case !perfStandbyAlwaysForwardPaths.HasPath(path):
+				handler.ServeHTTP(w, r)
+				return
+			case strings.HasPrefix(path, "auth/token/create/"):
+				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), path)
+				if err == nil && isBatch {
+					handler.ServeHTTP(w, r)
+					return
+				}
+			}
 		}
 
 		// Note: in an HA setup, this call will also ensure that connections to
@@ -405,47 +515,99 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 
-		// Attempt forwarding the request. If we cannot forward -- perhaps it's
-		// been disabled on the active node -- this will return with an
-		// ErrCannotForward and we simply fall back
-		statusCode, header, retBytes, err := core.ForwardRequest(r)
-		if err != nil {
-			if err == vault.ErrCannotForward {
-				core.Logger().Debug("handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
-			} else {
-				core.Logger().Error("handleRequestForwarding: error forwarding request", "error", err)
-			}
-
-			// Fall back to redirection
-			handler.ServeHTTP(w, r)
-			return
-		}
-
-		if header != nil {
-			for k, v := range header {
-				w.Header()[k] = v
-			}
-		}
-
-		w.WriteHeader(statusCode)
-		w.Write(retBytes)
+		forwardRequest(core, w, r)
 		return
 	})
 }
 
-// request is a helper to perform a request and properly exit in the
-// case of an error.
-func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
-	resp, err := core.HandleRequest(rawReq.Context(), r)
-	if errwrap.Contains(err, consts.ErrStandby.Error()) {
-		respondStandby(core, w, rawReq.URL)
-		return resp, false
-	}
-	if respondErrorCommon(w, r, resp, err) {
-		return resp, false
+func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
+		respondStandby(core, w, r.URL)
+		return
 	}
 
-	return resp, true
+	if r.Header.Get(NoRequestForwardingHeaderName) != "" {
+		// Forwarding explicitly disabled, fall back to previous behavior
+		core.Logger().Debug("handleRequestForwarding: forwarding disabled by client request")
+		respondStandby(core, w, r.URL)
+		return
+	}
+
+	// Attempt forwarding the request. If we cannot forward -- perhaps it's
+	// been disabled on the active node -- this will return with an
+	// ErrCannotForward and we simply fall back
+	statusCode, header, retBytes, err := core.ForwardRequest(r)
+	if err != nil {
+		if err == vault.ErrCannotForward {
+			core.Logger().Debug("cannot forward request (possibly disabled on active node), falling back")
+		} else {
+			core.Logger().Error("forward request error", "error", err)
+		}
+
+		// Fall back to redirection
+		respondStandby(core, w, r.URL)
+		return
+	}
+
+	if header != nil {
+		for k, v := range header {
+			w.Header()[k] = v
+		}
+	}
+
+	w.WriteHeader(statusCode)
+	w.Write(retBytes)
+}
+
+// request is a helper to perform a request and properly exit in the
+// case of an error.
+func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
+	resp, err := core.HandleRequest(rawReq.Context(), r)
+	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning("Timeout hit while waiting for local replicated cluster to apply primary's write; this client may encounter stale reads of values written during this operation.")
+	}
+	if errwrap.Contains(err, consts.ErrStandby.Error()) {
+		respondStandby(core, w, rawReq.URL)
+		return resp, false, false
+	}
+	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
+		return nil, false, true
+	}
+
+	if resp != nil && len(resp.Headers) > 0 {
+		// Set this here so it will take effect regardless of any other type of
+		// response processing
+		header := w.Header()
+		for k, v := range resp.Headers {
+			for _, h := range v {
+				header.Add(k, h)
+			}
+		}
+
+		switch {
+		case resp.Secret != nil,
+			resp.Auth != nil,
+			len(resp.Data) > 0,
+			resp.Redirect != "",
+			len(resp.Warnings) > 0,
+			resp.WrapInfo != nil:
+			// Nothing, resp has data
+
+		default:
+			// We have an otherwise totally empty response except for headers,
+			// so nil out the response now that the headers are written out
+			resp = nil
+		}
+	}
+
+	if respondErrorCommon(w, r, resp, err) {
+		return resp, false, false
+	}
+
+	return resp, true, false
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
@@ -498,17 +660,47 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	w.WriteHeader(307)
 }
 
+// getTokenFromReq parse headers of the incoming request to extract token if
+// present it accepts Authorization Bearer (RFC6750) and X-Vault-Token header.
+// Returns true if the token was sourced from a Bearer header.
+func getTokenFromReq(r *http.Request) (string, bool) {
+	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
+		return token, false
+	}
+	if headers, ok := r.Header["Authorization"]; ok {
+		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
+
+		// If string does not start by 'Bearer ', it is not one we would use,
+		// but might be used by plugins
+		for _, v := range headers {
+			if !strings.HasPrefix(v, "Bearer ") {
+				continue
+			}
+			return strings.TrimSpace(v[7:]), true
+		}
+	}
+	return "", false
+}
+
 // requestAuth adds the token to the logical.Request if it exists.
-func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logical.Request {
+func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if v := r.Header.Get(AuthHeaderName); v != "" {
-		req.ClientToken = v
+	token, fromAuthzHeader := getTokenFromReq(r)
+	if token != "" {
+		req.ClientToken = token
+		req.ClientTokenSource = logical.ClientTokenFromVaultHeader
+		if fromAuthzHeader {
+			req.ClientTokenSource = logical.ClientTokenFromAuthzHeader
+		}
 
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
 		// a token from a Vault version pre-accessors.
-		te, err := core.LookupToken(v)
+		te, err := core.LookupToken(r.Context(), token)
+		if err != nil && strings.Count(token, ".") != 2 {
+			return req, err
+		}
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
 			req.ClientTokenRemainingUses = te.NumUses
@@ -516,7 +708,22 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		}
 	}
 
-	return req
+	return req, nil
+}
+
+func requestPolicyOverride(r *http.Request, req *logical.Request) error {
+	raw := r.Header.Get(PolicyOverrideHeaderName)
+	if raw == "" {
+		return nil
+	}
+
+	override, err := parseutil.ParseBool(raw)
+	if err != nil {
+		return err
+	}
+
+	req.PolicyOverride = override
+	return nil
 }
 
 // requestWrapInfo adds the WrapInfo value to the logical.Request if wrap info exists
@@ -549,19 +756,54 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 	return req, nil
 }
 
-func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
+// parseMFAHeader parses the MFAHeaderName in the request headers and organizes
+// them with MFA method name as the index.
+func parseMFAHeader(req *logical.Request) error {
+	if req == nil {
+		return fmt.Errorf("request is nil")
 	}
 
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
+	if req.Headers == nil {
+		return nil
+	}
+
+	// Reset and initialize the credentials in the request
+	req.MFACreds = make(map[string][]string)
+
+	for _, mfaHeaderValue := range req.Headers[canonicalMFAHeaderName] {
+		// Skip the header with no value in it
+		if mfaHeaderValue == "" {
+			continue
+		}
+
+		// Handle the case where only method name is mentioned and no value
+		// is supplied
+		if !strings.Contains(mfaHeaderValue, ":") {
+			// Mark the presence of method name, but set an empty set to it
+			// indicating that there were no values supplied for the method
+			if req.MFACreds[mfaHeaderValue] == nil {
+				req.MFACreds[mfaHeaderValue] = []string{}
+			}
+			continue
+		}
+
+		shardSplits := strings.SplitN(mfaHeaderValue, ":", 2)
+		if shardSplits[0] == "" {
+			return fmt.Errorf("invalid data in header %q; missing method name", MFAHeaderName)
+		}
+
+		if shardSplits[1] == "" {
+			return fmt.Errorf("invalid data in header %q; missing method value", MFAHeaderName)
+		}
+
+		req.MFACreds[shardSplits[0]] = append(req.MFACreds[shardSplits[0]], shardSplits[1])
+	}
+
+	return nil
+}
+
+func respondError(w http.ResponseWriter, status int, err error) {
+	logical.RespondError(w, status, err)
 }
 
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
@@ -584,8 +826,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-type ErrorResponse struct {
-	Errors []string `json:"errors"`
 }

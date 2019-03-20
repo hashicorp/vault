@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Vault Auto-unseal using AWS KMS - Guides"
+sidebar_title: "Vault Auto-unseal with AWS KMS"
 sidebar_current: "guides-operations-autounseal-aws-kms"
 description: |-
   In this guide, we'll show an example of how to use Terraform to provision an
@@ -19,7 +20,7 @@ decrypt data. Before any operation can be performed on the Vault, it must be
 unsealed. Unsealing is the process of constructing the master key necessary to
 decrypt the data encryption key.
 
-![Unseal with Shamir's Secret Sharing](/assets/images/vault-autounseal.png)
+![Unseal with Shamir's Secret Sharing](/img/vault-autounseal.png)
 
 This guide demonstrates an example of how to use Terraform to provision an
 instance that can utilize an encryption key from [AWS Key Management Services
@@ -27,7 +28,7 @@ instance that can utilize an encryption key from [AWS Key Management Services
 
 ## Reference Material
 
-- [Vault Enterprise Auto Unseal](/docs/enterprise/auto-unseal/index.html)
+- [Vault Auto Unseal](/docs/configuration/seal/index.html)
 - [Configuration: `awskms` Seal](/docs/configuration/seal/awskms.html)
 
 
@@ -50,18 +51,19 @@ many different key holders with many different keys.
 
 ## Solution
 
-Vault Enterprise supports opt-in automatic unsealing via cloud technologies such
-Amazon KMS or Google Cloud KMS. This feature enables operators to delegate the
-unsealing process to trusted cloud providers to ease operations in the event of
-partial failure and to aid in the creation of new or ephemeral clusters.
+Vault Enterprise supports opt-in automatic unsealing via cloud technologies:
+Amazon KMS, Azure Key Vault or GCP Cloud KMS. This feature enables operators to
+delegate the unsealing process to trusted cloud providers to ease operations in
+the event of partial failure and to aid in the creation of new or ephemeral
+clusters.
 
-![Unseal with AWS KMS](/assets/images/vault-autounseal-2.png)
+![Unseal with AWS KMS](/img/vault-autounseal-2.png)
 
 ## Prerequisites
 
 This guide assumes the following:   
 
-- Access to **Vault Enterprise 0.9.0 or later** which supports AWS KMS as an unseal mechanism
+- Access to **Vault Enterprise 0.9.0 or later** 
 - A URL to download Vault Enterprise from (an Amazon S3 bucket will suffice)
 - AWS account for provisioning cloud resources
 - [Terraform installed](https://www.terraform.io/intro/getting-started/install.html)
@@ -84,7 +86,7 @@ AWS KMS. Included is a Terraform configuration that has the following:
 * Vault configured with access to an AWS KMS key   
 
 
-[![YouTube](/assets/images/vault-autounseal-4.png)](https://youtu.be/iRyqOEDFIiY)
+[![YouTube](/img/vault-autounseal-4.png)](https://youtu.be/iRyqOEDFIiY)
 
 
 You are going to perform the following steps:
@@ -124,7 +126,7 @@ $ export AWS_SECRET_ACCESS_KEY = "<YOUR_AWS_SECRET_ACCESS_KEY>"
 ```
 
 Create a file named **`terraform.tfvars`** and specify your Vault Enterprise
-binary download URL. 
+binary download URL.
 
 **Example:**
 
@@ -266,7 +268,7 @@ At this point, you should be able to launch the Vault Enterprise UI by entering
 the address provided in the `terraform apply` outputs (e.g. http://192.0.2.1:8200/ui)
 and log in with your initial root token.
 
-![Vault Enterprise UI Login](/assets/images/vault-autounseal-3.png)
+![Vault Enterprise UI Login](/img/vault-autounseal-3.png)
 
 
 ### Step 3: Clean Up

@@ -39,6 +39,7 @@ example.vault.d
 website/vendor
 website/.bundle
 website/build
+website/tmp
 
 # Vagrant
 .vagrant/
@@ -47,7 +48,12 @@ Vagrantfile
 # Configs
 *.hcl
 !command/agent/config/test-fixtures/config.hcl
+!command/agent/config/test-fixtures/config-cache.hcl
 !command/agent/config/test-fixtures/config-embedded-type.hcl
+!command/agent/config/test-fixtures/config-cache-embedded-type.hcl
+!command/agent/config/test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl
+!command/agent/config/test-fixtures/bad-config-cache-no-listeners.hcl
+!command/agent/config/test-fixtures/config-cache-no-auto_auth.hcl
 
 .DS_Store
 .idea
@@ -92,3 +98,14 @@ ui/vault-ui-integration-server.pid
 # for building static assets
 node_modules
 package-lock.json
+
+# Website
+website/.bundle
+website/build/
+website/npm-debug.log
+website/vendor
+website/.bundle
+website/.cache
+website/assets/node_modules
+website/assets/public
+website/components/node_modules

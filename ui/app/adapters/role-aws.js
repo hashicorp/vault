@@ -1,5 +1,6 @@
+import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
-import Ember from 'ember';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -31,9 +32,9 @@ export default ApplicationAdapter.extend({
   },
 
   urlForRole(backend, id) {
-    let url = `${this.buildURL()}/${backend}/roles`;
+    let url = `${this.buildURL()}/${encodePath(backend)}/roles`;
     if (id) {
-      url = url + '/' + id;
+      url = url + '/' + encodePath(id);
     }
     return url;
   },
@@ -55,7 +56,7 @@ export default ApplicationAdapter.extend({
         backend,
       };
 
-      return Ember.assign({}, resp, data);
+      return assign({}, resp, data);
     });
   },
 

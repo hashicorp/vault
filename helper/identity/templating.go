@@ -2,7 +2,10 @@ package identity
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 var (
@@ -17,6 +20,7 @@ type PopulateStringInput struct {
 	String            string
 	Entity            *Entity
 	Groups            []*Group
+	Namespace         *namespace.Namespace
 }
 
 func PopulateString(p *PopulateStringInput) (bool, string, error) {
@@ -32,7 +36,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	splitStr := strings.Split(p.String, "{{")
 
 	if len(splitStr) >= 1 {
-		if strings.Index(splitStr[0], "}}") != -1 {
+		if strings.Contains(splitStr[0], "}}") {
 			return false, "", ErrUnbalancedTemplatingCharacter
 		}
 		if len(splitStr) == 1 {
@@ -57,7 +61,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 		case 2:
 			subst = true
 			if !p.ValidityCheckOnly {
-				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups)
+				tmplStr, err := performTemplating(p.Namespace, strings.TrimSpace(splitPiece[0]), p.Entity, p.Groups)
 				if err != nil {
 					return false, "", err
 				}
@@ -72,7 +76,7 @@ func PopulateString(p *PopulateStringInput) (bool, string, error) {
 	return subst, b.String(), nil
 }
 
-func performTemplating(input string, entity *Entity, groups []*Group) (string, error) {
+func performTemplating(ns *namespace.Namespace, input string, entity *Entity, groups []*Group) (string, error) {
 	performAliasTemplating := func(trimmed string, alias *Alias) (string, error) {
 		switch {
 		case trimmed == "id":
@@ -150,9 +154,15 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 		}
 		var found *Group
 		for _, group := range groups {
-			compare := group.Name
+			var compare string
 			if ids {
 				compare = group.ID
+			} else {
+				if ns != nil && group.NamespaceID == ns.ID {
+					compare = group.Name
+				} else {
+					continue
+				}
 			}
 
 			if compare == accessorSplit[0] {
@@ -162,7 +172,7 @@ func performTemplating(input string, entity *Entity, groups []*Group) (string, e
 		}
 
 		if found == nil {
-			return "", errors.New("group not found")
+			return "", fmt.Errorf("entity is not a member of group %q", accessorSplit[0])
 		}
 
 		trimmed = accessorSplit[1]

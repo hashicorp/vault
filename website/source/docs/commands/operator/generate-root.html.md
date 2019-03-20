@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator generate-root - Command"
+sidebar_title: "<code>generate-root</code>"
 sidebar_current: "docs-commands-operator-generate-root"
 description: |-
   The "operator generate-root" command generates a new root token by combining a

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Transit - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-transit"
+sidebar_title: "Transit"
+sidebar_current: "api-http-secret-transit"
 description: |-
   This is the API documentation for the Vault Transit secrets engine.
 ---
@@ -384,6 +385,12 @@ will be returned.
 }
 ```
 
+!> Vault HTTP API imposes a maximum request size of 32MB to prevent a denial
+of service attack. This can be tuned per [`listener`
+block](/docs/configuration/listener/tcp.html) in the Vault server
+configuration.
+
+
 ### Sample Request
 
 ```
@@ -738,15 +745,29 @@ be used.
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
 
-### Sample Payload
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, if the parameter 'input' is also set, it will be 
+  ignored.  Responses are returned in the 'batch_results' array component of the 
+  'data' element of the response. If the input data value of an item is invalid, the 
+  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  describing the error. The format for batch_input is:
 
-```json
-{
-  "input": "adba32=="
-}
-```
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32=="
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg=="
+        }
+      ]
+    }
+    ```
+
 
 ### Sample Request
 
@@ -758,6 +779,14 @@ $ curl \
     http://127.0.0.1:8200/v1/transit/hmac/my-key/sha2-512
 ```
 
+### Sample Payload
+
+```json
+{
+  "input": "adba32=="
+}
+```
+
 ### Sample Response
 
 ```json
@@ -767,6 +796,49 @@ $ curl \
   }
 }
 ```
+
+### Sample Payload with batch_input
+
+```json
+{
+  "batch_input": [
+    {
+      "input": "adba32=="
+    },
+    {
+      "input": "adba32=="
+    },
+    {},
+    {
+      "input": ""
+    }
+  ]
+}
+```
+
+### Sample Response for batch_input
+
+```json
+{
+  "data": {
+    "batch_results": [
+      {
+        "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+      },
+      {
+        "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+      },
+      {
+        "error": "missing input for HMAC"
+      },
+      {
+        "hmac": "vault:v1:/wsSP6iQ9ECO9RRkefKLXey9sDntzSjoiW0vBrWfUsYB0ISroyC6plUt/jN7gcOv9O+Ecow"
+      }
+    ]
+  }
+}
+```
+
 
 ## Sign Data
 
@@ -792,12 +864,36 @@ supports signing.
   own hash algorithm). This can also be specified as part of the URL.
   Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
+
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, any supplied 'input' or 'context' parameters will be 
+  ignored.  Responses are returned in the 'batch_results' array component of the 
+  'data' element of the response. If the input data value of an item is invalid, the 
+  corresponding item in the 'batch_results' will have the key 'error' with a value 
+  describing the error. The format for batch_input is:
+
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32==",
+          "context": "abcd"
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg==",
+          "context": "efgh"
+        }
+      ]
+    }
+    ```
 
 - `context` `(string: "")` - Base64 encoded context for key derivation.
    Required if key derivation is enabled; currently only available with ed25519
@@ -818,14 +914,12 @@ supports signing.
     - `pss`
     - `pkcs1v15`
 
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature should be marshaled. This currently only applies to ECDSA keys. Supported types are:
 
-### Sample Payload
-
-```json
-{
-  "input": "adba32=="
-}
-```
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also change the output encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Request
 
@@ -837,6 +931,14 @@ $ curl \
     http://127.0.0.1:8200/v1/transit/sign/my-key/sha2-512
 ```
 
+### Sample Payload
+
+```json
+{
+  "input": "adba32=="
+}
+```
+
 ### Sample Response
 
 ```json
@@ -844,6 +946,47 @@ $ curl \
   "data": {
     "signature": "vault:v1:MEUCIQCyb869d7KWuA0hBM9b5NJrmWzMW3/pT+0XYCM9VmGR+QIgWWF6ufi4OS2xo1eS2V5IeJQfsi59qeMWtgX0LipxEHI="
   }
+}
+```
+
+### Sample Payload with batch_input
+
+ Given an ed25519 key with derived keys set, the context parameter is expected for each batch_input item, and 
+ the response will include the derived public key for each item.
+```
+{
+  "batch_input": [
+    {
+      "input": "adba32==",
+      "context": "efgh"
+    },
+    {
+      "input": "adba32==",
+      "context": "abcd"
+    },
+    {}
+  ]
+}
+```
+
+### Sample Response for batch_input
+```
+{
+  "data": {
+    "batch_results": [
+      {
+        "signature": "vault:v1:+R3cxAy6j4KriYzAyExU6p1glnyT/eLDSaUZO7gr8a8kgi/zSynNbOBSDJcGaAfLD1OF2hGupYBYTjmZMNoVAA==",
+        "publickey": "2fQIaaem7+EhSGs3jUebAS/8qP2+sUrmxOmgqZIZc0c="
+      },
+      {
+        "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA==",
+        "publickey": "goDXuePo7L9z6HOw+a54O4HeV189BLECK9nAUudwp4Y="
+      },
+      {
+        "error": "missing input"
+      }
+    ]
+  },
 }
 ```
 
@@ -864,13 +1007,15 @@ data.
 - `hash_algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
 
+    - `sha1`
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
     - `sha2-512`
 
-- `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
-
+- `input` `(string: "")` – Specifies the **base64 encoded** input data. One of 
+  `input` or `batch_input` must be supplied.
+  
 - `signature` `(string: "")` – Specifies the signature output from the
   `/transit/sign` function. Either this must be supplied or `hmac` must be
   supplied.
@@ -878,6 +1023,31 @@ data.
 - `hmac` `(string: "")` – Specifies the signature output from the
   `/transit/hmac` function. Either this must be supplied or `signature` must be
   supplied.
+
+- `batch_input` `(array<object>: nil)` – Specifies a list of items for processing.
+  When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters 
+  will be ignored.  'batch_input' items should contain an 'input' parameter and
+  either an 'hmac' or 'signature' parameter. All items in the batch must consistently
+  supply either 'hmac' or 'signature' parameters.  It is an error for some items to
+  supply 'hmac' while others supply 'signature'. Responses are returned in the 
+  'batch_results' array component of the 'data' element of the response. If the 
+  input data value of an item is invalid, the corresponding item in the 'batch_results' 
+  will have the key 'error' with a value describing the error. The format for batch_input is:
+
+    ```json
+    {
+      "batch_input": [
+        {
+          "input": "adba32==",
+          "hmac": "vault:v1:1jFhRYWHiddSKgEFyVRpX8ieX7UU+748NBwHKecXE3hnGBoAxrfgoD5U0yAvji7b5X6V1fP"
+        },
+        {
+          "input": "aGVsbG8gd29ybGQuCg==",
+          "hmac": "vault:v1:/wsSP6iQ9ECO9RRkefKLXey9sDntzSjoiW0vBrWfUsYB0ISroyC6plUt/jN7gcOv9O+Ecow"
+        }
+      ]
+    }
+    ```
 
 - `context` `(string: "")` - Base64 encoded context for key derivation.
    Required if key derivation is enabled; currently only available with ed25519
@@ -894,14 +1064,12 @@ data.
     - `pss`
     - `pkcs1v15`
 
-### Sample Payload
+- `marshaling_algorithm` `(string: "asn1")` – Specifies the way in which the signature was originally marshaled. This currently only applies to ECDSA keys. Supported types are:
 
-```json
-{
-  "input": "abcd13==",
-  "signature": "vault:v1:MEUCIQCyb869d7KWuA..."
-}
-```
+    - `asn1`: The default, used by OpenSSL and X.509
+    - `jws`: The version used by JWS (and thus for JWTs). Selecting this will
+      also expect the input encoding to URL-safe Base64 encoding instead of
+      standard Base64-encoding.
 
 ### Sample Request
 
@@ -913,6 +1081,15 @@ $ curl \
     http://127.0.0.1:8200/v1/transit/verify/my-key/sha2-512
 ```
 
+### Sample Payload
+
+```json
+{
+  "input": "abcd13==",
+  "signature": "vault:v1:MEUCIQCyb869d7KWuA..."
+}
+```
+
 ### Sample Response
 
 ```json
@@ -920,6 +1097,49 @@ $ curl \
   "data": {
     "valid": true
   }
+}
+```
+
+### Sample Payload with batch_input
+
+```
+{
+  "batch_input": [
+    {
+      "input": "adba32==",
+      "context": "abcd",
+      "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA=="
+    },
+    {
+      "input": "adba32==",
+      "context": "efgh",
+      "signature": "vault:v1:3hBwA88lnuAVJqb5rCCEstzKYaBTeSdejk356BTCE/nKwySOhzQH3mWCvJZwbRptNGa7ia5ykosYYdJz+aIKDA=="
+    },
+    {
+      "input": "",
+      "context": "abcd",
+      "signature": "vault:v1:C/pxm5V1RI6kqudLdbLdj5Bpm2P38FKgvxoV69oNXphvJukRcQIqjZO793jCa2JPYPG21Y7vquDWy/Ff4Ma4AQ=="
+    }
+  ]
+}
+```
+
+### Sample Response for batch_input
+```
+{
+  "data": {
+    "batch_results": [
+      {
+        "valid": true
+      },
+      {
+        "valid": false
+      },
+      {
+        "valid": true
+      }
+    ]
+  },
 }
 ```
 
@@ -962,6 +1182,11 @@ This endpoint restores the backup as a named key. This will restore the key
 configurations and all the versions of the named key along with HMAC keys. The
 input to this endpoint should be the output of `/backup` endpoint.
 
+ ~> For safety, by default the backend will refuse to restore to an existing
+ key. If you want to reuse a key name, it is recommended you delete the key
+ before restoring. It is a good idea to attempt restoring to a different key
+ name first to verify that the operation successfully completes.
+
 | Method   | Path                        | Produces               |
 | :------- | :-------------------------- | :--------------------- |
 | `POST`   | `/transit/restore(/:name)`  | `204 (empty body)`     |
@@ -973,6 +1198,9 @@ input to this endpoint should be the output of `/backup` endpoint.
 
  - `name` `(string: <optional>)` - If set, this will be the name of the
    restored key.
+
+ - `force` `(bool: false)` - If set, force the restore to proceed even if a key
+   by this name already exists.
 
 ### Sample Payload
 
@@ -988,4 +1216,39 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/transit/restore
+```
+
+## Trim Key
+
+This endpoint trims older key versions setting a minimum version for the
+keyring. Once trimmed, previous versions of the key cannot be recovered.
+
+| Method   | Path                       | Produces               |
+| :------- | :------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/trim` | `200 application/json` |
+
+### Parameters
+
+- `min_version` `(int: <required>)` - The minimum version for the key ring. All
+  versions before this version will be permanently deleted. This value can at
+  most be equal to the lesser of `min_decryption_version` and
+  `min_encryption_version`. This is not allowed to be set when either
+  `min_encryption_version` or `min_decryption_version` is set to zero.
+
+### Sample Payload
+
+```json
+{
+    "min_version": 2
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/transit/keys/my-key/trim
 ```

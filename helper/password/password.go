@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 )
 
 var ErrInterrupted = errors.New("interrupted")
@@ -34,7 +35,7 @@ func Read(f *os.File) (string, error) {
 	case <-ch:
 		return "", ErrInterrupted
 	case <-doneCh:
-		return result, resultErr
+		return removeiTermDelete(result), resultErr
 	}
 }
 
@@ -61,4 +62,8 @@ func readline(f *os.File) (string, error) {
 	}
 
 	return string(resultBuf), nil
+}
+
+func removeiTermDelete(input string) string {
+	return strings.TrimPrefix(input, "\x20\x7f")
 }

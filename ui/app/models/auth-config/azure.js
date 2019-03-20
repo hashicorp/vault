@@ -1,13 +1,13 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
 import DS from 'ember-data';
-
 import AuthConfig from '../auth-config';
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 const { attr } = DS;
-const { computed } = Ember;
 
 export default AuthConfig.extend({
+  useOpenAPI: true,
   tenantId: attr('string', {
     label: 'Tenant ID',
     helpText: 'The tenant ID for the Azure Active Directory organization',
@@ -27,12 +27,16 @@ export default AuthConfig.extend({
   googleCertsEndpoint: attr('string'),
 
   fieldGroups: computed(function() {
-    const groups = [
+    let groups = [
       { default: ['tenantId', 'resource'] },
       {
         'Azure Options': ['clientId', 'clientSecret'],
       },
     ];
+    if (this.newFields) {
+      groups = combineFieldGroups(groups, this.newFields, []);
+    }
+
     return fieldToAttrs(this, groups);
   }),
 });

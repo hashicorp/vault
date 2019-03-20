@@ -2,7 +2,6 @@ package mssql
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -13,55 +12,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory/dockertest"
 )
-
-func prepareMSSQLTestContainer(t *testing.T) (func(), string) {
-	if os.Getenv("MSSQL_URL") != "" {
-		return func() {}, os.Getenv("MSSQL_URL")
-	}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		t.Fatalf("Failed to connect to docker: %s", err)
-	}
-
-	runOpts := &dockertest.RunOptions{
-		Repository: "microsoft/mssql-server-linux",
-		Tag:        "2017-latest",
-		Env:        []string{"ACCEPT_EULA=Y", "SA_PASSWORD=yourStrong(!)Password"},
-	}
-	resource, err := pool.RunWithOptions(runOpts)
-	if err != nil {
-		t.Fatalf("Could not start local MSSQL docker container: %s", err)
-	}
-
-	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
-	}
-
-	retURL := fmt.Sprintf("sqlserver://sa:yourStrong(!)Password@localhost:%s", resource.GetPort("1433/tcp"))
-
-	// exponential backoff-retry, because the mssql container may not be able to accept connections yet
-	if err = pool.Retry(func() error {
-		var err error
-		var db *sql.DB
-		db, err = sql.Open("mssql", retURL)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.Ping()
-	}); err != nil {
-		cleanup()
-		t.Fatalf("Could not connect to MSSQL docker container: %s", err)
-	}
-
-	return cleanup, retURL
-}
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -104,19 +55,17 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	b, _ := Factory(context.Background(), logical.TestBackendConfig())
-
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepRole(t),
@@ -126,19 +75,17 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	b := Backend()
-
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepRole(t),
@@ -150,19 +97,17 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
+	if os.Getenv(logicaltest.TestEnvVar) == "" || os.Getenv("MSSQL_URL") == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 	}
+	connURL := os.Getenv("MSSQL_URL")
 
 	b := Backend()
-
-	cleanup, connURL := prepareMSSQLTestContainer(t)
-	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       testAccPreCheckFunc(t, connURL),
-		Backend:        b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connURL),
 			testAccStepWriteLease(t),

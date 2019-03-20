@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -13,8 +14,13 @@ type azureSecretBackend struct {
 	*framework.Backend
 
 	getProvider func(*clientSettings) (AzureProvider, error)
+	client      *client
 	settings    *clientSettings
 	lock        sync.RWMutex
+
+	// Creating/deleting passwords against a single Application is a PATCH
+	// operation that must be locked per Application Object ID.
+	appLocks []*locksutil.LockEntry
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -44,24 +50,27 @@ func backend() *azureSecretBackend {
 		),
 		Secrets: []*framework.Secret{
 			secretServicePrincipal(&b),
+			secretStaticServicePrincipal(&b),
 		},
 		BackendType: logical.TypeLogical,
 		Invalidate:  b.invalidate,
 	}
 
 	b.getProvider = newAzureProvider
+	b.appLocks = locksutil.CreateLocks()
 
 	return &b
 }
 
-// reset clears the backend's Provider
-// This is useful when the configuration changes and a new Provider should be
+// reset clears the backend's cached client
+// This is used when the configuration changes and a new client should be
 // created with the updated settings.
 func (b *azureSecretBackend) reset() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.settings = nil
+	b.client = nil
 }
 
 func (b *azureSecretBackend) invalidate(ctx context.Context, key string) {

@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"crypto/rand"
+	"github.com/hashicorp/go-sockaddr"
 	"net/http"
 
 	"golang.org/x/net/http2"
@@ -26,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 
-	"github.com/hashicorp/go-rootcerts"
+	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -220,7 +221,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Sign the intermediate CSR using /pki
 	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
-		"csr": intermediateCSR,
+		"csr":                   intermediateCSR,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -840,7 +841,7 @@ func TestBackend_CertWrites(t *testing.T) {
 	}
 
 	tc := logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "aaa", ca1, "foo", allowed{}, false),
 			testAccStepCert(t, "bbb", ca2, "foo", allowed{}, false),
@@ -863,7 +864,7 @@ func TestBackend_basic_CA(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -898,7 +899,7 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
@@ -923,7 +924,7 @@ func TestBackend_basic_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -948,7 +949,7 @@ func TestBackend_common_name_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{}, false),
 			testAccStepLogin(t, connState),
@@ -977,7 +978,7 @@ func TestBackend_ext_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{ext: "2.1.1.1:A UTF8String Extension"}, false),
 			testAccStepLogin(t, connState),
@@ -1032,7 +1033,7 @@ func TestBackend_dns_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
 			testAccStepLogin(t, connState),
@@ -1063,7 +1064,7 @@ func TestBackend_email_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "valid@example.com"}, false),
 			testAccStepLogin(t, connState),
@@ -1074,6 +1075,35 @@ func TestBackend_email_singleCert(t *testing.T) {
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "abc"}, false),
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{emails: "*.example.com"}, false),
+			testAccStepLoginInvalid(t, connState),
+		},
+	})
+}
+
+// Test a self-signed client with OU (root CA) that is trusted
+func TestBackend_organizationalUnit_singleCert(t *testing.T) {
+	connState, err := testConnState(
+		"test-fixtures/root/rootcawoucert.pem",
+		"test-fixtures/root/rootcawoukey.pem",
+		"test-fixtures/root/rootcawoucert.pem",
+	)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawoucert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "eng*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "engineering,finance"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizational_units: "foo"}, false),
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
@@ -1094,7 +1124,7 @@ func TestBackend_uri_singleCert(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{uris: "spiffe://example.com/*"}, false),
 			testAccStepLogin(t, connState),
@@ -1122,7 +1152,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "1unconstrained", ca, "foo", allowed{}, false),
 			testAccStepCert(t, "2matching", ca, "foo", allowed{names: "*.example.com,whatever"}, false),
@@ -1143,7 +1173,7 @@ func TestBackend_untrusted(t *testing.T) {
 		t.Fatalf("error testing connection state: %v", err)
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: testFactory(t),
+		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepLoginInvalid(t, connState),
 		},
@@ -1171,6 +1201,7 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	name := "web"
+	boundCIDRs := []string{"127.0.0.1", "128.252.0.0/16"}
 
 	addCertReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1182,7 +1213,7 @@ func TestBackend_validCIDR(t *testing.T) {
 			"allowed_names":       "",
 			"required_extensions": "",
 			"lease":               1000,
-			"bound_cidrs":         []string{"127.0.0.1/32", "128.252.0.0/16"},
+			"bound_cidrs":         boundCIDRs,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{ConnState: &connState},
@@ -1191,6 +1222,21 @@ func TestBackend_validCIDR(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), addCertReq)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	readCertReq := &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "certs/" + name,
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
+
+	if cidrsResult[0].String() != boundCIDRs[0] ||
+		cidrsResult[1].String() != boundCIDRs[1] {
+		t.Fatalf("bound_cidrs couldn't be set correctly, EXPECTED: %v, ACTUAL: %v", boundCIDRs, cidrsResult)
 	}
 
 	loginReq := &logical.Request{
@@ -1432,12 +1478,13 @@ func testAccStepListCerts(
 }
 
 type allowed struct {
-	names        string // allowed names in the certificate, looks at common, name, dns, email [depricated]
-	common_names string // allowed common names in the certificate
-	dns          string // allowed dns names in the SAN extension of the certificate
-	emails       string // allowed email names in SAN extension of the certificate
-	uris         string // allowed uris in SAN extension of the certificate
-	ext          string // required extensions in the certificate
+	names                string // allowed names in the certificate, looks at common, name, dns, email [depricated]
+	common_names         string // allowed common names in the certificate
+	dns                  string // allowed dns names in the SAN extension of the certificate
+	emails               string // allowed email names in SAN extension of the certificate
+	uris                 string // allowed uris in SAN extension of the certificate
+	organizational_units string // allowed OUs in the certificate
+	ext                  string // required extensions in the certificate
 }
 
 func testAccStepCert(
@@ -1447,16 +1494,17 @@ func testAccStepCert(
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
 		Data: map[string]interface{}{
-			"certificate":          string(cert),
-			"policies":             policies,
-			"display_name":         name,
-			"allowed_names":        testData.names,
-			"allowed_common_names": testData.common_names,
-			"allowed_dns_sans":     testData.dns,
-			"allowed_email_sans":   testData.emails,
-			"allowed_uri_sans":     testData.uris,
-			"required_extensions":  testData.ext,
-			"lease":                1000,
+			"certificate":                  string(cert),
+			"policies":                     policies,
+			"display_name":                 name,
+			"allowed_names":                testData.names,
+			"allowed_common_names":         testData.common_names,
+			"allowed_dns_sans":             testData.dns,
+			"allowed_email_sans":           testData.emails,
+			"allowed_uri_sans":             testData.uris,
+			"allowed_organizational_units": testData.organizational_units,
+			"required_extensions":          testData.ext,
+			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {

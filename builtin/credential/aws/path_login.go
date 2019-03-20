@@ -5,14 +5,12 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -22,8 +20,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-uuid"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -89,10 +88,11 @@ when using iam auth_type.`,
 This must match the request body included in the signature.`,
 			},
 			"iam_request_headers": {
-				Type: framework.TypeString,
-				Description: `Base64-encoded JSON representation of the request headers when auth_type is
-iam. This must at a minimum include the headers over
-which AWS has included a signature.`,
+				Type: framework.TypeHeader,
+				Description: `Key/value pairs of headers for use in the
+sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either 
+a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
+This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
 			"identity": {
 				Type: framework.TypeString,
@@ -132,7 +132,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
-		return "", err
+		return "", awsutil.AppendLogicalError(err)
 	}
 	if profile == nil {
 		return "", fmt.Errorf("nil output while getting instance profile details")
@@ -168,7 +168,8 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		},
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
+		errW := errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
+		return nil, errwrap.Wrap(errW, awsutil.CheckAWSError(err))
 	}
 	if status == nil {
 		return nil, fmt.Errorf("nil output from describe instances")
@@ -202,7 +203,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	}
 
 	// If reauthentication is disabled or if the nonce supplied matches a
-	// predefied nonce which indicates reauthentication to be disabled,
+	// predefined nonce which indicates reauthentication to be disabled,
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication ||
 		subtle.ConstantTimeCompare([]byte(reauthenticationDisabledNonce), []byte(clientNonce)) == 1 {
@@ -410,7 +411,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
-			return fmt.Errorf("AMI ID %q does not belong to role %q", instance.ImageId, roleName), nil
+			return fmt.Errorf("AMI ID %q does not belong to role %q", *instance.ImageId, roleName), nil
 		}
 	}
 
@@ -588,17 +589,6 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 		}
 	}
 
-	// If we're just looking up for MFA, return the Alias info
-	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
-			Auth: &logical.Auth{
-				Alias: &logical.Alias{
-					Name: identityDocParsed.InstanceID,
-				},
-			},
-		}, nil
-	}
-
 	roleName := data.Get("role").(string)
 
 	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for
@@ -617,6 +607,33 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 
 	if roleEntry.AuthType != ec2AuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method ec2 not allowed for role %s", roleName)), nil
+	}
+
+	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	identityAlias := ""
+
+	switch identityConfigEntry.EC2Alias {
+	case identityAliasRoleID:
+		identityAlias = roleEntry.RoleID
+	case identityAliasEC2InstanceID:
+		identityAlias = identityDocParsed.InstanceID
+	case identityAliasEC2ImageID:
+		identityAlias = identityDocParsed.AmiID
+	}
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityAlias,
+				},
+			},
+		}, nil
 	}
 
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
@@ -813,7 +830,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 				MaxTTL:    shortestMaxTTL,
 			},
 			Alias: &logical.Alias{
-				Name: identityDocParsed.InstanceID,
+				Name: identityAlias,
 			},
 		},
 	}
@@ -897,8 +914,8 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	return &roleTagLoginResponse{
-		Policies: rTag.Policies,
-		MaxTTL:   rTag.MaxTTL,
+		Policies:                 rTag.Policies,
+		MaxTTL:                   rTag.MaxTTL,
 		DisallowReauthentication: rTag.DisallowReauthentication,
 	}, nil
 }
@@ -1149,16 +1166,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	}
 	body := string(bodyRaw)
 
-	headersB64 := data.Get("iam_request_headers").(string)
-	if headersB64 == "" {
+	headers := data.Get("iam_request_headers").(http.Header)
+	if len(headers) == 0 {
 		return logical.ErrorResponse("missing iam_request_headers"), nil
-	}
-	headers, err := parseIamRequestHeaders(headersB64)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error parsing iam_request_headers: %v", err)), nil
-	}
-	if headers == nil {
-		return logical.ErrorResponse("nil response when parsing iam_request_headers"), nil
 	}
 
 	config, err := b.lockedClientConfigEntry(ctx, req.Storage)
@@ -1184,20 +1194,6 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
-	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
-	// (in the case of an IAM user).
-	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
-
-	// If we're just looking up for MFA, return the Alias info
-	if req.Operation == logical.AliasLookaheadOperation {
-		return &logical.Response{
-			Auth: &logical.Auth{
-				Alias: &logical.Alias{
-					Name: callerUniqueId,
-				},
-			},
-		}, nil
-	}
 
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
@@ -1219,6 +1215,35 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 
 	if roleEntry.AuthType != iamAuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method iam not allowed for role %s", roleName)), nil
+	}
+
+	identityConfigEntry, err := identityConfigEntry(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
+	// (in the case of an IAM user).
+	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+	identityAlias := ""
+	switch identityConfigEntry.IAMAlias {
+	case identityAliasRoleID:
+		identityAlias = roleEntry.RoleID
+	case identityAliasIAMUniqueID:
+		identityAlias = callerUniqueId
+	case identityAliasIAMFullArn:
+		identityAlias = callerID.Arn
+	}
+
+	// If we're just looking up for MFA, return the Alias info
+	if req.Operation == logical.AliasLookaheadOperation {
+		return &logical.Response{
+			Auth: &logical.Auth{
+				Alias: &logical.Alias{
+					Name: identityAlias,
+				},
+			},
+		}, nil
 	}
 
 	// The role creation should ensure that either we're inferring this is an EC2 instance
@@ -1305,9 +1330,11 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				"inferred_entity_id":   inferredEntityID,
 				"inferred_aws_region":  roleEntry.InferredAWSRegion,
 				"account_id":           entity.AccountNumber,
+				"role_id":              roleEntry.RoleID,
 			},
 			InternalData: map[string]interface{}{
 				"role_name": roleName,
+				"role_id":   roleEntry.RoleID,
 			},
 			DisplayName: entity.FriendlyName,
 			LeaseOptions: logical.LeaseOptions{
@@ -1316,7 +1343,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				MaxTTL:    roleEntry.MaxTTL,
 			},
 			Alias: &logical.Alias{
-				Name: callerUniqueId,
+				Name: identityAlias,
 			},
 		},
 	}
@@ -1394,7 +1421,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
-		if strings.ToLower(iamServerIdHeader) == strings.ToLower(k) {
+		if strings.EqualFold(iamServerIdHeader, k) {
 			providedValue = strings.Join(v, ",")
 			break
 		}
@@ -1491,41 +1518,6 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
-func parseIamRequestHeaders(headersB64 string) (http.Header, error) {
-	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to base64 decode iam_request_headers")
-	}
-	var headersDecoded map[string]interface{}
-	err = jsonutil.DecodeJSON(headersJson, &headersDecoded)
-	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to JSON decode iam_request_headers %q: {{err}}", headersJson), err)
-	}
-	headers := make(http.Header)
-	for k, v := range headersDecoded {
-		switch typedValue := v.(type) {
-		case string:
-			headers.Add(k, typedValue)
-		case json.Number:
-			headers.Add(k, typedValue.String())
-		case []interface{}:
-			for _, individualVal := range typedValue {
-				switch possibleStrVal := individualVal.(type) {
-				case string:
-					headers.Add(k, possibleStrVal)
-				case json.Number:
-					headers.Add(k, possibleStrVal.String())
-				default:
-					return nil, fmt.Errorf("header %q contains value %q that has type %s, not string", k, individualVal, reflect.TypeOf(individualVal))
-				}
-			}
-		default:
-			return nil, fmt.Errorf("header %q value %q has type %s, not string or []interface", k, typedValue, reflect.TypeOf(v))
-		}
-	}
-	return headers, nil
-}
-
 func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
@@ -1536,6 +1528,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
+
 	response, err := client.Do(request)
 	if err != nil {
 		return nil, errwrap.Wrapf("error making request: {{err}}", err)

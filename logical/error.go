@@ -20,6 +20,14 @@ var (
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
+
+	// ErrUpstreamRateLimited is returned when Vault receives a rate limited
+	// response from an upstream
+	ErrUpstreamRateLimited = errors.New("upstream rate limited")
+
+	// ErrPerfStandbyForward is returned when Vault is in a state such that a
+	// perf standby cannot satisfy a request
+	ErrPerfStandbyPleaseForward = errors.New("please forward to the active node")
 )
 
 type HTTPCodedError interface {
@@ -63,7 +71,7 @@ func (s *StatusBadRequest) Error() string {
 // This is a new type declared to not cause potential compatibility problems if
 // the logic around the CodedError changes; in particular for logical request
 // paths it is basically ignored, and changing that behavior might cause
-// unforseen issues.
+// unforeseen issues.
 type ReplicationCodedError struct {
 	Msg  string
 	Code int
@@ -71,4 +79,16 @@ type ReplicationCodedError struct {
 
 func (r *ReplicationCodedError) Error() string {
 	return r.Msg
+}
+
+type KeyNotFoundError struct {
+	Err error
+}
+
+func (e *KeyNotFoundError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *KeyNotFoundError) Error() string {
+	return e.Err.Error()
 }

@@ -3,14 +3,14 @@ package dbplugin
 import (
 	"context"
 	"fmt"
-	"net/rpc"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
@@ -26,7 +26,7 @@ type Database interface {
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
 
-	// DEPRECATED, will be removed in 0.12
+	// DEPRECATED, will be removed in 0.13
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 
@@ -34,7 +34,7 @@ type Database interface {
 // object in a logging and metrics middleware.
 func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName)
+	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, consts.PluginTypeDatabase)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 
 	} else {
 		// create a DatabasePluginClient instance
-		db, err = newPluginClient(ctx, sys, pluginRunner, namedLogger)
+		db, err = NewPluginClient(ctx, sys, pluginRunner, namedLogger, false)
 		if err != nil {
 			return nil, err
 		}
@@ -71,8 +71,6 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 		switch db.(*DatabasePluginClient).Database.(type) {
 		case *gRPCClient:
 			transport = "gRPC"
-		case *databasePluginRPCClient:
-			transport = "netRPC"
 		}
 
 	}
@@ -104,42 +102,33 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  3,
+	ProtocolVersion:  4,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
-var _ plugin.Plugin = &DatabasePlugin{}
-var _ plugin.GRPCPlugin = &DatabasePlugin{}
+var _ plugin.Plugin = &GRPCDatabasePlugin{}
+var _ plugin.GRPCPlugin = &GRPCDatabasePlugin{}
 
-// DatabasePlugin implements go-plugin's Plugin interface. It has methods for
-// retrieving a server and a client instance of the plugin.
-type DatabasePlugin struct {
-	impl Database
+// GRPCDatabasePlugin is the plugin.Plugin implementation that only supports GRPC
+// transport
+type GRPCDatabasePlugin struct {
+	Impl Database
+
+	// Embeding this will disable the netRPC protocol
+	plugin.NetRPCUnsupportedPlugin
 }
 
-func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
 	impl := &DatabaseErrorSanitizerMiddleware{
-		next: d.impl,
-	}
-
-	return &databasePluginRPCServer{impl: impl}, nil
-}
-
-func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &databasePluginRPCClient{client: c}, nil
-}
-
-func (d DatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) error {
-	impl := &DatabaseErrorSanitizerMiddleware{
-		next: d.impl,
+		next: d.Impl,
 	}
 
 	RegisterDatabaseServer(s, &gRPCServer{impl: impl})
 	return nil
 }
 
-func (DatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return &gRPCClient{
 		client:     NewDatabaseClient(c),
 		clientConn: c,

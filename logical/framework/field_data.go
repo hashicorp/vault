@@ -1,7 +1,6 @@
 package framework
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
@@ -63,8 +63,10 @@ func (d *FieldData) Get(k string) interface{} {
 		panic(fmt.Sprintf("field %s not in the schema", k))
 	}
 
+	// If the value can't be decoded, use the zero or default value for the field
+	// type
 	value, ok := d.GetOk(k)
-	if !ok {
+	if !ok || value == nil {
 		value = schema.DefaultOrZero()
 	}
 
@@ -96,8 +98,10 @@ func (d *FieldData) GetFirst(k ...string) (interface{}, bool) {
 	return nil, false
 }
 
-// GetOk gets the value for the given field. The second return value
-// will be false if the key is invalid or the key is not set at all.
+// GetOk gets the value for the given field. The second return value will be
+// false if the key is invalid or the key is not set at all. If the field k is
+// set and the decoded value is nil, the default or zero value
+// will be returned instead.
 func (d *FieldData) GetOk(k string) (interface{}, bool) {
 	schema, ok := d.Schema[k]
 	if !ok {
@@ -147,49 +151,49 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 	case TypeBool:
 		var result bool
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		return result, true, nil
 
 	case TypeInt:
 		var result int
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		return result, true, nil
 
 	case TypeString:
 		var result string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		return result, true, nil
 
 	case TypeLowerCaseString:
 		var result string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		return strings.ToLower(result), true, nil
 
 	case TypeNameString:
 		var result string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		matched, err := regexp.MatchString("^\\w(([\\w-.]+)?\\w)?$", result)
 		if err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		if !matched {
-			return nil, true, errors.New("field does not match the formatting rules")
+			return nil, false, errors.New("field does not match the formatting rules")
 		}
 		return result, true, nil
 
 	case TypeMap:
 		var result map[string]interface{}
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		return result, true, nil
 
@@ -217,20 +221,20 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		case string:
 			dur, err := parseutil.ParseDurationSecond(inp)
 			if err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 			result = int(dur.Seconds())
 		case json.Number:
 			valInt64, err := inp.Int64()
 			if err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 			result = int(valInt64)
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
 		}
 		if result < 0 {
-			return nil, true, fmt.Errorf("cannot provide negative value '%d'", result)
+			return nil, false, fmt.Errorf("cannot provide negative value '%d'", result)
 		}
 		return result, true, nil
 
@@ -243,24 +247,38 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		}
 		decoder, err := mapstructure.NewDecoder(config)
 		if err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 		if err := decoder.Decode(raw); err != nil {
-			return nil, true, err
+			return nil, false, err
+		}
+		if len(result) == 0 {
+			return make([]int, 0), true, nil
 		}
 		return result, true, nil
 
 	case TypeSlice:
 		var result []interface{}
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
+		}
+		if len(result) == 0 {
+			return make([]interface{}, 0), true, nil
 		}
 		return result, true, nil
 
 	case TypeStringSlice:
+		rawString, ok := raw.(string)
+		if ok && rawString == "" {
+			return []string{}, true, nil
+		}
+
 		var result []string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
-			return nil, true, err
+			return nil, false, err
+		}
+		if len(result) == 0 {
+			return make([]string, 0), true, nil
 		}
 		return strutil.TrimStrings(result), true, nil
 
@@ -281,7 +299,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		// If map parse fails, parse as a string list of = delimited pairs
 		var listResult []string
 		if err := mapstructure.WeakDecode(raw, &listResult); err != nil {
-			return nil, true, err
+			return nil, false, err
 		}
 
 		result := make(map[string]string, len(listResult))
@@ -327,15 +345,20 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 					for _, headerVal := range typedHeader {
 						header.Add(headerKey, headerVal)
 					}
+				case json.Number:
+					header.Add(headerKey, typedHeader.String())
 				case []interface{}:
 					for _, headerVal := range typedHeader {
-						strHeaderVal, ok := headerVal.(string)
-						if !ok {
+						switch typedHeader := headerVal.(type) {
+						case string:
+							header.Add(headerKey, typedHeader)
+						case json.Number:
+							header.Add(headerKey, typedHeader.String())
+						default:
 							// All header values should already be strings when they're being sent in.
 							// Even numbers and booleans will be treated as strings.
 							return nil, fmt.Errorf("received non-string value for header key:%s, val:%s", headerKey, headerValGroup)
 						}
-						header.Add(headerKey, strHeaderVal)
 					}
 				default:
 					return nil, fmt.Errorf("unrecognized type for %s", headerValGroup)
@@ -350,7 +373,7 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 		if err := mapstructure.WeakDecode(raw, &resultMap); err == nil {
 			result, err = toHeader(resultMap)
 			if err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 			return result, true, nil
 		}
@@ -363,12 +386,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 				// b. It's not base64 encoded, it's a straight-out JSON string.
 				headerBytes = []byte(headerStr)
 			}
-			if err := json.NewDecoder(bytes.NewReader(headerBytes)).Decode(&resultMap); err != nil {
-				return nil, true, err
+			if err := jsonutil.DecodeJSON(headerBytes, &resultMap); err != nil {
+				return nil, false, err
 			}
 			result, err = toHeader(resultMap)
 			if err != nil {
-				return nil, true, err
+				return nil, false, err
 			}
 			return result, true, nil
 		}
@@ -379,17 +402,17 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 			for _, keyPairIfc := range keyPairs {
 				keyPair, ok := keyPairIfc.(string)
 				if !ok {
-					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+					return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 				}
 				keyPairSlice := strings.SplitN(keyPair, ":", 2)
 				if len(keyPairSlice) != 2 || keyPairSlice[0] == "" {
-					return nil, true, fmt.Errorf("invalid key pair %q", keyPair)
+					return nil, false, fmt.Errorf("invalid key pair %q", keyPair)
 				}
 				result.Add(keyPairSlice[0], keyPairSlice[1])
 			}
 			return result, true, nil
 		}
-		return nil, true, fmt.Errorf("%s not provided an expected format", raw)
+		return nil, false, fmt.Errorf("%s not provided an expected format", raw)
 
 	default:
 		panic(fmt.Sprintf("Unknown type: %s", schema.Type))

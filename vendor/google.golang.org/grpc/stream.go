@@ -194,13 +194,8 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 	}
 
 	callHdr := &transport.CallHdr{
-		Host:   cc.authority,
-		Method: method,
-		// If it's not client streaming, we should already have the request to be sent,
-		// so we don't flush the header.
-		// If it's client streaming, the user may never send a request or send it any
-		// time soon, so we ask the transport to flush the header.
-		Flush:          desc.ClientStreams,
+		Host:           cc.authority,
+		Method:         method,
 		ContentSubtype: c.contentSubtype,
 	}
 
@@ -665,7 +660,14 @@ func (cs *clientStream) CloseSend() error {
 		return nil
 	}
 	cs.sentLast = true
-	op := func(a *csAttempt) error { return a.t.Write(a.s, nil, nil, &transport.Options{Last: true}) }
+	op := func(a *csAttempt) error {
+		a.t.Write(a.s, nil, nil, &transport.Options{Last: true})
+		// Always return nil; io.EOF is the only error that might make sense
+		// instead, but there is no need to signal the client to call RecvMsg
+		// as the only use left for the stream after CloseSend is to call
+		// RecvMsg.  This also matches historical behavior.
+		return nil
+	}
 	cs.withRetry(op, func() { cs.bufferForRetryLocked(0, op) })
 	// We never returned an error here for reasons.
 	return nil
@@ -814,11 +816,14 @@ func (a *csAttempt) finish(err error) {
 
 	if a.done != nil {
 		br := false
+		var tr metadata.MD
 		if a.s != nil {
 			br = a.s.BytesReceived()
+			tr = a.s.Trailer()
 		}
 		a.done(balancer.DoneInfo{
 			Err:           err,
+			Trailer:       tr,
 			BytesSent:     a.s != nil,
 			BytesReceived: br,
 		})

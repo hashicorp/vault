@@ -58,7 +58,7 @@ the latest version of the key is allowed.`,
 	}
 }
 
-func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (resp *logical.Response, retErr error) {
 	name := d.Get("name").(string)
 
 	// Check if the policy already exists before we lock everything
@@ -79,7 +79,23 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	}
 	defer p.Unlock()
 
-	resp := &logical.Response{}
+	originalMinDecryptionVersion := p.MinDecryptionVersion
+	originalMinEncryptionVersion := p.MinEncryptionVersion
+	originalDeletionAllowed := p.DeletionAllowed
+	originalExportable := p.Exportable
+	originalAllowPlaintextBackup := p.AllowPlaintextBackup
+
+	defer func() {
+		if retErr != nil || (resp != nil && resp.IsError()) {
+			p.MinDecryptionVersion = originalMinDecryptionVersion
+			p.MinEncryptionVersion = originalMinEncryptionVersion
+			p.DeletionAllowed = originalDeletionAllowed
+			p.Exportable = originalExportable
+			p.AllowPlaintextBackup = originalAllowPlaintextBackup
+		}
+	}()
+
+	resp = &logical.Response{}
 
 	persistNeeded := false
 
@@ -171,6 +187,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	if !persistNeeded {
 		return nil, nil
+	}
+
+	switch {
+	case p.MinAvailableVersion > p.MinEncryptionVersion:
+		return logical.ErrorResponse("min encryption version should not be less than min available version"), nil
+	case p.MinAvailableVersion > p.MinDecryptionVersion:
+		return logical.ErrorResponse("min decryption version should not be less then min available version"), nil
 	}
 
 	if len(resp.Warnings) == 0 {

@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Token - Auth Methods"
+sidebar_title: "Tokens"
 sidebar_current: "docs-auth-token"
 description: |-
   The token store auth method is used to authenticate using tokens.
@@ -32,8 +33,8 @@ $ vault login token=<token>
 
 ### Via the API
 
-The token is set directly as a header for the HTTP API. The name
-of the header should be "X-Vault-Token" and the value should be the token.
+The token is set directly as a header for the HTTP API. The header should be
+either `X-Vault-Token: <token>` or `Authorization: Bearer <token>`.
 
 ## API
 

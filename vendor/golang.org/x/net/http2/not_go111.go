@@ -6,6 +6,15 @@
 
 package http2
 
-func traceHasWroteHeaderField(trace *clientTrace) bool { return false }
+import (
+	"net/http/httptrace"
+	"net/textproto"
+)
 
-func traceWroteHeaderField(trace *clientTrace, k, v string) {}
+func traceHasWroteHeaderField(trace *httptrace.ClientTrace) bool { return false }
+
+func traceWroteHeaderField(trace *httptrace.ClientTrace, k, v string) {}
+
+func traceGot1xxResponseFunc(trace *httptrace.ClientTrace) func(int, textproto.MIMEHeader) error {
+	return nil
+}

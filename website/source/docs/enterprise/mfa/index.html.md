@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MFA Support - Vault Enterprise"
+sidebar_title: "MFA"
 sidebar_current: "docs-vault-enterprise-mfa"
 description: |-
   Vault Enterprise has support for Multi-factor Authentication (MFA), using different authentication types.
@@ -59,6 +60,40 @@ path "secret/foo" {
 
 The above policy grants `read` access to `secret/foo` only after *both* the MFA
 methods `dev_team_duo` and `sales_team_totp` are validated.
+
+## Namespaces
+
+All MFA configurations must be configured in the root namespace. They can be
+referenced from ACL and Sentinel policies in any namespace via the method name
+and can be tied to a mount accessor in any namespace.
+
+When using [Sentinel
+EGPs](/docs/enterprise/sentinel/index.html#endpoint-governing-policies-egps-),
+any MFA configuration specified must be satisfied by all requests affected by
+the policy, which can be difficult if the configured paths spread across
+namespaces. One way to address this is to use a policy similar to the
+following, using `or` operators to allow MFA configurations tied to mount
+accessors in the various namespaces:
+
+```python
+import "mfa"
+
+has_mfa = rule {
+    mfa.methods.duons1.valid
+}
+
+has_mfa2 = rule {
+    mfa.methods.duons2.valid
+}
+
+main = rule {
+    has_mfa or has_mfa2
+}
+```
+
+When using TOTP, any user with ACL permissions can self-generate credentials.
+Admins can generate or destroy credentials only if the targeted entity is in
+the same namespace.
 
 ## Supplying MFA Credentials
 

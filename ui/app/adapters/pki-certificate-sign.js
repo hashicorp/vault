@@ -7,4 +7,8 @@ export default Adapter.extend({
     }
     return `/v1/${role.backend}/sign/${role.name}`;
   },
+
+  pathForType() {
+    return 'sign';
+  },
 });

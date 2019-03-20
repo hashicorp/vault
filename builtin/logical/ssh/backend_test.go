@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os/user"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -70,6 +72,9 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 `
 	publicKey2 = `AAAAB3NzaC1yc2EAAAADAQABAAABAQDArgK0ilRRfk8E7HIsjz5l3BuxmwpDd8DHRCVfOhbZ4gOSVxjEOOqBwWGjygdboBIZwFXmwDlU6sWX0hBJAgpQz0Cjvbjxtq/NjkvATrYPgnrXUhTaEn2eQO0PsqRNSFH46SK/oJfTp0q8/WgojxWJ2L7FUV8PO8uIk49DzqAqPV7WXU63vFsjx+3WQOX/ILeQvHCvaqs3dWjjzEoDudRWCOdUqcHEOshV9azIzPrXlQVzRV3QAKl6u7pC+/Secorpwt6IHpMKoVPGiR0tMMuNOVH8zrAKzIxPGfy2WmNDpJopbXMTvSOGAqNcp49O4SKOQl9Fzfq2HEevJamKLrMB
 `
+
+	publicKey4096 = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC54Oj4YCFDYxYv69Q9KfU6rWYtUB1eByQdUW0nXFi/vr98QUIV77sEeUVhaQzZcuCojAi/GrloW7ta0Z2DaEv5jOQMAnGpXBcqLJsz3KdrHbpvl93MPNdmNaGPU0GnUEsjBVuDVn9HdIUa8CNrxShvPu7/VqoaRHKLqphGgzFb37vi4qvnQ+5VYAO/TzyVYMD6qJX6I/9Pw8d74jCfEdOh2yGKkP7rXWOghreyIl8H2zTJKg9KoZuPq9F5M8nNt7Oi3rf+DwQiYvamzIqlDP4s5oFVTZW0E9lwWvYDpyiJnUrkQqksebBK/rcyfiFG3onb4qLo2WVWXeK3si8IhGik/TEzprScyAWIf9RviT8O+l5hTA2/c+ctn3MVCLRNfez2lKpdxCoprv1MbIcySGWblTJEcY6RA+aauVJpu7FMtRxHHtZKtMpep8cLu8GKbiP6Ifq2JXBtXtNxDeIgo2MkNoMh/NHAsACJniE/dqV/+u9HvhvgrTbJ69ell0nE4ivzA7O4kZgbR/4MHlLgLFvaqC8RrWRLY6BdFagPIMxghWha7Qw16zqoIjRnolvRzUWvSXanJVg8Z6ua1VxwgirNaAH1ivmJhUh2+4lNxCX6jmZyR3zjJsWY03gjJTairvI762opjjalF8fH6Xrs15mB14JiAlNbk6+5REQcvXlGqw== dummy@example.com`
+
 	privateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAwK4CtIpUUX5PBOxyLI8+ZdwbsZsKQ3fAx0QlXzoW2eIDklcY
 xDjqgcFho8oHW6ASGcBV5sA5VOrFl9IQSQIKUM9Ao7248bavzY5LwE62D4J611IU
@@ -253,7 +258,7 @@ func TestSSHBackend_Lookup(t *testing.T) {
 	resp4 := []string{testDynamicRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -285,7 +290,7 @@ func TestSSHBackend_RoleList(t *testing.T) {
 		},
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleList(t, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
@@ -309,7 +314,7 @@ func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccUserPrecheckFunc(t),
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -332,7 +337,7 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testRoleRead(t, testOTPRoleName, respOTPRoleData),
@@ -362,7 +367,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
@@ -376,7 +381,7 @@ func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
 func TestSSHBackend_NamedKeysCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testNamedKeysDelete(t),
@@ -396,7 +401,7 @@ func TestSSHBackend_OTPCreate(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testCredsWrite(t, testOTPRoleName, data, false),
@@ -413,7 +418,7 @@ func TestSSHBackend_VerifyEcho(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testVerifyWrite(t, verifyData, expectedData),
 		},
@@ -451,7 +456,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
@@ -483,7 +488,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testRoleWrite(t, testOTPRoleName, otpRoleData),
 			testCredsWrite(t, testOTPRoleName, data, true),
@@ -512,7 +517,7 @@ func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		PreCheck:       testAccUserPrecheckFunc(t),
 		AcceptanceTest: true,
-		Factory:        testingFactory,
+		LogicalFactory: testingFactory,
 		Steps: []logicaltest.TestStep{
 			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
 			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
@@ -535,7 +540,7 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -571,7 +576,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -609,7 +614,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -652,7 +657,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -691,6 +696,74 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_AllowedUserKeyLengths(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(),
+			createRoleStep("weakkey", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"rsa": json.Number(strconv.FormatInt(4096, 10)),
+				},
+			}),
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/weakkey",
+				Data: map[string]interface{}{
+					"public_key": publicKey,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 2048" {
+						return errors.New("a smaller key (2048) was allowed, when the minimum was set for 4096")
+					}
+					return nil
+				},
+			},
+			createRoleStep("stdkey", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"rsa": json.Number(strconv.FormatInt(2048, 10)),
+				},
+			}),
+			// Pass with 2048 key
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/stdkey",
+				Data: map[string]interface{}{
+					"public_key": publicKey,
+				},
+			},
+			// Fail with 4096 key
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/stdkey",
+				Data: map[string]interface{}{
+					"public_key": publicKey4096,
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "public_key failed to meet the key requirements: key is of an invalid size: 4096" {
+						return errors.New("a larger key (4096) was allowed, when the size was set for 2048")
+					}
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	config := logical.TestBackendConfig()
 
@@ -700,7 +773,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -749,7 +822,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			configCaStep(),
 
@@ -799,7 +872,7 @@ func createRoleStep(name string, parameters map[string]interface{}) logicaltest.
 }
 
 func signCertificateStep(
-	role, keyId string, certType int, validPrincipals []string,
+	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
 	requestParameters map[string]interface{}) logicaltest.TestStep {
@@ -827,16 +900,16 @@ func signCertificateStep(
 				return err
 			}
 
-			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyId, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
 		},
 	}
 }
 
-func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
+func validateSSHCertificate(cert *ssh.Certificate, keyID string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration) error {
 
-	if cert.KeyId != keyId {
-		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyId)
+	if cert.KeyId != keyID {
+		return fmt.Errorf("incorrect KeyId: %v, wanted %v", cert.KeyId, keyID)
 	}
 
 	if cert.CertType != uint32(certType) {
@@ -851,9 +924,9 @@ func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, v
 		return fmt.Errorf("incorrect ValidBefore: %v", cert.ValidBefore)
 	}
 
-	actualTtl := time.Unix(int64(cert.ValidBefore), 0).Add(-30 * time.Second).Sub(time.Unix(int64(cert.ValidAfter), 0))
-	if actualTtl != ttl {
-		return fmt.Errorf("incorrect ttl: expected: %v, actualL %v", ttl, actualTtl)
+	actualTTL := time.Unix(int64(cert.ValidBefore), 0).Add(-30 * time.Second).Sub(time.Unix(int64(cert.ValidAfter), 0))
+	if actualTTL != ttl {
+		return fmt.Errorf("incorrect ttl: expected: %v, actualL %v", ttl, actualTTL)
 	}
 
 	if !reflect.DeepEqual(cert.ValidPrincipals, validPrincipals) {

@@ -1,6 +1,8 @@
-import Ember from 'ember';
+import { computed } from '@ember/object';
+import Mixin from '@ember/object/mixin';
+import escapeStringRegexp from 'escape-string-regexp';
 
-export default Ember.Mixin.create({
+export default Mixin.create({
   queryParams: {
     page: 'page',
     pageFilter: 'pageFilter',
@@ -9,20 +11,21 @@ export default Ember.Mixin.create({
   page: 1,
   pageFilter: null,
   filter: null,
+  filterFocused: false,
 
   isLoading: false,
 
-  filterMatchesKey: Ember.computed('filter', 'model', 'model.[]', function() {
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: Ember.computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
     var filter = this.get('filter');
     var content = this.get('model');
     var filterMatchesKey = this.get('filterMatchesKey');
-    var re = new RegExp('^' + filter);
+    var re = new RegExp('^' + escapeStringRegexp(filter));
     return filterMatchesKey
       ? null
       : content.find(function(key) {

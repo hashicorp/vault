@@ -1,19 +1,21 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { alias } from '@ember/object/computed';
+import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 
-const { inject, computed, Controller } = Ember;
 export default Controller.extend({
-  vaultController: inject.controller('vault'),
-  clusterController: inject.controller('vault.cluster'),
-  namespaceService: inject.service('namespace'),
-  namespaceQueryParam: computed.alias('clusterController.namespaceQueryParam'),
+  vaultController: controller('vault'),
+  clusterController: controller('vault.cluster'),
+  namespaceService: service('namespace'),
+  namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   queryParams: [{ authMethod: 'with' }],
-  wrappedToken: computed.alias('vaultController.wrappedToken'),
+  wrappedToken: alias('vaultController.wrappedToken'),
   authMethod: '',
   redirectTo: null,
 
   updateNamespace: task(function*(value) {
-    yield timeout(200);
+    // debounce
+    yield timeout(500);
     this.get('namespaceService').setNamespace(value, true);
     this.set('namespaceQueryParam', value);
   }).restartable(),

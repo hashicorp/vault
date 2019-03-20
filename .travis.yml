@@ -14,7 +14,7 @@ services:
   - docker
 
 go:
-  - "1.10.3"
+  - "1.11.1"
 
 go_import_path: github.com/hashicorp/vault
 
@@ -23,16 +23,14 @@ matrix:
     - go: tip
 
 cache:
-  yarn: true
+  directories:
+  - ui/node_modules
 
 before_install:
-  - nvm install 8
-  - nvm use 8
-  # Repo for Yarn
-  - sudo apt-key adv --fetch-keys http://dl.yarnpkg.com/debian/pubkey.gpg
-  - echo "deb http://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-  - sudo apt-get update -qq
-  - sudo apt-get install -y -qq yarn
+  - nvm install 10
+  - nvm use 10
+  - curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.12.1
+  - export PATH="$HOME/.yarn/bin:$PATH"
 
 branches:
   only:

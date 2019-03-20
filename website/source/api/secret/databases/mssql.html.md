@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MSSQL - Database - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-databases-mssql"
+sidebar_title: "MSSQL"
+sidebar_current: "api-http-secret-databases-mssql"
 description: |-
   The MSSQL plugin for Vault's database secrets engine generates database credentials to access MSSQL servers.
 ---

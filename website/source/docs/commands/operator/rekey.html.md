@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator rekey - Command"
+sidebar_title: "<code>rekey</code>"
 sidebar_current: "docs-commands-operator-rekey"
 description: |-
   The "operator rekey" command generates a new set of unseal keys. This can
@@ -44,6 +45,17 @@ $ vault operator rekey \
     -key-shares=3 \
     -key-threshold=2 \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
+```
+
+Rekey an Auto Unseal vault and encrypt the resulting recovery keys with PGP:
+
+```text
+$ vault operator rekey \
+    -target=recovery \
+    -init \
+    -pgp-keys=keybase:grahamhashicorp 
+    -key-shares=1 
+    -key-threshold=1
 ```
 
 Store encrypted PGP keys in Vault's core:

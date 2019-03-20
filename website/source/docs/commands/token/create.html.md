@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "token create - Command"
+sidebar_title: "<code>create</code>"
 sidebar_current: "docs-commands-token-create"
 description: |-
   The "token create" command creates a new token that can be used for
@@ -82,8 +83,7 @@ flags](/docs/commands/index.html) included on all commands.
   "5m".
 
 - `-id` `(string: "")` - Value for the token. By default, this is an
-  auto-generated 36 character UUID. Specifying this value requires sudo
-  permissions.
+  auto-generated value. Specifying this value requires sudo permissions.
 
 - `-metadata` `(k=v: "")` - Arbitrary key=value metadata to associate with the
   token. This metadata will show in the audit log when the token is used. This
@@ -97,9 +97,10 @@ flags](/docs/commands/index.html) included on all commands.
   value requires sudo permissions.
 
 - `-period` `(duration: "")` - If specified, every renewal will use the given
-  period. Periodic tokens do not expire (unless `-explicit-max-ttl` is also
-  provided). Setting this value requires sudo permissions. This is specified as
-  a numeric string with suffix like "30s" or "5m".
+  period. Periodic tokens do not expire as long as they are actively being
+  renewed (unless `-explicit-max-ttl` is also provided). Setting this value 
+  requires sudo permissions. This is specified as a numeric string with suffix 
+  like "30s" or "5m".
 
 - `-policy` `(string: "")` - Name of a policy to associate with this token. This
   can be specified multiple times to attach multiple policies.

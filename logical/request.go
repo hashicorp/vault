@@ -43,6 +43,14 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 	}
 }
 
+type ClientTokenSource uint32
+
+const (
+	NoClientToken ClientTokenSource = iota
+	ClientTokenFromVaultHeader
+	ClientTokenFromAuthzHeader
+)
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -51,6 +59,8 @@ func (r *RequestWrapInfo) SentinelKeys() []string {
 // by the router after policy checks; the token namespace would be the right
 // place to access them via Sentinel
 type Request struct {
+	entReq
+
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
 
@@ -140,6 +150,10 @@ type Request struct {
 	// accessible.
 	Unauthenticated bool `json:"unauthenticated" structs:"unauthenticated" mapstructure:"unauthenticated"`
 
+	// MFACreds holds the parsed MFA information supplied over the API as part of
+	// X-Vault-MFA header
+	MFACreds MFACreds `json:"mfa_creds" structs:"mfa_creds" mapstructure:"mfa_creds" sentinel:""`
+
 	// Cached token entry. This avoids another lookup in request handling when
 	// we've already looked it up at http handling time. Note that this token
 	// has not been "used", as in it will not properly take into account use
@@ -151,6 +165,10 @@ type Request struct {
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
+
+	// ClientTokenSource tells us where the client token was sourced from, so
+	// we can delete it before sending off to plugins
+	ClientTokenSource ClientTokenSource
 }
 
 // Get returns a data field and guards for nil Data
@@ -272,3 +290,5 @@ const (
 	RenewOperation              = "renew"
 	RollbackOperation           = "rollback"
 )
+
+type MFACreds map[string][]string

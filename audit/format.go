@@ -9,6 +9,7 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
@@ -113,20 +114,27 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		errString = in.OuterErr.Error()
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	reqEntry := &AuditRequestEntry{
 		Type:  "request",
 		Error: errString,
 
 		Auth: AuditAuth{
-			ClientToken:      auth.ClientToken,
-			Accessor:         auth.Accessor,
-			DisplayName:      auth.DisplayName,
-			Policies:         auth.Policies,
-			TokenPolicies:    auth.TokenPolicies,
-			IdentityPolicies: auth.IdentityPolicies,
-			Metadata:         auth.Metadata,
-			EntityID:         auth.EntityID,
-			RemainingUses:    req.ClientTokenRemainingUses,
+			ClientToken:               auth.ClientToken,
+			Accessor:                  auth.Accessor,
+			DisplayName:               auth.DisplayName,
+			Policies:                  auth.Policies,
+			TokenPolicies:             auth.TokenPolicies,
+			IdentityPolicies:          auth.IdentityPolicies,
+			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
+			Metadata:                  auth.Metadata,
+			EntityID:                  auth.EntityID,
+			RemainingUses:             req.ClientTokenRemainingUses,
+			TokenType:                 auth.TokenType.String(),
 		},
 
 		Request: AuditRequest{
@@ -134,12 +142,16 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
-			Path:                req.Path,
-			Data:                req.Data,
-			PolicyOverride:      req.PolicyOverride,
-			RemoteAddr:          getRemoteAddr(req),
-			ReplicationCluster:  req.ReplicationCluster,
-			Headers:             req.Headers,
+			Namespace: AuditNamespace{
+				ID:   ns.ID,
+				Path: ns.Path,
+			},
+			Path:               req.Path,
+			Data:               req.Data,
+			PolicyOverride:     req.PolicyOverride,
+			RemoteAddr:         getRemoteAddr(req),
+			ReplicationCluster: req.ReplicationCluster,
+			Headers:            req.Headers,
 		},
 	}
 
@@ -276,17 +288,25 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		errString = in.OuterErr.Error()
 	}
 
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	var respAuth *AuditAuth
 	if resp.Auth != nil {
 		respAuth = &AuditAuth{
-			ClientToken:      resp.Auth.ClientToken,
-			Accessor:         resp.Auth.Accessor,
-			DisplayName:      resp.Auth.DisplayName,
-			Policies:         resp.Auth.Policies,
-			TokenPolicies:    resp.Auth.TokenPolicies,
-			IdentityPolicies: resp.Auth.IdentityPolicies,
-			Metadata:         resp.Auth.Metadata,
-			NumUses:          resp.Auth.NumUses,
+			ClientToken:               resp.Auth.ClientToken,
+			Accessor:                  resp.Auth.Accessor,
+			DisplayName:               resp.Auth.DisplayName,
+			Policies:                  resp.Auth.Policies,
+			TokenPolicies:             resp.Auth.TokenPolicies,
+			IdentityPolicies:          resp.Auth.IdentityPolicies,
+			ExternalNamespacePolicies: resp.Auth.ExternalNamespacePolicies,
+			Metadata:                  resp.Auth.Metadata,
+			NumUses:                   resp.Auth.NumUses,
+			EntityID:                  resp.Auth.EntityID,
+			TokenType:                 resp.Auth.TokenType.String(),
 		}
 	}
 
@@ -317,15 +337,17 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		Type:  "response",
 		Error: errString,
 		Auth: AuditAuth{
-			DisplayName:      auth.DisplayName,
-			Policies:         auth.Policies,
-			TokenPolicies:    auth.TokenPolicies,
-			IdentityPolicies: auth.IdentityPolicies,
-			Metadata:         auth.Metadata,
-			ClientToken:      auth.ClientToken,
-			Accessor:         auth.Accessor,
-			RemainingUses:    req.ClientTokenRemainingUses,
-			EntityID:         auth.EntityID,
+			ClientToken:               auth.ClientToken,
+			Accessor:                  auth.Accessor,
+			DisplayName:               auth.DisplayName,
+			Policies:                  auth.Policies,
+			TokenPolicies:             auth.TokenPolicies,
+			IdentityPolicies:          auth.IdentityPolicies,
+			ExternalNamespacePolicies: auth.ExternalNamespacePolicies,
+			Metadata:                  auth.Metadata,
+			RemainingUses:             req.ClientTokenRemainingUses,
+			EntityID:                  auth.EntityID,
+			TokenType:                 auth.TokenType.String(),
 		},
 
 		Request: AuditRequest{
@@ -333,20 +355,26 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			ClientToken:         req.ClientToken,
 			ClientTokenAccessor: req.ClientTokenAccessor,
 			Operation:           req.Operation,
-			Path:                req.Path,
-			Data:                req.Data,
-			PolicyOverride:      req.PolicyOverride,
-			RemoteAddr:          getRemoteAddr(req),
-			ReplicationCluster:  req.ReplicationCluster,
-			Headers:             req.Headers,
+			Namespace: AuditNamespace{
+				ID:   ns.ID,
+				Path: ns.Path,
+			},
+			Path:               req.Path,
+			Data:               req.Data,
+			PolicyOverride:     req.PolicyOverride,
+			RemoteAddr:         getRemoteAddr(req),
+			ReplicationCluster: req.ReplicationCluster,
+			Headers:            req.Headers,
 		},
 
 		Response: AuditResponse{
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
+			Warnings: resp.Warnings,
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
+			Headers:  resp.Headers,
 		},
 	}
 
@@ -386,6 +414,7 @@ type AuditRequest struct {
 	Operation           logical.Operation      `json:"operation"`
 	ClientToken         string                 `json:"client_token"`
 	ClientTokenAccessor string                 `json:"client_token_accessor"`
+	Namespace           AuditNamespace         `json:"namespace"`
 	Path                string                 `json:"path"`
 	Data                map[string]interface{} `json:"data"`
 	PolicyOverride      bool                   `json:"policy_override"`
@@ -398,21 +427,25 @@ type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
+	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers  map[string][]string    `json:"headers"`
 }
 
 type AuditAuth struct {
-	ClientToken      string            `json:"client_token"`
-	Accessor         string            `json:"accessor"`
-	DisplayName      string            `json:"display_name"`
-	Policies         []string          `json:"policies"`
-	TokenPolicies    []string          `json:"token_policies,omitempty"`
-	IdentityPolicies []string          `json:"identity_policies,omitempty"`
-	Metadata         map[string]string `json:"metadata"`
-	NumUses          int               `json:"num_uses,omitempty"`
-	RemainingUses    int               `json:"remaining_uses,omitempty"`
-	EntityID         string            `json:"entity_id"`
+	ClientToken               string              `json:"client_token"`
+	Accessor                  string              `json:"accessor"`
+	DisplayName               string              `json:"display_name"`
+	Policies                  []string            `json:"policies"`
+	TokenPolicies             []string            `json:"token_policies,omitempty"`
+	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
+	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
+	Metadata                  map[string]string   `json:"metadata"`
+	NumUses                   int                 `json:"num_uses,omitempty"`
+	RemainingUses             int                 `json:"remaining_uses,omitempty"`
+	EntityID                  string              `json:"entity_id"`
+	TokenType                 string              `json:"token_type"`
 }
 
 type AuditSecret struct {
@@ -426,6 +459,11 @@ type AuditResponseWrapInfo struct {
 	CreationTime    string `json:"creation_time"`
 	CreationPath    string `json:"creation_path"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
+}
+
+type AuditNamespace struct {
+	ID   string `json:"id"`
+	Path string `json:"path"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

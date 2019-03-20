@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package chacha20poly1305 implements the ChaCha20-Poly1305 AEAD as specified in RFC 7539.
+// Package chacha20poly1305 implements the ChaCha20-Poly1305 AEAD as specified in RFC 7539,
+// and its extended nonce variant XChaCha20-Poly1305.
 package chacha20poly1305 // import "golang.org/x/crypto/chacha20poly1305"
 
 import (
@@ -14,15 +15,24 @@ import (
 const (
 	// KeySize is the size of the key used by this AEAD, in bytes.
 	KeySize = 32
-	// NonceSize is the size of the nonce used with this AEAD, in bytes.
+
+	// NonceSize is the size of the nonce used with the standard variant of this
+	// AEAD, in bytes.
+	//
+	// Note that this is too short to be safely generated at random if the same
+	// key is reused more than 2³² times.
 	NonceSize = 12
+
+	// NonceSizeX is the size of the nonce used with the XChaCha20-Poly1305
+	// variant of this AEAD, in bytes.
+	NonceSizeX = 24
 )
 
 type chacha20poly1305 struct {
 	key [8]uint32
 }
 
-// New returns a ChaCha20-Poly1305 AEAD that uses the given, 256-bit key.
+// New returns a ChaCha20-Poly1305 AEAD that uses the given 256-bit key.
 func New(key []byte) (cipher.AEAD, error) {
 	if len(key) != KeySize {
 		return nil, errors.New("chacha20poly1305: bad key length")

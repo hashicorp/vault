@@ -28,6 +28,8 @@ func TestSysPolicies(t *testing.T) {
 			"policies": []interface{}{"default", "root"},
 			"keys":     []interface{}{"default", "root"},
 		},
+		"policies": []interface{}{"default", "root"},
+		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -57,6 +59,8 @@ func TestSysReadPolicy(t *testing.T) {
 			"name":  "root",
 			"rules": "",
 		},
+		"name":  "root",
+		"rules": "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -91,6 +95,8 @@ func TestSysWritePolicy(t *testing.T) {
 			"policies": []interface{}{"default", "foo", "root"},
 			"keys":     []interface{}{"default", "foo", "root"},
 		},
+		"policies": []interface{}{"default", "foo", "root"},
+		"keys":     []interface{}{"default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -138,6 +144,8 @@ func TestSysDeletePolicy(t *testing.T) {
 			"policies": []interface{}{"default", "root"},
 			"keys":     []interface{}{"default", "root"},
 		},
+		"policies": []interface{}{"default", "root"},
+		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

@@ -1,0 +1,267 @@
+.ui-wizard-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.ui-wizard-container .app-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  transition: padding $speed;
+  will-change: padding;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.ui-wizard-container .app-content.wizard-open {
+  padding-right: 324px;
+  padding-right: calc(324px + env(safe-area-inset-right));
+
+  @include until($tablet) {
+    padding-right: 0;
+    padding-bottom: 50vh;
+  }
+}
+
+.ui-wizard {
+  z-index: 300;
+  padding: $size-5;
+  width: $drawer-width;
+  background: $white;
+  box-shadow: $box-shadow, $box-shadow-highest;
+  position: fixed;
+  right: $size-8;
+  bottom: $size-8;
+  top: calc(#{$header-height} + #{$size-8});
+  overflow: auto;
+
+  p {
+    line-height: 1.33;
+  }
+
+  .dismiss-collapsed {
+    position: absolute;
+    top: $size-8;
+    right: $size-8;
+    color: $grey;
+    z-index: 30;
+  }
+
+  @include until($tablet) {
+    box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 50%;
+    width: auto;
+  }
+
+  .doc-link {
+    margin-top: $size-5;
+    display: block;
+  }
+
+  pre code {
+    background: $ui-gray-050;
+    margin: $size-8 0;
+  }
+}
+
+.wizard-header {
+  border-bottom: $light-border;
+  padding: 0 $size-4 $size-8 2rem;
+  margin: $size-4 0;
+  position: relative;
+
+  @include until($tablet) {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .title .icon {
+    left: 0;
+    position: absolute;
+    top: 0;
+  }
+}
+
+.wizard-dismiss-menu {
+  position: absolute;
+  right: 0;
+  top: -$size-11;
+  z-index: 10;
+}
+
+.ui-wizard.collapsed {
+  animation: drop-fade-above $speed-slow;
+  color: $white;
+  background: $black;
+  bottom: auto;
+  box-shadow: $box-shadow-middle;
+  height: auto;
+  min-height: 0;
+  padding-bottom: $size-11;
+  position: fixed;
+  right: $size-8;
+  top: calc(#{$header-height} + #{$size-8});
+
+  @include until($tablet) {
+    box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: auto;
+  }
+
+  .title {
+    color: $white;
+
+    .icon {
+      top: -0.1rem;
+    }
+  }
+
+  .wizard-header {
+    border-bottom: 0;
+    margin: 0 0 $size-10;
+    padding-top: 0;
+  }
+
+  .wizard-dismiss-menu {
+    svg {
+      color: $white;
+    }
+
+    &:hover svg {
+      color: $black;
+    }
+  }
+}
+
+.wizard-divider-box {
+  background: none;
+  box-shadow: none;
+  margin: $size-8 0 0;
+  padding: 0 $size-8;
+  border-top: solid 1px $white;
+  border-image: linear-gradient(to right, $vault-gray-dark, $vault-gray) 1;
+  border-width: 1px 0 0;
+  button {
+    font-size: $size-7;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.wizard-section .title .icon {
+  height: auto;
+  margin-right: $size-11;
+  width: auto;
+}
+
+.wizard-section:last-of-type {
+  margin-bottom: $size-5;
+}
+
+.wizard-section button:not(:last-of-type) {
+  margin-bottom: $size-10;
+}
+
+.wizard-details {
+  padding-top: $size-4;
+  margin-top: $size-4;
+  border-top: 1px solid $grey-light;
+}
+
+.wizard-instructions {
+  margin: $size-4 0;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.time-estimate {
+  align-items: center;
+  color: $grey;
+  display: flex;
+  font-size: 12px;
+}
+
+.progress-container {
+  align-items: center;
+  background: $white;
+  bottom: 0;
+  height: $wizard-progress-bar-height;
+  display: flex;
+  left: 0;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  width: 100%;
+}
+
+.progress-bar {
+  background: $ui-gray-100;
+  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  display: flex;
+  height: $wizard-progress-bar-height;
+  position: relative;
+  width: 100%;
+}
+
+.feature-progress-container {
+  align-items: center;
+  flex: 1 0 auto;
+  padding: 0 ($wizard-progress-check-size / 4);
+  position: relative;
+}
+
+.feature-progress {
+  background: $green;
+  border-radius: $wizard-progress-bar-height;
+  height: $wizard-progress-bar-height;
+}
+
+.feature-check {
+  height: $wizard-progress-check-size;
+  left: $wizard-progress-check-size / 2;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: $wizard-progress-check-size;
+  z-index: 10;
+}
+
+.feature-progress-container .feature-check {
+  left: 100%;
+}
+
+.feature-progress-container:first-child {
+  padding-left: 0;
+
+  .progress-bar,
+  .feature-progress {
+    border-radius: $wizard-progress-bar-height 0 0 $wizard-progress-bar-height;
+  }
+}
+
+.feature-progress-container:first-child:last-child {
+  .progress-bar,
+  .feature-progress {
+    border-radius: $wizard-progress-bar-height;
+  }
+}
+
+.incomplete-check svg {
+  fill: $ui-gray-200;
+}
+
+.completed-check svg {
+  fill: $green;
+}

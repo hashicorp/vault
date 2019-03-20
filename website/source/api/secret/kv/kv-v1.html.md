@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "KV - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-kv-v1"
+sidebar_title: "K/V Version 1"
+sidebar_current: "api-http-secret-kv-v1"
 description: |-
   This is the API documentation for the Vault KV secrets engine.
 ---
@@ -43,18 +44,19 @@ $ curl \
 {
   "auth": null,
   "data": {
-    "foo": "bar"
+    "foo": "bar",
+    "ttl": "1h"
   },
-  "lease_duration": 2764800,
+  "lease_duration": 3600,
   "lease_id": "",
   "renewable": false
 }
 ```
 
-_Note_: the `lease_duration` field (which on the CLI shows as
-`refresh_interval`) is advisory. No lease is created. This is a way for writers
-to indicate how often a given value should be re-read by the client. See the
-[Vault KV secrets engine documentation](/docs/secrets/kv/index.html)
+_Note_: the `lease_duration` field, which will be populated if a "ttl" field
+was included in the data, is advisory. No lease is created. This is a way for
+writers to indicate how often a given value should be re-read by the client.
+See the [Vault KV secrets engine documentation](/docs/secrets/kv/index.html)
 for more details.
 
 ## List Secrets

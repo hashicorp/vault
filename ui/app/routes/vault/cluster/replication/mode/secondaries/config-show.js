@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { hash, resolve } from 'rsvp';
 import Base from '../../replication-base';
 
 export default Base.extend({
@@ -6,12 +6,12 @@ export default Base.extend({
 
   model(params) {
     const id = params.secondary_id;
-    return Ember.RSVP.hash({
+    return hash({
       cluster: this.modelFor('vault.cluster.replication'),
       config: this.store.findRecord('mount-filter-config', id).catch(e => {
         if (e.httpStatus === 404) {
           // return an empty obj to let them nav to create
-          return Ember.RSVP.resolve({ id });
+          return resolve({ id });
         } else {
           throw e;
         }

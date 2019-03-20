@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -31,12 +32,26 @@ func TestSysAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
+					"token_type":        "default-service",
+					"force_no_cache":    false,
 				},
 				"local":     false,
 				"seal_wrap": false,
 				"options":   interface{}(nil),
 			},
+		},
+		"token/": map[string]interface{}{
+			"description": "token based credentials",
+			"type":        "token",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -47,6 +62,7 @@ func TestSysAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
@@ -84,7 +100,8 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
+					"token_type":        "default-service",
+					"force_no_cache":    false,
 				},
 				"local":     false,
 				"seal_wrap": false,
@@ -96,12 +113,39 @@ func TestSysEnableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
+					"force_no_cache":    false,
+					"token_type":        "default-service",
 				},
 				"local":     false,
 				"seal_wrap": false,
 				"options":   interface{}(nil),
 			},
+		},
+		"foo/": map[string]interface{}{
+			"description": "foo",
+			"type":        "noop",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   map[string]interface{}{},
+		},
+		"token/": map[string]interface{}{
+			"description": "token based credentials",
+			"type":        "token",
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -112,11 +156,12 @@ func TestSysEnableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -150,7 +195,8 @@ func TestSysDisableAuth(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
-					"plugin_name":       "",
+					"token_type":        "default-service",
+					"force_no_cache":    false,
 				},
 				"description": "token based credentials",
 				"type":        "token",
@@ -158,6 +204,19 @@ func TestSysDisableAuth(t *testing.T) {
 				"seal_wrap":   false,
 				"options":     interface{}(nil),
 			},
+		},
+		"token/": map[string]interface{}{
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"description": "token based credentials",
+			"type":        "token",
+			"local":       false,
+			"seal_wrap":   false,
+			"options":     interface{}(nil),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -168,11 +227,12 @@ func TestSysDisableAuth(t *testing.T) {
 		if v.(map[string]interface{})["accessor"] == "" {
 			t.Fatalf("no accessor from %s", k)
 		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -212,7 +272,14 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"force_no_cache":               false,
 			"audit_non_hmac_request_keys":  []interface{}{"foo"},
 			"audit_non_hmac_response_keys": []interface{}{"bar"},
+			"token_type":                   "default-service",
 		},
+		"default_lease_ttl":            json.Number("2764800"),
+		"max_lease_ttl":                json.Number("2764800"),
+		"force_no_cache":               false,
+		"audit_non_hmac_request_keys":  []interface{}{"foo"},
+		"audit_non_hmac_response_keys": []interface{}{"bar"},
+		"token_type":                   "default-service",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -246,7 +313,12 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"token_type":        "default-service",
 		},
+		"default_lease_ttl": json.Number("2764800"),
+		"max_lease_ttl":     json.Number("2764800"),
+		"force_no_cache":    false,
+		"token_type":        "default-service",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -277,7 +349,12 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
+			"token_type":        "default-service",
 		},
+		"default_lease_ttl": json.Number("2764800"),
+		"max_lease_ttl":     json.Number("2764800"),
+		"force_no_cache":    false,
+		"token_type":        "default-service",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -308,7 +385,13 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 			"max_lease_ttl":      json.Number("2764800"),
 			"force_no_cache":     false,
 			"listing_visibility": "unauth",
+			"token_type":         "default-service",
 		},
+		"default_lease_ttl":  json.Number("2764800"),
+		"max_lease_ttl":      json.Number("2764800"),
+		"force_no_cache":     false,
+		"listing_visibility": "unauth",
+		"token_type":         "default-service",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]

@@ -20,6 +20,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/jackc/pgx"
 	"github.com/lib/pq"
 )
 
@@ -64,7 +65,9 @@ import (
 //        return nil
 //    })
 //
-func ExecuteTx(ctx context.Context, db *sql.DB, txopts *sql.TxOptions, fn func(*sql.Tx) error) error {
+func ExecuteTx(
+	ctx context.Context, db *sql.DB, txopts *sql.TxOptions, fn func(*sql.Tx) error,
+) error {
 	// Start a transaction.
 	tx, err := db.BeginTx(ctx, txopts)
 	if err != nil {
@@ -115,19 +118,35 @@ func ExecuteInTx(ctx context.Context, tx Tx, fn func() error) (err error) {
 				return nil
 			}
 		}
-		// We got an error; let's see if it's a retryable one and, if so, restart. We look
-		// for either the standard PG errcode SerializationFailureError:40001 or the Cockroach extension
-		// errcode RetriableError:CR000. The Cockroach extension has been removed server-side, but support
-		// for it has been left here for now to maintain backwards compatibility.
-		pqErr, ok := errorCause(err).(*pq.Error)
-		if retryable := ok && (pqErr.Code == "CR000" || pqErr.Code == "40001"); !retryable {
+		// We got an error; let's see if it's a retryable one and, if so, restart.
+		// We look for either:
+		//  - the standard PG errcode SerializationFailureError:40001 or
+		//  - the Cockroach extension errcode RetriableError:CR000. This extension
+		//    has been removed server-side, but support for it has been left here for
+		//    now to maintain backwards compatibility.
+		code := errCode(err)
+		if retryable := (code == "CR000" || code == "40001"); !retryable {
 			if released {
 				err = newAmbiguousCommitError(err)
 			}
 			return err
 		}
+
 		if _, retryErr := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT cockroach_restart"); retryErr != nil {
 			return newTxnRestartError(retryErr, err)
 		}
+	}
+}
+
+func errCode(err error) string {
+	switch t := errorCause(err).(type) {
+	case *pq.Error:
+		return string(t.Code)
+
+	case pgx.PgError:
+		return t.Code
+
+	default:
+		return ""
 	}
 }

@@ -196,7 +196,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	}
 
 	for _, o := range allOrgs {
-		if strings.ToLower(*o.Login) == strings.ToLower(config.Organization) {
+		if strings.EqualFold(*o.Login, config.Organization) {
 			org = o
 			break
 		}
@@ -214,7 +214,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 
 	var allTeams []*github.Team
 	for {
-		teams, resp, err := client.Organizations.ListUserTeams(ctx, teamOpt)
+		teams, resp, err := client.Teams.ListUserTeams(ctx, teamOpt)
 		if err != nil {
 			return nil, nil, err
 		}

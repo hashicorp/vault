@@ -1,4 +1,7 @@
-<div class="console-ui-panel">
+<button type="button" class="button is-ghost console-close-button" aria-label="close console" {{action "closeConsole"}}>
+  <ICon @glyph="close" @size=16 />
+</button>
+<div class="console-ui-panel-content">
   <div class="content">
     <p class="has-text-grey is-font-mono">
       The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and list.

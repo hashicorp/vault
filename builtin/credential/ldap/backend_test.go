@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -31,6 +32,92 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	}
 
 	return b, config.StorageView
+}
+
+func TestLdapAuthBackend_Listing(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	// Create group "testgroup"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/testgroup",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create group "nested/testgroup"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/nested/testgroup",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create user "testuser"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Create user "nested/testuser"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/nested/testuser",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"policies": []string{"default"},
+			"groups":   "testgroup,nested/testgroup",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// List users
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "users/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected := []string{"testuser", "nested/testuser"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed users; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
+
+	// List groups
+	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "groups/",
+		Operation: logical.ListOperation,
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+	expected = []string{"testgroup", "nested/testgroup"}
+	if !reflect.DeepEqual(expected, resp.Data["keys"].([]string)) {
+		t.Fatalf("bad: listed groups; expected: %#v actual: %#v", expected, resp.Data["keys"].([]string))
+	}
 }
 
 func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
@@ -315,7 +402,7 @@ func TestBackend_basic(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Map Scientists group (from LDAP server) with foo policy
@@ -342,7 +429,7 @@ func TestBackend_basic(t *testing.T) {
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Create LDAP user
@@ -357,7 +444,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrl(t),
 			// Create engineers group with no policies
@@ -376,7 +463,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithAuthBind(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -391,7 +478,7 @@ func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlWithDiscover(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -406,7 +493,7 @@ func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfigUrlNoGroupDN(t),
 			testAccStepGroup(t, "Scientists", "foo"),
@@ -421,7 +508,7 @@ func TestBackend_groupCrud(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepGroup(t, "g1", "foo"),
 			testAccStepReadGroup(t, "g1", "foo"),
@@ -438,7 +525,7 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	b := factory(t)
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -600,7 +687,7 @@ func TestBackend_userCrud(t *testing.T) {
 	b := Backend()
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
+		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepUser(t, "g1", "bar"),
 			testAccStepReadUser(t, "g1", "bar"),

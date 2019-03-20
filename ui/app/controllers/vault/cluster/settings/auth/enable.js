@@ -1,12 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Controller from '@ember/controller';
 
-export default Ember.Controller.extend({
+export default Controller.extend({
+  wizard: service(),
   actions: {
-    onMountSuccess: function() {
-      return this.transitionToRoute('vault.cluster.access.methods');
-    },
-    onConfigError: function(modelId) {
-      return this.transitionToRoute('vault.cluster.settings.auth.configure', modelId);
+    onMountSuccess: function(type, path) {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
+      let transition = this.transitionToRoute('vault.cluster.settings.auth.configure', path);
+      return transition.followRedirects();
     },
   },
 });

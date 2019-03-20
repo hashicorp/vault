@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/helper/base62"
 )
 
-// CredentialsProducer can be used as an embeded interface in the Database
+// CredentialsProducer can be used as an embedded interface in the Database
 // definition. It implements the methods for generating user information for a
 // particular database type and is used in all the builtin database types.
 type CredentialsProducer interface {
@@ -37,7 +37,7 @@ func RandomAlphaNumeric(length int, prependA1a bool) (string, error) {
 		prefix = reqStr
 	}
 
-	randomStr, err := base62.Random(length-len(prefix), true)
+	randomStr, err := base62.Random(length - len(prefix))
 	if err != nil {
 		return "", err
 	}

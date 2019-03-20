@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "AppRole - Auth Methods"
+sidebar_title: "AppRole"
 sidebar_current: "docs-auth-approle"
 description: |-
   The AppRole auth method allows machines and services to authenticate with

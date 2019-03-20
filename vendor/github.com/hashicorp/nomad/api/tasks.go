@@ -148,6 +148,23 @@ func (r *ReschedulePolicy) Canonicalize(jobType string) {
 	}
 }
 
+// Affinity is used to serialize task group affinities
+type Affinity struct {
+	LTarget string  // Left-hand target
+	RTarget string  // Right-hand target
+	Operand string  // Constraint operand (<=, <, =, !=, >, >=), set_contains_all, set_contains_any
+	Weight  float64 // Weight applied to nodes that match the affinity. Can be negative
+}
+
+func NewAffinity(LTarget string, Operand string, RTarget string, Weight float64) *Affinity {
+	return &Affinity{
+		LTarget: LTarget,
+		RTarget: RTarget,
+		Operand: Operand,
+		Weight:  Weight,
+	}
+}
+
 func NewDefaultReschedulePolicy(jobType string) *ReschedulePolicy {
 	var dp *ReschedulePolicy
 	switch jobType {
@@ -200,6 +217,34 @@ func (p *ReschedulePolicy) String() string {
 		return fmt.Sprintf("unlimited with %v delay, max_delay = %v", *p.DelayFunction, *p.MaxDelay)
 	}
 	return fmt.Sprintf("%v in %v with %v delay, max_delay = %v", *p.Attempts, *p.Interval, *p.DelayFunction, *p.MaxDelay)
+}
+
+// Spread is used to serialize task group allocation spread preferences
+type Spread struct {
+	Attribute    string
+	Weight       int
+	SpreadTarget []*SpreadTarget
+}
+
+// SpreadTarget is used to serialize target allocation spread percentages
+type SpreadTarget struct {
+	Value   string
+	Percent uint32
+}
+
+func NewSpreadTarget(value string, percent uint32) *SpreadTarget {
+	return &SpreadTarget{
+		Value:   value,
+		Percent: percent,
+	}
+}
+
+func NewSpread(attribute string, weight int, spreadTargets []*SpreadTarget) *Spread {
+	return &Spread{
+		Attribute:    attribute,
+		Weight:       weight,
+		SpreadTarget: spreadTargets,
+	}
 }
 
 // CheckRestart describes if and when a task should be restarted based on
@@ -413,7 +458,9 @@ type TaskGroup struct {
 	Name             *string
 	Count            *int
 	Constraints      []*Constraint
+	Affinities       []*Affinity
 	Tasks            []*Task
+	Spreads          []*Spread
 	RestartPolicy    *RestartPolicy
 	ReschedulePolicy *ReschedulePolicy
 	EphemeralDisk    *EphemeralDisk
@@ -543,9 +590,21 @@ func (g *TaskGroup) AddTask(t *Task) *TaskGroup {
 	return g
 }
 
+// AddAffinity is used to add a new affinity to a task group.
+func (g *TaskGroup) AddAffinity(a *Affinity) *TaskGroup {
+	g.Affinities = append(g.Affinities, a)
+	return g
+}
+
 // RequireDisk adds a ephemeral disk to the task group
 func (g *TaskGroup) RequireDisk(disk *EphemeralDisk) *TaskGroup {
 	g.EphemeralDisk = disk
+	return g
+}
+
+// AddSpread is used to add a new spread preference to a task group.
+func (g *TaskGroup) AddSpread(s *Spread) *TaskGroup {
+	g.Spreads = append(g.Spreads, s)
 	return g
 }
 
@@ -583,6 +642,7 @@ type Task struct {
 	User            string
 	Config          map[string]interface{}
 	Constraints     []*Constraint
+	Affinities      []*Affinity
 	Env             map[string]string
 	Services        []*Service
 	Resources       *Resources
@@ -768,6 +828,12 @@ func (t *Task) Require(r *Resources) *Task {
 // Constraint adds a new constraints to a single task.
 func (t *Task) Constrain(c *Constraint) *Task {
 	t.Constraints = append(t.Constraints, c)
+	return t
+}
+
+// AddAffinity adds a new affinity to a single task.
+func (t *Task) AddAffinity(a *Affinity) *Task {
+	t.Affinities = append(t.Affinities, a)
 	return t
 }
 

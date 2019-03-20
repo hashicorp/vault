@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "operator init - Command"
+sidebar_title: "<code>init</code>"
 sidebar_current: "docs-commands-operator-init"
 description: |-
   The "operator init" command initializes a Vault server. Initialization is the
@@ -41,6 +42,15 @@ $ vault operator init \
     -key-shares=3 \
     -key-threshold=2 \
     -pgp-keys="keybase:hashicorp,keybase:jefferai,keybase:sethvargo"
+```
+
+Initialize Auto Unseal, but encrypt the recovery keys with pgp keys:
+
+```text
+$ vault operator init \
+    -recovery-shares=1 \
+    -recovery-threshold=1 \
+    -recovery-pgp-keys="keybase:grahamhashicorp"
 ```
 
 Encrypt the initial root token using a pgp key:
@@ -84,7 +94,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 - `-status` `(bool": false)` - Print the current initialization status. An exit
   code of 0 means the Vault is already initialized. An exit code of 1 means an
-  error occurred. An exit code of 2 means the mean is not initialized.
+  error occurred. An exit code of 2 means the Vault is not initialized.
 
 ### Consul Options
 
@@ -101,7 +111,7 @@ flags](/docs/commands/index.html) included on all commands.
 - `-consul-service` `(string: "vault")` - Name of the service in Consul under
   which the Vault servers are registered.
 
-### HSM Options
+### HSM and KMS Options
 
 - `-recovery-pgp-keys` `(string: "...")` - Behaves like `-pgp-keys`, but for the
   recovery key shares. This is only used in HSM mode.

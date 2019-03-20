@@ -1,0 +1,55 @@
+.feature-header {
+  font-size: $size-6;
+  font-weight: $font-weight-semibold;
+  color: $grey;
+}
+
+.access-information {
+  display: flex;
+  padding: $size-8 0px;
+  font-size: $size-8;
+}
+
+.feature-box {
+  box-shadow: $box-shadow;
+  border-radius: $radius;
+  padding: $size-8;
+  margin: $size-8 0;
+
+  &.is-active {
+    box-shadow: 0 0 0 1px $grey-light;
+  }
+
+  &.is-disabled {
+    background-color: $ui-gray-010;
+    color: $ui-gray-300;
+  }
+}
+
+.feature-box label {
+  font-weight: $font-weight-semibold;
+  padding-left: $size-10;
+
+  &::before {
+    top: 3px;
+  }
+
+  &::after {
+    top: 5px;
+  }
+}
+
+.feature-steps {
+  font-size: $size-8;
+  color: $grey;
+  line-height: 1.5;
+  margin-left: $size-3;
+  margin-top: $size-10;
+
+  li::before {
+    // bullet
+    content: '\2022';
+    position: relative;
+    right: $size-11;
+  }
+}

@@ -1,9 +1,11 @@
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
-import Ember from 'ember';
-import { shiftCommandIndex } from 'vault/lib/console-helpers';
+import Service from '@ember/service';
 
-const { Service, getOwner, computed } = Ember;
+import { getOwner } from '@ember/application';
+import { computed } from '@ember/object';
+import { shiftCommandIndex } from 'vault/lib/console-helpers';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -73,7 +75,7 @@ export default Service.extend({
   ajax(operation, path, options = {}) {
     let verb = VERBS[operation];
     let adapter = this.adapter();
-    let url = adapter.buildURL(path);
+    let url = adapter.buildURL(encodePath(path));
     let { data, wrapTTL } = options;
     return adapter.ajax(url, verb, {
       data,

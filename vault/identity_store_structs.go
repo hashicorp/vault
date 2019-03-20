@@ -70,6 +70,10 @@ type IdentityStore struct {
 
 	// core is the pointer to Vault's core
 	core *Core
+
+	// disableLowerCaseNames indicates whether or not identity artifacts are
+	// operated case insensitively
+	disableLowerCasedNames bool
 }
 
 type groupDiff struct {

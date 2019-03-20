@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-secret-aws"
 description: |-
   This is the API documentation for the Vault AWS secrets engine.
 ---
@@ -79,6 +80,47 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/aws/config/root
 ```
+
+## Rotate Root IAM Credentials
+
+When you have configured Vault with static credentials, you can use this
+endpoint to have Vault rotate the access key it used. Note that, due to AWS
+eventual consistency, after calling this endpoint, subsequent calls from Vault
+to AWS may fail for a few seconds until AWS becomes consistent again.
+
+
+In order to call this endpoint, Vault's AWS access key MUST be the only access
+key on the IAM user; otherwise, generation of a new access key will fail. Once
+this method is called, Vault will now be the only entity that knows the AWS
+secret key is used to access AWS.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/rotate-root`    | `200 application/json` |
+
+### Parameters
+
+There are no parameters to this operation.
+
+### Sample Request
+
+```$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8211/v1/aws/config/rotate-root
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "access_key": "AKIA..."
+  }
+}
+```
+
+The new access key Vault uses is returned by this operation.
 
 ## Configure Lease
 
@@ -168,7 +210,7 @@ updated with the new attributes.
   prohibited otherwise. This is a comma-separated string or JSON array.
 
 - `policy_arns` `(list: [])` – Specifies the ARNs of the AWS managed policies to
-  be attached to IAM users when they are requsted. Valid only when
+  be attached to IAM users when they are requested. Valid only when
   `credential_type` is `iam_user`. When `credential_type` is `iam_user`, at
   least one of `policy_arns` or `policy_document` must be specified. This is a
   comma-separated string or JSON array.
@@ -178,6 +220,15 @@ updated with the new attributes.
   will be attached to the IAM user generated and augment the permissions the IAM
   user has. With `assumed_role` and `federation_token`, the policy document will
   act as a filter on what the credentials can do.
+
+- `default_sts_ttl` `(string)` - The default TTL for STS credentials. When a TTL is not
+  specified when STS credentials are requested, and a default TTL is specified
+  on the role, then this default TTL will be used. Valid only when
+  `credential_type` is one of `assumed_role` or `federation_token`.
+
+- `max_sts_ttl` `(string)` - The max allowed TTL for STS credentials (credentials
+  TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
+  `assumed_role` or `federation_token`.
 
 Legacy parameters:
 
@@ -351,7 +402,9 @@ credentials retrieved through `/aws/creds` must be of the `iam_user` type.
   required otherwise.
 - `ttl` `(string: "3600s")` – Specifies the TTL for the use of the STS token.
   This is specified as a string with a duration suffix. Valid only when
-  `credential_type` is `assumed_role` or `federation_token`. AWS places limits
+  `credential_type` is `assumed_role` or `federation_token`. When not specified,
+  the `default_sts_ttl` set for the role will be used. If that is also not set, then
+  the default value of `3600s` will be used. AWS places limits
   on the maximum TTL allowed. See the AWS documentation on the `DurationSeconds`
   parameter for
   [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)

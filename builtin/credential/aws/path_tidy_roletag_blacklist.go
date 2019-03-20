@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -35,6 +36,11 @@ expiration, before it is removed from the backend storage.`,
 
 // tidyBlacklistRoleTag is used to clean-up the entries in the role tag blacklist.
 func (b *backend) tidyBlacklistRoleTag(ctx context.Context, req *logical.Request, safetyBuffer int) (*logical.Response, error) {
+	// If we are a performance standby forward the request to the active node
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
 	if !atomic.CompareAndSwapUint32(b.tidyBlacklistCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")

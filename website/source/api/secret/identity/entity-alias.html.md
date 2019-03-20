@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Identity Secret Backend: Entity Alias - HTTP API"
-sidebar_current: "docs-http-secret-identity-entity-alias"
+sidebar_title: "Entity Alias"
+sidebar_current: "api-http-secret-identity-entity-alias"
 description: |-
   This is the API documentation for managing entity aliases in the identity store.
 ---
@@ -29,18 +30,11 @@ This endpoint creates a new alias for an entity.
 - `mount_accessor` `(string: <required>)` - Accessor of the mount to which the
   alias should belong to.
 
-- `metadata` `(key-value-map: {})` – Metadata to be associated with the
-  alias.
-
 ### Sample Payload
 
 ```json
 {
   "name": "testuser",
-  "metadata": {
-    "group": "san_francisco",
-    "region": "west"
-  },
   "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
   "mount_accessor": "auth_userpass_e50b1a44"
 }
@@ -130,18 +124,11 @@ This endpoint is used to update an existing entity alias.
 - `mount_accessor` `(string: <required>)` - Accessor of the mount to which the
   alias should belong to.
 
-- `metadata` `(key-value-map: {})` – Metadata to be associated with the
-  alias. Format should be a list of `key=value` pairs.
-
 ### Sample Payload
 
 ```json
 {
   "name": "testuser",
-  "metadata": {
-    "group": "philadelphia",
-    "region": "east"
-  },
   "canonical_id": "404e57bc-a0b1-a80f-0a73-b6e92e8a52d3",
   "mount_accessor": "auth_userpass_e50b1a44"
 }
@@ -176,7 +163,7 @@ This endpoint deletes an alias from its corresponding entity.
 | :--------- | :------------------------------- | :----------------------|
 | `DELETE`   | `/identity/entity-alias/id/:id`  | `204 (empty body)`     |
 
-## Parameters
+### Parameters
 
 - `id` `(string: <required>)` – Identifier of the entity alias.
 

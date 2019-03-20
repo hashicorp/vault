@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -574,12 +575,12 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"role_tag":                       "testtag",
 		"resolve_aws_unique_ids":         false,
 		"allow_instance_migration":       true,
-		"ttl":                       "10m",
-		"max_ttl":                   "20m",
-		"policies":                  "testpolicy1,testpolicy2",
-		"disallow_reauthentication": false,
-		"hmac_key":                  "testhmackey",
-		"period":                    "1m",
+		"ttl":                            "10m",
+		"max_ttl":                        "20m",
+		"policies":                       "testpolicy1,testpolicy2",
+		"disallow_reauthentication":      false,
+		"hmac_key":                       "testhmackey",
+		"period":                         "1m",
 	}
 
 	roleReq.Path = "role/testrole"
@@ -613,15 +614,20 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
-		"ttl":                       time.Duration(600),
-		"max_ttl":                   time.Duration(1200),
-		"policies":                  []string{"testpolicy1", "testpolicy2"},
-		"disallow_reauthentication": false,
-		"period":                    time.Duration(60),
+		"ttl":                            time.Duration(600),
+		"max_ttl":                        time.Duration(1200),
+		"policies":                       []string{"testpolicy1", "testpolicy2"},
+		"disallow_reauthentication":      false,
+		"period":                         time.Duration(60),
 	}
 
-	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("bad: role data: expected: %#v\n actual: %#v", expected, resp.Data)
+	if resp.Data["role_id"] == nil {
+		t.Fatal("role_id not found in repsonse")
+	}
+	expected["role_id"] = resp.Data["role_id"]
+
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
 	}
 
 	roleData["bound_vpc_id"] = "newvpcid"
@@ -676,9 +682,9 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		"auth_type":                      "ec2",
 		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/test-profile-name",
 		"resolve_aws_unique_ids":         false,
-		"ttl":     "10s",
-		"max_ttl": "20s",
-		"period":  "30s",
+		"ttl":                            "10s",
+		"max_ttl":                        "20s",
+		"period":                         "30s",
 	}
 
 	roleReq := &logical.Request{
@@ -711,7 +717,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 }
 
-func TestRoleEntryUpgradeV1(t *testing.T) {
+func TestRoleEntryUpgradeV(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -743,8 +749,12 @@ func TestRoleEntryUpgradeV1(t *testing.T) {
 	if !upgraded {
 		t.Fatalf("expected to upgrade role entry %#v but got no upgrade", roleEntryToUpgrade)
 	}
-	if !reflect.DeepEqual(*roleEntryToUpgrade, *expected) {
-		t.Fatalf("bad: expected upgraded role of %#v, got %#v instead", expected, roleEntryToUpgrade)
+	if roleEntryToUpgrade.RoleID == "" {
+		t.Fatal("expected role ID to be populated")
+	}
+	expected.RoleID = roleEntryToUpgrade.RoleID
+	if diff := deep.Equal(*roleEntryToUpgrade, *expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

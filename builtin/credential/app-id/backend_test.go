@@ -26,7 +26,7 @@ func TestBackend_basic(t *testing.T) {
 		return b, nil
 	}
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: factory,
+		CredentialFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepMapAppId(t),
 			testAccStepMapUserId(t),
@@ -65,7 +65,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_cidr(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		CredentialFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepMapAppIdDisplayName(t),
 			testAccStepMapUserIdCidr(t, "192.168.1.0/16"),
@@ -78,7 +78,7 @@ func TestBackend_cidr(t *testing.T) {
 
 func TestBackend_displayName(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
-		Factory: Factory,
+		CredentialFactory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepMapAppIdDisplayName(t),
 			testAccStepMapUserId(t),

@@ -1,25 +1,41 @@
-import Ember from 'ember';
+import { camelize } from '@ember/string';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const { computed } = Ember;
 const GLYPHS_WITH_SVG_TAG = [
-  'download',
-  'folder',
-  'file',
-  'hidden',
-  'perf-replication',
-  'role',
-  'visible',
-  'information-reversed',
-  'true',
-  'false',
-  'upload',
+  'cancel-square-outline',
+  'cancel-square-fill',
+  'check-circle-fill',
+  'check-plain',
+  'checkmark-circled-outline',
+  'close-circled-outline',
+  'console',
   'control-lock',
+  'docs',
+  'download',
   'edition-enterprise',
-  'edition-oss'
+  'edition-oss',
+  'false',
+  'file',
+  'folder',
+  'hidden',
+  'information-reversed',
+  'learn',
+  'neutral-circled-outline',
+  'perf-replication',
+  'person',
+  'role',
+  'status-indicator',
+  'stopwatch',
+  'tour',
+  'true',
+  'upload',
+  'video',
+  'visible',
 ];
 
-export default Ember.Component.extend({
+export default Component.extend({
   layout: hbs`
     {{#if excludeSVG}}
       {{partial partialName}}
@@ -40,15 +56,16 @@ export default Ember.Component.extend({
   glyph: null,
 
   excludeSVG: computed('glyph', function() {
-    return GLYPHS_WITH_SVG_TAG.includes(this.get('glyph'));
+    let glyph = this.get('glyph');
+    return glyph.startsWith('enable/') || GLYPHS_WITH_SVG_TAG.includes(glyph);
   }),
 
-  size: computed(function() {
-    return 12;
+  size: computed('glyph', function() {
+    return this.get('glyph').startsWith('enable/') ? 48 : 12;
   }),
 
   partialName: computed('glyph', function() {
     const glyph = this.get('glyph');
-    return `svg/icons/${Ember.String.camelize(glyph)}`;
+    return `svg/icons/${camelize(glyph)}`;
   }),
 });

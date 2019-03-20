@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"sort"
 	"strconv"
@@ -17,7 +18,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -149,7 +150,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		// Create the required table if it doesn't exists.
 		if !lockTableExist {
 			create_query := "CREATE TABLE IF NOT EXISTS " + dbLockTable +
-				" (node_job varchar(512), current_leader varchar(512), PRIMARY KEY (node_job))"
+				" (node_job varbinary(512), current_leader varbinary(512), PRIMARY KEY (node_job))"
 			if _, err := db.Exec(create_query); err != nil {
 				return nil, errwrap.Wrapf("failed to create mysql table: {{err}}", err)
 			}
@@ -560,8 +561,8 @@ var (
 	// ErrUnlockFailed
 	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
 	// You were unable to update that you are the new leader in the DB
-	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader infromation")
-	// Error to thow if inbetween getting the lock and checking the ID of it we lost it.
+	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader information")
+	// Error to throw if between getting the lock and checking the ID of it we lost it.
 	ErrSettingGlobalID = errors.New("mysql: getting global lock id failed")
 )
 
@@ -620,7 +621,9 @@ func (i *MySQLLock) becomeLeader() error {
 func (i *MySQLLock) Lock() error {
 	defer metrics.MeasureSince([]string{"mysql", "get_lock"}, time.Now())
 
-	rows, err := i.in.Query("SELECT GET_LOCK(?, -1), IS_USED_LOCK(?)", i.key, i.key)
+	// Lock timeout math.MaxInt32 instead of -1 solves compatibility issues with
+	// different MySQL flavours i.e. MariaDB
+	rows, err := i.in.Query("SELECT GET_LOCK(?, ?), IS_USED_LOCK(?)", i.key, math.MaxInt32, i.key)
 	if err != nil {
 		return err
 	}
@@ -636,7 +639,7 @@ func (i *MySQLLock) Lock() error {
 	}
 
 	// 1 is returned from GET_LOCK if it was able to get the lock
-	// 0 if it failed and NULL if some stange error happened.
+	// 0 if it failed and NULL if some strange error happened.
 	// https://dev.mysql.com/doc/refman/8.0/en/miscellaneous-functions.html#function_get-lock
 	if !lock.Valid || lock.Int64 != 1 {
 		return ErrLockHeld

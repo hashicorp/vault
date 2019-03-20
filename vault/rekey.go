@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -372,8 +372,10 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 	var recoveredKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveredKey = c.barrierRekeyConfig.RekeyProgress[0]
+		c.barrierRekeyConfig.RekeyProgress = nil
 	} else {
 		recoveredKey, err = shamir.Combine(c.barrierRekeyConfig.RekeyProgress)
+		c.barrierRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute master key: {{err}}", err).Error())
 		}
@@ -517,7 +519,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) log
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
@@ -600,8 +602,10 @@ func (c *Core) RecoveryRekeyUpdate(ctx context.Context, key []byte, nonce string
 	var recoveryKey []byte
 	if existingConfig.SecretThreshold == 1 {
 		recoveryKey = c.recoveryRekeyConfig.RekeyProgress[0]
+		c.recoveryRekeyConfig.RekeyProgress = nil
 	} else {
 		recoveryKey, err = shamir.Combine(c.recoveryRekeyConfig.RekeyProgress)
+		c.recoveryRekeyConfig.RekeyProgress = nil
 		if err != nil {
 			return nil, logical.CodedError(http.StatusInternalServerError, errwrap.Wrapf("failed to compute recovery key: {{err}}", err).Error())
 		}
@@ -717,7 +721,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {

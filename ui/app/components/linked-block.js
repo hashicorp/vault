@@ -1,13 +1,18 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-let LinkedBlockComponent = Ember.Component.extend({
+let LinkedBlockComponent = Component.extend({
+  router: service(),
+
   layout: hbs`{{yield}}`,
 
   classNames: 'linked-block',
 
-  routing: Ember.inject.service('-routing'),
   queryParams: null,
+
+  encode: false,
 
   click(event) {
     const $target = this.$(event.target);
@@ -17,13 +22,20 @@ let LinkedBlockComponent = Ember.Component.extend({
       $target.closest('button', event.currentTarget).length > 0 ||
       $target.closest('a', event.currentTarget).length > 0;
     if (!isAnchorOrButton) {
-      const router = this.get('routing.router');
-      const params = this.get('params');
+      let params = this.get('params');
+      if (this.encode) {
+        params = params.map((param, index) => {
+          if (index === 0 || typeof param !== 'string') {
+            return param;
+          }
+          return encodePath(param);
+        });
+      }
       const queryParams = this.get('queryParams');
       if (queryParams) {
         params.push({ queryParams });
       }
-      router.transitionTo.apply(router, params);
+      this.get('router').transitionTo(...params);
     }
   },
 });

@@ -1,14 +1,17 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
+import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { engines } from 'vault/helpers/mountable-secret-engines';
 
-const { inject } = Ember;
 const METHODS = methods();
+const ENGINES = engines();
 
-export default Ember.Component.extend({
-  store: inject.service(),
-  flashMessages: inject.service(),
-  routing: inject.service('-routing'),
+export default Component.extend({
+  store: service(),
+  wizard: service(),
+  flashMessages: service(),
 
   /*
    * @param Function
@@ -17,8 +20,7 @@ export default Ember.Component.extend({
    * Optional param to call a function upon successfully mounting a backend
    *
    */
-  onMountSuccess: () => {},
-  onConfigError: () => {},
+  onMountSuccess() {},
   /*
    * @param String
    * @public
@@ -38,59 +40,39 @@ export default Ember.Component.extend({
    */
   mountModel: null,
 
+  showEnable: false,
+
   init() {
     this._super(...arguments);
-    const type = this.get('mountType');
+    const type = this.mountType;
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
-    const model = this.get('store').createRecord(modelType);
+    const model = this.store.createRecord(modelType);
     this.set('mountModel', model);
-    this.changeConfigModel(model.get('type'));
   },
+
+  mountTypes: computed('mountType', function() {
+    return this.mountType === 'secret' ? ENGINES : METHODS;
+  }),
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     this.get('mountModel').rollbackAttributes();
   },
 
-  getConfigModelType(methodType) {
-    let noConfig = ['approle'];
-    if (noConfig.includes(methodType)) {
-      return;
-    }
-    if (methodType === 'aws') {
-      return 'auth-config/aws/client';
-    }
-    return `auth-config/${methodType}`;
-  },
-
-  changeConfigModel(methodType) {
-    const mount = this.get('mountModel');
-    const configRef = mount.hasMany('authConfigs').value();
-    const currentConfig = configRef.get('firstObject');
-    if (currentConfig) {
-      // rollbackAttributes here will remove the the config model from the store
-      // because `isNew` will be true
-      currentConfig.rollbackAttributes();
-    }
-    const configType = this.getConfigModelType(methodType);
-    if (!configType) return;
-    const config = this.get('store').createRecord(configType);
-    config.set('backend', mount);
-  },
-
   checkPathChange(type) {
-    const mount = this.get('mountModel');
-    const currentPath = mount.get('path');
+    let mount = this.mountModel;
+    let currentPath = mount.path;
+    let list = this.mountTypes;
     // if the current path matches a type (meaning the user hasn't altered it),
     // change it here to match the new type
-    const isUnchanged = METHODS.findBy('type', currentPath);
-    if (isUnchanged) {
+    let isUnchanged = list.findBy('type', currentPath);
+    if (!currentPath || isUnchanged) {
       mount.set('path', type);
     }
   },
 
   mountBackend: task(function*() {
-    const mountModel = this.get('mountModel');
+    const mountModel = this.mountModel;
     const { type, path } = mountModel.getProperties('type', 'path');
     try {
       yield mountModel.save();
@@ -98,39 +80,28 @@ export default Ember.Component.extend({
       // err will display via model state
       return;
     }
-    this.get('flashMessages').success(
-      `Successfully mounted ${type} ${this.get('mountType')} method at ${path}.`
-    );
-    yield this.get('saveConfig').perform(mountModel);
-  }).drop(),
 
-  saveConfig: task(function*(mountModel) {
-    const configRef = mountModel.hasMany('authConfigs').value();
-    const config = configRef.get('firstObject');
-    const { type, path } = mountModel.getProperties('type', 'path');
-    try {
-      if (config && Object.keys(config.changedAttributes()).length) {
-        yield config.save();
-        this.get('flashMessages').success(
-          `The config for ${type} ${this.get('mountType')} method at ${path} was saved successfully.`
-        );
-      }
-      yield this.get('onMountSuccess')();
-    } catch (err) {
-      this.get('flashMessages').danger(
-        `There was an error saving the configuration for ${type} ${this.get(
-          'mountType'
-        )} method at ${path}. ${err.errors.join(' ')}`
-      );
-      yield this.get('onConfigError')(mountModel.id);
-    }
+    let mountType = this.mountType;
+    mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
+    this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
+    yield this.onMountSuccess(type, path);
+    return;
   }).drop(),
 
   actions: {
     onTypeChange(path, value) {
       if (path === 'type') {
-        this.changeConfigModel(value);
+        this.wizard.set('componentState', value);
         this.checkPathChange(value);
+      }
+    },
+
+    toggleShowEnable(value) {
+      this.set('showEnable', value);
+      if (value === true && this.wizard.featureState === 'idle') {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.mountModel.type);
+      } else {
+        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.mountModel.type);
       }
     },
   },

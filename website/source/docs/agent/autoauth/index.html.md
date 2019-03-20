@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Auto-Auth"
+sidebar_title: "Auto-Auth"
 sidebar_current: "docs-agent-autoauth"
 description: |-
   Vault Agent's Auto-Auth functionality allows easy and automatic
@@ -60,6 +61,9 @@ There are two ways that tokens can be response-wrapped by the agent:
 
 ### Encrypting Tokens
 
+ ~> This is experimental; if input/output formats change we will make every
+ effort to provide backwards compatibility.
+
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
 generated public key to a file. The sink responsible for writing the token to
@@ -70,8 +74,8 @@ the client can compute the shared secret and decrypt the token value.
 
 ~> NOTE: This is not a protection against MITM attacks! The purpose of this
 feature is for forward-secrecy and coverage against bare token values being
-persisted. A MITM that can access the sink's output and public-key input files
-could attack this exchange.
+persisted. A MITM that can write to the sink's output and/or client public-key
+input files could attack this exchange.
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
 provided to the agent. This data is written as part of the AES-GCM tag and must

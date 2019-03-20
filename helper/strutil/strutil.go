@@ -239,6 +239,22 @@ func RemoveDuplicates(items []string, lowercase bool) []string {
 	return items
 }
 
+// RemoveEmpty removes empty elements from a slice of
+// strings
+func RemoveEmpty(items []string) []string {
+	if len(items) == 0 {
+		return items
+	}
+	itemsSlice := make([]string, 0, len(items))
+	for _, item := range items {
+		if item == "" {
+			continue
+		}
+		itemsSlice = append(itemsSlice, item)
+	}
+	return itemsSlice
+}
+
 // EquivalentSlices checks whether the given string sets are equivalent, as in,
 // they contain the same values.
 func EquivalentSlices(a, b []string) bool {
@@ -278,6 +294,24 @@ func EquivalentSlices(a, b []string) bool {
 
 	for i := range sortedA {
 		if sortedA[i] != sortedB[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// EqualStringMaps tests whether two map[string]string objects are equal.
+// Equal means both maps have the same sets of keys and values. This function
+// is 6-10x faster than a call to reflect.DeepEqual().
+func EqualStringMaps(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for k := range a {
+		v, ok := b[k]
+		if !ok || a[k] != v {
 			return false
 		}
 	}
@@ -340,9 +374,52 @@ func MergeSlices(args ...[]string) []string {
 	}
 
 	result := make([]string, 0, len(all))
-	for k, _ := range all {
+	for k := range all {
 		result = append(result, k)
 	}
 	sort.Strings(result)
 	return result
+}
+
+// Difference returns the set difference (A - B) of the two given slices. The
+// result will also remove any duplicated values in set A regardless of whether
+// that matches any values in set B.
+func Difference(a, b []string, lowercase bool) []string {
+	if len(a) == 0 {
+		return a
+	}
+	if len(b) == 0 {
+		if !lowercase {
+			return a
+		}
+		newA := make([]string, len(a))
+		for i, v := range a {
+			newA[i] = strings.ToLower(v)
+		}
+		return newA
+	}
+
+	a = RemoveDuplicates(a, lowercase)
+	b = RemoveDuplicates(b, lowercase)
+
+	itemsMap := map[string]bool{}
+	for _, aVal := range a {
+		itemsMap[aVal] = true
+	}
+
+	// Perform difference calculation
+	for _, bVal := range b {
+		if _, ok := itemsMap[bVal]; ok {
+			itemsMap[bVal] = false
+		}
+	}
+
+	items := []string{}
+	for item, exists := range itemsMap {
+		if exists {
+			items = append(items, item)
+		}
+	}
+	sort.Strings(items)
+	return items
 }

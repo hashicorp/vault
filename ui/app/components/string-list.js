@@ -1,8 +1,8 @@
-import Ember from 'ember';
+import ArrayProxy from '@ember/array/proxy';
+import Component from '@ember/component';
+import { set, computed } from '@ember/object';
 
-const { computed, set } = Ember;
-
-export default Ember.Component.extend({
+export default Component.extend({
   'data-test-component': 'string-list',
   classNames: ['field', 'string-list', 'form-section'],
 
@@ -33,7 +33,9 @@ export default Ember.Component.extend({
    * Defaults to an empty array.
    *
    */
-  inputValue: [],
+  inputValue: computed(function() {
+    return [];
+  }),
 
   /*
     *
@@ -60,7 +62,7 @@ export default Ember.Component.extend({
     *
     */
   inputList: computed(function() {
-    return Ember.ArrayProxy.create({
+    return ArrayProxy.create({
       content: [],
       // trim the `value` when accessing objects
       objectAtContent: function(idx) {
@@ -81,7 +83,7 @@ export default Ember.Component.extend({
   },
 
   setType() {
-    const list = this.get('inputList');
+    const list = this.inputList;
     if (!list) {
       return;
     }
@@ -89,7 +91,7 @@ export default Ember.Component.extend({
   },
 
   toVal() {
-    const inputs = this.get('inputList').filter(x => x.value).mapBy('value');
+    const inputs = this.inputList.filter(x => x.value).mapBy('value');
     if (this.get('format') === 'string') {
       return inputs.join(',');
     }
@@ -97,8 +99,8 @@ export default Ember.Component.extend({
   },
 
   toList() {
-    let input = this.get('inputValue') || [];
-    const inputList = this.get('inputList');
+    let input = this.inputValue || [];
+    const inputList = this.inputList;
     if (typeof input === 'string') {
       input = input.split(',');
     }
@@ -107,22 +109,22 @@ export default Ember.Component.extend({
 
   actions: {
     inputChanged(idx, val) {
-      const inputObj = this.get('inputList').objectAt(idx);
-      const onChange = this.get('onChange');
+      const inputObj = this.inputList.objectAt(idx);
+      const onChange = this.onChange;
       set(inputObj, 'value', val);
       onChange(this.toVal());
     },
 
     addInput() {
-      const inputList = this.get('inputList');
+      const inputList = this.inputList;
       if (inputList.get('lastObject.value') !== '') {
         inputList.pushObject({ value: '' });
       }
     },
 
     removeInput(idx) {
-      const onChange = this.get('onChange');
-      const inputs = this.get('inputList');
+      const onChange = this.onChange;
+      const inputs = this.inputList;
       inputs.removeObject(inputs.objectAt(idx));
       onChange(this.toVal());
     },

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Google Cloud - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-gcp"
+sidebar_title: "Google Cloud"
+sidebar_current: "api-http-secret-gcp"
 description: |-
   This is the API documentation for the Vault Google Cloud secrets engine.
 ---
@@ -124,7 +125,7 @@ generated under this roleset.**
 See [bindings format docs](/docs/secrets/gcp/index.html#roleset-bindings) for more information.
 
 ```hcl
-resource "project/mygcpproject" {
+resource "//cloudresourcemanager.googleapis.com/projects/mygcpproject" {
   roles = [
     "roles/viewer"
   ],
@@ -209,7 +210,7 @@ $ curl \
   "data": {
     "secret_type": "access_token",
     "service_account_email": "vault-myroleset-XXXXXXXXXX@myproject.gserviceaccounts.com",
-    "service_account_project": "service-account-project",    
+    "service_account_project": "service-account-project",
     "bindings": {
       "project/mygcpproject": [
         "roles/viewer"
@@ -269,7 +270,9 @@ $ curl \
 Generates an OAuth2 token with the scopes defined on the roleset. This OAuth access token can
 be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...`
 
-Tokens are non-renewable and have a TTL of an hour by default.
+Tokens are non-revocable and non-renewable and have a static TTL of an hour. The TTL configured
+for the backend (either through the default system TTLs or through the `config/` endpoint)
+do not apply.
 
 ### Parameters
 
@@ -289,11 +292,10 @@ $ curl \
 ```json
 {
   "request_id":"<uuid>",
-  "lease_id":"gcp/token/my-token-roleset/<uuid>",
-  "renewable":false,
-  "lease_duration":3599,
   "data": {
-    "token":"ya29.c.Elp5Be3ga87..."
+    "token":"ya29.c.Elp5Be3ga87...",
+    "expires_at_seconds": 1537400046,
+    "token_ttl": 3599
   },
   "wrap_info": null,
   "warnings": null,
@@ -371,3 +373,4 @@ $ curl \
 ## Revoking/Renewing Secrets
 
 See docs on how to [renew](/api/system/leases.html#renew-lease) and [revoke](/api/system/leases.html#revoke-lease) leases.
+Note this only applies to service account keys.

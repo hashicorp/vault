@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Custom Plugin Backends"
+sidebar_title: "Plugin Backends"
 sidebar_current: "docs-plugin"
 description: |-
   Plugin backends are mountable backends that are implemented unsing Vault's plugin system.
@@ -11,7 +12,7 @@ description: |-
 Plugin backends are the components in Vault that can be implemented separately from Vault's
 builtin backends. These backends can be either authentication or secrets engines.
 
-The [`api_addr`][api_addr] must be set in order for the plugin process establish
+The [`api_addr`][api_addr] must be set in order for the plugin process to establish
 communication with the Vault server during mount time. If the storage backend
 has HA enabled and supports automatic host address detection (e.g. Consul),
 Vault will automatically attempt to determine the `api_addr` as well.
@@ -26,8 +27,8 @@ Before a plugin backend can be mounted, it needs to be registered via the
 the plugin is registered, it can be mounted by specifying the registered plugin name:
 
 ```text
-$ vault secrets enable -path=my-secrets -plugin-name=passthrough-plugin plugin
-Successfully mounted plugin 'passthrough-plugin' at 'my-secrets'!
+$ vault secrets enable -path=my-secrets passthrough-plugin
+Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
 ```
 
 Listing secrets engines will display secrets engines that are mounted as

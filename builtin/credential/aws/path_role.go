@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	currentRoleStorageVersion = 2
+	currentRoleStorageVersion = 3
 )
 
 func pathRole(b *backend) *framework.Path {
@@ -247,7 +247,7 @@ func (b *backend) lockedAWSRole(ctx context.Context, s logical.Storage, roleName
 	if err != nil {
 		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
 	}
-	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		b.roleMutex.Lock()
 		defer b.roleMutex.Unlock()
 		// Now that we have a R/W lock, we need to re-read the role entry in case it was
@@ -391,8 +391,8 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 			roleEntry.BoundVpcIDs = []string{roleEntry.BoundVpcID}
 			roleEntry.BoundVpcID = ""
 		}
-		roleEntry.Version = 1
 		fallthrough
+
 	case 1:
 		// Make BoundIamRoleARNs and BoundIamInstanceProfileARNs explicitly prefix-matched
 		for i, arn := range roleEntry.BoundIamRoleARNs {
@@ -401,15 +401,24 @@ func (b *backend) upgradeRoleEntry(ctx context.Context, s logical.Storage, roleE
 		for i, arn := range roleEntry.BoundIamInstanceProfileARNs {
 			roleEntry.BoundIamInstanceProfileARNs[i] = fmt.Sprintf("%s*", arn)
 		}
-		roleEntry.Version = 2
 		fallthrough
+
+	case 2:
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return false, err
+		}
+		roleEntry.RoleID = roleID
+		fallthrough
+
 	case currentRoleStorageVersion:
+		roleEntry.Version = currentRoleStorageVersion
+
 	default:
 		return false, fmt.Errorf("unrecognized role version: %q", roleEntry.Version)
 	}
 
 	return upgraded, nil
-
 }
 
 // nonLockedAWSRole returns the properties set on the given role. This method
@@ -494,7 +503,12 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	if roleEntry == nil {
+		roleID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
 		roleEntry = &awsRoleEntry{
+			RoleID:  roleID,
 			Version: currentRoleStorageVersion,
 		}
 	} else {
@@ -692,7 +706,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	}
 
 	if numBinds == 0 {
-		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
+		return logical.ErrorResponse("at least one bound parameter should be specified on the role"), nil
 	}
 
 	policiesRaw, ok := data.GetOk("policies")
@@ -807,7 +821,8 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 
 // Struct to hold the information associated with a Vault role
 type awsRoleEntry struct {
-	AuthType                    string        `json:"auth_type" `
+	RoleID                      string        `json:"role_id"`
+	AuthType                    string        `json:"auth_type"`
 	BoundAmiIDs                 []string      `json:"bound_ami_id_list"`
 	BoundAccountIDs             []string      `json:"bound_account_id_list"`
 	BoundEc2InstanceIDs         []string      `json:"bound_ec2_instance_id_list"`
@@ -858,13 +873,14 @@ func (r *awsRoleEntry) ToResponseData() map[string]interface{} {
 		"inferred_entity_type":           r.InferredEntityType,
 		"inferred_aws_region":            r.InferredAWSRegion,
 		"resolve_aws_unique_ids":         r.ResolveAWSUniqueIDs,
+		"role_id":                        r.RoleID,
 		"role_tag":                       r.RoleTag,
 		"allow_instance_migration":       r.AllowInstanceMigration,
-		"ttl":                       r.TTL / time.Second,
-		"max_ttl":                   r.MaxTTL / time.Second,
-		"policies":                  r.Policies,
-		"disallow_reauthentication": r.DisallowReauthentication,
-		"period":                    r.Period / time.Second,
+		"ttl":                            r.TTL / time.Second,
+		"max_ttl":                        r.MaxTTL / time.Second,
+		"policies":                       r.Policies,
+		"disallow_reauthentication":      r.DisallowReauthentication,
+		"period":                         r.Period / time.Second,
 	}
 
 	convertNilToEmptySlice := func(data map[string]interface{}, field string) {
@@ -891,12 +907,12 @@ Create a role and associate policies to it.
 
 const pathRoleDesc = `
 A precondition for login is that a role should be created in the backend.
-The login endpoint takes in the role name against which the instance
-should be validated. After authenticating the instance, the authorization
-for the instance to access Vault's resources is determined by the policies
-that are associated to the role though this endpoint.
+The login endpoint takes in the role name against which the client
+should be validated. After authenticating the client, the authorization
+to access Vault's resources is determined by the policies that are
+associated to the role though this endpoint.
 
-When the instances require only a subset of policies on the role, then
+When an EC2 instance requires only a subset of policies on the role, then
 'role_tag' option on the role can be enabled to create a role tag via the
 endpoint 'role/<role>/tag'. This tag then needs to be applied on the
 instance before it attempts a login. The policies on the tag should be a

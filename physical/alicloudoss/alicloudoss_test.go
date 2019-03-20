@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/physical"
@@ -16,6 +15,7 @@ import (
 
 func TestAliCloudOSSBackend(t *testing.T) {
 
+	// ex. http://oss-us-east-1.aliyuncs.com
 	endpoint := os.Getenv("ALICLOUD_OSS_ENDPOINT")
 	accessKeyID := os.Getenv("ALICLOUD_ACCESS_KEY")
 	accessKeySecret := os.Getenv("ALICLOUD_SECRET_KEY")

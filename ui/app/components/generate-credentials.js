@@ -1,6 +1,6 @@
-import Ember from 'ember';
-
-const { get, computed } = Ember;
+import { inject as service } from '@ember/service';
+import { computed, set } from '@ember/object';
+import Component from '@ember/component';
 
 const MODEL_TYPES = {
   'ssh-sign': {
@@ -9,38 +9,31 @@ const MODEL_TYPES = {
   'ssh-creds': {
     model: 'ssh-otp-credential',
     title: 'Generate SSH Credentials',
-    generatedAttr: 'key',
   },
   'aws-creds': {
-    model: 'iam-credential',
-    title: 'Generate IAM Credentials',
-    generateWithoutInput: true,
+    model: 'aws-credential',
+    title: 'Generate AWS Credentials',
     backIsListLink: true,
-  },
-  'aws-sts': {
-    model: 'iam-credential',
-    title: 'Generate IAM Credentials with STS',
-    generatedAttr: 'accessKey',
   },
   'pki-issue': {
     model: 'pki-certificate',
     title: 'Issue Certificate',
-    generatedAttr: 'certificate',
   },
   'pki-sign': {
     model: 'pki-certificate-sign',
     title: 'Sign Certificate',
-    generatedAttr: 'certificate',
   },
 };
 
-export default Ember.Component.extend({
-  store: Ember.inject.service(),
-  routing: Ember.inject.service('-routing'),
+export default Component.extend({
+  wizard: service(),
+  store: service(),
+  router: service(),
   // set on the component
-  backend: null,
+  backendType: null,
+  backendPath: null,
+  roleName: null,
   action: null,
-  role: null,
 
   model: null,
   loading: false,
@@ -52,19 +45,27 @@ export default Ember.Component.extend({
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    const router = this.get('routing.router');
-    router.transitionTo.call(router, 'vault.cluster.secrets.backend.list-root', this.get('model.backend'));
+    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('backendPath'));
   },
 
-  options: computed('action', 'backend.type', function() {
+  options: computed('action', 'backendType', function() {
     const action = this.get('action') || 'creds';
-    return MODEL_TYPES[`${this.get('backend.type')}-${action}`];
+    return MODEL_TYPES[`${this.get('backendType')}-${action}`];
   }),
 
   init() {
     this._super(...arguments);
     this.createOrReplaceModel();
-    this.maybeGenerate();
+  },
+
+  didReceiveAttrs() {
+    if (this.get('wizard.featureState') === 'displayRole') {
+      this.get('wizard').transitionFeatureMachine(
+        this.get('wizard.featureState'),
+        'CONTINUE',
+        this.get('backendType')
+      );
+    }
   },
 
   willDestroy() {
@@ -75,7 +76,8 @@ export default Ember.Component.extend({
   createOrReplaceModel() {
     const modelType = this.modelForType();
     const model = this.get('model');
-    const roleModel = this.get('role');
+    const roleName = this.get('roleName');
+    const backendPath = this.get('backendPath');
     if (!modelType) {
       return;
     }
@@ -83,38 +85,35 @@ export default Ember.Component.extend({
       model.unloadRecord();
     }
     const attrs = {
-      role: roleModel,
-      id: `${get(roleModel, 'backend')}-${get(roleModel, 'name')}`,
+      role: {
+        backend: backendPath,
+        name: roleName,
+      },
+      id: `${backendPath}-${roleName}`,
     };
-    if (this.get('action') === 'sts') {
-      attrs.withSTS = true;
-    }
     const newModel = this.get('store').createRecord(modelType, attrs);
     this.set('model', newModel);
   },
 
-  /*
-   *
-   * @function maybeGenerate
-   *
-   * This method is called on `init`. If there is no input requried (as is the case for AWS IAM creds)
-   * then the `create` action is triggered right away.
-   *
-   */
-  maybeGenerate() {
-    if (this.get('backend.type') !== 'aws' || this.get('action') === 'sts') {
-      return;
-    }
-    // for normal IAM creds - there's no input, so just generate right away
-    this.send('create');
-  },
-
   actions: {
     create() {
+      let model = this.get('model');
       this.set('loading', true);
-      this.model.save().finally(() => {
-        this.set('loading', false);
-      });
+      this.model
+        .save()
+        .catch(() => {
+          if (this.get('wizard.featureState') === 'credentials') {
+            this.get('wizard').transitionFeatureMachine(
+              this.get('wizard.featureState'),
+              'ERROR',
+              this.get('backendType')
+            );
+          }
+        })
+        .finally(() => {
+          model.set('hasGenerated', true);
+          this.set('loading', false);
+        });
     },
 
     codemirrorUpdated(attr, val, codemirror) {
@@ -122,7 +121,7 @@ export default Ember.Component.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        Ember.set(this.get('model'), attr, JSON.parse(val));
+        set(this.get('model'), attr, JSON.parse(val));
       }
     },
 

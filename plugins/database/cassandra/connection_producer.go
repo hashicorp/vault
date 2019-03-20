@@ -16,29 +16,33 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
 // interface for cassandra databases to make connections.
 type cassandraConnectionProducer struct {
-	Hosts             string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
-	Port              int         `json:"port" structs:"port" mapstructure:"port"`
-	Username          string      `json:"username" structs:"username" mapstructure:"username"`
-	Password          string      `json:"password" structs:"password" mapstructure:"password"`
-	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
-	InsecureTLS       bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
-	ProtocolVersion   int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
-	ConnectTimeoutRaw interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
-	TLSMinVersion     string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
-	Consistency       string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
-	PemBundle         string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
-	PemJSON           string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
+	Hosts              string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
+	Port               int         `json:"port" structs:"port" mapstructure:"port"`
+	Username           string      `json:"username" structs:"username" mapstructure:"username"`
+	Password           string      `json:"password" structs:"password" mapstructure:"password"`
+	TLS                bool        `json:"tls" structs:"tls" mapstructure:"tls"`
+	InsecureTLS        bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	ProtocolVersion    int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
+	ConnectTimeoutRaw  interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
+	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
+	TLSMinVersion      string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	Consistency        string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
+	LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
+	PemBundle          string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
+	PemJSON            string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
-	connectTimeout time.Duration
-	certificate    string
-	privateKey     string
-	issuingCA      string
-	rawConfig      map[string]interface{}
+	connectTimeout  time.Duration
+	socketKeepAlive time.Duration
+	certificate     string
+	privateKey      string
+	issuingCA       string
+	rawConfig       map[string]interface{}
 
 	Initialized bool
 	Type        string
@@ -68,6 +72,14 @@ func (c *cassandraConnectionProducer) Init(ctx context.Context, conf map[string]
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
 		return nil, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+	}
+
+	if c.SocketKeepAliveRaw == nil {
+		c.SocketKeepAliveRaw = "0s"
+	}
+	c.socketKeepAlive, err = parseutil.ParseDurationSecond(c.SocketKeepAliveRaw)
+	if err != nil {
+		return nil, errwrap.Wrapf("invalid socket_keep_alive: {{err}}", err)
 	}
 
 	switch {
@@ -177,6 +189,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	}
 
 	clusterConfig.Timeout = c.connectTimeout
+	clusterConfig.SocketKeepalive = c.socketKeepAlive
 	if c.TLS {
 		var tlsConfig *tls.Config
 		if len(c.certificate) > 0 || len(c.issuingCA) > 0 {
@@ -222,6 +235,10 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 		}
 	}
 
+	if c.LocalDatacenter != "" {
+		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(c.LocalDatacenter)
+	}
+
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
 		return nil, errwrap.Wrapf("error creating session: {{err}}", err)
@@ -239,7 +256,15 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	// Verify the info
 	err = session.Query(`LIST ALL`).Exec()
-	if err != nil {
+	if err != nil && len(c.Username) != 0 && strings.Contains(err.Error(), "not authorized") {
+		rowNum := session.Query(dbutil.QueryHelper(`LIST CREATE ON ALL ROLES OF '{{username}}';`, map[string]string{
+			"username": c.Username,
+		})).Iter().NumRows()
+
+		if rowNum < 1 {
+			return nil, errwrap.Wrapf("error validating connection info: No role create permissions found, previous error: {{err}}", err)
+		}
+	} else if err != nil {
 		return nil, errwrap.Wrapf("error validating connection info: {{err}}", err)
 	}
 

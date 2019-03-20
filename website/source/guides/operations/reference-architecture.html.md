@@ -1,13 +1,15 @@
 ---
 layout: "guides"
-page_title: "Vault Deployment Reference Architecture - Guides"
+page_title: "Vault Reference Architecture - Guides"
+sidebar_title: "Reference Architecture"
 sidebar_current: "guides-operations-reference-architecture"
 description: |-
   This guide provides guidance in the best practices of Vault
   implementations through use of a reference architecture.
+ea_version: 1.0
 ---
 
-# Vault Deployment Reference Architecture
+# Vault Reference Architecture
 
 The goal of this document is to recommend _HashiCorp Vault_ deployment
 practices. This reference architecture conveys a general architecture
@@ -38,7 +40,7 @@ cluster replication.
 ### Reference Diagram
 
 Eight Nodes with [Consul Storage Backend](/docs/configuration/storage/consul.html)
-![Reference diagram](/assets/images/vault-ref-arch-2.png)
+![Reference diagram](/img/vault-ref-arch-2.png)
 
 #### Design Summary
 
@@ -49,7 +51,7 @@ separate Consul and Vault servers allows for separate sizing for each.
 Vault to Consul backend connectivity is over HTTP and should be
 secured with TLS as well as a Consul token to provide encryption of all traffic.  
 
-> **NOTE:** Refer to the online documentation to learn more about running [Consul in encrypted mode](https://www.consul.io/docs/agent/options.html#encrypt).
+-> Refer to the online documentation to learn more about running [Consul in encrypted mode](https://www.consul.io/docs/agent/options.html#encrypt).
 
 #### Failure Tolerance
 
@@ -59,14 +61,14 @@ such as an AWS Region. The diagram below shows Vault and Consul spread between
 AZs, with Consul servers in Redundancy Zone configurations, promoting a single
 voting member per AZ, providing both Zone and Node level failure protection.  
 
-> **NOTE:** Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election.html).
+-> Refer to the online documentation to learn more about the [Consul leader election process](https://www.consul.io/docs/guides/leader-election.html).
 
-![Failure tolerance|40%](/assets/images/vault-ref-arch-3.png)
+![Failure tolerance|40%](/img/vault-ref-arch-3.png)
 
 
 ### Network Connectivity Details
 
-![Network Connectivity Details](/assets/images/vault-ref-arch.png)
+![Network Connectivity Details](/img/vault-ref-arch.png)
 
 ### Deployment System Requirements
 
@@ -79,7 +81,7 @@ CPU" in AWS terms, such as T-series instances.
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
 | Small | 2 core   | 4-8 GB RAM      | 25 GB     | **AWS:** m5.large                          |
-|       |          |                 |           | **Azure:** Standard_A2_v2, Standard_A4_v2  |
+|       |          |                 |           | **Azure:** Standard_D2_v3                  |
 |       |          |                 |           | **GCE:** n1-standard-2, n1-standard-4      |
 | Large | 4-8 core | 16-32 GB RAM    | 50 GB     | **AWS:** m5.xlarge, m5.2xlarge             |
 |       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
@@ -90,10 +92,10 @@ CPU" in AWS terms, such as T-series instances.
 | Size  | CPU      | Memory          | Disk      | Typical Cloud Instance Types               |
 |-------|----------|-----------------|-----------|--------------------------------------------|
 | Small | 2 core   | 8-16 GB RAM     | 50 GB     | **AWS:** m5.large, m5.xlarge               |
-|       |          |                 |           | **Azure:** Standard_A4_v2, Standard_A8_v2  |
+|       |          |                 |           | **Azure:** Standard_D2_v3, Standard_D4_v3  |
 |       |          |                 |           | **GCE:** n1-standard-4, n1-standard-8      |
 | Large | 4-8 core | 32-64+ GB RAM   | 100 GB    | **AWS:** m5.2xlarge, m5.4xlarge            |
-|       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D5_v3  |
+|       |          |                 |           | **Azure:** Standard_D4_v3, Standard_D8_v3  |
 |       |          |                 |           | **GCE:** n1-standard-16, n1-standard-32    |
 
 ### Hardware Considerations
@@ -163,7 +165,7 @@ operate just as a typical DNS resolution operation.
 
 ### <a name="external-lb"></a>Load Balancing Using External Load Balancer
 
-![Vault Behind a Load Balancer](/assets/images/vault-ref-arch-9.png)
+![Vault Behind a Load Balancer](/img/vault-ref-arch-9.png)
 
 External load balancers are supported as well, and would be placed in front of the
 Vault cluster, and would poll specific Vault URL's to detect the active node and
@@ -206,20 +208,22 @@ adhere to security best practices.
 
 ### High Availability
 
-A Vault cluster is the highly-available unit of deployment within one datacenter.
-A recommended approach is three Vault servers with a Consul storage backend.
-With this configuration, during a Vault server outage, failover is handled
-immediately without human intervention. To learn more about setting up your
-Vault servers in HA mode, read [_Vault HA with
-Consul_](/guides/operations/vault-ha-consul.html) guide.
+A Vault cluster is the highly-available unit of deployment within one
+datacenter. A recommended approach is three Vault servers with a Consul storage
+backend. With this configuration, during a Vault server outage, failover is
+handled immediately without human intervention.
 
-High-availability and data-locality across datacenters requires
-Vault Enterprise.
+To learn more about setting up your Vault servers in HA mode, read [_Vault HA
+with Consul_](/guides/operations/vault-ha-consul.html) guide.
+
+> High-availability with [Performance Standby
+Nodes](/guides/operations/performance-nodes.html) and data-locality across
+datacenters requires Vault Enterprise.
 
 
 ## <a name="multi-dc"></a>Deployment Topology for Multiple Datacenters
 
-<img src="/assets/images/vault-ref-arch-6.png">
+<img src="/img/vault-ref-arch-6.png">
 
 ### Vault Replication
 
@@ -230,7 +234,7 @@ and **disaster recovery**. The [Vault
 documentation](/docs/enterprise/replication/index.html) provides more detailed
 information on the replication capabilities within Vault Enterprise.
 
-![Replication Pattern](/assets/images/vault-ref-arch-8.png)
+![Replication Pattern](/img/vault-ref-arch-8.png)
 
 #### Performance Replication
 
@@ -238,7 +242,7 @@ Vault performance replication allows for secrets management across many sites.
 Secrets, authentication methods, authorization policies and other details are
 replicated to be active and available in multiple locations.
 
-> **NOTE:** Refer to the [Vault Mount Filter](/guides/operations/mount-filter.html) guide
+-> Refer to the [Vault Mount Filter](/guides/operations/mount-filter.html) guide
 about filtering out secret engines from being replicated across regions.
 
 #### Disaster Recovery Replication
@@ -255,7 +259,7 @@ utmost concern.
 If your disaster recovery strategy is to plan for a loss of an entire data
 center, the following diagram illustrates a possible replication scenario.
 
-![Replication Pattern](/assets/images/vault-ref-arch-4.png)
+![Replication Pattern](/img/vault-ref-arch-4.png)
 
 In this scenario, if the Vault cluster in Region A fails and you promote the DR
 cluster in Region B to be the new primary, your applications will need to read
@@ -270,9 +274,9 @@ If your disaster recovery strategy is to plan for a loss of a cluster but not th
 entire data center, the following diagram illustrates a possible replication
 scenario.
 
-![Replication Pattern](/assets/images/vault-ref-arch-7.png)
+![Replication Pattern](/img/vault-ref-arch-7.png)
 
-> **NOTE:** Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery.html) guide for additional information.
+-> Refer to the [Vault Disaster Recovery Setup](/guides/operations/disaster-recovery.html) guide for additional information.
 
 #### Corruption or Sabotage Disaster Recovery
 
@@ -286,7 +290,7 @@ through the Consul Snapshot feature, which can be automated for regular archival
 backups.  A cold site or new infrastructure could be re-hydrated from a Consul
 snapshot.  
 
-> **NOTE:** Refer to the online documentation to learn more about [Consul snapshots](https://www.consul.io/docs/commands/snapshot.html).
+-> Refer to the online documentation to learn more about [Consul snapshots](https://www.consul.io/docs/commands/snapshot.html).
 
 #### Replication Notes
 
@@ -314,8 +318,7 @@ within that replication set must use an HSM as well.
   secret sharing method), the clusters within that replication set can be mixed,
   such that some may use an HSM, others may use Shamir.
 
-For sake of this discussion, the [cloud
-auto-unseal](/docs/enterprise/auto-unseal/index.html) feature is treated as an
+For sake of this discussion, the cloud auto-unseal feature is treated as an
 HSM.
 
 ## Additional References
@@ -333,5 +336,8 @@ learn more.
 
 ## Next steps
 
-Read [Production Hardening](/guides/operations/production.html) to learn best
-practices for a production hardening deployment of Vault.
+- Read [Production Hardening](/guides/operations/production.html) to learn best
+  practices for a production hardening deployment of Vault.
+
+- Read [Deployment Guide](/guides/operations/deployment-guide.html) to learn
+  the steps required to install and configure a single HashiCorp Vault cluster.

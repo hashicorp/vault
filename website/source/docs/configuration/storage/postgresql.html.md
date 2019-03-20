@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "PostgreSQL - Storage Backends - Configuration"
+sidebar_title: "PostgreSQL"
 sidebar_current: "docs-configuration-storage-postgresql"
 description: |-
   The PostgreSQL storage backend is used to persist Vault's data in a PostgreSQL

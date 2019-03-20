@@ -10,10 +10,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/physical"
-	//log "github.com/hashicorp/go-hclog"
+
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/lib/pq"
 )
 
@@ -164,7 +164,7 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 	}
 
 	ent := &physical.Entry{
-		Key:   key,
+		Key:   fullPath,
 		Value: result,
 	}
 	return ent, nil

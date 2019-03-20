@@ -1,3 +1,10 @@
+# Archived project. No maintenance. 
+
+This project is not maintained anymore and is archived. Feel free to fork and
+make your own changes if needed. For more detail read my blog post: [Taking an indefinite sabbatical from my projects](https://arslan.io/2018/10/09/taking-an-indefinite-sabbatical-from-my-projects/)
+
+Thanks to everyone for their valuable feedback and contributions.
+
 # Structs [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fatih/structs) [![Build Status](http://img.shields.io/travis/fatih/structs.svg?style=flat-square)](https://travis-ci.org/fatih/structs) [![Coverage Status](http://img.shields.io/coveralls/fatih/structs.svg?style=flat-square)](https://coveralls.io/r/fatih/structs)
 
 Structs contains various utilities to work with Go (Golang) structs. It was
@@ -81,8 +88,8 @@ n := s.Names()            // Get a []string
 f := s.Field(name)        // Get a *Field based on the given field name
 f, ok := s.FieldOk(name)  // Get a *Field based on the given field name
 n := s.Name()             // Get the struct name
-h := s.HasZero()          // Check if any field is initialized
-z := s.IsZero()           // Check if all fields are initialized
+h := s.HasZero()          // Check if any field is uninitialized
+z := s.IsZero()           // Check if all fields are uninitialized
 ```
 
 ### Field methods

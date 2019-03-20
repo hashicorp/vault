@@ -3,7 +3,8 @@ package ssh
 import (
 	"context"
 	"fmt"
-	"strings"
+
+	"github.com/hashicorp/vault/helper/strutil"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -19,7 +20,7 @@ func pathConfigZeroAddress(b *backend) *framework.Path {
 		Pattern: "config/zeroaddress",
 		Fields: map[string]*framework.FieldSchema{
 			"roles": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type: framework.TypeCommaStringSlice,
 				Description: `[Required] Comma separated list of role names which
 				allows credentials to be requested for any IP address. CIDR blocks
 				previously registered under these roles will be ignored.`,
@@ -60,13 +61,12 @@ func (b *backend) pathConfigZeroAddressRead(ctx context.Context, req *logical.Re
 }
 
 func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleNames := d.Get("roles").(string)
-	if roleNames == "" {
+	roles := d.Get("roles").([]string)
+	if len(roles) == 0 {
 		return logical.ErrorResponse("Missing roles"), nil
 	}
 
 	// Check if the roles listed actually exist in the backend
-	roles := strings.Split(roleNames, ",")
 	for _, item := range roles {
 		role, err := b.getRole(ctx, req.Storage, item)
 		if err != nil {
@@ -127,42 +127,9 @@ func (b *backend) removeZeroAddressRole(ctx context.Context, s logical.Storage, 
 		return nil
 	}
 
-	err = zeroAddressEntry.remove(roleName)
-	if err != nil {
-		return err
-	}
+	zeroAddressEntry.Roles = strutil.StrListDelete(zeroAddressEntry.Roles, roleName)
 
 	return b.putZeroAddressRoles(ctx, s, zeroAddressEntry.Roles)
-}
-
-// Removes a given role from the comma separated string
-func (r *zeroAddressRoles) remove(roleName string) error {
-	var index int
-	for i, role := range r.Roles {
-		if role == roleName {
-			index = i
-			break
-		}
-	}
-	length := len(r.Roles)
-	if index >= length || index < 0 {
-		return fmt.Errorf("invalid index %d", index)
-	}
-	// If slice has zero or one item, remove the item by setting slice to nil.
-	if length < 2 {
-		r.Roles = nil
-		return nil
-	}
-
-	// Last item to be deleted
-	if length-1 == index {
-		r.Roles = r.Roles[:length-1]
-		return nil
-	}
-
-	// Delete the item by appending all items except the one at index
-	r.Roles = append(r.Roles[:index], r.Roles[index+1:]...)
-	return nil
 }
 
 const pathConfigZeroAddressSyn = `

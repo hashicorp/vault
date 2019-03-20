@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Cassandra - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-cassandra"
+sidebar_title: "Cassandra <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-cassandra"
 description: |-
   This is the API documentation for the Vault Cassandra secrets engine.
 ---
@@ -64,7 +65,7 @@ Cassandra.
 
 - `consistency` `(string: "")` – Specifies the consistency option to use.  See
   the [gocql
-  definition](https://github.com/gocql/gocql/blob/master/frame.go#L203) for
+  definition](https://github.com/gocql/gocql/blob/master/frame.go#L188) for
   valid options.
 
 TLS works as follows:

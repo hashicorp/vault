@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/license"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
@@ -42,14 +45,35 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 		return false
 	}
 
-	// Construct the corresponding ACL object
-	entity, entityPolicies, err := d.core.fetchEntityAndDerivedPolicies(te.EntityID)
+	policies := make(map[string][]string)
+	// Add token policies
+	policies[te.NamespaceID] = append(policies[te.NamespaceID], te.Policies...)
+
+	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, d.core)
 	if err != nil {
-		d.core.logger.Error("failed to fetch entity information", "error", err)
+		d.core.logger.Error("failed to lookup token namespace", "error", err)
+		return false
+	}
+	if tokenNS == nil {
+		d.core.logger.Error("failed to lookup token namespace", "error", namespace.ErrNoNamespace)
 		return false
 	}
 
-	acl, err := d.core.policyStore.ACL(ctx, entity, append(entityPolicies, te.Policies...)...)
+	// Add identity policies from all the namespaces
+	entity, identityPolicies, err := d.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	if err != nil {
+		d.core.logger.Error("failed to fetch identity policies", "error", err)
+		return false
+	}
+	for nsID, nsPolicies := range identityPolicies {
+		policies[nsID] = append(policies[nsID], nsPolicies...)
+	}
+
+	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
+
+	// Construct the corresponding ACL object. Derive and use a new context that
+	// uses the req.ClientToken's namespace
+	acl, err := d.core.policyStore.ACL(tokenCtx, entity, policies)
 	if err != nil {
 		d.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -61,7 +85,7 @@ func (d dynamicSystemView) SudoPrivilege(ctx context.Context, path string, token
 	req := new(logical.Request)
 	req.Operation = logical.ReadOperation
 	req.Path = path
-	authResults := acl.AllowOperation(req)
+	authResults := acl.AllowOperation(ctx, req, true)
 	return authResults.RootPrivs
 }
 
@@ -71,11 +95,13 @@ func (d dynamicSystemView) fetchTTLs() (def, max time.Duration) {
 	def = d.core.defaultLeaseTTL
 	max = d.core.maxLeaseTTL
 
-	if d.mountEntry.Config.DefaultLeaseTTL != 0 {
-		def = d.mountEntry.Config.DefaultLeaseTTL
-	}
-	if d.mountEntry.Config.MaxLeaseTTL != 0 {
-		max = d.mountEntry.Config.MaxLeaseTTL
+	if d.mountEntry != nil {
+		if d.mountEntry.Config.DefaultLeaseTTL != 0 {
+			def = d.mountEntry.Config.DefaultLeaseTTL
+		}
+		if d.mountEntry.Config.MaxLeaseTTL != 0 {
+			max = d.mountEntry.Config.MaxLeaseTTL
+		}
 	}
 
 	return
@@ -98,7 +124,15 @@ func (d dynamicSystemView) LocalMount() bool {
 // Checks if this is a primary Vault instance. Caller should hold the stateLock
 // in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
-	return d.core.ReplicationState()
+	state := d.core.ReplicationState()
+	if d.core.perfStandby {
+		state |= consts.ReplicationPerformanceStandby
+	}
+	return state
+}
+
+func (d dynamicSystemView) HasFeature(feature license.Features) bool {
+	return d.core.HasFeature(feature)
 }
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
@@ -130,14 +164,14 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
-func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
+func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	if d.core == nil {
 		return nil, fmt.Errorf("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
 		return nil, fmt.Errorf("system view core plugin catalog is nil")
 	}
-	r, err := d.core.pluginCatalog.Get(ctx, name)
+	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType)
 	if err != nil {
 		return nil, err
 	}

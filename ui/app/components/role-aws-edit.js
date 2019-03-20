@@ -1,19 +1,9 @@
+import { isBlank } from '@ember/utils';
+import { set, get } from '@ember/object';
 import RoleEdit from './role-edit';
-import Ember from 'ember';
-
-const { get, set } = Ember;
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default RoleEdit.extend({
-  useARN: false,
-  init() {
-    this._super(...arguments);
-    const arn = get(this, 'model.arn');
-    if (arn) {
-      set(this, 'useARN', true);
-    }
-  },
-
   actions: {
     createOrUpdate(type, event) {
       event.preventDefault();
@@ -21,14 +11,25 @@ export default RoleEdit.extend({
       const modelId = this.get('model.id');
       // prevent from submitting if there's no key
       // maybe do something fancier later
-      if (type === 'create' && Ember.isBlank(modelId)) {
+      if (type === 'create' && isBlank(modelId)) {
         return;
       }
-      // clear the policy or arn before save depending on "useARN"
-      if (get(this, 'useARN')) {
-        set(this, 'model.policy', '');
-      } else {
-        set(this, 'model.arn', '');
+
+      var credential_type = get(this, 'model.credential_type');
+      if (credential_type == 'iam_user') {
+        set(this, 'model.role_arns', []);
+      }
+      if (credential_type == 'assumed_role') {
+        set(this, 'model.policy_arns', []);
+      }
+      if (credential_type == 'federation_token') {
+        set(this, 'model.role_arns', []);
+        set(this, 'model.policy_arns', []);
+      }
+
+      var policy_document = get(this, 'model.policy_document');
+      if (policy_document == '{}') {
+        set(this, 'model.policy_document', '');
       }
 
       this.persist('save', () => {

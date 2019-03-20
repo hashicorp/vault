@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -92,7 +91,7 @@ func (i *IdentityStore) pathGroupAliasRegister() framework.OperationFunc {
 		i.groupLock.Lock()
 		defer i.groupLock.Unlock()
 
-		return i.handleGroupAliasUpdateCommon(req, d, nil)
+		return i.handleGroupAliasUpdateCommon(ctx, req, d, nil)
 	}
 }
 
@@ -114,14 +113,14 @@ func (i *IdentityStore) pathGroupAliasIDUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("invalid group alias ID"), nil
 		}
 
-		return i.handleGroupAliasUpdateCommon(req, d, groupAlias)
+		return i.handleGroupAliasUpdateCommon(ctx, req, d, groupAlias)
 	}
 }
 
-func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *framework.FieldData, groupAlias *identity.Alias) (*logical.Response, error) {
-	var err error
+func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, groupAlias *identity.Alias) (*logical.Response, error) {
 	var newGroupAlias bool
 	var group *identity.Group
+	var err error
 
 	if groupAlias == nil {
 		groupAlias = &identity.Alias{}
@@ -214,7 +213,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(req *logical.Request, d *fr
 	// Explicitly correct for previous versions that persisted this
 	group.Alias.MountType = ""
 
-	err = i.sanitizeAndUpsertGroup(group, nil)
+	err = i.sanitizeAndUpsertGroup(ctx, group, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +240,7 @@ func (i *IdentityStore) pathGroupAliasIDRead() framework.OperationFunc {
 			return nil, err
 		}
 
-		return i.handleAliasReadCommon(groupAlias)
+		return i.handleAliasReadCommon(ctx, groupAlias)
 	}
 }
 
@@ -266,6 +265,14 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 
 		if alias == nil {
 			return nil, nil
+		}
+
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ns.ID != alias.NamespaceID {
+			return nil, logical.ErrUnsupportedOperation
 		}
 
 		group, err := i.MemDBGroupByAliasIDInTxn(txn, alias.ID, true)
@@ -302,53 +309,7 @@ func (i *IdentityStore) pathGroupAliasIDDelete() framework.OperationFunc {
 // identity store
 func (i *IdentityStore) pathGroupAliasIDList() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		ws := memdb.NewWatchSet()
-		iter, err := i.MemDBAliases(ws, true)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed to fetch iterator for group aliases in memdb: {{err}}", err)
-		}
-
-		var groupAliasIDs []string
-		aliasInfo := map[string]interface{}{}
-
-		type mountInfo struct {
-			MountType string
-			MountPath string
-		}
-		mountAccessorMap := map[string]mountInfo{}
-
-		for {
-			raw := iter.Next()
-			if raw == nil {
-				break
-			}
-			alias := raw.(*identity.Alias)
-			groupAliasIDs = append(groupAliasIDs, alias.ID)
-			entry := map[string]interface{}{
-				"name":           alias.Name,
-				"canonical_id":   alias.CanonicalID,
-				"mount_accessor": alias.MountAccessor,
-			}
-
-			mi, ok := mountAccessorMap[alias.MountAccessor]
-			if ok {
-				entry["mount_type"] = mi.MountType
-				entry["mount_path"] = mi.MountPath
-			} else {
-				mi = mountInfo{}
-				if mountValidationResp := i.core.router.validateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
-					mi.MountType = mountValidationResp.MountType
-					mi.MountPath = mountValidationResp.MountPath
-					entry["mount_type"] = mi.MountType
-					entry["mount_path"] = mi.MountPath
-				}
-				mountAccessorMap[alias.MountAccessor] = mi
-			}
-
-			aliasInfo[alias.ID] = entry
-		}
-
-		return logical.ListResponseWithInfo(groupAliasIDs, aliasInfo), nil
+		return i.handleAliasListCommon(ctx, true)
 	}
 }
 

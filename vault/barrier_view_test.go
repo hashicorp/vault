@@ -53,7 +53,7 @@ func TestBarrierView(t *testing.T) {
 	view := NewBarrierView(barrier, "foo/")
 
 	// Write a key outside of foo/
-	entry := &Entry{Key: "test", Value: []byte("test")}
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
 	if err := barrier.Put(context.Background(), entry); err != nil {
 		t.Fatalf("bad: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestBarrierView(t *testing.T) {
 	}
 
 	// Try to put the same entry via the view
-	if err := view.Put(context.Background(), entry.Logical()); err != nil {
+	if err := view.Put(context.Background(), entry); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -283,13 +283,14 @@ func TestBarrierView_ClearView(t *testing.T) {
 		t.Fatalf("have keys: %#v", out)
 	}
 }
+
 func TestBarrierView_Readonly(t *testing.T) {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
 
 	// Add a key before enabling read-only
-	entry := &Entry{Key: "test", Value: []byte("test")}
-	if err := view.Put(context.Background(), entry.Logical()); err != nil {
+	entry := &logical.StorageEntry{Key: "test", Value: []byte("test")}
+	if err := view.Put(context.Background(), entry); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -297,7 +298,7 @@ func TestBarrierView_Readonly(t *testing.T) {
 	view.readOnlyErr = logical.ErrReadOnly
 
 	// Put should fail in readonly mode
-	if err := view.Put(context.Background(), entry.Logical()); err != logical.ErrReadOnly {
+	if err := view.Put(context.Background(), entry); err != logical.ErrReadOnly {
 		t.Fatalf("err: %v", err)
 	}
 

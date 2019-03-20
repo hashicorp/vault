@@ -3,38 +3,25 @@
     <ul class="menu-list">
       {{#if item.generatePath.isPending}}
         <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
+          <button disabled type="button" class="link button is-loading is-transparent">
             loading
           </button>
         </li>
       {{else if item.canGenerate}}
         <li class="action">
           {{#link-to "vault.cluster.secrets.backend.credentials" item.id data-test-role-aws-link="generate"}}
-            Generate IAM Credentials
-          {{/link-to}}
-        </li>
-      {{/if}}
-      {{#if item.stsPath.isPending}}
-        <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
-            loading
-          </button>
-        </li>
-      {{else if item.canGenerateSTS}}
-        <li class="action">
-          {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sts") data-test-role-aws-link="generate-sts"}}
-            Generate STS Credentials
+            Generate credentials
           {{/link-to}}
         </li>
       {{/if}}
       {{#if item.updatePath.isPending}}
         <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
+          <button disabled type="button" class="link button is-loading is-transparent">
             loading
           </button>
         </li>
         <li class="action">
-          <button disabled=true type="button" class="link button is-loading is-transparent">
+          <button disabled type="button" class="link button is-loading is-transparent">
             loading
           </button>
         </li>
@@ -60,8 +47,8 @@
               buttonClasses="link is-destroy"
               onConfirmAction=(action "delete" item)
               confirmMessage=(concat "Are you sure you want to delete " item.id "?")
-              showConfirm=(get this (concat "shouldDelete-" item.id))
-              class=(if (get this (concat "shouldDelete-" item.id)) "message is-block is-warning is-outline")
+              showConfirm=(get this (concat "shouldDelete-" (dot-to-dash item.id)))
+              class=(if (get this (concat "shouldDelete-" (dot-to-dash item.id))) "message is-block is-warning is-outline")
               containerClasses="message-body is-block"
               messageClasses="is-block"
               data-test-aws-role-delete=item.id

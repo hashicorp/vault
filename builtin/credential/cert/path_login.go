@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/ryanuber/go-glob"
+	glob "github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -252,6 +252,7 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 		b.matchesDNSSANs(clientCert, config) &&
 		b.matchesEmailSANs(clientCert, config) &&
 		b.matchesURISANs(clientCert, config) &&
+		b.matchesOrganizationalUnits(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 }
 
@@ -350,6 +351,25 @@ func (b *backend) matchesURISANs(clientCert *x509.Certificate, config *ParsedCer
 	for _, allowedURI := range config.Entry.AllowedURISANs {
 		for _, name := range clientCert.URIs {
 			if glob.Glob(allowedURI, name.String()) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// matchesOrganizationalUnits verifies that the certificate matches at least one configurd allowed OU
+func (b *backend) matchesOrganizationalUnits(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no OUs) is to allow all OUs
+	if len(config.Entry.AllowedOrganizationalUnits) == 0 {
+		return true
+	}
+
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedOrganizationalUnits := range config.Entry.AllowedOrganizationalUnits {
+		for _, ou := range clientCert.Subject.OrganizationalUnit {
+			if glob.Glob(allowedOrganizationalUnits, ou) {
 				return true
 			}
 		}

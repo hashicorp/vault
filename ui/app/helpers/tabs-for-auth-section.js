@@ -1,4 +1,4 @@
-import Ember from 'ember';
+import { helper as buildHelper } from '@ember/component/helper';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -34,6 +34,12 @@ const TABS_FOR_SETTINGS = {
     },
   ],
   jwt: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
+  oidc: [
     {
       label: 'Configuration',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
@@ -88,4 +94,4 @@ export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
   return tabs;
 }
 
-export default Ember.Helper.helper(tabsForAuthSection);
+export default buildHelper(tabsForAuthSection);

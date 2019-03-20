@@ -1,5 +1,6 @@
-import Ember from 'ember';
+import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
@@ -26,29 +27,41 @@ export default ApplicationAdapter.extend({
   },
 
   urlForSecret(backend, id) {
-    let url = `${this.buildURL()}/${backend}/`;
-    if (!Ember.isEmpty(id)) {
-      url = url + id;
+    let url = `${this.buildURL()}/${encodePath(backend)}/`;
+    if (!isEmpty(id)) {
+      url = url + encodePath(id);
     }
 
     return url;
   },
 
-  optionsForQuery(id, action) {
+  pathForType() {
+    return 'mounts';
+  },
+
+  optionsForQuery(id, action, wrapTTL) {
     let data = {};
     if (action === 'query') {
-      data['list'] = true;
+      data.list = true;
     }
-
+    if (wrapTTL) {
+      return { data, wrapTTL };
+    }
     return { data };
   },
 
   fetchByQuery(query, action) {
-    const { id, backend } = query;
-    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action)).then(resp => {
-      resp.id = id;
-      return resp;
-    });
+    const { id, backend, wrapTTL } = query;
+    return this.ajax(this.urlForSecret(backend, id), 'GET', this.optionsForQuery(id, action, wrapTTL)).then(
+      resp => {
+        if (wrapTTL) {
+          return resp;
+        }
+        resp.id = id;
+        resp.backend = backend;
+        return resp;
+      }
+    );
   },
 
   query(store, type, query) {

@@ -1,5 +1,7 @@
-import Ember from 'ember';
-const { Helper, inject, observer } = Ember;
+import { inject as service } from '@ember/service';
+import { assert } from '@ember/debug';
+import Helper from '@ember/component/helper';
+import { observer } from '@ember/object';
 
 const FEATURES = [
   'HSM',
@@ -7,8 +9,6 @@ const FEATURES = [
   'DR Replication',
   'MFA',
   'Sentinel',
-  'AWS KMS Autounseal',
-  'GCP CKMS Autounseal',
   'Seal Wrapping',
   'Control Groups',
   'Namespaces',
@@ -16,14 +16,14 @@ const FEATURES = [
 
 export function hasFeature(featureName, features) {
   if (!FEATURES.includes(featureName)) {
-    Ember.assert(`${featureName} is not one of the available values for Vault Enterprise features.`, false);
+    assert(`${featureName} is not one of the available values for Vault Enterprise features.`, false);
     return false;
   }
   return features ? features.includes(featureName) : false;
 }
 
 export default Helper.extend({
-  version: inject.service(),
+  version: service(),
   onFeaturesChange: observer('version.features.[]', function() {
     this.recompute();
   }),

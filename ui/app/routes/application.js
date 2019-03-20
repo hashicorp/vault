@@ -1,11 +1,13 @@
-import Ember from 'ember';
+import { inject as service } from '@ember/service';
+import { next } from '@ember/runloop';
+import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const { inject } = Ember;
-export default Ember.Route.extend({
-  controlGroup: inject.service(),
-  routing: inject.service('router'),
-  namespaceService: inject.service('namespace'),
+export default Route.extend({
+  controlGroup: service(),
+  routing: service('router'),
+  wizard: service(),
+  namespaceService: service('namespace'),
 
   actions: {
     willTransition() {
@@ -53,6 +55,28 @@ export default Ember.Route.extend({
         router.get('location').setURL(errorURL);
       }
 
+      return true;
+    },
+    didTransition() {
+      let wizard = this.get('wizard');
+
+      if (wizard.get('currentState') !== 'active.feature') {
+        return true;
+      }
+      next(() => {
+        let applicationURL = this.get('routing.currentURL');
+        let activeRoute = this.get('routing.currentRouteName');
+
+        if (this.get('wizard.setURLAfterTransition')) {
+          this.set('wizard.setURLAfterTransition', false);
+          this.set('wizard.expectedURL', applicationURL);
+          this.set('wizard.expectedRouteName', activeRoute);
+        }
+        let expectedRouteName = this.get('wizard.expectedRouteName');
+        if (this.get('routing').isActive(expectedRouteName) === false) {
+          wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
+        }
+      });
       return true;
     },
   },

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "MySQL - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-mysql"
+sidebar_title: "MySQL <sup>DEPRECATED</sup>"
+sidebar_current: "api-http-secret-mysql"
 description: |-
   This is the API documentation for the Vault MySQL secrets engine.
 ---

@@ -89,32 +89,22 @@ func (c *Client) Dial(address string) (conn *Conn, err error) {
 	// create a new dialer with the appropriate timeout
 	var d net.Dialer
 	if c.Dialer == nil {
-		d = net.Dialer{Timeout:c.getTimeoutForRequest(c.dialTimeout())}
+		d = net.Dialer{Timeout: c.getTimeoutForRequest(c.dialTimeout())}
 	} else {
-		d = net.Dialer(*c.Dialer)
+		d = *c.Dialer
 	}
 
-	network := "udp"
-	useTLS := false
-
-	switch c.Net {
-	case "tcp-tls":
-		network = "tcp"
-		useTLS = true
-	case "tcp4-tls":
-		network = "tcp4"
-		useTLS = true
-	case "tcp6-tls":
-		network = "tcp6"
-		useTLS = true
-	default:
-		if c.Net != "" {
-			network = c.Net
-		}
+	network := c.Net
+	if network == "" {
+		network = "udp"
 	}
+
+	useTLS := strings.HasPrefix(network, "tcp") && strings.HasSuffix(network, "-tls")
 
 	conn = new(Conn)
 	if useTLS {
+		network = strings.TrimSuffix(network, "-tls")
+
 		conn.Conn, err = tls.DialWithDialer(&d, network, address, c.TLSConfig)
 	} else {
 		conn.Conn, err = d.Dial(network, address)
@@ -122,6 +112,7 @@ func (c *Client) Dial(address string) (conn *Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return conn, nil
 }
 
@@ -576,7 +567,7 @@ func (c *Client) ExchangeContext(ctx context.Context, m *Msg, a string) (r *Msg,
 	if deadline, ok := ctx.Deadline(); !ok {
 		timeout = 0
 	} else {
-		timeout = deadline.Sub(time.Now())
+		timeout = time.Until(deadline)
 	}
 	// not passing the context to the underlying calls, as the API does not support
 	// context. For timeouts you should set up Client.Dialer and call Client.Exchange.

@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "HTTP API: Libraries"
-sidebar_current: "docs-http-libraries"
+sidebar_title: "Client Libraries"
+sidebar_current: "api-http-libraries"
 description: |-
   List of official and community contributed libraries for interacting with the Vault HTTP API.
 ---
@@ -64,6 +65,7 @@ $ Install-Package Vault
 
 ### Elixir
 
+* [libvault](https://hex.pm/packages/libvault)
 * [vaultex](https://hex.pm/packages/vaultex)
 
 ### Go

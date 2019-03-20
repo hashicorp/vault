@@ -6,6 +6,7 @@ package openpgp
 
 import (
 	"crypto/hmac"
+	"crypto/rsa"
 	"encoding/binary"
 	"io"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
-	"github.com/keybase/go-crypto/rsa"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -510,7 +510,7 @@ EachPacket:
 					// Only register an identity once we've gotten a valid self-signature.
 					// It's possible therefore for us to throw away `current` in the case
 					// no valid self-signatures were found. That's OK as long as there are
-					// other identies that make sense.
+					// other identities that make sense.
 					//
 					// NOTE! We might later see a revocation for this very same UID, and it
 					// won't be undone. We've preserved this feature from the original
@@ -771,10 +771,16 @@ func (e *Entity) SerializePrivate(w io.Writer, config *packet.Config) (err error
 		if err != nil {
 			return
 		}
-		// Workaround shortcoming of SignKey(), which doesn't work to reverse-sign
-		// sub-signing keys. So if requested, just reuse the signatures already
-		// available to us (if we read this key from a keyring).
 		if e.PrivateKey.PrivateKey != nil && !config.ReuseSignatures() {
+			// If not reusing existing signatures, sign subkey using private key
+			// (subkey binding), but also sign primary key using subkey (primary
+			// key binding) if subkey is used for signing.
+			if subkey.Sig.FlagSign {
+				err = subkey.Sig.CrossSignKey(e.PrimaryKey, subkey.PrivateKey, config)
+				if err != nil {
+					return err
+				}
+			}
 			err = subkey.Sig.SignKey(subkey.PublicKey, e.PrivateKey, config)
 			if err != nil {
 				return

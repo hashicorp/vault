@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "delete - Command"
+sidebar_title: "<code>delete</code>"
 sidebar_current: "docs-commands-delete"
 description: |-
   The "delete" command deletes secrets and configuration from Vault at the given
@@ -16,7 +17,7 @@ given path.
 
 ## Examples
 
-Remove data in the status secrets engine:
+Remove data in the static secrets engine:
 
 ```text
 $ vault delete secret/my-secret

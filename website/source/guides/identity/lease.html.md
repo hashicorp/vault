@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Tokens and Leases - Guides"
+sidebar_title: "Tokens and Leases"
 sidebar_current: "guides-identity-lease"
 description: |-
   Tokens are the core method for authentication within Vault. For every
@@ -467,7 +468,7 @@ the attempt to read the secret from the cubbyhole failed.
 
 Set the `num_uses` property in the request payload.
 
-```shell
+```plaintext
 $ curl --header "X-Vault-Token: ..." --request POST  \
        --data '{ "policies": ["default"], "num_uses":2 }' \
        http://127.0.0.1:8200/v1/auth/token/create | jq
@@ -590,17 +591,20 @@ token renewal period. This value can be an integer value in seconds (e.g.
 **Example:**
 
 ```shell
-$ curl --header "X-Vault-Token: ..." --request POST \
-       --data @payload.json \
-       http://127.0.0.1:8200/v1/auth/token/roles/zabbix
-
-$ cat payload.json
+# API request payload
+$ tee payload.json <<EOF
 {
 	"allowed_policies": [
 		"default"
 	],
 	"period": "24h"
 }
+EOF
+
+# Create a token role called 'zabbix'
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data @payload.json \
+       http://127.0.0.1:8200/v1/auth/token/roles/zabbix
 ```
 
 This creates a token role named `zabbix` with `default` policies attached.
@@ -651,32 +655,36 @@ $ vault write auth/approle/role/jenkins policies="jenkins" period="72h"
 
 Or
 
-```plaintext
-$ curl --header "X-Vault-Token:..." --request POST \
-       --data @payload.json \
-       http://127.0.0.1:8200/v1/auth/approle/role/jenkins
-
-$ cat payload.json
+```shell
+# Sample request payload
+$ tee payload.json <<EOF
 {
   "allowed_policies": [
 		"jenkins"
 	],
   "period": "72h"  
 }
+EOF
+
+# Create a role named 'jenkins'
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data @payload.json \
+       http://127.0.0.1:8200/v1/auth/approle/role/jenkins
 ```
 
 
 
 ### <a name="step5"></a>Step 5: Orphan tokens
 
-**Root** or **sudo users** have the ability to generate **orphan** tokens. Orphan tokens
-are **not** children of their parent; therefore, orphan tokens do not expire when their
-parent does.
-
+Orphan tokens are **not** children of their parent; therefore, orphan tokens do
+not expire when their parent does.
 
 **NOTE:** Orphan tokens still expire when their own max TTL is reached.
 
 #### CLI command
+
+The following CLI command requires **root** token or **sudo** capability on the
+`auth/token/create` path.
 
 ```shell
 $ vault token create -orphan
@@ -684,12 +692,25 @@ $ vault token create -orphan
 
 #### API call using cURL
 
+To create an orphan token, use the **`auth/token/create-orphan`** endpoint:
+
 ```shell
 $ curl --header "X-Vault-Token:..." --request POST \
-       --data '{ "no_parent": true }' \
        http://127.0.0.1:8200/v1/auth/token/create-orphan | jq
 ```
 
+Also, you can create an orphan token using the **`auth/token/create`** endpoint with
+`no-parent` parameter set to true.
+
+```shell
+$ curl --header "X-Vault-Token:..." --request POST \
+       --data '{ "no_parent": true }' \
+       http://127.0.0.1:8200/v1/auth/token/create | jq
+```
+
+!> **NOTE:** The **`auth/token/create`** endpoint requires **root** token or
+**sudo** capability to create an orphan token while
+**`auth/token/create-orphan`** endpoint does not.
 
 ### <a name="step6"></a>Step 6: Revoke tokens and leases
 
@@ -747,10 +768,9 @@ $ curl --header "X-Vault-Token:..." --request POST \
        http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/auth/token/create
 
 # Revoke all tokens by accessor
-$ curl \
-    --header "X-Vault-Token: ..." --request POST \
-    --data '{ "accessor": "2b2b5b83-7f22-fecd-03f0-4e25bf64da11" }' \
-    http://127.0.0.1:8200/v1/auth/token/revoke-accessor
+$ curl --header "X-Vault-Token: ..." --request POST \
+       --data '{ "accessor": "2b2b5b83-7f22-fecd-03f0-4e25bf64da11" }' \
+       http://127.0.0.1:8200/v1/auth/token/revoke-accessor
 ```
 
 

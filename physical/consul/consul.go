@@ -22,7 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
@@ -73,6 +73,7 @@ var _ physical.Backend = (*ConsulBackend)(nil)
 var _ physical.HABackend = (*ConsulBackend)(nil)
 var _ physical.Lock = (*ConsulLock)(nil)
 var _ physical.Transactional = (*ConsulBackend)(nil)
+var _ physical.ServiceDiscovery = (*ConsulBackend)(nil)
 
 var (
 	hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
@@ -97,8 +98,9 @@ type ConsulBackend struct {
 	checkTimeout        time.Duration
 	consistencyMode     string
 
-	notifyActiveCh chan notifyEvent
-	notifySealedCh chan notifyEvent
+	notifyActiveCh      chan notifyEvent
+	notifySealedCh      chan notifyEvent
+	notifyPerfStandbyCh chan notifyEvent
 
 	sessionTTL   string
 	lockWaitTime time.Duration
@@ -292,6 +294,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		consistencyMode:     consistencyMode,
 		notifyActiveCh:      make(chan notifyEvent),
 		notifySealedCh:      make(chan notifyEvent),
+		notifyPerfStandbyCh: make(chan notifyEvent),
 		sessionTTL:          sessionTTL,
 		lockWaitTime:        lockWaitTime,
 	}
@@ -595,6 +598,18 @@ func (c *ConsulBackend) NotifyActiveStateChange() error {
 	return nil
 }
 
+func (c *ConsulBackend) NotifyPerformanceStandbyStateChange() error {
+	select {
+	case c.notifyPerfStandbyCh <- notifyEvent{}:
+	default:
+		// NOTE: If this occurs Vault's active status could be out of
+		// sync with Consul until reconcileTimer expires.
+		c.logger.Warn("concurrent state change notify dropped")
+	}
+
+	return nil
+}
+
 func (c *ConsulBackend) NotifySealedStateChange() error {
 	select {
 	case c.notifySealedCh <- notifyEvent{}:
@@ -611,7 +626,7 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction) (err error) {
+func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) (err error) {
 	if err := c.setRedirectAddr(redirectAddr); err != nil {
 		return err
 	}
@@ -619,12 +634,12 @@ func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownC
 	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr, activeFunc, sealedFunc)
+	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr, activeFunc, sealedFunc, perfStandbyFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
@@ -660,6 +675,9 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 		case <-c.notifySealedCh:
 			// Run check timer immediately upon a seal state change notification
 			checkTimer.Reset(0)
+		case <-c.notifyPerfStandbyCh:
+			// Run check timer immediately upon a seal state change notification
+			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
 			reconcileTimer.Reset(reconcileTimeout - lib.RandomStagger(reconcileTimeout/checkJitterFactor))
@@ -671,7 +689,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 				go func() {
 					defer atomic.CompareAndSwapInt32(serviceRegLock, 1, 0)
 					for !shutdown {
-						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
+						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc, perfStandbyFunc)
 						if err != nil {
 							if c.logger.IsWarn() {
 								c.logger.Warn("reconcile unable to talk with Consul backend", "error", err)
@@ -741,10 +759,11 @@ func (c *ConsulBackend) serviceID() string {
 // without any locks held and can be run concurrently, therefore no changes
 // to ConsulBackend can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction) (serviceID string, err error) {
+func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) (serviceID string, err error) {
 	// Query vault Core for its current state
 	active := activeFunc()
 	sealed := sealedFunc()
+	perfStandby := perfStandbyFunc()
 
 	agent := c.client.Agent()
 	catalog := c.client.Catalog()
@@ -762,7 +781,7 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc p
 		}
 	}
 
-	tags := c.fetchServiceTags(active)
+	tags := c.fetchServiceTags(active, perfStandby)
 
 	var reregister bool
 
@@ -839,12 +858,19 @@ func (c *ConsulBackend) runCheck(sealed bool) error {
 }
 
 // fetchServiceTags returns all of the relevant tags for Consul.
-func (c *ConsulBackend) fetchServiceTags(active bool) []string {
+func (c *ConsulBackend) fetchServiceTags(active bool, perfStandby bool) []string {
 	activeTag := "standby"
 	if active {
 		activeTag = "active"
 	}
-	return append(c.serviceTags, activeTag)
+
+	result := append(c.serviceTags, activeTag)
+
+	if perfStandby {
+		result = append(c.serviceTags, "performance-standby")
+	}
+
+	return result
 }
 
 func (c *ConsulBackend) setRedirectAddr(addr string) (err error) {

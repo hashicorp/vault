@@ -2,7 +2,11 @@ package zookeeper
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -11,9 +15,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/physical"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -119,7 +125,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	}
 
 	// We have all of the configuration in hand - let's try and connect to ZK
-	client, _, err := zk.Connect(strings.Split(machines, ","), time.Second)
+	client, _, err := createClient(conf, machines, time.Second)
 	if err != nil {
 		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
 	}
@@ -140,6 +146,162 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		logger: logger,
 	}
 	return c, nil
+}
+
+func caseInsenstiveContains(superset, val string) bool {
+	return strings.Contains(strings.ToUpper(superset), strings.ToUpper(val))
+}
+
+// Returns a client for ZK connection. Config value 'tls_enabled' determines if TLS is enabled or not.
+func createClient(conf map[string]string, machines string, timeout time.Duration) (*zk.Conn, <-chan zk.Event, error) {
+	// 'tls_enabled' defaults to false
+	isTlsEnabled := false
+	isTlsEnabledStr, ok := conf["tls_enabled"]
+
+	if ok && isTlsEnabledStr != "" {
+		parsedBoolval, err := parseutil.ParseBool(isTlsEnabledStr)
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("failed parsing tls_enabled parameter: {{err}}", err)
+		}
+		isTlsEnabled = parsedBoolval
+	}
+
+	if isTlsEnabled {
+		// Create a custom Dialer with cert configuration for TLS handshake.
+		tlsDialer := customTLSDial(conf, machines)
+		options := zk.WithDialer(tlsDialer)
+		return zk.Connect(strings.Split(machines, ","), timeout, options)
+	} else {
+		return zk.Connect(strings.Split(machines, ","), timeout)
+	}
+}
+
+// Vault config file properties:
+// 1. tls_skip_verify: skip host name verification.
+// 2. tls_min_version: minimum supported/acceptable tls version
+// 3. tls_cert_file: Cert file Absolute path
+// 4. tls_key_file: Key file Absolute path
+// 5. tls_ca_file: ca file absolute path
+// 6. tls_verify_ip: If set to true, server's IP is verified in certificate if tls_skip_verify is false.
+func customTLSDial(conf map[string]string, machines string) zk.Dialer {
+	return func(network, addr string, timeout time.Duration) (net.Conn, error) {
+		// Sets the serverName. *Note* the addr field comes in as an IP address
+		serverName, _, sParseErr := net.SplitHostPort(addr)
+		if sParseErr != nil {
+			// If the address is only missing port, assign the full address anyway
+			if strings.Contains(sParseErr.Error(), "missing port") {
+				serverName = addr
+			} else {
+				return nil, errwrap.Wrapf("failed parsing the server address for 'serverName' setting {{err}}", sParseErr)
+			}
+		}
+
+		insecureSkipVerify := false
+		tlsSkipVerify, ok := conf["tls_skip_verify"]
+
+		if ok && tlsSkipVerify != "" {
+			b, err := parseutil.ParseBool(tlsSkipVerify)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed parsing tls_skip_verify parameter: {{err}}", err)
+			}
+			insecureSkipVerify = b
+		}
+
+		if !insecureSkipVerify {
+			// If tls_verify_ip is set to false, Server's DNS name is verified in the CN/SAN of the certificate.
+			// if tls_verify_ip is true, Server's IP is verified in the CN/SAN of the certificate.
+			// These checks happen only when tls_skip_verify is set to false.
+			// This value defaults to false
+			ipSanCheck := false
+			configVal, lookupOk := conf["tls_verify_ip"]
+
+			if lookupOk && configVal != "" {
+				parsedIpSanCheck, ipSanErr := parseutil.ParseBool(configVal)
+				if ipSanErr != nil {
+					return nil, errwrap.Wrapf("failed parsing tls_verify_ip parameter: {{err}}", ipSanErr)
+				}
+				ipSanCheck = parsedIpSanCheck
+			}
+			// The addr/serverName parameter to this method comes in as an IP address.
+			// Here we lookup the DNS name and assign it to serverName if ipSanCheck is set to false
+			if !ipSanCheck {
+				lookupAddressMany, lookupErr := net.LookupAddr(serverName)
+				if lookupErr == nil {
+					for _, lookupAddress := range lookupAddressMany {
+						// strip the trailing '.' from lookupAddr
+						if lookupAddress[len(lookupAddress)-1] == '.' {
+							lookupAddress = lookupAddress[:len(lookupAddress)-1]
+						}
+						// Allow serverName to be replaced only if the lookupname is part of the
+						// supplied machine names
+						// If there is no match, the serverName will continue to be an IP value.
+						if caseInsenstiveContains(machines, lookupAddress) {
+							serverName = lookupAddress
+							break
+						}
+					}
+				}
+			}
+
+		}
+
+		tlsMinVersionStr, ok := conf["tls_min_version"]
+		if !ok {
+			// Set the default value
+			tlsMinVersionStr = "tls12"
+		}
+
+		tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_min_version'")
+		}
+
+		tlsClientConfig := &tls.Config{
+			MinVersion:         tlsMinVersion,
+			InsecureSkipVerify: insecureSkipVerify,
+			ServerName:         serverName,
+		}
+
+		_, okCert := conf["tls_cert_file"]
+		_, okKey := conf["tls_key_file"]
+
+		if okCert && okKey {
+			tlsCert, err := tls.LoadX509KeyPair(conf["tls_cert_file"], conf["tls_key_file"])
+			if err != nil {
+				return nil, errwrap.Wrapf("client tls setup failed for ZK: {{err}}", err)
+			}
+
+			tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
+		}
+
+		if tlsCaFile, ok := conf["tls_ca_file"]; ok {
+			caPool := x509.NewCertPool()
+
+			data, err := ioutil.ReadFile(tlsCaFile)
+			if err != nil {
+				return nil, errwrap.Wrapf("failed to read ZK CA file: {{err}}", err)
+			}
+
+			if !caPool.AppendCertsFromPEM(data) {
+				return nil, fmt.Errorf("failed to parse ZK CA certificate")
+			}
+			tlsClientConfig.RootCAs = caPool
+		}
+
+		if network != "tcp" {
+			return nil, fmt.Errorf("unsupported network %q", network)
+		}
+
+		tcpConn, err := net.DialTimeout("tcp", addr, timeout)
+		if err != nil {
+			return nil, err
+		}
+		conn := tls.Client(tcpConn, tlsClientConfig)
+		if err := conn.Handshake(); err != nil {
+			return nil, fmt.Errorf("Handshake failed with Zookeeper : %v", err)
+		}
+		return conn, nil
+	}
 }
 
 // ensurePath is used to create each node in the path hierarchy.
@@ -467,15 +629,15 @@ func (i *ZooKeeperHALock) Unlock() error {
 	var err error
 
 	if err = i.unlockInternal(); err != nil {
-		i.logger.Error("zookeeper: failed to release distributed lock", "error", err)
+		i.logger.Error("failed to release distributed lock", "error", err)
 
 		go func(i *ZooKeeperHALock) {
 			attempts := 0
-			i.logger.Info("zookeeper: launching automated distributed lock release")
+			i.logger.Info("launching automated distributed lock release")
 
 			for {
 				if err := i.unlockInternal(); err == nil {
-					i.logger.Info("zookeeper: distributed lock released")
+					i.logger.Info("distributed lock released")
 					return
 				}
 
@@ -483,7 +645,7 @@ func (i *ZooKeeperHALock) Unlock() error {
 				case <-time.After(time.Second):
 					attempts := attempts + 1
 					if attempts >= 10 {
-						i.logger.Error("zookeeper: release lock max attempts reached. Lock may not be released", "error", err)
+						i.logger.Error("release lock max attempts reached. Lock may not be released", "error", err)
 						return
 					}
 					continue

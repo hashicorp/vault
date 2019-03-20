@@ -326,6 +326,13 @@ type Policy struct {
 	// a max.
 	ArchiveVersion int `json:"archive_version"`
 
+	// ArchiveMinVersion is the minimum version of the key in the archive.
+	ArchiveMinVersion int `json:"archive_min_version"`
+
+	// MinAvailableVersion is the minimum version of the key present. All key
+	// versions before this would have been deleted.
+	MinAvailableVersion int `json:"min_available_version"`
+
 	// Whether the key is allowed to be deleted
 	DeletionAllowed bool `json:"deletion_allowed"`
 
@@ -462,7 +469,7 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	if !keysContainsMinimum {
 		// Need to move keys *from* archive
 		for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
-			p.Keys[strconv.Itoa(i)] = archive.Keys[i]
+			p.Keys[strconv.Itoa(i)] = archive.Keys[i-p.MinAvailableVersion]
 		}
 
 		return nil
@@ -473,9 +480,9 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	// We need a size that is equivalent to the latest version (number of keys)
 	// but adding one since slice numbering starts at 0 and we're indexing by
 	// key version
-	if len(archive.Keys) < p.LatestVersion+1 {
+	if len(archive.Keys)+p.MinAvailableVersion < p.LatestVersion+1 {
 		// Increase the size of the archive slice
-		newKeys := make([]KeyEntry, p.LatestVersion+1)
+		newKeys := make([]KeyEntry, p.LatestVersion-p.MinAvailableVersion+1)
 		copy(newKeys, archive.Keys)
 		archive.Keys = newKeys
 	}
@@ -483,8 +490,14 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	// We are storing all keys in the archive, so we ensure that it is up to
 	// date up to p.LatestVersion
 	for i := p.ArchiveVersion + 1; i <= p.LatestVersion; i++ {
-		archive.Keys[i] = p.Keys[strconv.Itoa(i)]
+		archive.Keys[i-p.MinAvailableVersion] = p.Keys[strconv.Itoa(i)]
 		p.ArchiveVersion = i
+	}
+
+	// Trim the keys if required
+	if p.ArchiveMinVersion < p.MinAvailableVersion {
+		archive.Keys = archive.Keys[p.MinAvailableVersion-p.ArchiveMinVersion:]
+		p.ArchiveMinVersion = p.MinAvailableVersion
 	}
 
 	err = p.storeArchive(ctx, storage, archive)
@@ -1030,7 +1043,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[strconv.Itoa(version)].HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorithm string) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1051,6 +1064,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
+		curveBits := 256
 		keyParams := p.Keys[strconv.Itoa(ver)]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
@@ -1060,18 +1074,46 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 			},
 			D: keyParams.EC_D,
 		}
+
 		r, s, err := ecdsa.Sign(rand.Reader, key, input)
 		if err != nil {
 			return nil, err
 		}
-		marshaledSig, err := asn1.Marshal(ecdsaSignature{
-			R: r,
-			S: s,
-		})
-		if err != nil {
-			return nil, err
+
+		switch marshaling {
+		case MarshalingTypeASN1:
+			// This is used by openssl and X.509
+			sig, err = asn1.Marshal(ecdsaSignature{
+				R: r,
+				S: s,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+		case MarshalingTypeJWS:
+			// This is used by JWS
+
+			// First we have to get the length of the curve in bytes. Although
+			// we only support 256 now, we'll do this in an agnostic way so we
+			// can reuse this marshaling if we support e.g. 521. Getting the
+			// number of bytes without rounding up would be 65.125 so we need
+			// to add one in that case.
+			keyLen := curveBits / 8
+			if curveBits%8 > 0 {
+				keyLen++
+			}
+
+			// Now create the output array
+			sig = make([]byte, keyLen*2)
+			rb := r.Bytes()
+			sb := s.Bytes()
+			copy(sig[keyLen-len(rb):], rb)
+			copy(sig[2*keyLen-len(sb):], sb)
+
+		default:
+			return nil, errutil.UserError{Err: "requested marshaling type is invalid"}
 		}
-		sig = marshaledSig
 
 	case KeyType_ED25519:
 		var key ed25519.PrivateKey
@@ -1100,16 +1142,18 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 
 		var algo crypto.Hash
 		switch hashAlgorithm {
-		case "sha2-224":
+		case HashTypeSHA1:
+			algo = crypto.SHA1
+		case HashTypeSHA2224:
 			algo = crypto.SHA224
-		case "sha2-256":
+		case HashTypeSHA2256:
 			algo = crypto.SHA256
-		case "sha2-384":
+		case HashTypeSHA2384:
 			algo = crypto.SHA384
-		case "sha2-512":
+		case HashTypeSHA2512:
 			algo = crypto.SHA512
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
+			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
 		if sigAlgorithm == "" {
@@ -1136,7 +1180,13 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 	}
 
 	// Convert to base64
-	encoded := base64.StdEncoding.EncodeToString(sig)
+	var encoded string
+	switch marshaling {
+	case MarshalingTypeASN1:
+		encoded = base64.StdEncoding.EncodeToString(sig)
+	case MarshalingTypeJWS:
+		encoded = base64.RawURLEncoding.EncodeToString(sig)
+	}
 	res := &SigningResult{
 		Signature: p.getVersionPrefix(ver) + encoded,
 		PublicKey: pubKey,
@@ -1145,7 +1195,7 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm, sigAlgorith
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm string, sigAlgorithm string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, sig string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1178,7 +1228,15 @@ func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm strin
 		return false, errutil.UserError{Err: ErrTooOld}
 	}
 
-	sigBytes, err := base64.StdEncoding.DecodeString(splitVerSig[1])
+	var sigBytes []byte
+	switch marshaling {
+	case MarshalingTypeASN1:
+		sigBytes, err = base64.StdEncoding.DecodeString(splitVerSig[1])
+	case MarshalingTypeJWS:
+		sigBytes, err = base64.RawURLEncoding.DecodeString(splitVerSig[1])
+	default:
+		return false, errutil.UserError{Err: "requested marshaling type is invalid"}
+	}
 	if err != nil {
 		return false, errutil.UserError{Err: "invalid base64 signature value"}
 	}
@@ -1186,12 +1244,25 @@ func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm strin
 	switch p.Type {
 	case KeyType_ECDSA_P256:
 		var ecdsaSig ecdsaSignature
-		rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
-		if err != nil {
-			return false, errutil.UserError{Err: "supplied signature is invalid"}
-		}
-		if rest != nil && len(rest) != 0 {
-			return false, errutil.UserError{Err: "supplied signature contains extra data"}
+
+		switch marshaling {
+		case MarshalingTypeASN1:
+			rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
+			if err != nil {
+				return false, errutil.UserError{Err: "supplied signature is invalid"}
+			}
+			if rest != nil && len(rest) != 0 {
+				return false, errutil.UserError{Err: "supplied signature contains extra data"}
+			}
+
+		case MarshalingTypeJWS:
+			paramLen := len(sigBytes) / 2
+			rb := sigBytes[:paramLen]
+			sb := sigBytes[paramLen:]
+			ecdsaSig.R = new(big.Int)
+			ecdsaSig.R.SetBytes(rb)
+			ecdsaSig.S = new(big.Int)
+			ecdsaSig.S.SetBytes(sb)
 		}
 
 		keyParams := p.Keys[strconv.Itoa(ver)]
@@ -1224,16 +1295,18 @@ func (p *Policy) VerifySignature(context, input []byte, sig, hashAlgorithm strin
 
 		var algo crypto.Hash
 		switch hashAlgorithm {
-		case "sha2-224":
+		case HashTypeSHA1:
+			algo = crypto.SHA1
+		case HashTypeSHA2224:
 			algo = crypto.SHA224
-		case "sha2-256":
+		case HashTypeSHA2256:
 			algo = crypto.SHA256
-		case "sha2-384":
+		case HashTypeSHA2384:
 			algo = crypto.SHA384
-		case "sha2-512":
+		case HashTypeSHA2512:
 			algo = crypto.SHA512
 		default:
-			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported hash algorithm %s", hashAlgorithm)}
+			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
 		if sigAlgorithm == "" {

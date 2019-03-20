@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/listenerutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/mitchellh/cli"
@@ -35,7 +36,7 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		return nil, nil, nil, err
 	}
 
-	ln = tcpKeepAliveListener{ln.(*net.TCPListener)}
+	ln = TCPKeepAliveListener{ln.(*net.TCPListener)}
 
 	ln, err = listenerWrapProxy(ln, config)
 	if err != nil {
@@ -94,20 +95,25 @@ func tcpListenerFactory(config map[string]interface{}, _ io.Writer, ui cli.Ui) (
 		config["x_forwarded_for_reject_not_authorized"] = true
 	}
 
-	return listenerWrapTLS(ln, props, config, ui)
+	ln, props, reloadFunc, _, err := listenerutil.WrapTLS(ln, props, config, ui)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return ln, props, reloadFunc, nil
 }
 
-// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// TCPKeepAliveListener sets TCP keep-alive timeouts on accepted
 // connections. It's used by ListenAndServe and ListenAndServeTLS so
 // dead TCP connections (e.g. closing laptop mid-download) eventually
 // go away.
 //
 // This is copied directly from the Go source code.
-type tcpKeepAliveListener struct {
+type TCPKeepAliveListener struct {
 	*net.TCPListener
 }
 
-func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+func (ln TCPKeepAliveListener) Accept() (c net.Conn, err error) {
 	tc, err := ln.AcceptTCP()
 	if err != nil {
 		return

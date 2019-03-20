@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "Nomad Secret Backend - HTTP API"
-sidebar_current: "docs-http-secret-nomad"
+sidebar_title: "Nomad"
+sidebar_current: "api-http-secret-nomad"
 description: |-
   This is the API documentation for the Vault Nomad secret backend.
 ---
@@ -184,7 +185,6 @@ updated attributes.
 - `policies` `(string: "")` – Comma separated list of Nomad policies the token is going to be created against. These need to be created beforehand in Nomad.
 
 - `global` `(bool: "false")` – Specifies if the token should be global, as defined in the [Nomad Documentation](https://www.nomadproject.io/guides/acl.html#acl-tokens).
-ma
 
 - `type` `(string: "client")` - Specifies the type of token to create when
   using this role. Valid values are `"client"` or `"management"`.

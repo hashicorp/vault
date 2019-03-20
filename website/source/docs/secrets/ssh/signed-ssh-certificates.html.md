@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Signed SSH Certificates - SSH - Secrets Engines"
+sidebar_title: "Signed Certificates"
 sidebar_current: "docs-secrets-ssh-signed-ssh-certificates"
 description: |-
   The signed SSH certificates is the simplest and most powerful in terms of

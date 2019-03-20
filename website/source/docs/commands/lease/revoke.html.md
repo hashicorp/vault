@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "lease revoke - Command"
+sidebar_title: "<code>revoke</code>"
 sidebar_current: "docs-commands-lease-revoke"
 description: |-
   The "lease revoke" command revokes the lease on a secret, invalidating the

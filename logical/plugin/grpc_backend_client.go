@@ -9,13 +9,14 @@ import (
 	"google.golang.org/grpc"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
 
 var ErrPluginShutdown = errors.New("plugin is shut down")
+var ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
 
 // Validate backendGRPCPluginClient satisfies the logical.Backend interface
 var _ logical.Backend = &backendGRPCPluginClient{}
@@ -149,7 +150,7 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 
 	// This will block until Setup has run the function to create a new server
 	// in b.server. If we stop here before it has a chance to actually start
-	// listening, when it starts listening it will immediatley error out and
+	// listening, when it starts listening it will immediately error out and
 	// exit, which is fine. Overall this ensures that we do not miss stopping
 	// the server if it ends up being created after Cleanup is called.
 	<-b.cleanupCh

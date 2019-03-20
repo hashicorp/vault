@@ -1,14 +1,16 @@
-import Ember from 'ember';
-const { Helper, inject, observer } = Ember;
+import { inject as service } from '@ember/service';
+import { assert } from '@ember/debug';
+import Helper from '@ember/component/helper';
+import { observer } from '@ember/object';
 
 export default Helper.extend({
-  version: inject.service(),
+  version: service(),
   onFeaturesChange: observer('version.version', function() {
     this.recompute();
   }),
   compute([sku]) {
     if (sku !== 'OSS' && sku !== 'Enterprise') {
-      Ember.assert(`${sku} is not one of the available values for Vault versions.`, false);
+      assert(`${sku} is not one of the available values for Vault versions.`, false);
       return false;
     }
     return this.get(`version.is${sku}`);

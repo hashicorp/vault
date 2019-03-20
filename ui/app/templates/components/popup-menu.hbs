@@ -1,5 +1,5 @@
 {{#basic-dropdown class="popup-menu" horizontalPosition="auto-right" verticalPosition="below" onOpen=onOpen as |d|}}
-  {{#d.trigger tagName="button" class=(concat "popup-menu-trigger button is-ghost" (if d.isOpen "is-active")) data-test-popup-menu-trigger=true}}
+  {{#d.trigger tagName="button" class=(concat "popup-menu-trigger button is-ghost" (if d.isOpen " is-active")) data-test-popup-menu-trigger=true}}
     {{i-con
       glyph="more"
       class="has-text-black auto-width"

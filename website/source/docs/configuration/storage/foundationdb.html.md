@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "FoundationDB - Storage Backends - Configuration"
+sidebar_title: "FoundationDB"
 sidebar_current: "docs-configuration-storage-foundationdb"
 description: |-
   The FoundationDB storage backend is used to persist Vault's data in the
@@ -10,7 +11,7 @@ description: |-
 # FoundationDB Storage Backend
 
 The FoundationDB storage backend is used to persist Vault's data in
-[FoundationDB][foundationdb] table.
+[FoundationDB][foundationdb].
 
 The backend needs to be explicitly enabled at build time, and is not available
 in the standard Vault binary distribution. Please refer to the documentation
@@ -28,22 +29,46 @@ accompanying the backend's source in the Vault source tree.
 
 ```hcl
 storage "foundationdb" {
-  api_version  = 510
-  cluster_file = "/path/to/fdb.cluster"
-  path         = "vault-top-level-directory"
-  ha_enabled   = "true"
+  api_version      = 520
+  cluster_file     = "/path/to/fdb.cluster"
+
+  tls_verify_peers = "I.CN=MyTrustedIssuer,I.O=MyCompany\, Inc.,I.OU=Certification Authority"
+  tls_ca_file      = "/path/to/ca_bundle.pem"
+  tls_cert_file    = "/path/to/cert.pem"
+  tls_key_file     = "/path/to/key.pem"
+  tls_password     = "PrivateKeyPassword"
+
+  path             = "vault-top-level-directory"
+  ha_enabled       = "true"
 }
 ```
 
 ## `foundationdb` Parameters
 
 - `api_version` `(int)` - The FoundationDB API version to use; this is a
-  required parameter and doesn't have a default value. Future versions will
-  impose a minimum API version to access newer features.
+  required parameter and doesn't have a default value. The minimum required API
+  version is 520.
 
 - `cluster_file` `(string)` - The path to the cluster file containing the
   connection data for the target cluster; this is a required parameter and
   doesn't have a default value.
+
+- `tls_verify_peers` `(string)` - The peer certificate verification criteria;
+  this parameter is mandatory if TLS is enabled. Refer to the [FoundationDB TLS]
+  [fdb-tls] documentation.
+
+- `tls_ca_file` `(string)` - The path to the CA certificate bundle file; this
+  parameter is mandatory if TLS is enabled.
+
+- `tls_cert_file` `(string)` - The path to the certificate file; specifying this
+  parameter together with `tls_key_file` will enable TLS support.
+
+- `tls_key_file` `(string)` - The path to the key file; specifying this
+  parameter together with `tls_cert_file` will enable TLS support.
+
+- `tls_password` `(string)` - The password needed to decrypt `tls_key_file`, if
+  it is encrypted; optional. This can also be specified via the
+  `FDB_TLS_PASSWORD` environment variable.
 
 - `path` `(string: "vault")` - The path of the top-level FoundationDB directory
   (using the directory layer) under which the Vault data will reside.
@@ -72,8 +97,9 @@ version; during cluster upgrades, multiple server versions will be running
 in the cluster, and the client must cope with that situation.
 
 This is handled by the (primary) client library having the ability to load
-a different version of the client library to connect to a particular server;
-it is referred to as the [multi-version client][multi-ver-client] feature.
+a different, later version of the client library to connect to a particular
+server; it is referred to as the [multi-version client][multi-ver-client]
+feature.
 
 #### Client setup with `LD_LIBRARY_PATH`
 
@@ -136,4 +162,5 @@ $ /path/to/bin/vault ...
 ```
 
 [foundationdb]: https://www.foundationdb.org
+[fdb-tls]: https://apple.github.io/foundationdb/tls.html
 [multi-ver-client]: https://apple.github.io/foundationdb/api-general.html#multi-version-client-api

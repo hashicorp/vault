@@ -2,6 +2,7 @@ package statsd
 
 import (
 	"net"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type udsWriter struct {
 	conn net.Conn
 	// write timeout
 	writeTimeout time.Duration
+	sync.Mutex   // used to lock conn / writer can replace it
 }
 
 // New returns a pointer to a new udsWriter given a socket file path as addr.
@@ -41,6 +43,8 @@ func (w *udsWriter) SetWriteTimeout(d time.Duration) error {
 // Write data to the UDS connection with write timeout and minimal error handling:
 // create the connection if nil, and destroy it if the statsd server has disconnected
 func (w *udsWriter) Write(data []byte) (int, error) {
+	w.Lock()
+	defer w.Unlock()
 	// Try connecting (first packet or connection lost)
 	if w.conn == nil {
 		conn, err := net.Dial(w.addr.Network(), w.addr.String())

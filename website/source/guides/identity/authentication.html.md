@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "AppRole Pull Authentication - Guides"
+sidebar_title: "AppRole Pull Authentication"
 sidebar_current: "guides-identity-authentication"
 description: |-
   Authentication is a process in Vault by which user or machine-supplied
@@ -67,7 +68,7 @@ Vault generates a token. This token has policies granting you permission to perf
 the appropriate operations.
 
 How can a Jenkins server programmatically request a token so that it can read
-secrets from Vault?  
+secrets from Vault?
 
 
 ## Solution
@@ -75,7 +76,7 @@ secrets from Vault?
 Enable **AppRole** auth method so that the Jenkins server can obtain a Vault
 token with appropriate policies attached. Since each AppRole has attached
 policies, you can write fine-grained policies limiting which app can access
-which path.  
+which path.
 
 
 ## Prerequisites
@@ -135,7 +136,7 @@ to allow machines or apps to acquire a token to interact with Vault. It uses
 **Role ID** and **Secret ID** for login.
 
 The basic workflow is:
-![AppRole auth method workflow](/assets/images/vault-approle-workflow.png)
+![AppRole auth method workflow](/img/vault-approle-workflow.png)
 
 > For the purpose of introducing the basics of AppRole, this guide walks you
 > through a very simple scenario involving only two personas (admin and app).
@@ -497,8 +498,8 @@ $ curl --request POST --data @payload.json http://127.0.0.1:8200/v1/auth/approle
   "wrap_info": null,
   "warnings": null,
   "auth": {
-    "client_token": "3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e",
-    "accessor": "375c077e-bf02-a09b-c864-63d7f967e86b",
+    "client_token": "eeaf890e-4b0f-a687-4190-c75b1d6d70bc",
+    "accessor": "fcee5d4e-7281-8bb0-2901-e743c52e0502",
     "policies": [
       "default",
       "jenkins"
@@ -537,9 +538,9 @@ No value found at secret/mysql/webapp
 Alternatively, you can first authenticate with Vault using the `client_token`.
 
 ```shell
-$ vault login 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
+$ vault login eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 Successfully authenticated! You are now logged in.
-token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e
+token: eeaf890e-4b0f-a687-4190-c75b1d6d70bc
 token_duration: 2762013
 token_policies: [default jenkins]
 
@@ -572,12 +573,12 @@ This time, it should return the values you just created.
 #### API call using cURL
 
 You can now pass the `client_token` returned in [Step 4](#step4) in the
-**`X-Vault-Token`** header.
+**`X-Vault-Token`** or **`Authorization`** header.
 
 **Example:**
 
 ```plaintext
-$ curl --header "X-Vault-Token: 3e7dd0ac-8b3e-8f88-bb37-a2890455ca6e" \
+$ curl --header "X-Vault-Token: eeaf890e-4b0f-a687-4190-c75b1d6d70bc" \
        --request GET \
        http://127.0.0.1:8200/v1/secret/data/mysql/webapp | jq
 {
@@ -615,17 +616,17 @@ becomes how to deliver those values to the expected client.
 
 A common solution involves **three personas** instead of two: `admin`, `app`, and
 `trusted entity`. The `trusted entity` delivers the Role ID and Secret ID to the
-client by separate means.   
+client by separate means.
 
 For example, Terraform as a trusted entity can deliver the Role ID onto the
 virtual machine.  When the app runs on the virtual machine, the Role ID already
 exists on the virtual machine.
 
-![AppRole auth method workflow](/assets/images/vault-approle-workflow2.png)
+![AppRole auth method workflow](/img/vault-approle-workflow2.png)
 
-Secret ID is like a password. To keep the Secret ID confidential, use
-[**response wrapping**](/docs/concepts/response-wrapping.html) so that only the
-expected client can unwrap the Secret ID.
+The secret ID can be delivered using [**response
+wrapping**](/docs/concepts/response-wrapping.html) to transmit the _reference_
+to the secret ID rather than the actual value.
 
 In [Step 3](#step3), you executed the following command to retrieve the Secret
 ID:
@@ -673,7 +674,7 @@ b07d7a47-1d0d-741d-20b4-ae0de7c6d964
 
 Read the [_AppRole with Terraform and
 Chef_](/guides/identity/approle-trusted-entities.html) guide to better
-understand the role of trusted entities using Terraform and Chef as an example. 
+understand the role of trusted entities using Terraform and Chef as an example.
 
 To learn more about response wrapping, go to the [Cubbyhole Response
 Wrapping](/guides/secret-mgmt/cubbyhole.html) guide.

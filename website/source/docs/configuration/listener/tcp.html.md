@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "TCP - Listeners - Configuration"
+sidebar_title: "TCP"
 sidebar_current: "docs-configuration-listener-tcp"
 description: |-
   The TCP listener configures Vault to listen on the specified TCP address and
@@ -38,8 +39,12 @@ advertise the correct address to other nodes.
   request size, in bytes. Defaults to 32 MB. Specifying a number less than or
   equal to `0` turns off limiting altogether.
 
-- `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
-  protocol for the listener.
+- `max_request_duration` `(string: "90s")` – Specifies the maximum
+  request duration allowed before Vault cancels the request. This overrides
+  `default_max_request_duration` for this listener.
+
+- `proxy_protocol_behavior` `(string: "")` – When specified, enables a PROXY
+  protocol version 1 behavior for the listener.
   Accepted Values:
   - *use_always* - The client's IP address will always be used.
   - *allow_authorized* - If the source IP address is in the
@@ -98,7 +103,7 @@ advertise the correct address to other nodes.
   is for Vault to request client certificates when available.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
-  Specifies the list of source IP addresses for which an X-Forwarded-For header
+  Specifies the list of source IP CIDRs for which an X-Forwarded-For header
   will be trusted. Comma-separated list or JSON array. This turns on
   X-Forwarded-For support.
 

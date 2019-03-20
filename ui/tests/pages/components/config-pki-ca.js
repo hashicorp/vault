@@ -21,13 +21,9 @@ export default {
   back: clickable('[data-test-back-button]'),
 
   signedIntermediate: fillable('[data-test-signed-intermediate]'),
-  downloadLinks: collection({ itemScope: '[data-test-ca-download-link]' }),
-  rows: collection({
-    itemScope: '[data-test-table-row]',
-  }),
-  rowValues: collection({
-    itemScope: '[data-test-row-value]',
-  }),
+  downloadLinks: collection('[data-test-ca-download-link]'),
+  rows: collection('[data-test-table-row]'),
+  rowValues: collection('[data-test-row-value]'),
   csr: text('[data-test-row-value="CSR"]', { normalize: false }),
   csrField: fillable('[data-test-input="csr"]'),
   certificate: text('[data-test-row-value="Certificate"]', { normalize: false }),
@@ -37,18 +33,27 @@ export default {
   pemBundle: fillable('[data-test-text-file-textarea="true"]'),
   commonName: fillable('[data-test-input="commonName"]'),
 
-  generateCA(commonName = 'PKI CA', type = 'root') {
+  async generateCA(commonName = 'PKI CA', type = 'root') {
     if (type === 'intermediate') {
-      return this.replaceCA().commonName(commonName).caType('intermediate').submit();
+      return this.replaceCA()
+        .commonName(commonName)
+        .caType('intermediate')
+        .submit();
     }
-    return this.replaceCA().commonName(commonName).submit();
+    return this.replaceCA()
+      .commonName(commonName)
+      .submit();
   },
 
-  uploadCA(pem) {
-    return this.replaceCA().uploadCert().enterCertAsText().pemBundle(pem).submit();
+  async uploadCA(pem) {
+    return this.replaceCA()
+      .uploadCert()
+      .enterCertAsText()
+      .pemBundle(pem)
+      .submit();
   },
 
-  signIntermediate(commonName) {
+  async signIntermediate(commonName) {
     return this.signIntermediateBtn().commonName(commonName);
   },
 };

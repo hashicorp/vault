@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
+	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
@@ -28,16 +28,33 @@ func (dc *DatabasePluginClient) Close() error {
 	return err
 }
 
-// newPluginClient returns a databaseRPCClient with a connection to a running
+// NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger) (Database, error) {
-	// pluginMap is the map of plugins we can dispense.
-	var pluginMap = map[string]plugin.Plugin{
-		"database": new(DatabasePlugin),
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
+
+	// pluginSets is the map of plugins we can dispense.
+	pluginSets := map[int]plugin.PluginSet{
+		// Version 3 used to supports both protocols. We want to keep it around
+		// since it's possible old plugins built against this version will still
+		// work with gRPC. There is currently no difference between version 3
+		// and version 4.
+		3: plugin.PluginSet{
+			"database": new(GRPCDatabasePlugin),
+		},
+		// Version 4 only supports gRPC
+		4: plugin.PluginSet{
+			"database": new(GRPCDatabasePlugin),
+		},
 	}
 
-	client, err := pluginRunner.Run(ctx, sys, pluginMap, handshakeConfig, []string{}, logger)
+	var client *plugin.Client
+	var err error
+	if isMetadataMode {
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
+	} else {
+		client, err = pluginRunner.Run(ctx, sys, pluginSets, handshakeConfig, []string{}, logger)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +77,6 @@ func newPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	switch raw.(type) {
 	case *gRPCClient:
 		db = raw.(*gRPCClient)
-	case *databasePluginRPCClient:
-		logger.Warn("plugin is using deprecated net RPC transport, recompile plugin to upgrade to gRPC", "plugin", pluginRunner.Name)
-		db = raw.(*databasePluginRPCClient)
 	default:
 		return nil, errors.New("unsupported client type")
 	}

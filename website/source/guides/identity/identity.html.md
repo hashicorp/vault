@@ -1,6 +1,7 @@
 ---
 layout: "guides"
 page_title: "Identity: Entities and Groups - Guides"
+sidebar_title: "Identity - Entities & Groups"
 sidebar_current: "guides-identity-identity"
 description: |-
   This guide demonstrates the commands to create entities, entity aliases, and
@@ -159,7 +160,7 @@ credentials: `bob` and `bsmith`.  He can authenticate with Vault using either
 one of his accounts.  To manage his accounts and link them to identity `Bob
 Smith` in QA team, you are going to create an entity for Bob.
 
-![Entity Bob Smith](/assets/images/vault-entity-1.png)
+![Entity Bob Smith](/img/vault-entity-1.png)
 
 -> For the simplicity of this guide, you are going to work with the `userpass`
 auth method.  However, in reality, the user `bob` might be a username exists in
@@ -285,7 +286,7 @@ attached.
 
     ```plaintext
     $ vault write identity/entity-alias name="bob" \
-         canonical_id=<entity_id>
+         canonical_id=<entity_id> \
          mount_accessor=<userpass_accessor>
     ```
 
@@ -477,8 +478,8 @@ attached.
     -> Make a note of the generated entity ID (**`id`**).
 
 1. Now, add the user `bob` to the `bob-smith` entity by creating an entity alias.
-In the request body, you need to pass the userpass accessor value as
-`mount_accessor`, and the entity id as `canonical_id`.
+In the request body, you need to pass the userpass name as `name`, the userpass 
+accessor value as `mount_accessor`, and the entity id as `canonical_id`.
 
     **Example:**
 
@@ -559,19 +560,19 @@ and then login.
 1. Enter **`base`** in the **Name** field, and paste in the [`base.hcl` policy
 rules](#scenario-policies) in the **Policy** text editor.
 
-    ![Create Policy](/assets/images/vault-policy-2.png)
+    ![Create Policy](/img/vault-policy-2.png)
 
 1. Click **Create Policy** to complete.
 
 1. Repeat the steps to create policies for **`test`** and **`team-qa`** as well.
 
-    ![Create Policy](/assets/images/vault-policy-1.png)
+    ![Create Policy](/img/vault-policy-1.png)
 
 1. Click the **Access** tab, and select **Enable new method**.
 
 1. Select **Username & Password** from the **Type** drop-down menu.
 
-    ![Create Policy](/assets/images/vault-auth-method-2.png)
+    ![Create Policy](/img/vault-auth-method-2.png)
 
 1. Click **Enable Method**.
 
@@ -581,14 +582,14 @@ following command to create a new user, **`bob`**:
     ```plaintext
     $ vault write auth/userpass/users/bob password="training" policies="test"
     ```
-    ![Create Policy](/assets/images/vault-auth-method-3.png)
+    ![Create Policy](/img/vault-auth-method-3.png)
 
 1. Enter the following command to create a new user, **`bsmith`**:
 
     ```plaintext
     $ vault write auth/userpass/users/bsmith password="training" policies="team-qa"
     ```
-    ![Create Policy](/assets/images/vault-auth-method-4.png)
+    ![Create Policy](/img/vault-auth-method-4.png)
 
 1. Click the icon (**`>_`**) again to hide the shell.
 
@@ -596,21 +597,21 @@ following command to create a new user, **`bob`**:
 
 1. Populate the **Name**, **Policies** and **Metadata** fields as shown below:
 
-    ![Create Policy](/assets/images/vault-entity-4.png)
+    ![Create Policy](/img/vault-entity-4.png)
 
 1. Click **Create**.
 
 1. Select **Add alias**.  Enter **`bob`** in the **Name** field and select
 **`userpass/ (userpass)`** from the **Auth Backend** drop-down list.
 
-    ![Create Policy](/assets/images/vault-entity-5.png)
+    ![Create Policy](/img/vault-entity-5.png)
 
 1. Click **Create**.
 
 1. Return to the **Entities** list.  Select **Add alias** from the **`bob-smith`**
 entity menu.
 
-    ![Create Policy](/assets/images/vault-entity-6.png)
+    ![Create Policy](/img/vault-entity-6.png)
 
 1. Enter **`bsmith`** in the **Name** field and select **`userpass/ (userpass)`** from the
 **Auth Backend** drop-down list, and then click **Create**.
@@ -782,7 +783,7 @@ The user can access the `secret/team-qa` path only if he logs in with
 Now, you are going to create an internal group named, **`engineers`**.  Its
 member is `bob-smith` entity that you created in [Step 1](#step1).
 
-![Entity Bob Smith](/assets/images/vault-entity-3.png)
+![Entity Bob Smith](/img/vault-entity-3.png)
 
 The group policy, `team-eng` defines the following: **`team-eng.hcl`**
 
@@ -906,7 +907,7 @@ rules](#step3) in the **Policy** text editor, and then click **Create Policy**.
 
 1. Enter the group information as shown below.
 
-    ![Group](/assets/images/vault-entity-7.png)
+    ![Group](/img/vault-entity-7.png)
 
     ~> **NOTE:** Make sure to enter the `bob-smith` entity **ID** you copied in the
     **Member Entity IDs** field.
@@ -1099,14 +1100,14 @@ you are running KV v2, set the path to **`secret/data/education`** instead.)
 
 1. Select **Create group**. Enter the group information as shown below.
 
-    ![Create Policy](/assets/images/vault-entity-9.png)
+    ![Create Policy](/img/vault-entity-9.png)
 
 1. Click **Create**.
 
 1. Select **Add alias** and enter **`training`** in the **Name** field.  Select
 **github/ (github)** from the **Auth Backend** drop-down list.
 
-    ![Create Policy](/assets/images/vault-entity-10.png)
+    ![Create Policy](/img/vault-entity-10.png)
 
 1. Click **Create**.
 

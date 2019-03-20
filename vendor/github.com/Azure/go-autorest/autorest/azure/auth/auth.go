@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/dimchansky/utfbom"
 	"golang.org/x/crypto/pkcs12"
 )
@@ -135,29 +136,21 @@ func (settings settings) getAuthorizer() (autorest.Authorizer, error) {
 
 // NewAuthorizerFromFile creates an Authorizer configured from a configuration file.
 func NewAuthorizerFromFile(baseURI string) (autorest.Authorizer, error) {
-	fileLocation := os.Getenv("AZURE_AUTH_LOCATION")
-	if fileLocation == "" {
-		return nil, errors.New("auth file not found. Environment variable AZURE_AUTH_LOCATION is not set")
-	}
-
-	contents, err := ioutil.ReadFile(fileLocation)
+	file, err := getAuthFile()
 	if err != nil {
 		return nil, err
 	}
 
-	// Auth file might be encoded
-	decoded, err := decode(contents)
+	resource, err := getResourceForToken(*file, baseURI)
 	if err != nil {
 		return nil, err
 	}
+	return NewAuthorizerFromFileWithResource(resource)
+}
 
-	file := file{}
-	err = json.Unmarshal(decoded, &file)
-	if err != nil {
-		return nil, err
-	}
-
-	resource, err := getResourceForToken(file, baseURI)
+// NewAuthorizerFromFileWithResource creates an Authorizer configured from a configuration file.
+func NewAuthorizerFromFileWithResource(resource string) (autorest.Authorizer, error) {
+	file, err := getAuthFile()
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +166,61 @@ func NewAuthorizerFromFile(baseURI string) (autorest.Authorizer, error) {
 	}
 
 	return autorest.NewBearerAuthorizer(spToken), nil
+}
+
+// NewAuthorizerFromCLI creates an Authorizer configured from Azure CLI 2.0 for local development scenarios.
+func NewAuthorizerFromCLI() (autorest.Authorizer, error) {
+	settings, err := getAuthenticationSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	if settings.resource == "" {
+		settings.resource = settings.environment.ResourceManagerEndpoint
+	}
+
+	return NewAuthorizerFromCLIWithResource(settings.resource)
+}
+
+// NewAuthorizerFromCLIWithResource creates an Authorizer configured from Azure CLI 2.0 for local development scenarios.
+func NewAuthorizerFromCLIWithResource(resource string) (autorest.Authorizer, error) {
+	token, err := cli.GetTokenFromCLI(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	adalToken, err := token.ToADALToken()
+	if err != nil {
+		return nil, err
+	}
+
+	return autorest.NewBearerAuthorizer(&adalToken), nil
+}
+
+func getAuthFile() (*file, error) {
+	fileLocation := os.Getenv("AZURE_AUTH_LOCATION")
+	if fileLocation == "" {
+		return nil, errors.New("environment variable AZURE_AUTH_LOCATION is not set")
+	}
+
+	contents, err := ioutil.ReadFile(fileLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	// Auth file might be encoded
+	decoded, err := decode(contents)
+	if err != nil {
+		return nil, err
+	}
+
+	authFile := file{}
+	err = json.Unmarshal(decoded, &authFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authFile, nil
 }
 
 // File represents the authentication file

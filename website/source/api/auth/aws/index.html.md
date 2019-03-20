@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-auth-aws"
 description: |-
   This is the API documentation for the Vault AWS auth method.
 ---
@@ -131,6 +132,84 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
+## Configure Identity Integration
+
+This configures the way that Vault interacts with the
+[Identity](/docs/secrets/identity/index.html) store. The default (as of Vault
+1.0.3) is `role_id` for both values.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/identity`  | `204 (empty body)`     |
+
+### Parameters
+
+- `iam_alias` `(string: "unique_id")` - How to generate the identity alias when
+  using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
+  `full_arn`  When `role_id` is selected, the randomly generated ID of the role
+  is used. When `unique_id` is selected, the [IAM Unique
+  ID](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids)
+  of the IAM principal (either the user or role) is used as the identity alias
+  name. When `full_arn` is selected, the ARN returned by the
+  `sts:GetCallerIdentity` call is used as the alias name. This is either
+  `arn:aws:iam::<account_id>:user/<optional_path/><user_name>` or
+  `arn:aws:sts::<account_id>:assumed-role/<role_name_without_path>/<role_session_name>`.
+  **Note**: if you select `full_arn` and then delete and recreate the IAM role,
+  Vault won't be aware and any identity aliases set up for the role name will
+  still be valid.
+
+- `ec2_alias (string: "instance_id")` - Configures how to generate the identity
+  alias when using the `ec2` auth method. Valid choices are `role_id`,
+  `instance_id`, and `image_id`. When `role_id` is selected, the randomly
+  generated ID of the role is used. When `instance_id` is selected, the
+  instance identifier is used as the identity alias name. When `image_id` is
+  selected, AMI ID of the instance is used as the identity alias name.
+
+### Sample Payload
+
+```json
+{
+  "iam_alias": "unique_id"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    -- header "X-Vault-Token:..." \
+    --request POST
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/aws/config/identity
+```
+
+## Read Identity Integration Configuration
+
+Returns the previously configured Identity integration configuration
+
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/identity`   | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token:..." \
+    http://127.0.0.1:8200/v1/auth/aws/config/identity
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "iam_alias": "full_arn"
+  }
+}
+```
+
 ## Create Certificate Configuration
 
 Registers an AWS public key to be used to verify the instance identity
@@ -253,8 +332,8 @@ $ curl \
 
 Allows the explicit association of STS roles to satellite AWS accounts
 (i.e. those which are not the account in which the Vault server is
-running.) Login attempts from EC2 instances running in these accounts will
-be verified using credentials obtained by assumption of these STS roles.
+running.) Vault will use credentials obtained by assuming these STS roles
+when validating IAM principals or EC2 instances in the particular AWS account.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -291,15 +370,14 @@ $ curl \
 
 Returns the previously configured STS role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/sts/:account_id` | `200 application/json` |
+| Method   | Path                               | Produces               |
+| :------- | :--------------------------------- | :--------------------- |
+| `GET`    | `/auth/aws/config/sts/:account_id` | `200 application/json` |
 
 ### Parameters
 
-- `account_id` `(string: <required>)` - AWS account ID to be associated with
-  STS role. If set, Vault will use assumed credentials to verify any login
-  attempts from EC2 instances in this account.
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -353,9 +431,14 @@ $ curl \
 
 Deletes a previously configured AWS account/STS role association.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/config/sts`       | `204 (empty body)`  |
+| Method   | Path                               | Produces           |
+| :------- | :--------------------------------- | :------------------|
+| `DELETE` | `/auth/aws/config/sts/:account_id` | `204 (empty body)` |
+
+### Parameters
+
+- `account_id` `(string: <required>)` - AWS account ID that has been
+  previously associated with STS role.
 
 ### Sample Request
 
@@ -363,7 +446,7 @@ Deletes a previously configured AWS account/STS role association.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/auth/aws/config/sts
+    http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
 ## Configure Identity Whitelist Tidy Operation
@@ -923,15 +1006,15 @@ along with its RSA digest can be supplied to this endpoint.
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==` which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
   required when using the iam auth method.
-- `iam_request_headers` `(string: <required-iam>)` - Base64-encoded,
-  JSON-serialized representation of the sts:GetCallerIdentity HTTP request
-  headers. The JSON serialization assumes that each header key maps to either a
-  string value or an array of string values (though the length of that array
-  will probably only be one). If the `iam_server_id_header_value` is configured
-  in Vault for the aws auth mount, then the headers must include the
-  X-Vault-AWS-IAM-Server-ID header, its value must match the value configured,
-  and the header must be included in the signed headers.  This is required when
-  using the iam auth method.
+- `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
+  for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
+  Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The
+  JSON serialization assumes that each header key maps to either a string value or
+  an array of string values (though the length of that array will probably only be
+  one). If the `iam_server_id_header_value` is configured in Vault for the aws
+  auth mount, then the headers must include the X-Vault-AWS-IAM-Server-ID header,
+  its value must match the value configured, and the header must be included in
+  the signed headers.  This is required when using the iam auth method.
 
 
 ### Sample Payload
@@ -1163,7 +1246,7 @@ $ curl \
 $ curl \
     --header "X-Vault-Token: ..." \
     --request LIST \
-    http://127.0.0.1:8200/v1/auth/aws/roletag-blacklist
+    http://127.0.0.1:8200/v1/auth/aws/identity-whitelist
 ```
 
 ### Sample Response

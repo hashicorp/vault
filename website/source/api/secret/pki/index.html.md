@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "PKI - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-pki"
+sidebar_title: "PKI"
+sidebar_current: "api-http-secret-pki"
 description: |-
   This is the API documentation for the Vault PKI secrets engine.
 ---
@@ -236,6 +237,7 @@ $ curl \
   "renewable": false,
   "lease_duration": 0,
   "data": {
+      "disable": false,
       "expiry": "72h"
     },
   "auth": null
@@ -245,7 +247,15 @@ $ curl \
 ## Set CRL Configuration
 
 This endpoint allows setting the duration for which the generated CRL should be
-marked valid.
+marked valid. If the CRL is disabled, it will return a signed but zero-length
+CRL for any request. If enabled, it will re-build the CRL.
+
+  ~> Note: Disabling the CRL does not affect whether revoked certificates are
+  stored internally. Certificates that have been revoked when a role's
+  certificate storage is enabled will continue to be marked and stored as
+  revoked until `tidy` has been run with the desired safety buffer. Re-enabling
+  CRL generation will then result in all such certificates becoming a part of
+  the CRL.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -254,6 +264,7 @@ marked valid.
 ### Parameters
 
 - `expiry` `(string: "72h")` – Specifies the time until expiration.
+- `disable` `(bool: false)` – Disables or enables CRL building.
 
 ### Sample Payload
 
@@ -776,14 +787,17 @@ request is denied.
 
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
-  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
-  be a comma-delimited list or a JSON string slice.
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8` (or
+  `UTF-8`). This can be a comma-delimited list or a JSON string slice. All
+  values, including globbing values, must use the correct syntax, with the
+  exception being a single `*` which allows any OID and any value (but type
+  must still be UTF8).
 
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
 
 - `client_flag` `(bool: true)` – Specifies if certificates are flagged for
-  client use.  
+  client use.
 
 - `code_signing_flag` `(bool: false)` – Specifies if certificates are flagged
   for code signing use.
@@ -813,6 +827,8 @@ request is denied.
   values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.
 
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
@@ -857,10 +873,7 @@ request is denied.
   added to the CRL by `vault revoke <lease_id>` when certificates are associated
   with leases.  It can also be done using the `pki/revoke` endpoint. However,
   when lease generation is disabled, invoking `pki/revoke` would be the only way
-  to add the certificates to the CRL. When large number of certificates are
-  generated with long lifetimes, it is recommended that lease generation be
-  disabled, as large amount of leases adversely affect the startup time of
-  Vault.
+  to add the certificates to the CRL.
 
 - `no_store` `(bool: false)` – If set, certificates issued/signed against this
   role will not be stored in the storage backend. This can improve performance
@@ -873,10 +886,12 @@ request is denied.
   optional while generating a certificate.
 
 - `policy_identifiers` `(list: [])` – A comma-separated string or list of policy
-  oids.
+  OIDs.
 
 - `basic_constraints_valid_for_non_ca` `(bool: false)` - Mark Basic Constraints
   valid when issuing non-CA certificates.
+
+- `not_before_duration` `(duration: "30s")` – Specifies the duration by which to backdate the NotBefore property.
 
 
 ### Sample Payload
@@ -1007,9 +1022,9 @@ As with other issued certificates, Vault will automatically revoke the
 generated root at the end of its lease period; the CA certificate will sign its
 own CRL.
 
-As of Vault 0.8.1, if a CA cert/key already exists, this function will return a
-204 and will not overwrite it. Previous versions of Vault would overwrite the
-existing cert/key with new values.
+As of Vault 0.8.1, if a CA cert/key already exists, this function will not
+overwrite it; it must be deleted first. Previous versions of Vault would
+overwrite the existing cert/key with new values.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -1135,7 +1150,7 @@ $ curl \
   "data": {
     "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
     "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
-    "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+    "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
   },
   "auth": null
 }
@@ -1291,7 +1306,7 @@ $ curl \
     "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
     "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
     "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
-    "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+    "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
   },
   "auth": null
 }
@@ -1429,7 +1444,7 @@ root CA need be in a client's trust store.
     "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
     "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
     "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
-    "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+    "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
   },
   "auth": null
 }
@@ -1468,6 +1483,8 @@ have access.**
   values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.  
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the engine's `max_ttl` value. If not provided, the engine's `ttl` value
@@ -1508,7 +1525,7 @@ $ curl \
     "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
     "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
     "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
-    "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
+    "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
   },
   "auth": null
 }
@@ -1529,12 +1546,9 @@ expiration time.
 - `tidy_cert_store` `(bool: false)` Specifies whether to tidy up the certificate
   store.
 
-- `tidy_revocation_list` `(bool: false)` Specifies whether to tidy up the
-  revocation list (CRL).
-
-- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
-  certificates, even if their duration has not yet passed. This will cause these
-  certificates to be removed from the CRL the next time the CRL is generated.
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked and
+  expired certificates, removing them both from the CRL and from storage. The
+  CRL will be rotated if this causes any values to be removed.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

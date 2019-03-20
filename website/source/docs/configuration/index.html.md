@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "Server Configuration"
+sidebar_title: "Configuration"
 sidebar_current: "docs-configuration"
 description: |-
   Vault server configuration reference.
@@ -98,16 +99,19 @@ to specify where the configuration is.
     LimitMEMLOCK=infinity
     ```
 
-- `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
-  for any value except the master key. If this value is toggled, the new
-  behavior will happen lazily (as values are read or written).
-
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.
 
 - `telemetry` <tt>([Telemetry][telemetry]: &lt;none&gt;)</tt> – Specifies the telemetry
   reporting system.
+
+- `log_level` `(string: "")` – Specifies the log level to use; overridden by
+  CLI and env var parameters. On SIGHUP, Vault will update the log level to the
+  current value specified here (including overriding the CLI/env var
+  parameters). Not all parts of Vault's logging can have its level be changed
+  dynamically this way; in particular, secrets/auth plugins are currently not
+  updated dynamically. Supported log levels: Trace, Debug, Error, Warn, Info.
 
 - `default_lease_ttl` `(string: "768h")` – Specifies the default lease duration
   for tokens and secrets. This is specified using a label suffix like `"30s"` or
@@ -116,6 +120,10 @@ to specify where the configuration is.
 - `max_lease_ttl` `(string: "768h")` – Specifies the maximum possible lease
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
+
+- `default_max_request_duration` `(string: "90s")` – Specifies the default
+  maximum request duration allowed before Vault cancels the request. This can
+  be overridden per listener via the `max_request_duration` value.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security
@@ -149,6 +157,19 @@ The following parameters are used on backends that support [high availability][h
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
+
+### Vault Enterprise Parameters
+
+The following parameters are only used with Vault Enterprise
+
+- `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
+  for any value except the master key. If this value is toggled, the new
+  behavior will happen lazily (as values are read or written).
+
+- `disable_performance_standby` `(bool: false)` – Specifies whether performance
+  standbys should be disabled on this node. Setting this to true on one Vault
+  node will disable this feature when this node is Active or Standby. It's
+  recomended to sync this setting across all nodes in the cluster.
 
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html

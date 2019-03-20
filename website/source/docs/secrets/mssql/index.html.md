@@ -1,6 +1,7 @@
 ---
 layout: "docs"
 page_title: "MSSQL - Secrets Engines"
+sidebar_title: "MSSQL <sup>DEPRECATED</sup>"
 sidebar_current: "docs-secrets-mssql"
 description: |-
   The MSSQL secrets engine for Vault generates database credentials to access Microsoft Sql Server.
