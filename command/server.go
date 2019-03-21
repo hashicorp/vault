@@ -518,6 +518,7 @@ func (c *ServerCommand) Run(args []string) int {
 			sealType := vaultseal.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
+				configSeal.Type = sealType
 			} else {
 				sealType = configSeal.Type
 			}
