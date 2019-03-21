@@ -292,7 +292,7 @@ func (c *ServerCommand) enableFourClusterDev(base *vault.CoreConfig, info map[st
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(clusterCleanup)
 
 			shutdownTriggered = true

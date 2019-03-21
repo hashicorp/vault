@@ -6,7 +6,7 @@ use ReshapeMiddleware, component_file: "assets/reshape.js"
 
 activate :hashicorp do |h|
   h.name         = "vault"
-  h.version      = "1.0.3"
+  h.version      = "1.1.0"
   h.github_slug  = "hashicorp/vault"
   h.website_root = "website"
   h.releases_enabled = true

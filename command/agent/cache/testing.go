@@ -2,7 +2,14 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/hashicorp/vault/api"
 )
 
 // mockProxier is a mock implementation of the Proxier interface, used for testing purposes.
@@ -33,4 +40,27 @@ func (p *mockProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse
 
 func (p *mockProxier) ResponseIndex() int {
 	return p.responseIndex
+}
+
+func newTestSendResponse(status int, body string) *SendResponse {
+	resp := &SendResponse{
+		Response: &api.Response{
+			Response: &http.Response{
+				StatusCode: status,
+				Header:     http.Header{},
+			},
+		},
+	}
+	resp.Response.Header.Set("Date", time.Now().Format(http.TimeFormat))
+
+	if body != "" {
+		resp.Response.Body = ioutil.NopCloser(strings.NewReader(body))
+		resp.ResponseBody = []byte(body)
+	}
+
+	if json.Valid([]byte(body)) {
+		resp.Response.Header.Set("content-type", "application/json")
+	}
+
+	return resp
 }

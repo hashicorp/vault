@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -164,6 +162,9 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 	testClient.SetToken(resp.Auth.ClientToken)
 
 	cleanup := func() {
+		// We wait for a tiny bit for things such as agent renewal to exit properly
+		time.Sleep(50 * time.Millisecond)
+
 		cluster.Cleanup()
 		os.Setenv(api.EnvVaultAddress, origEnvVaultAddress)
 		os.Setenv(api.EnvVaultCACert, origEnvVaultCACert)
@@ -193,25 +194,10 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	response1 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup-self"}}`
 	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response1)),
-				},
-			},
-			ResponseBody: []byte(response1),
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(response2)),
-				},
-			},
-			ResponseBody: []byte(response2),
-		},
+		newTestSendResponse(http.StatusOK, response1),
+		newTestSendResponse(http.StatusOK, response2),
 	}
+
 	leaseCache := testNewLeaseCache(t, responses)
 
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -934,6 +920,22 @@ func TestCache_NonCacheable(t *testing.T) {
 		t.Logf("response #2: %#v", newMounts)
 		t.Fatal("expected requests to be not cached")
 	}
+
+	// Query a non-existing mount, expect an error from api.Response
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	r := testClient.NewRequest("GET", "/v1/kv-invalid")
+
+	apiResp, err := testClient.RawRequestWithContext(ctx, r)
+	if apiResp != nil {
+		defer apiResp.Body.Close()
+	}
+	if apiResp.Error() == nil || (apiResp != nil && apiResp.StatusCode != 404) {
+		t.Fatalf("expected an error response and a 404 from requesting an invalid path, got: %#v", apiResp)
+	}
+	if err == nil {
+		t.Fatal("expected an error from requesting an invalid path")
+	}
 }
 
 func TestCache_Caching_AuthResponse(t *testing.T) {
@@ -1166,7 +1168,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	apiResp, err := testClient.RawRequestWithContext(ctx, r)
-	if resp != nil {
+	if apiResp != nil {
 		defer apiResp.Body.Close()
 	}
 	if apiResp != nil && apiResp.StatusCode == 404 {

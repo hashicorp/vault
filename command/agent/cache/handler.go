@@ -10,13 +10,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/helper/consts"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -34,7 +34,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		reqBody, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
-			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
 		}
 		if r.Body != nil {
 			r.Body.Close()
@@ -48,23 +48,59 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			// If this is a api.Response error, don't wrap the response.
+			if resp != nil && resp.Response.Error() != nil {
+				copyHeader(w.Header(), resp.Response.Header)
+				w.WriteHeader(resp.Response.StatusCode)
+				io.Copy(w, resp.Response.Body)
+			} else {
+				logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			}
 			return
 		}
 
 		err = processTokenLookupResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
+			logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to process token lookup response: {{err}}", err))
 			return
 		}
 
 		defer resp.Response.Body.Close()
 
-		copyHeader(w.Header(), resp.Response.Header)
-		w.WriteHeader(resp.Response.StatusCode)
+		// Set headers
+		setHeaders(w, resp)
+
+		// Set response body
 		io.Copy(w, resp.Response.Body)
 		return
 	})
+}
+
+// setHeaders is a helper that sets the header values based on SendResponse. It
+// copies over the headers from the original response and also includes any
+// cache-related headers.
+func setHeaders(w http.ResponseWriter, resp *SendResponse) {
+	// Set header values
+	copyHeader(w.Header(), resp.Response.Header)
+	if resp.CacheMeta != nil {
+		xCacheVal := "MISS"
+
+		if resp.CacheMeta.Hit {
+			xCacheVal = "HIT"
+
+			// If this is a cache hit, we also set the Age header
+			age := fmt.Sprintf("%.0f", resp.CacheMeta.Age.Seconds())
+			w.Header().Set("Age", age)
+
+			// Update the date value
+			w.Header().Set("Date", time.Now().Format(http.TimeFormat))
+		}
+
+		w.Header().Set("X-Cache", xCacheVal)
+	}
+
+	// Set status code
+	w.WriteHeader(resp.Response.StatusCode)
 }
 
 // processTokenLookupResponse checks if the request was one of token
@@ -163,19 +199,4 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, v)
 		}
 	}
-}
-
-func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &vaulthttp.ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
 }

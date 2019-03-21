@@ -97,26 +97,7 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <div class="message {{get (message-types flash.type) "class"}}">
-          <div class="columns is-mobile is-variable is-1">
-            <div class="column is-narrow message-icon">
-              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass={{true}} />
-            </div>
-            <div class="column">
-              <button type="button" class="close-button" {{action close}}>
-                {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
-              </button>
-              <div class="message-title">
-                {{get (message-types flash.type) "text"}}
-              </div>
-              {{#if flash.message}}
-                <p class="message-body" data-test-flash-message-body="true">
-                  {{flash.message}}
-                </p>
-              {{/if}}
-            </div>
-          </div>
-        </div>
+        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}}/>
       {{/if}}
     {{/flash-message}}
   {{/each}}

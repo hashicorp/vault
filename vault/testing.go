@@ -151,11 +151,19 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
+	if opts.Logger != nil {
+		conf.Logger = opts.Logger
+	}
+
 	for k, v := range opts.LogicalBackends {
 		conf.LogicalBackends[k] = v
 	}
 	for k, v := range opts.CredentialBackends {
 		conf.CredentialBackends[k] = v
+	}
+
+	for k, v := range opts.AuditBackends {
+		conf.AuditBackends[k] = v
 	}
 
 	c, err := NewCore(conf)
@@ -947,6 +955,7 @@ type TestClusterCore struct {
 	ServerKeyPEM      []byte
 	TLSConfig         *tls.Config
 	UnderlyingStorage physical.Backend
+	Barrier           SecurityBarrier
 }
 
 type TestClusterOptions struct {
@@ -1291,6 +1300,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableCache = base.DisableCache
 
 		coreConfig.DevToken = base.DevToken
+		coreConfig.CounterSyncInterval = base.CounterSyncInterval
 	}
 
 	if coreConfig.Physical == nil {
@@ -1541,6 +1551,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			Server:          servers[i],
 			TLSConfig:       tlsConfigs[i],
 			Client:          getAPIClient(listeners[i][0].Address.Port, tlsConfigs[i]),
+			Barrier:         cores[i].barrier,
 		}
 		tcc.ReloadFuncs = &cores[i].reloadFuncs
 		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock

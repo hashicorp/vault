@@ -2134,7 +2134,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required generate a namespace admin token"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("root or sudo privileges required to directly generate a token in a child namespace"), logical.ErrInvalidRequest
 		}
 
 		if strutil.StrListContains(data.Policies, "root") {
@@ -3025,7 +3025,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	boundCIDRsRaw, ok := data.GetOk("bound_cidrs")
 	if ok {
 		boundCIDRs := boundCIDRsRaw.([]string)
-		if len(boundCIDRs) > 0 {
+		if len(boundCIDRs) == 0 {
+			entry.BoundCIDRs = nil
+		} else {
 			var parsedCIDRs []*sockaddr.SockAddrMarshaler
 			for _, v := range boundCIDRs {
 				parsedCIDR, err := sockaddr.NewSockAddr(v)
@@ -3062,15 +3064,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	pathSuffixInt, ok := data.GetOk("path_suffix")
 	if ok {
 		pathSuffix := pathSuffixInt.(string)
-		if pathSuffix != "" {
+		switch {
+		case pathSuffix != "":
 			matched := pathSuffixSanitize.MatchString(pathSuffix)
 			if !matched {
 				return logical.ErrorResponse(fmt.Sprintf(
 					"given role path suffix contains invalid characters; must match %s",
 					pathSuffixSanitize.String())), nil
 			}
-			entry.PathSuffix = pathSuffix
 		}
+		entry.PathSuffix = pathSuffix
 	} else if req.Operation == logical.CreateOperation {
 		entry.PathSuffix = data.Get("path_suffix").(string)
 	}

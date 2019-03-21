@@ -128,7 +128,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	// and we do not look the policy up from storage
 	//
 	// - If it was found in cache and we are not using 'force', we should have
-	// returned above wih error
+	// returned above with error
 	var p *Policy
 	if pRaw == nil {
 		p, err = lm.getPolicyFromStorage(ctx, storage, name)

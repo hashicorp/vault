@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/parseutil"
 
 	"github.com/hashicorp/hcl"
@@ -19,11 +19,12 @@ import (
 
 // Config is the configuration for the vault server.
 type Config struct {
-	AutoAuth      *AutoAuth `hcl:"auto_auth"`
-	ExitAfterAuth bool      `hcl:"exit_after_auth"`
-	PidFile       string    `hcl:"pid_file"`
-	Cache         *Cache    `hcl:"cache"`
-	Vault         *Vault    `hcl:"vault"`
+	AutoAuth      *AutoAuth   `hcl:"auto_auth"`
+	ExitAfterAuth bool        `hcl:"exit_after_auth"`
+	PidFile       string      `hcl:"pid_file"`
+	Listeners     []*Listener `hcl:"listeners"`
+	Cache         *Cache      `hcl:"cache"`
+	Vault         *Vault      `hcl:"vault"`
 }
 
 type Vault struct {
@@ -36,8 +37,7 @@ type Vault struct {
 }
 
 type Cache struct {
-	UseAutoAuthToken bool        `hcl:"use_auto_auth_token"`
-	Listeners        []*Listener `hcl:"listeners"`
+	UseAutoAuthToken bool `hcl:"use_auto_auth_token"`
 }
 
 type Listener struct {
@@ -112,9 +112,24 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 		return nil, errwrap.Wrapf("error parsing 'auto_auth': {{err}}", err)
 	}
 
+	err = parseListeners(&result, list)
+	if err != nil {
+		return nil, errwrap.Wrapf("error parsing 'listeners': {{err}}", err)
+	}
+
 	err = parseCache(&result, list)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing 'cache':{{err}}", err)
+	}
+
+	if result.Cache != nil {
+		if len(result.Listeners) < 1 {
+			return nil, fmt.Errorf("at least one listener required when cache enabled")
+		}
+
+		if result.Cache.UseAutoAuthToken && result.AutoAuth == nil {
+			return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+		}
 	}
 
 	err = parseVault(&result, list)
@@ -171,18 +186,6 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Cache = &c
-
-	subs, ok := item.Val.(*ast.ObjectType)
-	if !ok {
-		return fmt.Errorf("could not parse %q as an object", name)
-	}
-	subList := subs.List
-
-	err = parseListeners(result, subList)
-	if err != nil {
-		return errwrap.Wrapf("error parsing 'listener' stanzas: {{err}}", err)
-	}
-
 	return nil
 }
 
@@ -190,9 +193,6 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 	name := "listener"
 
 	listenerList := list.Filter(name)
-	if len(listenerList.Items) < 1 {
-		return fmt.Errorf("at least one %q block is required", name)
-	}
 
 	var listeners []*Listener
 	for _, item := range listenerList.Items {
@@ -225,7 +225,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		})
 	}
 
-	result.Cache.Listeners = listeners
+	result.Listeners = listeners
 
 	return nil
 }
@@ -234,8 +234,11 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	name := "auto_auth"
 
 	autoAuthList := list.Filter(name)
-	if len(autoAuthList.Items) != 1 {
-		return fmt.Errorf("one and only one %q block is required", name)
+	if len(autoAuthList.Items) == 0 {
+		return nil
+	}
+	if len(autoAuthList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
 	}
 
 	// Get our item

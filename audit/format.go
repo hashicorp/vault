@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/jws"
+	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
@@ -371,6 +372,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			Auth:     respAuth,
 			Secret:   respSecret,
 			Data:     resp.Data,
+			Warnings: resp.Warnings,
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
 			Headers:  resp.Headers,
@@ -426,6 +428,7 @@ type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
+	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
 	Headers  map[string][]string    `json:"headers"`
@@ -479,12 +482,15 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	wt, err := jws.ParseJWT([]byte(token))
-	if err != nil || wt == nil {
+	parsedJWT, err := squarejwt.ParseSigned(token)
+	if err != nil {
 		return nil
 	}
 
-	result, _ := wt.Claims().JWTID()
+	var claims squarejwt.Claims
+	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return nil
+	}
 
-	return &result
+	return &claims.ID
 }

@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"io"
 	"io/ioutil"
 	"net"
@@ -20,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/helper/metricsutil"
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
@@ -69,6 +70,7 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	WaitGroup *sync.WaitGroup
 
@@ -201,7 +203,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	//
 	// Why hello there little source code reader! Welcome to the Vault source
 	// code. The remaining options are intentionally undocumented and come with
-	// no warranty or backwards-compatability promise. Do not use these flags
+	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
 
@@ -501,44 +503,61 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
 
-	sealType := vaultseal.Shamir
-	if config.Seal != nil || os.Getenv("VAULT_SEAL_TYPE") != "" {
-		if config.Seal == nil {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-		} else {
-			sealType = config.Seal.Type
-		}
-	}
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
 
-	var seal vault.Seal
 	var sealConfigError error
 	if c.flagDevAutoSeal {
-		seal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
-		sealLogger := c.logger.Named(sealType)
-		allLoggers = append(allLoggers, sealLogger)
-		seal, sealConfigError = serverseal.ConfigureSeal(config, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+		// Handle the case where no seal is provided
+		if len(config.Seals) == 0 {
+			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		}
+		for _, configSeal := range config.Seals {
+			sealType := vaultseal.Shamir
+			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
+				sealType = os.Getenv("VAULT_SEAL_TYPE")
+			} else {
+				sealType = configSeal.Type
+			}
+
+			var seal vault.Seal
+			sealLogger := c.logger.Named(sealType)
+			allLoggers = append(allLoggers, sealLogger)
+			seal, sealConfigError = serverseal.ConfigureSeal(configSeal, &infoKeys, &info, sealLogger, vault.NewDefaultSeal())
+			if sealConfigError != nil {
+				if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
+					c.UI.Error(fmt.Sprintf(
+						"Error parsing Seal configuration: %s", sealConfigError))
+					return 1
+				}
+			}
+			if seal == nil {
 				c.UI.Error(fmt.Sprintf(
-					"Error parsing Seal configuration: %s", sealConfigError))
+					"After configuring seal nil returned, seal type was %s", sealType))
 				return 1
 			}
+
+			if configSeal.Disabled {
+				unwrapSeal = seal
+			} else {
+				barrierSeal = seal
+			}
+
+			// Ensure that the seal finalizer is called, even if using verify-only
+			defer func() {
+				err = seal.Finalize(context.Background())
+				if err != nil {
+					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+				}
+			}()
+
 		}
 	}
 
-	// Ensure that the seal finalizer is called, even if using verify-only
-	defer func() {
-		if seal != nil {
-			err = seal.Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}
-	}()
-
-	if seal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+	if barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
 		return 1
 	}
 
@@ -546,7 +565,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Physical:                  backend,
 		RedirectAddr:              config.Storage.RedirectAddr,
 		HAPhysical:                nil,
-		Seal:                      seal,
+		Seal:                      barrierSeal,
 		AuditBackends:             c.AuditBackends,
 		CredentialBackends:        c.CredentialBackends,
 		LogicalBackends:           c.LogicalBackends,
@@ -937,7 +956,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}))
 
 	// Before unsealing with stored keys, setup seal migration if needed
-	if err := adjustCoreForSealMigration(context.Background(), core, coreConfig, seal, config); err != nil {
+	if err := adjustCoreForSealMigration(core, barrierSeal, unwrapSeal); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -946,27 +965,29 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	go func() {
-		for {
-			err := core.UnsealWithStoredKeys(context.Background())
-			if err == nil {
-				return
-			}
+	if !core.IsInSealMigration() {
+		go func() {
+			for {
+				err := core.UnsealWithStoredKeys(context.Background())
+				if err == nil {
+					return
+				}
 
-			if vault.IsFatalError(err) {
-				c.logger.Error("error unsealing core", "error", err)
-				return
-			} else {
-				c.logger.Warn("failed to unseal core", "error", err)
-			}
+				if vault.IsFatalError(err) {
+					c.logger.Error("error unsealing core", "error", err)
+					return
+				} else {
+					c.logger.Warn("failed to unseal core", "error", err)
+				}
 
-			select {
-			case <-c.ShutdownCh:
-				return
-			case <-time.After(5 * time.Second):
+				select {
+				case <-c.ShutdownCh:
+					return
+				case <-time.After(5 * time.Second):
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Perform service discovery registrations and initialization of
 	// HTTP server after the verifyOnly check.
@@ -1242,6 +1263,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
 
@@ -1366,9 +1392,8 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		return nil, err
 	}
 
-	// Upgrade the default K/V store
 	kvVer := "2"
-	if c.flagDevKVV1 {
+	if c.flagDevKVV1 || c.flagDevLeasedKV {
 		kvVer = "1"
 	}
 	req := &logical.Request{

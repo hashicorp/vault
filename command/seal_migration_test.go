@@ -9,7 +9,6 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical"
@@ -114,11 +113,7 @@ func TestSealMigration(t *testing.T) {
 		newSeal := vault.NewAutoSeal(seal.NewTestSeal(nil))
 		newSeal.SetCore(core)
 		autoSeal = newSeal
-		if err := adjustCoreForSealMigration(ctx, core, coreConfig, newSeal, &server.Config{
-			Seal: &server.Seal{
-				Type: "test-auto",
-			},
-		}); err != nil {
+		if err := adjustCoreForSealMigration(core, newSeal, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -197,13 +192,16 @@ func TestSealMigration(t *testing.T) {
 		cluster.Cores = nil
 	}
 
-	// We should see stored barrier keys; after the next stanza, we shouldn't
+	// We should see stored barrier keys; after the sixth test, we shouldn't
 	if entry, err := phys.Get(ctx, vault.StoredBarrierKeysPath); err != nil || entry == nil {
 		t.Fatalf("expected nil error and non-nil entry, got error %#v and entry %#v", err, entry)
 	}
 
-	// Fifth: create an autoseal and activate migration. Verify it doesn't work
-	// if disabled isn't set.
+	altTestSeal := seal.NewTestSeal(nil)
+	altTestSeal.Type = "test-alternate"
+	altSeal := vault.NewAutoSeal(altTestSeal)
+
+	// Fifth: migrate from auto-seal to auto-seal
 	{
 		coreConfig.Seal = autoSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
@@ -212,17 +210,45 @@ func TestSealMigration(t *testing.T) {
 
 		core := cluster.Cores[0].Core
 
-		serverConf := &server.Config{
-			Seal: &server.Seal{
-				Type: "test-auto",
-			},
+		if err := adjustCoreForSealMigration(core, altSeal, autoSeal); err != nil {
+			t.Fatal(err)
 		}
 
-		if err := adjustCoreForSealMigration(ctx, core, coreConfig, shamirSeal, serverConf); err == nil {
-			t.Fatal("expected error since disabled isn't set true")
+		client := cluster.Cores[0].Client
+		client.SetToken(rootToken)
+
+		var resp *api.SealStatusResponse
+		unsealOpts := &api.UnsealOpts{}
+		for _, key := range keys {
+			unsealOpts.Key = key
+			unsealOpts.Migrate = true
+			resp, err = client.Sys().UnsealWithOptions(unsealOpts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp == nil {
+				t.Fatal("expected response")
+			}
 		}
-		serverConf.Seal.Disabled = true
-		if err := adjustCoreForSealMigration(ctx, core, coreConfig, shamirSeal, serverConf); err != nil {
+		if resp.Sealed {
+			t.Fatalf("expected unsealed state; got %#v", *resp)
+		}
+
+		cluster.Cleanup()
+		cluster.Cores = nil
+	}
+
+	// Sixth: create an Shamir seal and activate migration. Verify it doesn't work
+	// if disabled isn't set.
+	{
+		coreConfig.Seal = altSeal
+		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)
+		cluster.Start()
+		defer cluster.Cleanup()
+
+		core := cluster.Cores[0].Core
+
+		if err := adjustCoreForSealMigration(core, shamirSeal, altSeal); err != nil {
 			t.Fatal(err)
 		}
 
@@ -259,7 +285,7 @@ func TestSealMigration(t *testing.T) {
 		t.Fatalf("expected nil error and nil entry, got error %#v and entry %#v", err, entry)
 	}
 
-	// Sixth: verify autoseal is off and the expected key shares work
+	// Seventh: verify autoseal is off and the expected key shares work
 	{
 		coreConfig.Seal = shamirSeal
 		cluster := vault.NewTestCluster(t, coreConfig, clusterConfig)

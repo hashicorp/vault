@@ -828,6 +828,8 @@ request is denied.
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
 
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.
+
 - `use_csr_common_name` `(bool: true)` – When used with the CSR signing
   endpoint, the common name in the CSR will be used instead of taken from the
   JSON data. This does `not` include any requested SANs in the CSR; use
@@ -1481,6 +1483,8 @@ have access.**
   values can be found at https://golang.org/pkg/crypto/x509/#ExtKeyUsage - simply 
   drop the `ExtKeyUsage` part of the value. Values are not case-sensitive. To 
   specify no key usage constraints, set this to an empty list.
+
+- `ext_key_usage_oids` `(string: "")` - A comma-separated string or list of extended key usage oids.  
 
 - `ttl` `(string: "")` – Specifies the requested Time To Live. Cannot be greater
   than the engine's `max_ttl` value. If not provided, the engine's `ttl` value

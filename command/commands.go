@@ -466,6 +466,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				PhysicalBackends:   physicalBackends,
 				ShutdownCh:         MakeShutdownCh(),
 				SighupCh:           MakeSighupCh(),
+				SigUSR2Ch:          MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {

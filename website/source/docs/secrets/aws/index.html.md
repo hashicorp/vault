@@ -99,7 +99,7 @@ the IAM credentials:
 
     ```text
     $ vault write aws/roles/my-other-role \
-        policy_arns=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess,arn:aws:iam::aws:policy/IAMReadOnlyAccess
+        policy_arns=arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess,arn:aws:iam::aws:policy/IAMReadOnlyAccess \
         credential_type=iam_user \
         policy_document=-<<EOF
             {
@@ -112,6 +112,7 @@ the IAM credentials:
                 }
               ]
             }
+            EOF
 
     ```
 

@@ -589,6 +589,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 	}
 }
 
+// grabLockOrStop returns true if we failed to get the lock before stopCh
+// was closed.  Returns false if the lock was obtained, in which case it's
+// the caller's responsibility to unlock it.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	// Grab the lock as we need it for cluster setup, which needs to happen
 	// before advertising;
