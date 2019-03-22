@@ -618,7 +618,8 @@ type cleanedResponse struct {
 	Data     map[string]interface{}     `json:"data,omitempty"`
 	Redirect string                     `json:"redirect,omitempty"`
 	Warnings []string                   `json:"warnings,omitempty"`
-	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
+	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty" mapstructure:"wrap_info"`
+	Headers  map[string][]string        `json:"headers,omitempty"`
 }
 
 func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
