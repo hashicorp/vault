@@ -521,10 +521,7 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	// Verify that an all-null input results in empty JSON
 	orig := &logical.Response{}
 
-	cr, err := cleanResponse(orig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cr := cleanResponse(orig)
 
 	newJSON := mustJSONMarshal(t, cr)
 
@@ -546,10 +543,7 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	}
 	origJSON := mustJSONMarshal(t, orig)
 
-	cr, err = cleanResponse(orig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cr = cleanResponse(orig)
 
 	cleanJSON := mustJSONMarshal(t, cr)
 
