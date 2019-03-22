@@ -18,9 +18,9 @@ provided, all mounted paths that use that plugin backend will be reloaded.
 
 This endpoint reloads mounted plugin backends.
 
-| Method   | Path                      -   | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/plugins/reload/backend` | `204 (empty body)`     |
+| Method   | Path                      -   |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/plugins/reload/backend` |
 
 ### Parameters
 

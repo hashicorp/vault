@@ -17,9 +17,9 @@ once registered backends can use the plugin by querying the catalog.
 
 This endpoint lists the plugins in the catalog by type.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/plugins/catalog`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/plugins/catalog`       |
 
 ### Sample Request
 
@@ -61,11 +61,11 @@ $ curl \
 
 This endpoint lists the plugins in the catalog by type.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `LIST`   | `/sys/plugins/catalog/auth`       | `200 application/json` |
-| `LIST`   | `/sys/plugins/catalog/database`   | `200 application/json` |
-| `LIST`   | `/sys/plugins/catalog/secret`     | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `LIST`   | `/sys/plugins/catalog/auth`       |
+| `LIST`   | `/sys/plugins/catalog/database`   |
+| `LIST`   | `/sys/plugins/catalog/secret`     |
 
 ### Sample Request
 
@@ -100,9 +100,9 @@ supplied name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                               | Produces               |
-| :------- | :--------------------------------- | :--------------------- |
-| `PUT`    | `/sys/plugins/catalog/:type/:name` | `204 (empty body)`     |
+| Method   | Path                               |
+| :--------------------------------- | :--------------------- |
+| `PUT`    | `/sys/plugins/catalog/:type/:name` |
 
 ### Parameters
 
@@ -154,9 +154,9 @@ This endpoint returns the configuration data for the plugin with the given name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                               | Produces               |
-| :------- | :--------------------------------- | :--------------------- |
-| `GET`    | `/sys/plugins/catalog/:type/:name` | `200 application/json` |
+| Method   | Path                               |
+| :--------------------------------- | :--------------------- |
+| `GET`    | `/sys/plugins/catalog/:type/:name` |
 
 ### Parameters
 
@@ -195,9 +195,9 @@ This endpoint removes the plugin with the given name.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/plugins/catalog/:type/:name` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/plugins/catalog/:type/:name` |
 
 ### Parameters
 

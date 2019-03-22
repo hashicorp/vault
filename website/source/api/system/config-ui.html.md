@@ -18,9 +18,9 @@ The `/sys/config/ui` endpoint is used to configure UI settings.
 
 This endpoint returns the given UI header configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/ui/headers/:name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/ui/headers/:name` |
 
 ### Parameters
 
@@ -46,9 +46,9 @@ $ curl \
 
 This endpoint allows configuring the values to be returned for the UI header.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/config/ui/headers/:name` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/config/ui/headers/:name` |
 
 ### Parameters
 
@@ -78,9 +78,9 @@ $ curl \
 
 This endpoint removes a UI header.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/config/ui/headers/:name`| `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/config/ui/headers/:name`|
 
 ### Sample Request
 
@@ -95,9 +95,9 @@ $ curl \
 
 This endpoint returns a list of configured UI headers.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/config/ui/headers`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/config/ui/headers`   |
 
 
 ### Sample Request

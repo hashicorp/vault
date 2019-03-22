@@ -15,9 +15,9 @@ The `/sys/policy` endpoint is used to manage ACL policies in Vault.
 
 This endpoint lists all configured policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/policy`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/policy`                |
 
 ### Sample Request
 
@@ -39,9 +39,9 @@ $ curl \
 
 This endpoint retrieve the policy body for the named policy.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/policy/:name`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/policy/:name`          |
 
 ### Parameters
 
@@ -70,9 +70,9 @@ $ curl \
 This endpoint adds a new or updates an existing policy. Once a policy is
 updated, it takes effect immediately to all associated users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/policy/:name`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/policy/:name`          |
 
 ### Parameters
 
@@ -104,9 +104,9 @@ $ curl \
 This endpoint deletes the policy with the given name. This will immediately
 affect all users associated with this policy.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/policy/:name`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/policy/:name`          |
 
 ### Parameters
 

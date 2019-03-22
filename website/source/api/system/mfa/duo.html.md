@@ -11,9 +11,9 @@ description: |-
 
 This endpoint defines a MFA method of type Duo.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/mfa/method/duo/:name`   | `204 (empty body)`     |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `POST`   | `/sys/mfa/method/duo/:name`   |
 
 ### Parameters
 
@@ -61,9 +61,9 @@ $ curl \
 This endpoint queries the MFA configuration of Duo type for a given method
 name.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `GET`    | `/sys/mfa/method/duo/:name`   | `200 application/json`   |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `GET`    | `/sys/mfa/method/duo/:name`   |
 
 ### Parameters
 
@@ -100,9 +100,9 @@ $ curl \
 
 This endpoint deletes a Duo MFA method.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `DELETE` | `/sys/mfa/method/duo/:name`   | `204 (empty body)`       |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `DELETE` | `/sys/mfa/method/duo/:name`   |
 
 
 ### Parameters
