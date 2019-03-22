@@ -41,12 +41,11 @@ $ vault login -method=gcp \
     role="my-role" \
     service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
     project="my-project" \
-    jwt_exp="15m"
+    jwt_exp="15m" \
+    credentials=@path/to/signer/credentials.json
 ```
 
 For more usage information, run `vault auth help gcp`.
-
-_NOTE:_ While it is possible to specify `credentials` in the login command, it is recommended to use the `GOOGLE_APPLICATION_CREDENTIALS` envrionment variable to point to the JSON file where credentials are stored.
 
 ### Via the CLI
 
