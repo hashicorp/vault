@@ -893,6 +893,8 @@ request is denied.
 
 - `not_before_duration` `(duration: "30s")` – Specifies the duration by which to backdate the NotBefore property.
 
+- `use_displayename_cn` `(bool: false)` - Use display name in authentication method as CN.
+  If necessary, use together with `allow_token_displayname`.
 
 ### Sample Payload
 

@@ -747,7 +747,11 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 			cn = data.csr.Subject.CommonName
 		}
 		if cn == "" {
-			cn = data.apiData.Get("common_name").(string)
+			if data.role.UseDisplayNameCN {
+				cn = data.req.DisplayName
+			} else {
+				cn = data.apiData.Get("common_name").(string)
+			}
 			if cn == "" && data.role.RequireCN {
 				return errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true, unless "require_cn" is set to false`}
 			}
