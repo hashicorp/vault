@@ -317,7 +317,7 @@ for "generate_lease".`,
 				Description: `The duration before now the cert needs to be created / signed.`,
 			},
 			"use_displayname_cn": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeBool,
 				Description: `Use display name as CN. If necessary, use together with 'allow_token_displayname'.`,
 			},
 		},
