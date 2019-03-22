@@ -1,18 +1,18 @@
 ---
 layout: "api"
-page_title: "JWT - Auth Methods - HTTP API"
-sidebar_title: "JWT"
-sidebar_current: "api-http-auth-jwt"
+page_title: "JWT/OIDC - Auth Methods - HTTP API"
+sidebar_title: "JWT/OIDC"
+sidebar_current: "api-http-auth-jwt-oidc"
 description: |-
-  This is the API documentation for the Vault JWT authentication
+  This is the API documentation for the Vault JWT/OIDC authentication
   method plugin.
 ---
 
-# JWT Auth Method (API)
+# JWT/OIDC Auth Method (API)
 
-This is the API documentation for the Vault JWT auth method
+This is the API documentation for the Vault JWT/OIDC auth method
 plugin. To learn more about the usage and operation, see the
-[Vault JWT method documentation](/docs/auth/jwt.html).
+[Vault JWT/OIDC method documentation](/docs/auth/jwt.html).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/jwt` path in Vault. Since it is possible to enable auth methods
