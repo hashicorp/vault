@@ -11,9 +11,9 @@ description: |-
 
 This endpoint defines a MFA method of type PingID.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/mfa/method/pingid/:name`   | `204 (empty body)`     |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `POST`   | `/sys/mfa/method/pingid/:name`   |
 
 ### Parameters
 
@@ -53,9 +53,9 @@ $ curl \
 This endpoint queries the MFA configuration of PingID type for a given method
 name.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `GET`    | `/sys/mfa/method/pingid/:name`   | `200 application/json`   |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `GET`    | `/sys/mfa/method/pingid/:name`   |
 
 ### Parameters
 
@@ -92,9 +92,9 @@ $ curl \
 
 This endpoint deletes a PingID MFA method.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `DELETE` | `/sys/mfa/method/pingid/:name`   | `204 (empty body)`       |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `DELETE` | `/sys/mfa/method/pingid/:name`   |
 
 
 ### Parameters

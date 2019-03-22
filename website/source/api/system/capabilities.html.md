@@ -22,9 +22,9 @@ paths. Multiple paths are taken in at once and the capabilities of the token
 for each path is returned. For backwards compatibility, if a single path is
 supplied, a `capabilities` field will also be returned.
 
-| Method   | Path                 | Produces               |
-| :------- | :------------------- | :--------------------- |
-| `POST`   | `/sys/capabilities`  | `200 application/json` |
+| Method   | Path                 |
+| :------------------- | :--------------------- |
+| `POST`   | `/sys/capabilities`  |
 
 ### Parameters
 

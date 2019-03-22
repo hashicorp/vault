@@ -15,9 +15,9 @@ The `/sys/tools` endpoints are a general set of tools.
 
 This endpoint returns high-quality random bytes of the specified length.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/tools/random(/:bytes)`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/tools/random(/:bytes)`   |
 
 ### Parameters
 
@@ -60,9 +60,9 @@ $ curl \
 This endpoint returns the cryptographic hash of given data using the specified
 algorithm.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/tools/hash(/:algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/tools/hash(/:algorithm)` |
 
 ### Parameters
 

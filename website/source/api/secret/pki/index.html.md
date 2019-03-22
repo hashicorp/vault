@@ -55,8 +55,8 @@ endpoint, the CA certificate is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/ca(/pem)`              | `200 application/binary` |
 
 ### Sample Request
@@ -80,8 +80,8 @@ structure and cannot be read by the Vault CLI; use `/pki/cert` for that.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/ca_chain`              | `200 application/binary` |
 
 ### Sample Request
@@ -104,9 +104,9 @@ This endpoint retrieves one of a selection of certificates. This endpoint return
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/cert/:serial`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/cert/:serial`          |
 
 ### Parameters
 
@@ -139,9 +139,9 @@ $ curl \
 
 This endpoint returns a list of the current certificates by serial number only.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/pki/certs`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/pki/certs`                 |
 
 ### Sample Request
 
@@ -185,9 +185,9 @@ if you have a signed intermediate CA certificate with a generated key (use the
 `/pki/intermediate/set-signed` endpoint for that). _If you have already set a
 certificate and key, they will be overridden._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/ca`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/ca`             |
 
 ### Parameters
 
@@ -217,9 +217,9 @@ JSON-formatted, with newlines replaced with `\n`, like so:
 This endpoint allows getting the duration for which the generated CRL should be
 marked valid.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/config/crl`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/config/crl`            |
 
 ### Sample Request
 
@@ -257,9 +257,9 @@ CRL for any request. If enabled, it will re-build the CRL.
   CRL generation will then result in all such certificates becoming a part of
   the CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/crl`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/crl`            |
 
 ### Parameters
 
@@ -288,9 +288,9 @@ $ curl \
 
 This endpoint fetches the URLs to be encoded in generated certificates.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/config/urls`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/config/urls`           |
 
 ### Sample Request
 
@@ -324,9 +324,9 @@ You can update any of the values at any time without affecting the other
 existing values. To remove the values, simply use a blank string as the
 parameter.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/urls`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/config/urls`           |
 
 ### Parameters
 
@@ -369,8 +369,8 @@ If `/pem` is added to the endpoint, the CRL is returned in PEM format.
 
 This is an unauthenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET`    | `/pki/crl(/pem)`             | `200 application/binary` |
 
 ### Sample Request
@@ -393,9 +393,9 @@ to cut the size of the CRL if it contains a number of certificates
 that have now expired, but has not been rotated due to no further
 certificates being revoked.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/crl/rotate`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/crl/rotate`            |
 
 ### Sample Request
 
@@ -425,9 +425,9 @@ here. _This will overwrite any previously existing CA private key._
 This is mostly meant as a helper function, and not all possible parameters that
 can be set in a CSR are supported.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/intermediate/generate/:type` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/intermediate/generate/:type` |
 
 ### Parameters
 
@@ -544,9 +544,9 @@ private key generated via `/pki/intermediate/generate`. The certificate should
 be submitted in PEM format; see the documentation for `/pki/config/ca` for some
 hints on submitting.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/intermediate/set-signed` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/intermediate/set-signed` |
 
 ## Parameters
 
@@ -582,9 +582,9 @@ as well, so that only the root CA need be in a client's trust store.
 **The private key is _not_ stored. If you do not save the private key, you will
 need to request a new certificate.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/issue/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/issue/:name`           |
 
 ### Parameters
 
@@ -678,9 +678,9 @@ This endpoint revokes a certificate using its serial number. This is an
 alternative option to the standard method of revoking using Vault lease IDs. A
 successful revocation will rotate the CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/revoke`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/revoke`                |
 
 ### Parameters
 
@@ -725,9 +725,9 @@ multiple roles nearly any issuing policy can be accommodated. `server_flag`,
 requests a certificate that is not allowed by the CN policy in the role, the
 request is denied.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -917,9 +917,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/pki/roles/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -961,9 +961,9 @@ $ curl \
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/pki/roles`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/pki/roles`                 |
 
 ### Sample Request
 
@@ -993,9 +993,9 @@ $ curl \
 This endpoint deletes the role definition. Deleting a role **does not**
 revoke certificates previously issued under this role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/pki/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/pki/roles/:name`           |
 
 ### Parameters
 
@@ -1026,9 +1026,9 @@ As of Vault 0.8.1, if a CA cert/key already exists, this function will not
 overwrite it; it must be deleted first. Previous versions of Vault would
 overwrite the existing cert/key with new values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/generate/:type`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/generate/:type`   |
 
 
 ### Parameters
@@ -1162,9 +1162,9 @@ This endpoint deletes the current CA key (the old CA certificate will still be
 accessible for reading until a new certificate/key are generated or uploaded).
 _This endpoint requires sudo/root privileges._
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/pki/root`   | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/pki/root`   |
 
 
 ### Sample Request
@@ -1184,9 +1184,9 @@ values set via `config/urls`. Values set in the CSR are ignored unless
 `use_csr_values` is set to true, in which case the values from the CSR are used
 verbatim.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/sign-intermediate` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/sign-intermediate` |
 
 ### Parameters
 
@@ -1329,9 +1329,9 @@ endpoint, you most likely should be using a different endpoint (such as
 
 This endpoint requires `sudo` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/root/sign-self-issued` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/root/sign-self-issued` |
 
 ### Parameters
 
@@ -1378,9 +1378,9 @@ supplied parameters, subject to the restrictions contained in the role named in
 the endpoint. The issuing CA certificate is returned as well, so that only the
 root CA need be in a client's trust store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/sign/:name`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/sign/:name`            |
 
 ### Parameters
 
@@ -1460,9 +1460,9 @@ refuse to issue an intermediate CA certificate (see the
 **This is a potentially dangerous endpoint and only highly trusted users should
 have access.**
 
-| Method   | Path                                 | Produces               |
-| :------- | :----------------------------------- | :--------------------- |
-| `POST`   | `/pki/sign-verbatim(/:name)`         | `200 application/json` |
+| Method   | Path                                 |
+| :----------------------------------- | :--------------------- |
+| `POST`   | `/pki/sign-verbatim(/:name)`         |
 
 ### Parameters
 
@@ -1537,9 +1537,9 @@ This endpoint allows tidying up the storage backend and/or CRL by removing
 certificates that have expired and are past a certain buffer period beyond their
 expiration time.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/tidy`                  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/pki/tidy`                  |
 
 ### Parameters
 

@@ -17,9 +17,9 @@ token which can be used for all future requests.
 
 This endpoint lists all enabled auth methods.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/auth`                  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/auth`                  |
 
 ### Sample Request
 
@@ -60,9 +60,9 @@ For example, enable the "foo" auth method will make it accessible at
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/auth/:path`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/auth/:path`            |
 
 ### Parameters
 
@@ -142,9 +142,9 @@ This endpoint disables the auth method at the given auth path.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/auth/:path`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/auth/:path`            |
 
 ### Parameters
 
@@ -169,9 +169,9 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/auth/:path/tune`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/auth/:path/tune`       |
 
 ### Parameters
 
@@ -203,9 +203,9 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/auth/:path/tune`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/auth/:path/tune`       |
 
 ### Parameters
 

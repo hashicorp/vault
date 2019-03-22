@@ -19,9 +19,9 @@ creation TTL as the original token and contain the same response. The old token
 will be invalidated. This can be used for long-term storage of a secret in a
 response-wrapped token when rotation is a requirement.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/rewrap`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/rewrap`       |
 
 ### Parameters
 

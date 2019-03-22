@@ -15,9 +15,9 @@ The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
 This endpoint retrieve lease metadata.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/lookup`          | `200 application/json` |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/lookup`          |
 
 ### Parameters
 
@@ -60,9 +60,9 @@ This endpoint returns a list of lease ids.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/sys/leases/lookup/:prefix` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/sys/leases/lookup/:prefix` |
 
 
 ### Sample Request
@@ -92,9 +92,9 @@ $ curl \
 
 This endpoint renews a lease, requesting to extend the lease.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/renew`           | `200 application/json` |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/renew`           |
 
 ### Parameters
 
@@ -137,9 +137,9 @@ $ curl \
 
 This endpoint revokes a lease immediately.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke`          | `204 (empty body)`     |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke`          |
 
 ### Parameters
 
@@ -177,9 +177,9 @@ this endpoint should be tightly controlled.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                                | Produces               |
-| :------- | :---------------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke-force/:prefix`  | `204 (empty body)`     |
+| Method   | Path                                |
+| :---------------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke-force/:prefix`  |
 
 ### Parameters
 
@@ -204,9 +204,9 @@ used to revoke very large numbers of secrets/tokens at once.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                                | Produces               |
-| :------- | :---------------------------------- | :--------------------- |
-| `PUT`    | `/sys/leases/revoke-prefix/:prefix` | `204 (empty body)`     |
+| Method   | Path                                |
+| :---------------------------------- | :--------------------- |
+| `PUT`    | `/sys/leases/revoke-prefix/:prefix` |
 
 ### Parameters
 

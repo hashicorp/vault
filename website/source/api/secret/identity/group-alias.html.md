@@ -11,9 +11,9 @@ description: |-
 
 This endpoint creates or updates a group alias.
 
-| Method   | Path                     | Produces               |
-| :------- | :----------------------- | :----------------------|
-| `POST`   | `/identity/group-alias`  | `200 application/json` |
+| Method   | Path                     |
+| :----------------------- | :----------------------|
+| `POST`   | `/identity/group-alias`  |
 
 ### Parameters
 
@@ -63,9 +63,9 @@ $ curl \
 
 This endpoint is used to update an existing group alias.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `POST`    | `/identity/group-alias/id/:id`   | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `POST`    | `/identity/group-alias/id/:id`   |
 
 ### Parameters
 
@@ -113,9 +113,9 @@ $ curl \
 
 This endpoint queries the group alias by its identifier.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `GET`    | `/identity/group-alias/id/:id`    | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `GET`    | `/identity/group-alias/id/:id`    |
 
 ### Parameters
 
@@ -152,9 +152,9 @@ $ curl \
 
 This endpoint deletes a group alias.
 
-| Method     | Path                             | Produces               |
-| :--------- | :------------------------------- | :----------------------|
-| `DELETE`   | `/identity/group-alias/id/:id`   | `204 (empty body)`     |
+| Method     | Path                             |
+| :------------------------------- | :----------------------|
+| `DELETE`   | `/identity/group-alias/id/:id`   |
 
 ## Parameters
 
@@ -173,10 +173,10 @@ $ curl \
 
 This endpoint returns a list of available group aliases by their identifiers.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `LIST`   | `/identity/group-alias/id`                | `200 application/json` |
-| `GET`    | `/identity/group-alias/id?list=true`      | `200 application/json` |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `LIST`   | `/identity/group-alias/id`                |
+| `GET`    | `/identity/group-alias/id?list=true`      |
 
 ### Sample Request
 
