@@ -82,7 +82,7 @@ func TestMSSQLBackend_schema(t *testing.T) {
 	b, err := NewMSSQLBackend(map[string]string{
 		"server":   server,
 		"database": database,
-		"schema": test,
+		"schema":  "test",
 		"table":    table,
 		"username": username,
 		"password": password,
