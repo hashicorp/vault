@@ -506,6 +506,10 @@ type FieldSchema struct {
 	Required    bool
 	Deprecated  bool
 
+	// Query indicates this field will be sent as a query parameter. It doesn't
+	// affect handling of the value, but may be used for documentation.
+	Query bool
+
 	// AllowedValues is an optional list of permitted values for this field.
 	// This constraint is not (yet) enforced by the framework, but the list is
 	// output as part of OpenAPI generation and may effect documentation and
