@@ -2,7 +2,10 @@ package command
 
 import (
 	"fmt"
+	"regexp"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -13,6 +16,11 @@ var _ cli.CommandAutocomplete = (*KVListCommand)(nil)
 
 type KVListCommand struct {
 	*BaseCommand
+
+	flagDepth      int
+	flagFilter     string
+	flagRecursive  bool
+	flagConcurrent uint
 }
 
 func (c *KVListCommand) Synopsis() string {
@@ -38,7 +46,39 @@ Usage: vault kv list [options] PATH
 }
 
 func (c *KVListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "recursive",
+		Target:  &c.flagRecursive,
+		Default: false,
+		Usage:   "Recursively list data for a given path.",
+	})
+
+	f.IntVar(&IntVar{
+		Name:    "depth",
+		Target:  &c.flagDepth,
+		Default: -1,
+		Usage:   "Specifies the depth for recursive listing.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "filter",
+		Target:  &c.flagFilter,
+		Default: `.*`,
+		Usage:   "Specifies a regular expression for filtering paths.",
+	})
+
+	f.UintVar(&UintVar{
+		Name:    "concurrent",
+		Target:  &c.flagConcurrent,
+		Default: 1,
+		Usage:   "Specifies the number of concurrent recursions to run.",
+	})
+
+	return set
 }
 
 func (c *KVListCommand) AutocompleteArgs() complete.Predictor {
@@ -64,6 +104,25 @@ func (c *KVListCommand) Run(args []string) int {
 		return 1
 	case len(args) > 1:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		return 1
+	}
+
+	if c.flagRecursive && c.flagDepth < -1 {
+		c.UI.Error(fmt.Sprintf("Invalid recursion depth: %d", c.flagDepth))
+		return 1
+	}
+
+	if _, e := regexp.Compile(c.flagFilter); c.flagRecursive && e != nil {
+		c.UI.Error(fmt.Sprintf(
+			"Invalid regular expression: %s", c.flagFilter,
+		))
+		return 1
+	}
+
+	if c.flagRecursive && c.flagConcurrent <= 0 {
+		c.UI.Error(fmt.Sprintf(
+			"Invalid concurrency value: %d", c.flagConcurrent,
+		))
 		return 1
 	}
 
@@ -103,9 +162,91 @@ func (c *KVListCommand) Run(args []string) int {
 		return OutputSecret(c.UI, secret)
 	}
 
-	if _, ok := extractListData(secret); !ok {
+	s, ok := extractListData(secret)
+	if !ok {
 		c.UI.Error(fmt.Sprintf("No entries found at %s", path))
 		return 2
+	}
+
+	// If we have to list keys recursively.
+	if c.flagRecursive {
+		if c.flagDepth != 0 {
+			var (
+				i = int32(-1)
+				r = &kvListRecursiveParams{
+					v2:     &v2,
+					client: client,
+					data:   []*kvData{},
+					depth:  int32(c.flagDepth),
+					track:  int32(0),
+					filter: regexp.MustCompile(c.flagFilter),
+					wg:     sync.WaitGroup{},
+					sem:    make(chan int32, c.flagConcurrent),
+					mux:    sync.Mutex{},
+				}
+				e      bool
+				opErr  string
+				opList = []string{}
+			)
+
+			// One of the base cases for `kvListRecursive()'.
+			path = ensureTrailingSlash(path)
+
+			// Append the first entry (only for tabular format).
+			if Format(c.UI) == "table" {
+				if v2 {
+					r.data = append(
+						r.data,
+						&kvData{
+							removePrefixFromVKVPath(path, "metadata/"),
+							secret,
+							nil,
+						},
+					)
+				} else {
+					r.data = append(r.data, &kvData{path, secret, nil})
+				}
+			}
+
+			// Launch the recursive call and wait for it them to finish.
+			r.wg.Add(1)
+			go kvListRecursive(r, path, s)
+			for i < r.track {
+				select {
+				case x, ok := <-r.sem:
+					if ok {
+						if i == -1 {
+							i++
+						}
+						i += x
+					} else {
+						break
+					}
+				}
+			}
+			r.wg.Wait()
+
+			// Print the entries.
+			for _, d := range r.data {
+				if d.path != "" {
+					opList = append(opList, d.path)
+					if d.err != nil {
+						e = true
+						opErr += fmt.Sprintf("\n\t%s: %s\n", d.path, d.err)
+					}
+				}
+			}
+
+			sort.Strings(opList)
+			OutputList(c.UI, opList)
+
+			if e {
+				c.UI.Error(fmt.Sprintf("Errors:%s", opErr))
+				return 3
+			}
+			return 0
+		}
+		return 0
 	}
 
 	return OutputList(c.UI, secret)
