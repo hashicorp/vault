@@ -146,7 +146,7 @@ These `telemetry` parameters apply to
   `disable_hostname` to avoid having prefixed metrics with hostname. Vault does not use the
   default Prometheus path, so Prometheus must be configured as follows. Note that using
   `?format=prometheus` in the path won't work as "?" will be escaped, so it must be specified
-  as a parameter. Addtionally a Vault token is required to access /v1/sys/metrics. The prometheus
+  as a parameter. Additionally a Vault token is required to access /v1/sys/metrics. The prometheus
   `bearer_token` or `bearer_token_file` options must be added to the scrape job.
 
 ```
