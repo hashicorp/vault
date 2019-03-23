@@ -22,9 +22,9 @@ compatibility for this endpoint.
 
 This endpoint lists all enabled auth methods.
 
-| Method |           Path            |        Produces        |
-| :----- | :------------------------ | :--------------------- |
-| `GET`  | `/sys/internal/ui/mounts` | `200 application/json` |
+| Method |           Path            |
+| :------------------------ | :--------------------- |
+| `GET`  | `/sys/internal/ui/mounts` |
 
 
 ### Sample Request

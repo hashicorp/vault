@@ -22,9 +22,9 @@ location, please update your API calls accordingly.
 This endpoint configures the connection string used to communicate with
 RabbitMQ.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/config/connection` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/config/connection` |
 
 ### Parameters
 
@@ -64,9 +64,9 @@ $ curl \
 
 This endpoint configures the lease settings for generated credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/config/lease`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/config/lease`     |
 
 ### Parameters
 
@@ -97,9 +97,9 @@ $ curl \
 
 This endpoint creates or updates the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/rabbitmq/roles/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/rabbitmq/roles/:name`      |
 
 ### Parameters
 
@@ -134,9 +134,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/rabbitmq/roles/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/rabbitmq/roles/:name`      |
 
 ### Parameters
 
@@ -166,9 +166,9 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/rabbitmq/roles/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/rabbitmq/roles/:name`     |
 
 ### Parameters
 
@@ -189,9 +189,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/rabbitmq/creds/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/rabbitmq/creds/:name`      |
 
 ### Parameters
 
