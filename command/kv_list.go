@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -211,7 +212,7 @@ func (c *KVListCommand) Run(args []string) int {
 			// Launch the recursive call and wait for it them to finish.
 			r.wg.Add(1)
 			go kvListRecursive(r, path, s)
-			for i < r.track {
+			for i < atomic.LoadInt32(&r.track) {
 				select {
 				case x, ok := <-r.sem:
 					if ok {
