@@ -504,6 +504,10 @@ can be set in a CSR are supported.
   subject field of the resulting CSR. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
+
 ### Sample Payload
 
 ```json
@@ -868,6 +872,10 @@ request is denied.
   subject field of issued certificates. This is a comma-separated string or
   JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
+
 - `generate_lease` `(bool: false)` – Specifies  if certificates issued/signed
   against this role will have Vault leases attached to them. Certificates can be
   added to the CRL by `vault revoke <lease_id>` when certificates are associated
@@ -1122,6 +1130,10 @@ overwrite the existing cert/key with new values.
   subject field of the resulting certificate. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
+
 ### Sample Payload
 
 ```json
@@ -1275,6 +1287,9 @@ verbatim.
   subject field of the resulting certificate. This is a comma-separated string
   or JSON array.
 
+- `serial_number` `(string: "")` – Specifies the Serial Number, if any.
+  Otherwise Vault will generate a random serial for you. If you want more than
+  one, specify alternative names in the alt_names map using OID 2.5.4.5.
 
 ### Sample Payload
 
