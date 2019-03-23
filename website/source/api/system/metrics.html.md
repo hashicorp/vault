@@ -17,9 +17,9 @@ This endpoint returns the telemetry metrics for Vault. It can be used by metrics
 collections systems like [Prometheus](https://prometheus.io) that use a pull
 model for metrics collection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/metrics`               | `000 application/json` |
+| Method   | Path             |
+| :------- | :--------------- |
+| `GET`    | `/sys/metrics`   |
 
 ### Parameters
 
