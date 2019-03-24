@@ -16,6 +16,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -295,6 +296,27 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	return result, nil
 }
 
+func verifyRSACertSig(pubKey *rsa.PublicKey, certRawBytes, certSigBytes []byte, hashFunc crypto.Hash) error {
+	hashFuncInstance := hashFunc.New()
+	hashFuncInstance.Write(certRawBytes)
+	digest := hashFuncInstance.Sum(nil)
+	return rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, certSigBytes)
+}
+
+func verifyECDSACertSig(pubKey *ecdsa.PublicKey, certRawBytes, certSigBytes []byte, hashFunc crypto.Hash) error {
+	ecdsaSignature := struct { R, S *big.Int }{}
+	if _, err := asn1.Unmarshal(certSigBytes, &ecdsaSignature); err != nil {
+		return err
+	}
+	hashFuncInstance := hashFunc.New()
+	hashFuncInstance.Write(certRawBytes)
+	digest := hashFuncInstance.Sum(nil)
+	if !ecdsa.Verify(pubKey, digest, ecdsaSignature.R, ecdsaSignature.S) {
+		return fmt.Errorf("incorrect signature og certificate")
+	}
+	return nil
+}
+
 // Verify checks if the parsed bundle is valid.  It validates the public
 // key of the certificate to the private key and checks the certificate trust
 // chain for path issues.
@@ -320,6 +342,29 @@ func (p *ParsedCertBundle) Verify() error {
 				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q)",
 					i+1, certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName)
 			}
+			verifyRSACertSigWith := func(hash crypto.Hash) error {
+				return verifyRSACertSig(caCert.Certificate.PublicKey.(*rsa.PublicKey),
+					certPath[i].Certificate.RawTBSCertificate, certPath[i].Certificate.Signature, hash)
+			}
+			verifyECDSACertSigWith := func(hash crypto.Hash) error {
+				return verifyECDSACertSig(caCert.Certificate.PublicKey.(*ecdsa.PublicKey),
+					certPath[i].Certificate.RawTBSCertificate, certPath[i].Certificate.Signature, hash)
+			}
+			var err error
+			switch caCert.Certificate.SignatureAlgorithm {
+			case x509.SHA1WithRSA: err = verifyRSACertSigWith(crypto.SHA1)
+			case x509.ECDSAWithSHA1: err = verifyECDSACertSigWith(crypto.SHA1)
+			case x509.SHA256WithRSA: err = verifyRSACertSigWith(crypto.SHA256)
+			case x509.ECDSAWithSHA256: err = verifyECDSACertSigWith(crypto.SHA256)
+			case x509.SHA384WithRSA: err = verifyRSACertSigWith(crypto.SHA384)
+			case x509.ECDSAWithSHA384: err = verifyECDSACertSigWith(crypto.SHA384)
+			case x509.SHA512WithRSA: err = verifyRSACertSigWith(crypto.SHA512)
+			case x509.ECDSAWithSHA512: err = verifyECDSACertSigWith(crypto.SHA512)
+			default: err = fmt.Errorf("unsupported signature algorithm")}
+			if err != nil {
+				return fmt.Errorf("certificate %d is not signed by certificate in ca chain: %v", i, err)
+			}
+
 		}
 	}
 
