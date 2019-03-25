@@ -213,13 +213,11 @@ func TestClientEnvNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Do a raw "/" request
 	_, err = client.RawRequest(client.NewRequest("GET", "/"))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Verify we got the response from the primary
 	if seenNamespace != "test" {
 		t.Fatalf("Bad: %s", seenNamespace)
 	}
