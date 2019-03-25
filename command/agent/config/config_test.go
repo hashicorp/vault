@@ -199,3 +199,42 @@ func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 		t.Fatal("LoadConfig should return an error when cache section present and no listeners present")
 	}
 }
+
+func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-no-sink.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				WrapTTL:   300 * time.Second,
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken: true,
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
