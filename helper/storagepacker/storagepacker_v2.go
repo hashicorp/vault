@@ -289,9 +289,10 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 				if lock != bucketLock {
 					lock.Unlock()
 				}
-				// Empty the map
-				shardLocks = make(map[*locksutil.LockEntry]struct{}, 32)
 			}
+
+			// Empty the map
+			shardLocks = make(map[*locksutil.LockEntry]struct{}, 32)
 		}()
 	}
 
@@ -390,6 +391,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 			cleanupCache()
 		}
 	}
+
 	s.bucketsCacheLock.Unlock()
 
 	return retErr.ErrorOrNil()
