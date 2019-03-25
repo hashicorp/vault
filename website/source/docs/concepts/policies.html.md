@@ -150,6 +150,21 @@ path "secret/zip-*" {
 }
 ```
 
+In addition, a `+` can be used to denote any number of characters bounded
+within a single path segment (this appeared in Vault 1.1):
+
+```ruby
+# Permit reading the "teamb" path under any top-level path under secret/
+path "secret/+/teamb" {
+  capabilities = ["read"]
+}
+
+# Permit reading secret/foo/bar/teamb, secret/bar/foo/teamb, etc.
+path "secret/+/+/teamb" {
+  capabilities = ["read"]
+}
+```
+
 Vault's architecture is similar to a filesystem. Every action in Vault has a
 corresponding path and capability - even Vault's internal core configuration
 endpoints live under the "sys/" path. Policies define access to these paths and

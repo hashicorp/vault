@@ -21,8 +21,8 @@ please update your API calls accordingly.
 
 This endpoint creates or updates a key definition.
 
-| Method   | Path                         | Produces                                                                                       |
-| :------- | :--------------------------- | :--------------------------------------------------------------------------------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------------------------------------------------------------------------------- |
 | `POST`   | `/totp/keys/:name`           | if generating a key and exported is true: `200 application/json` else: `204 (empty body)`      |
 
 ### Parameters
@@ -112,9 +112,9 @@ If a QR code is returned, it consists of base64-formatted PNG bytes. You can emb
 
 This endpoint queries the key definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/totp/keys/:name`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/totp/keys/:name`          |
 
 ### Parameters
 
@@ -147,9 +147,9 @@ $ curl \
 This endpoint returns a list of available keys. Only the key names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/totp/keys`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/totp/keys`                 |
 
 ### Sample Request
 
@@ -178,9 +178,9 @@ $ curl \
 
 This endpoint deletes the key definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/totp/keys/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/totp/keys/:name`           |
 
 ### Parameters
 
@@ -201,9 +201,9 @@ $ curl \
 This endpoint generates a new time-based one-time use password based on the named
 key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/totp/code/:name`          | `200 application/json`  |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/totp/code/:name`          |
 
 ### Parameters
 
@@ -233,9 +233,9 @@ $ curl \
 This endpoint validates a time-based one-time use password generated from the named
 key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/totp/code/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/totp/code/:name`           |
 
 ### Parameters
 

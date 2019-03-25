@@ -15,9 +15,9 @@ The `/sys/remount` endpoint is used remount a mounted backend to a new endpoint.
 
 This endpoint moves an already-mounted backend to a new mount point.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/remount`               | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/remount`               |
 
 ### Parameters
 

@@ -208,7 +208,7 @@ func TestParsingRateAndBurst(t *testing.T) {
 		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
 	}
 	if expectedBurst != observedBurst {
-		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+		t.Errorf("Expected burst %v but found %v", expectedBurst, observedBurst)
 	}
 }
 
@@ -225,7 +225,7 @@ func TestParsingRateOnly(t *testing.T) {
 		t.Errorf("Expected rate %v but found %v", expectedRate, observedRate)
 	}
 	if expectedBurst != observedBurst {
-		t.Errorf("Expected burst %v but found %v", expectedRate, observedRate)
+		t.Errorf("Expected burst %v but found %v", expectedBurst, observedBurst)
 	}
 }
 

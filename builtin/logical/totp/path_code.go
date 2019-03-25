@@ -98,7 +98,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 		Algorithm: key.Algorithm,
 	})
 	if err != nil && err != otplib.ErrValidateInputInvalidLength {
-		return logical.ErrorResponse("an error occured while validating the code"), err
+		return logical.ErrorResponse("an error occurred while validating the code"), err
 	}
 
 	// Take the key skew, add two for behind and in front, and multiple that by

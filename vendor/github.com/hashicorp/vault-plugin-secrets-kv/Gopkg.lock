@@ -2,19 +2,6 @@
 
 
 [[projects]]
-  digest = "1:a69ab3f1445ffd4815add4bd31ba05b65b3b9fec1ade5057d5d717f30e6efd6d"
-  name = "github.com/SermoDigital/jose"
-  packages = [
-    ".",
-    "crypto",
-    "jws",
-    "jwt",
-  ]
-  pruneopts = "UT"
-  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
-  version = "1.1"
-
-[[projects]]
   branch = "master"
   digest = "1:6bf6d532e503d9526d46e69aff04d11632c8c1e28b847dbd226babc1689aa723"
   name = "github.com/armon/go-radix"
@@ -93,12 +80,12 @@
   revision = "a4620f9913d19f03a6bf19b2f304daaaf83ea130"
 
 [[projects]]
-  branch = "master"
-  digest = "1:183f00c472fb9b2446659618eebf4899872fa267b92f926539411abdc8b941df"
+  digest = "1:d260503602063d71718eb21f85c02133ad5eac894c2a6f0e0546b7dc017dc97e"
   name = "github.com/hashicorp/go-retryablehttp"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e651d75abec6fbd4f2c09508f72ae7af8a8b7171"
+  revision = "73489d0a1476f0c9e6fb03f9c39241523a496dfd"
+  version = "v0.5.2"
 
 [[projects]]
   branch = "master"
@@ -163,14 +150,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:404934732c38cae3ff1be32409b9e435dcc6d790dab5a4fefdb6b5d9daa9ff63"
+  digest = "1:5d3cdbf593765a4625d4dbc295dfad65658f20bedf6dda921ee81edd6c4e9837"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
-    "helper/base62",
     "helper/certutil",
     "helper/compressutil",
     "helper/consts",
+    "helper/cryptoutil",
     "helper/errutil",
     "helper/hclutil",
     "helper/jsonutil",
@@ -195,7 +182,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "35328c50e74da4eaeb3db806d5e7964c751b011f"
+  revision = "208c76d345731837087b6a96493b5c1652eaf39b"
 
 [[projects]]
   branch = "master"
@@ -258,15 +245,17 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:943384d730fded533ad79c10beda11b7e99e70b527b88bb32b4b5efba74146c4"
+  digest = "1:a92143c3345d4a59f303129f88f1fe43b2fc56c4665785a12064495e126477eb"
   name = "golang.org/x/crypto"
   packages = [
+    "blake2b",
     "chacha20poly1305",
     "ed25519",
     "ed25519/internal/edwards25519",
     "hkdf",
     "internal/chacha20",
     "internal/subtle",
+    "pbkdf2",
     "poly1305",
   ]
   pruneopts = "UT"
@@ -374,6 +363,19 @@
   pruneopts = "UT"
   revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
   version = "v1.14.0"
+
+[[projects]]
+  digest = "1:005cbf8b937fcb1694b9dbb845b0aef618627be7faf7bb330eb2490e3f506ef8"
+  name = "gopkg.in/square/go-jose.v2"
+  packages = [
+    ".",
+    "cipher",
+    "json",
+    "jwt",
+  ]
+  pruneopts = "UT"
+  revision = "628223f44a71f715d2881ea69afc795a1e9c01be"
+  version = "v2.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
