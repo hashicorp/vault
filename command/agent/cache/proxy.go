@@ -49,10 +49,6 @@ type Proxier interface {
 // NewSendResponse creates a new SendResponse and takes care of initializing its
 // fields properly.
 func NewSendResponse(apiResponse *api.Response, responseBody []byte) (*SendResponse, error) {
-	if apiResponse == nil {
-		return nil, fmt.Errorf("nil api response provided")
-	}
-
 	resp := &SendResponse{
 		Response:  apiResponse,
 		CacheMeta: &CacheMeta{},
