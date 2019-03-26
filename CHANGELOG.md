@@ -4,6 +4,7 @@ BUG FIXES:
  * ui: Fix an issue where in production builds OpenAPI model generation was
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
+ * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
  
  
 ## 1.1.0 (March 18th, 2019)
