@@ -91,7 +91,7 @@ cover:
 vet:
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
-		| xargs go tool vet ; if [ $$? -eq 1 ]; then \
+		| xargs go vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Vet found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
