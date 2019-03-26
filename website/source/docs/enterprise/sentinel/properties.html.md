@@ -76,6 +76,17 @@ request, e.g. when logging in.
 | `role`                     | `string`                 | If created via a token role, the role that created the token                                                                       |
 | `type`                     | `string`                 | The type of token, currently will be either `batch` or `service` |
 
+## Token Namespace Properties
+
+The following properties, if available, are in the `token.namespace` namespace. 
+The (Sentinel) namespace will not exist if there is no token information attached to a
+request, e.g. when logging in.
+
+| Name | Type   | Description                    |
+| :----| :------| :------------------------------|
+| `id`   | `string` | The namespace ID               |
+| `path` | `string` | The root path of the namespace |
+
 ## Identity Properties
 
 The following properties, if available, are in the `identity` namespace. The
