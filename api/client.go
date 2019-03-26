@@ -381,7 +381,6 @@ type Client struct {
 	wrappingLookupFunc WrappingLookupFunc
 	mfaCreds           []string
 	policyOverride     bool
-	pollingChannel     chan int
 }
 
 // NewClient returns a new client for the given configuration.
