@@ -402,10 +402,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						}
 
 						// create a version of the response that will not emit null items
-						cr, err := cleanResponse(resp.Example)
-						if err != nil {
-							return err
-						}
+						cr := cleanResponse(resp.Example)
 
 						// Only one example per media type is allowed, so first one wins
 						if _, ok := content[mediaType]; !ok {
@@ -619,16 +616,19 @@ type cleanedResponse struct {
 	Redirect string                     `json:"redirect,omitempty"`
 	Warnings []string                   `json:"warnings,omitempty"`
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info,omitempty"`
+	Headers  map[string][]string        `json:"headers,omitempty"`
 }
 
-func cleanResponse(resp *logical.Response) (*cleanedResponse, error) {
-	var r cleanedResponse
-
-	if err := mapstructure.Decode(resp, &r); err != nil {
-		return nil, err
+func cleanResponse(resp *logical.Response) *cleanedResponse {
+	return &cleanedResponse{
+		Secret:   resp.Secret,
+		Auth:     resp.Auth,
+		Data:     resp.Data,
+		Redirect: resp.Redirect,
+		Warnings: resp.Warnings,
+		WrapInfo: resp.WrapInfo,
+		Headers:  resp.Headers,
 	}
-
-	return &r, nil
 }
 
 // CreateOperationIDs generates unique operationIds for all paths/methods.

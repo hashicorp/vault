@@ -2171,6 +2171,12 @@ func (b *SystemBackend) handleRawRead(ctx context.Context, req *logical.Request,
 		}
 	}
 
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
+	}
+
 	entry, err := b.Core.barrier.Get(ctx, path)
 	if err != nil {
 		return handleErrorNoReadOnlyForward(err)
@@ -2255,6 +2261,12 @@ func (b *SystemBackend) handleRawList(ctx context.Context, req *logical.Request,
 			err := fmt.Sprintf("cannot list '%s'", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
+	}
+
+	// Run additional checks if needed
+	if err := checkRaw(b, path); err != nil {
+		b.Core.logger.Warn(err.Error(), "path", path)
+		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
 	}
 
 	keys, err := b.Core.barrier.List(ctx, path)
@@ -2899,6 +2911,14 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.mountsLock.RLock()
 	for _, entry := range b.Core.mounts.Entries {
+		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
+		if err != nil {
+			return nil, err
+		}
+		if filtered {
+			continue
+		}
+
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
@@ -2916,6 +2936,14 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 
 	b.Core.authLock.RLock()
 	for _, entry := range b.Core.auth.Entries {
+		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
+		if err != nil {
+			return nil, err
+		}
+		if filtered {
+			continue
+		}
+
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
@@ -2952,6 +2980,14 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	if me == nil {
 		// Return a permission denied error here so this path cannot be used to
 		// brute force a list of mounts.
+		return errResp, logical.ErrPermissionDenied
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	if err != nil {
+		return nil, err
+	}
+	if filtered {
 		return errResp, logical.ErrPermissionDenied
 	}
 

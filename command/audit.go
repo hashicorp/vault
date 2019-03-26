@@ -27,7 +27,7 @@ Usage: vault audit <subcommand> [options] [args]
 
       $ vault audit list
 
-  Enable a new audit device "userpass";
+  Enable a new audit device "file";
 
        $ vault audit enable file file_path=/var/log/audit.log
 

@@ -16,9 +16,9 @@ The `/sys/seal-status` endpoint is used to check the seal status of a Vault.
 This endpoint returns the seal status of the Vault. This is an unauthenticated
 endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/seal-status`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/seal-status`           |
 
 ### Sample Request
 

@@ -18,6 +18,15 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func (b *versionedKVBackend) perfSecondaryCheck() bool {
+	replState := b.System().ReplicationState()
+	if (!b.System().LocalMount() && replState.HasState(consts.ReplicationPerformanceSecondary)) ||
+		replState.HasState(consts.ReplicationPerformanceStandby) {
+		return true
+	}
+	return false
+}
+
 func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		if atomic.LoadUint32(b.upgrading) == 1 {
@@ -28,7 +37,11 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 			time.Sleep(15 * time.Millisecond)
 
 			if atomic.LoadUint32(b.upgrading) == 1 {
-				return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				if b.perfSecondaryCheck() {
+					return logical.ErrorResponse("Waiting for the primary to upgrade from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service when the primary is finished."), logical.ErrInvalidRequest
+				} else {
+					return logical.ErrorResponse("Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly."), logical.ErrInvalidRequest
+				}
 			}
 		}
 
@@ -36,7 +49,26 @@ func (b *versionedKVBackend) upgradeCheck(next framework.OperationFunc) framewor
 	}
 }
 
+func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
+	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return false, err
+	}
+
+	var upgradeInfo UpgradeInfo
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return upgradeInfo.Done, nil
+}
+
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
+	replState := b.System().ReplicationState()
+
 	// Don't run if the plugin is in metadata mode.
 	if pluginutil.InMetadataMode() {
 		b.Logger().Info("upgrade not running while plugin is in metadata mode")
@@ -44,7 +76,7 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 	}
 
 	// Don't run while on a DR secondary.
-	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+	if replState.HasState(consts.ReplicationDRSecondary) {
 		b.Logger().Info("upgrade not running on disaster recovery replication secondary")
 		return nil
 	}
@@ -53,19 +85,26 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		return errors.New("upgrade already in process")
 	}
 
-	// If we are a replication secondary, wait until the primary has finished
+	// If we are a replication secondary or performance standby, wait until the primary has finished
 	// upgrading.
-	if !b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
-		b.Logger().Info("upgrade not running on performace replication secondary")
+	if b.perfSecondaryCheck() {
+		b.Logger().Info("upgrade not running on performance replication secondary or performance standby")
 
 		go func() {
 			for {
 				time.Sleep(time.Second)
 
+				// If we failed because the context is closed we are
+				// shutting down. Close this go routine and set the upgrade
+				// flag back to 0 for good measure.
+				if ctx.Err() != nil {
+					atomic.StoreUint32(b.upgrading, 0)
+					return
+				}
+
 				done, err := b.upgradeDone(ctx, s)
 				if err != nil {
 					b.Logger().Error("upgrading resulted in error", "error", err)
-					return
 				}
 
 				if done {

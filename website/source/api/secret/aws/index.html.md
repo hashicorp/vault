@@ -39,9 +39,9 @@ files, or IAM/ECS instances.
 At present, this endpoint does not confirm that the provided AWS credentials are
 valid AWS credentials with proper permissions.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/root`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/root`           |
 
 ### Parameters
 
@@ -94,9 +94,9 @@ key on the IAM user; otherwise, generation of a new access key will fail. Once
 this method is called, Vault will now be the only entity that knows the AWS
 secret key is used to access AWS.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/rotate-root`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/rotate-root`    |
 
 ### Parameters
 
@@ -127,9 +127,9 @@ The new access key Vault uses is returned by this operation.
 This endpoint configures lease settings for the AWS secrets engine. It is
 optional, as there are default values for `lease` and `lease_max`.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/config/lease`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/config/lease`          |
 
 ### Parameters
 
@@ -163,9 +163,9 @@ $ curl \
 
 This endpoint returns the current lease settings for the AWS secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/config/lease`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/config/lease`          |
 
 ### Sample Request
 
@@ -192,9 +192,9 @@ This endpoint creates or updates the role with the given `name`. If a role with
 the name does not exist, it will be created. If the role exists, it will be
 updated with the new attributes.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/aws/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/aws/roles/:name`           |
 
 ### Parameters
 
@@ -276,9 +276,9 @@ Using an ARN:
 This endpoint queries an existing role by the given name. If the role does not
 exist, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/roles/:name`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/roles/:name`           |
 
 If invalid role data was supplied to the role from an earlier version of Vault,
 then it will show up in the response as `invalid_data`.
@@ -328,9 +328,9 @@ For a role ARN:
 
 This endpoint lists all existing roles in the secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/aws/roles`                 | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/aws/roles`                 |
 
 ### Sample Request
 
@@ -358,9 +358,9 @@ $ curl
 This endpoint deletes an existing role by the given name. If the role does not
 exist, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`  | `/aws/roles/:name`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`  | `/aws/roles/:name`           |
 
 ### Parameters
 
@@ -381,10 +381,10 @@ $ curl \
 This endpoint generates credentials based on the named role. This role must be
 created before queried.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/aws/creds/:name`           | `200 application/json` |
-| `GET`    | `/aws/sts/:name`             | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/aws/creds/:name`           |
+| `GET`    | `/aws/sts/:name`             |
 
 The `/aws/creds` and `/aws/sts` endpoints are almost identical. The exception is
 when retrieving credentials for a role that was specified with the legacy `arn`

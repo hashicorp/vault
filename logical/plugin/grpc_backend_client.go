@@ -150,7 +150,7 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 
 	// This will block until Setup has run the function to create a new server
 	// in b.server. If we stop here before it has a chance to actually start
-	// listening, when it starts listening it will immediatley error out and
+	// listening, when it starts listening it will immediately error out and
 	// exit, which is fine. Overall this ensures that we do not miss stopping
 	// the server if it ends up being created after Cleanup is called.
 	<-b.cleanupCh

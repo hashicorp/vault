@@ -4,4 +4,89 @@ option go_package = "github.com/hashicorp/vault/helper/identity/mfa";
 
 package mfa;
 
-message Secret {}
+// Config represents the configuration information used *along with* the MFA
+// secret tied to caller's identity, to verify the MFA credentials supplied.
+// Configuration information differs by type. Handler of each type should know
+// what to expect from the Config field.
+message Config {
+	string type = 1;
+	string name = 2;
+	string id = 3;
+	string mount_accessor = 4;
+	string username_format = 5;
+	oneof config {
+		TOTPConfig totp_config = 6;
+		OktaConfig okta_config = 7;
+		DuoConfig duo_config = 8;
+		PingIDConfig pingid_config = 9;
+	}
+}
+
+// TOTPConfig represents the configuration information required to generate
+// a TOTP key. The generated key will be stored in the entity along with these
+// options. Validation of credentials supplied over the API will be validated
+// by the information stored in the entity and not from the values in the
+// configuration.
+message TOTPConfig {
+	string issuer = 1;
+	uint32 period = 2;
+	int32 algorithm = 3;
+	int32 digits = 4;
+	uint32 skew = 5;
+	uint32 key_size = 6;
+	int32 qr_size = 7;
+}
+
+// DuoConfig represents the configuration information required to perform
+// Duo authentication.
+message DuoConfig {
+	string integration_key = 1;
+	string secret_key = 2;
+	string api_hostname = 3;
+	string push_info = 4;
+}
+
+// OktaConfig contains Okta configuration parameters required to perform Okta
+// authentication.
+message OktaConfig {
+	string org_name = 1;
+	string api_token = 2;
+	bool production = 3;
+	string base_url = 4;
+	bool primary_email = 5;
+}
+
+// PingIDConfig contains PingID configuration information
+message PingIDConfig {
+	string use_base64_key = 1;
+	bool use_signature = 2;
+	string token = 3;
+	string idp_url = 4;
+	string org_alias = 5;
+	string admin_url = 6;
+	string authenticator_url = 7;
+}
+
+// Secret represents all the types of secrets which the entity can hold.
+// Each MFA type should add a secret type to the oneof block in this message.
+message Secret {
+	string method_name = 1;
+	oneof value {
+		TOTPSecret totp_secret = 2;
+	}
+}
+
+// TOTPSecret represents the secret that gets stored in the entity about a
+// particular MFA method. This information is used to validate the MFA
+// credential supplied over the API during request time.
+message TOTPSecret {
+	string issuer = 1;
+	uint32 period = 2;
+	int32 algorithm = 3;
+	int32 digits = 4;
+	uint32 skew = 5;
+	uint32 key_size = 6;
+	// reserving 7 here just to keep parity with the config message above
+	string account_name = 8;
+	string key = 9;
+}

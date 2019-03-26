@@ -15,9 +15,9 @@ The `/sys/wrapping/lookup` endpoint returns wrapping token properties.
 
 This endpoint looks up wrapping properties for the given token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/lookup`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/lookup`       |
 
 ### Parameters
 

@@ -38,9 +38,16 @@ const MOUNTABLE_AUTH_METHODS = [
     category: 'cloud',
   },
   {
-    displayName: 'JWT/OIDC',
+    displayName: 'JWT',
     value: 'jwt',
     type: 'jwt',
+    glyph: 'auth',
+    category: 'generic',
+  },
+  {
+    displayName: 'OIDC',
+    value: 'oidc',
+    type: 'oidc',
     glyph: 'auth',
     category: 'generic',
   },

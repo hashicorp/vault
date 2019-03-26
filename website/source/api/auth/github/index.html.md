@@ -22,9 +22,9 @@ please update your API calls accordingly.
 Configures the connection parameters for GitHub. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/github/config`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/config`          |
 
 ### Parameters
 
@@ -58,9 +58,9 @@ $ curl \
 
 Reads the GitHub configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/config`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/github/config`        |
 
 ### Sample Request
 
@@ -92,9 +92,9 @@ $ curl \
 
 Map a list of policies to a team that exists in the configured GitHub organization.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/github/map/teams/:team_name`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/map/teams/:team_name`   |
 
 ### Parameters
 
@@ -124,9 +124,9 @@ $ curl \
 
 Reads the GitHub team policy mapping.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/teams/:team_name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/github/map/teams/:team_name`        |
 
 ### Sample Request
 
@@ -159,9 +159,9 @@ $ curl \
 Map a list of policies to a specific GitHub user exists in the configured
 organization.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/github/map/users/:user_name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/map/users/:user_name`     |
 
 ### Parameters
 
@@ -193,9 +193,9 @@ policy **in addition to** any team policies.
 
 Reads the GitHub user policy mapping.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/github/map/users/:user_name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/github/map/users/:user_name`        |
 
 ### Sample Request
 
@@ -228,9 +228,9 @@ $ curl \
 
 Login using GitHub access token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/github/login`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/github/login`         |
 
 ### Parameters
 

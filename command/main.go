@@ -88,7 +88,7 @@ func Run(args []string) int {
 }
 
 // RunCustom allows passing in a base command template to pass to other
-// commands. Currenty, this is only used for setting a custom token helper.
+// commands. Currently, this is only used for setting a custom token helper.
 func RunCustom(args []string, runOpts *RunOptions) int {
 	if runOpts == nil {
 		runOpts = &RunOptions{}

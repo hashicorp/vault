@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -141,12 +142,21 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 		return nil, err
 	}
 
-	return &SendResponse{
-		Response: &api.Response{
-			Response: resp,
-		},
-		ResponseBody: index.Response,
-	}, nil
+	sendResp, err := NewSendResponse(&api.Response{Response: resp}, index.Response)
+	if err != nil {
+		c.logger.Error("failed to create new send response", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Hit = true
+
+	respTime, err := http.ParseTime(resp.Header.Get("Date"))
+	if err != nil {
+		c.logger.Error("failed to parse cached response date", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Age = time.Now().Sub(respTime)
+
+	return sendResp, nil
 }
 
 // Send performs a cache lookup on the incoming request. If it's a cache hit,

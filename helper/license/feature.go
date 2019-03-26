@@ -1,5 +1,3 @@
-// +build !enterprise
-
 package license
 
 // Features is a bitmask of feature flags

@@ -122,7 +122,7 @@ func TestParseSSHCommand(t *testing.T) {
 			nil,
 		},
 		{
-			"Flags after the ssh command are not pased because they are part of the command",
+			"Flags after the ssh command are not passed because they are part of the command",
 			[]string{
 				"username@hostname",
 				"command",
