@@ -586,48 +586,48 @@ func TestKVListCommand(t *testing.T) {
 		},
 		{
 			"default",
-			[]string{"secret/list"},
+			[]string{"secret/kvlist"},
 			"bar/\nbaz/\nfoo/",
 			0,
 		},
 		{
 			"default_slash",
-			[]string{"secret/list/"},
+			[]string{"secret/kvlist/"},
 			"bar/\nbaz/\nfoo/",
 			0,
 		},
 		{
 			"recursive",
-			[]string{"-recursive", "secret/list"},
-			"secret/list/bar/\n" +
-				"secret/list/bar/grault\n" +
-				"secret/list/baz/\n" +
-				"secret/list/baz/xyzzy/\n" +
-				"secret/list/baz/xyzzy/thud\n" +
-				"secret/list/baz/xyzzy/waldo\n" +
-				"secret/list/foo/\n" +
-				"secret/list/foo/grault/\n" +
-				"secret/list/foo/grault/garply\n" +
-				"secret/list/foo/qux/\n" +
-				"secret/list/foo/qux/quux",
+			[]string{"-recursive", "secret/kvlist"},
+			"secret/kvlist/bar/\n" +
+				"secret/kvlist/bar/grault\n" +
+				"secret/kvlist/baz/\n" +
+				"secret/kvlist/baz/xyzzy/\n" +
+				"secret/kvlist/baz/xyzzy/thud\n" +
+				"secret/kvlist/baz/xyzzy/waldo\n" +
+				"secret/kvlist/foo/\n" +
+				"secret/kvlist/foo/grault/\n" +
+				"secret/kvlist/foo/grault/garply\n" +
+				"secret/kvlist/foo/qux/\n" +
+				"secret/kvlist/foo/qux/quux",
 			0,
 		},
 		{
 			"recursive_with_depth",
-			[]string{"-recursive", "-depth", "2", "secret/list"},
-			"secret/list/bar/\nsecret/list/baz/\nsecret/list/foo/",
+			[]string{"-recursive", "-depth", "2", "secret/kvlist"},
+			"secret/kvlist/bar/\nsecret/kvlist/baz/\nsecret/kvlist/foo/",
 			0,
 		},
 		{
 			"recursive_with_filter",
-			[]string{"-recursive", "-filter", "xyz+y", "secret/list"},
-			"secret/list/baz/xyzzy/thud\nsecret/list/baz/xyzzy/waldo",
+			[]string{"-recursive", "-filter", "xyz+y", "secret/kvlist"},
+			"secret/kvlist/baz/xyzzy/thud\nsecret/kvlist/baz/xyzzy/waldo",
 			0,
 		},
 		{
 			"recursive_with_filter_depth",
-			[]string{"-recursive", "-depth", "2", "-filter", "/f.*", "secret/list"},
-			"secret/list/foo/",
+			[]string{"-recursive", "-depth", "2", "-filter", "/f.*", "secret/kvlist"},
+			"secret/kvlist/foo/",
 			0,
 		},
 	}
@@ -645,11 +645,11 @@ func TestKVListCommand(t *testing.T) {
 				defer closer()
 
 				keys := []string{
-					"secret/list/foo/qux/quux",
-					"secret/list/foo/grault/garply",
-					"secret/list/bar/grault",
-					"secret/list/baz/xyzzy/thud",
-					"secret/list/baz/xyzzy/waldo",
+					"secret/kvlist/foo/qux/quux",
+					"secret/kvlist/foo/grault/garply",
+					"secret/kvlist/bar/grault",
+					"secret/kvlist/baz/xyzzy/thud",
+					"secret/kvlist/baz/xyzzy/waldo",
 				}
 				for _, k := range keys {
 					if _, err := client.Logical().Write(k, map[string]interface{}{
@@ -685,13 +685,13 @@ func TestKVListCommand(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"secret/list",
+			"secret/kvlist",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error listing secret/list/: "
+		expected := "Error listing secret/kvlist/: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
