@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"github.com/hashicorp/vault/helper/consts"
 	"io"
 	"net/http"
 	"os"
@@ -192,6 +193,33 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+}
+
+func TestClientEnvNamespace(t *testing.T) {
+	var seenNamespace string
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+	}
+	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
+	defer ln.Close()
+
+	oldVaultNamespace := os.Getenv(EnvVaultNamespace)
+	defer os.Setenv(EnvVaultNamespace, oldVaultNamespace)
+	os.Setenv(EnvVaultNamespace, "test")
+
+	client, err := NewClient(config)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	_, err = client.RawRequest(client.NewRequest("GET", "/"))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if seenNamespace != "test" {
+		t.Fatalf("Bad: %s", seenNamespace)
 	}
 }
 

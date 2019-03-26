@@ -511,13 +511,21 @@ func (c *ServerCommand) Run(args []string) int {
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		// Handle the case where no seal is provided
-		if len(config.Seals) == 0 {
+		switch len(config.Seals) {
+		case 0:
 			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		case 1:
+			// If there's only one seal and it's disabled assume they want to
+			// migrate to a shamir seal and simply didn't provide it
+			if config.Seals[0].Disabled {
+				config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+			}
 		}
 		for _, configSeal := range config.Seals {
 			sealType := vaultseal.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
+				configSeal.Type = sealType
 			} else {
 				sealType = configSeal.Type
 			}
