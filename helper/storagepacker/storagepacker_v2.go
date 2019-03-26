@@ -33,7 +33,7 @@ var (
 )
 
 type Config struct {
-	// BucketStorageView is the storage to be used by all the buckets
+// BucketStorageView is the storage to be used by all the buckets
 	BucketStorageView *logical.StorageView `json:"-"`
 
 	// ConfigStorageView is the storage to store config info

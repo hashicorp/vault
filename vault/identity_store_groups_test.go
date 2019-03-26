@@ -40,8 +40,10 @@ func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
 	// Manually add an invalid entity as the group's member
 	group.MemberEntityIDs = []string{"invalidentityid"}
 
+	ctx := namespace.RootContext(nil)
+
 	// Persist the group
-	err = c.identityStore.UpsertGroupInTxn(txn, group, true)
+	err = c.identityStore.UpsertGroupInTxn(ctx, txn, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}

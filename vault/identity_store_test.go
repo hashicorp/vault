@@ -86,7 +86,9 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 		ID:      entity2.ID,
 		Message: entity2Any,
 	}
-	if err = c.identityStore.entityPacker.PutItem(item); err != nil {
+
+	ctx := namespace.RootContext(nil)
+	if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
 		t.Fatal(err)
 	}
 

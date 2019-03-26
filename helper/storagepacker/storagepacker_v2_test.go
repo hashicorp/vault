@@ -10,6 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -24,11 +25,13 @@ func getStoragePacker(tb testing.TB) *StoragePackerV2 {
 	if err != nil {
 		tb.Fatal(err)
 	}
-	return storagePacker
+	return storagePacker.(*StoragePackerV2)
 }
 
 func BenchmarkStoragePackerV2(b *testing.B) {
 	storagePacker := getStoragePacker(b)
+
+	ctx := namespace.RootContext(nil)
 
 	for i := 0; i < b.N; i++ {
 		itemID, err := uuid.GenerateUUID()
@@ -40,12 +43,12 @@ func BenchmarkStoragePackerV2(b *testing.B) {
 			ID: itemID,
 		}
 
-		err = storagePacker.PutItem(item)
+		err = storagePacker.PutItem(ctx, item)
 		if err != nil {
 			b.Fatal(err)
 		}
 
-		fetchedItem, err := storagePacker.GetItem(itemID)
+		fetchedItem, err := storagePacker.GetItem(ctx, itemID)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -58,12 +61,12 @@ func BenchmarkStoragePackerV2(b *testing.B) {
 			b.Fatalf("bad: item ID; expected: %q\n actual: %q", item.ID, fetchedItem.ID)
 		}
 
-		err = storagePacker.DeleteItem(item.ID)
+		err = storagePacker.DeleteItem(ctx, item.ID)
 		if err != nil {
 			b.Fatal(err)
 		}
 
-		fetchedItem, err = storagePacker.GetItem(item.ID)
+		fetchedItem, err = storagePacker.GetItem(ctx, item.ID)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -81,13 +84,15 @@ func TestStoragePackerV2(t *testing.T) {
 		ID: "item1",
 	}
 
-	err := storagePacker.PutItem(item1)
+	ctx := namespace.RootContext(nil)
+
+	err := storagePacker.PutItem(ctx, item1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify that it can be read
-	fetchedItem, err := storagePacker.GetItem(item1.ID)
+	fetchedItem, err := storagePacker.GetItem(ctx, item1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,13 +105,13 @@ func TestStoragePackerV2(t *testing.T) {
 	}
 
 	// Delete item1
-	err = storagePacker.DeleteItem(item1.ID)
+	err = storagePacker.DeleteItem(ctx, item1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check that the deletion was successful
-	fetchedItem, err = storagePacker.GetItem(item1.ID)
+	fetchedItem, err = storagePacker.GetItem(ctx, item1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +159,10 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = storagePacker.PutItem(&Item{
+
+	ctx := namespace.RootContext(nil)
+
+	err = storagePacker.PutItem(ctx, &Item{
 		ID:      entity.ID,
 		Message: marshaledEntity,
 	})
@@ -162,7 +170,7 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	itemFetched, err := storagePacker.GetItem(entity.ID)
+	itemFetched, err := storagePacker.GetItem(ctx, entity.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
