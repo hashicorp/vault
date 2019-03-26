@@ -1,0 +1,46 @@
+{{#if (showMainIndex)~}}
+{{>module-index~}}
+{{>global-index~}}
+{{/if~}}
+{{#orphans ~}}
+
+{{>heading-indent}}{{>sig-name}}
+
+{{>description~}}
+
+{{>category~}}
+
+{{>requires~}}
+
+{{>see~}}
+
+{{>since~}}
+
+{{>version~}}
+
+{{>authors~}}
+
+{{>license~}}
+
+{{>copyright~}}
+
+{{>params~}}
+
+{{>properties~}}
+
+{{#examples}}
+**Example**
+{{#if caption}} *({{caption}})*  {{else}}  {{/if}}
+{{{inlineLinks example}}}
+{{/examples}}
+
+{{>member-index~}}
+
+{{>separator~}}
+
+{{>members~}}
+
+{{/orphans~}}
+---
+
+###### _Documentation generated using [jsdoc-to-markdown](https://github.com/75lb/jsdoc-to-markdown)._ ######
