@@ -19,8 +19,9 @@ var (
 	// MaxDiff specifies the maximum number of differences to return.
 	MaxDiff = 10
 
-	// MaxDepth specifies the maximum levels of a struct to recurse into.
-	MaxDepth = 10
+	// MaxDepth specifies the maximum levels of a struct to recurse into,
+	// if greater than zero. If zero, there is no limit.
+	MaxDepth = 0
 
 	// LogErrors causes errors to be logged to STDERR when true.
 	LogErrors = false
@@ -50,8 +51,9 @@ type cmp struct {
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 
 // Equal compares variables a and b, recursing into their structure up to
-// MaxDepth levels deep, and returns a list of differences, or nil if there are
-// none. Some differences may not be found if an error is also returned.
+// MaxDepth levels deep (if greater than zero), and returns a list of differences,
+// or nil if there are none. Some differences may not be found if an error is
+// also returned.
 //
 // If a type has an Equal method, like time.Equal, it is called to check for
 // equality.
@@ -66,7 +68,7 @@ func Equal(a, b interface{}) []string {
 	if a == nil && b == nil {
 		return nil
 	} else if a == nil && b != nil {
-		c.saveDiff(b, "<nil pointer>")
+		c.saveDiff("<nil pointer>", b)
 	} else if a != nil && b == nil {
 		c.saveDiff(a, "<nil pointer>")
 	}
@@ -82,7 +84,7 @@ func Equal(a, b interface{}) []string {
 }
 
 func (c *cmp) equals(a, b reflect.Value, level int) {
-	if level > MaxDepth {
+	if MaxDepth > 0 && level > MaxDepth {
 		logError(ErrMaxRecursion)
 		return
 	}
