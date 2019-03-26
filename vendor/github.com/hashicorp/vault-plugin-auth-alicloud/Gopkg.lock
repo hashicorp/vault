@@ -2,19 +2,6 @@
 
 
 [[projects]]
-  digest = "1:a69ab3f1445ffd4815add4bd31ba05b65b3b9fec1ade5057d5d717f30e6efd6d"
-  name = "github.com/SermoDigital/jose"
-  packages = [
-    ".",
-    "crypto",
-    "jws",
-    "jwt",
-  ]
-  pruneopts = "UT"
-  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
-  version = "1.1"
-
-[[projects]]
   digest = "1:fd5206897fecaccd4d4f247bfb399a8e183b54a06426ffb9b157ed1119a3910f"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
@@ -113,12 +100,12 @@
   revision = "1faddcf740b61468a23dacc67369c28ec96d7fc7"
 
 [[projects]]
-  branch = "master"
-  digest = "1:183f00c472fb9b2446659618eebf4899872fa267b92f926539411abdc8b941df"
+  digest = "1:d260503602063d71718eb21f85c02133ad5eac894c2a6f0e0546b7dc017dc97e"
   name = "github.com/hashicorp/go-retryablehttp"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e651d75abec6fbd4f2c09508f72ae7af8a8b7171"
+  revision = "73489d0a1476f0c9e6fb03f9c39241523a496dfd"
+  version = "v0.5.2"
 
 [[projects]]
   branch = "master"
@@ -183,7 +170,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9b851e29f662c4522e3c9a235bb23008b8fce207b071e50eee2a014fd50f1059"
+  digest = "1:7fd5a79366307b7ee2c1b7a06366a0431934d31cf6a2b33874cbcf5f2f101b86"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -191,6 +178,7 @@
     "helper/cidrutil",
     "helper/compressutil",
     "helper/consts",
+    "helper/cryptoutil",
     "helper/errutil",
     "helper/hclutil",
     "helper/jsonutil",
@@ -213,7 +201,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "e7a0452736177a4ecf6955cdf72a93c325943a18"
+  revision = "208c76d345731837087b6a96493b5c1652eaf39b"
 
 [[projects]]
   branch = "master"
@@ -316,6 +304,19 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:5bce6a1c0d1492cef01d74084ddbac09c4bbc4cbc1db3fdd0c138ed9bc945bf8"
+  name = "golang.org/x/crypto"
+  packages = [
+    "blake2b",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "pbkdf2",
+  ]
+  pruneopts = "UT"
+  revision = "a1f597ede03a7bef967a422b5b3a5bd08805a01e"
+
+[[projects]]
+  branch = "master"
   digest = "1:505dbee0833715a72a529bb57c354826ad42a4496fad787fa143699b4de1a6d0"
   name = "golang.org/x/net"
   packages = [
@@ -332,9 +333,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:746ccf620ef9726c42453032e8e039860851ab5914278d24202f343a479a3073"
+  digest = "1:34dba4831be6a0b6d780592a05023eab016122cd5ba1cb37e172546ead4bbdcb"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "cpu",
+    "unix",
+  ]
   pruneopts = "UT"
   revision = "af653ce8b74f808d092db8ca9741fbb63d2a469d"
 
@@ -413,6 +417,19 @@
   pruneopts = "UT"
   revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
   version = "v1.15.0"
+
+[[projects]]
+  digest = "1:005cbf8b937fcb1694b9dbb845b0aef618627be7faf7bb330eb2490e3f506ef8"
+  name = "gopkg.in/square/go-jose.v2"
+  packages = [
+    ".",
+    "cipher",
+    "json",
+    "jwt",
+  ]
+  pruneopts = "UT"
+  revision = "628223f44a71f715d2881ea69afc795a1e9c01be"
+  version = "v2.3.0"
 
 [solve-meta]
   analyzer-name = "dep"

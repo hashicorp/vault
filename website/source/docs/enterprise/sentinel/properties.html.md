@@ -16,6 +16,17 @@ enumerated on this page.
 
 The following properties are available for use in Sentinel policies.
 
+## Namespace Properties
+
+The `namespace` (Sentinel) namespace gives access to information about the
+namespace in which the request is running. (This may or may not match the
+client's chosen namespace, if a request reaches into a child namespace).
+
+| Name | Type   | Description                    |
+| :----| :------| :------------------------------|
+| `id`   | `string` | The namespace ID               |
+| `path` | `string` | The root path of the namespace |
+
 ## Request Properties
 
 The following properties are available in the `request` namespace.
@@ -64,6 +75,17 @@ request, e.g. when logging in.
 | `policies`                 | `list (string)`          | Policies directly attached to the token                                                                                            |
 | `role`                     | `string`                 | If created via a token role, the role that created the token                                                                       |
 | `type`                     | `string`                 | The type of token, currently will be either `batch` or `service` |
+
+## Token Namespace Properties
+
+The following properties, if available, are in the `token.namespace` namespace. 
+The (Sentinel) namespace will not exist if there is no token information attached to a
+request, e.g. when logging in.
+
+| Name | Type   | Description                    |
+| :----| :------| :------------------------------|
+| `id`   | `string` | The namespace ID               |
+| `path` | `string` | The root path of the namespace |
 
 ## Identity Properties
 

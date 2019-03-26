@@ -28,9 +28,9 @@ structure, and other endpoints will be modified incrementally.
 
 This endpoint returns a single OpenAPI document describing all paths visible to the requester.
 
-| Method |           Path                |        Produces        |
-| :----- | :------------------------     | :--------------------- |
-| `GET`  | `/sys/internal/specs/openapi` | `200 application/json` |
+| Method |           Path                |
+| :------------------------     | :--------------------- |
+| `GET`  | `/sys/internal/specs/openapi` |
 
 
 ### Sample Request

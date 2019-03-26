@@ -15,9 +15,9 @@ The `/sys/mounts` endpoint is used manage secrets engines in Vault.
 
 This endpoints lists all the mounted secrets engines.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/mounts`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/mounts`                |
 
 ### Sample Request
 
@@ -61,9 +61,9 @@ are used by this backend.
 
 This endpoint enables a new secrets engine at the given path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/mounts/:path`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/mounts/:path`          |
 
 ### Parameters
 
@@ -148,8 +148,8 @@ $ curl \
 
 This endpoint disables the mount point specified in the URL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `DELETE` | `/sys/mounts/:path`          | `204 (empty body)    ` |
 
 ### Sample Request
@@ -167,9 +167,9 @@ This endpoint reads the given mount's configuration. Unlike the `mounts`
 endpoint, this will return the current time in seconds for each TTL, which may
 be the system default or a mount-specific value.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/sys/mounts/:path/tune`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/sys/mounts/:path/tune`      |
 
 ### Sample Request
 
@@ -193,9 +193,9 @@ $ curl \
 
 This endpoint tunes configuration parameters for a given mount point.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/mounts/:path/tune`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/mounts/:path/tune`     |
 
 ### Parameters
 

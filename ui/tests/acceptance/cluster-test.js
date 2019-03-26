@@ -39,21 +39,6 @@ module('Acceptance | cluster', function(hooks) {
     await logout.visit();
   });
 
-  test('shows nav item if user does have permission', async function(assert) {
-    const read_secrets_policy = `'
-      path "cubbyhole/" {
-        capabilities = ["read"]
-      },
-    '`;
-
-    const userToken = await tokenWithPolicy('show-secrets-nav', read_secrets_policy);
-    await logout.visit();
-    await authPage.login(userToken);
-
-    assert.dom('[data-test-navbar-item=secrets]').exists();
-    await logout.visit();
-  });
-
   test('enterprise nav item links to first route that user has access to', async function(assert) {
     const read_rgp_policy = `'
       path "sys/policies/rgp" {

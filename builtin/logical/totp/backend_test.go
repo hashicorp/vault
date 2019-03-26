@@ -1050,7 +1050,7 @@ func testAccStepCreateKey(t *testing.T, name string, keyData map[string]interfac
 			urlObject, err := url.Parse(d.Url)
 
 			if err != nil {
-				t.Fatal("an error occured while parsing url string")
+				t.Fatal("an error occurred while parsing url string")
 			}
 
 			//Set up query object

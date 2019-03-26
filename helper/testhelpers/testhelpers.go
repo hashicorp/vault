@@ -193,25 +193,28 @@ func WaitForReplicationState(t testing.T, c *vault.Core, state consts.Replicatio
 	}
 }
 
-func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.HandlerProperties) http.Handler) (*vault.TestCluster, *vault.TestClusterCore) {
-	inm, err := inmem.NewTransactionalInmem(nil, logger)
+func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) (*vault.TestCluster, *vault.TestClusterCore) {
+	if conf.Physical != nil || conf.HAPhysical != nil {
+		t.Fatalf("conf.Physical and conf.HAPhysical cannot be specified")
+	}
+	if opts.Logger == nil {
+		t.Fatalf("opts.Logger must be specified")
+	}
+
+	inm, err := inmem.NewTransactionalInmem(nil, opts.Logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	inmha, err := inmem.NewInmemHA(nil, logger)
+	inmha, err := inmem.NewInmemHA(nil, opts.Logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	coreConfig := &vault.CoreConfig{
-		Physical:   inm,
-		HAPhysical: inmha.(physical.HABackend),
-	}
+	coreConfig := *conf
+	coreConfig.Physical = inm
+	coreConfig.HAPhysical = inmha.(physical.HABackend)
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: handlerFunc,
-		Logger:      logger,
-	})
+	cluster := vault.NewTestCluster(t, &coreConfig, opts)
 	cluster.Start()
 
 	cores := cluster.Cores
@@ -220,6 +223,13 @@ func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.H
 	vault.TestWaitActive(t, core.Core)
 
 	return cluster, core
+}
+
+func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.HandlerProperties) http.Handler) (*vault.TestCluster, *vault.TestClusterCore) {
+	return ConfClusterAndCore(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		Logger:      logger,
+		HandlerFunc: handlerFunc,
+	})
 }
 
 func GetPerfReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerProperties) http.Handler) *ReplicatedTestClusters {
@@ -295,7 +305,7 @@ func SetupTwoClusterPerfReplication(t testing.T, perfPrimary, perfSecondary *vau
 
 	token := secret.WrapInfo.Token
 
-	// enable performace secondary
+	// enable performance secondary
 	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
 		"token":   token,
 		"ca_file": perfPrimary.CACertPEMFile,
@@ -317,106 +327,144 @@ func SetupTwoClusterPerfReplication(t testing.T, perfPrimary, perfSecondary *vau
 }
 
 func SetupFourClusterReplication(t testing.T, perfPrimary, perfSecondary, perfDRSecondary, perfSecondaryDRSecondary *vault.TestCluster) {
-	// Enable dr primary
-	_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
-	if err != nil {
-		t.Fatal(err)
+	var perfToken string
+	var drToken string
+
+	// Setup perf-primary
+	{
+		// Enable performance primary
+		_, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/enable", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationPerformancePrimary)
+		// get performance token
+		secret, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/primary/secondary-token", map[string]interface{}{
+			"id": "perf-secondary",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		perfToken = secret.WrapInfo.Token
+
+		// Enable dr primary
+		_, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationDRPrimary)
+
+		// get dr token
+		secret, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
+			"id": "primary-dr-secondary",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		drToken = secret.WrapInfo.Token
+		if drToken == "" {
+			t.Fatal("empty token retrieved")
+		}
 	}
 
-	WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationDRPrimary)
+	WaitForActiveNode(t, perfPrimary)
 
-	// Enable performance primary
-	_, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/enable", nil)
-	if err != nil {
-		t.Fatal(err)
+	// Setup perf-secondary
+	var perfSecondaryRootToken string
+	var perfSecondaryDRToken string
+	{
+		// enable performace secondary
+		_, err := perfSecondary.Cores[0].Client.Logical().Write("sys/replication/secondary/enable", map[string]interface{}{
+			"token":   perfToken,
+			"ca_file": perfPrimary.CACertPEMFile,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationPerformanceSecondary)
+		perfSecondary.BarrierKeys = perfPrimary.BarrierKeys
+
+		// We want to make sure we unseal all the nodes so we first need to wait
+		// until two of the nodes seal due to the poison pill being written
+		WaitForNCoresSealed(t, perfSecondary, 2)
+		EnsureCoresUnsealed(t, perfSecondary)
+		perfSecondaryRootToken = GenerateRoot(t, perfSecondary, false)
+		perfSecondary.Cores[0].Client.SetToken(perfSecondaryRootToken)
+
+		// Enable dr primary on perf secondary
+		_, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationDRPrimary)
+
+		// get dr token from perf secondary
+		secret, err := perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
+			"id": "secondary-dr-secondary",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		perfSecondaryDRToken = secret.WrapInfo.Token
+		if perfSecondaryDRToken == "" {
+			t.Fatal("empty token retrieved")
+		}
 	}
 
-	WaitForReplicationState(t, perfPrimary.Cores[0].Core, consts.ReplicationPerformancePrimary)
+	WaitForActiveNode(t, perfSecondary)
+	// Setup pref-primary's dr secondary using "drToken"
+	{
+		// enable dr secondary
+		_, err := perfDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
+			"token":   drToken,
+			"ca_file": perfPrimary.CACertPEMFile,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// get dr token
-	secret, err := perfPrimary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
-		"id": "1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	token := secret.WrapInfo.Token
+		WaitForReplicationState(t, perfDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
+		perfDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
 
-	// enable dr secondary
-	secret, err = perfDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
-		"token":   token,
-		"ca_file": perfPrimary.CACertPEMFile,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+		// We want to make sure we unseal all the nodes so we first need to wait
+		// until two of the nodes seal due to the poison pill being written
+		WaitForNCoresSealed(t, perfDRSecondary, 2)
+		EnsureCoresUnsealed(t, perfDRSecondary)
 
-	WaitForReplicationState(t, perfDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
-	perfDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
-	EnsureCoresUnsealed(t, perfDRSecondary)
-
-	// get performance token
-	secret, err = perfPrimary.Cores[0].Client.Logical().Write("sys/replication/performance/primary/secondary-token", map[string]interface{}{
-		"id": "1",
-	})
-	if err != nil {
-		t.Fatal(err)
+		perfDRSecondary.Cores[0].Client.SetToken(perfPrimary.Cores[0].Client.Token())
 	}
 
-	token = secret.WrapInfo.Token
+	WaitForActiveNode(t, perfDRSecondary)
+	time.Sleep(1 * time.Second)
+	// Setup pref-primary's dr secondary using "perfSecondaryDRToken"
+	{
+		// enable dr secondary
+		_, err := perfSecondaryDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
+			"token":   perfSecondaryDRToken,
+			"ca_file": perfSecondary.CACertPEMFile,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	// enable performace secondary
-	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/performance/secondary/enable", map[string]interface{}{
-		"token":   token,
-		"ca_file": perfPrimary.CACertPEMFile,
-	})
-	if err != nil {
-		t.Fatal(err)
+		WaitForReplicationState(t, perfSecondaryDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
+		perfSecondaryDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
+
+		// We want to make sure we unseal all the nodes so we first need to wait
+		// until two of the nodes seal due to the poison pill being written
+		WaitForNCoresSealed(t, perfSecondaryDRSecondary, 2)
+		EnsureCoresUnsealed(t, perfSecondaryDRSecondary)
+
+		perfSecondaryDRSecondary.Cores[0].Client.SetToken(perfSecondaryRootToken)
 	}
 
-	WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationPerformanceSecondary)
-	time.Sleep(time.Second * 3)
-	perfSecondary.BarrierKeys = perfPrimary.BarrierKeys
-
-	EnsureCoresUnsealed(t, perfSecondary)
-	rootToken := GenerateRoot(t, perfSecondary, false)
-	for _, core := range perfSecondary.Cores {
-		core.Client.SetToken(rootToken)
-	}
-
-	// Enable dr primary on perf secondary
-	_, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/enable", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	WaitForReplicationState(t, perfSecondary.Cores[0].Core, consts.ReplicationDRPrimary)
-
-	// get dr token from perf secondary
-	secret, err = perfSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/primary/secondary-token", map[string]interface{}{
-		"id": "1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	token = secret.WrapInfo.Token
-
-	// enable dr secondary
-	secret, err = perfSecondaryDRSecondary.Cores[0].Client.Logical().Write("sys/replication/dr/secondary/enable", map[string]interface{}{
-		"token":   token,
-		"ca_file": perfSecondary.CACertPEMFile,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	WaitForReplicationState(t, perfSecondaryDRSecondary.Cores[0].Core, consts.ReplicationDRSecondary)
-	perfSecondaryDRSecondary.BarrierKeys = perfPrimary.BarrierKeys
-	EnsureCoresUnsealed(t, perfSecondaryDRSecondary)
-
-	perfDRSecondary.Cores[0].Client.SetToken(perfPrimary.Cores[0].Client.Token())
-	perfSecondaryDRSecondary.Cores[0].Client.SetToken(rootToken)
+	WaitForActiveNode(t, perfSecondaryDRSecondary)
 }
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {

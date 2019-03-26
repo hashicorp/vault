@@ -22,9 +22,9 @@ any location, please update your API calls accordingly.
 
 This endpoint retrieves the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/cubbyhole/:path`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/cubbyhole/:path`           |
 
 ### Parameters
 
@@ -59,9 +59,9 @@ This endpoint returns a list of secret entries at the specified location.
 Folders are suffixed with `/`. The input must be a folder; list on a file will
 not return a value. The values themselves are not accessible via this command.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/cubbyhole/:path`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/cubbyhole/:path`           |
 
 ### Parameters
 
@@ -99,10 +99,10 @@ two entries.
 
 This endpoint stores a secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/cubbyhole/:path`           | `204 (empty body)`     |
-| `PUT`    | `/cubbyhole/:path`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/cubbyhole/:path`           |
+| `PUT`    | `/cubbyhole/:path`           |
 
 ### Parameters
 
@@ -137,9 +137,9 @@ $ curl \
 
 This endpoint deletes the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/cubbyhole/:path`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/cubbyhole/:path`           |
 
 ### Parameters
 

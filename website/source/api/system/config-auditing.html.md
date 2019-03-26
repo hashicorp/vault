@@ -18,9 +18,9 @@ This endpoint lists the request headers that are configured to be audited.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/auditing/request-headers` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/auditing/request-headers` |
 
 ### Sample Request
 
@@ -49,9 +49,9 @@ This endpoint lists the information for the given request header.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/auditing/request-headers/:name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/auditing/request-headers/:name` |
 
 ### Parameters
 
@@ -83,9 +83,9 @@ This endpoint enables auditing of a header.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/config/auditing/request-headers/:name` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/config/auditing/request-headers/:name` |
 
 ### Parameters
 
@@ -117,9 +117,9 @@ This endpoint disables auditing of the given request header.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/config/auditing/request-headers/:name` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/config/auditing/request-headers/:name` |
 
 ### Sample Request
 

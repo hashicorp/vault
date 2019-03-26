@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/jws"
+	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
@@ -481,12 +482,15 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	wt, err := jws.ParseJWT([]byte(token))
-	if err != nil || wt == nil {
+	parsedJWT, err := squarejwt.ParseSigned(token)
+	if err != nil {
 		return nil
 	}
 
-	result, _ := wt.Claims().JWTID()
+	var claims squarejwt.Claims
+	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		return nil
+	}
 
-	return &result
+	return &claims.ID
 }

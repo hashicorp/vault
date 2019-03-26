@@ -1,14 +1,14 @@
 [[constraint]]
+  branch = "master"
   name = "cloud.google.com/go"
-  version = "0.30.0"
 
 [[constraint]]
   branch = "master"
   name = "github.com/gammazero/workerpool"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/golang/protobuf"
-  version = "1.2.0"
 
 [[constraint]]
   branch = "master"
@@ -31,8 +31,8 @@
   name = "github.com/jeffchao/backoff"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/satori/go.uuid"
-  version = "1.2.0"
 
 [[constraint]]
   branch = "master"
@@ -47,8 +47,8 @@
   name = "google.golang.org/genproto"
 
 [[constraint]]
+  branch = "master"
   name = "google.golang.org/grpc"
-  version = "1.15.0"
 
 [prune]
   non-go = true

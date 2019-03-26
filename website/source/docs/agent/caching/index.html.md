@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Agent Caching"
-sidebar_title: "Caching <sup>BETA</sup>"
+sidebar_title: "Caching"
 sidebar_current: "docs-agent-caching"
 description: |-
   Vault Agent Caching allows client-side caching of responses containing newly
@@ -17,11 +17,9 @@ newly created tokens. The renewals of the cached tokens and leases are also
 managed by the agent.
 
 -> **Note:** Vault Agent Caching works best with servers/clusters that are
-running on Vault 1.1-beta2 and above due to changes that were introduced
+running on Vault 1.1 and above due to changes that were introduced
 alongside this feature, such as the exposure of the `orphan` field in token
-creation responses. Agent caching functionality was tested against changes
-introduced within 1.1 and thus full caching capabilities may not behave as
-expected when paired with older server versions.
+creation responses.
 
 ## Caching and Renewals
 
@@ -51,14 +49,6 @@ auto-auth token will be used to forward the request to the Vault server. This
 configuration will be overridden if the request already has a token attached,
 in which case, the token present in the request will be used to forward the
 request to the Vault server.
-
--> **Note:** In Vault 1.1-beta1, if the request doesn't already contain a Vault
-token, then the `auto-auth` token will used to make requests. However, the
-resulting secrets from these `auto-auth` token calls are not cached. This
-behavior will be changed so that they get cached in the upcoming versions. To
-test the caching scenarios in 1.1-beta1, please make login requests or token
-creation requests via the agent. These new tokens and their respective leased
-secrets will get cached.
 
 ## Cache Evictions
 
@@ -114,15 +104,15 @@ secrets are no longer performed by the Vault agent.
 
 Agent's listener address will be picked up by the CLI through the
 `VAULT_AGENT_ADDR` environment variable. This should be a complete URL such as
-"http://127.0.0.1:8007".
+"http://127.0.0.1:8200".
 
 ## API
 
 ### Cache Clear
 
-This endpoint clears the cache based on given criteria. To be able to use this
+This endpoint clears the cache based on given criteria. To use this
 API, some information on how the agent caches values should be known
-beforehand. Each response that gets cached in the agent will be indexed on some
+beforehand. Each response that is cached in the agent will be indexed on some
 factors depending on the type of request. Those factors can be the `token` that
 is belonging to the cached response, the `token_accessor` of the token
 belonging to the cached response, the `request_path` that resulted in the
@@ -138,8 +128,8 @@ evicted.
 #### Parameters
 
 - `type` `(strings: required)` - The type of cache entries to evict. Valid
-  values are `request_path`, `lease`, `token`, and `token_accessor`, and `all`.
-  If the `type` is set to `all`, the entire cache is cleared.
+  values are `request_path`, `lease`, `token`, `token_accessor`, and `all`.
+  If the `type` is set to `all`, the _entire cache_ is cleared.
 
 - `value` `(string: required)` - An exact value or the prefix of the value for
   the `type` selected. This parameter is optional when the `type` is set
@@ -177,11 +167,11 @@ The top level `cache` block has the following configuration entries:
   configuration will be overridden and the token in the request will be used to
   forward the request to the Vault server.
 
-- `listener` `(array of objects: required)` - Configuration for the listeners
+## Configuration (`listener`)
 
-### Configuration (`listener`)
+- `listener` `(array of objects: required)` - Configuration for the listeners.
 
-There can be one or more `listener` blocks inside the top-level `cache` block.
+There can be one or more `listener` blocks at the top level.
 These configuration values are common to all `listener` blocks.
 
 - `type` `(string: required)` - The type of the listener to use. Valid values
@@ -191,8 +181,8 @@ These configuration values are common to all `listener` blocks.
 
 - `address` `(string: required)` - The address for the listener to listen to.
   This can either be a URL path when using `tcp` or a file path when using
-  `unix`. For example, `127.0.0.1:8007` or `/path/to/socket`. Defaults to
-  `127.0.0.1:8007`.
+  `unix`. For example, `127.0.0.1:8200` or `/path/to/socket`. Defaults to
+  `127.0.0.1:8200`.
 
 - `tls_disable` `(bool: false)` - Specifies if TLS will be disabled.
 
@@ -202,60 +192,43 @@ These configuration values are common to all `listener` blocks.
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
 
-### Configuration (`vault`)
-
-There can at most be one top level `vault` block and it has the following
-configuration entries:
-
-- `address (string: optional)` - The address of the Vault server. This should
-  be a complete URL such as `https://127.0.0.1:8200`. This value can be
-  overridden by setting the `VAULT_ADDR` environment variable.
-
-- `ca_cert (string: optional)` - Path on the local disk to a single PEM-encoded
-  CA certificate to verify the Vault server's SSL certificate. This value can
-  be overridden by setting the `VAULT_CACERT` environment variable.
-
-- `ca_path (string: optional)` - Path on the local disk to a directory of
-  PEM-encoded CA certificates to verify the Vault server's SSL certificate.
-  This value can be overridden by setting the `VAULT_CAPATH` environment
-  variable.
-
-- `client_cert (string: option)` - Path on the local disk to a single
-  PEM-encoded CA certificate to use for TLS authentication to the Vault server.
-  This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
-  variable.
-
-- `client_key (string: option)` - Path on the local disk to a single
-  PEM-encoded private key matching the client certificate from `client_cert`.
-  This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
-  variable.
-
-- `tls_skip_verify (string: optional)` - Disable verification of TLS
-  certificates. Using this option is highly discouraged as it decreases the
-  security of data transmissions to and from the Vault server. This value can
-  be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
-
-
 ### Example Configuration
 
 An example configuration, with very contrived values, follows:
 
 ```javascript
-cache {
-  use_auto_auth_token = true
-
-  listener "unix" {
-    address = "/path/to/socket"
-    tls_disable = true
+auto_auth {
+  method {
+    type = "aws"
+    wrap_ttl = 300
+    config = {
+      role = "foobar"
+    }
   }
 
-  listener "tcp" {
-    address = "127.0.0.1:8007"
-    tls_disable = true
+  sink {
+    type = "file"
+    config = {
+      path = "/tmp/file-foo"
+    }
   }
 }
 
+cache {
+  use_auto_auth_token = true
+}
+
+listener "unix" {
+  address = "/path/to/socket"
+  tls_disable = true
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_disable = true
+}
+
 vault {
-    address = "http://127.0.0.1:8200"
+  address = "http://127.0.0.1:8200"
 }
 ```

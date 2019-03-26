@@ -18,9 +18,9 @@ token.
 This endpoint wraps the given user-supplied data inside a response-wrapped
 token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/wrap`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/wrap`         |
 
 ### Parameters
 

@@ -23,9 +23,9 @@ location, please update your API calls accordingly.
 This endpoint configures the Google Cloud KMS secrets engine with credentials
 and manages the requested scope(s) for authentication.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `gcpkms/config`          | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `gcpkms/config`          |
 
 ### Example Policy
 
@@ -68,9 +68,9 @@ $ curl \
 This endpoint returns the configuration endpoint for the Google Cloud KMS
 secrets engine. The credentials are not returned.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `gcpkms/config`          | `200 application/json` |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `gcpkms/config`          |
 
 ### Example Policy
 
@@ -106,9 +106,9 @@ $ curl \
 This endpoint deletes any configuration for the Google Cloud KMS secrets engine.
 If there is no configuration, the endpoint still returns successfully.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `DELETE` | `gcpkms/config`          | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `DELETE` | `gcpkms/config`          |
 
 ### Example Policy
 
@@ -132,9 +132,9 @@ $ curl \
 
 This endpoint uses the named encryption key to decrypt the ciphertext string. For symmetric key types, the provided ciphertext must come from a previous invocation of the `/encrypt` endpoint. For asymmetric key types, the provided ciphertext must be from the encrypt operation against the corresponding key version's public key.
 
-| Method   | Path                       | Produces                  |
-| :------- | :--------------------------| :------------------------ |
-| `POST`   | `gcpkms/decrypt/:key`      | `200 application/json`    |
+| Method   | Path                       |
+| :--------------------------| :------------------------ |
+| `POST`   | `gcpkms/decrypt/:key`      |
 
 ### Example Policy
 
@@ -197,9 +197,9 @@ $ curl \
 This endpoint uses the named encryption key to encrypt arbitrary plaintext
 string data. The response will be base64-encoded encrypted ciphertext.
 
-| Method   | Path                       | Produces                  |
-| :------- | :--------------------------| :------------------------ |
-| `POST`   | `gcpkms/encrypt/:key`      | `200 application/json`    |
+| Method   | Path                       |
+| :--------------------------| :------------------------ |
+| `POST`   | `gcpkms/encrypt/:key`      |
 
 ### Example Policy
 
@@ -265,9 +265,9 @@ cryptokey to the latest version for this ciphertext without disclosing the
 original plaintext value to the requestor. This is similar to "rewrapping" in
 Vault's transit secrets engine.
 
-| Method   | Path                       | Produces                  |
-| :------- | :--------------------------| :------------------------ |
-| `POST`   | `gcpkms/reencrypt/:key`    | `200 application/json`    |
+| Method   | Path                       |
+| :--------------------------| :------------------------ |
+| `POST`   | `gcpkms/reencrypt/:key`    |
 
 ### Example Policy
 
@@ -328,9 +328,9 @@ $ curl \
 This endpoint uses the named encryption key to sign digest string data. The
 response will include the base64-encoded signature.
 
-| Method   | Path                       | Produces                  |
-| :------- | :--------------------------| :------------------------ |
-| `POST`   | `gcpkms/sign/:key`         | `200 application/json`    |
+| Method   | Path                       |
+| :--------------------------| :------------------------ |
+| `POST`   | `gcpkms/sign/:key`         |
 
 ### Example Policy
 
@@ -392,9 +392,9 @@ $ curl \
 This endpoint uses the named encryption key to verify a signature and digest
 string data.
 
-| Method   | Path                       | Produces                  |
-| :------- | :--------------------------| :------------------------ |
-| `POST`   | `gcpkms/verify/:key`       | `200 application/json`    |
+| Method   | Path                       |
+| :--------------------------| :------------------------ |
+| `POST`   | `gcpkms/verify/:key`       |
 
 ### Example Policy
 
@@ -460,9 +460,9 @@ $ curl \
 This endpoint lists the named keys available for use in Vault. It does not list
 all Google Cloud KMS keys.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `LIST`   | `gcpkms/keys`            | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `LIST`   | `gcpkms/keys`            |
 
 ### Example Policy
 
@@ -499,9 +499,9 @@ registering the key in Vault, this endpoint will also create the corresponding
 Google Cloud KMS key with the given configuration options.
 
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `gcpkms/keys/:key`       | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `gcpkms/keys/:key`       |
 
 ### Example Policy
 
@@ -563,9 +563,9 @@ This endpoint deletes a key from both Vault and Google Cloud KMS. This will
 disable all crypto key versions for this crypto key in Google Cloud KMS and
 delete Vault's reference to the crypto key.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `DELETE` | `gcpkms/keys/:key`       | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `DELETE` | `gcpkms/keys/:key`       |
 
 ### Example Policy
 
@@ -589,9 +589,9 @@ $ curl \
 This endpoint reads data about a Google Cloud KMS crypto key, including the key
 status and current primary key version.
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `gcpkms/keys/:key`       | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `gcpkms/keys/:key`       |
 
 ### Example Policy
 
@@ -632,9 +632,9 @@ $ curl \
 
 This endpoint reads data about a Vault's configuration of the key.
 
-| Method   | Path                      | Produces                  |
-| :------- | :-------------------------| :------------------------ |
-| `GET`    | `gcpkms/keys/config/:key` | `200 application/json`    |
+| Method   | Path                      |
+| :-------------------------| :------------------------ |
+| `GET`    | `gcpkms/keys/config/:key` |
 
 ### Example Policy
 
@@ -670,9 +670,9 @@ $ curl \
 This endpoint is used to update Vault's information about an existing key.
 
 
-| Method   | Path                      | Produces                  |
-| :------- | :-------------------------| :------------------------ |
-| `POST`   | `gcpkms/keys/config/:key` | `204 (empty body)`        |
+| Method   | Path                      |
+| :-------------------------| :------------------------ |
+| `POST`   | `gcpkms/keys/config/:key` |
 
 ### Example Policy
 
@@ -721,9 +721,9 @@ $ curl \
 This endpoint deregisters an existing reference Vault has to a crypto key in
 Google Cloud KMS. The underlying Google Cloud KMS key remains unchanged.
 
-| Method   | Path                          | Produces                  |
-| :------- | :-----------------------------| :------------------------ |
-| `POST`   | `gcpkms/keys/deregister/:key` | `204 (empty body)`        |
+| Method   | Path                          |
+| :-----------------------------| :------------------------ |
+| `POST`   | `gcpkms/keys/deregister/:key` |
 
 ### Example Policy
 
@@ -747,9 +747,9 @@ $ curl \
 This endpoint registers an existing crypto key in Google Cloud KMS and makes it
 available for encryption and decryption in Vault.
 
-| Method   | Path                        | Produces                  |
-| :------- | :---------------------------| :------------------------ |
-| `POST`   | `gcpkms/keys/register/:key` | `204 (empty body)`        |
+| Method   | Path                        |
+| :---------------------------| :------------------------ |
+| `POST`   | `gcpkms/keys/register/:key` |
 
 ### Example Policy
 
@@ -806,9 +806,9 @@ primary key for future encryptions.
 so be sure to issue a read operation if you require new data to be encrypted
 with this key.**
 
-| Method   | Path                      | Produces                  |
-| :------- | :-------------------------| :------------------------ |
-| `POST`   | `gcpkms/keys/rotate/:key` | `200 application/json`    |
+| Method   | Path                      |
+| :-------------------------| :------------------------ |
+| `POST`   | `gcpkms/keys/rotate/:key` |
 
 ### Example Policy
 
@@ -843,9 +843,9 @@ This endpoint deletes old crypto key versions that are older than the key's spec
 
 **Data encrypted with older key versions will be irrecoverable!**
 
-| Method   | Path                      | Produces            |
-| :------- | :-------------------------| :------------------ |
-| `POST`   | `gcpkms/keys/trim/:key`   | `204 (empty body)`  |
+| Method   | Path                      |
+| :-------------------------| :------------------ |
+| `POST`   | `gcpkms/keys/trim/:key`   |
 
 ### Example Policy
 

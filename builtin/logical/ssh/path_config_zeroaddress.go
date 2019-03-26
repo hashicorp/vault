@@ -127,7 +127,6 @@ func (b *backend) removeZeroAddressRole(ctx context.Context, s logical.Storage, 
 		return nil
 	}
 
-	// Removes a given role from the comma separated string
 	zeroAddressEntry.Roles = strutil.StrListDelete(zeroAddressEntry.Roles, roleName)
 
 	return b.putZeroAddressRoles(ctx, s, zeroAddressEntry.Roles)
