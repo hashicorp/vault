@@ -10,11 +10,26 @@ storiesOf('ICon/', module)
     'ICon',
     () => ({
       template: hbs`
-        {{#each types as |type|}}
-          <h5 class="title is-5">{{humanize type}}</h5>
-          <ICon @glyph={{type}} />
-          <br />
-        {{/each}}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Glyph title</th>
+            <th>Glyph</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each types as |type|}}
+            <tr>
+              <td>
+                <h5>{{humanize type}}</h5>
+              </td>
+              <td>
+                <ICon @glyph={{type}} />
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
       `,
       context: {
         types: GLYPHS_WITH_SVG_TAG,
