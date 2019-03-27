@@ -7,9 +7,20 @@ description: |-
 
 # OIDC Provider Configuration
 
-This page collects high-level setup steps on how to configure an OIDC application
-on various providers. Corrections and additions may be submitted via the
-[Vault Github repository](https://github.com/hashicorp/vault).
+This page collects high-level setup steps on how to configure an OIDC application for various
+providers. These providers are often highly configurable and you should become familiar with their
+recommended settings and best practices. The instructions below are intended only to help you get
+started. Corrections and additions may be submitted via the [Vault Github repository](https://github.com/hashicorp/vault).
+
+## Azure Active Directory (AAD)
+Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc)
+
+1. Register or select an AAD application. Visit Overview page.
+1. Configure Redirect URIs ("Web" type). 
+1. Record "Application (client) ID".
+1. Under "Endpoints", copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
+1. Switch to Certificates & Secrets. Create a new client secret and record the generated value as
+it will not be accessible after you leave the page.
 
 ## Auth0
 1. Select Create Application (Regular Web App).
@@ -32,8 +43,16 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 1. Create a new credential via Credentials > Create Credentials > OAuth Client ID.
 1. Configure the OAuth Consent Screen. Application Name is required. Save.
 1. Select application type: "Web Application".
-1. Configured Authorized Redirect URIs.
+1. Configure Authorized Redirect URIs.
 1. Save client ID and secret.
+
+## Keycloak
+1. Select/create a Realm and Client. Visit Settings.
+1. Client Protocol: openid-connect
+1. Access Type: confidential
+1. Standard Flow Enabled: On
+1. Configure Valid Redirect URIs.
+1. Visit Settings. Select Client ID and Secret and note the generated secret.
 
 ## Okta
 
