@@ -4,7 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './options.md';
 
 storiesOf('AuthConfigForm/Options/', module)
-  .addParameters({ options: { showPanel: true } })
+  .addParameters({ options: { showPanel: false } })
   .add(
     `Options`,
     () => ({
