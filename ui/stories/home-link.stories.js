@@ -11,12 +11,19 @@ storiesOf('HomeLink/', module)
       template: hbs`
         <h5 class="title is-5">HomeLink</h5>
         <HomeLink />
-        <br />
+      `,
+    }),
+    { notes }
+  )
+  .add(
+    'HomeLink with LogoEdition',
+    () => ({
+      template: hbs`
         <h5 class="title is-5">HomeLink with LogoEdition</h5>
         <HomeLink>
           <LogoEdition />
         </HomeLink>
-    `,
+      `,
     }),
     { notes }
   );
