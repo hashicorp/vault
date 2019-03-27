@@ -4,7 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './alert-popup.md';
 import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
 
-storiesOf('AlertPopup/', module)
+storiesOf('Alerts/AlertPopup/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     `AlertPopup`,

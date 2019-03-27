@@ -4,7 +4,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './alert-banner.md';
 import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
 
-storiesOf('AlertBanner/', module)
+storiesOf('Alerts/AlertBanner/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     'AlertBanner',
