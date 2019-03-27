@@ -61,15 +61,13 @@ The existing logs that it did store are untouched.
 
 ## Blocked Audit Devices
 
-If there are any audit devices enabled, Vault requires that at least
-one be able to persist the log before completing a Vault request.
+If there are any audit devices enabled, Vault requires that all enabled
+devices are available for writing at the time of the request.
 
-!> If you have only one audit device enabled, and it is blocking (network
-block, etc.), then Vault will be _unresponsive_. Vault **will not** complete
-any requests until the audit device can write.
-
-If you have more than one audit device, then Vault will complete the request
-as long as one audit device persists the log.
+!> Note that even with multiple audit devices enabled, if any one audit device
+becomes blocked (due to network issue, etc.), then Vault will become
+_unresponsive_. Vault **will not** complete any requests until the blocked
+audit device can write.
 
 Vault will not respond to requests if audit devices are blocked because
 audit logs are critically important and ignoring blocked requests opens
