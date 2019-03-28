@@ -1517,15 +1517,6 @@
     react-inspector "^2.3.0"
     uuid "^3.3.2"
 
-"@storybook/addon-centered@^5.0.5":
-  version "5.0.5"
-  resolved "https://registry.yarnpkg.com/@storybook/addon-centered/-/addon-centered-5.0.5.tgz#0901a53c5fe8e5a79f3d7f05480c2c2091901dab"
-  integrity sha512-fq1mo9Y2KddqiIBJ9OxbhjNxnqpE+WlYKvOsMoQtZ3g9RIEZQA3j8GRc7cDqOE4W6G0nGhRJLin43Sz+afhnOw==
-  dependencies:
-    core-js "^2.6.5"
-    global "^4.3.2"
-    util-deprecate "^1.0.2"
-
 "@storybook/addon-knobs@^5.0.5":
   version "5.0.5"
   resolved "https://registry.yarnpkg.com/@storybook/addon-knobs/-/addon-knobs-5.0.5.tgz#965d3afc86bd2373ad4514529ec0f4e590c7db45"
@@ -1573,6 +1564,22 @@
     "@storybook/theming" "5.0.5"
     core-js "^2.6.5"
     markdown-to-jsx "^6.9.1"
+    prop-types "^15.6.2"
+    util-deprecate "^1.0.2"
+
+"@storybook/addon-viewport@^5.0.5":
+  version "5.0.5"
+  resolved "https://registry.yarnpkg.com/@storybook/addon-viewport/-/addon-viewport-5.0.5.tgz#212240f9955e7dc2f0ca2481e73effbeac95135d"
+  integrity sha512-47NU7wRwKBfnwGCBbslDPLsFIGvStYq1AUqvdtoV/WskLa+Zhi4dwaSyj0XhF3eSeUa23SiDGejUDHsEyVBtiw==
+  dependencies:
+    "@storybook/addons" "5.0.5"
+    "@storybook/client-logger" "5.0.5"
+    "@storybook/components" "5.0.5"
+    "@storybook/core-events" "5.0.5"
+    "@storybook/theming" "5.0.5"
+    core-js "^2.6.5"
+    global "^4.3.2"
+    memoizerific "^1.11.3"
     prop-types "^15.6.2"
     util-deprecate "^1.0.2"
 
