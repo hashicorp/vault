@@ -14,14 +14,12 @@ import hbs from 'htmlbars-inline-precompile';
  *  </ConfirmAction>
  * ```
  *
- * @property [ConfirmAction.onConfirmAction=null] {Func} - The action to take upon confirming.
- * @property confirmMessage='Are you sure you want to do this?' {String} - The message to display upon confirming.
- * @property confirmButtonText='Delete' {String} - The confirm button text.
- * @property cancelButtonText='Cancel' {String} - The cancel button text.
- * @property disabledMessage='Complete the form to complete this action' {String} - The message to display when the button is disabled.
+ * @property [onConfirmAction=null] {Func} - The action to take upon confirming.
+ * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display upon confirming.
+ * @property {String} [confirmButtonText=Delete] - The confirm button text.
+ * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
  *
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=ConfirmAction|Uses of ConfirmAction}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/confirm-action.js|ConfirmAction Source Code}
  */
 
 export default Component.extend({

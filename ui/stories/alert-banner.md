@@ -1,9 +1,8 @@
 ## AlertBanner
 `AlertBanner` components are used to inform users of important messages.
 
-**Properties**
 
-| Name | Type | Default | Description |
+| Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | type | <code>String</code> | <code></code> | The banner type. This comes from the message-types helper. |
 | message | <code>String</code> | <code></code> | The message to display within the banner. |
@@ -21,4 +20,4 @@
 
 ---
 
-###### _Documentation generated using [jsdoc-to-markdown](https://github.com/75lb/jsdoc-to-markdown)._ ######
+###### _Documentation generated using [jsdoc-to-markdown](https://github.com/75lb/jsdoc-to-markdown)._

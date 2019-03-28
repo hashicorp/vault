@@ -14,8 +14,6 @@ import DS from 'ember-data';
  *
  * @property model=null {String} - The corresponding auth model that is being configured.
  *
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=auth-config-form/options|Uses of AuthConfigForm/Options}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-config-form/options.js|AuthConfigForm/Options Source Code}
  */
 
 export default AuthConfigComponent.extend({
