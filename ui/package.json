@@ -22,7 +22,7 @@
     "fmt": "yarn run fmt-js && yarn run fmt-styles",
     "build-storybook": "build-storybook -s ../pkg/web_ui",
     "storybook": "start-storybook -p 6006 -s ../pkg/web_ui",
-    "gen-md": "node scripts/gen-story-md.js"
+    "gen-story-md": "node scripts/gen-story-md.js"
   },
   "lint-staged": {
     "linters": {
