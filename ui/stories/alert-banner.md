@@ -1,6 +1,3 @@
-
-[//]: # To adjust what shows up in generated markdown files, select partials from https://github.com/jsdoc2md/dmd/tree/master/partials and/or write your own version (as with examples below)
-
 ## AlertBanner
 `AlertBanner` components are used to inform users of important messages.
 
