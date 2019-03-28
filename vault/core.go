@@ -1734,7 +1734,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
 	}
 	// In older versions of vault the default seal would not store a type. This
-	// is here to offer backwards compatability for older seal configs.
+	// is here to offer backwards compatibility for older seal configs.
 	if barrierConf.Type == "" {
 		barrierConf.Type = seal.Shamir
 	}
@@ -1754,7 +1754,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
 		}
 		// In older versions of vault the default seal would not store a type. This
-		// is here to offer backwards compatability for older seal configs.
+		// is here to offer backwards compatibility for older seal configs.
 		if recoveryConf.Type == "" {
 			recoveryConf.Type = seal.Shamir
 		}

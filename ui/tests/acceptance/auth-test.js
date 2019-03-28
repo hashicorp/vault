@@ -79,6 +79,8 @@ module('Acceptance | auth', function(hooks) {
       } else if (backend.type === 'github') {
         assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
       } else if (backend.type === 'jwt' || backend.type === 'oidc') {
+        let authReq = this.server.passthroughRequests[this.server.passthroughRequests.length - 2];
+        body = JSON.parse(authReq.requestBody);
         assert.ok(Object.keys(body).includes('jwt'), `${backend.type} includes jwt`);
         assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
       } else {

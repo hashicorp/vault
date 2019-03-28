@@ -39,6 +39,12 @@ const TABS_FOR_SETTINGS = {
       routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
     },
   ],
+  oidc: [
+    {
+      label: 'Configuration',
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'configuration'],
+    },
+  ],
   kubernetes: [
     {
       label: 'Configuration',

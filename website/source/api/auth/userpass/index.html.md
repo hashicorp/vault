@@ -22,9 +22,9 @@ please update your API calls accordingly.
 
 Create a new user or update an existing user. This path honors the distinction between the `create` and `update` capabilities inside ACL policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/auth/userpass/users/:username`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/auth/userpass/users/:username`   |
 
 ### Parameters
 
@@ -63,9 +63,9 @@ $ curl \
 
 Reads the properties of an existing username.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/userpass/users/:username`   | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/userpass/users/:username`   |
 
 ### Sample Request
 
@@ -96,9 +96,9 @@ $ curl \
 
 This endpoint deletes the user from the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/userpass/users/:username` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/userpass/users/:username` |
 
 ### Parameters
 
@@ -117,9 +117,9 @@ $ curl \
 
 Update password for an existing user.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST` | `/auth/userpass/users/:username/password` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST` | `/auth/userpass/users/:username/password` |
 
 ### Parameters
 
@@ -148,9 +148,9 @@ $ curl \
 
 Update policies for an existing user.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST` | `/auth/userpass/users/:username/policies` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST` | `/auth/userpass/users/:username/policies` |
 
 ### Parameters
 
@@ -179,9 +179,9 @@ $ curl \
 
 List available userpass users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/userpass/users`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/userpass/users`          |
 
 ### Sample Request
 
@@ -209,9 +209,9 @@ $ curl \
 
 Login with the username and password.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST` | `/auth/userpass/login/:username` | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST` | `/auth/userpass/login/:username` |
 
 ### Parameters
 

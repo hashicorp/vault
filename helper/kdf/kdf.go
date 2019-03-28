@@ -17,7 +17,7 @@ import (
 // functions or block ciphers.
 type PRF func([]byte, []byte) ([]byte, error)
 
-// CounterMode implements the counter mode KDF that uses a psuedo-random-function (PRF)
+// CounterMode implements the counter mode KDF that uses a pseudo-random-function (PRF)
 // along with a counter to generate derived keys. The KDF takes a base key
 // a derivation context, and the required number of output bits.
 func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32) ([]byte, error) {

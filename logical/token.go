@@ -105,7 +105,7 @@ type TokenEntry struct {
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
 
 	// The set of CIDRs that this token can be used with
-	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs" sentinel:""`
 
 	// NamespaceID is the identifier of the namespace to which this token is
 	// confined to. Do not return this value over the API when the token is
@@ -122,6 +122,24 @@ func (te *TokenEntry) SentinelGet(key string) (interface{}, error) {
 		return nil, nil
 	}
 	switch key {
+	case "policies":
+		return te.Policies, nil
+
+	case "path":
+		return te.Path, nil
+
+	case "display_name":
+		return te.DisplayName, nil
+
+	case "num_uses":
+		return te.NumUses, nil
+
+	case "role":
+		return te.Role, nil
+
+	case "entity_id":
+		return te.EntityID, nil
+
 	case "period":
 		return te.Period, nil
 

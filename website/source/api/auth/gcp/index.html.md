@@ -25,9 +25,9 @@ to Google Cloud. These credentials will be used to query the status of IAM
 entities and get service account or other Google public certificates
 to confirm signed JWTs passed in during login.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/config`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/gcp/config`           |
 
 ### Parameters
 
@@ -67,9 +67,9 @@ $ curl \
 
 Returns the configuration, if any, including credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/gcp/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/gcp/config`           |
 
 ### Sample Request
 
@@ -99,9 +99,9 @@ that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/role/:name`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/gcp/role/:name`       |
 
 ### Parameters
 
@@ -230,9 +230,9 @@ Edit service accounts for an existing IAM role in the method.
 This allows you to add or remove service accounts from the list of
 service accounts on the role.
 
-| Method   | Path                                    | Produces           |
-| :------- | :---------------------------------------| :------------------|
-| `POST`   | `/auth/gcp/role/:name/service-accounts` | `204 (empty body)` |
+| Method   | Path                                    |
+| :---------------------------------------| :------------------|
+| `POST`   | `/auth/gcp/role/:name/service-accounts` |
 
 ### Parameters
 
@@ -274,9 +274,9 @@ $ curl \
 Edit labels for an existing GCE role in the backend. This allows you to add or
 remove labels (keys, values, or both) from the list of keys on the role.
 
-| Method   | Path                                    | Produces           |
-| :------- | :---------------------------------------| :------------------|
-| `POST`   | `/auth/gcp/role/:name/labels`           | `204 (empty body)` |
+| Method   | Path                                    |
+| :---------------------------------------| :------------------|
+| `POST`   | `/auth/gcp/role/:name/labels`           |
 
 ### Parameters
 
@@ -320,9 +320,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/gcp/role/:name`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/gcp/role/:name`       |
 
 ### Parameters
 
@@ -368,9 +368,9 @@ $ curl \
 
 Lists all the roles that are registered with the plugin.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/gcp/roles`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/gcp/roles`            |
 
 ### Sample Request
 
@@ -398,9 +398,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/gcp/role/:role`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/gcp/role/:role`       |
 
 ### Parameters
 
@@ -422,9 +422,9 @@ Login to retrieve a Vault token. This endpoint takes a signed JSON Web Token
 Cloud to authenticate that entity and then authorizes the entity for the given
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/gcp/login`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/gcp/login`            |
 
 ### Sample Payload
 

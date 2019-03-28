@@ -19,9 +19,9 @@ update your API calls accordingly.
 
 ## Write Config
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/gcp/config`            | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/gcp/config`            |
 
 This endpoint configures shared information for the secrets engine.
 
@@ -60,9 +60,9 @@ $ curl \
 
 ## Read Config
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/gcp/config`            | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/gcp/config`            |
 
 Credentials will be omitted from returned data.
 
@@ -88,9 +88,9 @@ $ curl \
 
 ## Create/Update Roleset
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `POST`   | `/gcp/roleset/:name`     | `204 (empty body)`        |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `POST`   | `/gcp/roleset/:name`     |
 
 This method allows you to create a roleset or update an existing roleset. See [roleset docs](/docs/secrets/gcp/index.html#rolesets) for the GCP secrets backend
 to learn more about what happens when you create or update a roleset.
@@ -151,8 +151,8 @@ $ curl \
 
 ## Rotate Roleset Account
 
-| Method   | Path                             | Produces               |
-| :------- | :--------------------------------| :--------------------- |
+| Method   | Path                             |
+| :--------------------------------| :--------------------- |
 | `POST`    | `/gcp/roleset/:name/rotate`     | `204 (empty body)``    |
 
 This will rotate the service account this roleset uses to generate secrets.
@@ -171,8 +171,8 @@ $ curl \
 
 ## Rotate Roleset Account Key (`access_token` Roleset Only)
 
-| Method   | Path                             | Produces               |
-| :------- | :--------------------------------| :--------------------- |
+| Method   | Path                             |
+| :--------------------------------| :--------------------- |
 | `POST`    | `/gcp/roleset/:name/rotate-key` | `204 (empty body)``    |
 
 This will rotate the service account key this roleset uses to generate
@@ -190,9 +190,9 @@ $ curl \
 
 ## Read Roleset
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `GET`    | `/gcp/roleset/:name`     | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `GET`    | `/gcp/roleset/:name`     |
 
 ### Sample Request
 
@@ -229,14 +229,14 @@ $ curl \
 
 ## List Rolesets
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `LIST`   | `/gcp/rolesets`          | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `LIST`   | `/gcp/rolesets`          |
 
 
-| Method   | Path                     | Produces                  |
-| :------- | :------------------------| :------------------------ |
-| `LIST`   | `/gcp/roleset`           | `200 application/json`    |
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `LIST`   | `/gcp/roleset`           |
 
 ### Sample Request
 
@@ -263,9 +263,9 @@ $ curl \
 ## Generate Secret (IAM Service Account Creds): OAuth2 Access Token
 
 
-| Method            | Path                            | Produces                  |
-| :---------------- | :-----------------------------  | :------------------------ |
-| `GET` | `POST`    | `/gcp/token/:roleset`           | `200 application/json`    |
+| Method            | Path                            |
+| :-----------------------------  | :------------------------ |
+| `GET` | `POST`    | `/gcp/token/:roleset`           |
 
 Generates an OAuth2 token with the scopes defined on the roleset. This OAuth access token can
 be used in GCP API calls, e.g. `curl -H "Authorization: Bearer $TOKEN" ...`
@@ -306,9 +306,9 @@ $ curl \
 ## Generate Secret (IAM Service Account Creds): Service Account Key
 
 
-| Method            | Path                            | Produces                  |
-| :---------------- | :-----------------------------  | :------------------------ |
-| `GET` | `POST`    | `/gcp/key/:roleset`             | `200 application/json`    |
+| Method            | Path                            |
+| :-----------------------------  | :------------------------ |
+| `GET` | `POST`    | `/gcp/key/:roleset`             |
 
 If using `GET` ('read'), the  optional parameters will be set to their defaults. Use `POST` if you
 want to specify different values for these params.

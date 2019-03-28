@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	oidc "github.com/coreos/go-oidc"
+	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -127,13 +126,16 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 		expected := jwt.Expected{
-			Issuer:   config.BoundIssuer,
-			Subject:  role.BoundSubject,
-			Audience: jwt.Audience(role.BoundAudiences),
-			Time:     time.Now(),
+			Issuer:  config.BoundIssuer,
+			Subject: role.BoundSubject,
+			Time:    time.Now(),
 		}
 
 		if err := claims.Validate(expected); err != nil {
+			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
+		}
+
+		if err := validateAudience(role.BoundAudiences, claims.Audience, true); err != nil {
 			return logical.ErrorResponse(errwrap.Wrapf("error validating claims: {{err}}", err).Error()), nil
 		}
 
@@ -145,6 +147,10 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 
 	default:
 		return nil, errors.New("unhandled case during login")
+	}
+
+	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {
+		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
 	}
 
 	alias, groupAliases, err := b.createIdentity(allClaims, role)
@@ -234,36 +240,15 @@ func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig,
 	if role.BoundSubject != "" && role.BoundSubject != idToken.Subject {
 		return nil, errors.New("sub claim does not match bound subject")
 	}
-	if len(role.BoundAudiences) > 0 {
-		var found bool
-		for _, v := range role.BoundAudiences {
-			if strutil.StrListContains(idToken.Audience, v) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, errors.New("aud claim does not match any bound audience")
-		}
-	}
 
-	if len(role.BoundClaims) > 0 {
-		for claim, expValue := range role.BoundClaims {
-			actValue := getClaim(b.Logger(), allClaims, claim)
-			if actValue == nil {
-				return nil, fmt.Errorf("claim is missing: %s", claim)
-			}
-
-			if expValue != actValue {
-				return nil, fmt.Errorf("claim '%s' does not match associated bound claim", claim)
-			}
-		}
+	if err := validateAudience(role.BoundAudiences, idToken.Audience, false); err != nil {
+		return nil, errwrap.Wrapf("error validating claims: {{err}}", err)
 	}
 
 	return allClaims, nil
 }
 
-// createIdentity creates an alias and set of groups aliass based on the role
+// createIdentity creates an alias and set of groups aliases based on the role
 // definition and received claims.
 func (b *jwtAuthBackend) createIdentity(allClaims map[string]interface{}, role *jwtRole) (*logical.Alias, []*logical.Alias, error) {
 	userClaimRaw, ok := allClaims[role.UserClaim]

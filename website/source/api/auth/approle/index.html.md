@@ -21,9 +21,9 @@ please update your API calls accordingly.
 
 This endpoint returns a list the existing AppRoles in the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/approle/role`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/approle/role`         |
 
 ### Sample Request
 
@@ -61,9 +61,9 @@ supports both `create` and `update` capabilities. There can be one or more
 constraints enabled on the role. It is required to have at least one of them
 enabled while creating or updating a role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name` |
 
 ### Parameters
 
@@ -133,9 +133,9 @@ $ curl \
 
 Reads the properties of an existing AppRole.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/approle/role/:role_name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/approle/role/:role_name` |
 
 ### Parameters
 
@@ -178,9 +178,9 @@ $ curl \
 
 Deletes an existing AppRole from the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/approle/role/:role_name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/approle/role/:role_name`    |
 
 ### Parameters
 
@@ -199,9 +199,9 @@ $ curl \
 
 Reads the RoleID of an existing AppRole.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/approle/role/:role_name/role-id` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/approle/role/:role_name/role-id` |
 
 ### Parameters
 
@@ -235,9 +235,9 @@ $ curl \
 
 Updates the RoleID of an existing AppRole to a custom value.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/role-id` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/role-id` |
 
 ### Parameters
 
@@ -285,9 +285,9 @@ tokens, the response will also contain a `secret_id_accessor` value which can
 be used to read the properties of the SecretID without divulging the SecretID
 itself, and also to delete the SecretID from the AppRole.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/secret-id` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/secret-id` |
 
 ### Parameters
 
@@ -344,9 +344,9 @@ $ curl \
 Lists the accessors of all the SecretIDs issued against the AppRole.
 This includes the accessors for "custom" SecretIDs as well.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/approle/role/:role_name/secret-id` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/approle/role/:role_name/secret-id` |
 
 ### Parameters
 
@@ -387,9 +387,9 @@ $ curl \
 
 Reads out the properties of a SecretID.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/secret-id/lookup` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/secret-id/lookup` |
 
 ### Parameters
 
@@ -418,9 +418,9 @@ $ curl \
 
 Destroy an AppRole secret ID.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/secret-id/destroy` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/secret-id/destroy` |
 
 ### Parameters
 
@@ -449,9 +449,9 @@ $ curl \
 
 Reads out the properties of a SecretID.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/secret-id-accessor/lookup` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/secret-id-accessor/lookup` |
 
 ### Parameters
 
@@ -480,9 +480,9 @@ $ curl \
 
 Destroy an AppRole secret ID by its accessor.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/secret-id-accessor/destroy` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/secret-id-accessor/destroy` |
 
 ### Parameters
 
@@ -512,9 +512,9 @@ $ curl \
 Assigns a "custom" SecretID against an existing AppRole. This is used in the
 "Push" model of operation.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/role/:role_name/custom-secret-id` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/role/:role_name/custom-secret-id` |
 
 ### Parameters
 
@@ -574,9 +574,9 @@ required; if `bind_secret_id` is enabled (the default) on the AppRole,
 `secret_id` is required too. Any other bound authentication values on the
 AppRole (such as client IP CIDR) are also evaluated.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/approle/login`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/approle/login`        |
 
 ### Parameters
 
@@ -631,8 +631,8 @@ parameters of the AppRole can be updated using the `/auth/approle/role/:role_nam
 endpoint directly. The endpoints for each field is provided separately
 to be able to delegate specific endpoints using Vault's ACL system.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/policies`  | `200/204` |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/secret-id-num-uses`  | `200/204` |
 | `GET/POST/DELETE`   | `/auth/approle/role/:role_name/secret-id-ttl`  | `200/204` |
@@ -652,9 +652,9 @@ in the token store. Generally, running this is not needed unless upgrade
 notes or support personnel suggest it. This may perform a lot of I/O to the
 storage method so should be used sparingly.
 
-| Method   | Path                            | Produces               |
-| :------- | :------------------------------ | :--------------------- |
-| `POST`   | `/auth/approle/tidy/secret-id`  | `204 (empty body)`     |
+| Method   | Path                            |
+| :------------------------------ | :--------------------- |
+| `POST`   | `/auth/approle/tidy/secret-id`  |
 
 ### Sample Request
 

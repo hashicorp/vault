@@ -26,9 +26,9 @@ wrapping token in the `token` parameter. Do _not_ use the wrapping token in both
 locations; this will cause the wrapping token to be revoked but the value to be
 unable to be looked up, as it will basically be a double-use of the token!
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/wrapping/unwrap`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/wrapping/unwrap`       |
 
 ### Parameters
 

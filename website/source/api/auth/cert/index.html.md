@@ -22,9 +22,9 @@ location, please update your API calls accordingly.
 
 Sets a CA cert and associated parameters in a role name.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/certs/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -110,9 +110,9 @@ $ curl \
 
 Gets information associated with the named role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/cert/certs/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -152,9 +152,9 @@ $ curl \
 
 Lists configured certificate names.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/cert/certs`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/cert/certs`           |
 
 ### Sample Request
 
@@ -188,9 +188,9 @@ $ curl \
 
 Deletes the named role and CA cert from the method mount.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/cert/certs/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/cert/certs/:name`     |
 
 ### Parameters
 
@@ -209,9 +209,9 @@ $ curl \
 
 Sets a named CRL.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/crls/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/crls/:name`      |
 
 
 ### Parameters
@@ -243,9 +243,9 @@ Gets information associated with the named CRL (currently, the serial
 numbers contained within).  As the serials can be integers up to an
 arbitrary size, these are returned as strings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/cert/crls/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/cert/crls/:name`      |
 
 ### Parameters
 
@@ -280,9 +280,9 @@ $ curl \
 
 Deletes the named CRL from the auth method mount.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/cert/crls/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/cert/crls/:name`      |
 
 ### Parameters
 
@@ -301,9 +301,9 @@ $ curl \
 
 Configuration options for the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/config`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/config`          |
 
 ### Parameters
 
@@ -338,9 +338,9 @@ is required to be verified, then it should be a fully qualified DNS domain name
 and must be duplicated as a DNS SAN (see
 https://tools.ietf.org/html/rfc6125#section-2.3)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/cert/login`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/cert/login`           |
 
 ### Parameters
 

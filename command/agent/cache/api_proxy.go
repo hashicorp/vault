@@ -1,10 +1,8 @@
 package cache
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -46,32 +44,15 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	// Make the request to Vault and get the response
 	ap.logger.Info("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
 
-	var sendResponse *SendResponse
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
-	if resp != nil {
-		sendResponse = &SendResponse{Response: resp}
-	}
-	if err != nil {
-		// Bubble back the api.Response as well for error checking/handling at the handler layer.
-		return sendResponse, err
-	}
 
-	// Set SendResponse.ResponseBody if the response body is non-nil
-	if resp.Body != nil {
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			ap.logger.Error("failed to read request body", "error", err)
-			return nil, err
-		}
-		// Close the old body
-		resp.Body.Close()
-
-		// Re-set the response body for potential consumption on the way back up the
-		// Proxier middleware chain.
-		resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
-
-		sendResponse.ResponseBody = respBody
+	// Before error checking from the request call, we'd want to initialize a SendResponse to
+	// potentially return
+	sendResponse, newErr := NewSendResponse(resp, nil)
+	if newErr != nil {
+		return nil, newErr
 	}
 
-	return sendResponse, nil
+	// Bubble back the api.Response as well for error checking/handling at the handler layer.
+	return sendResponse, err
 }

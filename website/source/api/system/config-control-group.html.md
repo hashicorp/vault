@@ -18,9 +18,9 @@ settings.
 
 This endpoint returns the current Control Group configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/config/control-group` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/config/control-group` |
 
 ### Sample Request
 
@@ -42,9 +42,9 @@ $ curl \
 
 This endpoint allows configuring control groups.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/config/control-group` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/config/control-group` |
 
 ### Parameters
 
@@ -72,9 +72,9 @@ $ curl \
 
 This endpoint removes any control group configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/config/control-group` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/config/control-group` |
 
 ### Sample Request
 

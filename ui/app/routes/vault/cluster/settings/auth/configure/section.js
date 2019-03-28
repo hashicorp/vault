@@ -19,6 +19,7 @@ export default Route.extend(UnloadModelRoute, {
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',
       'jwt-configuration': 'auth-config/jwt',
+      'oidc-configuration': 'auth-config/oidc',
       'kubernetes-configuration': 'auth-config/kubernetes',
       'ldap-configuration': 'auth-config/ldap',
       'okta-configuration': 'auth-config/okta',

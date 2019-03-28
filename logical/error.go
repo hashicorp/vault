@@ -71,7 +71,7 @@ func (s *StatusBadRequest) Error() string {
 // This is a new type declared to not cause potential compatibility problems if
 // the logic around the CodedError changes; in particular for logical request
 // paths it is basically ignored, and changing that behavior might cause
-// unforseen issues.
+// unforeseen issues.
 type ReplicationCodedError struct {
 	Msg  string
 	Code int
