@@ -121,10 +121,10 @@
   "optionalDependencies": {
     "@babel/core": "^7.3.4",
     "@storybook/addon-actions": "^5.0.5",
-    "@storybook/addon-centered": "^5.0.5",
     "@storybook/addon-knobs": "^5.0.5",
     "@storybook/addon-links": "^5.0.5",
     "@storybook/addon-notes": "^5.0.5",
+    "@storybook/addon-viewport": "^5.0.5",
     "@storybook/addons": "^5.0.5",
     "@storybook/ember": "^5.0.5",
     "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook",

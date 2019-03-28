@@ -1,5 +1,5 @@
 import { configure, addParameters, addDecorator } from '@storybook/ember';
-import Centered from '@storybook/addon-centered/ember';
+import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 
 function loadStories() {
   // automatically import all files ending in *.stories.js
@@ -7,6 +7,34 @@ function loadStories() {
   req.keys().forEach(filename => req(filename));
 }
 
-addDecorator(Centered);
+addParameters({ viewport: { viewports: INITIAL_VIEWPORTS } });
+
+addDecorator(storyFn => {
+  const { template, context } = storyFn();
+
+  // This adds styling to the Canvas tab.
+  const styles = {
+    style: {
+      margin: '20px',
+    },
+  };
+
+  // Create a div to wrap the Canvas tab with the applied styles.
+  const element = document.createElement('div');
+  Object.assign(element.style, styles.style);
+
+  const innerElement = document.createElement('div');
+
+  element.appendChild(innerElement);
+  innerElement.appendTo = function appendTo(el) {
+    el.appendChild(element);
+  };
+
+  return {
+    template,
+    context,
+    element: innerElement,
+  };
+});
 
 configure(loadStories, module);
