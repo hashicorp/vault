@@ -506,8 +506,11 @@ type FieldSchema struct {
 	Required    bool
 	Deprecated  bool
 
-	// Query indicates this field will be sent as a query parameter. It doesn't
-	// affect handling of the value, but may be used for documentation.
+	// Query indicates this field will be sent as a query parameter:
+	//
+	//   /v1/foo/bar?some_param=some_value
+	//
+	// It doesn't affect handling of the value, but may be used for documentation.
 	Query bool
 
 	// AllowedValues is an optional list of permitted values for this field.

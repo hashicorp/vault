@@ -148,20 +148,24 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
-	Type             string                `json:"type,omitempty"`
-	Description      string                `json:"description,omitempty"`
-	Properties       map[string]*OASSchema `json:"properties,omitempty"`
-	Items            *OASSchema            `json:"items,omitempty"`
-	Format           string                `json:"format,omitempty"`
-	Pattern          string                `json:"pattern,omitempty"`
-	Enum             []interface{}         `json:"enum,omitempty"`
-	Default          interface{}           `json:"default,omitempty"`
-	Example          interface{}           `json:"example,omitempty"`
-	Deprecated       bool                  `json:"deprecated,omitempty"`
-	Required         []string              `json:"required,omitempty"`
-	DisplayName      string                `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
-	DisplayValue     interface{}           `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
-	DisplaySensitive bool                  `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
+	Type        string                `json:"type,omitempty"`
+	Description string                `json:"description,omitempty"`
+	Properties  map[string]*OASSchema `json:"properties,omitempty"`
+
+	// Required is a list of keys in Properties that are required to be present. This is a different
+	// approach than OASParameter (unfortunately), but is how JSONSchema handles 'required'.
+	Required []string `json:"required,omitempty"`
+
+	Items            *OASSchema    `json:"items,omitempty"`
+	Format           string        `json:"format,omitempty"`
+	Pattern          string        `json:"pattern,omitempty"`
+	Enum             []interface{} `json:"enum,omitempty"`
+	Default          interface{}   `json:"default,omitempty"`
+	Example          interface{}   `json:"example,omitempty"`
+	Deprecated       bool          `json:"deprecated,omitempty"`
+	DisplayName      string        `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	DisplayValue     interface{}   `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
+	DisplaySensitive bool          `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
 }
 
 type OASResponse struct {
