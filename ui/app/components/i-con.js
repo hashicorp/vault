@@ -11,10 +11,8 @@ import hbs from 'htmlbars-inline-precompile';
  * ```js
  * <ICon @glyph="cancel-square-outline" />
  * ```
- * @property [ICon.glyph=null]{String} - The glyph type.
+ * @param [glyph=null]{String} - The glyph type.
  *
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=ICon|Uses of ICon}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/i-con.js|ICon Source Code}
  */
 
 export const GLYPHS_WITH_SVG_TAG = [
