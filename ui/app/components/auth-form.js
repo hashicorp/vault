@@ -17,13 +17,11 @@ const BACKENDS = supportedAuthBackends();
  * // All properties are passed in via query params.
  *   <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @redirectTo={{redirectTo}} @selectedAuth={{authMethod}}/>```
  *
- * @property wrappedToken=`null` {String} - The auth method that is currently selected in the dropdown.
- * @property cluster=`null` {Object} - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
- * @property namespace=`null` {String} - The currently active namespace.
- * @property redirectTo=`null` {String} - The name of the route to redirect to.
- * @property selectedAuth=`null` {String} - The auth method that is currently selected in the dropdown.
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthForm|Uses of AuthForm}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-form.js|AuthForm Source Code}
+ * @param wrappedToken=null {String} - The auth method that is currently selected in the dropdown.
+ * @param cluster=null {Object} - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
+ * @param namespace=null {String} - The currently active namespace.
+ * @param redirectTo=null {String} - The name of the route to redirect to.
+ * @param selectedAuth=null {String} - The auth method that is currently selected in the dropdown.
  */
 
 const DEFAULTS = {
