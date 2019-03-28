@@ -17,12 +17,10 @@ import { set, get, defineProperty, computed } from '@ember/object';
  *   {{/if}}
  * ```
  *
- * @property toggleAttr=null {String} - The attribute upon which to toggle.
- * @property attrTarget=null {Object} - The target upon which the event handler should be added.
- * @property [openLabel=Hide options] {String} - The message to display when the toggle is open.
- * @property [closedLabel=More options] {String} - The message to display when the toggle is closed.
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=ToggleButton|Uses of ToggleButton}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/toggle-button.js|ToggleButton Source Code}
+ * @param toggleAttr=null {String} - The attribute upon which to toggle.
+ * @param attrTarget=null {Object} - The target upon which the event handler should be added.
+ * @param [openLabel=Hide options] {String} - The message to display when the toggle is open.
+ * @param [closedLabel=More options] {String} - The message to display when the toggle is closed.
  */
 export default Component.extend({
   tagName: 'button',
