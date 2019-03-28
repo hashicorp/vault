@@ -1,7 +1,10 @@
 package raft
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -10,8 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
 )
 
@@ -32,30 +37,104 @@ type raftLayer struct {
 	logger log.Logger
 
 	dialerFunc func(string, time.Duration) (net.Conn, error)
+
+	// TLS config
+	certBytes  []byte
+	parsedCert *x509.Certificate
+	parsedKey  *ecdsa.PrivateKey
 }
 
-func NewRaftLayer(logger log.Logger, addr net.Addr) *raftLayer {
-	layer := &raftLayer{
-		addr:    addr,
+type RaftLayerConfig struct {
+	Addr             net.Addr
+	Cert             []byte
+	ClusterKeyParams *certutil.ClusterKeyParams
+	Logger           log.Logger
+}
+
+func NewRaftLayer(conf RaftLayerConfig) (*raftLayer, error) {
+	switch {
+	case conf.Addr == nil:
+		// Clustering disabled on the server, don't try to look for params
+		return nil, errors.New("no raft addr found")
+
+	case conf.ClusterKeyParams == nil:
+		conf.Logger.Error("no key params found loading raft cluster TLS information")
+		return nil, errors.New("no raft cluster key params found")
+
+	case conf.ClusterKeyParams.X == nil, conf.ClusterKeyParams.Y == nil, conf.ClusterKeyParams.D == nil:
+		conf.Logger.Error("failed to parse raft cluster key due to missing params")
+		return nil, errors.New("failed to parse raft cluster key")
+
+	case conf.ClusterKeyParams.Type != certutil.PrivateKeyTypeP521:
+		conf.Logger.Error("unknown raft cluster key type", "key_type", conf.ClusterKeyParams.Type)
+		return nil, errors.New("failed to find valid raft cluster key type")
+
+	case len(conf.Cert) == 0:
+		conf.Logger.Error("no cluster cert found")
+		return nil, errors.New("no cluster cert found")
+
+	}
+
+	locCert := make([]byte, len(conf.Cert))
+	copy(locCert, conf.Cert)
+
+	parsedCert, err := x509.ParseCertificate(conf.Cert)
+	if err != nil {
+		conf.Logger.Error("failed parsing raft cluster certificate", "error", err)
+		return nil, errwrap.Wrapf("error parsing raft cluster certificate: {{err}}", err)
+	}
+
+	return &raftLayer{
+		addr:    conf.Addr,
 		connCh:  make(chan net.Conn),
 		closeCh: make(chan struct{}),
-		logger:  logger,
+		logger:  conf.Logger,
+
+		certBytes:  locCert,
+		parsedCert: parsedCert,
+		parsedKey: &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: elliptic.P521(),
+				X:     conf.ClusterKeyParams.X,
+				Y:     conf.ClusterKeyParams.Y,
+			},
+			D: conf.ClusterKeyParams.D,
+		},
+	}, nil
+}
+
+func (l *raftLayer) ClientLookup(ctx context.Context, requestInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	for _, subj := range requestInfo.AcceptableCAs {
+		if bytes.Equal(subj, l.parsedCert.RawIssuer) {
+			localCert := make([]byte, len(l.certBytes))
+			copy(localCert, l.certBytes)
+
+			return &tls.Certificate{
+				Certificate: [][]byte{localCert},
+				PrivateKey:  l.parsedKey,
+				Leaf:        l.parsedCert,
+			}, nil
+		}
 	}
-	return layer
-}
 
-func (l *raftLayer) SetAddr(addr net.Addr) {
-	l.addr = addr
-}
-
-func (l *raftLayer) ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	return nil, nil
 }
 func (l *raftLayer) ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	return nil, nil
+	if l.parsedKey == nil {
+		return nil, errors.New("got raft connection but no local cert")
+	}
+
+	localCert := make([]byte, len(l.certBytes))
+	copy(localCert, l.certBytes)
+
+	return &tls.Certificate{
+		Certificate: [][]byte{localCert},
+		PrivateKey:  l.parsedKey,
+		Leaf:        l.parsedCert,
+	}, nil
 }
 func (l *raftLayer) CALookup(context.Context) (*x509.Certificate, error) {
-	return nil, nil
+	return l.parsedCert, nil
 }
 
 func (l *raftLayer) Stop() error {

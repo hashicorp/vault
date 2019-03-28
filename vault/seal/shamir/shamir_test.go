@@ -1,4 +1,4 @@
-package awskms
+package shamir
 
 import (
 	"context"

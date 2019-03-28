@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	shamirseal "github.com/hashicorp/vault/vault/seal/shamir"
 )
 
 const (
@@ -650,7 +651,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	if c.seal == nil {
-		c.seal = NewDefaultSeal()
+		c.seal = NewDefaultSeal(shamirseal.NewSeal(c.logger.Named("shamir")))
 	}
 	c.seal.SetCore(c)
 

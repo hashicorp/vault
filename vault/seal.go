@@ -72,9 +72,12 @@ type Seal interface {
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error
+
+	GetAccess() seal.Access
 }
 
 type defaultSeal struct {
+	access                     seal.Access
 	config                     atomic.Value
 	core                       *Core
 	PretendToAllowStoredShares bool
@@ -82,8 +85,10 @@ type defaultSeal struct {
 	PretendRecoveryKey         []byte
 }
 
-func NewDefaultSeal() Seal {
-	ret := &defaultSeal{}
+func NewDefaultSeal(lowLevel seal.Access) Seal {
+	ret := &defaultSeal{
+		access: lowLevel,
+	}
 	ret.config.Store((*SealConfig)(nil))
 	return ret
 }
@@ -93,6 +98,10 @@ func (d *defaultSeal) checkCore() error {
 		return fmt.Errorf("seal does not have a core set")
 	}
 	return nil
+}
+
+func (d *defaultSeal) GetAccess() seal.Access {
+	return d.access
 }
 
 func (d *defaultSeal) SetCore(core *Core) {

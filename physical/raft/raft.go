@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"path/filepath"
 	"sync"
 	"time"
@@ -69,16 +68,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		serverAddressProvider = s.serverLookup
 	}*/
 
-	raftLayer := NewRaftLayer(logger, nil)
-
-	transConfig := &raft.NetworkTransportConfig{
-		Stream:  raftLayer,
-		MaxPool: 3,
-		Timeout: 10 * time.Second,
-		//	ServerAddressProvider: serverAddressProvider,
-	}
-	transport := raft.NewNetworkTransportWithConfig(transConfig)
-
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
 	var log raft.LogStore
@@ -121,18 +110,28 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	return &RaftBackend{
-		logger:        logger,
-		fsm:           fsm,
-		conf:          conf,
-		raftTransport: transport,
-		raftLayer:     raftLayer,
-		logStore:      log,
-		stableStore:   stable,
-		snapStore:     snap,
+		logger:      logger,
+		fsm:         fsm,
+		conf:        conf,
+		logStore:    log,
+		stableStore: stable,
+		snapStore:   snap,
 	}, nil
 }
 
-func (b *RaftBackend) Bootstrap(ctx context.Context, localAddr net.Addr, servers []raft.Server) error {
+type Peer struct {
+	ID      string
+	Address string
+}
+
+type BootstrapConfig struct {
+	TLSCert string
+	TLSKey  string
+	TLSCa   string
+	Peers   []Peer
+}
+
+func (b *RaftBackend) Bootstrap(ctx context.Context, conf BootstrapConfig) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -145,15 +144,18 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, localAddr net.Addr, servers
 		return errors.New("error bootstrapping cluster: cluster already has state")
 	}
 
-	b.bootstrapConfig = &raft.Configuration{
-		Servers: []raft.Server{
-			{
-				ID:      raft.ServerID(localAddr.String()),
-				Address: raft.ServerAddress(localAddr.String()),
-			},
-		},
+	raftConfig := &raft.Configuration{
+		Servers: make([]raft.Server, len(conf.Peers)),
 	}
 
+	for i, p := range conf.Peers {
+		raftConfig.Servers[i] = raft.Server{
+			ID:      raft.ServerID(p.ID),
+			Address: raft.ServerAddress(p.Address),
+		}
+	}
+
+	b.bootstrapConfig = raftConfig
 	return nil
 }
 
@@ -172,7 +174,23 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.
 	//raftConfig.Logger = logger
 
 	// Set the local address and localID in the streaming layer and the raft config.
-	b.raftLayer.SetAddr(clusterListener.Addr())
+	raftLayer, err := NewRaftLayer(RaftLayerConfig{
+		Addr: clusterListener.Addr(),
+	})
+	if err != nil {
+		return err
+	}
+
+	transConfig := &raft.NetworkTransportConfig{
+		Stream:  raftLayer,
+		MaxPool: 3,
+		Timeout: 10 * time.Second,
+		//	ServerAddressProvider: serverAddressProvider,
+	}
+	transport := raft.NewNetworkTransportWithConfig(transConfig)
+
+	b.raftLayer = raftLayer
+	b.raftTransport = transport
 	raftConfig.LocalID = raft.ServerID(clusterListener.Addr().String())
 
 	// Set up a channel for reliable leader notifications.
