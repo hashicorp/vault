@@ -12,7 +12,6 @@ module.exports = {
         process.env.CI ? '--no-sandbox' : null,
         '--headless',
         '--disable-gpu',
-        '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--mute-audio',
         '--remote-debugging-port=0',
