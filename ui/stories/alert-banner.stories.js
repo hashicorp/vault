@@ -2,10 +2,9 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-banner.md';
+import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
 
-const TYPES = ['warning', 'info', 'danger', 'success'];
-
-storiesOf('AlertBanner/', module)
+storiesOf('Alerts/AlertBanner/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     'AlertBanner',
@@ -17,7 +16,7 @@ storiesOf('AlertBanner/', module)
       {{/each}}
     `,
       context: {
-        types: TYPES,
+        types: Object.keys(MESSAGE_TYPES),
         message: 'Here is a message.',
       },
     }),

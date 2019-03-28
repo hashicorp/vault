@@ -2,43 +2,28 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-popup.md';
-import { messageTypes } from '../app/helpers/message-types.js';
+import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
 
-storiesOf('AlertPopup/', module)
+storiesOf('Alerts/AlertPopup/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
     `AlertPopup`,
     () => ({
       template: hbs`
-        <h5 class="title is-5">Alert Popup</h5>
+      {{#each types as |type|}}
+        <h5 class="title is-5">{{humanize type}}</h5>
         <AlertPopup
-          @type={{info}}
-          @message="Hello!"
+          @type={{message-types type}}
+          @message={{message}}
           @close={{close}}/>
-          <h5 class="title is-5">Alert Popup</h5>
-        <AlertPopup
-          @type={{success}}
-          @message="Hello!"
-          @close={{close}}/>
-          <h5 class="title is-5">Alert Popup</h5>
-        <AlertPopup
-          @type={{danger}}
-          @message="Hello!"
-          @close={{close}}/>
-          <h5 class="title is-5">Alert Popup</h5>
-        <AlertPopup
-          @type={{warning}}
-          @message="Hello!"
-          @close={{close}}/>
+      {{/each}}
     `,
       context: {
         close: () => {
           console.log('closing!');
         },
-        info: messageTypes(['info']),
-        success: messageTypes(['success']),
-        danger: messageTypes(['danger']),
-        warning: messageTypes(['warning']),
+        types: Object.keys(MESSAGE_TYPES),
+        message: 'Hello!',
       },
     }),
     { notes }

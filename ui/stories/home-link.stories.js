@@ -11,12 +11,34 @@ storiesOf('HomeLink/', module)
       template: hbs`
         <h5 class="title is-5">HomeLink</h5>
         <HomeLink />
-        <br />
+      `,
+    }),
+    { notes }
+  )
+  .add(
+    'HomeLink with LogoEdition',
+    () => ({
+      template: hbs`
         <h5 class="title is-5">HomeLink with LogoEdition</h5>
         <HomeLink>
           <LogoEdition />
         </HomeLink>
-    `,
+      `,
+    }),
+    { notes }
+  )
+  .add(
+    'HomeLink inside Nav',
+    () => ({
+      template: hbs`
+        <NavHeader as |Nav|>
+          <Nav.home>
+            <HomeLink @class="navbar-item splash-page-logo">
+              <LogoEdition />
+            </HomeLink>
+          </Nav.home>
+        </NavHeader>
+      `,
     }),
     { notes }
   );
