@@ -11,11 +11,9 @@ import { messageTypes } from 'vault/helpers/message-types';
  * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
  * ```
  *
- * @property [AlertInline.type=null]{String} - The alert type. This comes from the message-types helper.
- * @property message=null{String} - The message to display within the alert.
+ * @param [type=null]{String} - The alert type. This comes from the message-types helper.
+ * @param message=null{String} - The message to display within the alert.
  *
- * @see {@link https://github.com/hashicorp/vault/search?l=Handlebars&q=AlertInline|Uses of AlertInline}
- * @see {@link https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-inline.js|AlertInline Source Code}
  */
 
 export default Component.extend({
