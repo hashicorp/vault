@@ -1,5 +1,12 @@
 import { configure, addParameters, addDecorator } from '@storybook/ember';
 import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
+import theme from './theme.js';
+
+// addParameters({
+//   options: {
+//     theme: yourTheme,
+//   },
+// });
 
 function loadStories() {
   // automatically import all files ending in *.stories.js
@@ -7,7 +14,10 @@ function loadStories() {
   req.keys().forEach(filename => req(filename));
 }
 
-addParameters({ viewport: { viewports: INITIAL_VIEWPORTS } });
+addParameters({
+  viewport: { viewports: INITIAL_VIEWPORTS },
+  options: { theme },
+});
 
 addDecorator(storyFn => {
   const { template, context } = storyFn();
