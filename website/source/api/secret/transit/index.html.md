@@ -22,9 +22,9 @@ location, please update your API calls accordingly.
 This endpoint creates a new named encryption key of the specified type. The
 values set here cannot be changed after key creation.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -89,9 +89,9 @@ themselves. Depending on the type of key, different information may be returned,
 e.g. an asymmetric key will return its public key in a standard format for the
 type.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/transit/keys/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -135,9 +135,9 @@ $ curl \
 This endpoint returns a list of keys. Only the key names are returned (not the
 actual keys themselves).
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/transit/keys`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/transit/keys`              |
 
 ### Sample Request
 
@@ -168,9 +168,9 @@ decrypt any data encrypted with the named key. Because this is a potentially
 catastrophic operation, the `deletion_allowed` tunable must be set in the key's
 `/config` endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/transit/keys/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/transit/keys/:name`        |
 
 ### Parameters
 
@@ -191,9 +191,9 @@ $ curl \
 This endpoint allows tuning configuration values for a given key. (These values
 are returned during a read operation on the named key.)
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/config` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/config` |
 
 ### Parameters
 
@@ -245,9 +245,9 @@ ciphertext to be encrypted with the latest version of the key, use the `rewrap`
 endpoint. This is only supported with keys that support encryption and
 decryption operations.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/rotate` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/rotate` |
 
 ### Sample Request
 
@@ -267,9 +267,9 @@ provided. Depending on the type of key, different information may be returned.
 The key must be exportable to support this operation and the version must still
 be valid.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/transit/export/:key_type/:name(/:version)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/transit/export/:key_type/:name(/:version)` |
 
 ### Parameters
 
@@ -319,9 +319,9 @@ requires derivation depends on whether the context parameter is empty or not).
 If the user only has `update` capability and the key does not exist, an error
 will be returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/encrypt/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/encrypt/:name`     |
 
 ### Parameters
 
@@ -415,9 +415,9 @@ $ curl \
 
 This endpoint decrypts the provided ciphertext using the named key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/decrypt/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/decrypt/:name`     |
 
 ### Parameters
 
@@ -486,9 +486,9 @@ This endpoint rewraps the provided ciphertext using the latest version of the
 named key. Because this never returns plaintext, it is possible to delegate this
 functionality to untrusted users or scripts.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/rewrap/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/rewrap/:name`      |
 
 ### Parameters
 
@@ -564,9 +564,9 @@ control whether a user is allowed to retrieve the plaintext value of a key. This
 is useful if you want an untrusted user or operation to generate keys that are
 then made available to trusted users.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/datakey/:type/:name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/datakey/:type/:name` |
 
 ### Parameters
 
@@ -624,9 +624,9 @@ $ curl \
 
 This endpoint returns high-quality random bytes of the specified length.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/random(/:bytes)`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/random(/:bytes)`   |
 
 ### Parameters
 
@@ -669,9 +669,9 @@ $ curl \
 This endpoint returns the cryptographic hash of given data using the specified
 algorithm.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/hash(/:algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/hash(/:algorithm)` |
 
 ### Parameters
 
@@ -724,9 +724,9 @@ the raw key will be marshaled into bytes to be used for the HMAC function. If
 the key is of a type that supports rotation, the latest (current) version will
 be used.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/hmac/:name(/:algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/hmac/:name(/:algorithm)` |
 
 ### Parameters
 
@@ -846,9 +846,9 @@ This endpoint returns the cryptographic signature of the given data using the
 named key and the specified hash algorithm. The key must be of a type that
 supports signing.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/sign/:name(/:hash_algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/sign/:name(/:hash_algorithm)` |
 
 ### Parameters
 
@@ -995,9 +995,9 @@ $ curl \
 This endpoint returns whether the provided signature is valid for the given
 data.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/transit/verify/:name(/:hash_algorithm)` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/transit/verify/:name(/:hash_algorithm)` |
 
 ### Parameters
 
@@ -1150,9 +1150,9 @@ the configuration data and keys of all the versions along with the HMAC key.
 The response from this endpoint can be used with the `/restore` endpoint to
 restore the key.
 
-| Method  | Path                    | Produces               |
-| :------ | :---------------------- | :--------------------- |
-| `GET`   | `/transit/backup/:name` | `200 application/json` |
+| Method  | Path                    |
+| :---------------------- | :--------------------- |
+| `GET`   | `/transit/backup/:name` |
 
 ### Parameters
 
@@ -1187,9 +1187,9 @@ input to this endpoint should be the output of `/backup` endpoint.
  before restoring. It is a good idea to attempt restoring to a different key
  name first to verify that the operation successfully completes.
 
-| Method   | Path                        | Produces               |
-| :------- | :-------------------------- | :--------------------- |
-| `POST`   | `/transit/restore(/:name)`  | `204 (empty body)`     |
+| Method   | Path                        |
+| :-------------------------- | :--------------------- |
+| `POST`   | `/transit/restore(/:name)`  |
 
 ### Parameters
 
@@ -1223,9 +1223,9 @@ $ curl \
 This endpoint trims older key versions setting a minimum version for the
 keyring. Once trimmed, previous versions of the key cannot be recovered.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :--------------------- |
-| `POST`   | `/transit/keys/:name/trim` | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :--------------------- |
+| `POST`   | `/transit/keys/:name/trim` |
 
 ### Parameters
 

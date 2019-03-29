@@ -10,7 +10,7 @@
     "@hashicorp/hashi-alert": "^1.1.0",
     "@hashicorp/hashi-button": "1.0.5",
     "@hashicorp/hashi-callouts": "^2.0.5",
-    "@hashicorp/hashi-consent-manager": "^1.0.5",
+    "@hashicorp/hashi-consent-manager": "^1.0.8",
     "@hashicorp/hashi-content": "^0.1.0",
     "@hashicorp/hashi-docs-sidenav": "^1.0.2",
     "@hashicorp/hashi-docs-sitemap": "^0.1.4",

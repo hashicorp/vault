@@ -26,13 +26,13 @@ func Backend() *backend {
 				"login",
 			},
 		},
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
 			pathListCerts(&b),
 			pathCerts(&b),
 			pathCRLs(&b),
-		}),
+		},
 		AuthRenew:   b.pathLoginRenew,
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeCredential,

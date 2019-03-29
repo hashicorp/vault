@@ -22,9 +22,9 @@ please update your API calls accordingly.
 Configures the connection parameters and shared secret used to communicate with
 RADIUS.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/radius/config`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/radius/config`        |
 
 ### Parameters
 
@@ -65,9 +65,9 @@ $ curl \
 Registers a new user and maps a set of policies to it.  This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/radius/users/:username` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/radius/users/:username` |
 
 ### Parameters
 
@@ -95,9 +95,9 @@ $ curl \
 
 Reads the properties of an existing username.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/radius/users/:username` | `200 application/json`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/radius/users/:username` |
 
 ### Parameters
 
@@ -130,9 +130,9 @@ $ curl \
 
 Deletes an existing username from the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/auth/radius/users/:username` | `204 (empty body)`   |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/auth/radius/users/:username` |
 
 ### Parameters
 
@@ -151,9 +151,9 @@ $ curl \
 
 List the users registered with the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/radius/users`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/radius/users`         |
 
 ### Sample Request
 
@@ -187,10 +187,10 @@ $ curl \
 
 Login with the username and password.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/radius/login`         | `200 application/json` |
-| `POST`   | `/auth/radius/login/:username` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/radius/login`         |
+| `POST`   | `/auth/radius/login/:username` |
 
 ### Parameters
 

@@ -136,15 +136,15 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 					return "", nil, errors.New("response nil when looking up wrapped secret ID")
 				}
 				if resp.Data == nil {
-					return "", nil, errors.New("data in repsonse nil when looking up wrapped secret ID")
+					return "", nil, errors.New("data in response nil when looking up wrapped secret ID")
 				}
 				creationPathRaw, ok := resp.Data["creation_path"]
 				if !ok {
-					return "", nil, errors.New("creation_path in repsonse nil when looking up wrapped secret ID")
+					return "", nil, errors.New("creation_path in response nil when looking up wrapped secret ID")
 				}
 				creationPath, ok := creationPathRaw.(string)
 				if !ok {
-					return "", nil, errors.New("creation_path in repsonse could not be parsed as string when looking up wrapped secret ID")
+					return "", nil, errors.New("creation_path in response could not be parsed as string when looking up wrapped secret ID")
 				}
 				if creationPath != a.secretIDResponseWrappingPath {
 					a.logger.Error("SECURITY: unable to validate wrapping token creation path", "expected", a.secretIDResponseWrappingPath, "found", creationPath)
@@ -159,15 +159,15 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 					return "", nil, errors.New("response nil when unwrapping secret ID")
 				}
 				if resp.Data == nil {
-					return "", nil, errors.New("data in repsonse nil when unwrapping secret ID")
+					return "", nil, errors.New("data in response nil when unwrapping secret ID")
 				}
 				secretIDRaw, ok := resp.Data["secret_id"]
 				if !ok {
-					return "", nil, errors.New("secret_id in repsonse nil when unwrapping secret ID")
+					return "", nil, errors.New("secret_id in response nil when unwrapping secret ID")
 				}
 				secretID, ok := secretIDRaw.(string)
 				if !ok {
-					return "", nil, errors.New("secret_id in repsonse could not be parsed as string when unwrapping secret ID")
+					return "", nil, errors.New("secret_id in response could not be parsed as string when unwrapping secret ID")
 				}
 				stringSecretID = secretID
 			}

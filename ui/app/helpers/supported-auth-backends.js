@@ -35,7 +35,7 @@ const SUPPORTED_AUTH_BACKENDS = [
   },
   {
     type: 'jwt',
-    typeDisplay: 'JWT/OIDC',
+    typeDisplay: 'JWT',
     description: 'Authenticate using JWT or OIDC provider.',
     tokenPath: 'client_token',
     displayNamePath: 'display_name',
@@ -48,6 +48,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     tokenPath: 'client_token',
     displayNamePath: 'display_name',
     formAttributes: ['role', 'jwt'],
+  },
+  {
+    type: 'radius',
+    typeDisplay: 'RADIUS',
+    description: 'Authenticate with your RADIUS username and password.',
+    tokenPath: 'client_token',
+    displayNamePath: 'metadata.username',
+    formAttributes: ['username', 'password'],
   },
   {
     type: 'github',

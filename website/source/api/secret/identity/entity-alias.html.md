@@ -11,9 +11,9 @@ description: |-
 
 This endpoint creates a new alias for an entity.
 
-| Method   | Path                       | Produces               |
-| :------- | :------------------------- | :----------------------|
-| `POST`   | `/identity/entity-alias`   | `200 application/json` |
+| Method   | Path                       |
+| :------------------------- | :----------------------|
+| `POST`   | `/identity/entity-alias`   |
 
 ### Parameters
 
@@ -65,9 +65,9 @@ $ curl \
 
 This endpoint queries the entity alias by its identifier.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `GET`    | `/identity/entity-alias/id/:id`  | `200 application/json` |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `GET`    | `/identity/entity-alias/id/:id`  |
 
 ### Parameters
 
@@ -106,9 +106,9 @@ $ curl \
 
 This endpoint is used to update an existing entity alias.
 
-| Method   | Path                              | Produces               |
-| :------- | :-------------------------------- | :--------------------- |
-| `POST`    | `/identity/entity-alias/id/:id`  | `200 application/json` |
+| Method   | Path                              |
+| :-------------------------------- | :--------------------- |
+| `POST`    | `/identity/entity-alias/id/:id`  |
 
 ### Parameters
 
@@ -159,9 +159,9 @@ $ curl \
 
 This endpoint deletes an alias from its corresponding entity.
 
-| Method     | Path                             | Produces               |
-| :--------- | :------------------------------- | :----------------------|
-| `DELETE`   | `/identity/entity-alias/id/:id`  | `204 (empty body)`     |
+| Method     | Path                             |
+| :------------------------------- | :----------------------|
+| `DELETE`   | `/identity/entity-alias/id/:id`  |
 
 ### Parameters
 
@@ -180,10 +180,10 @@ $ curl \
 
 This endpoint returns a list of available entity aliases by their identifiers.
 
-| Method   | Path                                  | Produces               |
-| :------- | :------------------------------------ | :--------------------- |
-| `LIST`   | `/identity/entity-alias/id`           | `200 application/json` |
-| `GET`    | `/identity/entity-alias/id?list=true` | `200 application/json` |
+| Method   | Path                                  |
+| :------------------------------------ | :--------------------- |
+| `LIST`   | `/identity/entity-alias/id`           |
+| `GET`    | `/identity/entity-alias/id?list=true` |
 
 ### Sample Request
 

@@ -144,7 +144,7 @@ func (b *backend) pathRoleSetRead(ctx context.Context, req *logical.Request, d *
 
 	if rs.AccountId != nil {
 		data["service_account_email"] = rs.AccountId.EmailOrId
-		data["service_account_project"] = rs.AccountId.Project
+		data["project"] = rs.AccountId.Project
 	}
 
 	if rs.TokenGen != nil && rs.SecretType == SecretTypeAccessToken {

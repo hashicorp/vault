@@ -2,19 +2,6 @@
 
 
 [[projects]]
-  digest = "1:a69ab3f1445ffd4815add4bd31ba05b65b3b9fec1ade5057d5d717f30e6efd6d"
-  name = "github.com/SermoDigital/jose"
-  packages = [
-    ".",
-    "crypto",
-    "jws",
-    "jwt",
-  ]
-  pruneopts = "UT"
-  revision = "f6df55f235c24f236d11dbcf665249a59ac2021f"
-  version = "1.1"
-
-[[projects]]
   digest = "1:c47f4964978e211c6e566596ec6246c329912ea92e9bb99c00798bb4564c5b09"
   name = "github.com/armon/go-radix"
   packages = ["."]
@@ -182,7 +169,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:961541c49385b69f1d3ee6087df21d7d9595f98a8f29170e810267180ff6a9fb"
+  digest = "1:c36ad0b7d3186dd926e371b155dc7532677d3df42aa18f19fe9d5759249c9569"
   name = "github.com/hashicorp/vault"
   packages = [
     "api",
@@ -214,7 +201,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "5d444354923ab54c8207f8c8820cfe78c1572656"
+  revision = "208c76d345731837087b6a96493b5c1652eaf39b"
 
 [[projects]]
   branch = "master"

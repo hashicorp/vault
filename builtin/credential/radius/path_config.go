@@ -30,7 +30,7 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
+				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: empty)",
 				DisplayName: "Policies for unregistered users",
 			},
 			"dial_timeout": &framework.FieldSchema{

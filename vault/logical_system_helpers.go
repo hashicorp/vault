@@ -84,6 +84,8 @@ var (
 			},
 		}
 	}
+
+	checkRaw = func(b *SystemBackend, path string) error { return nil }
 )
 
 // tuneMount is used to set config on a mount point

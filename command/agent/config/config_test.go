@@ -42,28 +42,31 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		},
 		Cache: &Cache{
 			UseAutoAuthToken: true,
-			Listeners: []*Listener{
-				&Listener{
-					Type: "unix",
-					Config: map[string]interface{}{
-						"address":     "/path/to/socket",
-						"tls_disable": true,
-					},
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "unix",
+				Config: map[string]interface{}{
+					"address":      "/path/to/socket",
+					"tls_disable":  true,
+					"socket_mode":  "configmode",
+					"socket_user":  "configuser",
+					"socket_group": "configgroup",
 				},
-				&Listener{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":     "127.0.0.1:8300",
-						"tls_disable": true,
-					},
+			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
 				},
-				&Listener{
-					Type: "tcp",
-					Config: map[string]interface{}{
-						"address":       "127.0.0.1:8400",
-						"tls_key_file":  "/path/to/cakey.pem",
-						"tls_cert_file": "/path/to/cacert.pem",
-					},
+			},
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":       "127.0.0.1:8400",
+					"tls_key_file":  "/path/to/cakey.pem",
+					"tls_cert_file": "/path/to/cacert.pem",
 				},
 			},
 		},
@@ -149,5 +152,50 @@ func TestLoadConfigFile(t *testing.T) {
 
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	config, err := LoadConfig("./test-fixtures/config-cache-no-auto_auth.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		Cache: &Cache{},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl", logger)
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when use_auto_auth_token=true and no auto_auth section present")
+	}
+}
+
+func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-no-listeners.hcl", logger)
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when cache section present and no listeners present")
 	}
 }
