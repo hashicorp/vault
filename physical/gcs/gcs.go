@@ -148,7 +148,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		logger.Warn("specifying credentials_file as an option is " +
 			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
 			"variable or instance credentials instead.")
-		opts = append(opts, option.WithServiceAccountFile(credentialsFile))
+		opts = append(opts, option.WithCredentialsFile(credentialsFile))
 	}
 
 	ctx := context.Background()
