@@ -23,7 +23,7 @@ export default DS.Model.extend({
   options: fragment('mount-options', { defaultValue: {} }),
   local: attr('boolean', {
     helpText:
-      'When replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
+      'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
   }),
   sealWrap: attr('boolean', {
     helpText:

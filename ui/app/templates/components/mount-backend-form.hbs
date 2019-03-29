@@ -10,15 +10,15 @@
            />
 
           {{#if (eq mountType "auth")}}
-            {{concat "Enable " typeInfo.displayName " authentication method"}}
+            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{else}}
-            {{concat "Enable " typeInfo.displayName " secrets engine"}}
+            {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{/if}}
         {{/with}}
       {{else if (eq mountType "auth")}}
-        Enable an authentication method
+        Enable an Authentication Method
       {{else}}
-        Enable a secrets engine
+        Enable a Secrets Engine
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -27,7 +27,7 @@
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder
       @mode="enable"
-      @noun={{if (eq mountType "auth") "auth method" "secret engine"}}
+      @noun={{if (eq mountType "auth") "Auth Method" "secret engine"}}
      />
 
     {{message-error model=mountModel}}
