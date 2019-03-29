@@ -233,5 +233,5 @@ belonging to configured CIDR blocks on the AppRole.
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](../../api/auth/approle/index.html) for more
+[AppRole API](../../api/auth/approle/index.html.md) for more
 details.
