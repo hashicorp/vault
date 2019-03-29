@@ -31,6 +31,6 @@ To make changes, first edit that file and run "yarn gen-story-md ${name}" to re-
 -->
 
 `;
-md = md.slice(0, pageBreakIndex) + seeLinks + md.slice(pageBreakIndex);
+md = generatedWarning + md.slice(0, pageBreakIndex) + seeLinks + md.slice(pageBreakIndex);
 
 fs.writeFileSync(outputFile, md);
