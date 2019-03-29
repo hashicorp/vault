@@ -1,5 +1,5 @@
 import { set } from '@ember/object';
-import { hash, resolve } from 'rsvp';
+import { hashSettled, resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import DS from 'ember-data';
 import Route from '@ember/routing/route';
@@ -21,12 +21,11 @@ export default Route.extend(UnloadModelRoute, {
   capabilities(secret) {
     const backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
-    let backendType = backendModel.get('engineType');
-    if (backendType === 'kv' || backendType === 'cubbyhole' || backendType === 'generic') {
-      return resolve({});
-    }
+    let backendType = backendModel.engineType;
     let path;
-    if (backendType === 'transit') {
+    if (backendModel.isV2KV) {
+      path = `${backend}/data/${secret}`;
+    } else if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
@@ -98,7 +97,7 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
     }
-    return hash({
+    return hashSettled({
       secret: this.store
         .queryRecord(modelType, { id: secret, backend })
         .then(secretModel => {
@@ -144,6 +143,11 @@ export default Route.extend(UnloadModelRoute, {
           throw err;
         }),
       capabilities: this.capabilities(secret),
+    }).then(({ secret, capabilities }) => {
+      return {
+        secret: Ember.Object.create(),
+        capabilities,
+      };
     });
   },
 
