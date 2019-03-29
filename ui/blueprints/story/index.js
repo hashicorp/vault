@@ -18,7 +18,10 @@ module.exports = {
 
   locals: function(options) {
     let contents = '';
+
+    let importMD = "import notes from './" + stringUtil.dasherize(options.entity.name) + "';\n";
     return {
+      importMD: importMD,
       contents: contents,
       path: getPathOption(options),
       header: stringUtil
