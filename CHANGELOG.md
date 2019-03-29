@@ -1,6 +1,12 @@
 ## 1.1.1 (unreleased)
 
+IMPROVEMENTS: 
+ * ui: Suport for authentication via the RADIUS auth method [GH-6488]
+
+
 BUG FIXES: 
+ * core: Fix incorrect representation of required properties in OpenAPI output
+   [[GH-6490]](https://github.com/hashicorp/vault/pull/6490)
  * ui: Fix an issue where in production builds OpenAPI model generation was
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]

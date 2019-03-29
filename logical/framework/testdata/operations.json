@@ -16,6 +16,14 @@
       "x-vault-sudo": true,
       "parameters": [
         {
+          "name": "format",
+          "description": "a query param",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
           "name": "id",
           "description": "id path parameter",
           "in": "path",
@@ -65,6 +73,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["age"],
                 "properties": {
                   "flavors": {
                     "type": "array",
@@ -77,7 +86,6 @@
                     "type": "integer",
                     "description": "the age",
                     "enum": [1, 2, 3],
-                    "required": true,
                     "x-vault-displayName": "Age",
                     "x-vault-displayValue": 7,
                     "x-vault-displaySensitive": true

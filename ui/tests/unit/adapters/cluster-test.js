@@ -96,6 +96,15 @@ module('Unit | Adapter | cluster', function(hooks) {
       'auth:userpass options OK'
     );
 
+    adapter.authenticate({ backend: 'radius', data });
+    assert.equal('/v1/auth/radius/login/username', url, 'auth:RADIUS url OK');
+    assert.equal('POST', method, 'auth:RADIUS method OK');
+    assert.deepEqual(
+      { data: { password: 'password' }, unauthenticated: true },
+      options,
+      'auth:RADIUS options OK'
+    );
+
     adapter.authenticate({ backend: 'LDAP', data });
     assert.equal('/v1/auth/ldap/login/username', url, 'ldap:userpass url OK');
     assert.equal('POST', method, 'ldap:userpass method OK');
