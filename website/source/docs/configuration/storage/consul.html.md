@@ -135,8 +135,8 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
   use. Accepted values are `"tls10"`, `"tls11"` or `"tls12"`.
 
-- `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
-  should be disabled. It is highly discouraged that you disable this option.
+- `tls_skip_verify` `(bool: false)` – Disable verification of TLS certificates.
+  Using this option is highly discouraged.
 
 ## ACLs
 
