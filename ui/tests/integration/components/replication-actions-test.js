@@ -39,10 +39,10 @@ module('Integration | Component | replication actions', function(hooks) {
   });
 
   let testCases = [
-    ['dr', 'primary', 'disable', 'Disable replication', null, ['disable', 'primary']],
-    ['performance', 'primary', 'disable', 'Disable replication', null, ['disable', 'primary']],
-    ['dr', 'secondary', 'disable', 'Disable replication', null, ['disable', 'secondary']],
-    ['performance', 'secondary', 'disable', 'Disable replication', null, ['disable', 'secondary']],
+    ['dr', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary']],
+    ['performance', 'primary', 'disable', 'Disable Replication', null, ['disable', 'primary']],
+    ['dr', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary']],
+    ['performance', 'secondary', 'disable', 'Disable Replication', null, ['disable', 'secondary']],
     ['dr', 'primary', 'recover', 'Recover', null, ['recover']],
     ['performance', 'primary', 'recover', 'Recover', null, ['recover']],
     ['performance', 'secondary', 'recover', 'Recover', null, ['recover']],
