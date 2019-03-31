@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -556,6 +557,27 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 	})
 }
 
+func assertCreatedIAMUser(accessKey, secretKey, token string) error {
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
+	awsConfig := &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"),
+		HTTPClient:  cleanhttp.DefaultClient(),
+	}
+	client := iam.New(session.New(awsConfig))
+	log.Printf("[WARN] Checking if IAM User is created properly...")
+	userOutput, err := client.GetUser(&iam.GetUserInput{})
+	if err != nil {
+		return err
+	}
+
+	if *userOutput.User.Path != "/path/" {
+		return fmt.Errorf("bad: got: %#v\nexpected: %#v", userOutput.User.Path, "/path/")
+	}
+
+	return nil
+}
+
 func listIamUsersTest(accessKey, secretKey, token string) error {
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
 	awsConfig := &aws.Config{
@@ -647,12 +669,13 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":      []string(nil),
-				"role_arns":        []string(nil),
-				"policy_document":  value,
-				"credential_types": []string{iamUserCred, federationTokenCred},
-				"default_sts_ttl":  int64(0),
-				"max_sts_ttl":      int64(0),
+				"policy_arns":     []string(nil),
+				"role_arns":       []string(nil),
+				"policy_document": value,
+				"credential_type": strings.Join([]string{iamUserCred, federationTokenCred}, ","),
+				"default_sts_ttl": int64(0),
+				"max_sts_ttl":     int64(0),
+				"user_path":       "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -743,15 +766,18 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 		"policy_document": testDynamoPolicy,
 		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
 		"credential_type": iamUserCred,
+		"user_path":       "/path/",
 	}
 	expectedRoleData := map[string]interface{}{
-		"policy_document":  compacted,
-		"policy_arns":      []string{ec2PolicyArn, iamPolicyArn},
-		"credential_types": []string{iamUserCred},
-		"role_arns":        []string(nil),
-		"default_sts_ttl":  int64(0),
-		"max_sts_ttl":      int64(0),
+		"policy_document": compacted,
+		"policy_arns":     []string{ec2PolicyArn, iamPolicyArn},
+		"credential_type": iamUserCred,
+		"role_arns":       []string(nil),
+		"default_sts_ttl": int64(0),
+		"max_sts_ttl":     int64(0),
+		"user_path":       "/path/",
 	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
 		PreCheck:       func() { testAccPreCheck(t) },
@@ -760,7 +786,7 @@ func TestBackend_iamUserManagedInlinePolicies(t *testing.T) {
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
 			testAccStepReadRole(t, "test", expectedRoleData),
-			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest, assertCreatedIAMUser}),
 			testAccStepRead(t, "sts", "test", []credentialTestFunc{describeInstancesTest, listIamUsersTest, listDynamoTablesTest}),
 		},
 	})
@@ -881,12 +907,13 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 			}
 
 			expected := map[string]interface{}{
-				"policy_arns":      []string{value},
-				"role_arns":        []string(nil),
-				"policy_document":  "",
-				"credential_types": []string{iamUserCred},
-				"default_sts_ttl":  int64(0),
-				"max_sts_ttl":      int64(0),
+				"policy_arns":     []string{value},
+				"role_arns":       []string(nil),
+				"policy_document": "",
+				"credential_type": iamUserCred,
+				"default_sts_ttl": int64(0),
+				"max_sts_ttl":     int64(0),
+				"user_path":       "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

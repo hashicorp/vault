@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+var (
+	userPathRegex = regexp.MustCompile(`^\/([\x21-\x7F]{0,510}\/)?$`)
 )
 
 func pathListRoles(b *backend) *framework.Path {
@@ -88,6 +93,13 @@ or IAM role to assume`,
 				Type:        framework.TypeString,
 				Description: "Deprecated; use policy_document instead. IAM policy document",
 				Deprecated:  true,
+			},
+
+			"user_path": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Path for IAM User. Only valid when credential_type is " + iamUserCred,
+				DisplayName: "User Path",
+				Default:     "/",
 			},
 		},
 
@@ -243,6 +255,20 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		}
 
 		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
+	}
+
+	if userPathRaw, ok := d.GetOk("user_path"); ok {
+		if legacyRole != "" {
+			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with user_path"), nil
+		}
+		if !strutil.StrListContains(roleEntry.CredentialTypes, iamUserCred) {
+			return logical.ErrorResponse(fmt.Sprintf("user_path parameter only valid for %s credential type", iamUserCred)), nil
+		}
+		if !userPathRegex.MatchString(userPathRaw.(string)) {
+			return logical.ErrorResponse(fmt.Sprintf("The specified value for user_path is invalid. It must match '%s' regexp", userPathRegex.String())), nil
+		}
+
+		roleEntry.UserPath = userPathRaw.(string)
 	}
 
 	if roleEntry.MaxSTSTTL > 0 &&
@@ -432,6 +458,7 @@ type awsRoleEntry struct {
 	Version                  int           `json:"version"`                               // Version number of the role format
 	DefaultSTSTTL            time.Duration `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 	MaxSTSTTL                time.Duration `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
+	UserPath                 string        `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -442,7 +469,9 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"policy_document": r.PolicyDocument,
 		"default_sts_ttl": int64(r.DefaultSTSTTL.Seconds()),
 		"max_sts_ttl":     int64(r.MaxSTSTTL.Seconds()),
+		"user_path":       r.UserPath,
 	}
+
 	if r.InvalidData != "" {
 		respData["invalid_data"] = r.InvalidData
 	}
