@@ -779,7 +779,7 @@ func parseMFAHeader(req *logical.Request) error {
 		// Handle the case where only method name is mentioned and no value
 		// is supplied
 		if !strings.Contains(mfaHeaderValue, ":") {
-			// Mark the presense of method name, but set an empty set to it
+			// Mark the presence of method name, but set an empty set to it
 			// indicating that there were no values supplied for the method
 			if req.MFACreds[mfaHeaderValue] == nil {
 				req.MFACreds[mfaHeaderValue] = []string{}

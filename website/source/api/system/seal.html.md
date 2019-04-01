@@ -17,9 +17,9 @@ This endpoint seals the Vault. In HA mode, only an active node can be sealed.
 Standby nodes should be restarted to get the same effect. Requires a token with
 `root` policy or `sudo` capability on the path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/seal`                  | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/seal`                  |
 
 ### Sample Request
 

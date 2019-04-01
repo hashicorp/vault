@@ -53,12 +53,12 @@
           {{/if}}
         {{/if}}
         <li class="action">
-          <CopyButton @clipboardText={{auth.currentToken}} class="link button" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
+          <CopyButton @clipboardText={{auth.currentToken}} class="link" @buttonType="button" @success={{action (set-flash-message 'Token copied!')}}>
             Copy token
           </CopyButton>
         </li>
         <li class="action">
-          <button type="button" class="button link" onclick={{action "restartGuide"}}>
+          <button type="button" class="link" onclick={{action "restartGuide"}}>
             Restart guide
           </button>
         </li>

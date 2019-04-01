@@ -41,7 +41,9 @@ func (d *OutputStringError) parseRequest() {
 
 	// Build cURL string
 	d.parsedCurlString = "curl "
-	d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
+	if d.Request.Method != "GET" {
+		d.parsedCurlString = fmt.Sprintf("%s-X %s ", d.parsedCurlString, d.Request.Method)
+	}
 	for k, v := range d.Request.Header {
 		for _, h := range v {
 			if strings.ToLower(k) == "x-vault-token" {

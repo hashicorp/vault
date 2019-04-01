@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"os"
 	"sync/atomic"
+	"time"
+
+	"github.com/armon/go-metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -158,7 +161,20 @@ func (k *AWSKMSSeal) KeyID() string {
 // Encrypt is used to encrypt the master key using the the AWS CMK.
 // This returns the ciphertext, and/or any errors from this
 // call. This should be called after the KMS client has been instantiated.
-func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "awskms", "encrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "awskms", "encrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "awskms", "encrypt"}, 1)
+
 	if plaintext == nil {
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
@@ -202,7 +218,20 @@ func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.Enc
 }
 
 // Decrypt is used to decrypt the ciphertext. This should be called after Init.
-func (k *AWSKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (k *AWSKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) (pt []byte, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "awskms", "decrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "awskms", "decrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "awskms", "decrypt"}, 1)
+
 	if in == nil {
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}

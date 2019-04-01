@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/strutil"
 
 	"github.com/coreos/go-oidc"
@@ -98,6 +99,10 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
 	}
 
+	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
+		return logical.ErrorResponse("request originated from invalid CIDR"), nil
+	}
+
 	provider, err := b.getProvider(ctx, config)
 	if err != nil {
 		return nil, errwrap.Wrapf(errLoginFailed+" Error getting provider for login operation: {{err}}", err)
@@ -133,6 +138,11 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("%s %s", errTokenVerification, err.Error()), nil
 	}
 
+	if allClaims["nonce"] != state.nonce {
+		return logical.ErrorResponse(errTokenVerification + " Invalid ID token nonce."), nil
+	}
+	delete(allClaims, "nonce")
+
 	// Attempt to fetch information from the /userinfo endpoint and merge it with
 	// the existing claims data. A failure to fetch additional information from this
 	// endpoint will not invalidate the authorization flow.
@@ -146,10 +156,9 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		logFunc("error reading /userinfo endpoint", "error", err)
 	}
 
-	if allClaims["nonce"] != state.nonce {
-		return logical.ErrorResponse(errTokenVerification + " Invalid ID token nonce."), nil
+	if err := validateBoundClaims(b.Logger(), role.BoundClaims, allClaims); err != nil {
+		return logical.ErrorResponse("error validating claims: %s", err.Error()), nil
 	}
-	delete(allClaims, "nonce")
 
 	alias, groupAliases, err := b.createIdentity(allClaims, role)
 	if err != nil {

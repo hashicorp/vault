@@ -77,7 +77,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -227,7 +227,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)

@@ -89,6 +89,7 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 	if role == nil {
 		return nil, nil
 	}
+	b.Logger().Debug(fmt.Sprintf("role is: %+v", role))
 
 	var resp *logical.Response
 	var respErr error
@@ -97,21 +98,24 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 	switch {
 
 	case role.LastVaultRotation == unset:
-		// We've never managed this cred before.
-		// We need to rotate the password so Vault will know it.
+		b.Logger().Debug("rotating password for the first time so Vault will know it")
 		resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 
 	case role.PasswordLastSet.After(role.LastVaultRotation.Add(passwordLastSetBuffer)):
-		// Someone has manually rotated the password in Active Directory since we last rolled it.
-		// We need to rotate it now so Vault will know it and be able to return it.
+		b.Logger().Debug(fmt.Sprintf(
+			"Vault rotated the password at %s, but it was rotated in AD later at %s, so rotating it again so Vault will know it",
+			role.LastVaultRotation.String(), role.PasswordLastSet.String()),
+		)
 		resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 
 	default:
-		// Since we should know the last password, let's retrieve it now so we can return it with the new one.
+		b.Logger().Debug("starting a regular rotation")
 		credIfc, found := b.credCache.Get(roleName)
 		if found {
+			b.Logger().Debug("using cached credential")
 			cred = credIfc.(map[string]interface{})
 		} else {
+			b.Logger().Debug("using stored credential")
 			entry, err := req.Storage.Get(ctx, storageKey+"/"+roleName)
 			if err != nil {
 				return nil, err
@@ -128,13 +132,16 @@ func (b *backend) credReadOperation(ctx context.Context, req *logical.Request, f
 			b.credCache.SetDefault(roleName, cred)
 		}
 
-		// Is the password too old?
-		// If so, time for a new one!
 		now := time.Now().UTC()
 		shouldBeRolled := role.LastVaultRotation.Add(time.Duration(role.TTL) * time.Second) // already in UTC
 		if now.After(shouldBeRolled) {
+			b.Logger().Debug(fmt.Sprintf(
+				"last Vault rotation was at %s, and since the TTL is %d and it's now %s, it's time to rotate it",
+				role.LastVaultRotation.String(), role.TTL, now.String()),
+			)
 			resp, respErr = b.generateAndReturnCreds(ctx, req.Storage, roleName, role, cred)
 		} else {
+			b.Logger().Debug("returning previous credential")
 			resp = &logical.Response{
 				Data: cred,
 			}

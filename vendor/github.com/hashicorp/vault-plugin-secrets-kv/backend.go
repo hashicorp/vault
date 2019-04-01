@@ -64,6 +64,10 @@ type versionedKVBackend struct {
 	// globalConfig is a cached value for fast lookup
 	globalConfig     *Configuration
 	globalConfigLock *sync.RWMutex
+
+	// upgradeCancelFunc is used to be able to shut down the upgrade checking
+	// goroutine from cleanup
+	upgradeCancelFunc context.CancelFunc
 }
 
 // Factory will return a logical backend of type versionedKVBackend or
@@ -88,9 +92,12 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 // Factory returns a new backend as logical.Backend.
 func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	upgradeCtx, upgradeCancelFunc := context.WithCancel(ctx)
+
 	b := &versionedKVBackend{
-		upgrading:        new(uint32),
-		globalConfigLock: new(sync.RWMutex),
+		upgrading:         new(uint32),
+		globalConfigLock:  new(sync.RWMutex),
+		upgradeCancelFunc: upgradeCancelFunc,
 	}
 	if conf.BackendUUID == "" {
 		return nil, errors.New("could not initialize versioned K/V Store, no UUID was provided")
@@ -140,30 +147,13 @@ func VersionedKVFactory(ctx context.Context, conf *logical.BackendConfig) (logic
 		return nil, err
 	}
 	if !upgradeDone {
-		err := b.Upgrade(ctx, conf.StorageView)
+		err := b.Upgrade(upgradeCtx, conf.StorageView)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return b, nil
-}
-
-func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage) (bool, error) {
-	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
-	if err != nil {
-		return false, err
-	}
-
-	var upgradeInfo UpgradeInfo
-	if upgradeEntry != nil {
-		err := proto.Unmarshal(upgradeEntry.Value, &upgradeInfo)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	return upgradeInfo.Done, nil
 }
 
 func pathInvalid(b *versionedKVBackend) []*framework.Path {
@@ -204,6 +194,12 @@ func pathInvalid(b *versionedKVBackend) []*framework.Path {
 
 			HelpDescription: pathInvalidHelp,
 		},
+	}
+}
+
+func (b *versionedKVBackend) Cleanup(ctx context.Context) {
+	if b.upgradeCancelFunc != nil {
+		b.upgradeCancelFunc()
 	}
 }
 

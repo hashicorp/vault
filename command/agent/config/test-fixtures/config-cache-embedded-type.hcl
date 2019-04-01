@@ -22,25 +22,28 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = true
+}
 
-	listener {
-		type = "unix"
-		address = "/path/to/socket"
-		tls_disable = true
-	}
+listener {
+    type = "unix"
+    address = "/path/to/socket"
+    tls_disable = true
+    socket_mode = "configmode"
+    socket_user = "configuser"
+    socket_group = "configgroup"
+}
 
-	listener {
-		type = "tcp"
-		address = "127.0.0.1:8300"
-		tls_disable = true
-	}
+listener {
+    type = "tcp"
+    address = "127.0.0.1:8300"
+    tls_disable = true
+}
 
-	listener {
-		type = "tcp"
-		address = "127.0.0.1:8400"
-		tls_key_file = "/path/to/cakey.pem"
-		tls_cert_file = "/path/to/cacert.pem"
-	}
+listener {
+    type = "tcp"
+    address = "127.0.0.1:8400"
+    tls_key_file = "/path/to/cakey.pem"
+    tls_cert_file = "/path/to/cacert.pem"
 }
 
 vault {

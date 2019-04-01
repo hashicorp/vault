@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -22,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/cryptoutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
@@ -72,6 +74,10 @@ type LeaseCache struct {
 	db          *cachememdb.CacheMemDB
 	baseCtxInfo *cachememdb.ContextInfo
 	l           *sync.RWMutex
+
+	// idLocks is used during cache lookup to ensure that identical requests made
+	// in parallel won't trigger multiple renewal goroutines.
+	idLocks []*locksutil.LockEntry
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -112,7 +118,45 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		db:          db,
 		baseCtxInfo: baseCtxInfo,
 		l:           &sync.RWMutex{},
+		idLocks:     locksutil.CreateLocks(),
 	}, nil
+}
+
+// checkCacheForRequest checks the cache for a particular request based on its
+// computed ID. It returns a non-nil *SendResponse  if an entry is found.
+func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
+	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if index == nil {
+		return nil, nil
+	}
+
+	// Cached request is found, deserialize the response
+	reader := bufio.NewReader(bytes.NewReader(index.Response))
+	resp, err := http.ReadResponse(reader, nil)
+	if err != nil {
+		c.logger.Error("failed to deserialize response", "error", err)
+		return nil, err
+	}
+
+	sendResp, err := NewSendResponse(&api.Response{Response: resp}, index.Response)
+	if err != nil {
+		c.logger.Error("failed to create new send response", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Hit = true
+
+	respTime, err := http.ParseTime(resp.Header.Get("Date"))
+	if err != nil {
+		c.logger.Error("failed to parse cached response date", "error", err)
+		return nil, err
+	}
+	sendResp.CacheMeta.Age = time.Now().Sub(respTime)
+
+	return sendResp, nil
 }
 
 // Send performs a cache lookup on the incoming request. If it's a cache hit,
@@ -126,29 +170,40 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 
+	// Grab a read lock for this particular request
+	idLock := locksutil.LockForKey(c.idLocks, id)
+
+	idLock.RLock()
+	unlockFunc := idLock.RUnlock
+	defer func() { unlockFunc() }()
+
 	// Check if the response for this request is already in the cache
-	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	sendResp, err := c.checkCacheForRequest(id)
+	if err != nil {
+		return nil, err
+	}
+	if sendResp != nil {
+		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
+		return sendResp, nil
+	}
+
+	// Perform a lock upgrade
+	idLock.RUnlock()
+	idLock.Lock()
+	unlockFunc = idLock.Unlock
+
+	// Check cache once more after upgrade
+	sendResp, err = c.checkCacheForRequest(id)
 	if err != nil {
 		return nil, err
 	}
 
-	// Cached request is found, deserialize the response and return early
-	if index != nil {
+	// If found, it means that some other parallel request already cached this response
+	// in between this upgrade so we can simply return that. Otherwise, this request
+	// will be the one performing the cache write.
+	if sendResp != nil {
 		c.logger.Debug("returning cached response", "path", req.Request.URL.Path)
-
-		reader := bufio.NewReader(bytes.NewReader(index.Response))
-		resp, err := http.ReadResponse(reader, nil)
-		if err != nil {
-			c.logger.Error("failed to deserialize response", "error", err)
-			return nil, err
-		}
-
-		return &SendResponse{
-			Response: &api.Response{
-				Response: resp,
-			},
-			ResponseBody: index.Response,
-		}, nil
+		return sendResp, nil
 	}
 
 	c.logger.Debug("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
@@ -156,7 +211,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)
 	if err != nil {
-		return nil, err
+		return resp, err
+	}
+
+	// If this is a non-2xx or if the returned response does not contain JSON payload,
+	// we skip caching
+	if resp.Response.StatusCode >= 300 || resp.Response.Header.Get("Content-Type") != "application/json" {
+		return resp, err
 	}
 
 	// Get the namespace from the request header
@@ -168,7 +229,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Build the index to cache based on the response received
-	index = &cachememdb.Index{
+	index := &cachememdb.Index{
 		ID:          id,
 		Namespace:   namespace,
 		RequestPath: req.Request.URL.Path,
@@ -417,7 +478,14 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 
 		c.logger.Debug("received cache-clear request", "type", req.Type, "namespace", req.Namespace, "value", req.Value)
 
-		if err := c.handleCacheClear(ctx, req.Type, req.Namespace, req.Value); err != nil {
+		in, err := parseCacheClearInput(req)
+		if err != nil {
+			c.logger.Error("unable to parse clear input", "error", err)
+			logical.RespondError(w, http.StatusBadRequest, errwrap.Wrapf("failed to parse clear input: {{err}}", err))
+			return
+		}
+
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			// Default to 500 on error, unless the user provided an invalid type,
 			// which would then be a 400.
 			httpStatus := http.StatusInternalServerError
@@ -432,35 +500,29 @@ func (c *LeaseCache) HandleCacheClear(ctx context.Context) http.Handler {
 	})
 }
 
-func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, clearValues ...interface{}) error {
-	if len(clearValues) == 0 {
+func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) error {
+	if in == nil {
 		return errors.New("no value(s) provided to clear corresponding cache entries")
 	}
 
-	// The value that we want to clear, for most cases, is the last one provided.
-	clearValue, ok := clearValues[len(clearValues)-1].(string)
-	if !ok {
-		return fmt.Errorf("unable to convert %v to type string", clearValue)
-	}
-
-	switch clearType {
+	switch in.Type {
 	case "request_path":
 		// For this particular case, we need to ensure that there are 2 provided
 		// indexers for the proper lookup.
-		if len(clearValues) != 2 {
-			return fmt.Errorf("clearing cache by request path requires 2 indexers, got %d", len(clearValues))
+		if in.RequestPath == "" {
+			return errors.New("request path not provided")
 		}
 
 		// The first value provided for this case will be the namespace, but if it's
 		// an empty value we need to overwrite it with "root/" to ensure proper
 		// cache lookup.
-		if clearValues[0].(string) == "" {
-			clearValues[0] = "root/"
+		if in.Namespace == "" {
+			in.Namespace = "root/"
 		}
 
 		// Find all the cached entries which has the given request path and
 		// cancel the contexts of all the respective renewers
-		indexes, err := c.db.GetByPrefix(clearType, clearValues...)
+		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
 		if err != nil {
 			return err
 		}
@@ -469,12 +531,12 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 		}
 
 	case "token":
-		if clearValue == "" {
-			return nil
+		if in.Token == "" {
+			return errors.New("token not provided")
 		}
 
 		// Get the context for the given token and cancel its context
-		index, err := c.db.Get(cachememdb.IndexNameToken, clearValue)
+		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
 		if err != nil {
 			return err
 		}
@@ -486,9 +548,31 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, clearType string, cle
 
 		index.RenewCtxInfo.CancelFunc()
 
-	case "token_accessor", "lease":
+	case "token_accessor":
+		if in.TokenAccessor == "" {
+			return errors.New("token accessor not provided")
+		}
+
 		// Get the cached index and cancel the corresponding renewer context
-		index, err := c.db.Get(clearType, clearValue)
+		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
+		if err != nil {
+			return err
+		}
+		if index == nil {
+			return nil
+		}
+
+		c.logger.Debug("canceling context of index attached to accessor")
+
+		index.RenewCtxInfo.CancelFunc()
+
+	case "lease":
+		if in.Lease == "" {
+			return errors.New("lease not provided")
+		}
+
+		// Get the cached index and cancel the corresponding renewer context
+		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
 		if err != nil {
 			return err
 		}
@@ -558,14 +642,22 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		if err := c.handleCacheClear(ctx, "token", token); err != nil {
+		in := &cacheClearInput{
+			Type:  "token",
+			Token: token,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
 	case path == vaultPathTokenRevokeSelf:
 		// Clear the cache entry associated with the token and all the other
 		// entries belonging to the leases derived from this token.
-		if err := c.handleCacheClear(ctx, "token", req.Token); err != nil {
+		in := &cacheClearInput{
+			Type:  "token",
+			Token: req.Token,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -583,7 +675,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 			return false, fmt.Errorf("expected accessor in the request body to be string")
 		}
 
-		if err := c.handleCacheClear(ctx, "token_accessor", accessor); err != nil {
+		in := &cacheClearInput{
+			Type:          "token_accessor",
+			TokenAccessor: accessor,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -654,7 +750,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		if !ok {
 			return false, fmt.Errorf("expected lease_id the request body to be string")
 		}
-		if err := c.handleCacheClear(ctx, "lease", leaseID); err != nil {
+		in := &cacheClearInput{
+			Type:  "lease",
+			Lease: leaseID,
+		}
+		if err := c.handleCacheClear(ctx, in); err != nil {
 			return false, err
 		}
 
@@ -813,4 +913,42 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	}
 
 	return nil
+}
+
+type cacheClearInput struct {
+	Type string
+
+	RequestPath   string
+	Namespace     string
+	Token         string
+	TokenAccessor string
+	Lease         string
+}
+
+func parseCacheClearInput(req *cacheClearRequest) (*cacheClearInput, error) {
+	if req == nil {
+		return nil, errors.New("nil request options provided")
+	}
+
+	if req.Type == "" {
+		return nil, errors.New("no type provided")
+	}
+
+	in := &cacheClearInput{
+		Type:      req.Type,
+		Namespace: req.Namespace,
+	}
+
+	switch req.Type {
+	case "request_path":
+		in.RequestPath = req.Value
+	case "token":
+		in.Token = req.Value
+	case "token_accessor":
+		in.TokenAccessor = req.Value
+	case "lease":
+		in.Lease = req.Value
+	}
+
+	return in, nil
 }

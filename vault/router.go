@@ -526,8 +526,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = ""
 	}
 
-	originalEntReq := req.EntReq()
-
 	// Attach the storage view for the request
 	req.Storage = re.storageView
 
@@ -587,8 +585,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	origMFACreds := req.MFACreds
+	originalMFACreds := req.MFACreds
 	req.MFACreds = nil
+
+	originalControlGroup := req.ControlGroup
+	req.ControlGroup = nil
 
 	// Cache the headers
 	headers := req.Headers
@@ -645,10 +646,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 		req.EntityID = originalEntityID
 
-		req.MFACreds = origMFACreds
+		req.MFACreds = originalMFACreds
 
 		req.SetTokenEntry(reqTokenEntry)
-		req.SetEntReq(originalEntReq)
+		req.ControlGroup = originalControlGroup
 	}()
 
 	// Invoke the backend

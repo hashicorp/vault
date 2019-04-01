@@ -51,6 +51,10 @@ Vagrantfile
 !command/agent/config/test-fixtures/config-cache.hcl
 !command/agent/config/test-fixtures/config-embedded-type.hcl
 !command/agent/config/test-fixtures/config-cache-embedded-type.hcl
+!command/agent/config/test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl
+!command/agent/config/test-fixtures/bad-config-cache-no-listeners.hcl
+!command/agent/config/test-fixtures/config-cache-no-auto_auth.hcl
+!command/agent/config/test-fixtures/config-cache-auto_auth-no-sink.hcl
 
 .DS_Store
 .idea

@@ -13,6 +13,11 @@ const (
 	CoreReplicatedClusterSecondariesPrefix   = CoreReplicatedClusterPrefix + "secondaries/"
 	CoreReplicatedClusterInfoPathDR          = CoreReplicatedClusterPrefixDR + "info"
 	CoreReplicatedClusterSecondariesPrefixDR = CoreReplicatedClusterPrefixDR + "secondaries/"
+
+	// This is an identifier for the current secondary in the replicated paths
+	// manager.  It should contain a character that is not allowed in secondary
+	// ids to ensure it doesn't collide.
+	CurrentReplicatedSecondaryIdentifier = ".current"
 )
 
 type ReplicationState uint32

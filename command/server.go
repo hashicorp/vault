@@ -70,6 +70,7 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+	SigUSR2Ch  chan struct{}
 
 	WaitGroup *sync.WaitGroup
 
@@ -202,7 +203,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	//
 	// Why hello there little source code reader! Welcome to the Vault source
 	// code. The remaining options are intentionally undocumented and come with
-	// no warranty or backwards-compatability promise. Do not use these flags
+	// no warranty or backwards-compatibility promise. Do not use these flags
 	// in production. Do not build automation using these flags. Unless you are
 	// developing against Vault, you should not need any of these flags.
 
@@ -510,13 +511,21 @@ func (c *ServerCommand) Run(args []string) int {
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
 	} else {
 		// Handle the case where no seal is provided
-		if len(config.Seals) == 0 {
+		switch len(config.Seals) {
+		case 0:
 			config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+		case 1:
+			// If there's only one seal and it's disabled assume they want to
+			// migrate to a shamir seal and simply didn't provide it
+			if config.Seals[0].Disabled {
+				config.Seals = append(config.Seals, &server.Seal{Type: vaultseal.Shamir})
+			}
 		}
 		for _, configSeal := range config.Seals {
 			sealType := vaultseal.Shamir
 			if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 				sealType = os.Getenv("VAULT_SEAL_TYPE")
+				configSeal.Type = sealType
 			} else {
 				sealType = configSeal.Type
 			}
@@ -1262,6 +1271,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
+
+		case <-c.SigUSR2Ch:
+			buf := make([]byte, 32*1024*1024)
+			n := runtime.Stack(buf[:], true)
+			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
 

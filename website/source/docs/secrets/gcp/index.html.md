@@ -171,7 +171,7 @@ note](#things-to-note) section below.
 
 Roleset bindings define a list of resources and the associated IAM roles on that
 resource. Roleset bindings are used as the `binding` argument when creating or
-updating a rolset and are specified in the following format using HCL:
+updating a roleset and are specified in the following format using HCL:
 
 ```hcl
 resource NAME {

@@ -423,6 +423,9 @@ type Core struct {
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
+
+	// Stores request counters
+	counters counters
 }
 
 // CoreConfig is used to parameterize a core
@@ -494,6 +497,8 @@ type CoreConfig struct {
 
 	// Telemetry objects
 	MetricsHelper *metricsutil.MetricsHelper
+
+	CounterSyncInterval time.Duration
 }
 
 func (c *CoreConfig) Clone() *CoreConfig {
@@ -526,6 +531,7 @@ func (c *CoreConfig) Clone() *CoreConfig {
 		DisablePerformanceStandby: c.DisablePerformanceStandby,
 		DisableIndexing:           c.DisableIndexing,
 		AllLoggers:                c.AllLoggers,
+		CounterSyncInterval:       c.CounterSyncInterval,
 	}
 }
 
@@ -564,6 +570,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logging.NewVaultLogger(log.Trace)
 	}
 
+	syncInterval := conf.CounterSyncInterval
+	if syncInterval.Nanoseconds() == 0 {
+		syncInterval = 30 * time.Second
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:                      entCore{},
@@ -600,6 +611,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		neverBecomeActive:            new(uint32),
 		clusterLeaderParams:          new(atomic.Value),
 		metricsHelper:                conf.MetricsHelper,
+		counters: counters{
+			requests:     new(uint64),
+			syncInterval: syncInterval,
+		},
 	}
 
 	atomic.StoreUint32(c.sealed, 1)
@@ -1459,6 +1474,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
+	if err := c.loadCurrentRequestCounters(ctx, time.Now()); err != nil {
+		return err
+	}
 	if err := c.loadCredentials(ctx); err != nil {
 		return err
 	}
@@ -1631,14 +1649,28 @@ func stopReplicationImpl(c *Core) error {
 
 // emitMetrics is used to periodically expose metrics while running
 func (c *Core) emitMetrics(stopCh chan struct{}) {
+	emitTimer := time.Tick(time.Second)
+	writeTimer := time.Tick(c.counters.syncInterval)
+
 	for {
 		select {
-		case <-time.After(time.Second):
+		case <-emitTimer:
 			c.metricsMutex.Lock()
 			if c.expiration != nil {
 				c.expiration.emitMetrics()
 			}
 			c.metricsMutex.Unlock()
+
+		case <-writeTimer:
+			if c.perfStandby {
+				syncCounter(c)
+			} else {
+				err := c.saveCurrentRequestCounters(context.Background(), time.Now())
+				if err != nil {
+					c.logger.Error("writing request counters to barrier", "err", err)
+				}
+			}
+
 		case <-stopCh:
 			return
 		}
@@ -1702,7 +1734,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
 	}
 	// In older versions of vault the default seal would not store a type. This
-	// is here to offer backwards compatability for older seal configs.
+	// is here to offer backwards compatibility for older seal configs.
 	if barrierConf.Type == "" {
 		barrierConf.Type = seal.Shamir
 	}
@@ -1722,7 +1754,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
 		}
 		// In older versions of vault the default seal would not store a type. This
-		// is here to offer backwards compatability for older seal configs.
+		// is here to offer backwards compatibility for older seal configs.
 		if recoveryConf.Type == "" {
 			recoveryConf.Type = seal.Shamir
 		}

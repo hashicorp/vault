@@ -168,7 +168,7 @@ type UserEntry struct {
 }
 
 const pathUserHelpSyn = `
-Manage additional groups for users allowed to authenticate.
+Manage users allowed to authenticate.
 `
 
 const pathUserHelpDesc = `

@@ -392,19 +392,25 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
 	if strings.HasPrefix(address, "unix://") {
 		socket := strings.TrimPrefix(address, "unix://")
 		transport := c.HttpClient.Transport.(*http.Transport)
 		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
 			return net.Dial("unix", socket)
 		}
-		// TODO: This shouldn't ideally be done. To be fixed post 1.1-beta.
-		address = "http://unix"
-	}
 
-	u, err := url.Parse(address)
-	if err != nil {
-		return nil, err
+		// Since the address points to a unix domain socket, the scheme in the
+		// *URL would be set to `unix`. The *URL in the client is expected to
+		// be pointing to the protocol used in the application layer and not to
+		// the transport layer. Hence, setting the fields accordingly.
+		u.Scheme = "http"
+		u.Host = socket
+		u.Path = ""
 	}
 
 	client := &Client{
@@ -414,6 +420,10 @@ func NewClient(c *Config) (*Client, error) {
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
+	}
+
+	if namespace := os.Getenv(EnvVaultNamespace); namespace != "" {
+		client.SetNamespace(namespace)
 	}
 
 	return client, nil

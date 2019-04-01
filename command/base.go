@@ -311,7 +311,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				EnvVar:  api.EnvVaultSkipVerify,
 				Usage: "Disable verification of TLS certificates. Using this option " +
-					"is highly discouraged and decreases the security of data " +
+					"is highly discouraged as it decreases the security of data " +
 					"transmissions to and from the Vault server.",
 			})
 

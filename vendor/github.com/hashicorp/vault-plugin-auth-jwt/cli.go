@@ -16,7 +16,7 @@ import (
 )
 
 const defaultMount = "oidc"
-const defaultPort = "8300"
+const defaultPort = "8250"
 
 var errorRegex = regexp.MustCompile(`(?s)Errors:.*\* *(.*)`)
 
@@ -133,6 +133,7 @@ func openURL(url string) error {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start"}
+		url = strings.Replace(url, "&", "^&", -1)
 	case "darwin":
 		cmd = "open"
 	default: // "linux", "freebsd", "openbsd", "netbsd"
@@ -202,7 +203,7 @@ Configuration:
       Vault role of type "OIDC" to use for authentication.
 
   port=<string>
-      Optional localhost port to use for OIDC callback (default: 8300).
+      Optional localhost port to use for OIDC callback (default: 8250).
 `
 
 	return strings.TrimSpace(help)

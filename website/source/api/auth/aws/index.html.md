@@ -30,9 +30,9 @@ the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
 method is configured on an EC2 instance with metadata querying
 capabilities, the credentials are fetched automatically.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/client`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/client`    |
 
 ### Parameters
 
@@ -89,9 +89,9 @@ $ curl \
 
 Returns the previously configured AWS access credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/client`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/client`     |
 
 ### Sample Request
 
@@ -119,9 +119,9 @@ $ curl \
 
 Deletes the previously configured AWS access credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/config/client`  | `204 (empty body)`  |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/aws/config/client`  |
 
 ### Sample Request
 
@@ -138,13 +138,13 @@ This configures the way that Vault interacts with the
 [Identity](/docs/secrets/identity/index.html) store. The default (as of Vault
 1.0.3) is `role_id` for both values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/identity`  | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/identity`  |
 
 ### Parameters
 
-- `iam_alias` `(string: "unique_id")` - How to generate the identity alias when
+- `iam_alias` `(string: "role_id")` - How to generate the identity alias when
   using the `iam` auth method. Valid choices are `role_id`, `unique_id`, and
   `full_arn`  When `role_id` is selected, the randomly generated ID of the role
   is used. When `unique_id` is selected, the [IAM Unique
@@ -158,7 +158,7 @@ This configures the way that Vault interacts with the
   Vault won't be aware and any identity aliases set up for the role name will
   still be valid.
 
-- `ec2_alias (string: "instance_id")` - Configures how to generate the identity
+- `ec2_alias (string: "role_id")` - Configures how to generate the identity
   alias when using the `ec2` auth method. Valid choices are `role_id`,
   `instance_id`, and `image_id`. When `role_id` is selected, the randomly
   generated ID of the role is used. When `instance_id` is selected, the
@@ -188,9 +188,9 @@ $ curl \
 Returns the previously configured Identity integration configuration
 
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/identity`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/identity`   |
 
 ### Sample Request
 
@@ -218,9 +218,9 @@ digest, the identity signature will have RSA digest, and hence the public
 keys for each type varies respectively. Indicate the type of the public key
 using the "type" parameter.
 
-| Method   | Path                                         | Produces               |
-| :------- | :------------------------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/certificate/:cert_name`    | `204 (empty body)`     |
+| Method   | Path                                         |
+| :------------------------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/certificate/:cert_name`    |
 
 ### Parameters
 
@@ -255,9 +255,9 @@ $ curl \
 
 Returns the previously configured AWS public key.
 
-| Method   | Path                                     | Produces               |
-| :------- | :--------------------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/certificate/:cert_name` | `200 application/json` |
+| Method   | Path                                     |
+| :--------------------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/certificate/:cert_name` |
 
 ### Parameters
 
@@ -286,9 +286,9 @@ $ curl \
 
 Removes the previously configured AWS public key.
 
-| Method   | Path                                      | Produces               |
-| :------- | :---------------------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/config/certificate/:cert_name` | `204 (empty body)`     |
+| Method   | Path                                      |
+| :---------------------------------------- | :--------------------- |
+| `DELETE` | `/auth/aws/config/certificate/:cert_name` |
 
 ### Sample Request
 
@@ -303,9 +303,9 @@ $ curl \
 
 Lists all the AWS public certificates that are registered with the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/aws/config/certificates` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/aws/config/certificates` |
 
 ### Sample Request
 
@@ -335,9 +335,9 @@ Allows the explicit association of STS roles to satellite AWS accounts
 running.) Vault will use credentials obtained by assuming these STS roles
 when validating IAM principals or EC2 instances in the particular AWS account.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/sts/:account_id` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/sts/:account_id` |
 
 ### Parameters
 
@@ -370,9 +370,9 @@ $ curl \
 
 Returns the previously configured STS role.
 
-| Method   | Path                               | Produces               |
-| :------- | :--------------------------------- | :--------------------- |
-| `GET`    | `/auth/aws/config/sts/:account_id` | `200 application/json` |
+| Method   | Path                               |
+| :--------------------------------- | :--------------------- |
+| `GET`    | `/auth/aws/config/sts/:account_id` |
 
 ### Parameters
 
@@ -401,9 +401,9 @@ $ curl \
 
 Lists all the AWS Account IDs for which an STS role is registered.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/aws/config/sts`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/aws/config/sts`       |
 
 ### Sample Request
 
@@ -431,9 +431,9 @@ $ curl \
 
 Deletes a previously configured AWS account/STS role association.
 
-| Method   | Path                               | Produces           |
-| :------- | :--------------------------------- | :------------------|
-| `DELETE` | `/auth/aws/config/sts/:account_id` | `204 (empty body)` |
+| Method   | Path                               |
+| :--------------------------------- | :------------------|
+| `DELETE` | `/auth/aws/config/sts/:account_id` |
 
 ### Parameters
 
@@ -453,9 +453,9 @@ $ curl \
 
 Configures the periodic tidying operation of the whitelisted identity entries.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/tidy/identity-whitelist` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/tidy/identity-whitelist` |
 
 ### Parameters
 
@@ -487,9 +487,9 @@ $ curl \
 
 Returns the previously configured periodic whitelist tidying settings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/tidy/identity-whitelist` | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/tidy/identity-whitelist` |
 
 ### Sample Request
 
@@ -514,9 +514,9 @@ $ curl \
 
 Deletes the previously configured periodic whitelist tidying settings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/auth/aws/config/tidy/identity-whitelist` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/auth/aws/config/tidy/identity-whitelist` |
 
 ### Sample Request
 
@@ -531,9 +531,9 @@ $ curl \
 
 Configures the periodic tidying operation of the blacklisted role tag entries.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/config/tidy/roletag-blacklist` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/config/tidy/roletag-blacklist` |
 
 ### Parameters
 
@@ -565,9 +565,9 @@ $ curl \
 
 Returns the previously configured periodic blacklist tidying settings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/config/tidy/roletag-blacklist` | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/config/tidy/roletag-blacklist` |
 
 ### Sample Request
 
@@ -592,9 +592,9 @@ $ curl \
 
 Deletes the previously configured periodic blacklist tidying settings.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/auth/aws/config/tidy/roletag-blacklist` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/auth/aws/config/tidy/roletag-blacklist` |
 
 ### Sample Request
 
@@ -619,9 +619,9 @@ inferencing configuration of that role. For the constraints which accept a list
 of values, the authenticating instance/principal must match any one value in the
 list in order to satisfy that constraint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/role/:role`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/role/:role`       |
 
 ### Parameters
 
@@ -793,9 +793,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/role/:role`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/role/:role`        |
 
 ### Parameters
 
@@ -832,9 +832,9 @@ $ curl \
 
 Lists all the roles that are registered with the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/aws/roles`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/aws/roles`       |
 
 ### Sample Request
 
@@ -862,9 +862,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/role/:role`       | `204 (empty body)`  |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/aws/role/:role`       |
 
 ### Parameters
 
@@ -896,9 +896,9 @@ on the new role tag. Since those must be a subset of the role
 capabilities, the role should never provide more capabilities than any
 given instance can be allowed to gain in a worst-case scenario.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/role/:role/tag`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/role/:role/tag`   |
 
 ### Parameters
 
@@ -960,9 +960,9 @@ defined on the role with which the login is being performed. With the ec2
 auth method, as an alternative to pkcs7 signature, the identity document
 along with its RSA digest can be supplied to this endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/login`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/login`            |
 
 ### Sample Payload
 
@@ -1064,9 +1064,9 @@ that if the role tag was previously used to perform a successful login,
 placing the tag in the blacklist does not invalidate the already issued
 token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/roletag-blacklist/:role_tag`            | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/roletag-blacklist/:role_tag`            |
 
 ### Parameters
 
@@ -1087,9 +1087,9 @@ $ curl \
 
 Returns the blacklist entry of a previously blacklisted role tag.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/roletag-blacklist/:role_tag`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/roletag-blacklist/:role_tag`            |
 
 ### Parameters
 
@@ -1121,9 +1121,9 @@ $ curl \
 
 Lists all the role tags that are blacklisted.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/aws/roletag-blacklist`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/aws/roletag-blacklist`       |
 
 ### Sample Request
 
@@ -1150,9 +1150,9 @@ $ curl \
 
 Deletes a blacklisted role tag.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/roletag-blacklist/:role_tag`       | `204 (empty body)`  |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/aws/roletag-blacklist/:role_tag`       |
 
 ### Parameters
 
@@ -1175,9 +1175,9 @@ $ curl \
 Cleans up the entries in the blacklist based on expiration time on the entry and
 `safety_buffer`.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/tidy/roletag-blacklist` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/tidy/roletag-blacklist` |
 
 ### Parameters
 
@@ -1199,9 +1199,9 @@ $ curl \
 Returns an entry in the whitelist. An entry will be created/updated by every
 successful login.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/aws/identity-whitelist/:instance_id`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/aws/identity-whitelist/:instance_id`            |
 
 ### Parameters
 
@@ -1236,9 +1236,9 @@ $ curl \
 
   Lists all the instance IDs that are in the whitelist of successful logins.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/aws/identity-whitelist`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/aws/identity-whitelist`       |
 
 ### Sample Request
 
@@ -1265,9 +1265,9 @@ $ curl \
 
 Deletes a cache of the successful login from an instance.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/aws/identity-whitelist/:instance_id`       | `204 (empty body)`  |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/aws/identity-whitelist/:instance_id`       |
 
 ### Parameters
 
@@ -1289,9 +1289,9 @@ $ curl \
 Cleans up the entries in the whitelist based on expiration time and
 `safety_buffer`.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/aws/tidy/identity-whitelist` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/aws/tidy/identity-whitelist` |
 
 ### Parameters
 

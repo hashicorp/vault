@@ -49,7 +49,7 @@ you will need to enable ipc_lock capabilities for the plugin binary.
 1. Download and register the plugin:
 
     ```text
-    $ vault write sys/plugins/catalog/oracle-database-plugin \
+    $ vault write sys/plugins/catalog/database/oracle-database-plugin \
         sha256="..." \
         command=vault-plugin-database-oracle
     ```

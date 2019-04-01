@@ -3,13 +3,14 @@ package cache
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
@@ -78,15 +79,7 @@ func TestCache_ComputeIndexID(t *testing.T) {
 
 func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusCreated,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "invalid", "auth": {"client_token": "testtoken"}}`)),
-				},
-			},
-			ResponseBody: []byte(`{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
-		},
+		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 
@@ -110,25 +103,10 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	// Emulate 2 responses from the api proxy. One returns a new token and the
 	// other returns a lease.
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusCreated,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"auth": {"client_token": "testtoken", "renewable": true}}`)),
-				},
-			},
-			ResponseBody: []byte(`{"auth": {"client_token": "testtoken", "renewable": true}}`),
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`)),
-				},
-			},
-			ResponseBody: []byte(`{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
-		},
+		newTestSendResponse(http.StatusCreated, `{"auth": {"client_token": "testtoken", "renewable": true}}`),
+		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
 	}
+
 	lc := testNewLeaseCache(t, responses)
 	// Register an token so that the token and lease requests are cached
 	lc.RegisterAutoAuthToken("autoauthtoken")
@@ -190,25 +168,14 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	}
 }
 
-func TesteaseCache_SendNonCacheable(t *testing.T) {
+func TestLeaseCache_SendNonCacheable(t *testing.T) {
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "output"}`)),
-				},
-			},
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusNotFound,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "invalid"}`)),
-				},
-			},
-		},
+		newTestSendResponse(http.StatusOK, `{"value": "output"}`),
+		newTestSendResponse(http.StatusNotFound, `{"value": "invalid"}`),
+		newTestSendResponse(http.StatusOK, `<html>Hello</html>`),
+		newTestSendResponse(http.StatusTemporaryRedirect, ""),
 	}
+
 	lc := testNewLeaseCache(t, responses)
 
 	// Send a request through the lease cache which is not cacheable (there is
@@ -220,7 +187,7 @@ func TesteaseCache_SendNonCacheable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := deep.Equal(resp.Response.StatusCode, responses[0].Response.StatusCode); diff != nil {
+	if diff := deep.Equal(resp.Response, responses[0].Response); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
@@ -234,7 +201,35 @@ func TesteaseCache_SendNonCacheable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := deep.Equal(resp.Response.StatusCode, responses[1].Response.StatusCode); diff != nil {
+	if diff := deep.Equal(resp.Response, responses[1].Response); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Since the response is non-cacheable, the third response will be
+	// returned.
+	sendReq = &SendRequest{
+		Token:   "foo",
+		Request: httptest.NewRequest("GET", "http://example.com", nil),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response, responses[2].Response); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Since the response is non-cacheable, the fourth response will be
+	// returned.
+	sendReq = &SendRequest{
+		Token:   "foo",
+		Request: httptest.NewRequest("GET", "http://example.com", nil),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response, responses[3].Response); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 }
@@ -242,24 +237,8 @@ func TesteaseCache_SendNonCacheable(t *testing.T) {
 func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	// Create the cache
 	responses := []*SendResponse{
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "output", "lease_id": "foo"}`)),
-				},
-			},
-			ResponseBody: []byte(`{"value": "output", "lease_id": "foo"}`),
-		},
-		&SendResponse{
-			Response: &api.Response{
-				Response: &http.Response{
-					StatusCode: http.StatusCreated,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"value": "invalid", "auth": {"client_token": "testtoken"}}`)),
-				},
-			},
-			ResponseBody: []byte(`{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
-		},
+		newTestSendResponse(http.StatusOK, `{"value": "output", "lease_id": "foo"}`),
+		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 
@@ -275,8 +254,16 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := deep.Equal(resp.Response.StatusCode, responses[0].Response.StatusCode); diff != nil {
+	if diff := deep.Equal(resp.Response, responses[0].Response); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	idx, err := lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != nil {
+		t.Fatalf("expected nil entry, got: %#v", idx)
 	}
 
 	// Verify that the response is not cached by sending the same request and
@@ -289,8 +276,16 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := deep.Equal(resp.Response.StatusCode, responses[0].Response.StatusCode); diff == nil {
+	if diff := deep.Equal(resp.Response, responses[1].Response); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	idx, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx != nil {
+		t.Fatalf("expected nil entry, got: %#v", idx)
 	}
 }
 

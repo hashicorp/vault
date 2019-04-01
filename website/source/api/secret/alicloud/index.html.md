@@ -34,10 +34,10 @@ valid AliCloud credentials with proper permissions.
 Please see the [Vault AliCloud documentation](/docs/secrets/alicloud/index.html) for
 the policies that should be attached to the access key you provide.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/alicloud/config`           | `204 (empty body)`     |
-| `GET`    | `/alicloud/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/alicloud/config`           |
+| `GET`    | `/alicloud/config`           |
 
 ### Parameters
 
@@ -84,12 +84,12 @@ The `role` endpoint configures how Vault will generate credentials for users of 
 * `ttl` (int, optional) - The duration in seconds after which the issued token should expire. Defaults to 0, in which case the value will fallback to the system/mount defaults.
 * `max_ttl` (int, optional) - The maximum allowed lifetime of tokens issued using this role.
 
-| Method   | Path                        | Produces               |
-| :------- | :---------------------------| :--------------------- |
-| `GET`    | `/alicloud/role`            | `200 application/json` |
-| `POST`   | `/alicloud/role/:role_name` | `204 (empty body)`     |
-| `GET`    | `/alicloud/role/:role_name` | `200 application/json` |
-| `DELETE` | `/alicloud/role/:role_name` | `204 (empty body)`     |
+| Method   | Path                        |
+| :---------------------------| :--------------------- |
+| `GET`    | `/alicloud/role`            |
+| `POST`   | `/alicloud/role/:role_name` |
+| `GET`    | `/alicloud/role/:role_name` |
+| `DELETE` | `/alicloud/role/:role_name` |
 
 ### Sample Post Request
 
@@ -177,9 +177,9 @@ Performing a `LIST` on the `/alicloud/roles` endpoint will list the names of all
 This endpoint generates dynamic RAM credentials based on the named role. This
 role must be created before queried.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/alicloud/creds/:name`      | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/alicloud/creds/:name`      |
 
 ### Parameters
 

@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
@@ -47,7 +48,14 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			// If this is a api.Response error, don't wrap the response.
+			if resp != nil && resp.Response.Error() != nil {
+				copyHeader(w.Header(), resp.Response.Header)
+				w.WriteHeader(resp.Response.StatusCode)
+				io.Copy(w, resp.Response.Body)
+			} else {
+				logical.RespondError(w, http.StatusInternalServerError, errwrap.Wrapf("failed to get the response: {{err}}", err))
+			}
 			return
 		}
 
@@ -59,11 +67,40 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		defer resp.Response.Body.Close()
 
-		copyHeader(w.Header(), resp.Response.Header)
-		w.WriteHeader(resp.Response.StatusCode)
+		// Set headers
+		setHeaders(w, resp)
+
+		// Set response body
 		io.Copy(w, resp.Response.Body)
 		return
 	})
+}
+
+// setHeaders is a helper that sets the header values based on SendResponse. It
+// copies over the headers from the original response and also includes any
+// cache-related headers.
+func setHeaders(w http.ResponseWriter, resp *SendResponse) {
+	// Set header values
+	copyHeader(w.Header(), resp.Response.Header)
+	if resp.CacheMeta != nil {
+		xCacheVal := "MISS"
+
+		if resp.CacheMeta.Hit {
+			xCacheVal = "HIT"
+
+			// If this is a cache hit, we also set the Age header
+			age := fmt.Sprintf("%.0f", resp.CacheMeta.Age.Seconds())
+			w.Header().Set("Age", age)
+
+			// Update the date value
+			w.Header().Set("Date", time.Now().Format(http.TimeFormat))
+		}
+
+		w.Header().Set("X-Cache", xCacheVal)
+	}
+
+	// Set status code
+	w.WriteHeader(resp.Response.StatusCode)
 }
 
 // processTokenLookupResponse checks if the request was one of token

@@ -146,6 +146,7 @@ export default ApplicationAdapter.extend({
       userpass: `login/${encodeURIComponent(username)}`,
       ldap: `login/${encodeURIComponent(username)}`,
       okta: `login/${encodeURIComponent(username)}`,
+      radius: `login/${encodeURIComponent(username)}`,
       token: 'lookup-self',
     };
     const urlSuffix = authURLs[authBackend];
