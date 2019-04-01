@@ -13,7 +13,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
     await withFlash(click('[data-test-confirm-button]'), () => {
       if (assert) {
-        assert.equal(currentURL(), `/vault/replication/${type}/manage`, 'redirects to the replication page');
+        assert.equal(currentURL(), `/vault/replication/${type}`, 'redirects to the replication page');
         assert.equal(
           // TODO better test selectors for flash messages
           find('[data-test-flash-message-body]').textContent.trim(),
