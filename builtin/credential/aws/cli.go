@@ -33,7 +33,7 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 	return defaultEndpoint, nil
 }
 
-// Generates the necessary data to send to the Vault server for generating a token
+// GenerateLoginData populates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
 func GenerateLoginData(creds *credentials.Credentials, headerValue, configuredRegion string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
