@@ -54,35 +54,33 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}
 
 	secretIDFilePathRaw, ok := conf.Config["secret_id_file_path"]
-	if !ok {
-		return a, nil
-	}
-
-	a.secretIDFilePath, ok = secretIDFilePathRaw.(string)
-	if !ok {
-		return nil, errors.New("could not convert 'secret_id_file_path' config value to string")
-	}
-	if a.secretIDFilePath == "" {
-		return a, nil
-	}
-
-	removeSecretIDFileAfterReadingRaw, ok := conf.Config["remove_secret_id_file_after_reading"]
 	if ok {
-		removeSecretIDFileAfterReading, err := parseutil.ParseBool(removeSecretIDFileAfterReadingRaw)
-		if err != nil {
-			return nil, errwrap.Wrapf("error parsing 'remove_secret_id_file_after_reading' value: {{err}}", err)
-		}
-		a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
-	}
-
-	secretIDResponseWrappingPathRaw, ok := conf.Config["secret_id_response_wrapping_path"]
-	if ok {
-		a.secretIDResponseWrappingPath, ok = secretIDResponseWrappingPathRaw.(string)
+		a.secretIDFilePath, ok = secretIDFilePathRaw.(string)
 		if !ok {
-			return nil, errors.New("could not convert 'secret_id_response_wrapping_path' config value to string")
+			return nil, errors.New("could not convert 'secret_id_file_path' config value to string")
 		}
-		if a.secretIDResponseWrappingPath == "" {
-			return nil, errors.New("'secret_id_response_wrapping_path' value is empty")
+		if a.secretIDFilePath == "" {
+			return a, nil
+		}
+
+		removeSecretIDFileAfterReadingRaw, ok := conf.Config["remove_secret_id_file_after_reading"]
+		if ok {
+			removeSecretIDFileAfterReading, err := parseutil.ParseBool(removeSecretIDFileAfterReadingRaw)
+			if err != nil {
+				return nil, errwrap.Wrapf("error parsing 'remove_secret_id_file_after_reading' value: {{err}}", err)
+			}
+			a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
+		}
+
+		secretIDResponseWrappingPathRaw, ok := conf.Config["secret_id_response_wrapping_path"]
+		if ok {
+			a.secretIDResponseWrappingPath, ok = secretIDResponseWrappingPathRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'secret_id_response_wrapping_path' config value to string")
+			}
+			if a.secretIDResponseWrappingPath == "" {
+				return nil, errors.New("'secret_id_response_wrapping_path' value is empty")
+			}
 		}
 	}
 
