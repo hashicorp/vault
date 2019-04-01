@@ -257,6 +257,8 @@ func TestLoadConfigFile_Bad_AgentCache_AutoAuth_Method_wrapping(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-cache-auto_auth-method-wrapping.hcl", logger)
 	if err == nil {
 		t.Fatal("LoadConfig should return an error when auth_auth.method.wrap_ttl nonzero and cache.use_auto_auth_token=true")
+	}
+}
 
 func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Debug)
@@ -270,7 +272,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
-				WrapTTL:   300 * time.Second,
 				MountPath: "auth/aws",
 				Config: map[string]interface{}{
 					"role": "foobar",
