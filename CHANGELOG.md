@@ -7,6 +7,8 @@ IMPROVEMENTS:
 
 BUG FIXES: 
 
+ * agent: Allow auto-auth to be used with caching without having to define any
+   sinks [GH-6468]
  * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
    URL when running on Windows. [[GH-37]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/37)
  * auth/jwt: Fix an issue where the `oidc_scopes` parameter was not being included in
