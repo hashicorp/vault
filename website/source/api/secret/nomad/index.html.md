@@ -23,9 +23,9 @@ This endpoint configures the access information for Nomad. This access
 information is used so that Vault can communicate with Nomad and generate
 Nomad tokens.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/nomad/config/access`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/nomad/config/access`       |
 
 ### Parameters
 
@@ -69,9 +69,9 @@ $ curl \
 
 This endpoint queries for information about the Nomad connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/nomad/config/access`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/config/access`       |
 
 ### Sample Request
 
@@ -93,9 +93,9 @@ $ curl \
 
 This endpoint configures the lease settings for generated tokens.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/nomad/config/lease`        | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/nomad/config/lease`        |
 
 ### Parameters
 
@@ -130,9 +130,9 @@ $ curl \
 
 This endpoint queries for information about the Lease TTL for the specified mount.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/nomad/config/lease`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/config/lease`        |
 
 ### Sample Request
 
@@ -155,9 +155,9 @@ $ curl \
 
 This endpoint deletes the lease configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/nomad/config/lease`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/nomad/config/lease`         |
 
 ### Sample Request
 
@@ -173,9 +173,9 @@ $ curl \
 This endpoint creates or updates the Nomad role definition in Vault. If the role does not exist, it will be created. If the role already exists, it will receive
 updated attributes.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/nomad/role/:name`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/nomad/role/:name`         |
 
 ### Parameters
 
@@ -214,9 +214,9 @@ $ curl \
 This endpoint queries for information about a Nomad role with the given name.
 If no role exists with that name, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/nomad/role/:name`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/role/:name`         |
 
 ### Parameters
 
@@ -249,10 +249,10 @@ $ curl \
 
 This endpoint lists all existing roles in the backend.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`    | `/nomad/role`              | `200 application/json` |
-| `GET`     | `/nomad/role?list=true`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`    | `/nomad/role`              |
+| `GET`     | `/nomad/role?list=true`    |
 
 ### Sample Request
 
@@ -280,9 +280,9 @@ $ curl \
 This endpoint deletes a Nomad role with the given name. Even if the role does
 not exist, this endpoint will still return a successful response.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/nomad/role/:name`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/nomad/role/:name`         |
 
 ### Parameters
 
@@ -303,9 +303,9 @@ $ curl \
 This endpoint generates a dynamic Nomad token based on the given role
 definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/nomad/creds/:name`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/nomad/creds/:name`         |
 
 ### Parameters
 

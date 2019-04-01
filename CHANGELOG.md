@@ -1,3 +1,25 @@
+## 1.1.1 (unreleased)
+
+IMPROVEMENTS: 
+
+ * ui: Suport for authentication via the RADIUS auth method [GH-6488]
+
+
+BUG FIXES: 
+
+ * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
+   URL when running on Windows. [[GH-37]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/37)
+ * auth/jwt: Fix an issue where the `oidc_scopes` parameter was not being included in
+   the response to a role read request [[GH-35]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/35)
+ * core: Fix incorrect representation of required properties in OpenAPI output
+   [[GH-6490]](https://github.com/hashicorp/vault/pull/6490)
+ * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
+ * ui: Fix an issue where in production builds OpenAPI model generation was
+   failing, causing any form using it to render labels with missing fields [GH-6474]
+ * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
+ * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
+ 
+ 
 ## 1.1.0 (March 18th, 2019)
 
 CHANGES:

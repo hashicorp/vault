@@ -11,9 +11,9 @@ description: |-
 
 This endpoint defines a MFA method of type TOTP.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `POST`   | `/sys/mfa/method/totp/:name`   | `204 (empty body)`     |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `POST`   | `/sys/mfa/method/totp/:name`   |
 
 ### Parameters
 
@@ -57,9 +57,9 @@ $ curl \
 This endpoint queries the MFA configuration of TOTP type for a given method
 name.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `GET`    | `/sys/mfa/method/totp/:name`   | `200 application/json`   |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `GET`    | `/sys/mfa/method/totp/:name`   |
 
 ### Parameters
 
@@ -98,9 +98,9 @@ $ curl \
 
 This endpoint deletes a TOTP MFA method.
 
-| Method   | Path                           | Produces                 |
-| :------- | :----------------------------- | :----------------------- |
-| `DELETE` | `/sys/mfa/method/totp/:name`   | `204 (empty body)`       |
+| Method   | Path                           |
+| :----------------------------- | :----------------------- |
+| `DELETE` | `/sys/mfa/method/totp/:name`   |
 
 
 ### Parameters
@@ -123,9 +123,9 @@ This endpoint generates an MFA secret in the entity of the calling token, if it
 doesn't exist already, using the configuration stored under the given MFA
 method name.
 
-| Method   | Path                                  | Produces                 |
-| :------- | :------------------------------------ | :----------------------- |
-| `GET`    | `/sys/mfa/method/totp/:name/generate` | `200 application/json`   |
+| Method   | Path                                  |
+| :------------------------------------ | :----------------------- |
+| `GET`    | `/sys/mfa/method/totp/:name/generate` |
 
 ### Parameters
 
@@ -157,9 +157,9 @@ This endpoint can be used to generate a TOTP MFA secret. Unlike the `generate`
 API which stores the generated secret on the entity ID of the calling token,
 the `admin-generate` API stores the generated secret on the given entity ID.
 
-| Method   | Path                                         | Produces                 |
-| :------- | :------------------------------------------- | :----------------------- |
-| `POST`   | `/sys/mfa/method/totp/:name/admin-generate`  | `200 application/json`   |
+| Method   | Path                                         |
+| :------------------------------------------- | :----------------------- |
+| `POST`   | `/sys/mfa/method/totp/:name/admin-generate`  |
 
 ### Parameters
 
@@ -206,9 +206,9 @@ explicitly delete the secret first. This API can be used to delete the secret
 and the `generate` or `admin-generate` APIs should be used to regenerate a new
 secret.
 
-| Method   | Path                                    | Produces               |
-| :------- | :-------------------------------------- | :--------------------- |
-| `POST`   | `/sys/mfa/method/:name/admin-destroy`   | `204 (empty body)`     |
+| Method   | Path                                    |
+| :-------------------------------------- | :--------------------- |
+| `POST`   | `/sys/mfa/method/:name/admin-destroy`   |
 
 ### Parameters
 

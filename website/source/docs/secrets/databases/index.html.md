@@ -20,7 +20,7 @@ that need to access a database no longer need to hardcode credentials: they can
 request them from Vault, and use Vault's leasing mechanism to more easily roll
 keys.
 
-Since every service accessing the database with unique credentials, it makes
+Since every service is accessing the database with unique credentials, it makes
 auditing much easier when questionable data access is discovered. You can track
 it down to the specific instance of a service based on the SQL username.
 

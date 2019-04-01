@@ -20,9 +20,9 @@ Upon successful rekey, no split unseal key shares are returned.
 
 This endpoint reads the configuration and progress of the current rekey attempt.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey/init`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/rekey/init`            |
 
 ### Sample Request
 
@@ -63,9 +63,9 @@ This endpoint initializes a new rekey attempt. Only a single rekey attempt can
 take place at a time, and changing the parameters of a rekey requires canceling
 and starting a new rekey, which will also provide a new nonce.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey/init`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey/init`            |
 
 ### Parameters
 
@@ -123,9 +123,9 @@ well as any progress made. This must be called to change the parameters of the
 rekey. Note: verification is still a part of a rekey. If rekeying is canceled
 during the verification flow, the current unseal keys remain valid.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey/init`            | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/rekey/init`            |
 
 ### Sample Request
 
@@ -142,9 +142,9 @@ This endpoint returns the backup copy of PGP-encrypted unseal keys. The returned
 value is the nonce of the rekey operation and a map of PGP key fingerprint to
 hex-encoded PGP-encrypted key.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey/backup`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/rekey/backup`          |
 
 ### Sample Request
 
@@ -169,9 +169,9 @@ $ curl \
 
 This endpoint deletes the backup copy of PGP-encrypted unseal keys.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/sys/rekey/backup`          | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/sys/rekey/backup`          |
 
 ### Sample Request
 
@@ -198,9 +198,9 @@ If verification was requested, successfully completing this flow will
 immediately put the operation into a verification state, and provide the nonce
 for the verification operation.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey/update`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey/update`          |
 
 ### Parameters
 
@@ -251,9 +251,9 @@ whether or not the keys were backed up to physical storage.
 This endpoint reads the configuration and progress of the current rekey
 verification attempt.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
-| `GET`    | `/sys/rekey/verify`            | `200 application/json` |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
+| `GET`    | `/sys/rekey/verify`            |
 
 ### Sample Request
 
@@ -287,8 +287,8 @@ any progress made and resets the nonce. Unlike a `DELETE` against
 entire rekey atttempt. The return value is the same as `GET` along with the new
 nonce.
 
-| Method   | Path                           | Produces               |
-| :------- | :----------------------------- | :--------------------- |
+| Method   | Path                           |
+| :----------------------------- | :--------------------- |
 | `DELETE` | `/sys/rekey/verify`            | `200 (empty body)`     |
 
 ### Sample Request
@@ -323,9 +323,9 @@ When the operation is complete, this will return a response like the example
 below; otherwise the response will be the same as the `GET` method against
 `sys/rekey/verify`, providing status on the operation itself.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/rekey/verify`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/rekey/verify`          |
 
 ### Parameters
 

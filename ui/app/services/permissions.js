@@ -2,7 +2,6 @@ import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
 const API_PATHS = {
-  secrets: { engine: 'cubbyhole/' },
   access: {
     methods: 'sys/auth',
     entities: 'identity/entities',

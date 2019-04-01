@@ -22,9 +22,9 @@ please update your API calls accordingly.
 Registers a role. Only entities using the role registered using this endpoint 
 will be able to perform the login operation.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `POST`   | `/auth/alicloud/role/:role`      | `204 (empty body)`     |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `POST`   | `/auth/alicloud/role/:role`      |
 
 ### Parameters
 
@@ -69,9 +69,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/alicloud/role/:role`  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/alicloud/role/:role`  |
 
 ### Parameters
 
@@ -107,9 +107,9 @@ $ curl \
 
 Lists all the roles that are registered with the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/alicloud/roles`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/alicloud/roles`       |
 
 ### Sample Request
 
@@ -137,9 +137,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                             | Produces               |
-| :------- | :------------------------------- | :--------------------- |
-| `DELETE` | `/auth/alicloud/role/:role`      | `204 (empty body)`     |
+| Method   | Path                             |
+| :------------------------------- | :--------------------- |
+| `DELETE` | `/auth/alicloud/role/:role`      |
 
 ### Parameters
 
@@ -159,9 +159,9 @@ $ curl \
 Fetch a token. This endpoint verifies the signature of the signed 
 GetCallerIdentity request.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/alicloud/login`       | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/alicloud/login`       |
 
 ### Parameters
 

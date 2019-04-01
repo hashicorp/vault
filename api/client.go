@@ -422,6 +422,10 @@ func NewClient(c *Config) (*Client, error) {
 		client.token = token
 	}
 
+	if namespace := os.Getenv(EnvVaultNamespace); namespace != "" {
+		client.SetNamespace(namespace)
+	}
+
 	return client, nil
 }
 

@@ -1,30 +1,38 @@
 ---
 layout: "docs"
-page_title: "JWT - Auth Methods"
-sidebar_title: "JWT"
-sidebar_current: "docs-auth-jwt"
+page_title: "JWT/OIDC - Auth Methods"
+sidebar_title: "JWT/OIDC"
+sidebar_current: "docs-auth-jwt-oidc"
 description: |-
-  The JWT auth method allows authentication using OIDC and user-provided JWTs
+  The JWT/OIDC auth method allows authentication using OIDC and user-provided JWTs
 ---
 
-# JWT Auth Method
+# JWT/OIDC Auth Method
 
 The `jwt` auth method can be used to authenticate with Vault using
-[OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a [JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
-The OIDC method will allow authentication via a configured OIDC provider using the user's web browser.
-This method may be initiated from the Vault UI or the command line. Alternatively, a JWT can be provided
-directly. It will be cryptographically verified using locally-provided keys, or, if configured, an
-OIDC Discovery service can be used to fetch the appropriate keys. The choice of method is configured per role.
+[OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a
+[JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
 
-Both methods allow additional processing of the claims data in the JWT. Some of the concepts common
-to both methods will be covered first, followed by specific examples of OIDC and JWT usage.
+The OIDC method allows authentication via a configured OIDC provider using the
+user's web browser.  This method may be initiated from the Vault UI or the
+command line. Alternatively, a JWT can be provided directly. The JWT is
+cryptographically verified using locally-provided keys, or, if configured, an
+OIDC Discovery service can be used to fetch the appropriate keys. The choice of
+method is configured per role.
+
+Both methods allow additional processing of the claims data in the JWT. Some of
+the concepts common to both methods will be covered first, followed by specific
+examples of OIDC and JWT usage.
 
 ### Bound Claims
 
-Once a JWT has been validated as being properly signed and not expired, the authorization flow will validate that any
-configured "bound" parameters match. In some cases there are dedicated parameters, for example `bound_subject`,  which must
-match the JWT's `sub` parameter. A role may also be configured to check arbitrary claims through the `bound_claims`
-map. The map contains a set of claims and their required values. For example, assume `bound_claims` is set to:
+Once a JWT has been validated as being properly signed and not expired, the
+authorization flow will validate that any configured "bound" parameters match.
+In some cases there are dedicated parameters, for example `bound_subject`,
+which must match the JWT's `sub` parameter. A role may also be configured to
+check arbitrary claims through the `bound_claims` map. The map contains a set
+of claims and their required values. For example, assume `bound_claims` is set
+to:
 
 ```json
 {
@@ -33,8 +41,8 @@ map. The map contains a set of claims and their required values. For example, as
 }
 ```
 
-Only JWTs containing both the "division" and "department" claims, and respective matching values of "Europe" and "Engineering",
-would be authorized.
+Only JWTs containing both the "division" and "department" claims, and
+respective matching values of "Europe" and "Engineering", would be authorized.
 
 ### Claims as Metadata
 
@@ -146,6 +154,23 @@ The OIDC authentication flow has been successfully tested with a number of provi
 guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
 collection of provider configuration steps has been collected to help get started:
 [OIDC Provider Setup](/docs/auth/jwt_oidc_providers.html)
+
+### OIDC Configuration Troubleshooting
+This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
+why things aren't working. Some tips for setting up OIDC:
+
+- Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
+- Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
+http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.
+- Start simple. The only claim configuration a role requires is `user_claim`. After authentication is
+known to work, you can add additional claims bindings and metadata copying.
+- If you're seeing claim-related errors in logs, review the provider's docs very carefully to see
+how they're naming and structuring their claims. Depending on the provider, you may be able to
+construct a simple `curl` implicit grant request to obtain a JWT that you can inspect. An example
+of how to decode the JWT (in this case located in the "access_token" field of a JSON response):
+
+`cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
+
 
 ## JWT Authentication
 

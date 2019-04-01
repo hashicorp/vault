@@ -1,18 +1,18 @@
 ---
 layout: "api"
-page_title: "JWT - Auth Methods - HTTP API"
-sidebar_title: "JWT"
-sidebar_current: "api-http-auth-jwt"
+page_title: "JWT/OIDC - Auth Methods - HTTP API"
+sidebar_title: "JWT/OIDC"
+sidebar_current: "api-http-auth-jwt-oidc"
 description: |-
-  This is the API documentation for the Vault JWT authentication
+  This is the API documentation for the Vault JWT/OIDC authentication
   method plugin.
 ---
 
-# JWT Auth Method (API)
+# JWT/OIDC Auth Method (API)
 
-This is the API documentation for the Vault JWT auth method
+This is the API documentation for the Vault JWT/OIDC auth method
 plugin. To learn more about the usage and operation, see the
-[Vault JWT method documentation](/docs/auth/jwt.html).
+[Vault JWT/OIDC method documentation](/docs/auth/jwt.html).
 
 This documentation assumes the plugin method is mounted at the
 `/auth/jwt` path in Vault. Since it is possible to enable auth methods
@@ -24,9 +24,9 @@ Configures the validation information to be used globally across all roles. One
 (and only one) of `oidc_discovery_url` and `jwt_validation_pubkeys` must be
 set.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/jwt/config`           | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/jwt/config`           |
 
 ### Parameters
 
@@ -62,9 +62,9 @@ $ curl \
 
 Returns the previously configured config.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/jwt/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/jwt/config`           |
 
 ### Sample Request
 
@@ -95,9 +95,9 @@ that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login. At least one of the bound values must be set.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/jwt/role/:name`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/jwt/role/:name`       |
 
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
@@ -172,9 +172,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/jwt/role/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/jwt/role/:name`        |
 
 ### Parameters
 
@@ -218,9 +218,9 @@ $ curl \
 
 Lists all the roles that are registered with the plugin.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/jwt/role`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/jwt/role`            |
 
 ### Sample Request
 
@@ -249,9 +249,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/jwt/role/:name`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/jwt/role/:name`       |
 
 ### Parameters
 
@@ -270,9 +270,9 @@ $ curl \
 
 Obtain an authorization URL from Vault to start an OIDC login flow.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/jwt/oidc/auth_url`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/jwt/oidc/auth_url`    |
 
 ### Parameters
 
@@ -317,9 +317,9 @@ $ curl \
 Exchange an authorization code for an OIDC ID Token. The ID token will be further validated
 against any bound claims, and if valid a Vault token will be returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/jwt/oidc/callback`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/jwt/oidc/callback`    |
 
 ### Parameters
 
@@ -362,9 +362,9 @@ Fetch a token. This endpoint takes a signed JSON Web Token (JWT) and
 a role name for some entity. It verifies the JWT signature to authenticate that
 entity and then authorizes the entity for the given role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/jwt/login`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/jwt/login`            |
 
 ### Parameters
 

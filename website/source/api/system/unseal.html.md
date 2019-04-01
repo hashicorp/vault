@@ -21,9 +21,9 @@ multiple times until that threshold is met.
 Either the `key` or `reset` parameter must be provided; if both are provided,
 `reset` takes precedence.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/unseal`                | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/unseal`                |
 
 ### Parameters
 

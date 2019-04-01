@@ -20,9 +20,9 @@ standby nodes grab the active lock in the interim, the same node may become the
 active node again. Requires a token with `root` policy or `sudo` capability on
 the path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/step-down`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/step-down`             |
 
 ### Sample Request
 

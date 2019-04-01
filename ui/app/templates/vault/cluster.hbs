@@ -17,18 +17,16 @@
             </NamespacePicker>
           </li>
         {{/if}}
-        {{#if (has-permission 'secrets')}}
-          <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
-            {{#link-to
-              "vault.cluster.secrets"
-              current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-              invokeAction=(action Nav.closeDrawer)
-              data-test-navbar-item='secrets'
-            }}
-              Secrets
-            {{/link-to}}
-          </li>
-        {{/if}}
+        <li class="{{if (is-active-route 'vault.cluster.secrets') 'is-active'}}">
+          {{#link-to
+            "vault.cluster.secrets"
+            current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
+            invokeAction=(action Nav.closeDrawer)
+            data-test-navbar-item='secrets'
+          }}
+            Secrets
+          {{/link-to}}
+        </li>
         {{#if (has-permission 'access')}}
           <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
             {{#link-to
