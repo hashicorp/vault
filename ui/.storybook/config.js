@@ -2,12 +2,6 @@ import { configure, addParameters, addDecorator } from '@storybook/ember';
 import { INITIAL_VIEWPORTS } from '@storybook/addon-viewport';
 import theme from './theme.js';
 
-// addParameters({
-//   options: {
-//     theme: yourTheme,
-//   },
-// });
-
 function loadStories() {
   // automatically import all files ending in *.stories.js
   const req = require.context('../stories/', true, /.stories.js$/);
