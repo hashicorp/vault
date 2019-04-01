@@ -271,6 +271,9 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 	if err := parseMethod(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'method': {{err}}", err)
 	}
+	if a.Method == nil {
+		return fmt.Errorf("no 'method' block found")
+	}
 
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
@@ -337,6 +340,9 @@ func parseSinks(result *Config, list *ast.ObjectList) error {
 	name := "sink"
 
 	sinkList := list.Filter(name)
+	if len(sinkList.Items) < 1 {
+		return nil
+	}
 
 	var ts []*Sink
 

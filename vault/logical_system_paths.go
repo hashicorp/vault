@@ -1117,7 +1117,8 @@ func (b *SystemBackend) metricsPath() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"format": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Format to export metrics into. Currently accept only \"prometheus\"",
+				Description: "Format to export metrics into. Currently accepts only \"prometheus\".",
+				Query:       true,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{

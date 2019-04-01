@@ -155,6 +155,23 @@ guide to configuring OAuth/OIDC applications is beyond the scope of Vault docume
 collection of provider configuration steps has been collected to help get started:
 [OIDC Provider Setup](/docs/auth/jwt_oidc_providers.html)
 
+### OIDC Configuration Troubleshooting
+This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
+why things aren't working. Some tips for setting up OIDC:
+
+- Monitor Vault's log output. Important information about OIDC validation failures will be emitted.
+- Ensure Redirect URIs are correct in Vault and on the provider. They need to match exactly. Check:
+http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.
+- Start simple. The only claim configuration a role requires is `user_claim`. After authentication is
+known to work, you can add additional claims bindings and metadata copying.
+- If you're seeing claim-related errors in logs, review the provider's docs very carefully to see
+how they're naming and structuring their claims. Depending on the provider, you may be able to
+construct a simple `curl` implicit grant request to obtain a JWT that you can inspect. An example
+of how to decode the JWT (in this case located in the "access_token" field of a JSON response):
+
+`cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
+
+
 ## JWT Authentication
 
 The authentication flow for roles of type "jwt" is simpler than OIDC since Vault

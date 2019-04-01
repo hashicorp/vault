@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/strutil"
 
 	"github.com/coreos/go-oidc"
@@ -96,6 +97,10 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	}
 	if config == nil {
 		return logical.ErrorResponse(errLoginFailed + " Could not load configuration"), nil
+	}
+
+	if req.Connection != nil && !cidrutil.RemoteAddrIsOk(req.Connection.RemoteAddr, role.BoundCIDRs) {
+		return logical.ErrorResponse("request originated from invalid CIDR"), nil
 	}
 
 	provider, err := b.getProvider(ctx, config)

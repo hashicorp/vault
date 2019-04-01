@@ -23,8 +23,10 @@ cached.
 
 * `role_id_file_path` `(string: required)` - The path to the file with role ID
 
-* `secret_id_file_path` `(string: required)` - The path to the file with secret
-  ID
+* `secret_id_file_path` `(string: optional)` - The path to the file with secret
+  ID.
+  If not set, only the `role-id` will be used. \
+  In that case, the AppRole should have `bind_secret_id` set to `false` otherwise Vault Agent wouldn't be able to login.
 
 * `remove_secret_id_file_after_reading` `(bool: optional, defaults to true)` -
   This can be set to `false` to disable the default behavior of removing the

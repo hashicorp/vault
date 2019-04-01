@@ -49,6 +49,7 @@ Vagrantfile
 *.hcl
 !command/agent/config/test-fixtures/*.hcl
 
+
 .DS_Store
 .idea
 .vscode
