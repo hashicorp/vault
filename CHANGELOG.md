@@ -2,6 +2,7 @@
 
 IMPROVEMENTS: 
 
+ * agent: Allow AppRole auto-auth without a secret-id [GH-6324]
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
 
 
