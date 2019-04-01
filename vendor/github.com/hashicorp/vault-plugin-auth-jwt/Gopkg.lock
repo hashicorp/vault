@@ -439,7 +439,7 @@
   version = "v1.18.0"
 
 [[projects]]
-  digest = "1:a4cde1eec9a17eb2399a50c6e1a9fe3fde039994de058f9dbf6592d157bfe97b"
+  digest = "1:005cbf8b937fcb1694b9dbb845b0aef618627be7faf7bb330eb2490e3f506ef8"
   name = "gopkg.in/square/go-jose.v2"
   packages = [
     ".",
@@ -448,8 +448,8 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "e94fb177d3668d35ab39c61cbb2f311550557e83"
-  version = "v2.2.2"
+  revision = "628223f44a71f715d2881ea69afc795a1e9c01be"
+  version = "v2.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
