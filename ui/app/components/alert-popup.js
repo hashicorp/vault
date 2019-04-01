@@ -2,7 +2,7 @@ import OuterHTML from './outer-html';
 
 /**
  * @module AlertPopup
- * The `AlertPopup` is an implementation of the {@link https://github.com/poteto/ember-cli-flash|ember-cli-flash} `flashMessage`.
+ * The `AlertPopup` is an implementation of the [ember-cli-flash](https://github.com/poteto/ember-cli-flash) `flashMessage`.
  *
  * @example ```js
  * // All properties are passed in from the flashMessage service.
@@ -10,7 +10,7 @@ import OuterHTML from './outer-html';
  *
  * @param [type=null] {String} - The alert type. This comes from the message-types helper.
  * @param message=null {String} - The alert message.
- * @param close=null {Func} - The close action which will close the alert.
+ * @param [close=null] {Func} - The close action which will close the alert.
  *
  */
 

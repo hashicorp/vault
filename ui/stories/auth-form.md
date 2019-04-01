@@ -1,3 +1,5 @@
+<!--THIS FILE IS AUTO GENERATED. This file is generated from JSDoc comments in app/components/auth-form.js. To make changes, first edit that file and run "yarn gen-story-md auth-form" to re-generate the content.-->
+
 ## AuthForm
 The `AuthForm` is used to sign users into Vault.
 
@@ -14,13 +16,16 @@ The `AuthForm` is used to sign users into Vault.
   
 ```js
 // All properties are passed in via query params.
-  <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @redirectTo={{redirectTo}} @selectedAuth={{authMethod}}/>```
+  <AuthForm
+    @wrappedToken={{wrappedToken}}
+    @cluster={{model}}
+    @namespace={{namespaceQueryParam}}
+    @redirectTo={{redirectTo}}
+    @selectedAuth={{authMethod}}/>```
 
 **See**
 
 - [Uses of AuthForm](https://github.com/hashicorp/vault/search?l=Handlebars&q=AuthForm)
-- [AuthForm Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-form.js) 
+- [AuthForm Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/auth-form.js)
 
 ---
-
-###### _Documentation generated using [jsdoc-to-markdown](https://github.com/75lb/jsdoc-to-markdown)._

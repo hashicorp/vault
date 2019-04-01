@@ -11,7 +11,7 @@ import { messageTypes } from 'vault/helpers/message-types';
  * <AlertBanner @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
  * ```
  *
- * @param type=null {String} - The banner type. This comes from the message-types helper.
+ * @param [type=null {String}] - The banner type. This comes from the message-types helper.
  * @param message=null {String} - The message to display within the banner.
  *
  */
