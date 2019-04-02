@@ -373,14 +373,15 @@ func parseRateLimit(val string) (rate float64, burst int, err error) {
 
 // Client is the client to the Vault API. Create a client with NewClient.
 type Client struct {
-	modifyLock         sync.RWMutex
-	addr               *url.URL
-	config             *Config
-	token              string
-	headers            http.Header
-	wrappingLookupFunc WrappingLookupFunc
-	mfaCreds           []string
-	policyOverride     bool
+	modifyLock          sync.RWMutex
+	addr                *url.URL
+	config              *Config
+	token               string
+	headers             http.Header
+	wrappingLookupFunc  WrappingLookupFunc
+	mfaCreds            []string
+	policyOverride      bool
+	useFileSinkForToken bool
 }
 
 // NewClient returns a new client for the given configuration.
@@ -404,18 +405,20 @@ func NewClient(c *Config) (*Client, error) {
 		return nil, errwrap.Wrapf("error encountered setting up default configuration: {{err}}", def.Error)
 	}
 
+	var clientConfig *Config
 	if c == nil {
-		c = def
+		clientConfig = def
+	} else {
+		clientConfig = c.Clone()
 	}
 
 	c.modifyLock.Lock()
-	defer c.modifyLock.Unlock()
 
-	if c.HttpClient == nil {
-		c.HttpClient = def.HttpClient
+	if clientConfig.HttpClient == nil {
+		clientConfig.HttpClient = def.HttpClient
 	}
-	if c.HttpClient.Transport == nil {
-		c.HttpClient.Transport = def.HttpClient.Transport
+	if clientConfig.HttpClient.Transport == nil {
+		clientConfig.HttpClient.Transport = def.HttpClient.Transport
 	}
 
 	address := c.Address
@@ -444,9 +447,11 @@ func NewClient(c *Config) (*Client, error) {
 		u.Path = ""
 	}
 
+	c.modifyLock.Unlock()
+
 	client := &Client{
 		addr:   u,
-		config: c,
+		config: clientConfig,
 	}
 
 	// determine how to get a token
@@ -455,26 +460,26 @@ func NewClient(c *Config) (*Client, error) {
 	switch {
 	case os.Getenv(EnvVaultToken) != "":
 		client.token = os.Getenv(EnvVaultToken)
-	case c.TokenFileSinkPath != "":
-		tokenSinkPath = c.TokenFileSinkPath
-	case c.AgentAddress != "":
-		tokenSinkPath, err = client.getSinkPathFromAgent(c.AgentAddress)
+	case client.config.TokenFileSinkPath != "":
+		tokenSinkPath = client.config.TokenFileSinkPath
+	case client.config.AgentAddress != "":
+		tokenSinkPath, err = client.getSinkPathFromAgent(client.config.AgentAddress)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", c.AgentAddress), err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", client.config.AgentAddress), err)
 		}
-		c.TokenFileSinkPath = tokenSinkPath
+		client.config.TokenFileSinkPath = tokenSinkPath
 	}
 
 	// set and poll token from file sink if it is available
-	if tokenSinkPath != "" {
-		token, err := readTokenFromFile(tokenSinkPath)
+	if client.config.TokenFileSinkPath != "" {
+		client.useFileSinkForToken = true
+		token, err := readTokenFromFile(client.config.TokenFileSinkPath)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", tokenSinkPath), err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", client.config.TokenFileSinkPath), err)
 		}
 		client.token = token
 		// poll file for updates
-		client.pollingChannel = make(chan int)
-		client.pollFileForToken(tokenSinkPath, client.pollingChannel)
+		client.pollFileForToken()
 	}
 
 	return client, nil
@@ -519,17 +524,13 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 }
 
 // starts a go routine to poll the specified file for a token
-func (c *Client) pollFileForToken(filePath string, quit chan int) {
+func (c *Client) pollFileForToken() {
 	pollingInterval := 60 * time.Second //todo - what should this be?
 	go func() {
 		for {
-			select {
-			case <-quit:
-				quit <- 1
-				return
-			default:
-				time.Sleep(pollingInterval)
-				token, err := readTokenFromFile(filePath) // todo - what to do with the error?
+			time.Sleep(pollingInterval)
+			if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
+				token, err := readTokenFromFile(c.config.TokenFileSinkPath)
 				// update the client's token if it has changed and there was no error reading the file
 				if err == nil && token != c.token {
 					c.modifyLock.Lock()
@@ -675,47 +676,24 @@ func (c *Client) Token() string {
 
 // SetToken sets the token directly. This won't perform any auth
 // verification, it simply sets the token properly for future requests.
-// Setting a token will kill any routine polling a sink for a token.
+// setting the token to "" will return to polling a file sink if one is available
 func (c *Client) SetToken(v string) {
-	switch {
-	// no op
-	case v == "" && c.config.TokenFileSinkPath == "":
-
-	// a token is provided and should cancel polling
-	case v != "":
-		if c.pollingChannel != nil {
-			c.pollingChannel <- 1
-			<-c.pollingChannel // this is to avoid grabbing c.modifyLock at the same time as the pollFileForToken routine
-		}
+	if v != "" {
 		c.modifyLock.Lock()
 		defer c.modifyLock.Unlock()
+		c.useFileSinkForToken = false
 		c.token = v
-
-	// case a token is not provided and should return to polling if possible
-	case v == "" && c.config.TokenFileSinkPath != "":
-		// ensure polling channel is setup
-		if c.pollingChannel == nil {
-			c.pollingChannel = make(chan int)
-		}
-		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
+	} else {
+		c.modifyLock.Lock()
+		defer c.modifyLock.Unlock()
+		c.useFileSinkForToken = true
 	}
 }
 
 // ClearToken deletes the token if it is set and returns to polling if a
 // tokenFileSinkPath was configured
 func (c *Client) ClearToken() {
-	c.modifyLock.Lock()
-	c.token = ""
-	c.modifyLock.Unlock()
-
-	// was a file sink used previously
-	if c.config.TokenFileSinkPath != "" {
-		// ensure polling channel is setup
-		if c.pollingChannel == nil {
-			c.pollingChannel = make(chan int)
-		}
-		c.pollFileForToken(c.config.TokenFileSinkPath, c.pollingChannel)
-	}
+	c.SetToken("")
 }
 
 // Headers gets the current set of headers used for requests. This returns a
@@ -781,6 +759,30 @@ func (c *Client) Clone() (*Client, error) {
 	config.modifyLock.RUnlock()
 
 	return NewClient(newConfig)
+}
+
+// config.Clone returns a clone of the config it is called on
+func (c *Config) Clone() *Config {
+	c.modifyLock.RLock()
+
+	newLimiter := rate.NewLimiter(c.Limiter.Limit(), c.Limiter.Burst())
+
+	newConfig := &Config{
+		Address:      c.Address,
+		AgentAddress: c.AgentAddress,
+		HttpClient:   c.HttpClient,
+		MaxRetries:   c.MaxRetries,
+		Timeout:      c.Timeout,
+		//		Error:
+		Backoff:           c.Backoff,
+		Limiter:           newLimiter,
+		OutputCurlString:  c.OutputCurlString,
+		TokenFileSinkPath: c.TokenFileSinkPath,
+		AgentSinkName:     c.AgentSinkName,
+	}
+	c.modifyLock.RUnlock()
+
+	return newConfig
 }
 
 // SetPolicyOverride sets whether requests should be sent with the policy
