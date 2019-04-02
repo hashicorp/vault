@@ -796,6 +796,16 @@ func (c *Config) Clone() *Config {
 		newConfig.Limiter = newLimiter
 	}
 
+	// create a new HttpClient and copy fields they are available
+	if c.HttpClient != nil {
+		newHttpClient := &http.Client{
+			Transport:     c.HttpClient.Transport,
+			CheckRedirect: c.HttpClient.CheckRedirect,
+			Timeout:       c.HttpClient.Timeout,
+		}
+		newConfig.HttpClient = newHttpClient
+	}
+
 	return newConfig
 }
 
