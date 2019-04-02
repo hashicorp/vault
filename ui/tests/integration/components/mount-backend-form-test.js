@@ -28,7 +28,7 @@ module('Integration | Component | mount backend form', function(hooks) {
 
   test('it renders', async function(assert) {
     await render(hbs`{{mount-backend-form}}`);
-    assert.equal(component.header, 'Enable an authentication method', 'renders auth header in default state');
+    assert.equal(component.header, 'Enable an Authentication Method', 'renders auth header in default state');
     assert.ok(component.types.length > 0, 'renders type picker');
   });
 
