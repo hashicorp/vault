@@ -27,6 +27,11 @@ func TestMSSQLBackend(t *testing.T) {
 		table = "test"
 	}
 
+	schema := os.Getenv("MSSQL_SCHEMA")
+	if schema == "" {
+		schema = "test"
+	}
+	
 	username := os.Getenv("MSSQL_USERNAME")
 	password := os.Getenv("MSSQL_PASSWORD")
 
@@ -37,6 +42,7 @@ func TestMSSQLBackend(t *testing.T) {
 		"server":   server,
 		"database": database,
 		"table":    table,
+		"schema":   schema,
 		"username": username,
 		"password": password,
 	}, logger)
@@ -73,6 +79,11 @@ func TestMSSQLBackend_schema(t *testing.T) {
 		table = "test"
 	}
 
+	schema := os.Getenv("MSSQL_SCHEMA")
+	if schema == "" {
+		schema = "test"
+	}
+	
 	username := os.Getenv("MSSQL_USERNAME")
 	password := os.Getenv("MSSQL_PASSWORD")
 
@@ -82,7 +93,7 @@ func TestMSSQLBackend_schema(t *testing.T) {
 	b, err := NewMSSQLBackend(map[string]string{
 		"server":   server,
 		"database": database,
-		"schema":  "test",
+		"schema":  	schema,
 		"table":    table,
 		"username": username,
 		"password": password,
