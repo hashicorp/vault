@@ -428,7 +428,7 @@ func getCN(dn string) string {
 
 	for _, rdn := range parsedDN.RDNs {
 		for _, rdnAttr := range rdn.Attributes {
-			if strings.ToLower(rdnAttr.Type) == "cn" {
+			if strings.EqualFold(rdnAttr.Type, "CN") {
 				return rdnAttr.Value
 			}
 		}
