@@ -17,7 +17,7 @@ type inmemSink struct {
 }
 
 // New creates a new instance of inmemSink.
-func New(conf *sink.SinkConfig, leaseCache *cache.LeaseCache) (sink.Sink, error) {
+func New(conf *sink.SinkConfig, leaseCache *cache.LeaseCache) (*inmemSink, error) {
 	if conf.Logger == nil {
 		return nil, errors.New("nil logger provided")
 	}

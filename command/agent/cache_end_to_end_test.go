@@ -283,7 +283,21 @@ path "/auth/token/create" {
 	sinks := append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
 	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
 
-	_, err = testAuthHelper.getToken(tokenFile)
+	if tokenFile == "" {
+		err = testAuthHelper.authenticate()
+		timeout := time.Now().Add(10 * time.Second)
+		for {
+			if time.Now().After(timeout) {
+				t.Fatalf("did not find an inmem token after timeout")
+			}
+			if inmemSink.Token() != "" {
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
+	} else {
+		_, err = testAuthHelper.getToken(tokenFile)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +319,10 @@ path "/auth/token/create" {
 	go server.Serve(listener)
 
 	cleanup = func() {
-		os.Remove(tokenFile)
+		if tokenFile != "" {
+			os.Remove(tokenFile)
+		}
+
 		listener.Close()
 		cancelFunc()
 		<-ss.DoneCh
@@ -541,6 +558,27 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		}
 
 		cleanup()
+	}
+}
+
+func TestCache_NoFileSink(t *testing.T) {
+	cluster := testAutoAuthCluster(t)
+	defer cluster.Cleanup()
+
+	tokenTtl := 200 * time.Millisecond
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, nil, "", tokenTtl)
+	defer cleanup()
+
+	clientConfig := api.DefaultConfig()
+	clientConfig.Address = agentAddr
+	testClient, err := api.NewClient(clientConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
