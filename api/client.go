@@ -765,21 +765,26 @@ func (c *Client) Clone() (*Client, error) {
 func (c *Config) Clone() *Config {
 	c.modifyLock.RLock()
 
-	newLimiter := rate.NewLimiter(c.Limiter.Limit(), c.Limiter.Burst())
-
 	newConfig := &Config{
-		Address:      c.Address,
-		AgentAddress: c.AgentAddress,
-		HttpClient:   c.HttpClient,
-		MaxRetries:   c.MaxRetries,
-		Timeout:      c.Timeout,
-		//		Error:
+		Address:           c.Address,
+		AgentAddress:      c.AgentAddress,
+		HttpClient:        c.HttpClient,
+		MaxRetries:        c.MaxRetries,
+		Timeout:           c.Timeout,
 		Backoff:           c.Backoff,
-		Limiter:           newLimiter,
 		OutputCurlString:  c.OutputCurlString,
 		TokenFileSinkPath: c.TokenFileSinkPath,
 		AgentSinkName:     c.AgentSinkName,
 	}
+	// deep copy rate limiter if it is set
+	var newLimiter *rate.Limiter
+	if c.Limiter != nil &&
+		c.Limiter.Limit() != 0 &&
+		c.Limiter.Burst() != 0 {
+		newLimiter = rate.NewLimiter(c.Limiter.Limit(), c.Limiter.Burst())
+		newConfig.Limiter = newLimiter
+	}
+
 	c.modifyLock.RUnlock()
 
 	return newConfig
