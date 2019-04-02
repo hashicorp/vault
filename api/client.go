@@ -43,7 +43,7 @@ const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
-const EnvTokenFileSinkPath = "TOKEN_FILE_SINK_PATH"
+const EnvTokenFileSinkPath = "VAULT_TOKEN_FILE_SINK_PATH"
 const EnvAgentSinkName = "VAULT_AGENT_SINK_NAME"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
@@ -109,6 +109,8 @@ type Config struct {
 
 	// AgentSinkName names a Sink written to by an Agent and is needed when an Agent is writing to multiple sinks
 	AgentSinkName string
+
+	PollingInterval time.Duration
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -149,6 +151,7 @@ func DefaultConfig() *Config {
 		HttpClient: cleanhttp.DefaultPooledClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
+	config.PollingInterval = 60 * time.Second
 
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
@@ -393,7 +396,7 @@ type Client struct {
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 //
-// If the environment variable `TOKEN_FILE_SINK_PATH` is present and contains
+// If the environment variable `VAULT_TOKEN_FILE_SINK_PATH` is present and contains
 // a valid filepath, that filepath will be used to set the client's token and
 // continue to be polled and update the client's token
 func NewClient(c *Config) (*Client, error) {
@@ -412,18 +415,23 @@ func NewClient(c *Config) (*Client, error) {
 		clientConfig = c.Clone()
 	}
 
-	c.modifyLock.Lock()
+	// config values should come from clientConfig
+	c = nil
 
+	// fill in some required fields with default values if they haven't been set
 	if clientConfig.HttpClient == nil {
 		clientConfig.HttpClient = def.HttpClient
 	}
 	if clientConfig.HttpClient.Transport == nil {
 		clientConfig.HttpClient.Transport = def.HttpClient.Transport
 	}
+	if clientConfig.PollingInterval == 0 {
+		clientConfig.PollingInterval = def.PollingInterval
+	}
 
-	address := c.Address
-	if c.AgentAddress != "" {
-		address = c.AgentAddress
+	address := clientConfig.Address
+	if clientConfig.AgentAddress != "" {
+		address = clientConfig.AgentAddress
 	}
 
 	u, err := url.Parse(address)
@@ -433,7 +441,7 @@ func NewClient(c *Config) (*Client, error) {
 
 	if strings.HasPrefix(address, "unix://") {
 		socket := strings.TrimPrefix(address, "unix://")
-		transport := c.HttpClient.Transport.(*http.Transport)
+		transport := clientConfig.HttpClient.Transport.(*http.Transport)
 		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
 			return net.Dial("unix", socket)
 		}
@@ -447,15 +455,12 @@ func NewClient(c *Config) (*Client, error) {
 		u.Path = ""
 	}
 
-	c.modifyLock.Unlock()
-
 	client := &Client{
 		addr:   u,
 		config: clientConfig,
 	}
 
 	// determine how to get a token
-	// order of precedence could change
 	tokenSinkPath := ""
 	switch {
 	case os.Getenv(EnvVaultToken) != "":
@@ -502,6 +507,9 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 	}
 
 	response, err := c.config.HttpClient.Get(uri.String())
+	if err != nil {
+		return "", err
+	}
 	if response != nil {
 		defer response.Body.Close()
 	}
@@ -525,10 +533,9 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 
 // starts a go routine to poll the specified file for a token
 func (c *Client) pollFileForToken() {
-	pollingInterval := 60 * time.Second //todo - what should this be?
 	go func() {
 		for {
-			time.Sleep(pollingInterval)
+			time.Sleep(c.config.PollingInterval)
 			if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
 				token, err := readTokenFromFile(c.config.TokenFileSinkPath)
 				// update the client's token if it has changed and there was no error reading the file
@@ -686,6 +693,7 @@ func (c *Client) SetToken(v string) {
 	} else {
 		c.modifyLock.Lock()
 		defer c.modifyLock.Unlock()
+		c.token = ""
 		c.useFileSinkForToken = true
 	}
 }
@@ -763,20 +771,23 @@ func (c *Client) Clone() (*Client, error) {
 
 // config.Clone returns a clone of the config it is called on
 func (c *Config) Clone() *Config {
+	defer c.modifyLock.RUnlock()
 	c.modifyLock.RLock()
 
 	newConfig := &Config{
-		Address:           c.Address,
-		AgentAddress:      c.AgentAddress,
-		HttpClient:        c.HttpClient,
+		Address:      c.Address,
+		AgentAddress: c.AgentAddress,
+		//		HttpClient:        c.HttpClient,
 		MaxRetries:        c.MaxRetries,
 		Timeout:           c.Timeout,
 		Backoff:           c.Backoff,
 		OutputCurlString:  c.OutputCurlString,
 		TokenFileSinkPath: c.TokenFileSinkPath,
 		AgentSinkName:     c.AgentSinkName,
+		PollingInterval:   c.PollingInterval,
 	}
-	// deep copy rate limiter if it is set
+
+	// deep copy rate.Limiter if it is set
 	var newLimiter *rate.Limiter
 	if c.Limiter != nil &&
 		c.Limiter.Limit() != 0 &&
@@ -784,8 +795,6 @@ func (c *Config) Clone() *Config {
 		newLimiter = rate.NewLimiter(c.Limiter.Limit(), c.Limiter.Burst())
 		newConfig.Limiter = newLimiter
 	}
-
-	c.modifyLock.RUnlock()
 
 	return newConfig
 }
