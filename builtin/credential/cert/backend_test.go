@@ -1225,6 +1225,9 @@ func TestBackend_uri_singleCert(t *testing.T) {
 	}
 
 	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
