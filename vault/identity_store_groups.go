@@ -443,7 +443,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 	}
 
 	// Delete the group from storage
-	err = i.groupPacker.DeleteItem(group.ID)
+	err = i.groupPacker.DeleteItem(ctx, group.ID)
 	if err != nil {
 		return nil, err
 	}

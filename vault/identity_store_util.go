@@ -115,7 +115,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 					// Group's namespace doesn't exist anymore but the group
 					// from the namespace still exists.
 					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
-					err = i.groupPacker.DeleteItem(group.ID)
+					err = i.groupPacker.DeleteItem(ctx, group.ID)
 					if err != nil {
 						return err
 					}
@@ -157,7 +157,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 			}
 
-			err = i.UpsertGroupInTxn(txn, group, persist)
+			err = i.UpsertGroupInTxn(ctx, txn, group, persist)
 			if err != nil {
 				txn.Abort()
 				return errwrap.Wrapf("failed to update group in memdb: {{err}}", err)
@@ -281,7 +281,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						// Entity's namespace doesn't exist anymore but the
 						// entity from the namespace still exists.
 						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
-						err = i.entityPacker.DeleteItem(entity.ID)
+						err = i.entityPacker.DeleteItem(ctx, entity.ID)
 						if err != nil {
 							return err
 						}
@@ -417,7 +417,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			if err != nil {
 				return err
 			}
-			err = i.entityPacker.PutItem(&storagepacker.Item{
+			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
 				ID:      previousEntity.ID,
 				Message: marshaledPreviousEntity,
 			})
@@ -444,7 +444,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		}
 
 		// Persist the entity object
-		err = i.entityPacker.PutItem(item)
+		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return err
 		}
@@ -1117,7 +1117,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		// Remove group ID from the parent group IDs
 		currentMemberGroup.ParentGroupIDs = strutil.StrListDelete(currentMemberGroup.ParentGroupIDs, group.ID)
 
-		err = i.UpsertGroupInTxn(txn, currentMemberGroup, true)
+		err = i.UpsertGroupInTxn(ctx, txn, currentMemberGroup, true)
 		if err != nil {
 			return err
 		}
@@ -1173,7 +1173,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 
 		// This technically is not upsert. It is only update, only the method
 		// name is upsert here.
-		err = i.UpsertGroupInTxn(txn, memberGroup, true)
+		err = i.UpsertGroupInTxn(ctx, txn, memberGroup, true)
 		if err != nil {
 			// Ideally we would want to revert the whole operation in case of
 			// errors while persisting in member groups. But there is no
@@ -1192,7 +1192,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
-	err = i.UpsertGroupInTxn(txn, group, true)
+	err = i.UpsertGroupInTxn(ctx, txn, group, true)
 	if err != nil {
 		return err
 	}
@@ -1319,11 +1319,11 @@ func (i *IdentityStore) MemDBGroupByName(ctx context.Context, groupName string, 
 	return i.MemDBGroupByNameInTxn(ctx, txn, groupName, clone)
 }
 
-func (i *IdentityStore) UpsertGroup(group *identity.Group, persist bool) error {
+func (i *IdentityStore) UpsertGroup(ctx context.Context, group *identity.Group, persist bool) error {
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
-	err := i.UpsertGroupInTxn(txn, group, true)
+	err := i.UpsertGroupInTxn(ctx, txn, group, true)
 	if err != nil {
 		return err
 	}
@@ -1333,7 +1333,7 @@ func (i *IdentityStore) UpsertGroup(group *identity.Group, persist bool) error {
 	return nil
 }
 
-func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, persist bool) error {
+func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, group *identity.Group, persist bool) error {
 	var err error
 
 	if txn == nil {
@@ -1389,7 +1389,7 @@ func (i *IdentityStore) UpsertGroupInTxn(txn *memdb.Txn, group *identity.Group, 
 			return err
 		}
 		if !sent {
-			if err := i.groupPacker.PutItem(item); err != nil {
+			if err := i.groupPacker.PutItem(ctx, item); err != nil {
 				return err
 			}
 		}
@@ -1833,7 +1833,7 @@ func (i *IdentityStore) MemDBGroupByAliasID(aliasID string, clone bool) (*identi
 	return i.MemDBGroupByAliasIDInTxn(txn, aliasID, clone)
 }
 
-func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
+func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Context, entityID string, groupAliases []*logical.Alias) ([]*logical.Alias, error) {
 	i.logger.Debug("refreshing external group memberships", "entity_id", entityID, "group_aliases", groupAliases)
 	if entityID == "" {
 		return nil, fmt.Errorf("empty entity ID")
@@ -1889,7 +1889,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
 
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return nil, err
 		}
@@ -1911,7 +1911,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
 
-		err = i.UpsertGroupInTxn(txn, group, true)
+		err = i.UpsertGroupInTxn(ctx, txn, group, true)
 		if err != nil {
 			return nil, err
 		}
