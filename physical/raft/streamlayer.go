@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/physical"
 )
 
 // RaftLayer implements the raft.StreamLayer interface,
@@ -44,33 +45,26 @@ type raftLayer struct {
 	parsedKey  *ecdsa.PrivateKey
 }
 
-type RaftLayerConfig struct {
-	Addr             net.Addr
-	Cert             []byte
-	ClusterKeyParams *certutil.ClusterKeyParams
-	Logger           log.Logger
-}
-
-func NewRaftLayer(conf RaftLayerConfig) (*raftLayer, error) {
+func NewRaftLayer(logger log.Logger, conf *physical.NetworkConfig) (*raftLayer, error) {
 	switch {
 	case conf.Addr == nil:
 		// Clustering disabled on the server, don't try to look for params
 		return nil, errors.New("no raft addr found")
 
 	case conf.ClusterKeyParams == nil:
-		conf.Logger.Error("no key params found loading raft cluster TLS information")
+		logger.Error("no key params found loading raft cluster TLS information")
 		return nil, errors.New("no raft cluster key params found")
 
 	case conf.ClusterKeyParams.X == nil, conf.ClusterKeyParams.Y == nil, conf.ClusterKeyParams.D == nil:
-		conf.Logger.Error("failed to parse raft cluster key due to missing params")
+		logger.Error("failed to parse raft cluster key due to missing params")
 		return nil, errors.New("failed to parse raft cluster key")
 
 	case conf.ClusterKeyParams.Type != certutil.PrivateKeyTypeP521:
-		conf.Logger.Error("unknown raft cluster key type", "key_type", conf.ClusterKeyParams.Type)
+		logger.Error("unknown raft cluster key type", "key_type", conf.ClusterKeyParams.Type)
 		return nil, errors.New("failed to find valid raft cluster key type")
 
 	case len(conf.Cert) == 0:
-		conf.Logger.Error("no cluster cert found")
+		logger.Error("no cluster cert found")
 		return nil, errors.New("no cluster cert found")
 
 	}
@@ -80,7 +74,7 @@ func NewRaftLayer(conf RaftLayerConfig) (*raftLayer, error) {
 
 	parsedCert, err := x509.ParseCertificate(conf.Cert)
 	if err != nil {
-		conf.Logger.Error("failed parsing raft cluster certificate", "error", err)
+		logger.Error("failed parsing raft cluster certificate", "error", err)
 		return nil, errwrap.Wrapf("error parsing raft cluster certificate: {{err}}", err)
 	}
 
@@ -88,7 +82,7 @@ func NewRaftLayer(conf RaftLayerConfig) (*raftLayer, error) {
 		addr:    conf.Addr,
 		connCh:  make(chan net.Conn),
 		closeCh: make(chan struct{}),
-		logger:  conf.Logger,
+		logger:  logger,
 
 		certBytes:  locCert,
 		parsedCert: parsedCert,

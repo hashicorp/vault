@@ -42,7 +42,7 @@ type RaftBackend struct {
 	raft            *raft.Raft
 	raftNotifyCh    chan bool
 	raftLayer       *raftLayer
-	raftTransport   *raft.NetworkTransport
+	raftTransport   raft.Transport
 	snapStore       raft.SnapshotStore
 	logStore        raft.LogStore
 	stableStore     raft.StableStore
@@ -124,14 +124,7 @@ type Peer struct {
 	Address string
 }
 
-type BootstrapConfig struct {
-	TLSCert string
-	TLSKey  string
-	TLSCa   string
-	Peers   []Peer
-}
-
-func (b *RaftBackend) Bootstrap(ctx context.Context, conf BootstrapConfig) error {
+func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -145,10 +138,10 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, conf BootstrapConfig) error
 	}
 
 	raftConfig := &raft.Configuration{
-		Servers: make([]raft.Server, len(conf.Peers)),
+		Servers: make([]raft.Server, len(peers)),
 	}
 
-	for i, p := range conf.Peers {
+	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
 			ID:      raft.ServerID(p.ID),
 			Address: raft.ServerAddress(p.Address),
@@ -159,7 +152,7 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, conf BootstrapConfig) error
 	return nil
 }
 
-func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physical.NetworkConfig, clusterListener cluster.ClusterHook) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -173,24 +166,27 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.
 	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
 	//raftConfig.Logger = logger
 
-	// Set the local address and localID in the streaming layer and the raft config.
-	raftLayer, err := NewRaftLayer(RaftLayerConfig{
-		Addr: clusterListener.Addr(),
-	})
-	if err != nil {
-		return err
+	switch {
+	case networkConfig == nil:
+		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(clusterListener.Addr().String()))
+	default:
+		// Set the local address and localID in the streaming layer and the raft config.
+		raftLayer, err := NewRaftLayer(b.logger.Named("stream"), networkConfig)
+		if err != nil {
+			return err
+		}
+		transConfig := &raft.NetworkTransportConfig{
+			Stream:  raftLayer,
+			MaxPool: 3,
+			Timeout: 10 * time.Second,
+			//	ServerAddressProvider: serverAddressProvider,
+		}
+		transport := raft.NewNetworkTransportWithConfig(transConfig)
+
+		b.raftLayer = raftLayer
+		b.raftTransport = transport
 	}
 
-	transConfig := &raft.NetworkTransportConfig{
-		Stream:  raftLayer,
-		MaxPool: 3,
-		Timeout: 10 * time.Second,
-		//	ServerAddressProvider: serverAddressProvider,
-	}
-	transport := raft.NewNetworkTransportWithConfig(transConfig)
-
-	b.raftLayer = raftLayer
-	b.raftTransport = transport
 	raftConfig.LocalID = raft.ServerID(clusterListener.Addr().String())
 
 	// Set up a channel for reliable leader notifications.
@@ -218,11 +214,13 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, clusterListener cluster.
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
 
-	// Add Handler to the cluster.
-	clusterListener.AddHandler(consts.RaftStorageALPN, b.raftLayer)
+	if b.raftLayer != nil {
+		// Add Handler to the cluster.
+		clusterListener.AddHandler(consts.RaftStorageALPN, b.raftLayer)
 
-	// Add Client to the cluster.
-	clusterListener.AddClient(consts.RaftStorageALPN, b.raftLayer)
+		// Add Client to the cluster.
+		clusterListener.AddClient(consts.RaftStorageALPN, b.raftLayer)
+	}
 
 	return nil
 }

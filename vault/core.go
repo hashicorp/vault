@@ -1093,7 +1093,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 	}
 
 	if clusteredStorage, ok := c.underlyingPhysical.(physical.Clustered); ok {
-		if err := clusteredStorage.SetupCluster(ctx, c.clusterListener); err != nil {
+		if err := clusteredStorage.SetupCluster(ctx, nil, c.clusterListener); err != nil {
 			return false, err
 		}
 	}

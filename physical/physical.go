@@ -2,10 +2,12 @@ package physical
 
 import (
 	"context"
+	"net"
 	"strings"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
@@ -116,8 +118,14 @@ type Lock interface {
 	Value() (bool, string, error)
 }
 
+type NetworkConfig struct {
+	Addr             net.Addr
+	Cert             []byte
+	ClusterKeyParams *certutil.ClusterKeyParams
+}
+
 type Clustered interface {
-	SetupCluster(context.Context, cluster.ClusterHook) error
+	SetupCluster(context.Context, *NetworkConfig, cluster.ClusterHook) error
 	TeardownCluster(cluster.ClusterHook) error
 }
 

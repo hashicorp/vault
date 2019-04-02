@@ -19,9 +19,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/hashicorp/vault/physical"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 
 	"github.com/hashicorp/errwrap"
@@ -238,35 +236,6 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
 		},
-		{
-			Pattern: "storage/raft/join",
-
-			Fields: map[string]*framework.FieldSchema{
-				"leader_api_addr": {
-					Type: framework.TypeString,
-				},
-				"ca_cert": {
-					Type: framework.TypeString,
-				},
-				// TODO: Add more TLS options
-				"cluster_addr": {
-					Type: framework.TypeString,
-				},
-				"retry": {
-					Type: framework.TypeBool,
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftJoinWrite(),
-					Summary:  "Update the value of the key at the given path.",
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
-		},
 	}
 }
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
@@ -291,123 +260,6 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 				"challenge": base64.StdEncoding.EncodeToString(protoBlob),
 			},
 		}, nil
-	}
-}
-
-func (b *SystemBackend) handleRaftJoinWrite() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-		leaderAddr := d.Get("leader_api_addr").(string)
-		if len(leaderAddr) == 0 {
-			return logical.ErrorResponse("No leader address provided"), logical.ErrInvalidRequest
-		}
-
-		join := func() error {
-			// Unwrap the token
-			clientConf := api.DefaultConfig()
-			clientConf.Address = leaderAddr
-			/*	if apiTLSConfig != nil {
-				err := clientConf.ConfigureTLS(apiTLSConfig)
-				if err != nil {
-					return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
-				}
-			} */
-			client, err := api.NewClient(clientConf)
-			if err != nil {
-				return errwrap.Wrapf("error during api client creation: {{err}}", err)
-			}
-
-			secret, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-				"cluster_addr": b.Core.clusterAddr,
-			})
-			if err != nil {
-				return errwrap.Wrapf("error during bootstrap init call: {{err}}", err)
-			}
-			if secret == nil {
-				return errors.New("could not retrieve bootstrap package")
-			}
-
-			challengeB64, ok := secret.Data["challenge"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no challenge given")
-			}
-			challengeRaw, err := base64.StdEncoding.DecodeString(challengeB64.(string))
-			if err != nil {
-				return errwrap.Wrapf("error decoding challenge: {{err}}", err)
-			}
-
-			eBlob := &physical.EncryptedBlobInfo{}
-			if err := json.Unmarshal(challengeRaw, eBlob); err != nil {
-				return errwrap.Wrapf("error decoding challenge: {{err}}", err)
-			}
-
-			sealAccess := b.Core.seal.GetAccess()
-			pt, err := sealAccess.Decrypt(ctx, eBlob)
-			if err != nil {
-				return errwrap.Wrapf("error decrypting challenge: {{err}}", err)
-			}
-
-			secret, err = client.Logical().Write("sys/storage/raft/bootstrap/answer", map[string]interface{}{
-				"answer": pt,
-			})
-			if err != nil {
-				return errwrap.Wrapf("error sending answer: {{err}}", err)
-			}
-			if secret == nil {
-				return errors.New("no response when sending answer")
-			}
-
-			tlsCertRaw, ok := secret.Data["tls_cert"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no tls cert given")
-			}
-
-			tlsKeyRaw, ok := secret.Data["tls_key"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no tls key given")
-			}
-			tlsCARaw, ok := secret.Data["tls_ca_cert"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no tls CA cert given")
-			}
-			peersRaw, ok := secret.Data["peers"]
-			if !ok {
-				return errors.New("error during raft bootstrap call, no peers given")
-			}
-
-			b.Core.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, raft.BootstrapPackage{
-				TLSCert: tlsCertRaw.(string),
-				TLSKey:  tlsKeyRaw.(string),
-				TLSCA:   tlsCARaw.(string),
-				Peers:   []raft.Server{},
-			})
-
-			return nil
-		}
-
-		var resp *logical.Response
-		switch d.Get("retry").(bool) {
-		case true:
-			resp = &logical.Response{}
-			resp.AddWarning("Vault will attempt to join the raft cluster in the background")
-
-			go func() {
-				for {
-					// TODO add a way to shut this down
-					if err := join(); err != nil {
-						b.logger.Error("failed to join raft cluster", "error", err)
-						time.Sleep(time.Second * 2)
-					}
-				}
-			}()
-		default:
-			if err := join(); err != nil {
-				b.logger.Error("failed to join raft cluster", "error", err)
-				return nil, errwrap.Wrapf("failed to join raft cluster: {{err}}", err)
-			}
-		}
-
-		return nil, nil
 	}
 }
 
