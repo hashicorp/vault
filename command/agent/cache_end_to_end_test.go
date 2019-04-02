@@ -598,6 +598,7 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 
 	sink1 := newFileSink(t, logger)
 	sink1.DHAuto = true
+	sink1.DHType = "curve25519"
 
 	tokenTtl := 200 * time.Millisecond
 	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
