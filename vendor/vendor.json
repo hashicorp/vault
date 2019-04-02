@@ -989,10 +989,10 @@
 			"revisionTime": "2016-01-25T20:49:56Z"
 		},
 		{
-			"checksumSHA1": "GaJLoEuMGnP5ofXvuweAI4wx06U=",
+			"checksumSHA1": "Y2MOwzNZfl4NRNDbLCZa6sgx7O0=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "ddf22928ea3c56eb4292a0adbbf5001b1e8e7d0d",
-			"revisionTime": "2018-10-05T18:17:28Z"
+			"revision": "d3c38a4eb4970272b87a425ae00ccc4548e2f9bb",
+			"revisionTime": "2019-03-18T19:48:12Z"
 		},
 		{
 			"checksumSHA1": "fXNL9CT3MIlkdLUCn83Aon7QVAU=",
