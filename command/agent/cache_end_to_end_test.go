@@ -118,6 +118,7 @@ func newTestAuthHelper(ctx context.Context, client *api.Client, policyBody strin
 		secretFile:  secret,
 		secretID:    secretID1,
 		cleanup: func() {
+			client.Sys().DisableAuth("approle")
 			os.Remove(role)
 			os.Remove(secret)
 		},
@@ -275,26 +276,17 @@ path "/auth/token/create" {
 }
 `
 	testAuthHelper, err := newTestAuthHelper(ctx, client, policyBody, tokenTtl)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	sinks := append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
 	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
-
-	// Check that no sink file exists
-	_, err = os.Lstat(tokenFile)
-	if err == nil {
-		t.Fatal("expected err")
-	}
-	if !os.IsNotExist(err) {
-		t.Fatal("expected notexist err")
-	}
 
 	_, err = testAuthHelper.getToken(tokenFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	sinks = append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
-	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -302,7 +294,7 @@ path "/auth/token/create" {
 	}
 
 	// Create a muxer and add paths relevant for the lease cache layer
-	mux := cache.AgentMux(ctx, cacheLogger, leaseCache, inmemSink, nil)
+	mux := cache.AgentMux(ctx, cacheLogger, leaseCache, inmemSink, fileSinks)
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -438,7 +430,6 @@ func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
 		out = ouf.Name()
 		ouf.Close()
 		os.Remove(out)
-		t.Logf("output: %s", out)
 	}
 
 	config := &sink.SinkConfig{
@@ -537,9 +528,7 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 
 		clientConfig := api.DefaultConfig()
 		clientConfig.AgentAddress = agentAddr
-
-		// TODO uncomment once AgetnSinkName is supported
-		// clientConfig.AgentSinkName = "sink2"
+		clientConfig.AgentSinkName = "sink2"
 
 		client, err := api.NewClient(clientConfig)
 		if err != nil {

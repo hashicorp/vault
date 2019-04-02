@@ -775,9 +775,9 @@ func (c *Config) Clone() *Config {
 	c.modifyLock.RLock()
 
 	newConfig := &Config{
-		Address:      c.Address,
-		AgentAddress: c.AgentAddress,
-		//		HttpClient:        c.HttpClient,
+		Address:           c.Address,
+		AgentAddress:      c.AgentAddress,
+		HttpClient:        c.HttpClient,
 		MaxRetries:        c.MaxRetries,
 		Timeout:           c.Timeout,
 		Backoff:           c.Backoff,
