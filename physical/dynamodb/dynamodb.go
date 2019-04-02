@@ -722,6 +722,7 @@ WatchLoop:
 				break WatchLoop
 			}
 		}
+		retries = DynamoDBWatchRetryMax
 	}
 
 	close(lost)
