@@ -6,8 +6,8 @@
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [type] | <code>String</code> | <code></code> | The banner type. This comes from the message-types helper. |
-| message | <code>String</code> | <code></code> | The message to display within the banner. |
+| type | <code>String</code> | <code></code> | The banner type. This comes from the message-types helper. |
+| [message] | <code>String</code> | <code></code> | The message to display within the banner. |
 
 **Example**
   

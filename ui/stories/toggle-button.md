@@ -6,10 +6,10 @@
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [toggleAttr] | <code>String</code> | <code></code> | The attribute upon which to toggle. |
-| [attrTarget] | <code>Object</code> | <code></code> | The target upon which the event handler should be added. |
-| openLabel | <code>String</code> | <code>Hide</code> | options  - The message to display when the toggle is open. |
-| closedLabel | <code>String</code> | <code>More</code> | options  - The message to display when the toggle is closed. |
+| toggleAttr | <code>String</code> | <code></code> | The attribute upon which to toggle. |
+| attrTarget | <code>Object</code> | <code></code> | The target upon which the event handler should be added. |
+| [openLabel] | <code>String</code> | <code>Hide</code> | options  - The message to display when the toggle is open. |
+| [closedLabel] | <code>String</code> | <code>More</code> | options  - The message to display when the toggle is closed. |
 
 **Example**
   

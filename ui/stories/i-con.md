@@ -6,7 +6,7 @@
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [glyph] | <code>String</code> | <code></code> | The glyph type. |
+| glyph | <code>String</code> | <code></code> | The glyph type. |
 
 **Example**
   

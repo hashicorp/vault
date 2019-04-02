@@ -6,9 +6,9 @@ The `AlertPopup` is an implementation of the [ember-cli-flash](https://github.co
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [type] | <code>String</code> | <code></code> | The alert type. This comes from the message-types helper. |
-| message | <code>String</code> | <code></code> | The alert message. |
-| [close] | <code>Func</code> | <code></code> | The close action which will close the alert. |
+| type | <code>String</code> | <code></code> | The alert type. This comes from the message-types helper. |
+| [message] | <code>String</code> | <code></code> | The alert message. |
+| close | <code>Func</code> | <code></code> | The close action which will close the alert. |
 
 **Example**
   

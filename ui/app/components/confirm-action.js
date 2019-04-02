@@ -15,10 +15,10 @@ import hbs from 'htmlbars-inline-precompile';
  * ```
  *
  * @property {Func} onConfirmAction=null - The action to take upon confirming.
- * @property {String} confirmMessage=Are you sure you want to do this? - The message to display upon confirming.
- * @property {String} confirmButtonText=Delete - The confirm button text.
- * @property {String} cancelButtonText=Cancel - The cancel button text.
- * @property {String} disabledMessage=Complete the form to complete this action - The message to display when the button is disabled.
+ * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display upon confirming.
+ * @property {String} [confirmButtonText=Delete] - The confirm button text.
+ * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
  *
  */
 

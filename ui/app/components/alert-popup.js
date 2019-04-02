@@ -8,9 +8,9 @@ import OuterHTML from './outer-html';
  * // All properties are passed in from the flashMessage service.
  *   <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}}/>```
  *
- * @param [type=null] {String} - The alert type. This comes from the message-types helper.
- * @param message=null {String} - The alert message.
- * @param [close=null] {Func} - The close action which will close the alert.
+ * @param type=null {String} - The alert type. This comes from the message-types helper.
+ * @param [message=null] {String} - The alert message.
+ * @param close=null {Func} - The close action which will close the alert.
  *
  */
 

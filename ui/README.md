@@ -134,7 +134,7 @@ Each component in `vault/ui/app/components` should have a corresponding `[compon
  * @param [closedLabel=More options] {String} - The message to display when the toggle is closed.
  */
 ````
-Note that placing a param inside brackets (e.g. `[closedLabel=More options]` indicates it is required and has a default value of `'More options'`.)
+Note that placing a param inside brackets (e.g. `[closedLabel=More options]` indicates it is optional and has a default value of `'More options'`.)
 
 2. Generate a new story with `ember generate story [name-of-component]`
 3. Inside the newly generated `stories` file, add at least one example of the component. If the component should be interactive, enable the [Storybook Knobs addon](https://github.com/storybooks/storybook/tree/master/addons/knobs).

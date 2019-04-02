@@ -17,8 +17,7 @@ import { set, get, defineProperty, computed } from '@ember/object';
  *   {{/if}}
  * ```
  *
- * @param [toggleAttr=null] {String} - The attribute upon which to toggle.
- * @param [attrTarget=null] {Object} - The target upon which the event handler should be added.
+ * @param toggleAttr=null {String} - The attribute upon which to toggle.
  * @param openLabel=Hide options {String} - The message to display when the toggle is open.
  * @param closedLabel=More options {String} - The message to display when the toggle is closed.
  */

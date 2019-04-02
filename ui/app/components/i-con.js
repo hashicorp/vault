@@ -11,7 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
  * ```js
  * <ICon @glyph="cancel-square-outline" />
  * ```
- * @param [glyph=null]{String} - The glyph type.
+ * @param glyph=null {String} - The glyph type.
  *
  */
 

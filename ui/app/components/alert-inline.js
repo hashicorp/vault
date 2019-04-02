@@ -11,8 +11,8 @@ import { messageTypes } from 'vault/helpers/message-types';
  * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
  * ```
  *
- * @param [type=null]{String} - The alert type. This comes from the message-types helper.
- * @param message=null{String} - The message to display within the alert.
+ * @param type=null{String} - The alert type. This comes from the message-types helper.
+ * @param [message=null]{String} - The message to display within the alert.
  *
  */
 
