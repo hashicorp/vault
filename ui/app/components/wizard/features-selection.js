@@ -60,7 +60,7 @@ export default Component.extend({
       {
         key: 'secrets',
         name: 'Secrets',
-        steps: ['Enabling a secrets engine', 'Adding a secret'],
+        steps: ['Enabling a Secrets Engine', 'Adding a secret'],
         selected: false,
         show: true,
         disabled: false,
@@ -71,7 +71,7 @@ export default Component.extend({
       {
         key: 'authentication',
         name: 'Authentication',
-        steps: ['Enabling an auth method', 'Managing your auth method'],
+        steps: ['Enabling an Auth Method', 'Managing your Auth Method'],
         selected: false,
         show: true,
         disabled: false,

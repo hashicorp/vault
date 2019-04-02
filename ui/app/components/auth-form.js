@@ -125,7 +125,7 @@ export default Component.extend(DEFAULTS, {
   }),
 
   unwrapToken: task(function*(token) {
-    // will be using the token auth method, so set it here
+    // will be using the Token Auth Method, so set it here
     this.set('selectedAuth', 'token');
     let adapter = this.get('store').adapterFor('tools');
     try {
@@ -152,7 +152,7 @@ export default Component.extend(DEFAULTS, {
         store.unloadAll('auth-method');
       });
     } catch (e) {
-      this.set('error', `There was an error fetching auth methods: ${e.errors[0]}`);
+      this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
     }
   }),
 

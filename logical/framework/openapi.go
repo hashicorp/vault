@@ -148,20 +148,24 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
-	Type             string                `json:"type,omitempty"`
-	Description      string                `json:"description,omitempty"`
-	Properties       map[string]*OASSchema `json:"properties,omitempty"`
-	Items            *OASSchema            `json:"items,omitempty"`
-	Format           string                `json:"format,omitempty"`
-	Pattern          string                `json:"pattern,omitempty"`
-	Enum             []interface{}         `json:"enum,omitempty"`
-	Default          interface{}           `json:"default,omitempty"`
-	Example          interface{}           `json:"example,omitempty"`
-	Deprecated       bool                  `json:"deprecated,omitempty"`
-	Required         bool                  `json:"required,omitempty"`
-	DisplayName      string                `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
-	DisplayValue     interface{}           `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
-	DisplaySensitive bool                  `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
+	Type        string                `json:"type,omitempty"`
+	Description string                `json:"description,omitempty"`
+	Properties  map[string]*OASSchema `json:"properties,omitempty"`
+
+	// Required is a list of keys in Properties that are required to be present. This is a different
+	// approach than OASParameter (unfortunately), but is how JSONSchema handles 'required'.
+	Required []string `json:"required,omitempty"`
+
+	Items            *OASSchema    `json:"items,omitempty"`
+	Format           string        `json:"format,omitempty"`
+	Pattern          string        `json:"pattern,omitempty"`
+	Enum             []interface{} `json:"enum,omitempty"`
+	Default          interface{}   `json:"default,omitempty"`
+	Example          interface{}   `json:"example,omitempty"`
+	Deprecated       bool          `json:"deprecated,omitempty"`
+	DisplayName      string        `json:"x-vault-displayName,omitempty" mapstructure:"x-vault-displayName,omitempty"`
+	DisplayValue     interface{}   `json:"x-vault-displayValue,omitempty" mapstructure:"x-vault-displayValue,omitempty"`
+	DisplaySensitive bool          `json:"x-vault-displaySensitive,omitempty" mapstructure:"x-vault-displaySensitive,omitempty"`
 }
 
 type OASResponse struct {
@@ -248,6 +252,11 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			location := "path"
 			required := true
 
+			if field.Query {
+				location = "query"
+				required = false
+			}
+
 			// Header parameters are part of the Parameters group but with
 			// a dedicated "header" location, a header parameter is not required.
 			if field.Type == TypeHeader {
@@ -313,10 +322,15 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				s := &OASSchema{
 					Type:       "object",
 					Properties: make(map[string]*OASSchema),
+					Required:   make([]string, 0),
 				}
 
 				for name, field := range bodyFields {
 					openapiField := convertType(field.Type)
+					if field.Required {
+						s.Required = append(s.Required, name)
+					}
+
 					p := OASSchema{
 						Type:             openapiField.baseType,
 						Description:      cleanString(field.Description),
@@ -324,7 +338,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 						Pattern:          openapiField.pattern,
 						Enum:             field.AllowedValues,
 						Default:          field.Default,
-						Required:         field.Required,
 						Deprecated:       field.Deprecated,
 						DisplayName:      field.DisplayName,
 						DisplayValue:     field.DisplayValue,
@@ -596,7 +609,7 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 	for name, field := range allFields {
 		if _, ok := pathFields[name]; !ok {
 			// Header fields are in "parameters" with other path fields
-			if field.Type == TypeHeader {
+			if field.Type == TypeHeader || field.Query {
 				pathFields[name] = field
 			} else {
 				bodyFields[name] = field

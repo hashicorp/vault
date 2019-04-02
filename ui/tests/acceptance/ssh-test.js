@@ -79,7 +79,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
       // create a role
       await click('[ data-test-secret-create]');
       assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH Role'),
+        find('[data-test-secret-header]').textContent.includes('SSH role'),
         `${role.type}: renders the create page`
       );
 

@@ -345,6 +345,11 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description:   "a header value",
 					AllowedValues: []interface{}{"a", "b", "c"},
 				},
+				"format": {
+					Type:        TypeString,
+					Description: "a query param",
+					Query:       true,
+				},
 			},
 			HelpSynopsis:    "Synopsis",
 			HelpDescription: "Description",
@@ -555,7 +560,9 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument()
-	documentPath(path, sp, logical.TypeLogical, doc)
+	if err := documentPath(path, sp, logical.TypeLogical, doc); err != nil {
+		t.Fatal(err)
+	}
 	doc.CreateOperationIDs("")
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")

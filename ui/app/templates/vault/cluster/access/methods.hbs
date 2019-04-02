@@ -54,13 +54,13 @@
               <ul class="menu-list">
                 <li>
                   {{#link-to "vault.cluster.access.method.section" method.id "configuration"}}
-                    View Configuration
+                    View configuration
                   {{/link-to}}
                 </li>
                 {{#if method.canEdit}}
                   <li>
                     {{#link-to "vault.cluster.settings.auth.configure" method.id}}
-                      Edit Configuration
+                      Edit configuration
                     {{/link-to}}
                   </li>
                 {{/if}}
@@ -71,7 +71,7 @@
                       confirmButtonClasses="button is-primary"
                       buttonClasses="link is-destroy"
                       onConfirmAction=(perform disableMethod method)
-                      confirmMessage=(concat "Are you sure you want to disable the " method.id " auth method at " method.path "?")
+                      confirmMessage=(concat "Are you sure you want to disable the " method.id " Auth Method at " method.path "?")
                       showConfirm=(get this (concat "shouldDelete-" (dot-to-dash method.id)))
                       class=(if (get this (concat "shouldDelete-" (dot-to-dash method.id))) "message is-block is-warning is-outline")
                       containerClasses="message-body is-block"
