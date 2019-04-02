@@ -1,4 +1,13 @@
-import { create, collection, text, visitable, clickable, isPresent } from 'ember-cli-page-object';
+import {
+  create,
+  collection,
+  fillable,
+  text,
+  visitable,
+  value,
+  clickable,
+  isPresent,
+} from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 
 export default create({
@@ -9,6 +18,8 @@ export default create({
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
   tabs: collection('[data-test-tab]'),
+  filterInput: fillable('[data-test-nav-input] input'),
+  filterInputValue: value('[data-test-nav-input] input'),
   secrets: collection('[data-test-secret-link]', {
     menuToggle: clickable('[data-test-popup-menu-trigger]'),
     id: text(),

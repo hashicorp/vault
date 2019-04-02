@@ -317,4 +317,22 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       `${path}: show page renders correctly`
     );
   });
+
+  test('filter clears on nav', async function(assert) {
+    await consoleComponent.runCommands([
+      'vault write sys/mounts/test type=kv',
+      'refresh',
+      'vault write test/filter/foo keys=a keys=b',
+      'vault write test/filter/foo1 keys=a keys=b',
+      'vault write test/filter/foo2 keys=a keys=b',
+    ]);
+    await listPage.visit({ backend: 'test', id: 'filter' });
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    await listPage.filterInput('filter/foo1');
+    assert.equal(listPage.secrets.length, 1, 'renders only one secret');
+    await listPage.secrets[0].click();
+    await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+  });
 });
