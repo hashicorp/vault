@@ -159,8 +159,8 @@ export default Route.extend({
 
   resetController(controller, isExiting) {
     this._super(...arguments);
-    controller.set('pageFilter', null);
     if (isExiting) {
+      controller.set('pageFilter', null);
       controller.set('filter', null);
     }
   },
