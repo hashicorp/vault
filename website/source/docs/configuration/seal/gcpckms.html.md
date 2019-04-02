@@ -81,17 +81,17 @@ The service account needs the following minimum permissions on the crypto key:
 ```text
 cloudkms.cryptoKeyVersions.useToEncrypt
 cloudkms.cryptoKeyVersions.useToDecrypt
-cloudkms.cryptKeys.get
+cloudkms.cryptoKeys.get
 ```
 
 These permissions can be described with the following role:
 
 ```text
 roles/cloudkms.cryptoKeyEncrypterDecrypter
-cloudkms.cryptKeys.get
+cloudkms.cryptoKeys.get
 ```
 
-`cloudkms.cryptKeys.get` permission is used for retrieving metadata information of keys from CloudKMS within this engine initialization process.
+`cloudkms.cryptoKeys.get` permission is used for retrieving metadata information of keys from CloudKMS within this engine initialization process.
 
 ## `gcpckms` Environment Variables
 
