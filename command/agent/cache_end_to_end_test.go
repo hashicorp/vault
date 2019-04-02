@@ -221,7 +221,7 @@ func testAutoAuthCluster(t *testing.T) *vault.TestCluster {
 	return cluster
 }
 
-func testhelperAutoAuth(t *testing.T, cluster *vault.TestCluster, fileSinks []*sink.SinkConfig, tokenFile string, tokenTtl time.Duration) (cleanup func(), client *api.Client, agentAddr string) {
+func testhelperAutoAuth(t *testing.T, cluster *vault.TestCluster, fileSinks []*sink.SinkConfig, tokenFile string, tokenTtl time.Duration, cacheUseAutoAuth bool) (cleanup func(), client *api.Client, agentAddr string) {
 	logger := logging.NewVaultLogger(log.Trace)
 	client = cluster.Cores[0].Client
 	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
@@ -266,6 +266,11 @@ func testhelperAutoAuth(t *testing.T, cluster *vault.TestCluster, fileSinks []*s
 	}
 	inmemSinkConfig.Sink = inmemSink
 
+	var sinks []*sink.SinkConfig
+	if cacheUseAutoAuth {
+		sinks = append(sinks, inmemSinkConfig)
+	}
+
 	policyBody := `
 path "/kv/*" {
 	capabilities = ["sudo", "create", "read", "update", "delete", "list"]
@@ -280,10 +285,14 @@ path "/auth/token/create" {
 		t.Fatal(err)
 	}
 
-	sinks := append([]*sink.SinkConfig{inmemSinkConfig}, fileSinks...)
+	sinks = append(sinks, fileSinks...)
 	go ss.Run(ctx, testAuthHelper.authHandler.OutputCh, sinks)
 
 	if tokenFile == "" {
+		if !cacheUseAutoAuth {
+			t.Fatal("must provide a tokenFile or cacheUseAutoAuth=true")
+
+		}
 		err = testAuthHelper.authenticate()
 		timeout := time.Now().Add(10 * time.Second)
 		for {
@@ -342,7 +351,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	out := sink1.Config["path"].(string)
 
 	tokenTtl := 3 * time.Second
-	cleanup, realClient, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, out, tokenTtl)
+	cleanup, realClient, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, out, tokenTtl, true)
 	defer cleanup()
 
 	// Wait for listeners to come up
@@ -473,7 +482,7 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 	out := sink1.Config["path"].(string)
 
 	tokenTtl := 200 * time.Millisecond
-	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, out, tokenTtl)
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, out, tokenTtl, false)
 	defer cleanup()
 
 	clientConfig := api.DefaultConfig()
@@ -519,7 +528,7 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		sink2 := newFileSink(t, logger)
 		sink2.Name = "sink2"
 
-		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl)
+		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl, false)
 
 		clientConfig := api.DefaultConfig()
 		clientConfig.AgentAddress = agentAddr
@@ -540,7 +549,7 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		sink2 := newFileSink(t, logger)
 		sink2.Name = "sink2"
 
-		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl)
+		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl, false)
 		os.Remove(out)
 
 		clientConfig := api.DefaultConfig()
@@ -566,7 +575,7 @@ func TestCache_NoFileSink(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tokenTtl := 200 * time.Millisecond
-	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, nil, "", tokenTtl)
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, nil, "", tokenTtl, true)
 	defer cleanup()
 
 	clientConfig := api.DefaultConfig()
@@ -583,4 +592,26 @@ func TestCache_NoFileSink(t *testing.T) {
 }
 
 func TestCache_ClientAutoAuthEnc(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Trace)
+	cluster := testAutoAuthCluster(t)
+	defer cluster.Cleanup()
+
+	sink1 := newFileSink(t, logger)
+	sink1.DHAuto = true
+
+	tokenTtl := 200 * time.Millisecond
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
+	defer cleanup()
+
+	clientConfig := api.DefaultConfig()
+	clientConfig.AgentAddress = agentAddr
+	testClient, err := api.NewClient(clientConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = testClient.Logical().Read("kv/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
