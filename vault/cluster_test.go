@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -108,23 +107,20 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
 		dialer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
-		for _, ln := range cores[0].Listeners {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				t.Fatalf("%s not a TCP port", tcpAddr.String())
-			}
+		for i := range cores[0].Listeners {
 
-			netConn, err := dialer(fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), 0)
+			clnAddr := cores[0].clusterListener.clusterListenerAddrs[i]
+			netConn, err := dialer(clnAddr.String(), 0)
 			conn := netConn.(*tls.Conn)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+					t.Logf("testing %s unsuccessful as expected", clnAddr)
 					continue
 				}
-				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[0])
+				t.Fatalf("error: %v\ncluster listener is %s", err, clnAddr)
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
+				t.Fatalf("testing %s not unsuccessful as expected", clnAddr)
 			}
 			err = conn.Handshake()
 			if err != nil {
@@ -137,7 +133,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != requestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+105)
+			t.Logf("testing %s successful", clnAddr)
 		}
 	}
 
@@ -391,7 +387,7 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
 	dialer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 
-	netConn, err := dialer(fmt.Sprintf("%s:%d", core.Listeners[0].Address.IP.String(), core.Listeners[0].Address.Port+105), 0)
+	netConn, err := dialer(core.clusterListener.clusterListenerAddrs[0].String(), 0)
 	conn := netConn.(*tls.Conn)
 	if err != nil {
 		t.Fatal(err)
