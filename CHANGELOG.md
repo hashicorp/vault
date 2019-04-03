@@ -4,6 +4,8 @@ IMPROVEMENTS:
 
  * agent: Allow AppRole auto-auth without a secret-id [GH-6324]
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
+ * ui: Navigating away from secret list view will clear any page-specific
+   filter that was applied [GH-6511]
 
 
 BUG FIXES: 
