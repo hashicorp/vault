@@ -1092,7 +1092,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	// processed. If an empty set of member group IDs are supplied, then it
 	// should be processed. Hence the nil check instead of the length check.
 	if memberGroupIDs == nil {
-		goto alias
+		goto ALIAS
 	}
 
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
@@ -1192,7 +1192,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
-alias:
+ALIAS:
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
