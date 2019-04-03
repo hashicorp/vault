@@ -3,6 +3,19 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
+/**
+ * @module AuthConfigForm/Options
+ * The `AuthConfigForm/Options` is options portion of the auth config form.
+ *
+ * @example
+ * ```js
+ * {{auth-config-form/options model.model}}
+ * ```
+ *
+ * @property model=null {String} - The corresponding auth model that is being configured.
+ *
+ */
+
 export default AuthConfigComponent.extend({
   router: service(),
   wizard: service(),
