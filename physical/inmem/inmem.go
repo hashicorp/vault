@@ -36,15 +36,15 @@ var (
 // expected to be durable.
 type InmemBackend struct {
 	sync.RWMutex
-	root       *radix.Tree
-	permitPool *physical.PermitPool
-	logger     log.Logger
-	failGet    *uint32
-	failPut    *uint32
-	failDelete *uint32
-	failList   *uint32
-	logOps     bool
-	maxValSize int
+	root         *radix.Tree
+	permitPool   *physical.PermitPool
+	logger       log.Logger
+	failGet      *uint32
+	failPut      *uint32
+	failDelete   *uint32
+	failList     *uint32
+	logOps       bool
+	maxValueSize int
 }
 
 type TransactionalInmemBackend struct {
@@ -53,37 +53,37 @@ type TransactionalInmemBackend struct {
 
 // NewInmem constructs a new in-memory backend
 func NewInmem(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	maxValSize := 0
-	maxValSizeStr, ok := conf["max_val_size"]
+	maxValueSize := 0
+	maxValueSizeStr, ok := conf["max_value_size"]
 	if ok {
 		var err error
-		maxValSize, err = strconv.Atoi(maxValSizeStr)
+		maxValueSize, err = strconv.Atoi(maxValueSizeStr)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &InmemBackend{
-		root:       radix.New(),
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-		logger:     logger,
-		failGet:    new(uint32),
-		failPut:    new(uint32),
-		failDelete: new(uint32),
-		failList:   new(uint32),
-		logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
-		maxValSize: maxValSize,
+		root:         radix.New(),
+		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		logger:       logger,
+		failGet:      new(uint32),
+		failPut:      new(uint32),
+		failDelete:   new(uint32),
+		failList:     new(uint32),
+		logOps:       os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
+		maxValueSize: maxValueSize,
 	}, nil
 }
 
 // Basically for now just creates a permit pool of size 1 so only one operation
 // can run at a time
 func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	maxValSize := 0
-	maxValSizeStr, ok := conf["max_val_size"]
+	maxValueSize := 0
+	maxValueSizeStr, ok := conf["max_value_size"]
 	if ok {
 		var err error
-		maxValSize, err = strconv.Atoi(maxValSizeStr)
+		maxValueSize, err = strconv.Atoi(maxValueSizeStr)
 		if err != nil {
 			return nil, err
 		}
@@ -91,15 +91,15 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 
 	return &TransactionalInmemBackend{
 		InmemBackend: InmemBackend{
-			root:       radix.New(),
-			permitPool: physical.NewPermitPool(1),
-			logger:     logger,
-			failGet:    new(uint32),
-			failPut:    new(uint32),
-			failDelete: new(uint32),
-			failList:   new(uint32),
-			logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
-			maxValSize: maxValSize,
+			root:         radix.New(),
+			permitPool:   physical.NewPermitPool(1),
+			logger:       logger,
+			failGet:      new(uint32),
+			failPut:      new(uint32),
+			failDelete:   new(uint32),
+			failList:     new(uint32),
+			logOps:       os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
+			maxValueSize: maxValueSize,
 		},
 	}, nil
 }
@@ -129,7 +129,7 @@ func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) e
 	default:
 	}
 
-	if i.maxValSize > 0 && len(entry.Value) > i.maxValSize {
+	if i.maxValueSize > 0 && len(entry.Value) > i.maxValueSize {
 		return fmt.Errorf("%s", physical.ErrValueTooLarge)
 	}
 
