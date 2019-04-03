@@ -3,7 +3,7 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
-TEST_TIMEOUT?=20m
+TEST_TIMEOUT?=30m
 EXTENDED_TEST_TIMEOUT=45m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
