@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -90,6 +90,7 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
+	// Please see GetOrDefaultRegion for an explanation of the order in which region is parsed.
 	k.region = awsutil.GetOrDefaultRegion(k.logger, config["region"])
 
 	// Check and set AWS access key, secret key, and session token
