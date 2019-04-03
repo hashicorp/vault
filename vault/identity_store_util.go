@@ -1088,7 +1088,9 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	var currentMemberGroupIDs []string
 	var currentMemberGroups []*identity.Group
 
-	// Process member group IDs only if they were supplied
+	// If there are no member group IDs supplied, then it shouldn't be
+	// processed. If an empty set of member group IDs are supplied, then it
+	// should be processed. Hence the nil check instead of the length check.
 	if memberGroupIDs == nil {
 		goto alias
 	}
