@@ -3,7 +3,9 @@ package inmem
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,6 +44,7 @@ type InmemBackend struct {
 	failDelete *uint32
 	failList   *uint32
 	logOps     bool
+	maxValSize int
 }
 
 type TransactionalInmemBackend struct {
@@ -49,8 +52,18 @@ type TransactionalInmemBackend struct {
 }
 
 // NewInmem constructs a new in-memory backend
-func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) {
-	in := &InmemBackend{
+func NewInmem(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	maxValSize := 0
+	maxValSizeStr, ok := conf["max_val_size"]
+	if ok {
+		var err error
+		maxValSize, err = strconv.Atoi(maxValSizeStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &InmemBackend{
 		root:       radix.New(),
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 		logger:     logger,
@@ -59,14 +72,24 @@ func NewInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) 
 		failDelete: new(uint32),
 		failList:   new(uint32),
 		logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
-	}
-	return in, nil
+		maxValSize: maxValSize,
+	}, nil
 }
 
 // Basically for now just creates a permit pool of size 1 so only one operation
 // can run at a time
-func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Backend, error) {
-	in := &TransactionalInmemBackend{
+func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.Backend, error) {
+	maxValSize := 0
+	maxValSizeStr, ok := conf["max_val_size"]
+	if ok {
+		var err error
+		maxValSize, err = strconv.Atoi(maxValSizeStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &TransactionalInmemBackend{
 		InmemBackend: InmemBackend{
 			root:       radix.New(),
 			permitPool: physical.NewPermitPool(1),
@@ -76,9 +99,9 @@ func NewTransactionalInmem(_ map[string]string, logger log.Logger) (physical.Bac
 			failDelete: new(uint32),
 			failList:   new(uint32),
 			logOps:     os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
+			maxValSize: maxValSize,
 		},
-	}
-	return in, nil
+	}, nil
 }
 
 // Put is used to insert or update an entry
@@ -104,6 +127,10 @@ func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) e
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
+	}
+
+	if i.maxValSize > 0 && len(entry.Value) > i.maxValSize {
+		return fmt.Errorf("%s", physical.ErrValueTooLarge)
 	}
 
 	i.root.Insert(entry.Key, entry.Value)
