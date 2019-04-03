@@ -4,15 +4,27 @@ import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
 
+/**
+ * @module FormField
+ * `FormField` components are field elements associated with a particular model.
+ *
+ * @example
+ * ```js
+ * {{#each @model.fields as |attr|}}
+ *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+ * {{/each}}
+ * ```
+ *
+ * @param [onChange=null] {Func} - Called whenever a value on the model changes via the component.
+ * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
+ * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
+ *
+ */
+
 export default Component.extend({
   'data-test-field': true,
   classNames: ['field'],
 
-  /*
-   * @public Function
-   * called whenever a value on the model changes via the component
-   *
-   */
   onChange() {},
 
   /*
@@ -29,9 +41,6 @@ export default Component.extend({
    *   },
    *   type: "boolean"
    * }
-   *
-   * this is usually derived from ember model `attributes` lookup,
-   * and all members of `attr.options` are optional
    *
    */
   attr: null,
@@ -65,13 +74,6 @@ export default Component.extend({
     return this.get('attr.options.fieldValue') || this.get('attr.name');
   }),
 
-  /*
-   *
-   * @public
-   * @param DS.Model
-   *
-   * the Ember Data model that `attr` is defined on
-   */
   model: null,
 
   /*
