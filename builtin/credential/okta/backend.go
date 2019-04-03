@@ -56,7 +56,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, params ...string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
@@ -64,6 +64,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	if cfg == nil {
 		return nil, logical.ErrorResponse("Okta auth method not configured"), nil, nil
 	}
+
+	username := params[0]
+	password := params[1]
+	mfaMethod := params[2]
+	passcode := params[3]
 
 	client := cfg.OktaClient()
 
@@ -152,20 +157,27 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		var selectedFactor mfaFactor
 		// only okta push is currently supported
 		for _, v := range result.Embedded.Factors {
-			if v.Type == "push" && v.Provider == "OKTA" {
+			if v.Type == mfaMethod {
 				factorAvailable = true
 				selectedFactor = v
 			}
 		}
 
 		if !factorAvailable {
-			return nil, logical.ErrorResponse("Okta Verify Push factor is required in order to perform MFA"), nil, nil
+			return nil, logical.ErrorResponse("Okta Verify Push or TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)
+
 		payload := map[string]interface{}{
 			"stateToken": result.StateToken,
 		}
+
+		// Add the 'passCode' value if using Token MFA
+		if mfaMethod == "token:software:totp" {
+			payload["passCode"] = passcode
+		}
+
 		verifyReq, err := client.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err

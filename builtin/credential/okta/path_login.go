@@ -55,8 +55,10 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
+	mfaMethod := d.Get("method").(string)
+	passCode := d.Get("passcode").(string)
 
-	policies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	policies, resp, groupNames, err := b.Login(ctx, req, username, password, mfaMethod, passCode)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
