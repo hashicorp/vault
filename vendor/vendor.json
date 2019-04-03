@@ -1379,16 +1379,16 @@
 			"revisionTime": "2019-03-20T21:13:57Z"
 		},
 		{
-			"checksumSHA1": "a1DSDFYBTXvAst7+Srn/+OgqDnU=",
+			"checksumSHA1": "iHbSrSvf+fcXh6oqN1zP1Ybj6s0=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "e8308b5e41c9ea3e7dad0075ab1bfb1d779f29be",
-			"revisionTime": "2019-03-20T21:44:13Z"
+			"revision": "441a7965e9fe531b6724c2c3b2dc5418f681599d",
+			"revisionTime": "2019-04-02T00:00:36Z"
 		},
 		{
 			"checksumSHA1": "SF3ju0Tm+0lZZAeinRSCXoFy2oE=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache",
-			"revision": "e8308b5e41c9ea3e7dad0075ab1bfb1d779f29be",
-			"revisionTime": "2019-03-20T21:44:13Z"
+			"revision": "441a7965e9fe531b6724c2c3b2dc5418f681599d",
+			"revisionTime": "2019-04-02T00:00:36Z"
 		},
 		{
 			"checksumSHA1": "itJt7LtTNuCOBfBVGDcTtUu9HIc=",
@@ -3263,28 +3263,28 @@
 			"revisionTime": "2018-08-22T07:09:55Z"
 		},
 		{
-			"checksumSHA1": "Wy85jVEPvSSgYWCr/VyfJ5ES3r8=",
+			"checksumSHA1": "klOgUG8O4wvk2/6m3VrublB6gN8=",
 			"path": "gopkg.in/square/go-jose.v2",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "Ho5sr2GbiR8S35IRni7vC54d5Js=",
 			"path": "gopkg.in/square/go-jose.v2/cipher",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "JFun0lWY9eqd80Js2iWsehu1gc4=",
 			"path": "gopkg.in/square/go-jose.v2/json",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
-			"checksumSHA1": "gMJFFBv2lKqUlg2Kwqd5xnb2qfc=",
+			"checksumSHA1": "ArWEYi3WR6KVH3dZcElUJTi+pdA=",
 			"path": "gopkg.in/square/go-jose.v2/jwt",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "ZSWoOPUNRr5+3dhkLK3C4cZAQPk=",

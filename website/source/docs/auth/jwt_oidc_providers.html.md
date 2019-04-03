@@ -22,6 +22,8 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
 1. Switch to Certificates & Secrets. Create a new client secret and record the generated value as
 it will not be accessible after you leave the page.
 
+Please note [Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison) are required for [external groups](https://www.vaultproject.io/docs/secrets/identity/index.html#external-vs-internal-groups) to work. Further, the App Registration needs the [Group.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-10)  Microsoft Graph API Permission, and `groupMembershipClaims` should be changed from `none` in the [App registration manifest](https://docs.microsoft.com/en-us/azure/active-directory/develop/reference-app-manifest). In the [OIDC Role config](https://www.vaultproject.io/api/auth/jwt/index.html#create-role) the scope `"https://graph.microsoft.com/.default"` should be added to add groups to the jwt token and `groups_claim` should be set to `groups`. Finally Azure AD group can be referenced by using the groups `objectId` as the [group alias name](https://www.vaultproject.io/api/secret/identity/group-alias.html) for the external group.
+
 ## Auth0
 1. Select Create Application (Regular Web App).
 1. Configure Allowed Callback URLs.

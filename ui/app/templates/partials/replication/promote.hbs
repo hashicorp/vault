@@ -16,7 +16,7 @@
       @class="is-block"
       @toggleAttr="showOptions"
       @toggleTarget={{this}}
-      @openLabel="Hide Options"
+      @openLabel="Hide options"
       @closedLabel="Options"
       />
     {{#if showOptions}}
@@ -77,7 +77,7 @@
     <p>Promote the cluster to primary.
     <AlertInline
       @type="warning"
-      @message="Vault replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
+      @message="Vault Replication is not designed for active-active usage and enabling two primaries should never be done, as it can lead to data loss if they or their secondaries are ever reconnected.
         If the cluster has a primary, be sure to demote it before promoting a secondary."
     />
     </p>

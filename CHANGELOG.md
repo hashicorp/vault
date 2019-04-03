@@ -10,6 +10,8 @@ IMPROVEMENTS:
 
  * agent: Allow AppRole auto-auth without a secret-id [GH-6324]
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
+ * ui: Navigating away from secret list view will clear any page-specific
+   filter that was applied [GH-6511]
 
 
 BUG FIXES: 
@@ -23,6 +25,8 @@ BUG FIXES:
  * core: Fix incorrect representation of required properties in OpenAPI output
    [[GH-6490]](https://github.com/hashicorp/vault/pull/6490)
  * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
+ * storage/dynamodb: Fix a race condition possible in HA configurations that could
+   leave the cluster without a leader [[GH-6512]](https://github.com/hashicorp/vault/pull/6512)
  * ui: Fix an issue where in production builds OpenAPI model generation was
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
