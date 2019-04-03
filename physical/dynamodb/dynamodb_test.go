@@ -168,7 +168,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 
 	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 	testDynamoDBLockTTL(t, b.(physical.HABackend))
-	testDynamoDBLockRewewal(t, b.(physical.HABackend))
+	testDynamoDBLockRenewal(t, b.(physical.HABackend))
 }
 
 // Similar to testHABackend, but using internal implementation details to
@@ -280,7 +280,7 @@ func testDynamoDBLockTTL(t *testing.T, ha physical.HABackend) {
 // Similar to testHABackend, but using internal implementation details to
 // trigger a renewal before a "watch" check, which has been a source of
 // race conditions.
-func testDynamoDBLockRewewal(t *testing.T, ha physical.HABackend) {
+func testDynamoDBLockRenewal(t *testing.T, ha physical.HABackend) {
 	renewInterval := time.Second * 1
 	watchInterval := time.Second * 5
 
