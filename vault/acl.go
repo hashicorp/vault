@@ -525,9 +525,9 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 	// multiple matches, we use this priority order, which tries to most
 	// closely match longest-prefix:
 	//
-	// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
-	// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
 	// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
+	// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
+	// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
 	// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
 	// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
 	// * Lexigraphical ordering (preferring less, arbitrarily)
@@ -587,24 +587,20 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 				}
 			}
 			switch {
-			// N.B.: For this first switch, we'd really only have a
-			// disparate number of segments if a wildcard was also in play
-			case totalPathSegments == 0:
-				// If we don't already have a match, carry on
-			case totalPathSegments > 0 && totalPathSegments < len(splitCurrWCPath):
-				// We've found a match, but the current path has more overall
-				// segments, hence is more specific, so keep going -- if it's not
-				// invalid we'll replace the current match with it
-			case totalPathSegments > 0 && totalPathSegments > len(splitCurrWCPath):
-				// We already have a match and it's more overall segments (more
-				// specific) so use that
+			case currFirstWC == 0:
+				// No current match so carry on
+			case currFirstWC < firstWC:
+				// Current one comes before so is less specific, continue on
+			case currFirstWC > firstWC:
+				// Current one is after so it's more specific, use that
 				continue
-			case totalPathSegments == len(splitCurrWCPath):
-				// In this case we want to next check on whether the number of
-				// wildcard segments is the same
+			default:
+				// Note: the various other global values will always be
+				// populated if currFirstWC is
+				//
+				// Same first position of wildcard. Next switch on least
+				// wildcard segments.
 				switch {
-				// totalWildcardSegment segments will always be greater than
-				// zero if totalPathSegments is
 				case totalWildcardSegments > wcSegments:
 					// Continue on here; if it matches, this is less segments so we
 					// want to use that as it's more specific
@@ -612,17 +608,21 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 					// What we have is more specific already, so use that
 					continue
 				default:
-					// Same number of wildcard segments. Next switch on first
-					// position of wildcard.
+					// Same number of total wildcard segments, so next check
+					// total path segments
 					switch {
-					case currFirstWC < firstWC:
-						// Current one comes before so is less specific, continue on
-					case currFirstWC > firstWC:
-						// Current one is after so it's more specific, use that
+					// N.B.: We'd really only have a disparate number of segments
+					// if a wildcard was also in play.
+					case totalPathSegments < len(splitCurrWCPath):
+						// We've found a match, but the current path has more overall
+						// segments, hence is more specific, so keep going -- if it's not
+						// invalid we'll replace the current match with it
+					case totalPathSegments > len(splitCurrWCPath):
+						// We already have a match and it's more overall segments (more
+						// specific) so use that
 						continue
 					default:
-						// Same positioning of first wildcard segments. Next switch
-						// on prefix.
+						// Same number of path segments. Next switch on prefix.
 						if isPrefix != currIsPrefix {
 							if isPrefix {
 								// This is a prefix but what we found earlier
