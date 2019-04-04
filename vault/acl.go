@@ -522,9 +522,19 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 	}
 
 	// We use these to find the most-specific matching path. In the case of
-	// multiple matches, we prefer less segments and then later segment placing
-	// (e.g. prefer foo/bar/+/baz over foo/+/bar/baz for a given path of
-	// foo/bar/bar/baz). We also prefer non-prefix to prefix.
+	// multiple matches, we use this priority order, which tries to most
+	// closely match longest-prefix:
+	//
+	// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
+	// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
+	// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
+	// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
+	// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
+	// * Lexigraphical ordering (preferring less, arbitrarily)
+	//
+	// That final case (lexigraphical) should never really come up. It's more
+	// of a throwing-up-hands scenario akin to panic("should not be here")
+	// statements, but less panicky.
 	var totalPathSegments int
 	var totalWildcardSegments int
 	var currIsPrefix bool
