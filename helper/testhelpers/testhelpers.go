@@ -5,12 +5,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/logical"
 	"math/rand"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -183,17 +184,19 @@ func EnsureCoreUnsealed(t testing.T, c *vault.TestCluster, core *vault.TestClust
 	}
 }
 
-func EnsureCoreIsPerfStandby(t testing.T, core *vault.TestClusterCore) {
+func EnsureCoreIsPerfStandby(t testing.T, client *api.Client) {
 	t.Helper()
 	start := time.Now()
 	for {
-		health, err := core.Client.Sys().Health()
+		health, err := client.Sys().Health()
 		if err != nil {
 			t.Fatal(err)
 		}
 		if health.PerformanceStandby {
 			break
 		}
+
+		t.Log("waiting for performance standby", fmt.Sprintf("%+v", health))
 		time.Sleep(time.Millisecond * 500)
 		if time.Now().After(start.Add(time.Second * 60)) {
 			t.Fatal("did not become a perf standby")
