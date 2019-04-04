@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	radix "github.com/armon/go-radix"
@@ -511,6 +512,21 @@ CHECK:
 	return
 }
 
+type wcPathDescr struct {
+	wcPath           string
+	firstWC          int
+	wildcardSegments int
+	segments         []string
+	isPrefix         bool
+}
+
+func (w wcPathDescr) origWcPath() string {
+	if w.isPrefix {
+		return w.wcPath + "*"
+	}
+	return w.wcPath
+}
+
 // CheckAllowedFromSegmentWildcardPaths returns permissions corresponding to a
 // matching path with wildcard segments. If bareMount is true, the path should
 // correspond to a mount prefix, and what is returned is either a non-nil set
@@ -521,141 +537,90 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		return nil
 	}
 
-	// We use these to find the most-specific matching path. In the case of
-	// multiple matches, we use this priority order, which tries to most
-	// closely match longest-prefix:
-	//
-	// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
-	// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
-	// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
-	// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
-	// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
-	// * Lexigraphical ordering (preferring less, arbitrarily)
-	//
-	// That final case (lexigraphical) should never really come up. It's more
-	// of a throwing-up-hands scenario akin to panic("should not be here")
-	// statements, but less panicky.
-	var totalPathSegments int
-	var totalWildcardSegments int
-	var currIsPrefix bool
-	var permissions *ACLPermissions
-	var currFoundPath string
-	var currFirstWC int = -1
-	constructedPath := make([]string, 0, 10)
+	wcPathDescrs := make([]wcPathDescr, 0, len(a.segmentWildcardPaths))
+
+	less := func(i, j int) bool {
+		// In the case of multiple matches, we use this priority order,
+		// which tries to most closely match longest-prefix:
+		//
+		// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
+		// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
+		// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
+		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
+		// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
+		// * Lexicographical ordering (preferring less, arbitrarily)
+		//
+		// That final case (lexigraphical) should never really come up. It's more
+		// of a throwing-up-hands scenario akin to panic("should not be here")
+		// statements, but less panicky.
+
+		pdi, pdj := wcPathDescrs[i], wcPathDescrs[j]
+
+		// If the first + occurs earlier in pdi, pdi is lower priority
+		return pdi.firstWC < pdj.firstWC ||
+			// If pdi has more wc segs, pdi is lower priority
+			pdi.wildcardSegments > pdj.wildcardSegments ||
+			// If pdi has fewer segs, pdi is lower priority
+			len(pdi.segments) < len(pdj.segments) ||
+			// If pdi ends in * and pdj doesn't, pdi is lower priority
+			(pdi.isPrefix && !pdj.isPrefix) ||
+			// If pdi is shorter, it is lower priority
+			len(pdi.wcPath) < len(pdj.wcPath) ||
+			// If pdi is smaller lexicographically, it is lower priority
+			pdi.wcPath < pdj.wcPath
+	}
 
 	pathParts := strings.Split(path, "/")
+
 	for currWCPath := range a.segmentWildcardPaths {
 		if currWCPath == "" {
 			continue
 		}
 
-		var isPrefix bool
-		var invalid bool
-		var wcSegments int
-		var firstWC int = -1
-
-		origCurrWCPath := currWCPath
-
+		pd := wcPathDescr{firstWC: -1}
 		if currWCPath[len(currWCPath)-1] == '*' {
-			isPrefix = true
+			pd.isPrefix = true
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
+		pd.wcPath = currWCPath
+
 		splitCurrWCPath := strings.Split(currWCPath, "/")
 		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
-			// If not a bare mount, check if the path coming in is shorter; if
-			// so it can't match
+			// check if the path coming in is shorter; if so it can't match
 			continue
 		}
-		if !isPrefix && !bareMount && len(splitCurrWCPath) != len(pathParts) {
-			// If it's not a prefix or bare mount we expect the same number of
-			// segments
+		if !bareMount && !pd.isPrefix && len(splitCurrWCPath) != len(pathParts) {
+			// If it's not a prefix we expect the same number of segments
 			continue
 		}
 
-		//
-		// Priority handling
-		//
+		pd.segments = splitCurrWCPath
+
+		for i, part := range splitCurrWCPath {
+			if part == "+" {
+				pd.wildcardSegments++
+				if pd.firstWC == -1 {
+					pd.firstWC = i
+				}
+			}
+		}
+		wcPathDescrs = append(wcPathDescrs, pd)
+	}
+
+	if !bareMount {
 		// We don't do this in the bare mount check because we don't care about
 		// priority, we only care about any capability at all.
-		if !bareMount {
-			for i, part := range splitCurrWCPath {
-				if part == "+" {
-					wcSegments++
-					if firstWC == -1 {
-						firstWC = i
-					}
-				}
-			}
-			switch {
-			case currFirstWC == 0:
-				// No current match so carry on
-			case currFirstWC < firstWC:
-				// Current one comes before so is less specific, continue on
-			case currFirstWC > firstWC:
-				// Current one is after so it's more specific, use that
-				continue
-			default:
-				// Note: the various other global values will always be
-				// populated if currFirstWC is
-				//
-				// Same first position of wildcard. Next switch on least
-				// wildcard segments.
-				switch {
-				case totalWildcardSegments > wcSegments:
-					// Continue on here; if it matches, this is less segments so we
-					// want to use that as it's more specific
-				case totalWildcardSegments < wcSegments:
-					// What we have is more specific already, so use that
-					continue
-				default:
-					// Same number of total wildcard segments, so next check
-					// total path segments
-					switch {
-					// N.B.: We'd really only have a disparate number of segments
-					// if a wildcard was also in play.
-					case totalPathSegments < len(splitCurrWCPath):
-						// We've found a match, but the current path has more overall
-						// segments, hence is more specific, so keep going -- if it's not
-						// invalid we'll replace the current match with it
-					case totalPathSegments > len(splitCurrWCPath):
-						// We already have a match and it's more overall segments (more
-						// specific) so use that
-						continue
-					default:
-						// Same number of path segments. Next switch on prefix.
-						if isPrefix != currIsPrefix {
-							if isPrefix {
-								// This is a prefix but what we found earlier
-								// isn't; use that
-								continue
-							}
-							// Carry on checking
-						} else {
-							// At this point do a length check; failing that do
-							// a lexigraphical ordering. I actually can't
-							// figure out when we'd get to the lexigraphical
-							// case, based on coming up with test cases, so
-							// it's for safety more than anyting else.
-							switch {
-							case len(currFoundPath) > len(origCurrWCPath):
-								// Use current one, it's longer
-								continue
-							case len(currFoundPath) < len(origCurrWCPath):
-							// Try for the new one, it's longer
-							default:
-								if currFoundPath < origCurrWCPath {
-									continue
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		sort.Slice(wcPathDescrs, less)
+	}
 
+	constructedPath := make([]string, 0, 10)
+	for i := len(wcPathDescrs) - 1; i >= 0; i-- {
+		wcpd := wcPathDescrs[i]
+		var invalid bool
 		constructedPath = constructedPath[:0]
+
 		// We key off splitK here since it might be less than pathParts
-		for i, aclPart := range splitCurrWCPath {
+		for i, aclPart := range wcpd.segments {
 			var skipAfterConsPathCheck bool
 			if aclPart == "+" {
 				// Matches anything in the segment, so keep checking
@@ -669,7 +634,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 				// Check the current joined path so far. If we find a prefix,
 				// check permissions. If they're defined but not deny, success.
 				if strings.HasPrefix(joinedConstructedPath, path) {
-					permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
+					permissions := a.segmentWildcardPaths[wcpd.origWcPath()].(*ACLPermissions)
 					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
 						return permissions
 					} else {
@@ -685,7 +650,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 			if skipAfterConsPathCheck {
 				continue
 			}
-			if i == len(splitCurrWCPath)-1 && isPrefix {
+			if i == len(wcpd.segments)-1 && wcpd.isPrefix {
 				// In this case we may have foo* or just * depending on if
 				// originally it was foo* or foo/*.
 				if aclPart == "" {
@@ -712,16 +677,11 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		// If invalid isn't set then we got through the full segmented path
 		// without finding a mismatch, so it's valid
 		if !invalid && !bareMount {
-			permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
-			totalPathSegments = len(splitCurrWCPath)
-			totalWildcardSegments = wcSegments
-			currIsPrefix = isPrefix
-			currFoundPath = origCurrWCPath
-			currFirstWC = firstWC
+			return a.segmentWildcardPaths[wcpd.origWcPath()].(*ACLPermissions)
 		}
 	}
 
-	return permissions
+	return nil
 }
 
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
