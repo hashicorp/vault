@@ -1,3 +1,10 @@
+## Next
+
+CHANGES:
+
+ * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path
+   [[GH-38]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/38)
+
 ## 1.1.1 (unreleased)
 
 IMPROVEMENTS: 
