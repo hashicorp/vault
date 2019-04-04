@@ -375,7 +375,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		goto CHECK
 	}
 
-	permissions = a.CheckAllowedFromSegmentWildcardPaths(path)
+	permissions = a.CheckAllowedFromSegmentWildcardPaths(path, false)
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
@@ -511,7 +511,12 @@ CHECK:
 	return
 }
 
-func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions {
+// CheckAllowedFromSegmentWildcardPaths returns permissions corresponding to a
+// matching path with wildcard segments. If bareMount is true, the path should
+// correspond to a mount prefix, and what is returned is either a non-nil set
+// of permissions from some allowed path underneath the mount (for use in mount
+// access checks), or nil indicating no non-deny permissions were found.
+func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) *ACLPermissions {
 	if len(a.segmentWildcardPaths) == 0 {
 		return nil
 	}
@@ -526,6 +531,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions 
 	var permissions *ACLPermissions
 	var currFoundPath string
 	var currFirstWC int = -1
+	constructedPath := make([]string, 0, 10)
 
 	pathParts := strings.Split(path, "/")
 	for currWCPath := range a.segmentWildcardPaths {
@@ -545,19 +551,23 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions 
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
 		splitCurrWCPath := strings.Split(currWCPath, "/")
-		if len(pathParts) < len(splitCurrWCPath) {
-			// The path coming in is shorter; it can't match
+		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
+			// If not a bare mount, the path coming in is shorter; it can't
+			// match
 			continue
 		}
-		if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
-			// If it's not a prefix we expect the same number of segments
+		if !isPrefix && !bareMount && len(splitCurrWCPath) != len(pathParts) {
+			// If it's not a prefix or bare mount we expect the same number of
+			// segments
 			continue
 		}
 
 		//
 		// Priority handling
 		//
-		{
+		// We don't do this in the bare mount check because we don't care about
+		// priority, we only care about any capability at all.
+		if !bareMount {
 			for i, part := range splitCurrWCPath {
 				if part == "+" {
 					segments++
@@ -633,10 +643,35 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions 
 			}
 		}
 
+		constructedPath = constructedPath[:0]
 		// We key off splitK here since it might be less than pathParts
 		for i, aclPart := range splitCurrWCPath {
+			var skipAfterConsPathCheck bool
 			if aclPart == "+" {
 				// Matches anything in the segment, so keep checking
+				constructedPath = append(constructedPath, pathParts[i])
+				skipAfterConsPathCheck = true
+			}
+			constructedPath = append(constructedPath, aclPart)
+			if bareMount {
+				joinedConstructedPath := strings.Join(constructedPath, "/")
+				// Check the current joined path so far. If we find a prefix,
+				// check permissions. If they're defined but not deny, success.
+				if strings.HasPrefix(joinedConstructedPath, path) {
+					permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
+					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && perms.CapabilitiesBitmap > 0 {
+						return permissions
+					} else {
+						// If we already found a match and the permissions
+						// don't check out we're not going to do any better
+						// looking at the rest of the path, so keep on with the
+						// next one instead
+						invalid = true
+						break
+					}
+				}
+			}
+			if skipAfterConsPathCheck {
 				continue
 			}
 			if i == len(splitCurrWCPath)-1 && isPrefix {
@@ -665,7 +700,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions 
 		}
 		// If invalid isn't set then we got through the full segmented path
 		// without finding a mismatch, so it's valid
-		if !invalid {
+		if !invalid && !bareMount {
 			permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
 			totalPathSegments = len(splitCurrWCPath)
 			totalWildcardSegments = segments
