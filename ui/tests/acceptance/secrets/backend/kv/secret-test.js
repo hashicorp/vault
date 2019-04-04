@@ -324,4 +324,111 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(listPage.secrets.length, 3, 'renders three secrets');
     assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
   });
+
+  let setupNoRead = async function(backend, canReadMeta = false) {
+    const V2_WRITE_ONLY_POLICY = `'
+      path "${backend}/+/+" {
+        capabilities = ["create", "update", "list"]
+      }
+      // list at the root for v2
+      path "${backend}/+" {
+        capabilities = ["list"]
+      }
+    '`;
+
+    const V2_WRITE_WITH_META_READ_POLICY = `'
+      path "${backend}/+/+" {
+        capabilities = ["create", "update", "list"]
+      }
+      // list at the root for v2
+      path "${backend}/+" {
+        capabilities = ["list"]
+      }
+    '`;
+    const V1_WRITE_ONLY_POLICY = `'
+      // write and list for one level deep v1
+      path "${backend}/+" {
+        capabilities = ["create", "update", "list"]
+      }
+    '`;
+
+    let policy;
+    if (backend === 'kv-v2' && canReadMeta) {
+      policy = V2_WRITE_WITH_META_READ_POLICY;
+    } else if (backend === 'kv-v2') {
+      policy = V2_WRITE_ONLY_POLICY;
+    } else if (backend === 'kv-v1') {
+      policy = V1_WRITE_ONLY_POLICY;
+    }
+    await consoleComponent.runCommands([
+      `write sys/mounts/${backend} type=kv options=version=2`,
+      `write sys/policies/acl/${backend} policy=${policy}`,
+      `write -field=client_token auth/token/create policies=${backend}`,
+    ]);
+
+    return consoleComponent.lastLogOutput;
+  };
+  test('write without read: version 2', async function(assert) {
+    let backend = 'kv-v2';
+    let userToken = await setupNoRead(backend);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+
+    // TODO assert that it shows a warning about not being able to read CAS
+    // version and writing without read will create a new version
+    await editPage.editSecret('bar', 'baz');
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
+  });
+
+  test('write without read: version 2 with metadata read', async function(assert) {
+    let backend = 'kv-v2';
+    let userToken = await setupNoRead(backend, true);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+
+    // TODO assert that it shows a warning about writing without read will create a new version
+    await editPage.editSecret('bar', 'baz');
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
+  });
+
+  test('write without read: version 1', async function(assert) {
+    let backend = 'kv-v1';
+    let userToken = await setupNoRead(backend);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+
+    // TODO assert that it shows a warning about writing without read will overwrite the existing secret
+    await editPage.editSecret('bar', 'baz');
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
+  });
 });
