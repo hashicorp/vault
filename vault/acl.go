@@ -541,7 +541,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 
 		var isPrefix bool
 		var invalid bool
-		var segments int
+		var wcSegments int
 		var firstWC int = -1
 
 		origCurrWCPath := currWCPath
@@ -552,8 +552,8 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		}
 		splitCurrWCPath := strings.Split(currWCPath, "/")
 		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
-			// If not a bare mount, the path coming in is shorter; it can't
-			// match
+			// If not a bare mount, check if the path coming in is shorter; if
+			// so it can't match
 			continue
 		}
 		if !isPrefix && !bareMount && len(splitCurrWCPath) != len(pathParts) {
@@ -570,7 +570,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		if !bareMount {
 			for i, part := range splitCurrWCPath {
 				if part == "+" {
-					segments++
+					wcSegments++
 					if firstWC == -1 {
 						firstWC = i
 					}
@@ -595,10 +595,10 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 				switch {
 				// totalWildcardSegment segments will always be greater than
 				// zero if totalPathSegments is
-				case totalWildcardSegments > segments:
+				case totalWildcardSegments > wcSegments:
 					// Continue on here; if it matches, this is less segments so we
 					// want to use that as it's more specific
-				case totalWildcardSegments < segments:
+				case totalWildcardSegments < wcSegments:
 					// What we have is more specific already, so use that
 					continue
 				default:
@@ -704,7 +704,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		if !invalid && !bareMount {
 			permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
 			totalPathSegments = len(splitCurrWCPath)
-			totalWildcardSegments = segments
+			totalWildcardSegments = wcSegments
 			currIsPrefix = isPrefix
 			currFoundPath = origCurrWCPath
 			currFirstWC = firstWC
