@@ -2846,6 +2846,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
+
 			return true
 		}
 
@@ -2855,6 +2856,12 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
 		acl.prefixRules.WalkPrefix(path, walkFn)
+	}
+
+	if !aclCapabilitiesGiven {
+		if perms := acl.CheckAllowedFromSegmentWildcardPaths(path, true); perms != nil {
+			return true
+		}
 	}
 
 	return aclCapabilitiesGiven

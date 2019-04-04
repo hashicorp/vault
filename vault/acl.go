@@ -651,15 +651,16 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 				// Matches anything in the segment, so keep checking
 				constructedPath = append(constructedPath, pathParts[i])
 				skipAfterConsPathCheck = true
+			} else {
+				constructedPath = append(constructedPath, aclPart)
 			}
-			constructedPath = append(constructedPath, aclPart)
 			if bareMount {
 				joinedConstructedPath := strings.Join(constructedPath, "/")
 				// Check the current joined path so far. If we find a prefix,
 				// check permissions. If they're defined but not deny, success.
 				if strings.HasPrefix(joinedConstructedPath, path) {
 					permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
-					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && perms.CapabilitiesBitmap > 0 {
+					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
 						return permissions
 					} else {
 						// If we already found a match and the permissions

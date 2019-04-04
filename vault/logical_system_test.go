@@ -2562,9 +2562,19 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 
+	// Add another mount
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  sanitizeMountPath("kv/foo/bar"),
+		Type:  "kv",
+	}
+	if err := core.mount(ctx, me); err != nil {
+		t.Fatal(err)
+	}
+
 	// Create the policy
 	rules := `path "secret/data/foo/+/baz" { capabilities = ["read"] }`
-	req := logical.TestRequest(t, logical.UpdateOperation, "policy/Foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
 	req.Data["rules"] = rules
 	resp, err := b.HandleRequest(ctx, req)
 	if err != nil {
@@ -2604,8 +2614,28 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Read the policy
+	// Check the mount access func
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/secret/foo/bar/baz")
+	req.ClientToken = te.ID
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Modify policy to be a wildcard policy
+	rules = `path "kv/+/bar/yoo*" { capabilities = ["read"] }`
+	req = logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
+	req.Data["rules"] = rules
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Check the mount access func again
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv/foo/bar/baz")
 	req.ClientToken = te.ID
 	resp, err = b.HandleRequest(ctx, req)
 	if err != nil {
