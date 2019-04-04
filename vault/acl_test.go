@@ -593,6 +593,79 @@ func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_SegmentWildcardPriority(t *testing.T) {
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	type poltest struct {
+		policy string
+		path   string
+	}
+	poltests := []poltest{
+		{
+			`
+path "foo/+/+*" { capabilities = ["read"] }
+path "foo/+/bar/baz" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			`
+path "foo/+/+/baz" { capabilities = ["read"] }
+path "foo/+/bar/baz" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			`
+path "foo/+/bar/baz" { capabilities = ["read"] }
+path "foo/bar/+/baz" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			`
+path "foo/bar/+/baz*" { capabilities = ["read"] }
+path "foo/bar/+/baz" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			`
+path "foo/bar/+/b*" { capabilities = ["read"] }
+path "foo/bar/+/ba*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+	}
+
+	for _, pt := range poltests {
+		policy, err := ParseACLPolicy(ns, pt.policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		acl, err := NewACL(ctx, []*Policy{policy})
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		request := new(logical.Request)
+		request.Path = pt.path
+
+		request.Operation = logical.UpdateOperation
+		authResults := acl.AllowOperation(ctx, request, false)
+		if !authResults.Allowed {
+			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+		}
+
+		request.Operation = logical.ReadOperation
+		authResults = acl.AllowOperation(ctx, request, false)
+		if authResults.Allowed {
+			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+		}
+	}
+}
+
 // NOTE: this test doesn't catch any races ATM
 func TestACL_CreationRace(t *testing.T) {
 	policy, err := ParseACLPolicy(namespace.RootNamespace, valuePermissionsPolicy)

@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
@@ -2553,5 +2554,61 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	if doc.Paths["/rotate"] == nil {
 		t.Fatalf("expected to find path '/rotate'")
+	}
+}
+
+func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
+	core, b, _ := testCoreSystemBackend(t)
+
+	ctx := namespace.RootContext(nil)
+
+	// Create the policy
+	rules := `path "secret/data/foo/+/baz" { capabilities = ["read"] }`
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/Foo")
+	req.Data["rules"] = rules
+	resp, err := b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	if err := core.identityStore.upsertEntity(ctx, &identity.Entity{
+		ID:            "abcd",
+		Name:          "abcd",
+		BucketKeyHash: "abcd",
+	}, nil, false); err != nil {
+		t.Fatal(err)
+	}
+
+	te := &logical.TokenEntry{
+		TTL:         300 * time.Second,
+		EntityID:    "abcd",
+		Policies:    []string{"default", "foo"},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	if err := core.tokenStore.create(ctx, te); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("token id: %s", te.ID)
+
+	if err := core.expiration.RegisterAuth(ctx, te, &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			TTL: te.TTL,
+		},
+		ClientToken: te.ID,
+		Accessor:    te.Accessor,
+		Orphan:      true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the policy
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/secret/foo/bar/baz")
+	req.ClientToken = te.ID
+	resp, err = b.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 }

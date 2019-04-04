@@ -375,68 +375,10 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		goto CHECK
 	}
 
-	if len(a.segmentWildcardPaths) > 0 {
-		pathParts := strings.Split(path, "/")
-		for currWCPath := range a.segmentWildcardPaths {
-			if currWCPath == "" {
-				continue
-			}
-
-			var isPrefix bool
-			var invalid bool
-			origCurrWCPath := currWCPath
-
-			if currWCPath[len(currWCPath)-1] == '*' {
-				isPrefix = true
-				currWCPath = currWCPath[0 : len(currWCPath)-1]
-			}
-			splitCurrWCPath := strings.Split(currWCPath, "/")
-			if len(pathParts) < len(splitCurrWCPath) {
-				// The path coming in is shorter; it can't match
-				continue
-			}
-			if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
-				// If it's not a prefix we expect the same number of segments
-				continue
-			}
-			// We key off splitK here since it might be less than pathParts
-			for i, aclPart := range splitCurrWCPath {
-				if aclPart == "+" {
-					// Matches anything in the segment, so keep checking
-					continue
-				}
-				if i == len(splitCurrWCPath)-1 && isPrefix {
-					// In this case we may have foo* or just * depending on if
-					// originally it was foo* or foo/*.
-					if aclPart == "" {
-						// Ended in /*, so at this point we're at the final
-						// glob which will match anything, so return success
-						break
-					}
-					if !strings.HasPrefix(pathParts[i], aclPart) {
-						// E.g., the final part of the acl is foo* and the
-						// final part of the path is boofar
-						invalid = true
-						break
-					}
-					// Final prefixed matched and the rest is a wildcard,
-					// matches
-					break
-				}
-				if aclPart != pathParts[i] {
-					// Mismatch, exit out
-					invalid = true
-					break
-				}
-			}
-			// If invalid isn't set then we got through the full segmented path
-			// without finding a mismatch, so it's valid
-			if !invalid {
-				permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
-				capabilities = permissions.CapabilitiesBitmap
-				goto CHECK
-			}
-		}
+	permissions = a.CheckAllowedFromSegmentWildcardPaths(path)
+	if permissions != nil {
+		capabilities = permissions.CapabilitiesBitmap
+		goto CHECK
 	}
 
 	// No exact, prefix, or segment wildcard paths found, return without
@@ -567,6 +509,173 @@ CHECK:
 
 	ret.Allowed = true
 	return
+}
+
+func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string) *ACLPermissions {
+	if len(a.segmentWildcardPaths) == 0 {
+		return nil
+	}
+
+	// We use these to find the most-specific matching path. In the case of
+	// multiple matches, we prefer less segments and then later segment placing
+	// (e.g. prefer foo/bar/+/baz over foo/+/bar/baz for a given path of
+	// foo/bar/bar/baz). We also prefer non-prefix to prefix.
+	var totalPathSegments int
+	var totalWildcardSegments int
+	var currIsPrefix bool
+	var permissions *ACLPermissions
+	var currFoundPath string
+	var currFirstWC int = -1
+
+	pathParts := strings.Split(path, "/")
+	for currWCPath := range a.segmentWildcardPaths {
+		if currWCPath == "" {
+			continue
+		}
+
+		var isPrefix bool
+		var invalid bool
+		var segments int
+		var firstWC int = -1
+
+		origCurrWCPath := currWCPath
+
+		if currWCPath[len(currWCPath)-1] == '*' {
+			isPrefix = true
+			currWCPath = currWCPath[0 : len(currWCPath)-1]
+		}
+		splitCurrWCPath := strings.Split(currWCPath, "/")
+		if len(pathParts) < len(splitCurrWCPath) {
+			// The path coming in is shorter; it can't match
+			continue
+		}
+		if !isPrefix && len(splitCurrWCPath) != len(pathParts) {
+			// If it's not a prefix we expect the same number of segments
+			continue
+		}
+
+		//
+		// Priority handling
+		//
+		{
+			for i, part := range splitCurrWCPath {
+				if part == "+" {
+					segments++
+					if firstWC == -1 {
+						firstWC = i
+					}
+				}
+			}
+			switch {
+			// N.B.: For this first switch, we'd really only have a
+			// disparate number of segments if a wildcard was also in play
+			case totalPathSegments == 0:
+				// If we don't already have a match, carry on
+			case totalPathSegments > 0 && totalPathSegments < len(splitCurrWCPath):
+				// We've found a match, but the current path has more overall
+				// segments, hence is more specific, so keep going -- if it's not
+				// invalid we'll replace the current match with it
+			case totalPathSegments > 0 && totalPathSegments > len(splitCurrWCPath):
+				// We already have a match and it's more overall segments (more
+				// specific) so use that
+				continue
+			case totalPathSegments == len(splitCurrWCPath):
+				// In this case we want to next check on whether the number of
+				// wildcard segments is the same
+				switch {
+				// totalWildcardSegment segments will always be greater than
+				// zero if totalPathSegments is
+				case totalWildcardSegments > segments:
+					// Continue on here; if it matches, this is less segments so we
+					// want to use that as it's more specific
+				case totalWildcardSegments < segments:
+					// What we have is more specific already, so use that
+					continue
+				default:
+					// Same number of wildcard segments. Next switch on first
+					// position of wildcard.
+					switch {
+					case currFirstWC < firstWC:
+						// Current one comes before so is less specific, continue on
+					case currFirstWC > firstWC:
+						// Current one is after so it's more specific, use that
+						continue
+					default:
+						// Same positioning of first wildcard segments. Next switch
+						// on prefix.
+						if isPrefix != currIsPrefix {
+							if isPrefix {
+								// This is a prefix but what we found earlier
+								// isn't; use that
+								continue
+							}
+							// Carry on checking
+						} else {
+							// At this point do a length check; failing that do
+							// a lexigraphical ordering. I actually can't
+							// figure out when we'd get to the lexigraphical
+							// case, based on coming up with test cases, so
+							// it's for safety more than anyting else.
+							switch {
+							case len(currFoundPath) > len(origCurrWCPath):
+								// Use current one, it's longer
+								continue
+							case len(currFoundPath) < len(origCurrWCPath):
+							// Try for the new one, it's longer
+							default:
+								if currFoundPath < origCurrWCPath {
+									continue
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// We key off splitK here since it might be less than pathParts
+		for i, aclPart := range splitCurrWCPath {
+			if aclPart == "+" {
+				// Matches anything in the segment, so keep checking
+				continue
+			}
+			if i == len(splitCurrWCPath)-1 && isPrefix {
+				// In this case we may have foo* or just * depending on if
+				// originally it was foo* or foo/*.
+				if aclPart == "" {
+					// Ended in /*, so at this point we're at the final
+					// glob which will match anything, so return success
+					break
+				}
+				if !strings.HasPrefix(pathParts[i], aclPart) {
+					// E.g., the final part of the acl is foo* and the
+					// final part of the path is boofar
+					invalid = true
+					break
+				}
+				// Final prefixed matched and the rest is a wildcard,
+				// matches
+				break
+			}
+			if aclPart != pathParts[i] {
+				// Mismatch, exit out
+				invalid = true
+				break
+			}
+		}
+		// If invalid isn't set then we got through the full segmented path
+		// without finding a mismatch, so it's valid
+		if !invalid {
+			permissions = a.segmentWildcardPaths[origCurrWCPath].(*ACLPermissions)
+			totalPathSegments = len(splitCurrWCPath)
+			totalWildcardSegments = segments
+			currIsPrefix = isPrefix
+			currFoundPath = origCurrWCPath
+			currFirstWC = firstWC
+		}
+	}
+
+	return permissions
 }
 
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
