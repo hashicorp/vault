@@ -273,6 +273,14 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 
 		b.Logger().Info("upgrading keys finished")
 
+		// We do this now so that we ensure it's written by the primary before
+		// secondaries unblock
+		b.l.Lock()
+		if _, err = b.policy(ctx, s); err != nil {
+			b.Logger().Error("error checking/creating policy after upgrade", "error", err)
+		}
+		b.l.Unlock()
+
 		// Write upgrade done value
 		upgradeInfo.Done = true
 		info, err := proto.Marshal(upgradeInfo)
@@ -286,10 +294,6 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		})
 		if err != nil {
 			b.Logger().Error("writing upgrade done resulted in an error", "error", err)
-		}
-
-		if _, err = b.policy(ctx, s); err != nil {
-			b.Logger().Error("error checking/creating policy after upgrade", "error", err)
 		}
 
 		atomic.StoreUint32(b.upgrading, 0)
