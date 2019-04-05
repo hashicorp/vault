@@ -46,6 +46,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
 	if resp == nil && err != nil {
+		// We don't want to cache nil responses, so we simply return the error
 		return nil, err
 	}
 
