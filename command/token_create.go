@@ -29,6 +29,7 @@ type TokenCreateCommand struct {
 	flagType            string
 	flagMetadata        map[string]string
 	flagPolicies        []string
+	flagEntityAlias     string
 }
 
 func (c *TokenCreateCommand) Synopsis() string {
@@ -176,6 +177,16 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 			"specified multiple times to attach multiple policies.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "entity-alias",
+		Target:  &c.flagEntityAlias,
+		Default: "",
+		Usage: "Name of the entity alias to associate with during token creation. " +
+			"Only works in combination with -role argument and used entity alias " +
+			"must be listed in allowed entity aliases. If this has been specified, " +
+			"the entity will not be inherited from the parent.",
+	})
+
 	return set
 }
 
@@ -224,6 +235,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		ExplicitMaxTTL:  c.flagExplicitMaxTTL.String(),
 		Period:          c.flagPeriod.String(),
 		Type:            c.flagType,
+		EntityAlias:     c.flagEntityAlias,
 	}
 
 	var secret *api.Secret

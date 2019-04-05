@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
 
 	metrics "github.com/armon/go-metrics"
 	multierror "github.com/hashicorp/go-multierror"
@@ -397,6 +397,11 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Description: "Use 'token_bound_cidrs' instead.",
 				Deprecated:  true,
 			},
+
+			"allowed_entity_aliases": &framework.FieldSchema{
+				Type:        framework.TypeStringSlice,
+				Description: "String or JSON list of allowed entity aliases. If set, specifies the entity aliases which are allowed to be used during token generation.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -611,6 +616,9 @@ type tsRoleEntry struct {
 
 	// The set of CIDRs that tokens generated using this role will be bound to
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
+
+	// The set of allowed entity aliases used during token creation
+	AllowedEntityAliases []string `json:"allowed_entity_aliases" mapstructure:"allowed_entity_aliases" structs:"allowed_entity_aliases"`
 }
 
 type accessorEntry struct {
@@ -1819,11 +1827,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
-				countCubbyholeKeys,
-				deletedCountAccessorEmptyToken,
-				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor,
-				deletedCountInvalidCubbyholeKey int64
+			countCubbyholeKeys,
+			deletedCountAccessorEmptyToken,
+			deletedCountAccessorInvalidToken,
+			deletedCountInvalidTokenInAccessor,
+			deletedCountInvalidCubbyholeKey int64
 
 			validCubbyholeKeys := make(map[string]bool)
 
@@ -2106,6 +2114,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
 		Type            string `mapstructure:"type"`
+		EntityAlias     string
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -2200,6 +2209,60 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	if data.NumUses < 0 {
 		return logical.ErrorResponse("number of uses cannot be negative"),
 			logical.ErrInvalidRequest
+	}
+
+	// Verify the entity alias
+	overwriteEntityID := ""
+	if data.EntityAlias != "" {
+		// Parameter is only allowed in combination with token role
+		if role == nil {
+			return logical.ErrorResponse("'entity_alias' is only allowed in combination with token role"), logical.ErrInvalidRequest
+		}
+
+		// Get mount accessor which is required to lookup entity alias
+		mountValidationResp := ts.core.router.validateMountByAccessor("auth_token_")
+		if mountValidationResp == nil {
+			return logical.ErrorResponse("auth token mount accessor not found"), nil
+		}
+
+		// Verify that the alias exist
+		aliasByFactors, err := ts.core.identityStore.MemDBAliasByFactors(mountValidationResp.MountAccessor, data.EntityAlias, false, false)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		switch {
+		case aliasByFactors == nil:
+			// Entity alias does not exist. Create a new entity and entity alias
+			newAlias := &logical.Alias{
+				Name: data.EntityAlias,
+				MountAccessor: mountValidationResp.MountAccessor,
+				MountType: mountValidationResp.MountType,
+			}
+
+			newEntity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, newAlias)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+
+			// Set new entity id
+			overwriteEntityID = newEntity.ID
+		default:
+			// Verify that the specified entity alias is included in the allowed entity alias list
+			foundEntityAlias := false
+			for _, entityAlias := range role.AllowedEntityAliases {
+				if strings.Compare(entityAlias, data.EntityAlias) == 0 {
+					foundEntityAlias = true
+				}
+			}
+
+			if !foundEntityAlias {
+				return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
+			}
+
+			// Set new entity id
+			overwriteEntityID = aliasByFactors.CanonicalID
+		}
 	}
 
 	// Setup the token entry
@@ -2434,9 +2497,14 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// At this point, it is clear whether the token is going to be an orphan or
-	// not. If the token is not going to be an orphan, inherit the parent's
+	// not. If setEntityID is set, the entity identifier will be overwritten.
+	// Otherwise, if the token is not going to be an orphan, inherit the parent's
 	// entity identifier into the child token.
-	if te.Parent != "" {
+	switch {
+	case overwriteEntityID != "":
+		// Overwrite the entity identifier
+		te.EntityID = overwriteEntityID
+	case te.Parent != "":
 		te.EntityID = parent.EntityID
 
 		// If the parent has bound CIDRs, copy those into the child. We don't
@@ -3181,6 +3249,13 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		if entry.ExplicitMaxTTL != 0 || entry.TokenExplicitMaxTTL != 0 {
 			return logical.ErrorResponse("'token_type' cannot be 'batch' when role is set to generate tokens with an explicit max TTL"), nil
 		}
+	}
+
+	allowedEntityAliasesRaw, ok := data.GetOk("allowed_entity_aliases")
+	if ok {
+		entry.AllowedEntityAliases = strutil.RemoveDuplicates(allowedEntityAliasesRaw.([]string), true)
+	} else if req.Operation == logical.CreateOperation {
+		entry.AllowedEntityAliases = strutil.RemoveDuplicates(data.Get("allowed_entity_aliases").([]string), true)
 	}
 
 	ns, err := namespace.FromContext(ctx)
