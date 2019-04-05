@@ -638,13 +638,14 @@ SWCPATH:
 			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
 				segments = append(segments, pathParts[i:]...)
 
-			default:
+			case !bareMount:
 				// Found a mismatch, give up on this segmentWildcardPath
 				continue SWCPATH
 			}
 
-			if bareMount && i == len(pathParts)-1 {
-				joinedPath := strings.Join(segments, "/")
+			// -2 because we're always invoked with a trailing "/" in case bareMount.
+			if bareMount && i == len(pathParts)-2 {
+				joinedPath := strings.Join(segments, "/") + "/"
 				// Check the current joined path so far. If we find a prefix,
 				// check permissions. If they're defined but not deny, success.
 				if strings.HasPrefix(joinedPath, path) {

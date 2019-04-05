@@ -685,52 +685,52 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 	poltests := []poltest{
 		{
 			`path "+" { capabilities = ["read"] }`,
-			"foo",
+			"foo/",
 			true,
 		},
 		{
 			`path "+*" { capabilities = ["read"] }`,
-			"foo",
+			"foo/",
 			true,
 		},
 		{
 			`path "foo/+/+*" { capabilities = ["read"] }`,
-			"foo",
+			"foo/",
 			true,
 		},
 		{
 			`path "foo/+/+*" { capabilities = ["read"] }`,
-			"foo/bar",
+			"foo/bar/",
 			true,
 		},
 		{
 			`path "foo/+/+*" { capabilities = ["read"] }`,
-			"foo/bar/bar",
+			"foo/bar/bar/",
 			true,
 		},
 		{
 			`path "foo/+/+*" { capabilities = ["read"] }`,
-			"foo/bar/bar/baz",
+			"foo/bar/bar/baz/",
 			false,
 		},
 		{
 			`path "foo/+/+/baz" { capabilities = ["read"] }`,
-			"foo/bar/bar/baz",
+			"foo/bar/bar/baz/",
 			true,
 		},
 		{
 			`path "foo/+/bar/baz" { capabilities = ["read"] }`,
-			"foo/bar/bar/baz",
+			"foo/bar/bar/baz/",
 			true,
 		},
 		{
 			`path "foo/bar/+/baz*" { capabilities = ["read"] }`,
-			"foo/bar/bar/baz",
+			"foo/bar/bar/baz/",
 			true,
 		},
 		{
 			`path "foo/bar/+/b*" { capabilities = ["read"] }`,
-			"foo/bar/bar/baz",
+			"foo/bar/bar/baz/",
 			true,
 		},
 	}
