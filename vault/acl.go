@@ -572,6 +572,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 
 	pathParts := strings.Split(path, "/")
 
+SWCPATH:
 	for currWCPath := range a.segmentWildcardPaths {
 		if currWCPath == "" {
 			continue
@@ -594,94 +595,55 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 			continue
 		}
 
-		pd.segments = splitCurrWCPath
+		pd.segments = make([]string, 0, len(splitCurrWCPath))
 
-		for i, part := range splitCurrWCPath {
-			if part == "+" {
+		for i, aclPart := range splitCurrWCPath {
+			switch {
+			case bareMount && i == len(pathParts)-1:
+				joinedPath := strings.Join(pd.segments, "/")
+				// Check the current joined path so far. If we find a prefix,
+				// check permissions. If they're defined but not deny, success.
+				if strings.HasPrefix(joinedPath, path) {
+					permissions := a.segmentWildcardPaths[pd.origWcPath()].(*ACLPermissions)
+					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
+						return permissions
+					}
+					// If we already found a match and the permissions
+					// don't check out we're not going to do any better
+					// looking at the rest of the path, so keep on with the
+					// next one instead
+					continue SWCPATH
+				}
+
+			case aclPart == "+":
 				pd.wildcardSegments++
 				if pd.firstWC == -1 {
 					pd.firstWC = i
 				}
+				pd.segments = append(pd.segments, pathParts[i])
+
+			case aclPart == pathParts[i]:
+				pd.segments = append(pd.segments, aclPart)
+
+			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
+				pd.segments = append(pd.segments, pathParts[i:]...)
+
+			default:
+				// Found a mismatch, give up on this segmentWildcardPath
+				continue SWCPATH
 			}
 		}
 		wcPathDescrs = append(wcPathDescrs, pd)
 	}
 
-	if !bareMount {
-		// We don't do this in the bare mount check because we don't care about
-		// priority, we only care about any capability at all.
-		sort.Slice(wcPathDescrs, less)
+	if bareMount || len(wcPathDescrs) == 0 {
+		return nil
 	}
 
-	constructedPath := make([]string, 0, 10)
-	for i := len(wcPathDescrs) - 1; i >= 0; i-- {
-		wcpd := wcPathDescrs[i]
-		var invalid bool
-		constructedPath = constructedPath[:0]
-
-		// We key off splitK here since it might be less than pathParts
-		for i, aclPart := range wcpd.segments {
-			var skipAfterConsPathCheck bool
-			if aclPart == "+" {
-				// Matches anything in the segment, so keep checking
-				constructedPath = append(constructedPath, pathParts[i])
-				skipAfterConsPathCheck = true
-			} else {
-				constructedPath = append(constructedPath, aclPart)
-			}
-			if bareMount {
-				joinedConstructedPath := strings.Join(constructedPath, "/")
-				// Check the current joined path so far. If we find a prefix,
-				// check permissions. If they're defined but not deny, success.
-				if strings.HasPrefix(joinedConstructedPath, path) {
-					permissions := a.segmentWildcardPaths[wcpd.origWcPath()].(*ACLPermissions)
-					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
-						return permissions
-					} else {
-						// If we already found a match and the permissions
-						// don't check out we're not going to do any better
-						// looking at the rest of the path, so keep on with the
-						// next one instead
-						invalid = true
-						break
-					}
-				}
-			}
-			if skipAfterConsPathCheck {
-				continue
-			}
-			if i == len(wcpd.segments)-1 && wcpd.isPrefix {
-				// In this case we may have foo* or just * depending on if
-				// originally it was foo* or foo/*.
-				if aclPart == "" {
-					// Ended in /*, so at this point we're at the final
-					// glob which will match anything, so return success
-					break
-				}
-				if !strings.HasPrefix(pathParts[i], aclPart) {
-					// E.g., the final part of the acl is foo* and the
-					// final part of the path is boofar
-					invalid = true
-					break
-				}
-				// Final prefixed matched and the rest is a wildcard,
-				// matches
-				break
-			}
-			if aclPart != pathParts[i] {
-				// Mismatch, exit out
-				invalid = true
-				break
-			}
-		}
-		// If invalid isn't set then we got through the full segmented path
-		// without finding a mismatch, so it's valid
-		if !invalid && !bareMount {
-			return a.segmentWildcardPaths[wcpd.origWcPath()].(*ACLPermissions)
-		}
-	}
-
-	return nil
+	// We don't do this in the bare mount check because we don't care about
+	// priority, we only care about any capability at all.
+	sort.Slice(wcPathDescrs, less)
+	return a.segmentWildcardPaths[wcPathDescrs[len(wcPathDescrs)-1].origWcPath()].(*ACLPermissions)
 }
 
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
