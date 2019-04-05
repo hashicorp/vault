@@ -513,18 +513,12 @@ CHECK:
 }
 
 type wcPathDescr struct {
-	wcPath           string
 	firstWC          int
 	wildcardSegments int
-	segments         []string
+	totalSegments    int
 	isPrefix         bool
-}
-
-func (w wcPathDescr) origWcPath() string {
-	if w.isPrefix {
-		return w.wcPath + "*"
-	}
-	return w.wcPath
+	wcPath           string
+	perms            *ACLPermissions
 }
 
 // CheckAllowedFromSegmentWildcardPaths returns permissions corresponding to a
@@ -557,28 +551,59 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		pdi, pdj := wcPathDescrs[i], wcPathDescrs[j]
 
 		// If the first + occurs earlier in pdi, pdi is lower priority
-		return pdi.firstWC < pdj.firstWC ||
-			// If pdi has more wc segs, pdi is lower priority
-			pdi.wildcardSegments > pdj.wildcardSegments ||
-			// If pdi has fewer segs, pdi is lower priority
-			len(pdi.segments) < len(pdj.segments) ||
-			// If pdi ends in * and pdj doesn't, pdi is lower priority
-			(pdi.isPrefix && !pdj.isPrefix) ||
-			// If pdi is shorter, it is lower priority
-			len(pdi.wcPath) < len(pdj.wcPath) ||
-			// If pdi is smaller lexicographically, it is lower priority
-			pdi.wcPath < pdj.wcPath
+		if pdi.firstWC < pdj.firstWC {
+			return true
+		} else if pdi.firstWC > pdj.firstWC {
+			return false
+		}
+
+		// If pdi has more wc segs, pdi is lower priority
+		if pdi.wildcardSegments > pdj.wildcardSegments {
+			return true
+		} else if pdi.wildcardSegments < pdj.wildcardSegments {
+			return false
+		}
+
+		// If pdi has fewer segs, pdi is lower priority
+		if pdi.totalSegments < pdj.totalSegments {
+			return true
+		} else if pdi.totalSegments > pdj.totalSegments {
+			return false
+		}
+
+		// If pdi ends in * and pdj doesn't, pdi is lower priority
+		if pdi.isPrefix && !pdj.isPrefix {
+			return true
+		} else if !pdi.isPrefix && pdj.isPrefix {
+			return false
+		}
+
+		// If pdi is shorter, it is lower priority
+		if len(pdi.wcPath) < len(pdj.wcPath) {
+			return true
+		} else if len(pdi.wcPath) > len(pdj.wcPath) {
+			return false
+		}
+
+		// If pdi is smaller lexicographically, it is lower priority
+		if pdi.wcPath < pdj.wcPath {
+			return true
+		} else if pdi.wcPath > pdj.wcPath {
+			return false
+		}
+		return false
 	}
 
 	pathParts := strings.Split(path, "/")
 
 SWCPATH:
-	for currWCPath := range a.segmentWildcardPaths {
-		if currWCPath == "" {
+	for fullWCPath := range a.segmentWildcardPaths {
+		if fullWCPath == "" {
 			continue
 		}
-
 		pd := wcPathDescr{firstWC: -1}
+
+		currWCPath := fullWCPath
 		if currWCPath[len(currWCPath)-1] == '*' {
 			pd.isPrefix = true
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
@@ -586,6 +611,8 @@ SWCPATH:
 		pd.wcPath = currWCPath
 
 		splitCurrWCPath := strings.Split(currWCPath, "/")
+		pd.totalSegments = len(splitCurrWCPath)
+
 		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
 			// check if the path coming in is shorter; if so it can't match
 			continue
@@ -595,8 +622,7 @@ SWCPATH:
 			continue
 		}
 
-		pd.segments = make([]string, 0, len(splitCurrWCPath))
-
+		segments := make([]string, 0, len(splitCurrWCPath))
 		for i, aclPart := range splitCurrWCPath {
 			switch {
 			case aclPart == "+":
@@ -604,13 +630,13 @@ SWCPATH:
 				if pd.firstWC == -1 {
 					pd.firstWC = i
 				}
-				pd.segments = append(pd.segments, pathParts[i])
+				segments = append(segments, pathParts[i])
 
 			case aclPart == pathParts[i]:
-				pd.segments = append(pd.segments, aclPart)
+				segments = append(segments, pathParts[i])
 
 			case pd.isPrefix && i == len(splitCurrWCPath)-1 && strings.HasPrefix(pathParts[i], aclPart):
-				pd.segments = append(pd.segments, pathParts[i:]...)
+				segments = append(segments, pathParts[i:]...)
 
 			default:
 				// Found a mismatch, give up on this segmentWildcardPath
@@ -618,11 +644,11 @@ SWCPATH:
 			}
 
 			if bareMount && i == len(pathParts)-1 {
-				joinedPath := strings.Join(pd.segments, "/")
+				joinedPath := strings.Join(segments, "/")
 				// Check the current joined path so far. If we find a prefix,
 				// check permissions. If they're defined but not deny, success.
 				if strings.HasPrefix(joinedPath, path) {
-					permissions := a.segmentWildcardPaths[pd.origWcPath()].(*ACLPermissions)
+					permissions := a.segmentWildcardPaths[fullWCPath].(*ACLPermissions)
 					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
 						return permissions
 					}
@@ -630,6 +656,7 @@ SWCPATH:
 				continue SWCPATH
 			}
 		}
+		pd.perms = a.segmentWildcardPaths[fullWCPath].(*ACLPermissions)
 		wcPathDescrs = append(wcPathDescrs, pd)
 	}
 
@@ -640,7 +667,8 @@ SWCPATH:
 	// We don't do this in the bare mount check because we don't care about
 	// priority, we only care about any capability at all.
 	sort.Slice(wcPathDescrs, less)
-	return a.segmentWildcardPaths[wcPathDescrs[len(wcPathDescrs)-1].origWcPath()].(*ACLPermissions)
+
+	return wcPathDescrs[len(wcPathDescrs)-1].perms
 }
 
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {

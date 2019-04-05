@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -605,6 +604,7 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 	// These test cases should each have a read rule and an update rule, where
 	// the update rule wins out due to being more specific.
 	poltests := []poltest{
+
 		{
 			`
 path "foo/+/+*" { capabilities = ["read"] }
@@ -620,11 +620,12 @@ path "foo/+/bar/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// '(' is used here because it is lexicographically smaller than "+"
 			`
-path "foo/+/bar/baz" { capabilities = ["read"] }
-path "foo/bar/+/baz" { capabilities = ["update"] }
+path "foo/+/(ar/baz" { capabilities = ["read"] }
+path "foo/(ar/+/baz" { capabilities = ["update"] }
 `,
-			"foo/bar/bar/baz",
+			"foo/(ar/(ar/baz",
 		},
 		{
 			`
@@ -642,7 +643,7 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		},
 	}
 
-	for _, pt := range poltests {
+	for i, pt := range poltests {
 		policy, err := ParseACLPolicy(ns, pt.policy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -659,13 +660,13 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		request.Operation = logical.UpdateOperation
 		authResults := acl.AllowOperation(ctx, request, false)
 		if !authResults.Allowed {
-			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
 
 		request.Operation = logical.ReadOperation
 		authResults = acl.AllowOperation(ctx, request, false)
 		if authResults.Allowed {
-			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
 	}
 }
@@ -678,11 +679,20 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 		mountpath string
 		hasperms  bool
 	}
-	os.Remove("/tmp/q")
 	// These test cases should have one or more rules and a mount prefix.
 	// hasperms should be true if there are non-deny perms that apply
 	// to the mount prefix or something below it.
 	poltests := []poltest{
+		{
+			`path "+" { capabilities = ["read"] }`,
+			"foo",
+			true,
+		},
+		{
+			`path "+*" { capabilities = ["read"] }`,
+			"foo",
+			true,
+		},
 		{
 			`path "foo/+/+*" { capabilities = ["read"] }`,
 			"foo",
