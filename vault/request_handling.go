@@ -584,6 +584,32 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return nil, nil, ctErr
 	}
 
+	// If this is a wrapping request, check for token validity before routing
+	switch req.Path {
+	case "sys/wrapping/rewrap", "sys/wrapping/unwrap":
+		valid, err := c.ValidateWrappingToken(ctx, req, false)
+		// Perform audit logging before returning if there's an issue with checking
+		// the wrapping token
+		if err != nil || !valid {
+			logInput := &audit.LogInput{
+				Auth:               auth,
+				Request:            req,
+				OuterErr:           ctErr,
+				NonHMACReqDataKeys: nonHMACReqDataKeys,
+			}
+			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			}
+		}
+
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
+		}
+	}
+
 	// We run this logic first because we want to decrement the use count even
 	// in the case of an error (assuming we can successfully look up; if we
 	// need to forward, we exit before now)
@@ -901,6 +927,15 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
+	var nonHMACReqDataKeys []string
+	entry := c.router.MatchingMountEntry(ctx, req.Path)
+	if entry != nil {
+		// Get and set ignored HMAC'd value.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			nonHMACReqDataKeys = rawVals.([]string)
+		}
+	}
+
 	req.Unauthenticated = true
 
 	var auth *logical.Auth
@@ -922,15 +957,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			errType = logical.ErrInvalidRequest
 		}
 
-		var nonHMACReqDataKeys []string
-		entry := c.router.MatchingMountEntry(ctx, req.Path)
-		if entry != nil {
-			// Get and set ignored HMAC'd value.
-			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-				nonHMACReqDataKeys = rawVals.([]string)
-			}
-		}
-
 		logInput := &audit.LogInput{
 			Auth:               auth,
 			Request:            req,
@@ -949,6 +975,31 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, auth, retErr
 		}
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
+	}
+
+	// If this is a wrapping token lookup, validate the token and produce an audit log
+	switch req.Path {
+	case "sys/wrapping/lookup":
+		valid, err := c.ValidateWrappingToken(ctx, req, false)
+		// Perform audit logging before returning if there's an issue with checking
+		// the wrapping token
+		if err != nil || !valid {
+			logInput := &audit.LogInput{
+				Auth:               auth,
+				Request:            req,
+				OuterErr:           ctErr,
+				NonHMACReqDataKeys: nonHMACReqDataKeys,
+			}
+			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			}
+		}
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
+		}
 	}
 
 	// Create an audit trail of the request. Attach auth if it was returned,

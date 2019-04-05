@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -187,14 +187,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 			switch req.Path {
 			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 				r = r.WithContext(newCtx)
-				if err := wrappingVerificationFunc(r.Context(), core, req); err != nil {
-					if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-						respondError(w, http.StatusForbidden, err)
-					} else {
-						respondError(w, http.StatusBadRequest, err)
-					}
-					return
-				}
+				// We perform validation but don't check the error here yet so
+				// that the request/response can be logged once we're in the
+				// logical layer. This is more for logical.Request modification
+				// depending on how the wrapping token was provided.
+				_, _ = core.ValidateWrappingToken(r.Context(), req, true)
 
 			// The -self paths have no meaning outside of the token NS, so
 			// requests for these paths always go to the token NS

@@ -309,16 +309,20 @@ DONELISTHANDLING:
 	return nil, nil
 }
 
-// ValidateWrappingToken checks whether a token is a wrapping token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) (bool, error) {
+// ValidateWrappingToken checks whether a token is a wrapping token. The passed
+// in logical request can be optionally updated if the wrapping token was
+// provided within a JWT token.
+func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request, updateRequest bool) (bool, error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
 
 	var err error
-
 	var token string
 	var thirdParty bool
+
+	// Check if the wrapping token is coming from the request body, and it not
+	// assume that req.ClientToken is the wrapping token
 	if req.Data != nil && req.Data["token"] != nil {
 		thirdParty = true
 		if tokenStr, ok := req.Data["token"].(string); !ok {
@@ -360,10 +364,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		if typeClaim != "wrapping" {
 			return false, errors.New("unexpected type claim")
 		}
-		if !thirdParty {
-			req.ClientToken = claims.ID
-		} else {
-			req.Data["token"] = claims.ID
+		if updateRequest {
+			if !thirdParty {
+				req.ClientToken = claims.ID
+			} else {
+				req.Data["token"] = claims.ID
+			}
 		}
 		token = claims.ID
 	}
@@ -398,7 +404,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 		return false, nil
 	}
 
-	if !thirdParty {
+	if !thirdParty && updateRequest {
 		req.ClientTokenAccessor = te.Accessor
 		req.ClientTokenRemainingUses = te.NumUses
 		req.SetTokenEntry(te)
