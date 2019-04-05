@@ -632,7 +632,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 							// Carry on checking
 						} else {
 							// At this point do a length check; failing that do
-							// a lexigraphical ordering. I actually can't
+							// a lexicographical ordering. I actually can't
 							// figure out when we'd get to the lexigraphical
 							// case, based on coming up with test cases, so
 							// it's for safety more than anyting else.
