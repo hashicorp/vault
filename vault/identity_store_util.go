@@ -1085,14 +1085,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
+	var currentMemberGroupIDs []string
+	var currentMemberGroups []*identity.Group
+
+	// If there are no member group IDs supplied, then it shouldn't be
+	// processed. If an empty set of member group IDs are supplied, then it
+	// should be processed. Hence the nil check instead of the length check.
+	if memberGroupIDs == nil {
+		goto ALIAS
+	}
+
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
 
 	// For those group member IDs that are removed from the list, remove current
 	// group ID as their respective ParentGroupID.
 
 	// Get the current MemberGroups IDs for this group
-	var currentMemberGroupIDs []string
-	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	currentMemberGroups, err = i.MemDBGroupsByParentGroupID(group.ID, false)
 	if err != nil {
 		return err
 	}
@@ -1183,6 +1192,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
+ALIAS:
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
