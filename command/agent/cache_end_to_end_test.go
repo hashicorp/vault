@@ -495,6 +495,7 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 	defer cleanup()
 
 	clientConfig := api.DefaultConfig()
+	clientConfig.PollingInterval = 1 * time.Second
 	clientConfig.TokenFileSinkPath = out
 	testClient, err := api.NewClient(clientConfig)
 	if err != nil {
@@ -504,6 +505,9 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 	if err := testClient.SetAddress(agentAddr); err != nil {
 		t.Fatal(err)
 	}
+
+	// let polling set a token
+	time.Sleep(5 * time.Second)
 
 	// This block tests token renewal and the client reading in file updates.
 	{
@@ -540,6 +544,7 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl, false)
 
 		clientConfig := api.DefaultConfig()
+		clientConfig.PollingInterval = 1 * time.Second
 		clientConfig.AgentAddress = agentAddr
 		_, err := api.NewClient(clientConfig)
 		if err == nil {
@@ -562,6 +567,7 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		os.Remove(out)
 
 		clientConfig := api.DefaultConfig()
+		clientConfig.PollingInterval = 1 * time.Second
 		clientConfig.AgentAddress = agentAddr
 		clientConfig.AgentSinkName = "sink2"
 
@@ -569,6 +575,9 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		// let polling set a token
+		time.Sleep(5 * time.Second)
 
 		_, err = client.Logical().Read("kv/foo")
 		if err != nil {

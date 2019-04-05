@@ -489,12 +489,6 @@ func NewClient(c *Config) (*Client, error) {
 	// start polling token from file sink if it is available
 	if client.config.TokenFileSinkPath != "" {
 		client.useFileSinkForToken = true
-		//		token, err := client.readTokenFromFile()
-		// if err != nil {
-		// 	return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", client.config.TokenFileSinkPath), err)
-		// }
-		// client.token = token
-		// poll file for updates
 		client.pollFileForToken()
 	}
 
@@ -616,7 +610,6 @@ func (c *Client) pollFileForToken() {
 	if !c.sinkPollingStarted {
 		go func() {
 			for {
-				time.Sleep(c.config.PollingInterval)
 				if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
 					token, err := c.readTokenFromFile()
 					// update the client's token if it has changed and there was no error reading the file
@@ -626,6 +619,7 @@ func (c *Client) pollFileForToken() {
 						c.modifyLock.Unlock()
 					}
 				}
+				time.Sleep(c.config.PollingInterval)
 			}
 		}()
 		c.sinkPollingStarted = true
