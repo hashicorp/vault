@@ -321,7 +321,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request, 
 	var token string
 	var thirdParty bool
 
-	// Check if the wrapping token is coming from the request body, and it not
+	// Check if the wrapping token is coming from the request body, and if not
 	// assume that req.ClientToken is the wrapping token
 	if req.Data != nil && req.Data["token"] != nil {
 		thirdParty = true
