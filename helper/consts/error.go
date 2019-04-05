@@ -14,6 +14,6 @@ var (
 	// Used when .. is used in a path
 	ErrPathContainsParentReferences = errors.New("path cannot contain parent references")
 
-	// ErrInvalidToken
+	// ErrInvalidWrappingToken
 	ErrInvalidWrappingToken = errors.New("wrapping token is not valid or does not exist")
 )
