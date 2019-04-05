@@ -10,6 +10,21 @@
 | attr | <code>Object</code> | <code></code> | This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional. |
 | model | <code>DS.Model</code> | <code></code> | The Ember Data model that `attr` is defined on |
 
+### Example Attr
+
+```js
+{
+   name: "foo",
+   options: {
+     label: "Foo",
+     defaultValue: "",
+     editType: "ttl",
+     helpText: "This will be in a tooltip"
+   },
+   type: "boolean"
+}
+```
+
 **Example**
   
 ```js
