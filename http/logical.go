@@ -26,7 +26,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
 	var data map[string]interface{}
-	origBody := r.Body
+	var origBody io.ReadCloser
 
 	// Determine the operation
 	var op logical.Operation
@@ -157,7 +157,7 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 
 		// Always forward requests that are using a limited use count token.
 		// origBody will not be nil if it's a perf standby as it checks
-		// PerfStandby()
+		// PerfStandby() but will be nil otherwise.
 		if origBody != nil && req.ClientTokenRemainingUses > 0 {
 			r.Body = origBody
 			forwardRequest(core, w, r)
