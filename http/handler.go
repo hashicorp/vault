@@ -463,6 +463,8 @@ func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out 
 	}
 	var origBody io.ReadWriter
 	if core.PerfStandby() {
+		// Since we're checking PerfStandby here we key on origBody being nil
+		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)
 		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
 	}
