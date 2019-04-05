@@ -12,6 +12,66 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+func TestIdentityStore_FixOverwrittenMemberGroupIDs(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create a group
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": "group1",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	groupID := resp.Data["id"].(string)
+
+	expectedMemberGroupIDs := []string{groupID}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             "group2",
+			"policies":         "default",
+			"member_group_ids": expectedMemberGroupIDs,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Create another group and add the above created group as its member
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": "default,another-policy",
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Read the group and check if the member_group_ids is intact
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group/name/group2",
+		Operation: logical.ReadOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Data["member_group_ids"], expectedMemberGroupIDs) {
+		t.Fatalf("bad: member_group_ids; expected: %#v\n, actual: %#v", expectedMemberGroupIDs, resp.Data["member_group_ids"])
+	}
+}
+
 func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
 	c, keys, rootToken := TestCoreUnsealed(t)
 

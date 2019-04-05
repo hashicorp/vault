@@ -1,24 +1,37 @@
 ## 1.1.1 (unreleased)
 
+CHANGES:
+
+ * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
+
 IMPROVEMENTS: 
 
  * agent: Allow AppRole auto-auth without a secret-id [GH-6324]
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
-
+ * ui: Navigating away from secret list view will clear any page-specific
+   filter that was applied [GH-6511]
 
 BUG FIXES: 
 
  * agent: Allow auto-auth to be used with caching without having to define any
    sinks [GH-6468]
+ * auth/ldap: Fix CN check not working if CN was not all in uppercase [GH-6518]
  * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
-   URL when running on Windows. [[GH-37]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/37)
+   URL when running on Windows [JWT-37]
  * auth/jwt: Fix an issue where the `oidc_scopes` parameter was not being included in
-   the response to a role read request [[GH-35]](https://github.com/hashicorp/vault-plugin-auth-jwt/pull/35)
+   the response to a role read request [JWT-35]
+ * core: Fix seal migration case when migrating to Shamir and a seal block
+   wasn't explicitly specified [GH-6455]
+ * core: Fix unwrapping when using namespaced wrapping tokens [GH-6536]
  * core: Fix incorrect representation of required properties in OpenAPI output
-   [[GH-6490]](https://github.com/hashicorp/vault/pull/6490)
+   [GH-6490]
+ * identity: Fix updating groups removing existing members [GH-6527]
+ * replication: Fix mount filter invalidation on performance standby nodes
+ * replication: Fix license reloading on performance standby nodes
+ * replication: Fix handling of control groups on performance standby nodes
  * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
  * storage/dynamodb: Fix a race condition possible in HA configurations that could
-   leave the cluster without a leader [[GH-6512]](https://github.com/hashicorp/vault/pull/6512)
+   leave the cluster without a leader [GH-6512]
  * ui: Fix an issue where in production builds OpenAPI model generation was
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]

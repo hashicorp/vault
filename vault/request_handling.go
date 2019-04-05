@@ -352,6 +352,23 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	if !authResults.Allowed {
 		retErr := authResults.Error
+
+		// If we get a control group error and we are a performance standby,
+		// restore the client token information to the request so that we can
+		// forward this request properly to the active node.
+		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
+			c.perfStandby && len(req.ClientToken) != 0 {
+			switch req.ClientTokenSource {
+			case logical.ClientTokenFromVaultHeader:
+				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
+			case logical.ClientTokenFromAuthzHeader:
+				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
+			}
+			// We also return the appropriate error so that the caller can forward the
+			// request to the active node
+			return auth, te, logical.ErrPerfStandbyPleaseForward
+		}
+
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
