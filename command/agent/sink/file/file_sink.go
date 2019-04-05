@@ -3,6 +3,7 @@ package file
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,26 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 
 	if err := f.WriteToken(""); err != nil {
 		return nil, errwrap.Wrapf("error during write check: {{err}}", err)
+	}
+
+	// TODO: this is a quick fix to address the testing scenario that SinkConfig.encryptToken()
+	// expects a DHPath to be available and already populated with a client's public key. Ideally
+	// conf would not be modified as a side effect of this method.
+	if conf.DHAuto {
+		if conf.DHType == "" {
+			conf.DHType = "curve25519"
+		}
+
+		if conf.DHPath == "" {
+			dir, err := ioutil.TempDir("", "sinkauto")
+			if err != nil {
+				return nil, errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err)
+				// c.UI.Error(errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err).Error())
+				// return 1
+			}
+
+			conf.DHPath = filepath.Join(dir, "token-dh")
+		}
 	}
 
 	f.logger.Info("file sink configured", "path", f.path)

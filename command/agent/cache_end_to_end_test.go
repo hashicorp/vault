@@ -347,7 +347,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	cluster := testAutoAuthCluster(t)
 	defer cluster.Cleanup()
 
-	sink1 := newFileSink(t, logger)
+	sink1 := newFileSink(t, logger, nil)
 	out := sink1.Config["path"].(string)
 
 	tokenTtl := 3 * time.Second
@@ -444,7 +444,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 }
 
-func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
+func newFileSink(t *testing.T, logger hclog.Logger, configOptions map[string]interface{}) *sink.SinkConfig {
 	var out string
 	{
 		// We close and rm this file right away because we're just basically testing
@@ -464,6 +464,15 @@ func newFileSink(t *testing.T, logger hclog.Logger) *sink.SinkConfig {
 			"path": out,
 		},
 	}
+
+	// apply some config options
+	if configOptions != nil {
+		dhpath := configOptions["DHAuto"]
+		if dhpath != nil {
+			config.DHAuto = dhpath.(bool)
+		}
+	}
+
 	fs, err := file.NewFileSink(config)
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +487,7 @@ func TestCache_ClientAutoAuth(t *testing.T) {
 	cluster := testAutoAuthCluster(t)
 	defer cluster.Cleanup()
 
-	sink1 := newFileSink(t, logger)
+	sink1 := newFileSink(t, logger, nil)
 	out := sink1.Config["path"].(string)
 
 	tokenTtl := 200 * time.Millisecond
@@ -521,11 +530,11 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 
 	// Test that multiple sinks returns an error when no AgentSinkName given
 	{
-		sink1 := newFileSink(t, logger)
+		sink1 := newFileSink(t, logger, nil)
 		sink1.Name = "sink1"
 		out := sink1.Config["path"].(string)
 
-		sink2 := newFileSink(t, logger)
+		sink2 := newFileSink(t, logger, nil)
 		sink2.Name = "sink2"
 
 		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl, false)
@@ -542,11 +551,11 @@ func TestCache_ClientChooseSinks(t *testing.T) {
 
 	// Test that with multiple sinks we choose the right one when AgentSinkName given
 	{
-		sink1 := newFileSink(t, logger)
+		sink1 := newFileSink(t, logger, nil)
 		sink1.Name = "sink1"
 		out := sink1.Config["path"].(string)
 
-		sink2 := newFileSink(t, logger)
+		sink2 := newFileSink(t, logger, nil)
 		sink2.Name = "sink2"
 
 		cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1, sink2}, out, tokenTtl, false)
@@ -597,19 +606,11 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 	cluster := testAutoAuthCluster(t)
 	defer cluster.Cleanup()
 
-	sink1 := newFileSink(t, logger)
-	sink1.DHType = "curve25519"
-	sink1.DHAuto = true
-
-	// selecting a random DHpath for the test agent
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
-	if err != nil {
-		t.Fatal(err)
+	testingConfigOptions := map[string]interface{}{
+		"DHAuto": true,
 	}
-	dhpath := ouf.Name()
-	ouf.Close()
-	os.Remove(dhpath)
-	sink1.DHPath = dhpath
+
+	sink1 := newFileSink(t, logger, testingConfigOptions)
 
 	clientConfig := api.DefaultConfig()
 	clientConfig.PollingInterval = 1 * time.Second
@@ -619,7 +620,7 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 	}
 
 	// sink expects dhpath to be populated with client's public key
-	testClient.InitiateDHExchange("curve25519", dhpath)
+	testClient.InitiateDHExchange("curve25519", sink1.DHPath)
 
 	tokenTtl := 200 * time.Millisecond
 	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)

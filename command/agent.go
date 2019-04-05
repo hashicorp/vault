@@ -304,21 +304,21 @@ func (c *AgentCommand) Run(args []string) int {
 				DHPath:  sc.DHPath,
 				AAD:     sc.AAD,
 			}
-			if config.DHAuto {
-				if config.DHType == "" {
-					config.DHType = "curve25519"
-				}
+			// if config.DHAuto {
+			// 	if config.DHType == "" {
+			// 		config.DHType = "curve25519"
+			// 	}
 
-				if config.DHPath == "" {
-					dir, err := ioutil.TempDir("", "sinkauto")
-					if err != nil {
-						c.UI.Error(errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err).Error())
-						return 1
-					}
+			// 	if config.DHPath == "" {
+			// 		dir, err := ioutil.TempDir("", "sinkauto")
+			// 		if err != nil {
+			// 			c.UI.Error(errwrap.Wrapf("Error creating auto file sink dir: {{err}}", err).Error())
+			// 			return 1
+			// 		}
 
-					config.DHPath = filepath.Join(dir, "token-dh")
-				}
-			}
+			// 		config.DHPath = filepath.Join(dir, "token-dh")
+			// 	}
+			// }
 			s, err := file.NewFileSink(config)
 			if err != nil {
 				c.UI.Error(errwrap.Wrapf("Error creating file sink: {{err}}", err).Error())
