@@ -15,6 +15,7 @@ BUG FIXES:
 
  * agent: Allow auto-auth to be used with caching without having to define any
    sinks [GH-6468]
+ * agent: Disallow some nonsensical config file combinations [GH-6471]
  * auth/ldap: Fix CN check not working if CN was not all in uppercase [GH-6518]
  * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
    URL when running on Windows [JWT-37]
