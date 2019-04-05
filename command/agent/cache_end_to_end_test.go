@@ -621,7 +621,7 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 	// sink expects dhpath to be populated with client's public key
 	testClient.InitiateDHExchange("curve25519", dhpath)
 
-	tokenTtl := 3 * time.Second
+	tokenTtl := 200 * time.Millisecond
 	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
 	defer cleanup()
 
