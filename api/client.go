@@ -501,9 +501,15 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
-// updates the agentAddress of a client's config
-func (c *Client) SetClientConfigAgentAddress(address string) {
-	c.config.AgentAddress = address
+// updates a client's address and the address in it's config
+func (c *Client) SetClientAddress(address string) error {
+	u, err := url.Parse(address)
+	if err != nil {
+		return errwrap.Wrapf("Error updating client's address: {{err}}", err)
+	}
+	c.addr = u
+	c.config.Address = address
+	return nil
 }
 
 // updates the TokenFileSinkPath of a client's config

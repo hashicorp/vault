@@ -626,7 +626,7 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 	defer cleanup()
 
 	// fill in missing client properties
-	testClient.SetClientConfigAgentAddress(agentAddr)
+	testClient.SetClientAddress(agentAddr)
 	testClient.SetClientConfigTokenFileSinkPath(sink1.Config["path"].(string))
 
 	// let polling set a token
