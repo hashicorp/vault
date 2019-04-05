@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -600,6 +601,9 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 		policy string
 		path   string
 	}
+
+	// These test cases should each have a read rule and an update rule, where
+	// the update rule wins out due to being more specific.
 	poltests := []poltest{
 		{
 			`
@@ -663,6 +667,80 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		if authResults.Allowed {
 			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
 		}
+	}
+}
+
+func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	type poltest struct {
+		policy    string
+		mountpath string
+		hasperms  bool
+	}
+	os.Remove("/tmp/q")
+	// These test cases should have one or more rules and a mount prefix.
+	// hasperms should be true if there are non-deny perms that apply
+	// to the mount prefix or something below it.
+	poltests := []poltest{
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar/bar",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz",
+			false,
+		},
+		{
+			`path "foo/+/+/baz" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz",
+			true,
+		},
+		{
+			`path "foo/+/bar/baz" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz",
+			true,
+		},
+		{
+			`path "foo/bar/+/baz*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz",
+			true,
+		},
+		{
+			`path "foo/bar/+/b*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz",
+			true,
+		},
+	}
+
+	for i, pt := range poltests {
+		policy, err := ParseACLPolicy(ns, pt.policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		acl, err := NewACL(ctx, []*Policy{policy})
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		hasperms := nil != acl.CheckAllowedFromSegmentWildcardPaths(pt.mountpath, true)
+		if hasperms != pt.hasperms {
+			t.Fatalf("bad: case %d: %#v", i, pt)
+		}
+
 	}
 }
 

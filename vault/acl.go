@@ -599,22 +599,6 @@ SWCPATH:
 
 		for i, aclPart := range splitCurrWCPath {
 			switch {
-			case bareMount && i == len(pathParts)-1:
-				joinedPath := strings.Join(pd.segments, "/")
-				// Check the current joined path so far. If we find a prefix,
-				// check permissions. If they're defined but not deny, success.
-				if strings.HasPrefix(joinedPath, path) {
-					permissions := a.segmentWildcardPaths[pd.origWcPath()].(*ACLPermissions)
-					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
-						return permissions
-					}
-					// If we already found a match and the permissions
-					// don't check out we're not going to do any better
-					// looking at the rest of the path, so keep on with the
-					// next one instead
-					continue SWCPATH
-				}
-
 			case aclPart == "+":
 				pd.wildcardSegments++
 				if pd.firstWC == -1 {
@@ -630,6 +614,19 @@ SWCPATH:
 
 			default:
 				// Found a mismatch, give up on this segmentWildcardPath
+				continue SWCPATH
+			}
+
+			if bareMount && i == len(pathParts)-1 {
+				joinedPath := strings.Join(pd.segments, "/")
+				// Check the current joined path so far. If we find a prefix,
+				// check permissions. If they're defined but not deny, success.
+				if strings.HasPrefix(joinedPath, path) {
+					permissions := a.segmentWildcardPaths[pd.origWcPath()].(*ACLPermissions)
+					if permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 && permissions.CapabilitiesBitmap > 0 {
+						return permissions
+					}
+				}
 				continue SWCPATH
 			}
 		}
