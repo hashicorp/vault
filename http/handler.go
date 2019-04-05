@@ -696,10 +696,17 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logi
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
-		// a token from a Vault version pre-accessors.
+		// a token from a Vault version pre-accessors. We ignore errors for
+		// JWTs.
 		te, err := core.LookupToken(r.Context(), token)
-		if err != nil && strings.Count(token, ".") != 2 {
-			return req, err
+		if err != nil {
+			dotCount := strings.Count(token, ".")
+			// If we have two dots but the second char is a dot it's a vault
+			// token of the form s.SOMETHING.nsid, not a JWT
+			if dotCount != 2 ||
+				dotCount == 2 && token[1] == '.' {
+				return req, err
+			}
 		}
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
