@@ -39,6 +39,7 @@ BUG FIXES:
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
  * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
+ * ui: fix SSH OTP generation [GH-6540]
  
  
 ## 1.1.0 (March 18th, 2019)
