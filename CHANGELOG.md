@@ -19,6 +19,7 @@ BUG FIXES:
  * auth/ldap: Fix CN check not working if CN was not all in uppercase [GH-6518]
  * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
    URL when running on Windows [JWT-37]
+ * auth/jwt: Fix OIDC login issue where configured TLS certs weren't being used [JWT-40]
  * auth/jwt: Fix an issue where the `oidc_scopes` parameter was not being included in
    the response to a role read request [JWT-35]
  * core: Fix seal migration case when migrating to Shamir and a seal block
