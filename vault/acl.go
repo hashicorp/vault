@@ -530,7 +530,7 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 	// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
 	// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
 	// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
-	// * Lexigraphical ordering (preferring less, arbitrarily)
+	// * Lexicographical ordering (preferring less, arbitrarily)
 	//
 	// That final case (lexigraphical) should never really come up. It's more
 	// of a throwing-up-hands scenario akin to panic("should not be here")
