@@ -446,7 +446,7 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
+func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -461,13 +461,19 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) (io.R
 			reader = http.MaxBytesReader(w, r.Body, max)
 		}
 	}
-	origBody := new(bytes.Buffer)
-	teeReader := io.TeeReader(reader, origBody)
-	err := jsonutil.DecodeJSONFromReader(teeReader, out)
+	var origBody io.ReadWriter
+	if core.PerfStandby() {
+		origBody = new(bytes.Buffer)
+		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+	}
+	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
 		return nil, errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
-	return ioutil.NopCloser(origBody), err
+	if origBody != nil {
+		return ioutil.NopCloser(origBody), err
+	}
+	return nil, err
 }
 
 // handleRequestForwarding determines whether to forward a request or not,

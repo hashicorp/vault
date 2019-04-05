@@ -80,7 +80,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		op = logical.UpdateOperation
 		// Parse the request if we can
 		if op == logical.UpdateOperation {
-			origBody, err = parseRequest(r, w, &data)
+			origBody, err = parseRequest(core, r, w, &data)
 			if err == io.EOF {
 				data = nil
 				err = nil
