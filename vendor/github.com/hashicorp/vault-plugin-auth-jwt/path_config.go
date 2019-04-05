@@ -199,12 +199,29 @@ func (b *jwtAuthBackend) pathConfigWrite(ctx context.Context, req *logical.Reque
 }
 
 func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, error) {
-	var certPool *x509.CertPool
-	if config.OIDCDiscoveryCAPEM != "" {
-		certPool = x509.NewCertPool()
-		if ok := certPool.AppendCertsFromPEM([]byte(config.OIDCDiscoveryCAPEM)); !ok {
-			return nil, errors.New("could not parse 'oidc_discovery_ca_pem' value successfully")
-		}
+	oidcCtx, err := b.createOIDCContext(b.providerCtx, config)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating provider: {{err}}", err)
+	}
+
+	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
+	if err != nil {
+		return nil, errwrap.Wrapf("error creating provider with given values: {{err}}", err)
+	}
+
+	return provider, nil
+}
+
+// createOIDCContext returns a context with custom TLS client, configured with the root certificates
+// from oidc_discovery_ca_pem. If no certificates are configured, the original context is returned.
+func (b *jwtAuthBackend) createOIDCContext(ctx context.Context, config *jwtConfig) (context.Context, error) {
+	if config.OIDCDiscoveryCAPEM == "" {
+		return ctx, nil
+	}
+
+	certPool := x509.NewCertPool()
+	if ok := certPool.AppendCertsFromPEM([]byte(config.OIDCDiscoveryCAPEM)); !ok {
+		return nil, errors.New("could not parse 'oidc_discovery_ca_pem' value successfully")
 	}
 
 	tr := cleanhttp.DefaultPooledTransport()
@@ -216,14 +233,10 @@ func (b *jwtAuthBackend) createProvider(config *jwtConfig) (*oidc.Provider, erro
 	tc := &http.Client{
 		Transport: tr,
 	}
-	oidcCtx := context.WithValue(b.providerCtx, oauth2.HTTPClient, tc)
 
-	provider, err := oidc.NewProvider(oidcCtx, config.OIDCDiscoveryURL)
-	if err != nil {
-		return nil, errwrap.Wrapf("error creating provider with given values: {{err}}", err)
-	}
+	oidcCtx := context.WithValue(ctx, oauth2.HTTPClient, tc)
 
-	return provider, nil
+	return oidcCtx, nil
 }
 
 type jwtConfig struct {
