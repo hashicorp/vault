@@ -377,16 +377,23 @@ func parseRateLimit(val string) (rate float64, burst int, err error) {
 
 // Client is the client to the Vault API. Create a client with NewClient.
 type Client struct {
-	modifyLock          sync.RWMutex
-	addr                *url.URL
-	config              *Config
-	token               string
-	headers             http.Header
-	wrappingLookupFunc  WrappingLookupFunc
-	mfaCreds            []string
-	policyOverride      bool
+	modifyLock         sync.RWMutex
+	addr               *url.URL
+	config             *Config
+	token              string
+	headers            http.Header
+	wrappingLookupFunc WrappingLookupFunc
+	mfaCreds           []string
+	policyOverride     bool
+
+	// whether or not a routine has been kicked off
+	sinkPollingStarted bool
+	// whether or not the value in the sink should clobber the client's current token
 	useFileSinkForToken bool
-	symKey              []byte
+	privateKey          []byte
+	publicKey           []byte
+	remotePublicKey     []byte
+	sharedKey           []byte
 }
 
 // NewClient returns a new client for the given configuration.
@@ -428,7 +435,6 @@ func NewClient(c *Config) (*Client, error) {
 		clientConfig.HttpClient.Transport = def.HttpClient.Transport
 	}
 
-	fmt.Printf("-- HERE --\nclientConfig.PollingInterval: %#v\ndef.PollingInterval: %#v", clientConfig.PollingInterval, def.PollingInterval)
 	if clientConfig.PollingInterval == 0 {
 		clientConfig.PollingInterval = def.PollingInterval
 	}
@@ -472,21 +478,22 @@ func NewClient(c *Config) (*Client, error) {
 	case client.config.TokenFileSinkPath != "":
 		tokenSinkPath = client.config.TokenFileSinkPath
 	case client.config.AgentAddress != "":
-		tokenSinkPath, err = client.getSinkPathFromAgent(client.config.AgentAddress)
+		tokenSinkPath, err = client.GetSinkPathFromAgent()
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", client.config.AgentAddress), err)
 		}
 		client.config.TokenFileSinkPath = tokenSinkPath
+	default: // no token available yet
 	}
 
-	// set and poll token from file sink if it is available
+	// start polling token from file sink if it is available
 	if client.config.TokenFileSinkPath != "" {
 		client.useFileSinkForToken = true
-		token, err := client.readTokenFromFile()
-		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", client.config.TokenFileSinkPath), err)
-		}
-		client.token = token
+		//		token, err := client.readTokenFromFile()
+		// if err != nil {
+		// 	return nil, errwrap.Wrapf(fmt.Sprintf("failed to read token from file %q {{err}}", client.config.TokenFileSinkPath), err)
+		// }
+		// client.token = token
 		// poll file for updates
 		client.pollFileForToken()
 	}
@@ -494,9 +501,22 @@ func NewClient(c *Config) (*Client, error) {
 	return client, nil
 }
 
-// contacts agent for a file sink path
-func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
-	uri, err := url.Parse(agentAddress)
+// updates the agentAddress of a client's config
+func (c *Client) SetClientConfigAgentAddress(address string) {
+	c.config.AgentAddress = address
+}
+
+// updates the TokenFileSinkPath of a client's config
+func (c *Client) SetClientConfigTokenFileSinkPath(path string) {
+	c.config.TokenFileSinkPath = path
+}
+
+// contacts agent for a file sink path and initiates DHExchange if needed
+func (c *Client) GetSinkPathFromAgent() (string, error) {
+	if c.config.AgentAddress == "" {
+		return "", errors.New("an agent address in this client's config must be set first")
+	}
+	uri, err := url.Parse(c.config.AgentAddress)
 	if err != nil {
 		return "", err
 	}
@@ -537,48 +557,73 @@ func (c *Client) getSinkPathFromAgent(agentAddress string) (string, error) {
 		return agentSink.TokenFilePath, nil
 	}
 
-	// Only curve25519 is supported for now
-	if agentSink.DHType != "curve25519" {
-		return "", fmt.Errorf("dh_type %q is not supported", agentSink.DHType)
-	}
-
-	// Generate encryption parameters
-	pub, pri, err := dhutil.GeneratePublicPrivateKey()
-	if err != nil {
-		return "", errwrap.Wrapf("error generating pub/pri key pair for dh exchange: {{err}}", err)
-	}
-
-	// determine and store in memory the symmetric key
-	aesKey, err := dhutil.GenerateSharedKey(pri, pub)
-	if err != nil {
-		return "", errwrap.Wrapf("failed to generate aes key from dh parameters: {{err}}", err)
-	}
-	c.symKey = aesKey
-
-	// write the public key to dh_path
-	if err := ioutil.WriteFile(agentSink.DHPath, pub, 0600); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("error writing public key to provided dh_path %q: {{err}}", agentSink.DHPath), err)
+	// otherwise DHExchange
+	if err := c.InitiateDHExchange(agentSink.DHType, agentSink.DHPath); err != nil {
+		return "", err
 	}
 
 	return agentSink.TokenFilePath, nil
 }
 
+// Initiates a DH exchange and resumes polling sink for token
+// Can be called multiple times to update the secret shared between client and agent
+func (c *Client) InitiateDHExchange(dhtype string, dhpath string) error {
+	// Only curve25519 is supported for now
+	if dhtype != "curve25519" {
+		return fmt.Errorf("dh_type %q is not supported", dhtype)
+	}
+
+	// Generate encryption parameters
+	pub, pri, err := dhutil.GeneratePublicPrivateKey()
+	if err != nil {
+		return errwrap.Wrapf("error generating pub/pri key pair for dh exchange: {{err}}", err)
+	}
+
+	c.publicKey = pub
+	c.privateKey = pri
+
+	// write the public key to dh_path
+	publicKeyInfo := &dhutil.PublicKeyInfo{
+		Curve25519PublicKey: pub,
+	}
+
+	keyData, err := jsonutil.EncodeJSON(publicKeyInfo)
+	if err != nil {
+		return errwrap.Wrapf("error JSONEncoding public key: {{err}}", err)
+	}
+
+	if err := ioutil.WriteFile(dhpath, keyData, 0600); err != nil {
+		return errwrap.Wrapf(fmt.Sprintf("error writing public key to provided dh_path %q: {{err}}", dhpath), err)
+	}
+
+	// determine whether polling needs to be initiated
+	c.useFileSinkForToken = true
+	if !c.sinkPollingStarted {
+		c.pollFileForToken()
+	}
+
+	return nil
+}
+
 // starts a go routine to poll the specified file for a token
 func (c *Client) pollFileForToken() {
-	go func() {
-		for {
-			time.Sleep(c.config.PollingInterval)
-			if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
-				token, err := c.readTokenFromFile()
-				// update the client's token if it has changed and there was no error reading the file
-				if err == nil && token != c.token {
-					c.modifyLock.Lock()
-					c.token = token
-					c.modifyLock.Unlock()
+	if !c.sinkPollingStarted {
+		go func() {
+			for {
+				time.Sleep(c.config.PollingInterval)
+				if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
+					token, err := c.readTokenFromFile()
+					// update the client's token if it has changed and there was no error reading the file
+					if err == nil && token != c.token {
+						c.modifyLock.Lock()
+						c.token = token
+						c.modifyLock.Unlock()
+					}
 				}
 			}
-		}
-	}()
+		}()
+		c.sinkPollingStarted = true
+	}
 }
 
 func (c *Client) readTokenFromFile() (string, error) {
@@ -590,23 +635,32 @@ func (c *Client) readTokenFromFile() (string, error) {
 	}
 
 	// val could be a raw token or a json structure if it was encrypted
-	if len(c.symKey) == 0 {
-		// token is not encrypted
+	if len(c.publicKey) == 0 {
+		// assume token is not encrypted
 		tokenString = strings.TrimSpace(string(val))
 	} else {
-		// token is encrypted
+		// assume token is encrypted
 		sinkEnvelope := new(dhutil.Envelope)
 		if err := jsonutil.DecodeJSON(val, sinkEnvelope); err != nil {
 			return "", errwrap.Wrapf(fmt.Sprintf("error decoding JSON from file sink %q: {{err}}", c.config.TokenFileSinkPath), err)
 		}
 
+		// generate shared key if it is not available
+		if len(c.sharedKey) == 0 {
+			c.remotePublicKey = sinkEnvelope.Curve25519PublicKey
+			c.sharedKey, err = dhutil.GenerateSharedKey(c.privateKey, c.remotePublicKey)
+			if err != nil {
+				return "", errwrap.Wrapf("error generating shared key: {{err}}", err)
+			}
+		}
+
 		// attempt to decrypt the token
-		plainText, err := dhutil.DecryptAES(c.symKey, sinkEnvelope.EncryptedPayload, sinkEnvelope.Nonce, []byte("")) // add aad field to config
+		plainText, err := dhutil.DecryptAES(c.sharedKey, sinkEnvelope.EncryptedPayload, sinkEnvelope.Nonce, []byte("")) // todo add aad field to config
 		if err != nil {
 			return "", errwrap.Wrapf(fmt.Sprintf("error decrypting token from file sink %q: {{err}}", c.config.TokenFileSinkPath), err)
 		}
 
-		// TODO handle case that the token is wrapped...
+		// todo handle case that the token is wrapped...
 		tokenString = strings.TrimSpace(string(plainText))
 	}
 

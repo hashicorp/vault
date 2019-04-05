@@ -592,24 +592,45 @@ func TestCache_NoFileSink(t *testing.T) {
 }
 
 func TestCache_ClientAutoAuthEnc(t *testing.T) {
+	os.Unsetenv("VAULT_ADDR")
 	logger := logging.NewVaultLogger(log.Trace)
 	cluster := testAutoAuthCluster(t)
 	defer cluster.Cleanup()
 
 	sink1 := newFileSink(t, logger)
-	sink1.DHAuto = true
 	sink1.DHType = "curve25519"
+	sink1.DHAuto = true
 
-	tokenTtl := 200 * time.Millisecond
-	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
-	defer cleanup()
+	// selecting a random DHpath for the test agent
+	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dhpath := ouf.Name()
+	ouf.Close()
+	os.Remove(dhpath)
+	sink1.DHPath = dhpath
 
 	clientConfig := api.DefaultConfig()
-	clientConfig.AgentAddress = agentAddr
+	clientConfig.PollingInterval = 1 * time.Second
 	testClient, err := api.NewClient(clientConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// sink expects dhpath to be populated with client's public key
+	testClient.InitiateDHExchange("curve25519", dhpath)
+
+	tokenTtl := 3 * time.Second
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
+	defer cleanup()
+
+	// fill in missing client properties
+	testClient.SetClientConfigAgentAddress(agentAddr)
+	testClient.SetClientConfigTokenFileSinkPath(sink1.Config["path"].(string))
+
+	// let polling set a token
+	time.Sleep(5 * time.Second)
 
 	_, err = testClient.Logical().Read("kv/foo")
 	if err != nil {
