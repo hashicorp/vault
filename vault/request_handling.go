@@ -584,7 +584,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return nil, nil, ctErr
 	}
 
-	// If this is a wrapping request, check for token validity before routing
+	// If this is a wrapping request that contains a wrapping token, check for
+	// token validity before routing
 	switch req.Path {
 	case "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 		valid, err := c.ValidateWrappingToken(ctx, req, false)
