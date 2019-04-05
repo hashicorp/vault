@@ -145,8 +145,8 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: this.capabilities(secret),
     }).then(({ secret, capabilities }) => {
       return {
-        secret: Ember.Object.create(),
-        capabilities,
+        secret: secret.value,
+        capabilities: capabilities.value,
       };
     });
   },
