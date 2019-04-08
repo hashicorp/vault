@@ -423,7 +423,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	if namespace := os.Getenv(EnvVaultNamespace); namespace != "" {
-		client.SetNamespace(namespace)
+		client.setNamespace(namespace)
 	}
 
 	return client, nil
@@ -535,7 +535,10 @@ func (c *Client) SetMFACreds(creds []string) {
 func (c *Client) SetNamespace(namespace string) {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
+	c.setNamespace(namespace)
+}
 
+func (c *Client) setNamespace(namespace string) {
 	if c.headers == nil {
 		c.headers = make(http.Header)
 	}
