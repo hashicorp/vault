@@ -606,6 +606,34 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 	poltests := []poltest{
 
 		{
+			// Verify edge conditions.  Here '+/*' is more specific because
+			// of length.  Not useful, but test is included to document it.
+			`
+path "+*" { capabilities = ["read"] }
+path "+/*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify edge conditions.  Here '*' is more specific both because
+			// of first wildcard position (0 vs -1/infinity) and #wildcards.
+			`
+path "+*" { capabilities = ["read"] }
+path "*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify edge conditions.  Here '+*' is less specific because of
+			// first wildcard position.
+			`
+path "+*" { capabilities = ["read"] }
+path "foo/+*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify that more wildcard segments is lower priority.
 			`
 path "foo/+/+*" { capabilities = ["read"] }
 path "foo/+/bar/baz" { capabilities = ["update"] }
@@ -613,6 +641,7 @@ path "foo/+/bar/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that more wildcard segments is lower priority.
 			`
 path "foo/+/+/baz" { capabilities = ["read"] }
 path "foo/+/bar/baz" { capabilities = ["update"] }
@@ -620,6 +649,7 @@ path "foo/+/bar/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that first wildcard position is lower priority.
 			// '(' is used here because it is lexicographically smaller than "+"
 			`
 path "foo/+/(ar/baz" { capabilities = ["read"] }
@@ -627,7 +657,10 @@ path "foo/(ar/+/baz" { capabilities = ["update"] }
 `,
 			"foo/(ar/(ar/baz",
 		},
+
 		{
+			// Verify that a glob has lower priority, even if the prefix is the
+			// same otherwise.
 			`
 path "foo/bar/+/baz*" { capabilities = ["read"] }
 path "foo/bar/+/baz" { capabilities = ["update"] }
@@ -635,6 +668,7 @@ path "foo/bar/+/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that a shorter prefix has lower priority.
 			`
 path "foo/bar/+/b*" { capabilities = ["read"] }
 path "foo/bar/+/ba*" { capabilities = ["update"] }

@@ -515,7 +515,6 @@ CHECK:
 type wcPathDescr struct {
 	firstWC          int
 	wildcardSegments int
-	totalSegments    int
 	isPrefix         bool
 	wcPath           string
 	perms            *ACLPermissions
@@ -539,7 +538,6 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		//
 		// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
 		// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
-		// * Total path segments (prefer foo/bar/+/baz/why over foo/bar/+/ba*)
 		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
 		// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
 		// * Lexicographical ordering (preferring less, arbitrarily)
@@ -561,13 +559,6 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		if pdi.wildcardSegments > pdj.wildcardSegments {
 			return true
 		} else if pdi.wildcardSegments < pdj.wildcardSegments {
-			return false
-		}
-
-		// If pdi has fewer segs, pdi is lower priority
-		if pdi.totalSegments < pdj.totalSegments {
-			return true
-		} else if pdi.totalSegments > pdj.totalSegments {
 			return false
 		}
 
@@ -611,7 +602,6 @@ SWCPATH:
 		pd.wcPath = currWCPath
 
 		splitCurrWCPath := strings.Split(currWCPath, "/")
-		pd.totalSegments = len(splitCurrWCPath)
 
 		if !bareMount && len(pathParts) < len(splitCurrWCPath) {
 			// check if the path coming in is shorter; if so it can't match
