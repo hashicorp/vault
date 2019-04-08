@@ -380,13 +380,24 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-	c.stateLock.RLock()
+	return c.switchedLockHandleRequest(httpCtx, req, true)
+}
+
+func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.Request, doLocking bool) (resp *logical.Response, err error) {
+	if doLocking {
+		c.stateLock.RLock()
+	}
+	unlockFunc := func() {
+		if doLocking {
+			c.stateLock.RUnlock()
+		}
+	}
 	if c.Sealed() {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrStandby
 	}
 
@@ -402,7 +413,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
@@ -411,7 +422,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 
 	req.SetTokenEntry(nil)
 	cancel()
-	c.stateLock.RUnlock()
+	unlockFunc()
 	return resp, err
 }
 
