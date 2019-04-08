@@ -600,8 +600,40 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 		policy string
 		path   string
 	}
+
+	// These test cases should each have a read rule and an update rule, where
+	// the update rule wins out due to being more specific.
 	poltests := []poltest{
+
 		{
+			// Verify edge conditions.  Here '+/*' is more specific because
+			// of length.  Not useful, but test is included to document it.
+			`
+path "+*" { capabilities = ["read"] }
+path "+/*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify edge conditions.  Here '*' is more specific both because
+			// of first wildcard position (0 vs -1/infinity) and #wildcards.
+			`
+path "+*" { capabilities = ["read"] }
+path "*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify edge conditions.  Here '+*' is less specific because of
+			// first wildcard position.
+			`
+path "+*" { capabilities = ["read"] }
+path "foo/+*" { capabilities = ["update"] }
+`,
+			"foo/bar/bar/baz",
+		},
+		{
+			// Verify that more wildcard segments is lower priority.
 			`
 path "foo/+/+*" { capabilities = ["read"] }
 path "foo/+/bar/baz" { capabilities = ["update"] }
@@ -609,6 +641,7 @@ path "foo/+/bar/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that more wildcard segments is lower priority.
 			`
 path "foo/+/+/baz" { capabilities = ["read"] }
 path "foo/+/bar/baz" { capabilities = ["update"] }
@@ -616,13 +649,18 @@ path "foo/+/bar/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that first wildcard position is lower priority.
+			// '(' is used here because it is lexicographically smaller than "+"
 			`
-path "foo/+/bar/baz" { capabilities = ["read"] }
-path "foo/bar/+/baz" { capabilities = ["update"] }
+path "foo/+/(ar/baz" { capabilities = ["read"] }
+path "foo/(ar/+/baz" { capabilities = ["update"] }
 `,
-			"foo/bar/bar/baz",
+			"foo/(ar/(ar/baz",
 		},
+
 		{
+			// Verify that a glob has lower priority, even if the prefix is the
+			// same otherwise.
 			`
 path "foo/bar/+/baz*" { capabilities = ["read"] }
 path "foo/bar/+/baz" { capabilities = ["update"] }
@@ -630,6 +668,7 @@ path "foo/bar/+/baz" { capabilities = ["update"] }
 			"foo/bar/bar/baz",
 		},
 		{
+			// Verify that a shorter prefix has lower priority.
 			`
 path "foo/bar/+/b*" { capabilities = ["read"] }
 path "foo/bar/+/ba*" { capabilities = ["update"] }
@@ -638,7 +677,7 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		},
 	}
 
-	for _, pt := range poltests {
+	for i, pt := range poltests {
 		policy, err := ParseACLPolicy(ns, pt.policy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -655,14 +694,97 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		request.Operation = logical.UpdateOperation
 		authResults := acl.AllowOperation(ctx, request, false)
 		if !authResults.Allowed {
-			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
 
 		request.Operation = logical.ReadOperation
 		authResults = acl.AllowOperation(ctx, request, false)
 		if authResults.Allowed {
-			t.Fatalf("bad: case %#v: %v", pt, authResults.Allowed)
+			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
+	}
+}
+
+func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	type poltest struct {
+		policy    string
+		mountpath string
+		hasperms  bool
+	}
+	// These test cases should have one or more rules and a mount prefix.
+	// hasperms should be true if there are non-deny perms that apply
+	// to the mount prefix or something below it.
+	poltests := []poltest{
+		{
+			`path "+" { capabilities = ["read"] }`,
+			"foo/",
+			true,
+		},
+		{
+			`path "+*" { capabilities = ["read"] }`,
+			"foo/",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar/",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar/bar/",
+			true,
+		},
+		{
+			`path "foo/+/+*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz/",
+			false,
+		},
+		{
+			`path "foo/+/+/baz" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz/",
+			true,
+		},
+		{
+			`path "foo/+/bar/baz" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz/",
+			true,
+		},
+		{
+			`path "foo/bar/+/baz*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz/",
+			true,
+		},
+		{
+			`path "foo/bar/+/b*" { capabilities = ["read"] }`,
+			"foo/bar/bar/baz/",
+			true,
+		},
+	}
+
+	for i, pt := range poltests {
+		policy, err := ParseACLPolicy(ns, pt.policy)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		acl, err := NewACL(ctx, []*Policy{policy})
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		hasperms := nil != acl.CheckAllowedFromSegmentWildcardPaths(pt.mountpath, true)
+		if hasperms != pt.hasperms {
+			t.Fatalf("bad: case %d: %#v", i, pt)
+		}
+
 	}
 }
 

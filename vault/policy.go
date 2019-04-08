@@ -339,7 +339,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Ensure we are using the full request path internally
 		pc.Path = result.namespace.Path + pc.Path
 
-		if strings.Count(pc.Path, "/+") > 0 || strings.HasPrefix(pc.Path, "+/") {
+		if pc.Path == "+" || pc.Path == "+*" || strings.Count(pc.Path, "/+") > 0 || strings.HasPrefix(pc.Path, "+/") {
 			pc.HasSegmentWildcards = true
 		}
 
