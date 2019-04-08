@@ -102,8 +102,8 @@ entities attempting to login. At least one of the bound values must be set.
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
 - `role_type` `(string: <optional>)` - Type of role, either "oidc" (default) or "jwt".
-- `bound_audiences` `(array: <required>)` - List of `aud` claims to match
-  against. Any match is sufficient.
+- `bound_audiences` `(array: <optional>)` - List of `aud` claims to match against.
+   Any match is sufficient. Required for "jwt" roles, optional for "oidc" roles. 
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
