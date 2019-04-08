@@ -180,8 +180,12 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 // It returns a PluginRunner or an error if no plugin was found.
 func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
-	defer c.lock.RUnlock()
+	runner, err := c.get(ctx, name, pluginType)
+	c.lock.RUnlock()
+	return runner, err
+}
 
+func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
@@ -348,7 +352,7 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	for _, plugin := range keys {
 
 		// Only list user-added plugins if they're of the given type.
-		if entry, err := c.Get(ctx, plugin, pluginType); err == nil && entry != nil {
+		if entry, err := c.get(ctx, plugin, pluginType); err == nil && entry != nil {
 
 			// Some keys will be prepended with the plugin type, but other ones won't.
 			// Users don't expect to see the plugin type, so we need to strip that here.
