@@ -118,10 +118,14 @@ export default Route.extend(UnloadModelRoute, {
       }
     }
 
+    await capabilities;
+    // after the the base model fetch, kv-v2 has a second associated
+    // version model that contains the secret data
     if (modelType === 'secret-v2') {
-      // in v2 we need to find the current version, so we look for a param or find it on the metadata model
       let targetVersion;
       if (secretModel.currentVersion) {
+        // we have the secret metadata, so we can read the currentVersion but give priority to any
+        // version passed in via the url
         targetVersion = parseInt(params.version || secretModel.currentVersion, 10);
       } else {
         // we've got a stub model because we can't read the metadata
@@ -129,7 +133,9 @@ export default Route.extend(UnloadModelRoute, {
       }
 
       let versionId = targetVersion ? [backend, secret, targetVersion] : [backend, secret];
-      let version = secretModel.versions.findBy('version', targetVersion);
+
+      // if we have the metadata, a list of versions are part of the payload
+      let version = secretModel.versions && secretModel.versions.findBy('version', targetVersion);
       // 404 if there's no version
       if (!version && secretModel.isStub !== true) {
         let error = new DS.AdapterError();
@@ -139,19 +145,31 @@ export default Route.extend(UnloadModelRoute, {
       secretModel.set('engine', backendModel);
 
       let versionModel;
-
-      if (secretModel.isStub) {
-        // we couldn't read metadata, so we want to directly fetch the version
-        versionModel = this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
-          reload: true,
-        });
-      } else {
-        // trigger reload to fetch the whole version model
-        versionModel = await version.reload();
+      try {
+        if (secretModel.isStub) {
+          // we couldn't read metadata, so we want to directly fetch the version
+          versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
+            reload: true,
+          });
+        } else {
+          // trigger reload to fetch the whole version model
+          versionModel = await version.reload();
+        }
+      } catch (error) {
+        // cannot read the version data, but can write according to capabilities-self endpoint
+        // so we create a versionModel that is a stub like we do when we can't read metadata
+        if (error.httpStatus === 403 && capabilities.get('canUpdate')) {
+          versionModel = this.store.createRecord('secret-v2-version');
+          versionModel.setProperties({
+            id: JSON.stringify(versionId),
+            isStub: true,
+          });
+        } else {
+          throw error;
+        }
       }
       secretModel.set('selectedVersion', versionModel);
     }
-    await capabilities;
     return {
       secret: secretModel,
       capabilities,
