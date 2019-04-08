@@ -85,7 +85,7 @@ export default Route.extend(UnloadModelRoute, {
     return types[type];
   },
 
-  model(params) {
+  async model(params) {
     let secret = this.secretParam();
     let backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
@@ -97,58 +97,65 @@ export default Route.extend(UnloadModelRoute, {
     if (modelType === 'pki-certificate') {
       secret = secret.replace('cert/', '');
     }
-    return hashSettled({
-      secret: this.store
-        .queryRecord(modelType, { id: secret, backend })
-        .then(secretModel => {
-          if (modelType === 'secret-v2') {
-            let targetVersion = parseInt(params.version || secretModel.currentVersion, 10);
-            let version = secretModel.versions.findBy('version', targetVersion);
-            // 404 if there's no version
-            if (!version) {
-              let error = new DS.AdapterError();
-              set(error, 'httpStatus', 404);
-              throw error;
-            }
-            secretModel.set('engine', backendModel);
+    let secretModel;
 
-            return version.reload().then(() => {
-              secretModel.set('selectedVersion', version);
-              return secretModel;
-            });
-          }
-          return secretModel;
-        })
-        .catch(err => {
-          //don't have access to the metadata, so we'll make
-          //a stub metadata model and try to load the version
-          if (modelType === 'secret-v2' && err.httpStatus === 403) {
-            let secretModel = this.store.createRecord('secret-v2');
-            secretModel.setProperties({
-              engine: backendModel,
-              id: secret,
-              // so we know it's a stub model and won't be saving it
-              // because we don't have access to that endpoint
-              isStub: true,
-            });
-            let targetVersion = params.version ? parseInt(params.version, 10) : null;
-            let versionId = targetVersion ? [backend, secret, targetVersion] : [backend, secret];
-            return this.store
-              .findRecord('secret-v2-version', JSON.stringify(versionId), { reload: true })
-              .then(versionModel => {
-                secretModel.set('selectedVersion', versionModel);
-                return secretModel;
-              });
-          }
-          throw err;
-        }),
-      capabilities: this.capabilities(secret),
-    }).then(({ secret, capabilities }) => {
-      return {
-        secret: secret.value,
-        capabilities: capabilities.value,
-      };
-    });
+    let capabilities = this.capabilities(secret);
+    try {
+      secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
+    } catch (err) {
+      //don't have access to the metadata, so we'll make
+      //a stub metadata model and try to load the version
+      if (modelType === 'secret-v2' && err.httpStatus === 403) {
+        secretModel = this.store.createRecord('secret-v2');
+        secretModel.setProperties({
+          id: secret,
+          // so we know it's a stub model and won't be saving it
+          // because we don't have access to that endpoint
+          isStub: true,
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    if (modelType === 'secret-v2') {
+      // in v2 we need to find the current version, so we look for a param or find it on the metadata model
+      let targetVersion;
+      if (secretModel.currentVersion) {
+        targetVersion = parseInt(params.version || secretModel.currentVersion, 10);
+      } else {
+        // we've got a stub model because we can't read the metadata
+        targetVersion = params.version ? parseInt(params.version, 10) : null;
+      }
+
+      let versionId = targetVersion ? [backend, secret, targetVersion] : [backend, secret];
+      let version = secretModel.versions.findBy('version', targetVersion);
+      // 404 if there's no version
+      if (!version && secretModel.isStub !== true) {
+        let error = new DS.AdapterError();
+        set(error, 'httpStatus', 404);
+        throw error;
+      }
+      secretModel.set('engine', backendModel);
+
+      let versionModel;
+
+      if (secretModel.isStub) {
+        // we couldn't read metadata, so we want to directly fetch the version
+        versionModel = this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
+          reload: true,
+        });
+      } else {
+        // trigger reload to fetch the whole version model
+        versionModel = await version.reload();
+      }
+      secretModel.set('selectedVersion', versionModel);
+    }
+    await capabilities;
+    return {
+      secret: secretModel,
+      capabilities,
+    };
   },
 
   setupController(controller, model) {
