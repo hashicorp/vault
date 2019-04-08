@@ -156,8 +156,6 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		}
 
 		// Always forward requests that are using a limited use count token.
-		// origBody will not be nil if it's a perf standby as it checks
-		// PerfStandby() but will be nil otherwise.
 		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
 			if origBody != nil {
 				r.Body = origBody
