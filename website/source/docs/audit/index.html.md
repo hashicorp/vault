@@ -61,8 +61,8 @@ The existing logs that it did store are untouched.
 
 ## Blocked Audit Devices
 
-If there are any audit devices enabled, Vault requires that all enabled
-devices are available for writing at the time of the request.
+If the audit device request becomes blocked for an indefinite period of time,
+then the associated Vault request will block as well.
 
 !> Note that even with multiple audit devices enabled, if any one audit device
 becomes blocked (due to network issue, etc.), then Vault will become
@@ -71,8 +71,10 @@ audit device can write.
 
 Vault will not respond to requests if audit devices are blocked because
 audit logs are critically important and ignoring blocked requests opens
-an avenue for attack. Be absolutely certain that your audit devices cannot
-block.
+an avenue for attack.
+
+Be absolutely certain that your audit devices cannot block and monitor for
+blocked requests with [related telemetry](/docs/internals/telemetry.html#vault-audit-log_request_failure).
 
 ## API
 
