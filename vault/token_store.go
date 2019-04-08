@@ -2114,7 +2114,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		NumUses         int    `mapstructure:"num_uses"`
 		Period          string
 		Type            string `mapstructure:"type"`
-		EntityAlias     string
+		EntityAlias     string `mapstructure:"entity_alias"`
 	}
 	if err := mapstructure.WeakDecode(req.Data, &data); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -2220,13 +2220,13 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		// Get mount accessor which is required to lookup entity alias
-		mountValidationResp := ts.core.router.validateMountByAccessor("auth_token_")
+		mountValidationResp := ts.core.router.MatchingMountByAccessor(req.MountAccessor)
 		if mountValidationResp == nil {
 			return logical.ErrorResponse("auth token mount accessor not found"), nil
 		}
 
 		// Verify that the alias exist
-		aliasByFactors, err := ts.core.identityStore.MemDBAliasByFactors(mountValidationResp.MountAccessor, data.EntityAlias, false, false)
+		aliasByFactors, err := ts.core.identityStore.MemDBAliasByFactors(mountValidationResp.Accessor, data.EntityAlias, false, false)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -2236,8 +2236,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			// Entity alias does not exist. Create a new entity and entity alias
 			newAlias := &logical.Alias{
 				Name: data.EntityAlias,
-				MountAccessor: mountValidationResp.MountAccessor,
-				MountType: mountValidationResp.MountType,
+				MountAccessor: mountValidationResp.Accessor,
+				MountType: mountValidationResp.Type,
 			}
 
 			newEntity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, newAlias)

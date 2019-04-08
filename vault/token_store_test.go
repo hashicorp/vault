@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
 	"path"
 	"reflect"
 	"sort"
@@ -2659,13 +2660,14 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:      "auth/token/roles/" + testRoleName,
-		Operation: logical.CreateOperation,
+		Path:        "auth/token/roles/" + testRoleName,
+		ClientToken: root,
+		Operation:   logical.CreateOperation,
 		Data: map[string]interface{}{
-			"orphan":      true,
-			"period":      "72h",
-			"path_suffix": "happenin",
-			"bound_cidrs": []string{"0.0.0.0/0"},
+			"orphan":                 true,
+			"period":                 "72h",
+			"path_suffix":            "happenin",
+			"bound_cidrs":            []string{"0.0.0.0/0"},
 			"allowed_entity_aliases": []string{"test1", "test2", entityAliasName},
 		},
 	})
@@ -2674,11 +2676,10 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 	}
 
 	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/create",
+		Path:        "auth/token/create/" + testRoleName,
 		Operation:   logical.UpdateOperation,
 		ClientToken: root,
 		Data: map[string]interface{}{
-			"role_name":    testRoleName,
 			"entity_alias": entityAliasName,
 		},
 	})
@@ -2712,12 +2713,13 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 
 	// Create token role
 	resp, err := core.HandleRequest(ctx, &logical.Request{
-		Path:      "auth/token/roles/" + testRoleName,
-		Operation: logical.CreateOperation,
+		Path:        "auth/token/roles/" + testRoleName,
+		ClientToken: root,
+		Operation:   logical.CreateOperation,
 		Data: map[string]interface{}{
-			"period":      "72h",
-			"path_suffix": "happenin",
-			"bound_cidrs": []string{"0.0.0.0/0"},
+			"period":                 "72h",
+			"path_suffix":            "happenin",
+			"bound_cidrs":            []string{"0.0.0.0/0"},
 			"allowed_entity_aliases": []string{"test1", "test2"},
 		},
 	})
@@ -2727,11 +2729,10 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 
 	// Create token with non existing entity alias
 	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/create",
+		Path:        "auth/token/create/" + testRoleName,
 		Operation:   logical.UpdateOperation,
 		ClientToken: root,
 		Data: map[string]interface{}{
-			"role_name":    testRoleName,
 			"entity_alias": entityAliasName,
 		},
 	})
@@ -2752,15 +2753,16 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 	}
 
 	// Get the attached alias information
-	aliases, ok := resp.Data["aliases"].([]identity.Alias)
-	if !ok {
-		t.Fatalf("failed to parse attached aliases. Resp: %#v", resp.Data)
-	}
+	aliases := resp.Data["aliases"].([]interface{})
 	if len(aliases) != 1 {
-		t.Fatalf("expected one attached alias but got %d", len(aliases))
+		t.Fatalf("expected only one alias but got %d; Aliases: %#v", len(aliases), aliases)
 	}
-	if aliases[0].Name != entityAliasName {
-		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, aliases[0].Name)
+	alias := &identity.Alias{}
+	mapstructure.Decode(aliases[0], alias)
+
+	// Validate
+	if alias.Name != entityAliasName {
+		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, alias.Name)
 	}
 }
 
@@ -2787,7 +2789,7 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 	entityID := resp.Data["id"].(string)
 
 	// Find mount accessor
-	resp, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	resp, err = core.systemBackend.HandleRequest(ctx, &logical.Request{
 		Path:      "auth",
 		Operation: logical.ReadOperation,
 	})
@@ -2809,10 +2811,11 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 
 	// Create token role
 	resp, err = core.HandleRequest(ctx, &logical.Request{
-		Path:      "auth/token/roles/" + testRoleName,
-		Operation: logical.CreateOperation,
+		Path:        "auth/token/roles/" + testRoleName,
+		ClientToken: root,
+		Operation:   logical.CreateOperation,
 		Data: map[string]interface{}{
-			"period": "72h",
+			"period":                 "72h",
 			"allowed_entity_aliases": []string{"test1", "test2", "testentityaliasn"},
 		},
 	})
@@ -2821,7 +2824,7 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 	}
 
 	resp, _ = core.HandleRequest(ctx, &logical.Request{
-		Path:        "auth/token/create",
+		Path:        "auth/token/create/" + testRoleName,
 		Operation:   logical.UpdateOperation,
 		ClientToken: root,
 		Data: map[string]interface{}{
