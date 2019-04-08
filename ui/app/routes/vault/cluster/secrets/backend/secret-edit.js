@@ -1,5 +1,5 @@
 import { set } from '@ember/object';
-import { hashSettled, resolve } from 'rsvp';
+import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import DS from 'ember-data';
 import Route from '@ember/routing/route';
@@ -103,10 +103,15 @@ export default Route.extend(UnloadModelRoute, {
     try {
       secretModel = await this.store.queryRecord(modelType, { id: secret, backend });
     } catch (err) {
-      //don't have access to the metadata, so we'll make
-      //a stub metadata model and try to load the version
-      if (modelType === 'secret-v2' && err.httpStatus === 403) {
-        secretModel = this.store.createRecord('secret-v2');
+      if (err.httpStatus === 403 && (modelType === 'secret-v2' || modelType === 'secret')) {
+        await capabilities;
+        // can't read the path and don't have update permission, so re-throw
+        if (!capabilities.get('canUpdate') && modelType === 'secret') {
+          throw err;
+        }
+        // don't have access to the metadata for v2 or the secret for v1,
+        // so we make a stub model
+        secretModel = this.store.createRecord(modelType);
         secretModel.setProperties({
           id: secret,
           // so we know it's a stub model and won't be saving it
