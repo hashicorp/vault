@@ -502,7 +502,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	// token store; such a request will have already been routed through the
 	// token store -> exp manager -> here so we need to not grab the lock again
 	// or we'll be recursively grabbing it.
-	if !(req.Operation == logical.RenewOperation && strings.HasPrefix(req.Path, "auth/token")) {
+	if !(req.Operation == logical.RenewOperation && strings.HasPrefix(req.Path, "auth/token/")) {
 		re.l.RLock()
 		defer re.l.RUnlock()
 	}
