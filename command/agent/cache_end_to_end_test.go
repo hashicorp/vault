@@ -610,7 +610,6 @@ func TestCache_NoFileSink(t *testing.T) {
 }
 
 func TestCache_ClientAutoAuthEnc(t *testing.T) {
-	os.Unsetenv("VAULT_ADDR")
 	logger := logging.NewVaultLogger(log.Trace)
 	cluster := testAutoAuthCluster(t)
 	defer cluster.Cleanup()
@@ -621,26 +620,23 @@ func TestCache_ClientAutoAuthEnc(t *testing.T) {
 
 	sink1 := newFileSink(t, logger, testingConfigOptions)
 
+	tokenTtl := 200 * time.Millisecond
+	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, "", tokenTtl, true)
+	defer cleanup()
+
 	clientConfig := api.DefaultConfig()
-	clientConfig.PollingInterval = 1 * time.Second
+	clientConfig.AgentAddress = agentAddr
 	testClient, err := api.NewClient(clientConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// sink expects dhpath to be populated with client's public key
-	testClient.InitiateDHExchange("curve25519", sink1.DHPath)
-
-	tokenTtl := 200 * time.Millisecond
-	cleanup, _, agentAddr := testhelperAutoAuth(t, cluster, []*sink.SinkConfig{sink1}, sink1.Config["path"].(string), tokenTtl, false)
-	defer cleanup()
-
-	// fill in missing client properties
-	testClient.SetClientAddress(agentAddr)
-	testClient.SetClientConfigTokenFileSinkPath(sink1.Config["path"].(string))
-
-	// let polling set a token
-	time.Sleep(5 * time.Second)
+	for i := 0; i < 10; i++ {
+		if testClient.Token() != "" {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	_, err = testClient.Logical().Read("kv/foo")
 	if err != nil {

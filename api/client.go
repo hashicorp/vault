@@ -386,8 +386,6 @@ type Client struct {
 	mfaCreds           []string
 	policyOverride     bool
 
-	// whether or not a routine has been kicked off
-	sinkPollingStarted bool
 	// whether or not the value in the sink should clobber the client's current token
 	useFileSinkForToken bool
 	privateKey          []byte
@@ -478,7 +476,7 @@ func NewClient(c *Config) (*Client, error) {
 	case client.config.TokenFileSinkPath != "":
 		tokenSinkPath = client.config.TokenFileSinkPath
 	case client.config.AgentAddress != "":
-		tokenSinkPath, err = client.GetSinkPathFromAgent()
+		tokenSinkPath, err = client.getSinkPathFromAgent()
 		if err != nil {
 			return nil, errwrap.Wrapf(fmt.Sprintf("failed to determine tokenSinkPath given the provided agent address %q {{err}}", client.config.AgentAddress), err)
 		}
@@ -489,30 +487,14 @@ func NewClient(c *Config) (*Client, error) {
 	// start polling token from file sink if it is available
 	if client.config.TokenFileSinkPath != "" {
 		client.useFileSinkForToken = true
-		client.pollFileForToken()
+		go client.pollFileForToken()
 	}
 
 	return client, nil
 }
 
-// updates a client's address and the address in it's config
-func (c *Client) SetClientAddress(address string) error {
-	u, err := url.Parse(address)
-	if err != nil {
-		return errwrap.Wrapf("Error updating client's address: {{err}}", err)
-	}
-	c.addr = u
-	c.config.Address = address
-	return nil
-}
-
-// updates the TokenFileSinkPath of a client's config
-func (c *Client) SetClientConfigTokenFileSinkPath(path string) {
-	c.config.TokenFileSinkPath = path
-}
-
 // contacts agent for a file sink path and initiates DHExchange if needed
-func (c *Client) GetSinkPathFromAgent() (string, error) {
+func (c *Client) getSinkPathFromAgent() (string, error) {
 	if c.config.AgentAddress == "" {
 		return "", errors.New("an agent address in this client's config must be set first")
 	}
@@ -558,7 +540,7 @@ func (c *Client) GetSinkPathFromAgent() (string, error) {
 	}
 
 	// otherwise DHExchange
-	if err := c.InitiateDHExchange(agentSink.DHType, agentSink.DHPath); err != nil {
+	if err := c.initiateDHExchange(agentSink.DHType, agentSink.DHPath); err != nil {
 		return "", err
 	}
 
@@ -567,7 +549,7 @@ func (c *Client) GetSinkPathFromAgent() (string, error) {
 
 // Initiates a DH exchange and resumes polling sink for token
 // Can be called multiple times to update the secret shared between client and agent
-func (c *Client) InitiateDHExchange(dhtype string, dhpath string) error {
+func (c *Client) initiateDHExchange(dhtype string, dhpath string) error {
 	// Only curve25519 is supported for now
 	if dhtype != "curve25519" {
 		return fmt.Errorf("dh_type %q is not supported", dhtype)
@@ -596,33 +578,22 @@ func (c *Client) InitiateDHExchange(dhtype string, dhpath string) error {
 		return errwrap.Wrapf(fmt.Sprintf("error writing public key to provided dh_path %q: {{err}}", dhpath), err)
 	}
 
-	// determine whether polling needs to be initiated
-	c.useFileSinkForToken = true
-	if !c.sinkPollingStarted {
-		c.pollFileForToken()
-	}
-
 	return nil
 }
 
 // starts a go routine to poll the specified file for a token
 func (c *Client) pollFileForToken() {
-	if !c.sinkPollingStarted {
-		go func() {
-			for {
-				if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
-					token, err := c.readTokenFromFile()
-					// update the client's token if it has changed and there was no error reading the file
-					if err == nil && token != c.token {
-						c.modifyLock.Lock()
-						c.token = token
-						c.modifyLock.Unlock()
-					}
-				}
-				time.Sleep(c.config.PollingInterval)
+	for {
+		if c.useFileSinkForToken && c.config.TokenFileSinkPath != "" {
+			token, err := c.readTokenFromFile()
+			// update the client's token if it has changed and there was no error reading the file
+			if err == nil && token != c.token {
+				c.modifyLock.Lock()
+				c.token = token
+				c.modifyLock.Unlock()
 			}
-		}()
-		c.sinkPollingStarted = true
+		}
+		time.Sleep(c.config.PollingInterval)
 	}
 }
 
