@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/logical"
 
 	log "github.com/hashicorp/go-hclog"
@@ -288,10 +289,17 @@ func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.H
 func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: log.Trace,
-	})
+	var logger hclog.Logger
+	if opts != nil {
+		logger = opts.Logger
+	}
+	if logger == nil {
+		logger = log.New(&log.LoggerOptions{
+			Mutex: &sync.Mutex{},
+			Level: log.Trace,
+		})
+	}
+
 	// Set this lower so that state populates quickly to standby nodes
 	vault.HeartbeatInterval = 2 * time.Second
 

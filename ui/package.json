@@ -122,7 +122,6 @@
   },
   "optionalDependencies": {
     "@babel/core": "^7.3.4",
-    "@storybook/addon-actions": "^5.0.5",
     "@storybook/addon-knobs": "^5.0.5",
     "@storybook/addon-links": "^5.0.5",
     "@storybook/addon-notes": "^5.0.5",

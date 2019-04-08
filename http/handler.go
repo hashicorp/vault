@@ -1,11 +1,13 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -444,7 +446,7 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
+func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -453,17 +455,27 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 	if maxRequestSize != nil {
 		max, ok := maxRequestSize.(int64)
 		if !ok {
-			return errors.New("could not parse max_request_size from request context")
+			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
 			reader = http.MaxBytesReader(w, r.Body, max)
 		}
 	}
+	var origBody io.ReadWriter
+	if core.PerfStandby() {
+		// Since we're checking PerfStandby here we key on origBody being nil
+		// or not later, so we need to always allocate so it's non-nil
+		origBody = new(bytes.Buffer)
+		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
-		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
-	return err
+	if origBody != nil {
+		return ioutil.NopCloser(origBody), err
+	}
+	return nil, err
 }
 
 // handleRequestForwarding determines whether to forward a request or not,

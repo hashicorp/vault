@@ -12,7 +12,7 @@ import DS from 'ember-data';
  * {{auth-config-form/options model.model}}
  * ```
  *
- * @property model=null {String} - The corresponding auth model that is being configured.
+ * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *
  */
 

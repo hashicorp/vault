@@ -15,9 +15,11 @@ BUG FIXES:
 
  * agent: Allow auto-auth to be used with caching without having to define any
    sinks [GH-6468]
+ * agent: Disallow some nonsensical config file combinations [GH-6471]
  * auth/ldap: Fix CN check not working if CN was not all in uppercase [GH-6518]
  * auth/jwt: The CLI helper for OIDC logins will now open the browser to the correct
    URL when running on Windows [JWT-37]
+ * auth/jwt: Fix OIDC login issue where configured TLS certs weren't being used [JWT-40]
  * auth/jwt: Fix an issue where the `oidc_scopes` parameter was not being included in
    the response to a role read request [JWT-35]
  * core: Fix seal migration case when migrating to Shamir and a seal block
@@ -29,6 +31,8 @@ BUG FIXES:
  * replication: Fix mount filter invalidation on performance standby nodes
  * replication: Fix license reloading on performance standby nodes
  * replication: Fix handling of control groups on performance standby nodes
+ * replication: Fix some forwarding scenarios with request bodies using
+   performance standby nodes [GH-6538]
  * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
  * storage/dynamodb: Fix a race condition possible in HA configurations that could
    leave the cluster without a leader [GH-6512]
@@ -36,6 +40,7 @@ BUG FIXES:
    failing, causing any form using it to render labels with missing fields [GH-6474]
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
  * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
+ * ui: fix SSH OTP generation [GH-6540]
  
  
 ## 1.1.0 (March 18th, 2019)

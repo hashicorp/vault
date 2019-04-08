@@ -225,7 +225,7 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
 	allClaims := make(map[string]interface{})
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
 	}

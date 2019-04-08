@@ -100,7 +100,7 @@ func (b *jwtAuthBackend) reset() {
 	b.l.Unlock()
 }
 
-func (b *jwtAuthBackend) getProvider(ctx context.Context, config *jwtConfig) (*oidc.Provider, error) {
+func (b *jwtAuthBackend) getProvider(config *jwtConfig) (*oidc.Provider, error) {
 	b.l.RLock()
 	unlockFunc := b.l.RUnlock
 	defer func() { unlockFunc() }()

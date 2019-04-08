@@ -103,9 +103,14 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("request originated from invalid CIDR"), nil
 	}
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
-		return nil, errwrap.Wrapf(errLoginFailed+" Error getting provider for login operation: {{err}}", err)
+		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
+	}
+
+	oidcCtx, err := b.createOIDCContext(ctx, config)
+	if err != nil {
+		return nil, errwrap.Wrapf("error preparing context for login operation: {{err}}", err)
 	}
 
 	var oauth2Config = oauth2.Config{
@@ -121,7 +126,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(errLoginFailed + " OAuth code parameter not provided"), nil
 	}
 
-	oauth2Token, err := oauth2Config.Exchange(ctx, code)
+	oauth2Token, err := oauth2Config.Exchange(oidcCtx, code)
 	if err != nil {
 		return logical.ErrorResponse(errLoginFailed+" Error exchanging oidc code: %q.", err.Error()), nil
 	}
@@ -146,7 +151,7 @@ func (b *jwtAuthBackend) pathCallback(ctx context.Context, req *logical.Request,
 	// Attempt to fetch information from the /userinfo endpoint and merge it with
 	// the existing claims data. A failure to fetch additional information from this
 	// endpoint will not invalidate the authorization flow.
-	if userinfo, err := provider.UserInfo(ctx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
+	if userinfo, err := provider.UserInfo(oidcCtx, oauth2.StaticTokenSource(oauth2Token)); err == nil {
 		_ = userinfo.Claims(&allClaims)
 	} else {
 		logFunc := b.Logger().Warn
@@ -246,7 +251,7 @@ func (b *jwtAuthBackend) authURL(ctx context.Context, req *logical.Request, d *f
 		return resp, nil
 	}
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
 		logger.Warn("error getting provider for login operation", "error", err)
 		return resp, nil

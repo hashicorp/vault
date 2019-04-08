@@ -7,7 +7,7 @@ The `AuthConfigForm/Options` is options portion of the auth config form.
 
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
-| model | <code>String</code> | <code></code> | The corresponding auth model that is being configured. |
+| model | <code>DS.Model</code> | <code></code> | The corresponding auth model that is being configured. |
 
 **Example**
   
