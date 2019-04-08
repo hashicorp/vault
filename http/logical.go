@@ -185,13 +185,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 				}
 			}
 			switch req.Path {
+			// Route the token wrapping request to its respective sys NS
 			case "sys/wrapping/lookup", "sys/wrapping/rewrap", "sys/wrapping/unwrap":
 				r = r.WithContext(newCtx)
-				// We perform validation but don't check the error here yet so
-				// that the request/response can be logged once we're in the
-				// logical layer. This is more for logical.Request modification
-				// depending on how the wrapping token was provided.
-				_, _ = core.ValidateWrappingToken(r.Context(), req, true)
 
 			// The -self paths have no meaning outside of the token NS, so
 			// requests for these paths always go to the token NS

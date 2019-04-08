@@ -578,24 +578,20 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return
 	}
 
-	// Validate the token
-	auth, te, ctErr := c.checkToken(ctx, req, false)
-	if ctErr == logical.ErrPerfStandbyPleaseForward {
-		return nil, nil, ctErr
-	}
-
 	// If this is a wrapping request that contains a wrapping token, check for
-	// token validity before routing
+	// token validity. We perform this before c.checkToken since wrapping token
+	// validation performs a token store lookup, and can potentially modify
+	// logical.Request's token-related fields.
 	switch req.Path {
 	case "sys/wrapping/rewrap", "sys/wrapping/unwrap":
-		valid, err := c.ValidateWrappingToken(ctx, req, false)
+		valid, err := c.validateWrappingToken(ctx, req)
+
 		// Perform audit logging before returning if there's an issue with checking
 		// the wrapping token
 		if err != nil || !valid {
 			logInput := &audit.LogInput{
-				Auth:               auth,
+				Auth:               req.Auth,
 				Request:            req,
-				OuterErr:           ctErr,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
 			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
@@ -609,6 +605,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		if !valid {
 			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
 		}
+	}
+
+	// Validate the token
+	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrPerfStandbyPleaseForward {
+		return nil, nil, ctErr
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -937,11 +939,38 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		}
 	}
 
+	// If this is a wrapping token lookup, validate the token and produce an
+	// audit log. We perform this before c.checkToken since wrapping token
+	// validation performs a token store lookup, and can potentially modify
+	// logical.Request's token-related fields.
+	switch req.Path {
+	case "sys/wrapping/lookup":
+		valid, err := c.validateWrappingToken(ctx, req)
+		// Perform audit logging before returning if there's an issue with checking
+		// the wrapping token
+		if err != nil || !valid {
+
+			logInput := &audit.LogInput{
+				Auth:               req.Auth,
+				Request:            req,
+				NonHMACReqDataKeys: nonHMACReqDataKeys,
+			}
+			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
+			}
+		}
+		if err != nil {
+			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
+		}
+	}
+
 	req.Unauthenticated = true
 
-	var auth *logical.Auth
-
 	// Do an unauth check. This will cause EGP policies to be checked
+	var auth *logical.Auth
 	var ctErr error
 	auth, _, ctErr = c.checkToken(ctx, req, true)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
@@ -976,31 +1005,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, auth, retErr
 		}
 		return logical.ErrorResponse(ctErr.Error()), auth, retErr
-	}
-
-	// If this is a wrapping token lookup, validate the token and produce an audit log
-	switch req.Path {
-	case "sys/wrapping/lookup":
-		valid, err := c.ValidateWrappingToken(ctx, req, false)
-		// Perform audit logging before returning if there's an issue with checking
-		// the wrapping token
-		if err != nil || !valid {
-			logInput := &audit.LogInput{
-				Auth:               auth,
-				Request:            req,
-				OuterErr:           ctErr,
-				NonHMACReqDataKeys: nonHMACReqDataKeys,
-			}
-			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
-				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
-			}
-		}
-		if err != nil {
-			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
-		}
 	}
 
 	// Create an audit trail of the request. Attach auth if it was returned,

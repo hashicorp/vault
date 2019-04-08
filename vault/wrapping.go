@@ -309,10 +309,10 @@ DONELISTHANDLING:
 	return nil, nil
 }
 
-// ValidateWrappingToken checks whether a token is a wrapping token. The passed
+// validateWrappingToken checks whether a token is a wrapping token. The passed
 // in logical request can be optionally updated if the wrapping token was
 // provided within a JWT token.
-func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request, updateRequest bool) (bool, error) {
+func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (bool, error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
 	}
@@ -364,13 +364,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request, 
 		if typeClaim != "wrapping" {
 			return false, errors.New("unexpected type claim")
 		}
-		if updateRequest {
-			if !thirdParty {
-				req.ClientToken = claims.ID
-			} else {
-				req.Data["token"] = claims.ID
-			}
+		if !thirdParty {
+			req.ClientToken = claims.ID
+		} else {
+			req.Data["token"] = claims.ID
 		}
+
 		token = claims.ID
 	}
 
@@ -404,7 +403,7 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request, 
 		return false, nil
 	}
 
-	if !thirdParty && updateRequest {
+	if !thirdParty {
 		req.ClientTokenAccessor = te.Accessor
 		req.ClientTokenRemainingUses = te.NumUses
 		req.SetTokenEntry(te)
