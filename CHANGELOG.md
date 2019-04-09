@@ -10,6 +10,7 @@ IMPROVEMENTS:
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
  * ui: Navigating away from secret list view will clear any page-specific
    filter that was applied [GH-6511]
+ * ui: Improved the display when OIDC auth errors [GH-6553] 
 
 BUG FIXES: 
 
