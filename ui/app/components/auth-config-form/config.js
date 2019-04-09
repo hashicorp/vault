@@ -39,7 +39,7 @@ const AuthConfigBase = Component.extend({
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }),
+  }).withTestWaiter(),
 });
 
 AuthConfigBase.reopenClass({
