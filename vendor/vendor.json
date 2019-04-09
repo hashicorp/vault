@@ -1391,10 +1391,10 @@
 			"revisionTime": "2019-04-02T00:00:36Z"
 		},
 		{
-			"checksumSHA1": "9i2hbq87+NbEq31VOxKDbKg01Fo=",
+			"checksumSHA1": "iSPnkjB0aTOzQBFo+im0Gn+5oiQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "c05fb7def42bbaf0194c6d63d41c54eae2976139",
-			"revisionTime": "2019-04-05T22:34:29Z"
+			"revision": "5baec3419da7a7d656e7e317788fdea9bedb4ebf",
+			"revisionTime": "2019-04-09T19:30:14Z"
 		},
 		{
 			"checksumSHA1": "2GD7htZi0dpYxt7kxljXq2qK61s=",
