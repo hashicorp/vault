@@ -4,7 +4,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
-import withFlash from 'vault/tests/helpers/with-flash';
 
 module('Acceptance | gcpkms/enable', function(hooks) {
   setupApplicationTest(hooks);
@@ -17,15 +16,11 @@ module('Acceptance | gcpkms/enable', function(hooks) {
     let enginePath = `gcpkms-${new Date().getTime()}`;
     await mountSecrets.visit();
     await mountSecrets.selectType('gcpkms');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .submit();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
-
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the gcpkms engine');
   });
 });
