@@ -76,7 +76,7 @@ func (b *backend) serviceAccountRollback(ctx context.Context, req *logical.Reque
 	}
 
 	// Delete service account.
-	iamC, err := newIamAdmin(ctx, req.Storage)
+	iamC, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 		return nil
 	}
 
-	iamC, err := newIamAdmin(ctx, req.Storage)
+	iamC, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 		return err
 	}
 
-	httpC, err := newHttpClient(ctx, req.Storage)
+	httpC, err := b.HTTPClient(req.Storage)
 	if err != nil {
 		return err
 	}
