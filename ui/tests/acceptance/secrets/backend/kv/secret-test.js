@@ -361,7 +361,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       policy = V1_WRITE_ONLY_POLICY;
     }
     await consoleComponent.runCommands([
-      `write sys/mounts/${backend} type=kv options=version=2`,
+      // disable any kv previously enabled kv
+      `delete sys/mounts/${backend}`,
+      `write sys/mounts/${backend} type=kv options=version=${backend === 'kv-v2' ? 2 : 1}`,
       `write sys/policies/acl/${backend} policy=${policy}`,
       `write -field=client_token auth/token/create policies=${backend}`,
     ]);
@@ -423,8 +425,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-
     // TODO assert that it shows a warning about writing without read will overwrite the existing secret
     await editPage.editSecret('bar', 'baz');
 

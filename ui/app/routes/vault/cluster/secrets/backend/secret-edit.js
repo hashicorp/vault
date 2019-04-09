@@ -122,7 +122,6 @@ export default Route.extend(UnloadModelRoute, {
         throw err;
       }
     }
-
     await capabilities;
     // after the the base model fetch, kv-v2 has a second associated
     // version model that contains the secret data
