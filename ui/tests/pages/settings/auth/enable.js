@@ -9,6 +9,6 @@ export default create({
   flash: flashMessages,
   enable: async function(type, path) {
     await this.visit();
-    return withFlash(this.mount(type, path));
+    await withFlash(this.mount(type, path));
   },
 });
