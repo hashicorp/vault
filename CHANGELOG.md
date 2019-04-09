@@ -36,6 +36,7 @@ BUG FIXES:
  * replication: Fix handling of control groups on performance standby nodes
  * replication: Fix some forwarding scenarios with request bodies using
    performance standby nodes [GH-6538]
+ * secret/gcp: Fix roleset binding when using JSON [GCP-27]
  * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
  * storage/dynamodb: Fix a race condition possible in HA configurations that could
    leave the cluster without a leader [GH-6512]
