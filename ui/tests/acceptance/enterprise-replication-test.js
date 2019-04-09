@@ -3,6 +3,9 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { create } from 'ember-cli-page-object';
+import flashMessage from 'vault/tests/pages/components/flash-message';
+const flash = create(flashMessage);
 
 const disableReplication = async (type, assert) => {
   // disable performance replication
@@ -14,8 +17,7 @@ const disableReplication = async (type, assert) => {
     if (assert) {
       assert.equal(currentURL(), `/vault/replication/${type}`, 'redirects to the replication page');
       assert.equal(
-        // TODO better test selectors for flash messages
-        find('[data-test-flash-message-body]').textContent.trim(),
+        flash.latestMessage,
         'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
         'renders info flash when disabled'
       );
@@ -90,7 +92,7 @@ module('Acceptance | Enterprise | replication', function(hooks) {
     await click('[data-test-delete-mount-config] button');
     await click('[data-test-confirm-button]');
     assert.equal(
-      findAll('[data-test-flash-message-body]')[0].textContent.trim(),
+      flash.latestMessage,
       `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
       'renders success flash upon deletion'
     );

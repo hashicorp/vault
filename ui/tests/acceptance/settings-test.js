@@ -27,7 +27,7 @@ module('Acceptance | settings', function(hooks) {
     assert.equal(currentURL(), '/vault/settings/mount-secret-backend');
 
     await mountSecrets.selectType(type);
-    await ountSecrets
+    await mountSecrets
       .next()
       .path(path)
       .toggleOptions()
