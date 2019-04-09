@@ -287,6 +287,11 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	return certEntry, nil
 }
 
+// Instead of returning an error when applying identity templating, it's better
+// to just return the input, which most likely returns a "badName" to the caller.
+// Ideally, parse errors of identity templating should be handled when configuring
+// the role, instead when applying the role. Unfortunately, the templating library does
+// not support parsing validations yet. So, returning the input is best choice.
 func applyIdentityTemplating(b *backend, data *dataBundle, input string) string {
 
 	info, err := b.System().EntityInfo(data.req.EntityID)
