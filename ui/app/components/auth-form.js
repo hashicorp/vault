@@ -152,7 +152,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   fetchMethods: task(function*() {
     let store = this.get('store');
@@ -169,7 +169,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
@@ -207,7 +207,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.handleError(e);
     }
-  }),
+  }).withTestWaiter(),
 
   actions: {
     doSubmit() {
