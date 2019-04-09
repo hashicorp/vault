@@ -606,36 +606,27 @@ func TestACL_SegmentWildcardPriority(t *testing.T) {
 	poltests := []poltest{
 
 		{
-			// Verify edge conditions.  Here '+/*' is more specific because
-			// of length.  Not useful, but test is included to document it.
-			`
-path "+*" { capabilities = ["read"] }
-path "+/*" { capabilities = ["update"] }
-`,
-			"foo/bar/bar/baz",
-		},
-		{
 			// Verify edge conditions.  Here '*' is more specific both because
 			// of first wildcard position (0 vs -1/infinity) and #wildcards.
 			`
-path "+*" { capabilities = ["read"] }
+path "+/*" { capabilities = ["read"] }
 path "*" { capabilities = ["update"] }
 `,
 			"foo/bar/bar/baz",
 		},
 		{
-			// Verify edge conditions.  Here '+*' is less specific because of
+			// Verify edge conditions.  Here '+/*' is less specific because of
 			// first wildcard position.
 			`
-path "+*" { capabilities = ["read"] }
-path "foo/+*" { capabilities = ["update"] }
+path "+/*" { capabilities = ["read"] }
+path "foo/+/*" { capabilities = ["update"] }
 `,
 			"foo/bar/bar/baz",
 		},
 		{
 			// Verify that more wildcard segments is lower priority.
 			`
-path "foo/+/+*" { capabilities = ["read"] }
+path "foo/+/+/*" { capabilities = ["read"] }
 path "foo/+/bar/baz" { capabilities = ["update"] }
 `,
 			"foo/bar/bar/baz",
@@ -723,29 +714,29 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 			true,
 		},
 		{
-			`path "+*" { capabilities = ["read"] }`,
+			`path "+/*" { capabilities = ["read"] }`,
 			"foo/",
 			true,
 		},
 		{
-			`path "foo/+/+*" { capabilities = ["read"] }`,
+			`path "foo/+/+/*" { capabilities = ["read"] }`,
 			"foo/",
 			true,
 		},
 		{
-			`path "foo/+/+*" { capabilities = ["read"] }`,
+			`path "foo/+/+/*" { capabilities = ["read"] }`,
 			"foo/bar/",
 			true,
 		},
 		{
-			`path "foo/+/+*" { capabilities = ["read"] }`,
+			`path "foo/+/+/*" { capabilities = ["read"] }`,
 			"foo/bar/bar/",
 			true,
 		},
 		{
-			`path "foo/+/+*" { capabilities = ["read"] }`,
+			`path "foo/+/+/*" { capabilities = ["read"] }`,
 			"foo/bar/bar/baz/",
-			false,
+			true,
 		},
 		{
 			`path "foo/+/+/baz" { capabilities = ["read"] }`,
