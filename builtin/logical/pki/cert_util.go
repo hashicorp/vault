@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -286,10 +287,49 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 	return certEntry, nil
 }
 
+func applyIdentityTemplating(b *backend, data *dataBundle, input string) string {
+
+	info, err := b.System().EntityInfo(data.req.EntityID)
+	if err != nil {
+		return input
+	}
+
+	entity := &identity.Entity{
+		ID:       data.req.EntityID,
+		Name:     info.Name,
+		Metadata: info.Metadata,
+		Aliases:  make([]*identity.Alias, 0, len(info.Aliases)),
+	}
+
+	for i, a := range info.Aliases {
+		entity.Aliases = append(entity.Aliases, &identity.Alias{
+			MountAccessor: a.MountAccessor,
+			ID:            fmt.Sprintf("alias-%d", i),
+			Name:          a.Name,
+			Metadata:      a.Metadata,
+		})
+	}
+
+	_, out, err := identity.PopulateString(&identity.PopulateStringInput{
+		ValidityCheckOnly: false,
+		String:            input,
+		Entity:            entity,
+		Groups:            nil,
+		Namespace:         nil,
+	})
+
+	if err != nil {
+		return input
+	}
+
+	return out
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateNames(data *dataBundle, names []string) string {
+func validateNames(b *backend, data *dataBundle, names []string) string {
+
 	for _, name := range names {
 		sanitizedName := name
 		emailDomain := name
@@ -424,6 +464,8 @@ func validateNames(data *dataBundle, names []string) string {
 				if currDomain == "" {
 					continue
 				}
+
+				currDomain = applyIdentityTemplating(b, data, currDomain)
 
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
@@ -819,7 +861,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
 		if cn != "" {
-			badName := validateNames(data, []string{cn})
+			badName := validateNames(b, data, []string{cn})
 			if len(badName) != 0 {
 				return errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}
@@ -835,13 +877,13 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 
 		// Check for bad email and/or DNS names
-		badName := validateNames(data, dnsNames)
+		badName := validateNames(b, data, dnsNames)
 		if len(badName) != 0 {
 			return errutil.UserError{Err: fmt.Sprintf(
 				"subject alternate name %s not allowed by this role", badName)}
 		}
 
-		badName = validateNames(data, emailAddresses)
+		badName = validateNames(b, data, emailAddresses)
 		if len(badName) != 0 {
 			return errutil.UserError{Err: fmt.Sprintf(
 				"email address %s not allowed by this role", badName)}
