@@ -33,6 +33,7 @@ BUG FIXES:
  * core: Fix incorrect representation of required properties in OpenAPI output
    [GH-6490]
  * identity: Fix updating groups removing existing members [GH-6527]
+ * identity: Properly invalidate group alias in performance secondary [GH-6564]
  * identity: Use NS context when loading entities and groups [GH-6563]
  * replication: Fix mount filter invalidation on performance standby nodes
  * replication: Fix license reloading on performance standby nodes
