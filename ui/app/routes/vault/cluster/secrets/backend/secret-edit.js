@@ -168,6 +168,8 @@ export default Route.extend(UnloadModelRoute, {
             id: JSON.stringify(versionId),
             isStub: true,
           });
+          //TODO 😭 because we want this to be update instead of create
+          versionModel.send('pushedData');
         } else {
           throw error;
         }

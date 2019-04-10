@@ -18,6 +18,12 @@ export default ApplicationSerializer.extend({
   },
   serialize(snapshot) {
     let secret = snapshot.belongsTo('secret');
+    // if both models are stubs, we need to write without CAS
+    if (secret.record.isStub && snapshot.record.isStub) {
+      return {
+        data: snapshot.attr('secretData'),
+      };
+    }
     let version = secret.record.isStub ? snapshot.attr('version') : secret.attr('currentVersion');
     version = version || 0;
     return {
