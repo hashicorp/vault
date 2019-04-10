@@ -2913,6 +2913,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	for _, entry := range b.Core.mounts.Entries {
 		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, "")
 		if err != nil {
+			b.Core.mountsLock.RUnlock()
 			return nil, err
 		}
 		if filtered {
