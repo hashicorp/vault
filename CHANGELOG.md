@@ -3,6 +3,9 @@
 CHANGES:
 
  * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
+ * core/acl:  New ordering defines which policy wins when there are multiple 
+   inexact matches and at least one path contains `+`. `+*` is now illegal in
+   policy paths.[GH-6532]
 
 IMPROVEMENTS: 
 
