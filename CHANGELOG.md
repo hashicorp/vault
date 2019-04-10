@@ -52,6 +52,7 @@ BUG FIXES:
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
  * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
  * ui: fix SSH OTP generation [GH-6540]
+ * ui: add polyfill to load UI in IE11 [GH-6567]
  
  
 ## 1.1.0 (March 18th, 2019)
