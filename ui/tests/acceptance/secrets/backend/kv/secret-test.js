@@ -10,7 +10,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import withFlash from 'vault/tests/helpers/with-flash';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
@@ -64,17 +63,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -86,14 +81,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
 
@@ -143,14 +135,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await showPage.deleteSecret();
