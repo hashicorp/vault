@@ -122,6 +122,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 				continue
 			}
+			ctx = namespace.ContextWithNamespace(ctx, ns)
 
 			// Ensure that there are no groups with duplicate names
 			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
