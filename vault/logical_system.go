@@ -2819,7 +2819,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 		return false
 	}
 
-	// If an earlier policy is giving us access to the mount path then we can do
+	// If a policy is giving us direct access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
 	if !strutil.StrListContains(capabilities, DenyCapability) {
@@ -2846,6 +2846,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
+
 			return true
 		}
 
@@ -2855,6 +2856,12 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
 		acl.prefixRules.WalkPrefix(path, walkFn)
+	}
+
+	if !aclCapabilitiesGiven {
+		if perms := acl.CheckAllowedFromNonExactPaths(path, true); perms != nil {
+			return true
+		}
 	}
 
 	return aclCapabilitiesGiven
