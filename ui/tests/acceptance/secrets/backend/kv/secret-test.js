@@ -330,7 +330,6 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
-      // list at the root for v2
       path "${backend}/+" {
         capabilities = ["list"]
       }
@@ -340,14 +339,15 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       path "${backend}/+/+" {
         capabilities = ["create", "update", "list"]
       }
-      // list at the root for v2
+      path "${backend}/metadata/+" {
+        capabilities = ["read"]
+      }
       path "${backend}/+" {
         capabilities = ["list"]
       }
     '`;
     const V1_WRITE_ONLY_POLICY = `'
-      // write and list for one level deep v1
-      path "${backend}/+" {
+     path "${backend}/+" {
         capabilities = ["create", "update", "list"]
       }
     '`;
@@ -384,8 +384,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
 
-    // TODO assert that it shows a warning about not being able to read CAS
-    // version and writing without read will create a new version
+    assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
     await editPage.editSecret('bar', 'baz');
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -406,7 +405,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
 
-    // TODO assert that it shows a warning about writing without read will create a new version
+    assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
     await editPage.editSecret('bar', 'baz');
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
@@ -425,7 +424,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
-    // TODO assert that it shows a warning about writing without read will overwrite the existing secret
+    assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
     await editPage.editSecret('bar', 'baz');
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');

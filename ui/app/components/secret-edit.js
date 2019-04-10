@@ -156,6 +156,16 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
+  showEmptyState: computed('model.{isStub,selectedVersion.isStub}', 'isV2', function() {
+    if (this.isV2 && this.model.selectedVersion.isStub) {
+      return true;
+    }
+    if (!this.isV2 && this.model.isStub) {
+      return true;
+    }
+    return false;
+  }),
+
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
   },
