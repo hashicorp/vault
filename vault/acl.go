@@ -368,7 +368,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
-	permissions = a.CheckAllowedFromSegmentWildcardPaths(path, false)
+	permissions = a.CheckAllowedFromNonExactPaths(path, false)
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
@@ -505,19 +505,19 @@ CHECK:
 }
 
 type wcPathDescr struct {
-	firstWC   int
-	wildcards int
-	isPrefix  bool
-	wcPath    string
-	perms     *ACLPermissions
+	firstWCOrGlob int
+	wildcards     int
+	isPrefix      bool
+	wcPath        string
+	perms         *ACLPermissions
 }
 
-// CheckAllowedFromSegmentWildcardPaths returns permissions corresponding to a
-// matching path with wildcard segments. If bareMount is true, the path should
+// CheckAllowedFromNonExactPaths returns permissions corresponding to a
+// matching path with wildcards/globs. If bareMount is true, the path should
 // correspond to a mount prefix, and what is returned is either a non-nil set
 // of permissions from some allowed path underneath the mount (for use in mount
 // access checks), or nil indicating no non-deny permissions were found.
-func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) *ACLPermissions {
+func (a *ACL) CheckAllowedFromNonExactPaths(path string, bareMount bool) *ACLPermissions {
 	wcPathDescrs := make([]wcPathDescr, 0, len(a.segmentWildcardPaths)+1)
 
 	less := func(i, j int) bool {
@@ -525,8 +525,9 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		// which tries to most closely match longest-prefix:
 		//
 		// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
+		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*,
+		//   foo/+/+ over foo/*)
 		// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
-		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*)
 		// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
 		// * Lexicographical ordering (preferring less, arbitrarily)
 		//
@@ -536,10 +537,18 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 
 		pdi, pdj := wcPathDescrs[i], wcPathDescrs[j]
 
-		// If the first + occurs earlier in pdi, pdi is lower priority
-		if pdi.firstWC < pdj.firstWC {
+		// If the first wildcard (+) or glob (*) occurs earlier in pdi,
+		// pdi is lower priority
+		if pdi.firstWCOrGlob < pdj.firstWCOrGlob {
 			return true
-		} else if pdi.firstWC > pdj.firstWC {
+		} else if pdi.firstWCOrGlob > pdj.firstWCOrGlob {
+			return false
+		}
+
+		// If pdi ends in * and pdj doesn't, pdi is lower priority
+		if pdi.isPrefix && !pdj.isPrefix {
+			return true
+		} else if !pdi.isPrefix && pdj.isPrefix {
 			return false
 		}
 
@@ -574,11 +583,10 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 				return raw.(*ACLPermissions)
 			}
 			wcPathDescrs = append(wcPathDescrs, wcPathDescr{
-				firstWC:   len(prefix),
-				wcPath:    prefix,
-				isPrefix:  true,
-				wildcards: 1,
-				perms:     raw.(*ACLPermissions),
+				firstWCOrGlob: len(prefix),
+				wcPath:        prefix,
+				isPrefix:      true,
+				perms:         raw.(*ACLPermissions),
 			})
 		}
 	}
@@ -594,12 +602,11 @@ SWCPATH:
 		if fullWCPath == "" {
 			continue
 		}
-		pd := wcPathDescr{firstWC: strings.Index(fullWCPath, "+")}
+		pd := wcPathDescr{firstWCOrGlob: strings.Index(fullWCPath, "+")}
 
 		currWCPath := fullWCPath
 		if currWCPath[len(currWCPath)-1] == '*' {
 			pd.isPrefix = true
-			pd.wildcards = 1
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
 		pd.wcPath = currWCPath

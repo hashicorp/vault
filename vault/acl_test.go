@@ -777,7 +777,7 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
-		hasperms := nil != acl.CheckAllowedFromSegmentWildcardPaths(pt.mountpath, true)
+		hasperms := nil != acl.CheckAllowedFromNonExactPaths(pt.mountpath, true)
 		if hasperms != pt.hasperms {
 			t.Fatalf("bad: case %d: %#v", i, pt)
 		}
@@ -869,7 +869,7 @@ path "test/+/wildcardglob/+/end*" {
 path "1/2/*" {
 	capabilities = ["read"]
 }
-path "1/2/+/4" {
+path "1/2/+/+" {
 	capabilities = ["update"]
 }
 `

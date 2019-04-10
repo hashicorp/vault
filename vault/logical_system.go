@@ -2859,7 +2859,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	}
 
 	if !aclCapabilitiesGiven {
-		if perms := acl.CheckAllowedFromSegmentWildcardPaths(path, true); perms != nil {
+		if perms := acl.CheckAllowedFromNonExactPaths(path, true); perms != nil {
 			return true
 		}
 	}
