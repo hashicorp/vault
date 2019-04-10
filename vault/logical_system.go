@@ -2939,6 +2939,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 	for _, entry := range b.Core.auth.Entries {
 		filtered, err := b.Core.checkReplicatedFiltering(ctx, entry, credentialRoutePrefix)
 		if err != nil {
+			b.Core.authLock.RUnlock()
 			return nil, err
 		}
 		if filtered {
