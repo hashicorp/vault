@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	radix "github.com/armon/go-radix"
+	"github.com/armon/go-radix"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -368,14 +368,6 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		}
 	}
 
-	// Find a prefix rule, default deny if no match
-	_, raw, ok = a.prefixRules.LongestPrefix(path)
-	if ok {
-		permissions = raw.(*ACLPermissions)
-		capabilities = permissions.CapabilitiesBitmap
-		goto CHECK
-	}
-
 	permissions = a.CheckAllowedFromSegmentWildcardPaths(path, false)
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap
@@ -513,11 +505,11 @@ CHECK:
 }
 
 type wcPathDescr struct {
-	firstWC          int
-	wildcardSegments int
-	isPrefix         bool
-	wcPath           string
-	perms            *ACLPermissions
+	firstWC   int
+	wildcards int
+	isPrefix  bool
+	wcPath    string
+	perms     *ACLPermissions
 }
 
 // CheckAllowedFromSegmentWildcardPaths returns permissions corresponding to a
@@ -526,11 +518,7 @@ type wcPathDescr struct {
 // of permissions from some allowed path underneath the mount (for use in mount
 // access checks), or nil indicating no non-deny permissions were found.
 func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) *ACLPermissions {
-	if len(a.segmentWildcardPaths) == 0 {
-		return nil
-	}
-
-	wcPathDescrs := make([]wcPathDescr, 0, len(a.segmentWildcardPaths))
+	wcPathDescrs := make([]wcPathDescr, 0, len(a.segmentWildcardPaths)+1)
 
 	less := func(i, j int) bool {
 		// In the case of multiple matches, we use this priority order,
@@ -556,16 +544,9 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		}
 
 		// If pdi has more wc segs, pdi is lower priority
-		if pdi.wildcardSegments > pdj.wildcardSegments {
+		if pdi.wildcards > pdj.wildcards {
 			return true
-		} else if pdi.wildcardSegments < pdj.wildcardSegments {
-			return false
-		}
-
-		// If pdi ends in * and pdj doesn't, pdi is lower priority
-		if pdi.isPrefix && !pdj.isPrefix {
-			return true
-		} else if !pdi.isPrefix && pdj.isPrefix {
+		} else if pdi.wildcards < pdj.wildcards {
 			return false
 		}
 
@@ -585,6 +566,27 @@ func (a *ACL) CheckAllowedFromSegmentWildcardPaths(path string, bareMount bool) 
 		return false
 	}
 
+	// Find a prefix rule if any.
+	{
+		prefix, raw, ok := a.prefixRules.LongestPrefix(path)
+		if ok {
+			if len(a.segmentWildcardPaths) == 0 {
+				return raw.(*ACLPermissions)
+			}
+			wcPathDescrs = append(wcPathDescrs, wcPathDescr{
+				firstWC:   len(prefix),
+				wcPath:    prefix,
+				isPrefix:  true,
+				wildcards: 1,
+				perms:     raw.(*ACLPermissions),
+			})
+		}
+	}
+
+	if len(a.segmentWildcardPaths) == 0 {
+		return nil
+	}
+
 	pathParts := strings.Split(path, "/")
 
 SWCPATH:
@@ -592,11 +594,12 @@ SWCPATH:
 		if fullWCPath == "" {
 			continue
 		}
-		pd := wcPathDescr{firstWC: -1}
+		pd := wcPathDescr{firstWC: strings.Index(fullWCPath, "+")}
 
 		currWCPath := fullWCPath
 		if currWCPath[len(currWCPath)-1] == '*' {
 			pd.isPrefix = true
+			pd.wildcards = 1
 			currWCPath = currWCPath[0 : len(currWCPath)-1]
 		}
 		pd.wcPath = currWCPath
@@ -616,10 +619,7 @@ SWCPATH:
 		for i, aclPart := range splitCurrWCPath {
 			switch {
 			case aclPart == "+":
-				pd.wildcardSegments++
-				if pd.firstWC == -1 {
-					pd.firstWC = i
-				}
+				pd.wildcards++
 				segments = append(segments, pathParts[i])
 
 			case aclPart == pathParts[i]:

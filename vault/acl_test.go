@@ -250,6 +250,12 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ReadOperation, "test/segment/wildcard/at/foo/", true, false},
 		{logical.ReadOperation, "test/segment/wildcard/at/end", true, false},
 		{logical.ReadOperation, "test/segment/wildcard/at/end/", true, false},
+
+		// Path segment wildcards vs glob
+		{logical.ReadOperation, "1/2/3/4", false, false},
+		{logical.ReadOperation, "1/2/3", true, false},
+		{logical.UpdateOperation, "1/2/3", false, false},
+		{logical.UpdateOperation, "1/2/3/4", true, false},
 	}
 
 	for _, tc := range tcases {
@@ -859,6 +865,12 @@ path "test/+/wildcard/+/*" {
 }
 path "test/+/wildcardglob/+/end*" {
 	capabilities = ["read"]
+}
+path "1/2/*" {
+	capabilities = ["read"]
+}
+path "1/2/+/4" {
+	capabilities = ["update"]
 }
 `
 
