@@ -2564,16 +2564,17 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 
 	// Add another mount
 	me := &MountEntry{
-		Table: mountTableType,
-		Path:  sanitizeMountPath("kv/foo/bar"),
-		Type:  "kv",
+		Table:   mountTableType,
+		Path:    sanitizeMountPath("kv-v1"),
+		Type:    "kv",
+		Options: map[string]string{"version": "1"},
 	}
 	if err := core.mount(ctx, me); err != nil {
 		t.Fatal(err)
 	}
 
-	// Create the policy
-	rules := `path "secret/data/foo/+/baz" { capabilities = ["read"] }`
+	// Create the policy, designed to fail
+	rules := `path "foo" { capabilities = ["read"] }`
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
 	req.Data["rules"] = rules
 	resp, err := b.HandleRequest(ctx, req)
@@ -2615,15 +2616,15 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	}
 
 	// Check the mount access func
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/secret/foo/bar/baz")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv-v1/baz")
 	req.ClientToken = te.ID
 	resp, err = b.HandleRequest(ctx, req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("expected 403, got err: %v", err)
 	}
 
-	// Modify policy to be a wildcard policy
-	rules = `path "kv/+/bar/yoo*" { capabilities = ["read"] }`
+	// Modify policy to pass
+	rules = `path "kv-v1/+" { capabilities = ["read"] }`
 	req = logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
 	req.Data["rules"] = rules
 	resp, err = b.HandleRequest(ctx, req)
@@ -2635,7 +2636,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	}
 
 	// Check the mount access func again
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv/foo/bar/baz")
+	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv-v1/baz")
 	req.ClientToken = te.ID
 	resp, err = b.HandleRequest(ctx, req)
 	if err != nil {

@@ -765,6 +765,11 @@ func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 			"foo/bar/bar/baz/",
 			true,
 		},
+		{
+			`path "foo/+" { capabilities = ["read"] }`,
+			"foo/",
+			true,
+		},
 	}
 
 	for i, pt := range poltests {
