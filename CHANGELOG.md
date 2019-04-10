@@ -35,9 +35,11 @@ BUG FIXES:
  * core: Fix unwrapping when using namespaced wrapping tokens [GH-6536]
  * core: Fix incorrect representation of required properties in OpenAPI output
    [GH-6490]
+ * core: Fix deadlock that could happen when using the UI [GH-6560]
  * identity: Fix updating groups removing existing members [GH-6527]
  * identity: Properly invalidate group alias in performance secondary [GH-6564]
  * identity: Use NS context when loading entities and groups [GH-6563]
+ * replication: Fix performance standby election failure [GH-6561]
  * replication: Fix mount filter invalidation on performance standby nodes
  * replication: Fix license reloading on performance standby nodes
  * replication: Fix handling of control groups on performance standby nodes
