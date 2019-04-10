@@ -256,6 +256,7 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.ReadOperation, "1/2/3", true, false},
 		{logical.UpdateOperation, "1/2/3", false, false},
 		{logical.UpdateOperation, "1/2/3/4", true, false},
+		{logical.CreateOperation, "1/2/3/4/5", true, false},
 	}
 
 	for _, tc := range tcases {
@@ -867,6 +868,9 @@ path "test/+/wildcardglob/+/end*" {
 	capabilities = ["read"]
 }
 path "1/2/*" {
+	capabilities = ["create"]
+}
+path "1/2/+" {
 	capabilities = ["read"]
 }
 path "1/2/+/+" {

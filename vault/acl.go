@@ -524,9 +524,10 @@ func (a *ACL) CheckAllowedFromNonExactPaths(path string, bareMount bool) *ACLPer
 		// In the case of multiple matches, we use this priority order,
 		// which tries to most closely match longest-prefix:
 		//
-		// * First wildcard position (prefer foo/bar/+/baz over foo/+/bar/baz)
+		// * First glob or wildcard position (prefer foo/a* over foo/+,
+		//   foo/bar/+/baz over foo/+/bar/baz)
 		// * Whether it's a prefix (prefer foo/+/bar over foo/+/ba*,
-		//   foo/+/+ over foo/*)
+		//   foo/+ over foo/*)
 		// * Number of wildcard segments (prefer foo/bar/+/baz over foo/+/+/baz)
 		// * Length check (prefer foo/+/bar/ba* over foo/+/bar/b*)
 		// * Lexicographical ordering (preferring less, arbitrarily)
