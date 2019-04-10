@@ -122,10 +122,10 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				}
 				continue
 			}
-			ctx = namespace.ContextWithNamespace(ctx, ns)
+			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 
 			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
 			if err != nil {
 				return err
 			}
@@ -289,10 +289,10 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					}
 					continue
 				}
-				ctx = namespace.ContextWithNamespace(ctx, ns)
+				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 
 				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(ctx, entity.Name, false)
+				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
 				if err != nil {
 					return nil
 				}
@@ -304,7 +304,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				}
 
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(ctx, entity, nil, false)
+				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
