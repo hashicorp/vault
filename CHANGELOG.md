@@ -15,6 +15,9 @@ SECURITY:
    nodes is sufficient to cause the performance standby nodes to clear their
    cache. A CVE is in the process of being issued; the number is
    CVE-2019-11075.
+ * Roles in the JWT Auth backend using the OIDC login flow (i.e. role_type of
+   “oidc”) were not enforcing bound_cidrs restrictions, if any were configured
+   for the role. This issue did not affect roles of type “jwt”.
 
 CHANGES:
 
