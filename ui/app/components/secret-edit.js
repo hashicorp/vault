@@ -156,7 +156,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
 
-  showEmptyState: computed('model.{isStub,selectedVersion.isStub}', 'isV2', function() {
+  isWriteWithoutRead: computed('model.{isStub,selectedVersion.isStub}', 'isV2', function() {
     if (this.isV2 && this.model.selectedVersion.isStub) {
       return true;
     }

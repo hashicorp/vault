@@ -378,15 +378,14 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await authPage.login(userToken);
 
     await showPage.visit({ backend, id: 'secret' });
-    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-
     assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
-    await editPage.editSecret('bar', 'baz');
 
+    await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     await logout.visit();
   });
@@ -399,15 +398,14 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await authPage.login(userToken);
 
     await showPage.visit({ backend, id: 'secret' });
-    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
-
     assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
-    await editPage.editSecret('bar', 'baz');
 
+    await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     await logout.visit();
   });
@@ -420,13 +418,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await authPage.login(userToken);
 
     await showPage.visit({ backend, id: 'secret' });
-    // TODO assert that it shows the empty state and an edit button
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
     await editPage.visitEdit({ backend, id: 'secret' });
     assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
-    await editPage.editSecret('bar', 'baz');
 
+    await editPage.editSecret('bar', 'baz');
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     await logout.visit();
   });
