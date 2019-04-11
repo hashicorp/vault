@@ -22,7 +22,7 @@ This endpoint creates or updates a group alias.
 - `id` `(string: <optional>)` - ID of the group alias. If set, updates the
   corresponding existing group alias.
 
-- `mount_accessor` `(string: "")` – Mount accessor to which this alias belongs
+- `mount_accessor` `(string: "")` – Mount accessor which this alias belongs
   to.
 
 - `canonical_id` `(string: "")` - ID of the group to which this is an alias.
@@ -73,7 +73,7 @@ This endpoint is used to update an existing group alias.
 
 - `name` `(string: entity-<UUID>)` – Name of the group alias.
 
-- `mount_accessor` `(string: "")` – Mount accessor to which this alias belongs
+- `mount_accessor` `(string: "")` – Mount accessor which this alias belongs
   to.
 
 - `canonical_id` `(string: "")` - ID of the group to which this is an alias.
