@@ -116,7 +116,7 @@ export default Route.extend(UnloadModelRoute, {
           id: secret,
           // so we know it's a stub model and won't be saving it
           // because we don't have access to that endpoint
-          isStub: true,
+          failedServerRead: true,
         });
       } else {
         throw err;
@@ -141,7 +141,7 @@ export default Route.extend(UnloadModelRoute, {
       // if we have the metadata, a list of versions are part of the payload
       let version = secretModel.versions && secretModel.versions.findBy('version', targetVersion);
       // 404 if there's no version
-      if (!version && secretModel.isStub !== true) {
+      if (!version && secretModel.failedServerRead !== true) {
         let error = new DS.AdapterError();
         set(error, 'httpStatus', 404);
         throw error;
@@ -150,7 +150,7 @@ export default Route.extend(UnloadModelRoute, {
 
       let versionModel;
       try {
-        if (secretModel.isStub) {
+        if (secretModel.failedServerRead) {
           // we couldn't read metadata, so we want to directly fetch the version
           versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
             reload: true,
@@ -166,7 +166,7 @@ export default Route.extend(UnloadModelRoute, {
           versionModel = this.store.createRecord('secret-v2-version');
           versionModel.setProperties({
             id: JSON.stringify(versionId),
-            isStub: true,
+            failedServerRead: true,
           });
           //TODO 😭 because we want this to be update instead of create
           versionModel.send('pushedData');
