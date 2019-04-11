@@ -5,7 +5,8 @@ CHANGES:
  * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
  * core/acl:  New ordering defines which policy wins when there are multiple 
    inexact matches and at least one path contains `+`. `+*` is now illegal in
-   policy paths.[GH-6532]
+   policy paths. The previous behavior simply selected any matching
+   segment-wildcard path that matched. [GH-6532]
 
 IMPROVEMENTS: 
 
@@ -38,7 +39,8 @@ BUG FIXES:
  * core: Fix deadlock that could happen when using the UI [GH-6560]
  * identity: Fix updating groups removing existing members [GH-6527]
  * identity: Properly invalidate group alias in performance secondary [GH-6564]
- * identity: Use NS context when loading entities and groups [GH-6563]
+ * identity: Use namespace context when loading entities and groups to ensure
+   merging of duplicate entries works properly [GH-6563]
  * replication: Fix performance standby election failure [GH-6561]
  * replication: Fix mount filter invalidation on performance standby nodes
  * replication: Fix license reloading on performance standby nodes
@@ -55,7 +57,8 @@ BUG FIXES:
  * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
  * ui: fix SSH OTP generation [GH-6540]
  * ui: add polyfill to load UI in IE11 [GH-6567]
- 
+ * ui: Fix issue where some elements would fail to work properly if using ACLs
+   with segment-wildcard paths (`/+/` segments) [GH-6525]
  
 ## 1.1.0 (March 18th, 2019)
 
