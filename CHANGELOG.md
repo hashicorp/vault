@@ -1,5 +1,21 @@
 ## 1.1.1 (April 11th, 2019)
 
+SECURITY:
+
+ * Given: (a) performance replication is enabled; (b) performance standbys are
+   in use on the performance replication secondary cluster; and (c) mount
+   filters are in use, if a mount that was previously available to a secondary
+   is updated to be filtered out, although the data would be removed from the
+   secondary cluster, the in-memory cache of the data would not be purged on
+   the performance standby nodes. As a result, the previously-available data
+   could still be read from memory if it was ever read from disk, and if this
+   included mount configuration data this could result in token or lease
+   issuance. The issue is fixed in this release; in prior releases either an
+   active node changeover (such as a step-down) or a restart of the standby
+   nodes is sufficient to cause the performance standby nodes to clear their
+   cache. A CVE is in the process of being issued; the number is
+   CVE-2019-11075.
+
 CHANGES:
 
  * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
@@ -7,6 +23,9 @@ CHANGES:
    inexact matches and at least one path contains `+`. `+*` is now illegal in
    policy paths. The previous behavior simply selected any matching
    segment-wildcard path that matched. [GH-6532]
+ * replication: Due to technical limitations, mounting and unmounting was not
+   previously possible from a performance secondary. These have been resolved,
+   and these operations may now be run from a performance secondary.
 
 IMPROVEMENTS: 
 
