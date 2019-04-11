@@ -1,4 +1,4 @@
-## 1.1.1 (unreleased)
+## 1.1.1 (April 11th, 2019)
 
 CHANGES:
 
