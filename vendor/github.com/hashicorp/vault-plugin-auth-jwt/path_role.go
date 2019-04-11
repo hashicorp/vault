@@ -245,6 +245,7 @@ func (b *jwtAuthBackend) pathRoleRead(ctx context.Context, req *logical.Request,
 			"user_claim":            role.UserClaim,
 			"groups_claim":          role.GroupsClaim,
 			"allowed_redirect_uris": role.AllowedRedirectURIs,
+			"oidc_scopes":           role.OIDCScopes,
 		},
 	}
 

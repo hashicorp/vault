@@ -19,11 +19,11 @@
         </code>
       </small>
     {{else if (and (eq mode 'performance') (not version.hasPerfReplication))}}
-      Learn More
+      Learn more
     {{else if auth.currentToken}}
       Enable {{if (eq mode 'performance') 'Performance' 'DR'}}
     {{else}}
-      Not Enabled
+      Not enabled
     {{/if}}
   </div>
   <div class="level-right">

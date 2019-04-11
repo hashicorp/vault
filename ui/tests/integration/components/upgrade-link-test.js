@@ -21,7 +21,7 @@ module('Integration | Component | upgrade link', function(hooks) {
     );
     assert.equal(
       find('#modal-wormhole .upgrade-overlay-title').textContent.trim(),
-      'Try Vault Enterprise Free for 30 Days',
+      'Try Vault Enterprise free for 30 days',
       'contains overlay content'
     );
     assert.equal(

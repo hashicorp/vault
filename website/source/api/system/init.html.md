@@ -15,9 +15,9 @@ The `/sys/init` endpoint is used to initialize a new Vault.
 
 This endpoint returns the initialization status of Vault.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/init`                  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/init`                  |
 
 ### Sample Request
 
@@ -40,9 +40,9 @@ This endpoint initializes a new Vault. The Vault must not have been previously
 initialized. The recovery options, as well as the stored shares option, are only
 available when using Vault HSM.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/init`                  | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `PUT`    | `/sys/init`                  |
 
 ### Parameters
 

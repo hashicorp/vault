@@ -207,6 +207,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
 				return
 			}
+
+			if group.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete group alias from MemDB", "error", err)
+					return
+				}
+			}
 		}
 
 		// Get the storage bucket entry

@@ -86,7 +86,9 @@ export default Component.extend({
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
     yield this.onMountSuccess(type, path);
     return;
-  }).drop(),
+  })
+    .drop()
+    .withTestWaiter(),
 
   actions: {
     onTypeChange(path, value) {

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/version"
 )
@@ -343,6 +345,11 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description:   "a header value",
 					AllowedValues: []interface{}{"a", "b", "c"},
 				},
+				"format": {
+					Type:        TypeString,
+					Description: "a query param",
+					Query:       true,
+				},
 			},
 			HelpSynopsis:    "Synopsis",
 			HelpDescription: "Description",
@@ -474,15 +481,18 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 				Responses: map[int][]Response{
 					100: {{
 						Description: "OK",
-						Example:     &logical.Response{},
+						Example: &logical.Response{
+							Data: map[string]interface{}{
+								"foo": 42,
+							},
+						},
 					}},
 					200: {{
 						Description: "Good",
-						Example:     &logical.Response{},
+						Example:     (*logical.Response)(nil),
 					}},
 					599: {{
 						Description: "Bad",
-						Example:     &logical.Response{},
 					}},
 				},
 			},
@@ -492,10 +502,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	docOrig := NewOASDocument()
 	documentPath(p, nil, logical.TypeLogical, docOrig)
 
-	docJSON, err := json.Marshal(docOrig)
-	if err != nil {
-		t.Fatal(err)
-	}
+	docJSON := mustJSONMarshal(t, docOrig)
 
 	var intermediate map[string]interface{}
 	if err := jsonutil.DecodeJSON(docJSON, &intermediate); err != nil {
@@ -507,7 +514,44 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := deep.Equal(docOrig, docNew); diff != nil {
+	docNewJSON := mustJSONMarshal(t, docNew)
+
+	if diff := deep.Equal(docJSON, docNewJSON); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestOpenAPI_CleanResponse(t *testing.T) {
+	// Verify that an all-null input results in empty JSON
+	orig := &logical.Response{}
+
+	cr := cleanResponse(orig)
+
+	newJSON := mustJSONMarshal(t, cr)
+
+	if !bytes.Equal(newJSON, []byte("{}")) {
+		t.Fatalf("expected {}, got: %q", newJSON)
+	}
+
+	// Verify that all non-null inputs results in JSON that matches the marshalling of
+	// logical.Response. This will fail if logical.Response changes without a corresponding
+	// change to cleanResponse()
+	orig = &logical.Response{
+		Secret:   new(logical.Secret),
+		Auth:     new(logical.Auth),
+		Data:     map[string]interface{}{"foo": 42},
+		Redirect: "foo",
+		Warnings: []string{"foo"},
+		WrapInfo: &wrapping.ResponseWrapInfo{Token: "foo"},
+		Headers:  map[string][]string{"foo": {"bar"}},
+	}
+	origJSON := mustJSONMarshal(t, orig)
+
+	cr = cleanResponse(orig)
+
+	cleanJSON := mustJSONMarshal(t, cr)
+
+	if diff := deep.Equal(origJSON, cleanJSON); diff != nil {
 		t.Fatal(diff)
 	}
 }
@@ -516,7 +560,9 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument()
-	documentPath(path, sp, logical.TypeLogical, doc)
+	if err := documentPath(path, sp, logical.TypeLogical, doc); err != nil {
+		t.Fatal(err)
+	}
 	doc.CreateOperationIDs("")
 
 	docJSON, err := json.MarshalIndent(doc, "", "  ")
@@ -562,4 +608,13 @@ func expected(name string) string {
 	content := strings.Replace(string(data), "<vault_version>", version.GetVersion().Version, 1)
 
 	return content
+}
+
+func mustJSONMarshal(t *testing.T, data interface{}) []byte {
+	j, err := json.MarshalIndent(data, "", "  ")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	return j
 }

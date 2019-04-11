@@ -16,7 +16,9 @@ import (
 
 type entCore struct{}
 
-type LicensingConfig struct{}
+type LicensingConfig struct {
+	AdditionalPublicKeys []interface{}
+}
 
 func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical

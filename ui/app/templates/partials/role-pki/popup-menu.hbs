@@ -13,14 +13,14 @@
         {{#if item.canGenerate}}
           <li class="action">
             {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="issue") data-test-role-pki-link="generate-certificate"}}
-              Generate Certificate
+              Generate certificate
             {{/link-to}}
           </li>
         {{/if}}
         {{#if item.canSign}}
           <li class="action">
             {{#link-to "vault.cluster.secrets.backend.credentials" item.id (query-params action="sign") data-test-role-pki-link="sign-certificate"}}
-              Sign Certificate
+              Sign certificate
             {{/link-to}}
           </li>
         {{/if}}

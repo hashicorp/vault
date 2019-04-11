@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
+
+	"github.com/armon/go-metrics"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -210,7 +213,20 @@ func (s *Seal) KeyID() string {
 }
 
 // Encrypt is used to encrypt using Vaults Transit engine
-func (s *Seal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (s *Seal) Encrypt(_ context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "transit", "encrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "transit", "encrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "transit", "encrypt"}, 1)
+
 	encPlaintext := base64.StdEncoding.EncodeToString(plaintext)
 	path := path.Join(s.mountPath, "encrypt", s.keyName)
 	secret, err := s.client.Logical().Write(path, map[string]interface{}{
@@ -238,7 +254,20 @@ func (s *Seal) Encrypt(_ context.Context, plaintext []byte) (*physical.Encrypted
 }
 
 // Decrypt is used to decrypt the ciphertext
-func (s *Seal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (s *Seal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) (pt []byte, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "transit", "decrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "transit", "decrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "transit", "decrypt"}, 1)
+
 	path := path.Join(s.mountPath, "decrypt", s.keyName)
 	secret, err := s.client.Logical().Write(path, map[string]interface{}{
 		"ciphertext": string(in.Ciphertext),

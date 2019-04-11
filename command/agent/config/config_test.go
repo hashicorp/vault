@@ -22,7 +22,6 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
-				WrapTTL:   300 * time.Second,
 				MountPath: "auth/aws",
 				Config: map[string]interface{}{
 					"role": "foobar",
@@ -110,7 +109,6 @@ func TestLoadConfigFile(t *testing.T) {
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
-				WrapTTL:   300 * time.Second,
 				MountPath: "auth/aws",
 				Config: map[string]interface{}{
 					"role": "foobar",
@@ -148,6 +146,41 @@ func TestLoadConfigFile(t *testing.T) {
 	config, err = LoadConfig("./test-fixtures/config-embedded-type.hcl", logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Method_Wrapping(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	config, err := LoadConfig("./test-fixtures/config-method-wrapping.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				WrapTTL:   5 * time.Minute,
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				&Sink{
+					Type: "file",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		PidFile: "./pidfile",
 	}
 
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -197,5 +230,70 @@ func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 	_, err := LoadConfig("./test-fixtures/bad-config-cache-no-listeners.hcl", logger)
 	if err == nil {
 		t.Fatal("LoadConfig should return an error when cache section present and no listeners present")
+	}
+}
+
+func TestLoadConfigFile_Bad_AutoAuth_Wrapped_Multiple_Sinks(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := LoadConfig("./test-fixtures/bad-config-auto_auth-wrapped-multiple-sinks", logger)
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when auth_auth.method.wrap_ttl nonzero and multiple sinks defined")
+	}
+}
+
+func TestLoadConfigFile_Bad_AutoAuth_Both_Wrapping_Types(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := LoadConfig("./test-fixtures/bad-config-method-wrapping-and-sink-wrapping.hcl", logger)
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when auth_auth.method.wrap_ttl nonzero and sinks.wrap_ttl nonzero")
+	}
+}
+
+func TestLoadConfigFile_Bad_AgentCache_AutoAuth_Method_wrapping(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-auto_auth-method-wrapping.hcl", logger)
+	if err == nil {
+		t.Fatal("LoadConfig should return an error when auth_auth.method.wrap_ttl nonzero and cache.use_auto_auth_token=true")
+	}
+}
+
+func TestLoadConfigFile_AgentCache_AutoAuth_NoSink(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Debug)
+
+	config, err := LoadConfig("./test-fixtures/config-cache-auto_auth-no-sink.hcl", logger)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{
+			UseAutoAuthToken: true,
+		},
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":     "127.0.0.1:8300",
+					"tls_disable": true,
+				},
+			},
+		},
+		PidFile: "./pidfile",
+	}
+
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

@@ -929,10 +929,10 @@
 			"revisionTime": "2018-10-01T07:22:39Z"
 		},
 		{
-			"checksumSHA1": "TI+QiWWuz4SQKW/MyRRYhjzdq2A=",
+			"checksumSHA1": "at1y9um6fBwntQTOsP5eCFDqNfA=",
 			"path": "github.com/go-test/deep",
-			"revision": "57af0be209c537ba1d9c2a4b285ab7aea0897e51",
-			"revisionTime": "2018-05-09T20:02:13Z"
+			"revision": "042da051cf3189d80f667339b822c7effac29cd6",
+			"revisionTime": "2018-11-18T22:09:53Z"
 		},
 		{
 			"checksumSHA1": "R6itMAIo8MvEkf0FYAeXtaBhcfc=",
@@ -1379,46 +1379,46 @@
 			"revisionTime": "2019-03-20T21:13:57Z"
 		},
 		{
-			"checksumSHA1": "a1DSDFYBTXvAst7+Srn/+OgqDnU=",
+			"checksumSHA1": "iHbSrSvf+fcXh6oqN1zP1Ybj6s0=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin",
-			"revision": "e8308b5e41c9ea3e7dad0075ab1bfb1d779f29be",
-			"revisionTime": "2019-03-20T21:44:13Z"
+			"revision": "441a7965e9fe531b6724c2c3b2dc5418f681599d",
+			"revisionTime": "2019-04-02T00:00:36Z"
 		},
 		{
 			"checksumSHA1": "SF3ju0Tm+0lZZAeinRSCXoFy2oE=",
 			"path": "github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache",
-			"revision": "e8308b5e41c9ea3e7dad0075ab1bfb1d779f29be",
-			"revisionTime": "2019-03-20T21:44:13Z"
+			"revision": "441a7965e9fe531b6724c2c3b2dc5418f681599d",
+			"revisionTime": "2019-04-02T00:00:36Z"
 		},
 		{
-			"checksumSHA1": "6Q2aZXkqfidN3ItF8x4ogjXZ6T8=",
+			"checksumSHA1": "iSPnkjB0aTOzQBFo+im0Gn+5oiQ=",
 			"path": "github.com/hashicorp/vault-plugin-auth-jwt",
-			"revision": "c6ec63d2528c96ac0632be8e6345eeed80e7509b",
-			"revisionTime": "2019-03-20T20:53:10Z"
+			"revision": "5baec3419da7a7d656e7e317788fdea9bedb4ebf",
+			"revisionTime": "2019-04-09T19:30:14Z"
 		},
 		{
-			"checksumSHA1": "NrmhGV/cWJihaeCGXnZRa+DORjg=",
+			"checksumSHA1": "2GD7htZi0dpYxt7kxljXq2qK61s=",
 			"path": "github.com/hashicorp/vault-plugin-auth-kubernetes",
-			"revision": "426b5188498e0daecf301fb3e9080766f9d55aea",
-			"revisionTime": "2019-03-20T21:02:28Z"
+			"revision": "79931ee7aad5fa677125dffb7e5840122977e9cf",
+			"revisionTime": "2019-03-28T16:39:20Z"
 		},
 		{
-			"checksumSHA1": "PmhyvCKVlEMEP6JO31ozW+CBIiE=",
+			"checksumSHA1": "kFYpIlNMSz3LVpZ3BmYPo1hxMpA=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin",
-			"revision": "127b63e898e6daa85026659e3a0535b2e45cf75a",
-			"revisionTime": "2019-03-20T21:17:35Z"
+			"revision": "ed2c3d4c3d9530fc28ba1b437b29d2282850a5b3",
+			"revisionTime": "2019-03-27T18:23:27Z"
 		},
 		{
 			"checksumSHA1": "GOxdFElG31lXWgKFG9aqpDcG47M=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/client",
-			"revision": "127b63e898e6daa85026659e3a0535b2e45cf75a",
-			"revisionTime": "2019-03-20T21:17:35Z"
+			"revision": "ed2c3d4c3d9530fc28ba1b437b29d2282850a5b3",
+			"revisionTime": "2019-03-27T18:23:27Z"
 		},
 		{
 			"checksumSHA1": "RaH2xTkjaToCk+RoPhap7I66ibo=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-ad/plugin/util",
-			"revision": "127b63e898e6daa85026659e3a0535b2e45cf75a",
-			"revisionTime": "2019-03-20T21:17:35Z"
+			"revision": "ed2c3d4c3d9530fc28ba1b437b29d2282850a5b3",
+			"revisionTime": "2019-03-27T18:23:27Z"
 		},
 		{
 			"checksumSHA1": "+FpRiSHCp9eaGQNVAn74MMcLFB4=",
@@ -1439,22 +1439,22 @@
 			"revisionTime": "2019-03-20T21:19:22Z"
 		},
 		{
-			"checksumSHA1": "QRHQkEIrTKzFEO3CNwo0jYNizxE=",
+			"checksumSHA1": "aEtN3GKjvzsoTNBxW4YTcnEkxx8=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin",
-			"revision": "71903323ecb49843dd1118c3bf130fad306964e7",
-			"revisionTime": "2019-03-20T21:14:52Z"
+			"revision": "960ba981b05e2b144c9fdbcf826a9e7ab0a2397f",
+			"revisionTime": "2019-04-09T20:40:55Z"
 		},
 		{
 			"checksumSHA1": "itK0aDL54CoWfKfpkCAp/7MdTgk=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil",
-			"revision": "71903323ecb49843dd1118c3bf130fad306964e7",
-			"revisionTime": "2019-03-20T21:14:52Z"
+			"revision": "960ba981b05e2b144c9fdbcf826a9e7ab0a2397f",
+			"revisionTime": "2019-04-09T20:40:55Z"
 		},
 		{
-			"checksumSHA1": "81kYL49zTBoj1NYczxB2Xbr2d6Y=",
+			"checksumSHA1": "wrGM6GARtTJyHWfYu+y2bd+mb0M=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util",
-			"revision": "71903323ecb49843dd1118c3bf130fad306964e7",
-			"revisionTime": "2019-03-20T21:14:52Z"
+			"revision": "960ba981b05e2b144c9fdbcf826a9e7ab0a2397f",
+			"revisionTime": "2019-04-09T20:40:55Z"
 		},
 		{
 			"checksumSHA1": "Kmkt2VgWs0WFq+8E1lnXhQow3w0=",
@@ -1463,10 +1463,10 @@
 			"revisionTime": "2019-03-20T21:33:25Z"
 		},
 		{
-			"checksumSHA1": "1j26RucsFw9nM2citz0eElSUk50=",
+			"checksumSHA1": "489Mmb5wg9htQYN9+IdfJZ6i378=",
 			"path": "github.com/hashicorp/vault-plugin-secrets-kv",
-			"revision": "3ccc8684cf25a9169d033336261f252ee0686fd3",
-			"revisionTime": "2019-03-20T21:16:21Z"
+			"revision": "4807e6564154e2b4aba2cbc8e2707e68f384c5ab",
+			"revisionTime": "2019-04-04T21:26:40Z"
 		},
 		{
 			"checksumSHA1": "ldkAQ1CpiAaQ9sti0qIch+UyRsI=",
@@ -3263,28 +3263,28 @@
 			"revisionTime": "2018-08-22T07:09:55Z"
 		},
 		{
-			"checksumSHA1": "Wy85jVEPvSSgYWCr/VyfJ5ES3r8=",
+			"checksumSHA1": "klOgUG8O4wvk2/6m3VrublB6gN8=",
 			"path": "gopkg.in/square/go-jose.v2",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "Ho5sr2GbiR8S35IRni7vC54d5Js=",
 			"path": "gopkg.in/square/go-jose.v2/cipher",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "JFun0lWY9eqd80Js2iWsehu1gc4=",
 			"path": "gopkg.in/square/go-jose.v2/json",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
-			"checksumSHA1": "gMJFFBv2lKqUlg2Kwqd5xnb2qfc=",
+			"checksumSHA1": "ArWEYi3WR6KVH3dZcElUJTi+pdA=",
 			"path": "gopkg.in/square/go-jose.v2/jwt",
-			"revision": "ef984e69dd356202fd4e4910d4d9c24468bdf0b8",
-			"revisionTime": "2018-09-20T18:25:19Z"
+			"revision": "628223f44a71f715d2881ea69afc795a1e9c01be",
+			"revisionTime": "2019-02-26T00:52:03Z"
 		},
 		{
 			"checksumSHA1": "ZSWoOPUNRr5+3dhkLK3C4cZAQPk=",

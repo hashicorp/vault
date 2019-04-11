@@ -908,8 +908,6 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 // RekeyRetrieveBackup is used to retrieve any backed-up PGP-encrypted unseal
 // keys
 func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBackup, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -945,8 +943,6 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 
 // RekeyDeleteBackup is used to delete any backed-up PGP-encrypted unseal keys
 func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTTPCodedError {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}

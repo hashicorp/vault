@@ -15,6 +15,7 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -429,7 +430,7 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
-// called. This function blocks so should be called in a go routine.
+// called.
 func (cl *ClusterListener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)
@@ -441,42 +442,42 @@ func (cl *ClusterListener) Run(ctx context.Context) error {
 	// The server supports all of the possible protos
 	tlsConfig.NextProtos = []string{"h2", requestForwardingALPN, perfStandbyALPN, PerformanceReplicationALPN, DRReplicationALPN}
 
-	for _, addr := range cl.clusterListenerAddrs {
+	for i, laddr := range cl.clusterListenerAddrs {
+		// closeCh is used to shutdown the spawned goroutines once this
+		// function returns
+		closeCh := make(chan struct{})
+
+		if cl.logger.IsInfo() {
+			cl.logger.Info("starting listener", "listener_address", laddr)
+		}
+
+		// Create a TCP listener. We do this separately and specifically
+		// with TCP so that we can set deadlines.
+		tcpLn, err := net.ListenTCP("tcp", laddr)
+		if err != nil {
+			cl.logger.Error("error starting listener", "error", err)
+			continue
+		}
+		if laddr.String() != tcpLn.Addr().String() {
+			// If we listened on port 0, record the port the OS gave us.
+			cl.clusterListenerAddrs[i] = tcpLn.Addr().(*net.TCPAddr)
+		}
+
+		// Wrap the listener with TLS
+		tlsLn := tls.NewListener(tcpLn, tlsConfig)
+
+		if cl.logger.IsInfo() {
+			cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
+		}
+
 		cl.shutdownWg.Add(1)
-
-		// Force a local resolution to avoid data races
-		laddr := addr
-
 		// Start our listening loop
-		go func() {
-			defer cl.shutdownWg.Done()
-
-			// closeCh is used to shutdown the spawned goroutines once this
-			// function returns
-			closeCh := make(chan struct{})
+		go func(closeCh chan struct{}, tlsLn net.Listener) {
 			defer func() {
+				cl.shutdownWg.Done()
+				tlsLn.Close()
 				close(closeCh)
 			}()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("starting listener", "listener_address", laddr)
-			}
-
-			// Create a TCP listener. We do this separately and specifically
-			// with TCP so that we can set deadlines.
-			tcpLn, err := net.ListenTCP("tcp", laddr)
-			if err != nil {
-				cl.logger.Error("error starting listener", "error", err)
-				return
-			}
-
-			// Wrap the listener with TLS
-			tlsLn := tls.NewListener(tcpLn, tlsConfig)
-			defer tlsLn.Close()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
-			}
 
 			for {
 				if atomic.LoadUint32(cl.shutdown) > 0 {
@@ -553,7 +554,7 @@ func (cl *ClusterListener) Run(ctx context.Context) error {
 					continue
 				}
 			}
-		}()
+		}(closeCh, tlsLn)
 	}
 
 	return nil
@@ -610,7 +611,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		logger:               c.logger.Named("cluster-listener"),
 	}
 
-	return c.clusterListener.Run(ctx)
+	err := c.clusterListener.Run(ctx)
+	if err != nil {
+		return err
+	}
+	if strings.HasSuffix(c.clusterAddr, ":0") {
+		// If we listened on port 0, record the port the OS gave us.
+		c.clusterAddr = fmt.Sprintf("https://%s", c.clusterListener.clusterListenerAddrs[0])
+	}
+	return nil
 }
 
 // stopClusterListener stops any existing listeners during seal. It is

@@ -20,8 +20,8 @@ secrets engine](/api/secret/databases/index.html#configure-connection), this plu
 has a number of parameters to further configure a connection.
 
 | Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the HANA DSN.  This field

@@ -1463,7 +1463,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses
 		certTemplate.IPAddresses = data.params.IPAddresses
-		certTemplate.URIs = data.csr.URIs
+		certTemplate.URIs = data.params.URIs
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {

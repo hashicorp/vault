@@ -59,8 +59,6 @@ const (
 // by the router after policy checks; the token namespace would be the right
 // place to access them via Sentinel
 type Request struct {
-	entReq
-
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id" sentinel:""`
 
@@ -165,6 +163,10 @@ type Request struct {
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
+
+	// ControlGroup holds the authorizations that have happened on this
+	// request
+	ControlGroup *ControlGroup `json:"control_group" structs:"control_group" mapstructure:"control_group" sentinel:""`
 
 	// ClientTokenSource tells us where the client token was sourced from, so
 	// we can delete it before sending off to plugins

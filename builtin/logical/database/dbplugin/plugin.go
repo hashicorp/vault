@@ -26,7 +26,7 @@ type Database interface {
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
 
-	// DEPRECATED, will be removed in 0.13
+	// DEPRECATED, will be removed in a future plugin version bump.
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 

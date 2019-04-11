@@ -50,6 +50,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     formAttributes: ['role', 'jwt'],
   },
   {
+    type: 'radius',
+    typeDisplay: 'RADIUS',
+    description: 'Authenticate with your RADIUS username and password.',
+    tokenPath: 'client_token',
+    displayNamePath: 'metadata.username',
+    formAttributes: ['username', 'password'],
+  },
+  {
     type: 'github',
     typeDisplay: 'GitHub',
     description: 'GitHub authentication.',

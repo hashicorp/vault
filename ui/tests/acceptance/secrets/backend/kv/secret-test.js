@@ -10,7 +10,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import withFlash from 'vault/tests/helpers/with-flash';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
@@ -64,17 +63,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -86,14 +81,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
 
@@ -143,14 +135,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await showPage.deleteSecret();
@@ -316,5 +305,23 @@ module('Acceptance | secrets/secret/create', function(hooks) {
       'vault.cluster.secrets.backend.show',
       `${path}: show page renders correctly`
     );
+  });
+
+  test('filter clears on nav', async function(assert) {
+    await consoleComponent.runCommands([
+      'vault write sys/mounts/test type=kv',
+      'refresh',
+      'vault write test/filter/foo keys=a keys=b',
+      'vault write test/filter/foo1 keys=a keys=b',
+      'vault write test/filter/foo2 keys=a keys=b',
+    ]);
+    await listPage.visit({ backend: 'test', id: 'filter' });
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    await listPage.filterInput('filter/foo1');
+    assert.equal(listPage.secrets.length, 1, 'renders only one secret');
+    await listPage.secrets[0].click();
+    await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
+    assert.equal(listPage.secrets.length, 3, 'renders three secrets');
+    assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
   });
 });

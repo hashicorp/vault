@@ -62,7 +62,9 @@ export default Component.extend({
     }
     this.get('flashMessages').success(message);
     yield this.get('onSave')({ saveType: 'save', model });
-  }).drop(),
+  })
+    .drop()
+    .withTestWaiter(),
 
   willDestroy() {
     let model = this.get('model');

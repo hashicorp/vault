@@ -25,9 +25,9 @@ accordingly.
 This path configures backend level settings that are applied to every key in the
 key-value store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/config`             | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/config`             |
 
 ### Parameters
 
@@ -63,9 +63,9 @@ $ curl \
 This path retrieves the current configuration for the secrets backend at the
 given path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/secret/config`             | `200 application/json`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/secret/config`             |
 
 
 ### Sample Request
@@ -92,9 +92,9 @@ $ curl \
 
 This endpoint retrieves the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/data/:path`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/data/:path`         |
 
 ### Parameters
 
@@ -136,9 +136,9 @@ the value does not yet exist, the calling token must have an ACL policy granting
 the `create` capability. If the value already exists, the calling token must
 have an ACL policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/data/:path`         | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/data/:path`         |
 
 ### Parameters
 
@@ -196,9 +196,9 @@ specified location. This marks the version as deleted and will stop it from
 being returned from reads, but the underlying data will not be removed. A
 delete can be undone using the `undelete` path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/secret/data/:path`         | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/secret/data/:path`         |
 
 ### Parameters
 
@@ -221,9 +221,9 @@ marks the versions as deleted and will stop them from being returned from reads,
 but the underlying data will not be removed. A delete can be undone using the
 `undelete` path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/delete/:path`       | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/delete/:path`       |
 
 ### Parameters
 
@@ -256,9 +256,9 @@ $ curl \
 Undeletes the data for the provided version and path in the key-value store.
 This restores the data, allowing it to be returned on get requests.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/undelete/:path`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/undelete/:path`     |
 
 ### Parameters
 
@@ -290,9 +290,9 @@ $ curl \
 Permanently removes the specified version data for the provided key and version
 numbers from the key-value store.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/destroy/:path`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/destroy/:path`      |
 
 ### Parameters
 
@@ -327,9 +327,9 @@ value. Note that no policy-based filtering is performed on keys; do not encode
 sensitive information in key names. The values themselves are not accessible via
 this command.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/secret/metadata/:path`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/secret/metadata/:path`     |
 
 ### Parameters
 
@@ -364,9 +364,9 @@ entries.
 This endpoint retrieves the metadata and versions for the secret at the
 specified path.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/metadata/:path`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/metadata/:path`     |
 
 ### Parameters
 
@@ -420,9 +420,9 @@ the value does not yet exist, the calling token must have an ACL policy granting
 the `create` capability. If the value already exists, the calling token must
 have an ACL policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/metadata/:path`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/metadata/:path`     |
 
 ### Parameters
 
@@ -459,9 +459,9 @@ $ curl \
 This endpoint permanently deletes the key metadata and all version data for the
 specified key. All version history will be removed.  
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE`   | `/secret/metadata/:path`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE`   | `/secret/metadata/:path`   |
 
 ### Parameters
 

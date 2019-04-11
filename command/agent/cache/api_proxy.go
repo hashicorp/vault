@@ -45,6 +45,10 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 	ap.logger.Info("forwarding request", "path", req.Request.URL.Path, "method", req.Request.Method)
 
 	resp, err := client.RawRequestWithContext(ctx, fwReq)
+	if resp == nil && err != nil {
+		// We don't want to cache nil responses, so we simply return the error
+		return nil, err
+	}
 
 	// Before error checking from the request call, we'd want to initialize a SendResponse to
 	// potentially return

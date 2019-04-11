@@ -15,6 +15,10 @@ func checkNeedsCG(context.Context, *Core, *logical.Request, *logical.Auth, error
 	return nil, nil, nil, nil
 }
 
+func checkErrControlGroupTokenNeedsCreated(err error) bool {
+	return false
+}
+
 func shouldForward(c *Core, routeErr error) bool {
 	return false
 }

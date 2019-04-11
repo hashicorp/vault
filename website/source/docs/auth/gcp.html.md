@@ -39,7 +39,7 @@ request to Vault. This helper is only available for IAM-type roles.
 ```text
 $ vault login -method=gcp \
     role="my-role" \
-    service_account="authenticating-account@my-project.iam.gserviceaccounts.com" \
+    service_account="authenticating-account@my-project.iam.gserviceaccount.com" \
     project="my-project" \
     jwt_exp="15m" \
     credentials=@path/to/signer/credentials.json

@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
-	"time"
 )
 
 func pathSecretAccessToken(b *backend) *framework.Path {
@@ -52,7 +53,7 @@ func (b *backend) pathAccessToken(ctx context.Context, req *logical.Request, d *
 }
 
 func (b *backend) secretAccessTokenResponse(ctx context.Context, s logical.Storage, rs *RoleSet) (*logical.Response, error) {
-	iamC, err := newIamAdmin(ctx, s)
+	iamC, err := b.IAMClient(s)
 	if err != nil {
 		return nil, errwrap.Wrapf("could not create IAM Admin client: {{err}}", err)
 	}
@@ -108,24 +109,24 @@ func (tg *TokenGenerator) getAccessToken(ctx context.Context, iamAdmin *iam.Serv
 }
 
 const deprecationWarning = `
-This endpoint no longer generates leases due to limitations of the GCP API, as OAuth2 tokens belonging to Service 
-Accounts cannot be revoked. This access_token and lease were created by a previous version of the GCP secrets 
-engine and will be cleaned up now. Note that there is the chance that this access_token, if not already expired, 
-will still be valid up to one hour. 
+This endpoint no longer generates leases due to limitations of the GCP API, as OAuth2 tokens belonging to Service
+Accounts cannot be revoked. This access_token and lease were created by a previous version of the GCP secrets
+engine and will be cleaned up now. Note that there is the chance that this access_token, if not already expired,
+will still be valid up to one hour.
 `
 
 const pathTokenHelpSyn = `Generate an OAuth2 access token under a specific role set.`
 const pathTokenHelpDesc = `
 This path will generate a new OAuth2 access token for accessing GCP APIs.
-A role set, binding IAM roles to specific GCP resources, will be specified 
+A role set, binding IAM roles to specific GCP resources, will be specified
 by name - for example, if this backend is mounted at "gcp",
 then "gcp/token/deploy" would generate tokens for the "deploy" role set.
 
-On the backend, each roleset is associated with a service account. 
-The token will be associated with this service account. Tokens have a 
+On the backend, each roleset is associated with a service account.
+The token will be associated with this service account. Tokens have a
 short-term lease (1-hour) associated with them but cannot be renewed.
 
-Please see backend documentation for more information: 
+Please see backend documentation for more information:
 https://www.vaultproject.io/docs/secrets/gcp/index.html
 `
 
