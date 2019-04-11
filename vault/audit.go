@@ -136,6 +136,11 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 		path += "/"
 	}
 
+	// Ensure there is a name
+	if path == "/" {
+		return false, fmt.Errorf("backend path must be specified")
+	}
+
 	// Remove the entry from the mount table
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()

@@ -516,6 +516,21 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	return nil
 }
 
+func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+	cores := make([]*vault.TestClusterCore, 0, 2)
+	for _, core := range cluster.Cores {
+		leaderResp, err := core.Client.Sys().Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !leaderResp.IsSelf {
+			cores = append(cores, core)
+		}
+	}
+
+	return cores
+}
+
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
@@ -578,4 +593,17 @@ func WaitForMatchingMerkleRoots(t testing.T, endpoint string, primary, secondary
 	}
 
 	t.Fatalf("roots did not become equal")
+}
+
+func WaitForWAL(t testing.T, c *vault.TestClusterCore, wal uint64) {
+	timeout := time.Now().Add(3 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("timeout waiting for WAL")
+		}
+		if vault.LastRemoteWAL(c.Core) >= wal {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
