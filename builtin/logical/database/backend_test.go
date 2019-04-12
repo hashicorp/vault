@@ -119,7 +119,7 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 

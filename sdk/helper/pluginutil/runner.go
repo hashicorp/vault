@@ -58,7 +58,7 @@ func (r *PluginRunner) Run(ctx context.Context, wrapper RunnerUtil, pluginSets m
 
 // RunMetadataMode returns a configured plugin.Client that will dispense a plugin
 // in metadata mode. The PluginMetadataModeEnv is passed in as part of the Cmd to
-// plugin.Client, and consumed by the plugin process on pluginutil.VaultPluginTLSProvider.
+// plugin.Client, and consumed by the plugin process on api.VaultPluginTLSProvider.
 func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, pluginSets map[int]plugin.PluginSet, hs plugin.HandshakeConfig, env []string, logger log.Logger) (*plugin.Client, error) {
 	return r.runCommon(ctx, wrapper, pluginSets, hs, env, logger, true)
 

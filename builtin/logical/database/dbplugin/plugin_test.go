@@ -112,7 +112,7 @@ func TestPlugin_GRPC_Main(t *testing.T) {
 
 	args := []string{"--tls-skip-verify=true"}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 

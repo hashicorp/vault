@@ -13,7 +13,7 @@ import (
 // use during the initial unwrap request to vault. The api config is particularly
 // useful when vault is setup to require client cert checking.
 func Serve(plugin interface{}, tlsConfig *api.TLSConfig) {
-	tlsProvider := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProvider := api.VaultPluginTLSProvider(tlsConfig)
 
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {

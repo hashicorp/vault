@@ -55,11 +55,11 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	err := logicalPlugin.Serve(&logicalPlugin.ServeOpts{
 		BackendFactoryFunc: mock.Factory,
