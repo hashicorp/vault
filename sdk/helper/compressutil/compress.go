@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/hashicorp/errwrap"
-	"github.com/pierrec/lz4"
+	"github.com/pierrec/lz4/v2"
 )
 
 const (
