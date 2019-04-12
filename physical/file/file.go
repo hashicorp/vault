@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify FileBackend satisfies the correct interfaces

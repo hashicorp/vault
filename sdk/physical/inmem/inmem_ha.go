@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 type InmemHABackend struct {

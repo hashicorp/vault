@@ -36,7 +36,7 @@ import (
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/seal"
 )

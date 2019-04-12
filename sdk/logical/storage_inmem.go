@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 // InmemStorage implements Storage and stores all data in memory. It is

@@ -44,12 +44,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	testing "github.com/mitchellh/go-testing-interface"
 
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 // This file contains a number of methods that are useful for unit

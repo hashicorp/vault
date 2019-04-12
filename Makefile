@@ -150,14 +150,14 @@ proto:
 	protoc vault/*.proto --go_out=plugins=grpc:../../..
 	protoc helper/storagepacker/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
-	protoc logical/*.proto --go_out=plugins=grpc:../../..
-	protoc physical/types.proto --go_out=plugins=grpc:../../..
+	protoc sdk/logical/*.proto --go_out=plugins=grpc:../../..
+	protoc sdk/physical/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc:../../..
 	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
 	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
-	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go logical/identity.pb.go
-	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
+	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc:../../..
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go
+	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' sdk/physical/types.pb.go
 
 fmtcheck:
 	@true

@@ -22,7 +22,7 @@ import (
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify MySQLBackend satisfies the correct interfaces
