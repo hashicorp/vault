@@ -6,8 +6,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/pathmanager"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 )
 
 const (

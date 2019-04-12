@@ -3,7 +3,7 @@ package kv
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 )

@@ -4,8 +4,8 @@ package pb;
 option go_package = "github.com/hashicorp/vault/sdk/plugin/pb";
 
 import "google/protobuf/timestamp.proto";
-import "logical/identity.proto";
-import "logical/plugin.proto";
+import "sdk/logical/identity.proto";
+import "sdk/logical/plugin.proto";
 
 message Empty {}
 

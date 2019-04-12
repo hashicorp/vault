@@ -3,7 +3,7 @@ package locksutil
 import (
 	"sync"
 
-	"github.com/hashicorp/vault/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
 const (

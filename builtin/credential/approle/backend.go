@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
