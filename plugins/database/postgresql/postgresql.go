@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-        "github.com/hashicorp/vault/plugins/helper/database/credsutil"
-        "github.com/hashicorp/vault/plugins/helper/database/dbutil"
-        "github.com/lib/pq"
+	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/lib/pq"
 )
 
 const (
@@ -96,60 +96,60 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        if len(statements) == 0 {
-                return "", "", false, errors.New("empty creation or rotation statements")
-        }
+	if len(statements) == 0 {
+		return "", "", false, errors.New("empty creation or rotation statements")
+	}
 
-        username = staticUser.Username
-        password = staticUser.Password
-        if username == "" || password == "" {
-                return "", "", false, errors.New("must provide both username and password")
-        }
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", false, errors.New("must provide both username and password")
+	}
 
-        // Grab the lock
-        p.Lock()
-        defer p.Unlock()
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
 
-        // Get the connection
-        db, err := p.getConnection(ctx)
-        if err != nil {
-                return "", "", false, err
-        }
+	// Get the connection
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return "", "", false, err
+	}
 
-        // Start a transaction
-        tx, err := db.BeginTx(ctx, nil)
-        if err != nil {
-                return "", "", false, err
-        }
-        defer func() {
-                _ = tx.Rollback()
-        }()
-        // Return the secret
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", false, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	// Return the secret
 
-        // Execute each query
-        for _, stmt := range statements {
-                for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-                        query = strings.TrimSpace(query)
-                        if len(query) == 0 {
-                                continue
-                        }
+	// Execute each query
+	for _, stmt := range statements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
 
-                        m := map[string]string{
-                                "name":     staticUser.Username,
-                                "password": password,
-                        }
-                        if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-                                return "", "", false, err
-                        }
-                }
-        }
+			m := map[string]string{
+				"name":     staticUser.Username,
+				"password": password,
+			}
+			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+				return "", "", false, err
+			}
+		}
+	}
 
-        // Commit the transaction
-        if err := tx.Commit(); err != nil {
-                return "", "", false, err
-        }
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", "", false, err
+	}
 
-        return username, password, false, nil
+	return username, password, false, nil
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
@@ -272,11 +272,11 @@ func (p *PostgreSQL) RenewUser(ctx context.Context, statements dbplugin.Statemen
 }
 
 func (p *PostgreSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-        // Grab the lock
-        p.Lock()
-        defer p.Unlock()
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
 
-        statements = dbutil.StatementCompatibilityHelper(statements)
+	statements = dbutil.StatementCompatibilityHelper(statements)
 
 	if len(statements.Revocation) == 0 {
 		return p.defaultRevokeUser(ctx, username)
@@ -491,9 +491,9 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 // GenerateCredentials returns a generated password
 func (p *PostgreSQL) GenerateCredentials(ctx context.Context) (string, error) {
-        password, err := p.GeneratePassword()
-        if err != nil {
-                return "", err
-        }
-        return password, nil
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }

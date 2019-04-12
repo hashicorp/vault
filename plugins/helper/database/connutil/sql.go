@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-        "github.com/hashicorp/vault/helper/parseutil"
-        "github.com/hashicorp/vault/plugins/helper/database/dbutil"
-        "github.com/mitchellh/mapstructure"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
@@ -41,7 +41,7 @@ type SQLConnectionProducer struct {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        return
+	return
 }
 
 func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {

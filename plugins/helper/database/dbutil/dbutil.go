@@ -3,14 +3,14 @@ package dbutil
 import (
 	"errors"
 	"fmt"
-        "strings"
+	"strings"
 
-        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 )
 
 var (
 	ErrEmptyCreationStatement = errors.New("empty creation statements")
-        ErrEmptyRotationStatement = errors.New("empty rotation statements")
+	ErrEmptyRotationStatement = errors.New("empty rotation statements")
 )
 
 // Query templates a query for us.
@@ -46,8 +46,8 @@ func StatementCompatibilityHelper(statements dbplugin.Statements) dbplugin.State
 	switch {
 	case len(statements.Rollback) > 0 && len(statements.RollbackStatements) == 0:
 		statements.RollbackStatements = strings.Join(statements.Rollback, ";")
-        case len(statements.RollbackStatements) > 0:
-                statements.Rollback = []string{statements.RollbackStatements}
-        }
-        return statements
+	case len(statements.RollbackStatements) > 0:
+		statements.Rollback = []string{statements.RollbackStatements}
+	}
+	return statements
 }

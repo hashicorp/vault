@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-        fmt "fmt"
+	fmt "fmt"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-        "github.com/golang/protobuf/ptypes"
-        "github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 var (
@@ -113,32 +113,32 @@ func (s *gRPCServer) Init(ctx context.Context, req *InitRequest) (*InitResponse,
 
 func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 	s.impl.Close()
-        return &Empty{}, nil
+	return &Empty{}, nil
 }
 
 func (s *gRPCServer) GenerateCredentials(ctx context.Context, _ *Empty) (*GenerateCredentialsResponse, error) {
-        p, err := s.impl.GenerateCredentials(ctx)
-        if err != nil {
-                return nil, err
-        }
+	p, err := s.impl.GenerateCredentials(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-        return &GenerateCredentialsResponse{
-                Password: p,
-        }, nil
+	return &GenerateCredentialsResponse{
+		Password: p,
+	}, nil
 }
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-        username, password, restored, err := s.impl.SetCredentials(ctx, *req.StaticUserConfig, req.Statements)
-        if err != nil {
-                return nil, err
-        }
+	username, password, restored, err := s.impl.SetCredentials(ctx, *req.StaticUserConfig, req.Statements)
+	if err != nil {
+		return nil, err
+	}
 
-        return &SetCredentialsResponse{
-                Username: username,
-                Password: password,
-                Restored: restored,
-        }, err
+	return &SetCredentialsResponse{
+		Username: username,
+		Password: password,
+		Restored: restored,
+	}, err
 }
 
 // ---- gRPC client domain ----
@@ -307,63 +307,63 @@ func (c *gRPCClient) Init(ctx context.Context, conf map[string]interface{}, veri
 
 func (c *gRPCClient) Close() error {
 	_, err := c.client.Close(c.doneCtx, &Empty{})
-        return err
+	return err
 }
 
 func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
-        ctx, cancel := context.WithCancel(ctx)
-        quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
-        defer close(quitCh)
-        defer cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
-        // TODO: Question: CreateUser takes the CreateUserRequest and splits the
-        // statements and the config. Here we just pass on the request without
-        // splitting anything
-        resp, err := c.client.GenerateCredentials(ctx, &Empty{})
+	// TODO: Question: CreateUser takes the CreateUserRequest and splits the
+	// statements and the config. Here we just pass on the request without
+	// splitting anything
+	resp, err := c.client.GenerateCredentials(ctx, &Empty{})
 
-        if err != nil {
-                // Fall back to old call if not implemented
-                grpcStatus, ok := status.FromError(err)
-                if ok && grpcStatus.Code() == codes.Unimplemented {
-                        // TODO: a better or const error type here
-                        return "", fmt.Errorf("backend/version does not support generating credentials")
-                }
+	if err != nil {
+		// Fall back to old call if not implemented
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			// TODO: a better or const error type here
+			return "", fmt.Errorf("backend/version does not support generating credentials")
+		}
 
-                if c.doneCtx.Err() != nil {
-                        return "", ErrPluginShutdown
-                }
-                return "", err
-        }
+		if c.doneCtx.Err() != nil {
+			return "", ErrPluginShutdown
+		}
+		return "", err
+	}
 
-        return resp.Password, nil
+	return resp.Password, nil
 }
 func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        ctx, cancel := context.WithCancel(ctx)
-        quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
-        defer close(quitCh)
-        defer cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
-        // TODO: Question: CreateUser takes the CreateUserRequest and splits the
-        // statements and the config. Here we just pass on the request without
-        // splitting anything
-        resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
-                StaticUserConfig: &staticUser,
-                Statements:       statements,
-        })
+	// TODO: Question: CreateUser takes the CreateUserRequest and splits the
+	// statements and the config. Here we just pass on the request without
+	// splitting anything
+	resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
+		StaticUserConfig: &staticUser,
+		Statements:       statements,
+	})
 
-        if err != nil {
-                // Fall back to old call if not implemented
-                grpcStatus, ok := status.FromError(err)
-                if ok && grpcStatus.Code() == codes.Unimplemented {
-                        // TODO: a better or const error type here
-                        return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
-                }
+	if err != nil {
+		// Fall back to old call if not implemented
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			// TODO: a better or const error type here
+			return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
+		}
 
-                if c.doneCtx.Err() != nil {
-                        return "", "", false, ErrPluginShutdown
-                }
-                return "", "", false, err
-        }
+		if c.doneCtx.Err() != nil {
+			return "", "", false, ErrPluginShutdown
+		}
+		return "", "", false, err
+	}
 
-        return resp.Username, resp.Password, resp.Restored, err
+	return resp.Username, resp.Password, resp.Restored, err
 }

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-        "github.com/hashicorp/vault/helper/strutil"
-        "github.com/hashicorp/vault/logical"
-        "github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
 )
 
 func pathCredsCreate(b *databaseBackend) *framework.Path {
@@ -43,17 +43,17 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
-                // check static account.
-                // - if static, return password
-                if role.StaticAccount != nil {
-                        return &logical.Response{
-                                Data: map[string]interface{}{
-                                        "username":            role.StaticAccount.Username,
-                                        "password":            role.StaticAccount.Password,
-                                        "last_vault_rotation": role.StaticAccount.LastVaultRotation,
-                                },
-                        }, nil
-                }
+		// check static account.
+		// - if static, return password
+		if role.StaticAccount != nil {
+			return &logical.Response{
+				Data: map[string]interface{}{
+					"username":            role.StaticAccount.Username,
+					"password":            role.StaticAccount.Password,
+					"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+				},
+			}, nil
+		}
 
 		dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -71,7 +71,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-                // branch for static account around here
+		// branch for static account around here
 
 		db.RLock()
 		defer db.RUnlock()

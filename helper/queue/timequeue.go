@@ -62,7 +62,7 @@ func (tq *TimeQueue) PushItem(i *Item) error {
 	defer tq.dataMutex.Unlock()
 
 	if _, ok := tq.dataMap[i.Key]; ok {
-                return ErrDuplicateItem
+		return ErrDuplicateItem
 	}
 
 	tq.dataMap[i.Key] = i

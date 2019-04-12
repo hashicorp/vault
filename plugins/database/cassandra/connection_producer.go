@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-        "time"
+	"time"
 
-        "github.com/mitchellh/mapstructure"
+	"github.com/mitchellh/mapstructure"
 
-        "github.com/gocql/gocql"
-        "github.com/hashicorp/errwrap"
-        "github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/gocql/gocql"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
@@ -58,7 +58,7 @@ type cassandraConnectionProducer struct {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        return
+	return
 }
 
 func (c *cassandraConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {

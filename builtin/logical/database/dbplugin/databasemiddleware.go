@@ -83,25 +83,25 @@ func (mw *databaseTracingMiddleware) Close() (err error) {
 	}(time.Now())
 
 	mw.logger.Trace("close", "status", "started")
-        return mw.next.Close()
+	return mw.next.Close()
 }
 
 func (mw *databaseTracingMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
-        defer func(then time.Time) {
-                mw.logger.Trace("generate credentials", "status", "finished", "err", err, "took", time.Since(then))
-        }(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("generate credentials", "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
 
-        mw.logger.Trace("generate credentials", "status", "started")
-        return mw.next.GenerateCredentials(ctx)
+	mw.logger.Trace("generate credentials", "status", "started")
+	return mw.next.GenerateCredentials(ctx)
 }
 
 func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        defer func(then time.Time) {
-                mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
-        }(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
+	}(time.Now())
 
-        mw.logger.Trace("set credentials", "status", "started")
-        return mw.next.SetCredentials(ctx, staticConfig, statements)
+	mw.logger.Trace("set credentials", "status", "started")
+	return mw.next.SetCredentials(ctx, staticConfig, statements)
 }
 
 // ---- Metrics Middleware Domain ----
@@ -216,39 +216,39 @@ func (mw *databaseMetricsMiddleware) Close() (err error) {
 
 	metrics.IncrCounter([]string{"database", "Close"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Close"}, 1)
-        return mw.next.Close()
+	return mw.next.Close()
 }
 
 func (mw *databaseMetricsMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
-        defer func(now time.Time) {
-                metrics.MeasureSince([]string{"database", "GenerateCredentials"}, now)
-                metrics.MeasureSince([]string{"database", mw.typeStr, "GenerateCredentials"}, now)
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "GenerateCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "GenerateCredentials"}, now)
 
-                if err != nil {
-                        metrics.IncrCounter([]string{"database", "GenerateCredentials", "error"}, 1)
-                        metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials", "error"}, 1)
-                }
-        }(time.Now())
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "GenerateCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials", "error"}, 1)
+		}
+	}(time.Now())
 
-        metrics.IncrCounter([]string{"database", "GenerateCredentials"}, 1)
-        metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials"}, 1)
-        return mw.next.GenerateCredentials(ctx)
+	metrics.IncrCounter([]string{"database", "GenerateCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "GenerateCredentials"}, 1)
+	return mw.next.GenerateCredentials(ctx)
 }
 
 func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        defer func(now time.Time) {
-                metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
-                metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
 
-                if err != nil {
-                        metrics.IncrCounter([]string{"database", "SetCredentials", "error"}, 1)
-                        metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials", "error"}, 1)
-                }
-        }(time.Now())
+		if err != nil {
+			metrics.IncrCounter([]string{"database", "SetCredentials", "error"}, 1)
+			metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials", "error"}, 1)
+		}
+	}(time.Now())
 
-        metrics.IncrCounter([]string{"database", "SetCredentials"}, 1)
-        metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials"}, 1)
-        return mw.next.SetCredentials(ctx, staticConfig, statements)
+	metrics.IncrCounter([]string{"database", "SetCredentials"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "SetCredentials"}, 1)
+	return mw.next.SetCredentials(ctx, staticConfig, statements)
 }
 
 // ---- Error Sanitizer Middleware Domain ----
@@ -321,15 +321,15 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 			err = errors.New(strings.Replace(err.Error(), k, v.(string), -1))
 		}
 	}
-        return err
+	return err
 }
 
 func (mw *DatabaseErrorSanitizerMiddleware) GenerateCredentials(ctx context.Context) (password string, err error) {
-        password, err = mw.next.GenerateCredentials(ctx)
-        return password, mw.sanitize(err)
+	password, err = mw.next.GenerateCredentials(ctx)
+	return password, mw.sanitize(err)
 }
 
 func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-        username, password, restored, err = mw.next.SetCredentials(ctx, staticConfig, statements)
-        return username, password, restored, mw.sanitize(err)
+	username, password, restored, err = mw.next.SetCredentials(ctx, staticConfig, statements)
+	return username, password, restored, mw.sanitize(err)
 }
