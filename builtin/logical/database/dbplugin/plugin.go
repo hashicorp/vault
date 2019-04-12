@@ -32,7 +32,7 @@ type Database interface {
 	// RevokeUser is triggered either automatically by a lease expiration, or by a revocation call to the API.
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
-	// RotateRootCredentials is triggered either by a root credential rotation call to the API.
+	// RotateRootCredentials is triggered by a root credential rotation call to the API.
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 
 	// Init is called on `$ vault write database/config/:db-name`, or when you do a creds call after Vault's been restarted.
