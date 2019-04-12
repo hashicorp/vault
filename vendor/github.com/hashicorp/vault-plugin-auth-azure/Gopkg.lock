@@ -480,9 +480,9 @@
     "github.com/hashicorp/go-hclog",
     "github.com/hashicorp/vault/sdk/helper/pluginutil",
     "github.com/hashicorp/vault/helper/policyutil",
-    "github.com/hashicorp/vault/logical",
-    "github.com/hashicorp/vault/logical/framework",
-    "github.com/hashicorp/vault/logical/plugin",
+    "github.com/hashicorp/vault/sdk/logical",
+    "github.com/hashicorp/vault/sdk/framework",
+    "github.com/hashicorp/vault/sdk/logical/plugin",
     "golang.org/x/oauth2",
   ]
   solver-name = "gps-cdcl"

@@ -6,7 +6,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	appId "github.com/hashicorp/vault/builtin/credential/app-id"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-	"github.com/hashicorp/vault/logical/plugin"
+	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 func main() {

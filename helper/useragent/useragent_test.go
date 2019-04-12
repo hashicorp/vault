@@ -3,7 +3,7 @@ package useragent
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestUserAgent(t *testing.T) {

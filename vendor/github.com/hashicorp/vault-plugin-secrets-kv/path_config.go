@@ -5,8 +5,8 @@ import (
 	"path"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 // pathConfig returns the path configuration for CRUD operations on the backend

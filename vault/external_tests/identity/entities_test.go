@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 

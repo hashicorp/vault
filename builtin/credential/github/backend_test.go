@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/logical"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 )
 
 func TestBackend_Config(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 type sshHostKey struct {

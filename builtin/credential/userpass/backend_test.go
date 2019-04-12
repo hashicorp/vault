@@ -10,8 +10,8 @@ import (
 	"crypto/tls"
 
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/logical"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/mitchellh/mapstructure"
 )
 

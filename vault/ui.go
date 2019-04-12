@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/physical"
 )
 
