@@ -17,7 +17,9 @@ import (
 // Database is the interface that all database objects must implement.
 type Database interface {
 	// Type returns the TypeName for the particular database backend
-	// implementation.
+	// implementation. This type name is usually set as a constant within the
+	// database backend implementation, e.g. "mysql" for the MySQL database
+	// backend.
 	Type() (string, error)
 
 	// CreateUser is called on `$ vault read database/creds/:role-name` and it's
