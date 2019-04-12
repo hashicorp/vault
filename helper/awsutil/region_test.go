@@ -17,6 +17,8 @@ region=%s
 output=json`
 
 var (
+	shouldTestFiles = os.Getenv("VAULT_ACC_AWS_FILES") == "1"
+
 	logger               = hclog.NewNullLogger()
 	expectedTestRegion   = "us-west-2"
 	unexpectedTestRegion = "us-east-2"
@@ -60,6 +62,12 @@ func TestGetOrDefaultRegion_EnvVarsPreferredSecond(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
+	if !shouldTestFiles {
+		// In some test environments, like a CI environment, we may not have the
+		// permissions to write to the ~/.aws/config file. Thus, this test is off
+		// by default but can be set to on for local development.
+		t.SkipNow()
+	}
 	configuredRegion := ""
 
 	cleanupEnv := setEnvRegion(t, "")
@@ -155,6 +163,10 @@ func setConfigFileRegion(t *testing.T, region string) (cleanup func()) {
 		for _, f := range cleanupFuncs {
 			f()
 		}
+	}
+
+	if !shouldTestFiles {
+		return
 	}
 
 	usr, err := user.Current()
