@@ -156,6 +156,8 @@ export default Route.extend(UnloadModelRoute, {
             reload: true,
           });
         } else {
+          // we may have previously errored, so roll it back here
+          version.rollbackAttributes();
           // trigger reload to fetch the whole version model
           versionModel = await version.reload();
         }
@@ -163,13 +165,15 @@ export default Route.extend(UnloadModelRoute, {
         // cannot read the version data, but can write according to capabilities-self endpoint
         // so we create a versionModel that is a stub like we do when we can't read metadata
         if (error.httpStatus === 403 && capabilities.get('canUpdate')) {
-          versionModel = this.store.createRecord('secret-v2-version');
+          versionModel = version || this.store.createRecord('secret-v2-version');
           versionModel.setProperties({
-            id: JSON.stringify(versionId),
             failedServerRead: true,
           });
-          //TODO 😭 because we want this to be update instead of create
-          versionModel.send('pushedData');
+          if (versionModel.isNew) {
+            versionModel.set('id', JSON.stringify(versionId));
+            //TODO 😭 because we want this to be update instead of create
+            versionModel.send('pushedData');
+          }
         } else {
           throw error;
         }
