@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
-	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -46,16 +45,6 @@ func NewUsageClientWithBaseURI(baseURI string, subscriptionID string) UsageClien
 // Parameters:
 // location - the location for which resource usage is queried.
 func (client UsageClient) List(ctx context.Context, location string) (result ListUsagesResultPage, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/UsageClient.List")
-		defer func() {
-			sc := -1
-			if result.lur.Response.Response != nil {
-				sc = result.lur.Response.Response.StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.Pattern, Rule: `^[-\w\._]+$`, Chain: nil}}}}); err != nil {
@@ -125,8 +114,8 @@ func (client UsageClient) ListResponder(resp *http.Response) (result ListUsagesR
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client UsageClient) listNextResults(ctx context.Context, lastResults ListUsagesResult) (result ListUsagesResult, err error) {
-	req, err := lastResults.listUsagesResultPreparer(ctx)
+func (client UsageClient) listNextResults(lastResults ListUsagesResult) (result ListUsagesResult, err error) {
+	req, err := lastResults.listUsagesResultPreparer()
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "compute.UsageClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -147,16 +136,6 @@ func (client UsageClient) listNextResults(ctx context.Context, lastResults ListU
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client UsageClient) ListComplete(ctx context.Context, location string) (result ListUsagesResultIterator, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/UsageClient.List")
-		defer func() {
-			sc := -1
-			if result.Response().Response.Response != nil {
-				sc = result.page.Response().Response.Response.StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
 	result.page, err = client.List(ctx, location)
 	return
 }
