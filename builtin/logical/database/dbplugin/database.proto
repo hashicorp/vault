@@ -21,6 +21,9 @@ message CreateUserRequest {
 	Statements     statements = 1;
 	UsernameConfig username_config = 2;
 	google.protobuf.Timestamp expiration = 3;
+
+message GenerateCredentialsResponse {
+  string password = 1;
 }
 
 message SetCredentialsRequest {
@@ -105,6 +108,7 @@ service Database {
 	rpc Init(InitRequest) returns (InitResponse);
 	rpc Close(Empty) returns (Empty);
   rpc SetCredentials(SetCredentialsRequest) returns (SetCredentialsResponse);
+  rpc GenerateCredentials(Empty) returns (GenerateCredentialsResponse);
 	
 	rpc Initialize(InitializeRequest) returns (Empty) {
 		option deprecated = true;

@@ -46,7 +46,11 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			// err'd , and this call does not return credentials
 
 			//TODO wrap in WAL, rollback
-			err = b.createUpdateStaticAccount(ctx, req.Storage, name, role, false)
+			// TODO: pop and replace item from queue?
+			_, err = b.createUpdateStaticAccount(ctx, req.Storage, &setPasswordInput{
+				RoleName: name,
+				Role:     role,
+			})
 			if err != nil {
 				return nil, err
 			}

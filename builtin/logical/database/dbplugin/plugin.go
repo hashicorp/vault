@@ -22,6 +22,7 @@ type Database interface {
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
+	GenerateCredentials(ctx context.Context) (string, error)
 	SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username string, password string, restored bool, err error)
 
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)

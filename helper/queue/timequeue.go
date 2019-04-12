@@ -3,11 +3,11 @@ package queue
 import (
 	"container/heap"
 	"errors"
-	"fmt"
 	"sync"
 )
 
 var ErrEmpty = errors.New("queue is empty")
+var ErrDuplicateItem = errors.New("duplicate item")
 
 // NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
 func NewTimeQueue() *TimeQueue {
@@ -62,7 +62,7 @@ func (tq *TimeQueue) PushItem(i *Item) error {
 	defer tq.dataMutex.Unlock()
 
 	if _, ok := tq.dataMap[i.Key]; ok {
-		return fmt.Errorf("error adding item: Item (%s) is already in queue", i.Key)
+		return ErrDuplicateItem
 	}
 
 	tq.dataMap[i.Key] = i
@@ -88,8 +88,6 @@ func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
 		return i, nil
 	}
 
-	// TODO log that we found something but it wasn't an Item. Or just not bother
-	// type asserting
 	return nil, NewErrItemNotFound(key)
 }
 

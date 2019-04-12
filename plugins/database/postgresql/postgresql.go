@@ -100,14 +100,15 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
 		return "", "", false, errors.New("empty creation or rotation statements")
 	}
 
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", false, errors.New("must provide both username and password")
+	}
+
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
-	username = staticUser.Username
-	password, err = p.GeneratePassword()
-	if err != nil {
-		return "", "", false, err
-	}
 
 	// Get the connection
 	db, err := p.getConnection(ctx)
@@ -486,4 +487,13 @@ func (p *PostgreSQL) RotateRootCredentials(ctx context.Context, statements []str
 
 	p.RawConfig["password"] = password
 	return p.RawConfig, nil
+}
+
+// GenerateCredentials returns a generated password
+func (p *PostgreSQL) GenerateCredentials(ctx context.Context) (string, error) {
+	password, err := p.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }

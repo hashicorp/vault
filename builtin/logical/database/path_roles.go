@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -82,13 +81,6 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Description: `Name of the static user account for Vault to manage.
 				Requires "rotation_period" to be specified`,
 			},
-			// TODO: verify if we should support this as input and use it to verify
-			// credentials before assuming managment of an account.
-			// "password": {
-			// 	Type:        framework.TypeString,
-			// 	Description: "Password of the static user account for Vault to manage.
-			// 	Not used yet",
-			// },
 			"rotation_period": {
 				Type: framework.TypeDurationSecond,
 				Description: `Period for automatic credential rotation of the given
@@ -121,7 +113,6 @@ func (b *databaseBackend) pathRoleExistenceCheck(ctx context.Context, req *logic
 	if err != nil {
 		return false, err
 	}
-
 	return role != nil, nil
 }
 
@@ -266,11 +257,11 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		}
 		if ok {
 			rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
-			if rotationPeriodSeconds < 60 {
+			if rotationPeriodSeconds < 5 {
 				// If rotation frequency is specified, and this is an update, the value
-				// must be at least 60 seconds because our periodic func runs about once a
+				// must be at least 5 seconds because our periodic func runs about once a
 				// minute.
-				return logical.ErrorResponse("rotation_period must be 60 seconds or more"), nil
+				return logical.ErrorResponse("rotation_period must be 5 seconds or more"), nil
 			}
 			role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 		}
@@ -360,29 +351,42 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	if role.StaticAccount != nil {
 		// in create/update of static accounts, we only care if the operation
 		// err'd , and this call does not return credentials
-		err = b.createUpdateStaticAccount(ctx, req.Storage, name, role, createRole)
-		if err != nil {
-			return nil, err
-		}
 
-		// TODO need to check that we're only updating the revocation statements or rotation period
-		if b.credRotationQueue != nil {
+		// lvr represents the roles' LastVaultRotation
+		lvr := role.StaticAccount.LastVaultRotation
+
+		// only call createUpdateStaticAccount if we're creating the role for the
+		// first time
+		switch req.Operation {
+		case logical.CreateOperation:
+			resp, err := b.createUpdateStaticAccount(ctx, req.Storage, &setPasswordInput{
+				RoleName:   name,
+				Role:       role,
+				CreateUser: createRole,
+			})
+			if err != nil {
+				return nil, err
+			}
+			// guard against RotationTime not being set or zero-value
+			lvr = resp.RotationTime
+			if lvr.IsZero() {
+				lvr = time.Now()
+			}
+		case logical.UpdateOperation:
 			// In case this is an update, remove any previous version of the item from the queue
 			if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
 				if _, ok := err.(*queue.ErrItemNotFound); !ok {
 					return nil, err
 				}
 			}
+		}
 
-			// Add their rotation to the queue
-			if err := b.credRotationQueue.PushItem(&queue.Item{
-				Key:      name,
-				Value:    role, // TODO is this what needs to be here?
-				Priority: time.Now().Add(role.StaticAccount.RotationPeriod).Unix(),
-			}); err != nil {
-				// TODO rollback?
-				return nil, err
-			}
+		// Add their rotation to the queue
+		if err := b.credRotationQueue.PushItem(&queue.Item{
+			Key:      name,
+			Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
+		}); err != nil {
+			return nil, err
 		}
 	}
 	// END create/update static account
@@ -397,97 +401,6 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	}
 
 	return nil, nil
-}
-
-func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logical.Storage, name string, role *roleEntry, createUser bool) error {
-	var password string
-
-	dbConfig, err := b.DatabaseConfig(ctx, s, role.DBName)
-	if err != nil {
-		return err
-	}
-
-	// If role name isn't in the database's allowed roles, send back a
-	// permission denied.
-	if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
-		return fmt.Errorf("%q is not an allowed role", name)
-	}
-
-	// Get the Database object
-	db, err := b.GetConnection(ctx, s, role.DBName)
-	if err != nil {
-		return err
-	}
-	// branch for static account around here
-
-	db.RLock()
-	defer db.RUnlock()
-
-	config := dbplugin.StaticUserConfig{
-		Username: role.StaticAccount.Username,
-	}
-
-	// Create or rotate the user
-	stmts := role.Statements.Creation
-	if !createUser {
-		stmts = role.Statements.Rotation
-	}
-
-	// Create a WAL to record the SetCredential attempt if we have the current
-	// password. Without the current password, we have nothing to rollback to.
-	//
-	// If we successfully rotate the credentials, but fail to save the results to
-	// Vault, the WAL will get kept and a rollback will be attempted.
-	//
-	// walID records the if of the WAL created, if any. It is later checked to be
-	// empty and if not, to delete the wal if all operations were successful
-	var walID string
-	if role.StaticAccount.Password != "" {
-		walID, err = framework.PutWAL(ctx, s, "setcreds", &walSetCredentials{
-			RoleName:   name,
-			Username:   config.Username,
-			Password:   role.StaticAccount.Password,
-			Statements: stmts,
-		})
-		if err != nil {
-			return fmt.Errorf("error writing WAL entry: %s", err)
-		}
-	}
-
-	var sterr error
-	_, password, _, sterr = db.SetCredentials(ctx, config, stmts)
-	if sterr != nil {
-		// we failed to rotate the credentials, so we can delete the log. The error
-		// propagates up and this rotation will be reattempted by the periodic
-		// function
-		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
-			setErr := errwrap.Wrapf("error setting credentials: {{err}}", sterr)
-			return errwrap.Wrap(errwrap.Wrapf("failed to delete WAL entry: {{err}}", walErr), setErr)
-		}
-		b.CloseIfShutdown(db, sterr)
-		return sterr
-	}
-
-	// Store updated role information
-	role.StaticAccount.LastVaultRotation = time.Now()
-	role.StaticAccount.Password = password
-
-	entry, err := logical.StorageEntryJSON("role/"+name, role)
-	if err != nil {
-		return err
-	}
-	if err := s.Put(ctx, entry); err != nil {
-		return err
-	}
-
-	// Setting credentials succeeded, storing to Vault succeeded, delete the WAL
-	if walID != "" {
-		if err := framework.DeleteWAL(ctx, s, walID); err != nil {
-			return fmt.Errorf("failed to delete WAL entry: %s", err)
-		}
-	}
-
-	return nil
 }
 
 type roleEntry struct {
