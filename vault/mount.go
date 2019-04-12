@@ -174,6 +174,21 @@ func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, erro
 	return nil, nil
 }
 
+func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error) {
+	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < n; i++ {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
+			return entry, nil
+		}
+	}
+	return nil, nil
+}
+
 // sortEntriesByPath sorts the entries in the table by path and returns the
 // table; this is useful for tests
 func (t *MountTable) sortEntriesByPath() *MountTable {
