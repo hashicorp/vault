@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"

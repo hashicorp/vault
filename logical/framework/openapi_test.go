@@ -13,9 +13,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 func TestOpenAPI_Regex(t *testing.T) {

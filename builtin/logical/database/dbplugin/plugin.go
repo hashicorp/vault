@@ -11,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Database is the interface that all database objects must implement.

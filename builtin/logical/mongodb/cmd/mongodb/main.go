@@ -5,7 +5,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/mongodb"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 )
 

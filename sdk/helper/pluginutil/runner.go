@@ -4,17 +4,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"os/exec"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -132,49 +130,6 @@ func (r *PluginRunner) runCommon(ctx context.Context, wrapper RunnerUtil, plugin
 	client := plugin.NewClient(clientConfig)
 
 	return client, nil
-}
-
-// APIClientMeta is a helper that plugins can use to configure TLS connections
-// back to Vault.
-type APIClientMeta struct {
-	// These are set by the command line flags.
-	flagCACert     string
-	flagCAPath     string
-	flagClientCert string
-	flagClientKey  string
-	flagInsecure   bool
-}
-
-// FlagSet returns the flag set for configuring the TLS connection
-func (f *APIClientMeta) FlagSet() *flag.FlagSet {
-	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
-
-	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
-	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
-	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
-	fs.StringVar(&f.flagClientKey, "client-key", "", "")
-	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
-
-	return fs
-}
-
-// GetTLSConfig will return a TLSConfig based off the values from the flags
-func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
-	// If we need custom TLS configuration, then set it
-	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
-		t := &api.TLSConfig{
-			CACert:        f.flagCACert,
-			CAPath:        f.flagCAPath,
-			ClientCert:    f.flagClientCert,
-			ClientKey:     f.flagClientKey,
-			TLSServerName: "",
-			Insecure:      f.flagInsecure,
-		}
-
-		return t
-	}
-
-	return nil
 }
 
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is

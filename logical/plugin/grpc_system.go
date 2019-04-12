@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/helper/license"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 	"google.golang.org/grpc"

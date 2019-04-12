@@ -478,7 +478,7 @@
     "github.com/hashicorp/errwrap",
     "github.com/hashicorp/go-cleanhttp",
     "github.com/hashicorp/go-hclog",
-    "github.com/hashicorp/vault/helper/pluginutil",
+    "github.com/hashicorp/vault/sdk/helper/pluginutil",
     "github.com/hashicorp/vault/helper/policyutil",
     "github.com/hashicorp/vault/logical",
     "github.com/hashicorp/vault/logical/framework",

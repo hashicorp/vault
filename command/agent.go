@@ -32,7 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"

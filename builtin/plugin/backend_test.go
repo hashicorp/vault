@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	logicalPlugin "github.com/hashicorp/vault/logical/plugin"

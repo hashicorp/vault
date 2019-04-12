@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 )
 

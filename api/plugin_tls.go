@@ -1,138 +1,74 @@
 package pluginutil
 
 import (
-	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"errors"
+	"flag"
 	"net/url"
 	"os"
-	"time"
 
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-var (
-	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
-	// plugin.
-	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
+var ()
 
-	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
-	// string. Used for testing.
-	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
-)
-
-// generateCert is used internally to create certificates for the plugin
-// client and server.
-func generateCert() ([]byte, *ecdsa.PrivateKey, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	host, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sn, err := certutil.GenerateSerialNumber()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	template := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: host,
-		},
-		DNSNames: []string{host},
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageClientAuth,
-			x509.ExtKeyUsageServerAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: sn,
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(262980 * time.Hour),
-		IsCA:         true,
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
-	if err != nil {
-		return nil, nil, errwrap.Wrapf("unable to generate client certificate: {{err}}", err)
-	}
-
-	return certBytes, key, nil
+// APIClientMeta is a helper that plugins can use to configure TLS connections
+// back to Vault.
+type APIClientMeta struct {
+	// These are set by the command line flags.
+	flagCACert     string
+	flagCAPath     string
+	flagClientCert string
+	flagClientKey  string
+	flagInsecure   bool
 }
 
-// createClientTLSConfig creates a signed certificate and returns a configured
-// TLS config.
-func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config, error) {
-	clientCert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, errwrap.Wrapf("error parsing generated plugin certificate: {{err}}", err)
-	}
+// FlagSet returns the flag set for configuring the TLS connection
+func (f *APIClientMeta) FlagSet() *flag.FlagSet {
+	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
-	cert := tls.Certificate{
-		Certificate: [][]byte{certBytes},
-		PrivateKey:  key,
-		Leaf:        clientCert,
-	}
+	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
+	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
+	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
+	fs.StringVar(&f.flagClientKey, "client-key", "", "")
+	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
 
-	clientCertPool := x509.NewCertPool()
-	clientCertPool.AddCert(clientCert)
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      clientCertPool,
-		ClientCAs:    clientCertPool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ServerName:   clientCert.Subject.CommonName,
-		MinVersion:   tls.VersionTLS12,
-	}
-
-	tlsConfig.BuildNameToCertificate()
-
-	return tlsConfig, nil
+	return fs
 }
 
-// wrapServerConfig is used to create a server certificate and private key, then
-// wrap them in an unwrap token for later retrieval by the plugin.
-func wrapServerConfig(ctx context.Context, sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
-	rawKey, err := x509.MarshalECPrivateKey(key)
-	if err != nil {
-		return "", err
+// GetTLSConfig will return a TLSConfig based off the values from the flags
+func (f *APIClientMeta) GetTLSConfig() *TLSConfig {
+	// If we need custom TLS configuration, then set it
+	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
+		t := &TLSConfig{
+			CACert:        f.flagCACert,
+			CAPath:        f.flagCAPath,
+			ClientCert:    f.flagClientCert,
+			ClientKey:     f.flagClientKey,
+			TLSServerName: "",
+			Insecure:      f.flagInsecure,
+		}
+
+		return t
 	}
 
-	wrapInfo, err := sys.ResponseWrapData(ctx, map[string]interface{}{
-		"ServerCert": certBytes,
-		"ServerKey":  rawKey,
-	}, time.Second*60, true)
-	if err != nil {
-		return "", err
-	}
-
-	return wrapInfo.Token, nil
+	return nil
 }
 
 // VaultPluginTLSProvider is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
-func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
-	if os.Getenv(PluginMetadataModeEnv) == "true" {
+func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
+	if os.Getenv(pluginutil.PluginMetadataModeEnv) == "true" {
 		return nil
 	}
 
 	return func() (*tls.Config, error) {
-		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
+		unwrapToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
 
 		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
 		if err != nil {
@@ -162,7 +98,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		}
 
 		// Unwrap the token
-		clientConf := api.DefaultConfig()
+		clientConf := DefaultConfig()
 		clientConf.Address = vaultAddr
 		if apiTLSConfig != nil {
 			err := clientConf.ConfigureTLS(apiTLSConfig)
@@ -170,7 +106,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 				return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
 			}
 		}
-		client, err := api.NewClient(clientConf)
+		client, err := NewClient(clientConf)
 		if err != nil {
 			return nil, errwrap.Wrapf("error during api client creation: {{err}}", err)
 		}

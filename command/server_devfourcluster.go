@@ -22,7 +22,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/version"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 )

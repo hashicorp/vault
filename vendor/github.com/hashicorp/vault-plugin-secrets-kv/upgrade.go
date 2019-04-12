@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )

@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 var (

@@ -31,7 +31,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/tlsutil"

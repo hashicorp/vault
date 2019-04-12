@@ -4,7 +4,7 @@ import (
 	"os"
 
 	version "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
 )
 
 var (
@@ -19,6 +19,14 @@ var (
 	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
 	// to bootstrap mounting plugins.
 	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
+
+	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
+	// plugin.
+	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
+
+	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
+	// string. Used for testing.
+	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

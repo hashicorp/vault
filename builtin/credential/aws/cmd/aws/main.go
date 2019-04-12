@@ -5,7 +5,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	awsauth "github.com/hashicorp/vault/builtin/credential/aws"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 )
 

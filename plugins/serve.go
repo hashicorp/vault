@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Serve is used to start a plugin's RPC server. It takes an interface that must

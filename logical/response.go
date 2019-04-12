@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
 )
 
 const (
