@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 	"golang.org/x/oauth2"
