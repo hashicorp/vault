@@ -1,3 +1,11 @@
+## Next
+
+CHANGES:
+
+ * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
+   will now be preferred over regions set in the enclosing environment.
+   This is a _breaking_ change.
+
 ## 1.1.1 (April 11th, 2019)
 
 SECURITY:
@@ -29,12 +37,6 @@ CHANGES:
  * replication: Due to technical limitations, mounting and unmounting was not
    previously possible from a performance secondary. These have been resolved,
    and these operations may now be run from a performance secondary.
-
-CHANGES:
-
- * vault aws kms seal **breaking change**: user-configured regions will now be 
-   preferred over regions set in the enclosing environment.
-
 
 IMPROVEMENTS: 
 
