@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 
+	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -44,20 +45,30 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		if role.StaticAccount != nil {
 			// in create/update of static accounts, we only care if the operation
 			// err'd , and this call does not return credentials
+			item, err := b.credRotationQueue.PopItemByKey(name)
+			if err != nil {
+				item = &queue.Item{
+					Key: name,
+				}
+			}
 
-			//TODO wrap in WAL, rollback
-			// TODO: pop and replace item from queue?
-			_, err = b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+			resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
 				RoleName: name,
 				Role:     role,
 			})
 			if err != nil {
 				return nil, err
 			}
+
+			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+
+			// Add their rotation to the queue
+			if err := b.credRotationQueue.PushItem(item); err != nil {
+				return nil, err
+			}
 		} else {
 			return logical.ErrorResponse("cannot rotate credentials of non-static accounts"), nil
 		}
-
 		return nil, nil
 	}
 }

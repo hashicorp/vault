@@ -75,7 +75,7 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a credential is valid for",
 			},
-			// TODO: consider renaming to "static_username" for clarity
+
 			"username": {
 				Type: framework.TypeString,
 				Description: `Name of the static user account for Vault to manage.
@@ -120,7 +120,6 @@ func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Reque
 	name := data.Get("name").(string)
 	// if this role is a static account, we need to revoke the user from the
 	// database
-	// TODO: wrap this in a WAL
 	role, err := b.Role(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -200,7 +199,6 @@ func (b *databaseBackend) pathRoleRead(ctx context.Context, req *logical.Request
 		data["username"] = role.StaticAccount.Username
 		data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
-			// TODO: formatting
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
 	}
@@ -275,7 +273,6 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 			return logical.ErrorResponse(fmt.Sprintf("invalid rotation_period: %s", err)), nil
 		}
 
-		// TODO: not sure why the check on logical.CreateOperation here
 		if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
 			role.Statements.Rotation = rotationStmtsRaw.([]string)
 		} else if req.Operation == logical.CreateOperation {

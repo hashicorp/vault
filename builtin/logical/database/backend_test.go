@@ -1377,7 +1377,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 }
 
-func TestBackend_PeriodicFunc(t *testing.T) {
+func TestBackend_Static_Rotations(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1391,7 +1391,7 @@ func TestBackend_PeriodicFunc(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	// TODO: verify this is needed
+	// allow initQueue to finish
 	time.Sleep(1 * time.Second)
 	bd := b.(*databaseBackend)
 	if bd.credRotationQueue == nil {

@@ -522,7 +522,6 @@ func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
 			return
 		}
 	}
-	return
 }
 
 // walSetCredentials is used to store information in a WAL that can retry a
@@ -648,7 +647,6 @@ func (b *databaseBackend) walForItemValue(ctx context.Context, s logical.Storage
 	return &walEntry
 }
 
-// TODO: rename to match the method these go with
 type setStaticAccountInput struct {
 	RoleName   string
 	Role       *roleEntry
@@ -664,27 +662,40 @@ type setStaticAccountOutput struct {
 	WALID string
 }
 
+// setStaticAccount sets the password for a static account associated with a
+// Role. This method does many things:
+// - verifies role exists and is in the allowed roles list
+// - loads an existing WAL entry if WALID input is given, otherwise creates a
+// new WAL entry
+// - gets a database connection
+// - accepts an input password, otherwise generates a new one via gRPC to the
+// database plugin
+// - sets new password for the static account
+// - uses WAL for ensuring passwords are not lost if storage to Vault fails
+//
+// This method does not preform any operations on the priority queue. Those
+// tasks must be handled outside of this method.
 func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
 	var lvr time.Time
 	var merr error
 	// re-use WAL ID if present, otherwise PUT a new WAL
-	setResponse := &setStaticAccountOutput{WALID: input.WALID}
+	output := &setStaticAccountOutput{WALID: input.WALID}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
 	if err != nil {
-		return setResponse, err
+		return output, err
 	}
 
 	// If role name isn't in the database's allowed roles, send back a
 	// permission denied.
 	if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, input.RoleName) {
-		return setResponse, fmt.Errorf("%q is not an allowed role", input.RoleName)
+		return output, fmt.Errorf("%q is not an allowed role", input.RoleName)
 	}
 
 	// Get the Database object
 	db, err := b.GetConnection(ctx, s, input.Role.DBName)
 	if err != nil {
-		return setResponse, err
+		return output, err
 	}
 
 	// Use password from input if available. This happens if we're restoring from
@@ -695,7 +706,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		// Generate a new password
 		newPassword, err = db.GenerateCredentials(ctx)
 		if err != nil {
-			return setResponse, err
+			return output, err
 		}
 	}
 
@@ -713,8 +724,8 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		stmts = input.Role.Statements.Rotation
 	}
 
-	if setResponse.WALID == "" {
-		setResponse.WALID, err = framework.PutWAL(ctx, s, walRotationKey, &walSetCredentials{
+	if output.WALID == "" {
+		output.WALID, err = framework.PutWAL(ctx, s, walRotationKey, &walSetCredentials{
 			RoleName:          input.RoleName,
 			Username:          config.Username,
 			NewPassword:       config.Password,
@@ -723,42 +734,39 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
-			// TODO: error wrap here?
-			return setResponse, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
+			return output, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 		}
 	}
 
-	var sterr error
-	_, password, _, sterr := db.SetCredentials(ctx, config, stmts)
-	if sterr != nil {
-		b.CloseIfShutdown(db, sterr)
-		return setResponse, sterr
+	_, password, _, err := db.SetCredentials(ctx, config, stmts)
+	if err != nil {
+		b.CloseIfShutdown(db, err)
+		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
 	}
 
-	// TODO set credentials doesn't need to return all these things
 	if newPassword != password {
-		return setResponse, errors.New("mismatch password returned")
+		return output, errors.New("mismatch passwords returned")
 	}
 
 	// Store updated role information
 	lvr = time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
 	input.Role.StaticAccount.Password = password
-	setResponse.RotationTime = lvr
+	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON("role/"+input.RoleName, input.Role)
 	if err != nil {
-		return setResponse, err
+		return output, err
 	}
 	if err := s.Put(ctx, entry); err != nil {
-		return setResponse, err
+		return output, err
 	}
 
 	// cleanup WAL after successfully rotating and pushing new item on to queue
-	if err := framework.DeleteWAL(ctx, s, setResponse.WALID); err != nil {
+	if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
 		merr = multierror.Append(merr, err)
 	}
 
-	// return a new setStaticAccountOutput without the WALID, since we deleted it
+	// the WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
