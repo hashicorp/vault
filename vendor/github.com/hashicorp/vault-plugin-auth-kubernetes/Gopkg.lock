@@ -471,7 +471,7 @@
     "github.com/hashicorp/go-hclog",
     "github.com/hashicorp/go-multierror",
     "github.com/hashicorp/go-sockaddr",
-    "github.com/hashicorp/vault/helper/cidrutil",
+    "github.com/hashicorp/vault/sdk/helper/cidrutil",
     "github.com/hashicorp/vault/sdk/helper/logging",
     "github.com/hashicorp/vault/sdk/helper/parseutil",
     "github.com/hashicorp/vault/sdk/helper/pluginutil",

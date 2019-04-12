@@ -447,7 +447,7 @@
     "github.com/hashicorp/go-sockaddr",
     "github.com/hashicorp/go-uuid",
     "github.com/hashicorp/vault/api",
-    "github.com/hashicorp/vault/helper/cidrutil",
+    "github.com/hashicorp/vault/sdk/helper/cidrutil",
     "github.com/hashicorp/vault/sdk/helper/parseutil",
     "github.com/hashicorp/vault/sdk/helper/pluginutil",
     "github.com/hashicorp/vault/sdk/logical",
