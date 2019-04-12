@@ -618,3 +618,40 @@ func mustJSONMarshal(t *testing.T, data interface{}) []byte {
 	}
 	return j
 }
+
+func TestOpenAPI_fmtParagraph(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    `     This is a test of a single line.    `,
+			expected: `This is a test of a single line.`,
+		},
+		{
+			input: `This is a test
+		     of multiple lines. All leading whitespace
+    from each line should be removed.`,
+			expected: `This is a test of multiple lines. All leading whitespace from each line should be removed.`,
+		},
+		{
+			input: `   This is a test
+		     of multiple lines and multiple paragraphs.
+
+   This should come after a blank
+  line.    
+
+
+
+
+   This should also come after ONE blank
+  line.    `,
+			expected: "This is a test of multiple lines and multiple paragraphs.\n\nThis should come after a blank line.\n\nThis should also come after ONE blank line.",
+		},
+	}
+	for _, test := range tests {
+		if actual := formatParagraph(test.input); actual != test.expected {
+			t.Errorf("\nactual: %v\nexpected: %v", actual, test.expected)
+		}
+	}
+}

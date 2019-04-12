@@ -174,6 +174,11 @@ spellcheck:
 	@echo "==> Spell checking website..."
 	@misspell -error -source=text website/source
 
+apidoc: dev
+	scripts/gen_openapi.sh
+	go run scripts/apidoc.go
+	rm -f openapi.json
+
 mysql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
 

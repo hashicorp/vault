@@ -314,7 +314,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 			op := NewOASOperation()
 
 			op.Summary = props.Summary
-			op.Description = props.Description
+			op.Description = formatParagraph(props.Description)
 			op.Deprecated = props.Deprecated
 
 			// Add any fields not present in the path as body parameters for POST.
@@ -699,4 +699,20 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 			oasOperation.OperationID = opID
 		}
 	}
+}
+
+var leadingSpace = regexp.MustCompile(`\n[\t ]+`)
+var paragraphSplit = regexp.MustCompile(`\n\n+`)
+
+// formatParagraph formats a string by removing leading whitespace from lines
+// while preserving paragraph splits (assuming the Markdown convention of multiple
+// empty lines as the paragraph split)
+func formatParagraph(s string) string {
+	paragraphs := paragraphSplit.Split(s, -1)
+	for i, p := range paragraphs {
+		s := leadingSpace.ReplaceAllString(p, " ")
+		paragraphs[i] = strings.TrimSpace(s)
+	}
+
+	return strings.Join(paragraphs, "\n\n")
 }

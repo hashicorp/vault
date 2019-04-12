@@ -33,9 +33,27 @@ for the OCSP servers attribute`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathWriteURL,
-			logical.ReadOperation:   b.pathReadURL,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadURL,
+				Summary:  "Read the URLs to be encoded in generated certificates.",
+			},
+
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathWriteURL,
+				Summary:  "Update the URLs to be encoded in generated certificates.",
+				Description: `
+				This endpoint allows setting the issuing certificate endpoints, CRL distribution
+				points, and OCSP server endpoints that will be encoded into issued certificates.
+				You can update any of the values at any time without affecting the other
+				existing values. To remove the values, simply use a blank string as the
+				parameter.`,
+				Examples: []framework.RequestExample{{
+					Data: map[string]interface{}{
+						"ocsp_servers": []string{"https://..."},
+					},
+				}},
+			},
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,

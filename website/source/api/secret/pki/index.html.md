@@ -318,34 +318,32 @@ $ curl \
 
 ## Set URLs
 
-This endpoint allows setting the issuing certificate endpoints, CRL distribution
-points, and OCSP server endpoints that will be encoded into issued certificates.
-You can update any of the values at any time without affecting the other
-existing values. To remove the values, simply use a blank string as the
-parameter.
+<!--apidoc_start path:/pki/config/urls method:post -->
+<!-- This section is auto-generated and must be updated in the Go source file. -->
 
-| Method   | Path                         |
-| :--------------------------- | :--------------------- |
-| `POST`   | `/pki/config/urls`           |
+This endpoint allows setting the issuing certificate endpoints, CRL distribution points, and OCSP
+server endpoints that will be encoded into issued certificates. You can update any of the values
+at any time without affecting the other existing values. To remove the values, simply use a blank
+string as the parameter.
 
-### Parameters
+| Method  | Path                |
+| :------ | :------------------ |
+| `POST`  | `/pki/config/urls`  |
 
-- `issuing_certificates` `(array<string>: nil)` – Specifies the URL values for
-  the Issuing Certificate field. This can be an array or a comma-separated
-  string list.
-
-- `crl_distribution_points` `(array<string>: nil)` – Specifies the URL values
-  for the CRL Distribution Points field. This can be an array or a
-  comma-separated string list.
-
-- `ocsp_servers` `(array<string>: nil)` – Specifies the URL values for the OCSP
-  Servers field. This can be an array or a comma-separated string list.
+- `issuing_certificates` (`array: []`) - Comma-separated list of URLs to be used for the issuing
+  certificate attribute.
+- `crl_distribution_points` (`array: []`) - Comma-separated list of URLs to be used for the CRL
+  distribution points attribute.
+- `ocsp_servers` (`array: []`) - Comma-separated list of URLs to be used for the OCSP servers
+  attribute.
 
 ### Sample Payload
 
 ```json
 {
-  "ocsp_servers": ["https://..."]
+  "ocsp_servers": [
+    "https://..."
+  ]
 }
 ```
 
@@ -353,11 +351,13 @@ parameter.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \
+    --header "X-Vault-Token: ..." 
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/pki/config/urls
+    https://127.0.0.1:8200/v1/pki/config/urls
 ```
+
+<!--apidoc_end -->
 
 ## Read CRL
 
