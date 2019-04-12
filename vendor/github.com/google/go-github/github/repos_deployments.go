@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Deployment represents a deployment in a repo
@@ -116,7 +117,8 @@ func (s *RepositoriesService) CreateDeployment(ctx context.Context, owner, repo 
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
+	acceptHeaders := []string{mediaTypeDeploymentStatusPreview, mediaTypeExpandDeploymentStatusPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	d := new(Deployment)
 	resp, err := s.client.Do(ctx, req, d)
@@ -149,6 +151,7 @@ type DeploymentStatusRequest struct {
 	State          *string `json:"state,omitempty"`
 	LogURL         *string `json:"log_url,omitempty"`
 	Description    *string `json:"description,omitempty"`
+	Environment    *string `json:"environment,omitempty"`
 	EnvironmentURL *string `json:"environment_url,omitempty"`
 	AutoInactive   *bool   `json:"auto_inactive,omitempty"`
 }
@@ -189,7 +192,8 @@ func (s *RepositoriesService) GetDeploymentStatus(ctx context.Context, owner, re
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
+	acceptHeaders := []string{mediaTypeDeploymentStatusPreview, mediaTypeExpandDeploymentStatusPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	d := new(DeploymentStatus)
 	resp, err := s.client.Do(ctx, req, d)
@@ -212,7 +216,8 @@ func (s *RepositoriesService) CreateDeploymentStatus(ctx context.Context, owner,
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	req.Header.Set("Accept", mediaTypeDeploymentStatusPreview)
+	acceptHeaders := []string{mediaTypeDeploymentStatusPreview, mediaTypeExpandDeploymentStatusPreview}
+	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	d := new(DeploymentStatus)
 	resp, err := s.client.Do(ctx, req, d)

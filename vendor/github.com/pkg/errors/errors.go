@@ -82,7 +82,7 @@
 //
 //     if err, ok := err.(stackTracer); ok {
 //             for _, f := range err.StackTrace() {
-//                     fmt.Printf("%+s:%d", f)
+//                     fmt.Printf("%+s:%d\n", f, f)
 //             }
 //     }
 //
@@ -229,7 +229,7 @@ func WithMessagef(err error, format string, args ...interface{}) error {
 	}
 	return &withMessage{
 		cause: err,
-		msg: fmt.Sprintf(format, args...),
+		msg:   fmt.Sprintf(format, args...),
 	}
 }
 

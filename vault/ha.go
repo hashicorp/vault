@@ -646,6 +646,12 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				lopCount := opCount
 				isLeader, _, newClusterAddr, _ := c.Leader()
 
+				// If we are the leader reset the clusterAddr since the next
+				// failover might go to the node that was previously active.
+				if isLeader {
+					clusterAddr = ""
+				}
+
 				if !isLeader && newClusterAddr != clusterAddr && newLeaderCh != nil {
 					select {
 					case newLeaderCh <- nil:

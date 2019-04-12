@@ -92,6 +92,7 @@ func (h Hook) String() string {
 // information.
 type createHookRequest struct {
 	// Config is required.
+	Name   string                 `json:"name"`
 	Config map[string]interface{} `json:"config,omitempty"`
 	Events []string               `json:"events,omitempty"`
 	Active *bool                  `json:"active,omitempty"`
@@ -108,6 +109,7 @@ func (s *RepositoriesService) CreateHook(ctx context.Context, owner, repo string
 	u := fmt.Sprintf("repos/%v/%v/hooks", owner, repo)
 
 	hookReq := &createHookRequest{
+		Name:   "web",
 		Events: hook.Events,
 		Active: hook.Active,
 		Config: hook.Config,

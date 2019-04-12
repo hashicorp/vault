@@ -12,6 +12,7 @@ import (
 
 // ReviewersRequest specifies users and teams for a pull request review request.
 type ReviewersRequest struct {
+	NodeID        *string  `json:"node_id,omitempty"`
 	Reviewers     []string `json:"reviewers,omitempty"`
 	TeamReviewers []string `json:"team_reviewers,omitempty"`
 }

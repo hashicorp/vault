@@ -498,9 +498,14 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
-	// being reloaded during a request.
-	re.l.RLock()
-	defer re.l.RUnlock()
+	// being reloaded during a request. The exception is a renew request on the
+	// token store; such a request will have already been routed through the
+	// token store -> exp manager -> here so we need to not grab the lock again
+	// or we'll be recursively grabbing it.
+	if !(req.Operation == logical.RenewOperation && strings.HasPrefix(req.Path, "auth/token/")) {
+		re.l.RLock()
+		defer re.l.RUnlock()
+	}
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {

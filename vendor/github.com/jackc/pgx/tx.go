@@ -240,18 +240,18 @@ func (tx *Tx) CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyFr
 }
 
 // CopyFromReader delegates to the underlying *Conn
-func (tx *Tx) CopyFromReader(r io.Reader, sql string) error {
+func (tx *Tx) CopyFromReader(r io.Reader, sql string) (commandTag CommandTag, err error) {
 	if tx.status != TxStatusInProgress {
-		return ErrTxClosed
+		return CommandTag(""), ErrTxClosed
 	}
 
 	return tx.conn.CopyFromReader(r, sql)
 }
 
 // CopyToWriter delegates to the underlying *Conn
-func (tx *Tx) CopyToWriter(w io.Writer, sql string, args ...interface{}) error {
+func (tx *Tx) CopyToWriter(w io.Writer, sql string, args ...interface{}) (commandTag CommandTag, err error) {
 	if tx.status != TxStatusInProgress {
-		return ErrTxClosed
+		return CommandTag(""), ErrTxClosed
 	}
 
 	return tx.conn.CopyToWriter(w, sql, args...)

@@ -205,9 +205,6 @@ var CertTypeToString = map[uint16]string{
 	CertOID:     "OID",
 }
 
-// StringToCertType is the reverseof CertTypeToString.
-var StringToCertType = reverseInt16(CertTypeToString)
-
 //go:generate go run types_generate.go
 
 // Question holds a DNS question. There can be multiple questions in the
@@ -218,8 +215,10 @@ type Question struct {
 	Qclass uint16
 }
 
-func (q *Question) len() int {
-	return len(q.Name) + 1 + 2 + 2
+func (q *Question) len(off int, compression map[string]struct{}) int {
+	l := domainNameLen(q.Name, off, compression, true)
+	l += 2 + 2
+	return l
 }
 
 func (q *Question) String() (s string) {
@@ -238,6 +237,25 @@ type ANY struct {
 }
 
 func (rr *ANY) String() string { return rr.Hdr.String() }
+
+func (rr *ANY) parse(c *zlexer, origin, file string) *ParseError {
+	panic("dns: internal error: parse should never be called on ANY")
+}
+
+// NULL RR. See RFC 1035.
+type NULL struct {
+	Hdr  RR_Header
+	Data string `dns:"any"`
+}
+
+func (rr *NULL) String() string {
+	// There is no presentation format; prefix string with a comment.
+	return ";" + rr.Hdr.String() + rr.Data
+}
+
+func (rr *NULL) parse(c *zlexer, origin, file string) *ParseError {
+	panic("dns: internal error: parse should never be called on NULL")
+}
 
 // CNAME RR. See RFC 1034.
 type CNAME struct {
@@ -351,7 +369,7 @@ func (rr *X25) String() string {
 type RT struct {
 	Hdr        RR_Header
 	Preference uint16
-	Host       string `dns:"cdomain-name"`
+	Host       string `dns:"domain-name"` // RFC 3597 prohibits compressing records not defined in RFC 1035.
 }
 
 func (rr *RT) String() string {
@@ -386,7 +404,7 @@ type RP struct {
 }
 
 func (rr *RP) String() string {
-	return rr.Hdr.String() + rr.Mbox + " " + sprintTxt([]string{rr.Txt})
+	return rr.Hdr.String() + sprintName(rr.Mbox) + " " + sprintName(rr.Txt)
 }
 
 // SOA RR. See RFC 1035.
@@ -460,7 +478,7 @@ func sprintTxtOctet(s string) string {
 		case b == '.':
 			dst.WriteByte('.')
 		case b < ' ' || b > '~':
-			writeEscapedByte(&dst, b)
+			dst.WriteString(escapeByte(b))
 		default:
 			dst.WriteByte(b)
 		}
@@ -508,20 +526,44 @@ func writeTXTStringByte(s *strings.Builder, b byte) {
 		s.WriteByte('\\')
 		s.WriteByte(b)
 	case b < ' ' || b > '~':
-		writeEscapedByte(s, b)
+		s.WriteString(escapeByte(b))
 	default:
 		s.WriteByte(b)
 	}
 }
 
-func writeEscapedByte(s *strings.Builder, b byte) {
-	var buf [3]byte
-	bufs := strconv.AppendInt(buf[:0], int64(b), 10)
-	s.WriteByte('\\')
-	for i := len(bufs); i < 3; i++ {
-		s.WriteByte('0')
+const (
+	escapedByteSmall = "" +
+		`\000\001\002\003\004\005\006\007\008\009` +
+		`\010\011\012\013\014\015\016\017\018\019` +
+		`\020\021\022\023\024\025\026\027\028\029` +
+		`\030\031`
+	escapedByteLarge = `\127\128\129` +
+		`\130\131\132\133\134\135\136\137\138\139` +
+		`\140\141\142\143\144\145\146\147\148\149` +
+		`\150\151\152\153\154\155\156\157\158\159` +
+		`\160\161\162\163\164\165\166\167\168\169` +
+		`\170\171\172\173\174\175\176\177\178\179` +
+		`\180\181\182\183\184\185\186\187\188\189` +
+		`\190\191\192\193\194\195\196\197\198\199` +
+		`\200\201\202\203\204\205\206\207\208\209` +
+		`\210\211\212\213\214\215\216\217\218\219` +
+		`\220\221\222\223\224\225\226\227\228\229` +
+		`\230\231\232\233\234\235\236\237\238\239` +
+		`\240\241\242\243\244\245\246\247\248\249` +
+		`\250\251\252\253\254\255`
+)
+
+// escapeByte returns the \DDD escaping of b which must
+// satisfy b < ' ' || b > '~'.
+func escapeByte(b byte) string {
+	if b < ' ' {
+		return escapedByteSmall[b*4 : b*4+4]
 	}
-	s.Write(bufs)
+
+	b -= '~' + 1
+	// The cast here is needed as b*4 may overflow byte.
+	return escapedByteLarge[int(b)*4 : int(b)*4+4]
 }
 
 func nextByte(s string, offset int) (byte, int) {
@@ -803,14 +845,15 @@ type NSEC struct {
 
 func (rr *NSEC) String() string {
 	s := rr.Hdr.String() + sprintName(rr.NextDomain)
-	for i := 0; i < len(rr.TypeBitMap); i++ {
-		s += " " + Type(rr.TypeBitMap[i]).String()
+	for _, t := range rr.TypeBitMap {
+		s += " " + Type(t).String()
 	}
 	return s
 }
 
-func (rr *NSEC) len() int {
-	l := rr.Hdr.len() + len(rr.NextDomain) + 1
+func (rr *NSEC) len(off int, compression map[string]struct{}) int {
+	l := rr.Hdr.len(off, compression)
+	l += domainNameLen(rr.NextDomain, off+l, compression, false)
 	lastwindow := uint32(2 ^ 32 + 1)
 	for _, t := range rr.TypeBitMap {
 		window := t / 256
@@ -968,14 +1011,15 @@ func (rr *NSEC3) String() string {
 		" " + strconv.Itoa(int(rr.Iterations)) +
 		" " + saltToString(rr.Salt) +
 		" " + rr.NextDomain
-	for i := 0; i < len(rr.TypeBitMap); i++ {
-		s += " " + Type(rr.TypeBitMap[i]).String()
+	for _, t := range rr.TypeBitMap {
+		s += " " + Type(t).String()
 	}
 	return s
 }
 
-func (rr *NSEC3) len() int {
-	l := rr.Hdr.len() + 6 + len(rr.Salt)/2 + 1 + len(rr.NextDomain) + 1
+func (rr *NSEC3) len(off int, compression map[string]struct{}) int {
+	l := rr.Hdr.len(off, compression)
+	l += 6 + len(rr.Salt)/2 + 1 + len(rr.NextDomain) + 1
 	lastwindow := uint32(2 ^ 32 + 1)
 	for _, t := range rr.TypeBitMap {
 		window := t / 256
@@ -1022,10 +1066,16 @@ type TKEY struct {
 
 // TKEY has no official presentation format, but this will suffice.
 func (rr *TKEY) String() string {
-	s := "\n;; TKEY PSEUDOSECTION:\n"
-	s += rr.Hdr.String() + " " + rr.Algorithm + " " +
-		strconv.Itoa(int(rr.KeySize)) + " " + rr.Key + " " +
-		strconv.Itoa(int(rr.OtherLen)) + " " + rr.OtherData
+	s := ";" + rr.Hdr.String() +
+		" " + rr.Algorithm +
+		" " + TimeToString(rr.Inception) +
+		" " + TimeToString(rr.Expiration) +
+		" " + strconv.Itoa(int(rr.Mode)) +
+		" " + strconv.Itoa(int(rr.Error)) +
+		" " + strconv.Itoa(int(rr.KeySize)) +
+		" " + rr.Key +
+		" " + strconv.Itoa(int(rr.OtherLen)) +
+		" " + rr.OtherData
 	return s
 }
 
@@ -1285,14 +1335,15 @@ type CSYNC struct {
 func (rr *CSYNC) String() string {
 	s := rr.Hdr.String() + strconv.FormatInt(int64(rr.Serial), 10) + " " + strconv.Itoa(int(rr.Flags))
 
-	for i := 0; i < len(rr.TypeBitMap); i++ {
-		s += " " + Type(rr.TypeBitMap[i]).String()
+	for _, t := range rr.TypeBitMap {
+		s += " " + Type(t).String()
 	}
 	return s
 }
 
-func (rr *CSYNC) len() int {
-	l := rr.Hdr.len() + 4 + 2
+func (rr *CSYNC) len(off int, compression map[string]struct{}) int {
+	l := rr.Hdr.len(off, compression)
+	l += 4 + 2
 	lastwindow := uint32(2 ^ 32 + 1)
 	for _, t := range rr.TypeBitMap {
 		window := t / 256

@@ -9,6 +9,21 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 
+/**
+ * @module AuthForm
+ * The `AuthForm` is used to sign users into Vault.
+ *
+ * @example ```js
+ * // All properties are passed in via query params.
+ *   <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @redirectTo={{redirectTo}} @selectedAuth={{authMethod}}/>```
+ *
+ * @param wrappedToken=null {String} - The auth method that is currently selected in the dropdown.
+ * @param cluster=null {Object} - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
+ * @param namespace=null {String} - The currently active namespace.
+ * @param redirectTo=null {String} - The name of the route to redirect to.
+ * @param selectedAuth=null {String} - The auth method that is currently selected in the dropdown.
+ */
+
 const DEFAULTS = {
   token: null,
   username: null,
@@ -137,7 +152,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   fetchMethods: task(function*() {
     let store = this.get('store');
@@ -154,11 +169,11 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
-  handleError(e) {
+  handleError(e, prefixMessage = true) {
     this.set('loading', false);
     if (!e.errors) {
       return e;
@@ -169,7 +184,8 @@ export default Component.extend(DEFAULTS, {
       }
       return error;
     });
-    this.set('error', `Authentication failed: ${errors.join('.')}`);
+    let message = prefixMessage ? 'Authentication failed: ' : '';
+    this.set('error', `${message}${errors.join('.')}`);
   },
 
   authenticate: task(function*(backendType, data) {
@@ -192,7 +208,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.handleError(e);
     }
-  }),
+  }).withTestWaiter(),
 
   actions: {
     doSubmit() {
@@ -223,6 +239,13 @@ export default Component.extend(DEFAULTS, {
         data.path = this.get('customPath') || get(backend, 'id');
       }
       return this.authenticate.unlinked().perform(backend.type, data);
+    },
+    handleError(e) {
+      if (e) {
+        this.handleError(e, false);
+      } else {
+        this.set('error', null);
+      }
     },
   },
 });

@@ -19,19 +19,10 @@ import (
 	"time"
 )
 
-// a copy of context.Context for Go 1.7 and earlier
-type mysqlContext interface {
-	Done() <-chan struct{}
-	Err() error
-
-	// defined in context.Context, but not used in this driver:
-	// Deadline() (deadline time.Time, ok bool)
-	// Value(key interface{}) interface{}
-}
-
 type mysqlConn struct {
 	buf              buffer
 	netConn          net.Conn
+	rawConn          net.Conn // underlying connection when netConn is TLS connection.
 	affectedRows     uint64
 	insertId         uint64
 	cfg              *Config
@@ -42,10 +33,11 @@ type mysqlConn struct {
 	status           statusFlag
 	sequence         uint8
 	parseTime        bool
+	reset            bool // set when the Go SQL package calls ResetSession
 
 	// for context support (Go 1.8+)
 	watching bool
-	watcher  chan<- mysqlContext
+	watcher  chan<- context.Context
 	closech  chan struct{}
 	finished chan<- struct{}
 	canceled atomicError // set non-nil if conn is canceled
@@ -192,10 +184,10 @@ func (mc *mysqlConn) interpolateParams(query string, args []driver.Value) (strin
 		return "", driver.ErrSkip
 	}
 
-	buf := mc.buf.takeCompleteBuffer()
-	if buf == nil {
+	buf, err := mc.buf.takeCompleteBuffer()
+	if err != nil {
 		// can not take the buffer. Something must be wrong with the connection
-		errLog.Print(ErrBusyBuffer)
+		errLog.Print(err)
 		return "", ErrInvalidConn
 	}
 	buf = buf[:0]
@@ -475,7 +467,7 @@ func (mc *mysqlConn) Ping(ctx context.Context) (err error) {
 	defer mc.finish()
 
 	if err = mc.writeCommandPacket(comPing); err != nil {
-		return
+		return mc.markBadConn(err)
 	}
 
 	return mc.readResultOK()
@@ -614,13 +606,13 @@ func (mc *mysqlConn) watchCancel(ctx context.Context) error {
 }
 
 func (mc *mysqlConn) startWatcher() {
-	watcher := make(chan mysqlContext, 1)
+	watcher := make(chan context.Context, 1)
 	mc.watcher = watcher
 	finished := make(chan struct{})
 	mc.finished = finished
 	go func() {
 		for {
-			var ctx mysqlContext
+			var ctx context.Context
 			select {
 			case ctx = <-watcher:
 			case <-mc.closech:
@@ -649,5 +641,6 @@ func (mc *mysqlConn) ResetSession(ctx context.Context) error {
 	if mc.closed.IsSet() {
 		return driver.ErrBadConn
 	}
+	mc.reset = true
 	return nil
 }

@@ -21,7 +21,10 @@ import (
 
 // RepositoryContent represents a file or directory in a github repository.
 type RepositoryContent struct {
-	Type     *string `json:"type,omitempty"`
+	Type *string `json:"type,omitempty"`
+	// Target is only set if the type is "symlink" and the target is not a normal file.
+	// If Target is set, Path will be the symlink path.
+	Target   *string `json:"target,omitempty"`
 	Encoding *string `json:"encoding,omitempty"`
 	Size     *int    `json:"size,omitempty"`
 	Name     *string `json:"name,omitempty"`

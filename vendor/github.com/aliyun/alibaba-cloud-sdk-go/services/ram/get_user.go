@@ -91,7 +91,7 @@ func CreateGetUserRequest() (request *GetUserRequest) {
 	request = &GetUserRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetUser", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetUser", "ram", "openAPI")
 	return
 }
 

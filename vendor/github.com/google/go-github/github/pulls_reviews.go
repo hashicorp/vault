@@ -14,6 +14,7 @@ import (
 // PullRequestReview represents a review of a pull request.
 type PullRequestReview struct {
 	ID             *int64     `json:"id,omitempty"`
+	NodeID         *string    `json:"node_id,omitempty"`
 	User           *User      `json:"user,omitempty"`
 	Body           *string    `json:"body,omitempty"`
 	SubmittedAt    *time.Time `json:"submitted_at,omitempty"`
@@ -40,6 +41,7 @@ func (c DraftReviewComment) String() string {
 
 // PullRequestReviewRequest represents a request to create a review.
 type PullRequestReviewRequest struct {
+	NodeID   *string               `json:"node_id,omitempty"`
 	CommitID *string               `json:"commit_id,omitempty"`
 	Body     *string               `json:"body,omitempty"`
 	Event    *string               `json:"event,omitempty"`

@@ -59,7 +59,7 @@ _build() {
     cat > gen.generated.go <<EOF
 // +build codecgen.exec
 
-// Copyright (c) 2012-2015 Ugorji Nwoke. All rights reserved.
+// Copyright (c) 2012-2018 Ugorji Nwoke. All rights reserved.
 // Use of this source code is governed by a MIT license found in the LICENSE file.
 
 package codec
@@ -127,16 +127,19 @@ EOF
 }
 
 _codegenerators() {
-    if ! [[ $zforce ||
-                $(_ng "values_codecgen${zsfx}") ]]; then return 0; fi
+    if ! [[ $zforce || $(_ng "values_codecgen${zsfx}") ]]; then return 0; fi
 
-    # Note: ensure you run the codecgen for this codebase  (using $zgobase/bin/codecgen)
+    # Note: ensure you run the codecgen for this codebase/directory i.e. ./codecgen/codecgen
     local c9="codecgen-scratch.go"
+    local c7="$zmydir/codecgen"
     true &&
         echo "codecgen ... " &&
-        $zgobase/bin/codecgen -rt codecgen -t 'codecgen generated' -o values_codecgen${zsfx} -d 19780 $zfin $zfin2 &&
+        if [[ $zforce || ! -f "$c7/codecgen" || "$c7/gen.go" -nt "$c7/codecgen" ]]; then
+            echo "rebuilding codecgen ... " && ( cd codecgen && go build -o codecgen ${zargs[*]} . )
+        fi &&
+        $c7/codecgen -rt codecgen -t 'codecgen generated' -o values_codecgen${zsfx} -d 19780 $zfin $zfin2 &&
         cp mammoth2_generated_test.go $c9 &&
-        $zgobase/bin/codecgen -t '!notfastpath' -o mammoth2_codecgen${zsfx} -d 19781 mammoth2_generated_test.go &&
+        $c7/codecgen -t '!notfastpath' -o mammoth2_codecgen${zsfx} -d 19781 mammoth2_generated_test.go &&
         rm -f $c9 &&
         echo "generators done!" 
 }
@@ -165,7 +168,7 @@ _prebuild() {
 _make() {
     zforce=1
     zexternal=1
-    ( cd codecgen && go install ${zargs[*]} . ) && _prebuild && go install ${zargs[*]} .
+    (cd codecgen && go install ${zargs[*]} .) && _prebuild && go install ${zargs[*]} .
     unset zforce zexternal
 }
 
@@ -175,10 +178,47 @@ _clean() {
        test_values.generated.go test_values_flex.generated.go
 }
 
+_release() {
+    local reply
+    read -p "Pre-release validation takes a few minutes and MUST be run from within GOPATH/src. Confirm y/n? " -n 1 -r reply
+    echo
+    if [[ ! $reply =~ ^[Yy]$ ]]; then return 1; fi
+
+    # expects GOROOT, GOROOT_BOOTSTRAP to have been set.
+    if [[ -z "${GOROOT// }" || -z "${GOROOT_BOOTSTRAP// }" ]]; then return 1; fi
+    # (cd $GOROOT && git checkout -f master && git pull && git reset --hard)
+    (cd $GOROOT && git pull)
+    local f=`pwd`/make.release.out
+    cat > $f <<EOF
+========== `date` ===========
+EOF
+    # # go 1.6 and below kept giving memory errors on Mac OS X during SDK build or go run execution,
+    # # that is fine, as we only explicitly test the last 3 releases and tip (2 years).
+    zforce=1
+    for i in 1.10 1.11 1.12 master
+    do
+        echo "*********** $i ***********" >>$f
+        if [[ "$i" != "master" ]]; then i="release-branch.go$i"; fi
+        (false ||
+             (echo "===== BUILDING GO SDK for branch: $i ... =====" &&
+                  cd $GOROOT &&
+                  git checkout -f $i && git reset --hard && git clean -f . &&
+                  cd src && ./make.bash >>$f 2>&1 && sleep 1 ) ) &&
+            echo "===== GO SDK BUILD DONE =====" &&
+            _prebuild &&
+            echo "===== PREBUILD DONE with exit: $? =====" &&
+            _tests "$@"
+        if [[ "$?" != 0 ]]; then return 1; fi
+    done
+    unset zforce
+    echo "++++++++ RELEASE TEST SUITES ALL PASSED ++++++++"
+}
+
 _usage() {
     cat <<EOF
 primary usage: $0 
-    -[tmpfxnld] for [tests, make, prebuild (force) (external), inlining diagnostics, mid-stack inlining, race detector]
+    -[tmpfxnld]           -> [tests, make, prebuild (force) (external), inlining diagnostics, mid-stack inlining, race detector]
+    -v                    -> verbose
 EOF
     if [[ "$(type -t _usage_run)" = "function" ]]; then _usage_run ; fi
 }
@@ -188,23 +228,26 @@ _main() {
     local x
     unset zforce zexternal
     zargs=()
-    while getopts ":ctbqmnrgupfxlzd" flag
+    zbenchflags=""
+    OPTIND=1
+    while getopts ":ctmnrgupfvxlzdb:" flag
     do
         case "x$flag" in
             'xf') zforce=1 ;;
             'xx') zexternal=1 ;;
+            'xv') zverbose=1 ;;
             'xl') zargs+=("-gcflags"); zargs+=("-l=4") ;;
-            'xn') zargs+=("-gcflags"); zargs+=("-m") ;;
+            'xn') zargs+=("-gcflags"); zargs+=("-m=2") ;;
             'xd') zargs+=("-race") ;;
+            'xb') x='b'; zbenchflags=${OPTARG} ;;
             x\?) _usage; return 1 ;;
             *) x=$flag ;;
         esac
     done
     shift $((OPTIND-1))
+    # echo ">>>> _main: extra args: $@"
     case "x$x" in
         'xt') _tests "$@" ;;
-        'xq') _benchquick "$@" ;;
-        'xb') _bench "$@" ;;
         'xm') _make "$@" ;;
         'xr') _release "$@" ;;
         'xg') _go ;;
@@ -212,6 +255,7 @@ _main() {
         'xp') _prebuild "$@" ;;
         'xc') _clean "$@" ;;
         'xz') _analyze "$@" ;;
+        'xb') _bench "$@" ;;
     esac
     unset zforce zexternal 
 }

@@ -11,7 +11,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
@@ -63,7 +65,22 @@ func (b *versionedKVBackend) upgradeDone(ctx context.Context, s logical.Storage)
 		}
 	}
 
-	return upgradeInfo.Done, nil
+	if !upgradeInfo.Done {
+		return false, nil
+	}
+
+	// Also make sure the policy is found. This is created on first call to
+	// policy() but if that happens to be a secondary you get a readonly
+	// storage error -- not nice UX.
+	policy, err := keysutil.LoadPolicy(ctx, s, path.Join(b.storagePrefix, "policy/metadata"))
+	if err != nil {
+		return false, err
+	}
+	if policy == nil {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) error {
@@ -118,7 +135,30 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		return nil
 	}
 
-	upgradeInfo := &UpgradeInfo{
+	// See if we're already done, in which case we just need to ensure the
+	// policy was created
+	upgradeEntry, err := s.Get(ctx, path.Join(b.storagePrefix, "upgrading"))
+	if err != nil {
+		return err
+	}
+
+	upgradeInfo := new(UpgradeInfo)
+	if upgradeEntry != nil {
+		err := proto.Unmarshal(upgradeEntry.Value, upgradeInfo)
+		if err != nil {
+			return err
+		}
+	}
+
+	if upgradeInfo.Done {
+		// Just synchronously call policy
+		if _, err = b.policy(ctx, s); err != nil {
+			return errwrap.Wrapf("upgrade done but error checking/creating policy: {{err}}", err)
+		}
+		return nil
+	}
+
+	upgradeInfo = &UpgradeInfo{
 		StartedTime: ptypes.TimestampNow(),
 	}
 
@@ -232,6 +272,14 @@ func (b *versionedKVBackend) Upgrade(ctx context.Context, s logical.Storage) err
 		}
 
 		b.Logger().Info("upgrading keys finished")
+
+		// We do this now so that we ensure it's written by the primary before
+		// secondaries unblock
+		b.l.Lock()
+		if _, err = b.policy(ctx, s); err != nil {
+			b.Logger().Error("error checking/creating policy after upgrade", "error", err)
+		}
+		b.l.Unlock()
 
 		// Write upgrade done value
 		upgradeInfo.Done = true

@@ -18,14 +18,15 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, int, error) {
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
-		return nil, http.StatusBadRequest, nil
+		return nil, nil, http.StatusBadRequest, nil
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
 	var data map[string]interface{}
+	var origBody io.ReadCloser
 
 	// Determine the operation
 	var op logical.Operation
@@ -42,7 +43,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		if listStr != "" {
 			list, err = strconv.ParseBool(listStr)
 			if err != nil {
-				return nil, http.StatusBadRequest, nil
+				return nil, nil, http.StatusBadRequest, nil
 			}
 			if list {
 				op = logical.ListOperation
@@ -79,13 +80,13 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		op = logical.UpdateOperation
 		// Parse the request if we can
 		if op == logical.UpdateOperation {
-			err := parseRequest(r, w, &data)
+			origBody, err = parseRequest(core, r, w, &data)
 			if err == io.EOF {
 				data = nil
 				err = nil
 			}
 			if err != nil {
-				return nil, http.StatusBadRequest, err
+				return nil, nil, http.StatusBadRequest, err
 			}
 		}
 
@@ -97,12 +98,12 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	case "OPTIONS":
 	default:
-		return nil, http.StatusMethodNotAllowed, nil
+		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
 
 	request_id, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
 	req, err := requestAuth(core, r, &logical.Request{
@@ -115,27 +116,27 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	})
 	if err != nil {
 		if errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
-			return nil, http.StatusForbidden, nil
+			return nil, nil, http.StatusForbidden, nil
 		}
-		return nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error performing token check: {{err}}", err)
 	}
 
 	req, err = requestWrapInfo(r, req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
 	}
 
 	err = parseMFAHeader(req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf("failed to parse X-Vault-MFA header: {{err}}", err)
 	}
 
 	err = requestPolicyOverride(r, req)
 	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
+		return nil, nil, http.StatusBadRequest, errwrap.Wrapf(fmt.Sprintf(`failed to parse %s header: {{err}}`, PolicyOverrideHeaderName), err)
 	}
 
-	return req, 0, nil
+	return req, origBody, 0, nil
 }
 
 func handleLogical(core *vault.Core) http.Handler {
@@ -148,14 +149,17 @@ func handleLogicalWithInjector(core *vault.Core) http.Handler {
 
 func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, statusCode, err := buildLogicalRequest(core, w, r)
+		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
 		}
 
-		// Always forward requests that are using a limited use count token
+		// Always forward requests that are using a limited use count token.
 		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			if origBody != nil {
+				r.Body = origBody
+			}
 			forwardRequest(core, w, r)
 			return
 		}
@@ -271,6 +275,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		if needsForward {
+			if origBody != nil {
+				r.Body = origBody
+			}
 			forwardRequest(core, w, r)
 			return
 		}

@@ -127,8 +127,19 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 			return nil, fmt.Errorf("at least one listener required when cache enabled")
 		}
 
-		if result.Cache.UseAutoAuthToken && result.AutoAuth == nil {
-			return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+		if result.Cache.UseAutoAuthToken {
+			if result.AutoAuth == nil {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if result.AutoAuth.Method.WrapTTL > 0 {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if result.AutoAuth != nil {
+		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
 		}
 	}
 
@@ -266,6 +277,16 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
+	}
+
+	if result.AutoAuth.Method.WrapTTL > 0 {
+		if len(result.AutoAuth.Sinks) != 1 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
+		}
+
+		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
+		}
 	}
 
 	return nil

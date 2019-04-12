@@ -8,9 +8,7 @@ package github
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strconv"
-	"strings"
 
 	qs "github.com/google/go-querystring/query"
 )
@@ -218,20 +216,19 @@ func (s *SearchService) Labels(ctx context.Context, repoID int64, query string, 
 
 // Helper function that executes search queries against different
 // GitHub search types (repositories, commits, code, issues, users, labels)
+//
+// If searchParameters.Query includes multiple condition, it MUST NOT include "+" as condition separator.
+// For example, querying with "language:c++" and "leveldb", then searchParameters.Query should be "language:c++ leveldb" but not "language:c+++leveldb".
 func (s *SearchService) search(ctx context.Context, searchType string, parameters *searchParameters, opt *SearchOptions, result interface{}) (*Response, error) {
 	params, err := qs.Values(opt)
 	if err != nil {
 		return nil, err
 	}
-	q := strings.Replace(parameters.Query, " ", "+", -1)
 	if parameters.RepositoryID != nil {
 		params.Set("repository_id", strconv.FormatInt(*parameters.RepositoryID, 10))
 	}
-	query := "q=" + url.PathEscape(q)
-	if v := params.Encode(); v != "" {
-		query = query + "&" + v
-	}
-	u := fmt.Sprintf("search/%s?%s", searchType, query)
+	params.Set("q", parameters.Query)
+	u := fmt.Sprintf("search/%s?%s", searchType, params.Encode())
 
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
