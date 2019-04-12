@@ -9,5 +9,6 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/pierrec/lz4 v0.0.0-20190327172049-315a67e90e41
 	github.com/ryanuber/go-glob v1.0.0
 )
