@@ -310,8 +310,8 @@ DONELISTHANDLING:
 }
 
 // validateWrappingToken checks whether a token is a wrapping token. The passed
-// in logical request can be optionally updated if the wrapping token was
-// provided within a JWT token.
+// in logical request will be updated if the wrapping token was provided within
+// a JWT token.
 func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (bool, error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
