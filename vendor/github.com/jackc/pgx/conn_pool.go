@@ -28,7 +28,7 @@ type ConnPool struct {
 	resetCount           int
 	afterConnect         func(*Conn) error
 	logger               Logger
-	logLevel             int
+	logLevel             LogLevel
 	closed               bool
 	preparedStatements   map[string]*PreparedStatement
 	acquireTimeout       time.Duration
@@ -39,6 +39,12 @@ type ConnPoolStat struct {
 	MaxConnections       int // max simultaneous connections to use
 	CurrentConnections   int // current live connections
 	AvailableConnections int // unused live connections
+}
+
+// CheckedOutConnections returns the amount of connections that are currently
+// checked out from the pool.
+func (stat *ConnPoolStat) CheckedOutConnections() int {
+	return stat.CurrentConnections - stat.AvailableConnections
 }
 
 // ErrAcquireTimeout occurs when an attempt to acquire a connection times out.
@@ -443,7 +449,7 @@ func (p *ConnPool) Prepare(name, sql string) (*PreparedStatement, error) {
 //
 // PrepareEx creates a prepared statement with name and sql. sql can contain placeholders
 // for bound parameters. These placeholders are referenced positional as $1, $2, etc.
-// It defers from Prepare as it allows additional options (such as parameter OIDs) to be passed via struct
+// It differs from Prepare as it allows additional options (such as parameter OIDs) to be passed via struct
 //
 // PrepareEx is idempotent; i.e. it is safe to call PrepareEx multiple times with the same
 // name and sql arguments. This allows a code path to PrepareEx and Query/Exec/Prepare without
@@ -547,10 +553,10 @@ func (p *ConnPool) CopyFrom(tableName Identifier, columnNames []string, rowSrc C
 }
 
 // CopyFromReader acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyFromReader(r io.Reader, sql string) error {
+func (p *ConnPool) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
 	c, err := p.Acquire()
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer p.Release(c)
 
@@ -558,10 +564,10 @@ func (p *ConnPool) CopyFromReader(r io.Reader, sql string) error {
 }
 
 // CopyToWriter acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyToWriter(w io.Writer, sql string, args ...interface{}) error {
+func (p *ConnPool) CopyToWriter(w io.Writer, sql string, args ...interface{}) (CommandTag, error) {
 	c, err := p.Acquire()
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer p.Release(c)
 

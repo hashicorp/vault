@@ -59,6 +59,7 @@ func (s *OrganizationsService) CreateHook(ctx context.Context, org string, hook 
 	u := fmt.Sprintf("orgs/%v/hooks", org)
 
 	hookReq := &createHookRequest{
+		Name:   "web",
 		Events: hook.Events,
 		Active: hook.Active,
 		Config: hook.Config,

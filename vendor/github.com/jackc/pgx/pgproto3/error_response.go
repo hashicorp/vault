@@ -115,70 +115,87 @@ func (src *ErrorResponse) marshalBinary(typeByte byte) []byte {
 	buf.Write(bigEndian.Uint32(0))
 
 	if src.Severity != "" {
+		buf.WriteByte('S')
 		buf.WriteString(src.Severity)
 		buf.WriteByte(0)
 	}
 	if src.Code != "" {
+		buf.WriteByte('C')
 		buf.WriteString(src.Code)
 		buf.WriteByte(0)
 	}
 	if src.Message != "" {
+		buf.WriteByte('M')
 		buf.WriteString(src.Message)
 		buf.WriteByte(0)
 	}
 	if src.Detail != "" {
+		buf.WriteByte('D')
 		buf.WriteString(src.Detail)
 		buf.WriteByte(0)
 	}
 	if src.Hint != "" {
+		buf.WriteByte('H')
 		buf.WriteString(src.Hint)
 		buf.WriteByte(0)
 	}
 	if src.Position != 0 {
+		buf.WriteByte('P')
 		buf.WriteString(strconv.Itoa(int(src.Position)))
 		buf.WriteByte(0)
 	}
 	if src.InternalPosition != 0 {
+		buf.WriteByte('p')
 		buf.WriteString(strconv.Itoa(int(src.InternalPosition)))
 		buf.WriteByte(0)
 	}
 	if src.InternalQuery != "" {
+		buf.WriteByte('q')
 		buf.WriteString(src.InternalQuery)
 		buf.WriteByte(0)
 	}
 	if src.Where != "" {
+		buf.WriteByte('W')
 		buf.WriteString(src.Where)
 		buf.WriteByte(0)
 	}
 	if src.SchemaName != "" {
+		buf.WriteByte('s')
 		buf.WriteString(src.SchemaName)
 		buf.WriteByte(0)
 	}
 	if src.TableName != "" {
+		buf.WriteByte('t')
 		buf.WriteString(src.TableName)
 		buf.WriteByte(0)
 	}
 	if src.ColumnName != "" {
+		buf.WriteByte('c')
 		buf.WriteString(src.ColumnName)
 		buf.WriteByte(0)
 	}
 	if src.DataTypeName != "" {
+		buf.WriteByte('d')
 		buf.WriteString(src.DataTypeName)
 		buf.WriteByte(0)
 	}
 	if src.ConstraintName != "" {
+		buf.WriteByte('n')
 		buf.WriteString(src.ConstraintName)
 		buf.WriteByte(0)
 	}
 	if src.File != "" {
+		buf.WriteByte('F')
 		buf.WriteString(src.File)
 		buf.WriteByte(0)
 	}
 	if src.Line != 0 {
+		buf.WriteByte('L')
 		buf.WriteString(strconv.Itoa(int(src.Line)))
 		buf.WriteByte(0)
 	}
 	if src.Routine != "" {
+		buf.WriteByte('R')
 		buf.WriteString(src.Routine)
 		buf.WriteByte(0)
 	}

@@ -76,8 +76,8 @@ func (client *Client) AddUserToGroupWithCallback(request *AddUserToGroupRequest,
 // AddUserToGroupRequest is the request struct for api AddUserToGroup
 type AddUserToGroupRequest struct {
 	*requests.RpcRequest
-	UserName  string `position:"Query" name:"UserName"`
 	GroupName string `position:"Query" name:"GroupName"`
+	UserName  string `position:"Query" name:"UserName"`
 }
 
 // AddUserToGroupResponse is the response struct for api AddUserToGroup
@@ -91,7 +91,7 @@ func CreateAddUserToGroupRequest() (request *AddUserToGroupRequest) {
 	request = &AddUserToGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "AddUserToGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "AddUserToGroup", "ram", "openAPI")
 	return
 }
 

@@ -32,7 +32,7 @@ type Policy struct {
 // GET /api/policies
 //
 
-// Return all policies (across all virtual hosts).
+// ListPolicies returns all policies (across all virtual hosts).
 func (c *Client) ListPolicies() (rec []Policy, err error) {
 	req, err := newGETRequest(c, "policies")
 	if err != nil {
@@ -50,7 +50,7 @@ func (c *Client) ListPolicies() (rec []Policy, err error) {
 // GET /api/policies/{vhost}
 //
 
-// Returns policies in a specific virtual host.
+// ListPoliciesIn returns policies in a specific virtual host.
 func (c *Client) ListPoliciesIn(vhost string) (rec []Policy, err error) {
 	req, err := newGETRequest(c, "policies/"+PathEscape(vhost))
 	if err != nil {
@@ -68,7 +68,7 @@ func (c *Client) ListPoliciesIn(vhost string) (rec []Policy, err error) {
 // GET /api/policies/{vhost}/{name}
 //
 
-// Returns individual policy in virtual host.
+// GetPolicy returns individual policy in virtual host.
 func (c *Client) GetPolicy(vhost, name string) (rec *Policy, err error) {
 	req, err := newGETRequest(c, "policies/"+PathEscape(vhost)+"/"+PathEscape(name))
 	if err != nil {

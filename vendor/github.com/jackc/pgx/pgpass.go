@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func parsepgpass(cfg *ConnConfig, line string) *string {
+func parsepgpass(line, cfgHost, cfgPort, cfgDatabase, cfgUsername string) *string {
 	const (
 		backslash = "\r"
 		colon     = "\n"
@@ -21,6 +21,9 @@ func parsepgpass(cfg *ConnConfig, line string) *string {
 		username
 		pw
 	)
+	if strings.HasPrefix(line, "#") {
+		return nil
+	}
 	line = strings.Replace(line, `\:`, colon, -1)
 	line = strings.Replace(line, `\\`, backslash, -1)
 	parts := strings.Split(line, `:`)
@@ -34,23 +37,19 @@ func parsepgpass(cfg *ConnConfig, line string) *string {
 		parts[i] = strings.Replace(strings.Replace(parts[i], backslash, `\`, -1), colon, `:`, -1)
 		switch i {
 		case host:
-			if parts[i] != cfg.Host {
+			if parts[i] != cfgHost {
 				return nil
 			}
 		case port:
-			portstr := fmt.Sprintf(`%v`, cfg.Port)
-			if portstr == "0" {
-				portstr = "5432"
-			}
-			if parts[i] != portstr {
+			if parts[i] != cfgPort {
 				return nil
 			}
 		case database:
-			if parts[i] != cfg.Database {
+			if parts[i] != cfgDatabase {
 				return nil
 			}
 		case username:
-			if parts[i] != cfg.User {
+			if parts[i] != cfgUsername {
 				return nil
 			}
 		}
@@ -72,10 +71,32 @@ func pgpass(cfg *ConnConfig) (found bool) {
 		return
 	}
 	defer f.Close()
+
+	host := cfg.Host
+	if _, err := os.Stat(host); err == nil {
+		host = "localhost"
+	}
+	port := fmt.Sprintf(`%v`, cfg.Port)
+	if port == "0" {
+		port = "5432"
+	}
+	username := cfg.User
+	if username == "" {
+		user, err := user.Current()
+		if err != nil {
+			return
+		}
+		username = user.Username
+	}
+	database := cfg.Database
+	if database == "" {
+		database = username
+	}
+
 	scanner := bufio.NewScanner(f)
 	var pw *string
 	for scanner.Scan() {
-		pw = parsepgpass(cfg, scanner.Text())
+		pw = parsepgpass(scanner.Text(), host, port, database, username)
 		if pw != nil {
 			cfg.Password = *pw
 			return true

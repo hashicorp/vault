@@ -309,40 +309,34 @@ func (g *Container) DeleteP(path string) error {
 	return g.Delete(strings.Split(path, ".")...)
 }
 
-// Merge - Merges two gabs-containers
-func (g *Container) Merge(toMerge *Container) error {
+// MergeFn merges two objects using a provided function to resolve collisions.
+//
+// The collision function receives two interface{} arguments, destination (the
+// original object) and source (the object being merged into the destination).
+// Which ever value is returned becomes the new value in the destination object
+// at the location of the collision.
+func (g *Container) MergeFn(source *Container, collisionFn func(destination, source interface{}) interface{}) error {
 	var recursiveFnc func(map[string]interface{}, []string) error
 	recursiveFnc = func(mmap map[string]interface{}, path []string) error {
 		for key, value := range mmap {
 			newPath := append(path, key)
 			if g.Exists(newPath...) {
-				target := g.Search(newPath...)
+				existingData := g.Search(newPath...).Data()
 				switch t := value.(type) {
 				case map[string]interface{}:
-					switch targetV := target.Data().(type) {
+					switch existingVal := existingData.(type) {
 					case map[string]interface{}:
 						if err := recursiveFnc(t, newPath); err != nil {
 							return err
 						}
-					case []interface{}:
-						g.Set(append(targetV, t), newPath...)
 					default:
-						newSlice := append([]interface{}{}, targetV)
-						g.Set(append(newSlice, t), newPath...)
-					}
-				case []interface{}:
-					for _, valueOfSlice := range t {
-						if err := g.ArrayAppend(valueOfSlice, newPath...); err != nil {
+						if _, err := g.Set(collisionFn(existingVal, t), newPath...); err != nil {
 							return err
 						}
 					}
 				default:
-					switch targetV := target.Data().(type) {
-					case []interface{}:
-						g.Set(append(targetV, t), newPath...)
-					default:
-						newSlice := append([]interface{}{}, targetV)
-						g.Set(append(newSlice, t), newPath...)
+					if _, err := g.Set(collisionFn(existingData, t), newPath...); err != nil {
+						return err
 					}
 				}
 			} else {
@@ -354,10 +348,35 @@ func (g *Container) Merge(toMerge *Container) error {
 		}
 		return nil
 	}
-	if mmap, ok := toMerge.Data().(map[string]interface{}); ok {
+	if mmap, ok := source.Data().(map[string]interface{}); ok {
 		return recursiveFnc(mmap, []string{})
 	}
 	return nil
+}
+
+// Merge a source object into an existing destination object. When a collision
+// is found within the merged structures (both a source and destination object
+// contain the same non-object keys) the result will be an array containing both
+// values, where values that are already arrays will be expanded into the
+// resulting array.
+//
+// It is possible to merge structures will different collision behaviours with
+// MergeFn.
+func (g *Container) Merge(source *Container) error {
+	return g.MergeFn(source, func(dest, source interface{}) interface{} {
+		destArr, destIsArray := dest.([]interface{})
+		sourceArr, sourceIsArray := source.([]interface{})
+		if destIsArray {
+			if sourceIsArray {
+				return append(destArr, sourceArr...)
+			}
+			return append(destArr, source)
+		}
+		if sourceIsArray {
+			return append(append([]interface{}{}, dest), sourceArr...)
+		}
+		return []interface{}{dest, source}
+	})
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -377,7 +396,9 @@ func (g *Container) ArrayAppend(value interface{}, path ...string) error {
 	}
 
 	newArray := []interface{}{}
-	newArray = append(newArray, g.Search(path...).Data())
+	if d := g.Search(path...).Data(); d != nil {
+		newArray = append(newArray, d)
+	}
 	newArray = append(newArray, value)
 
 	_, err := g.Set(newArray, path...)

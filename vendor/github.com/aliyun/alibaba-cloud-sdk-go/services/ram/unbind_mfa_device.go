@@ -91,7 +91,7 @@ func CreateUnbindMFADeviceRequest() (request *UnbindMFADeviceRequest) {
 	request = &UnbindMFADeviceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UnbindMFADevice", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UnbindMFADevice", "ram", "openAPI")
 	return
 }
 

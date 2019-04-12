@@ -4,24 +4,31 @@ This library is a [RabbitMQ HTTP API](https://raw.githack.com/rabbitmq/rabbitmq-
 
 ## Supported Go Versions
 
-Rabbit Hole requires Go 1.6+.
+Rabbit Hole supports 3 most recent Go releases.
 
 
 ## Supported RabbitMQ Versions
 
- * RabbitMQ 3.x
+ * RabbitMQ `3.7.x` is the primary target series
+ * Most API functions would work against RabbitMQ `3.6.x` nodes or earlier but those releases are officially out of support
 
-All versions require [RabbitMQ Management UI plugin](http://www.rabbitmq.com/management.html) to be installed and enabled.
+All versions require [RabbitMQ Management UI plugin](https://www.rabbitmq.com/management.html) to be installed and enabled.
 
 
 ## Project Maturity
 
-Rabbit Hole is a fairly mature library (started in October 2013)
+Rabbit Hole is a mature library (first released in late 2013)
 designed after a couple of other RabbitMQ HTTP API clients with stable
 APIs. Breaking API changes are not out of the question but not without
 a reasonable version bump.
 
 It is largely (80-90%) feature complete and decently documented.
+
+
+## Change Log
+
+If upgrading from an earlier release, please consult with
+the [change log](https://github.com/michaelklishin/rabbit-hole/blob/master/ChangeLog.md).
 
 
 ## Installation
@@ -32,6 +39,12 @@ go get github.com/michaelklishin/rabbit-hole
 
 
 ## Documentation
+
+### API Reference
+
+[API reference](http://godoc.org/github.com/michaelklishin/rabbit-hole) is available on [godoc.org](http://godoc.org).
+
+Continue reading for a list of example snippets.
 
 ### Overview
 
@@ -59,9 +72,7 @@ transport := &http.Transport{TLSClientConfig: tlsConfig}
 rmqc, _ := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport)
 ```
 
-RabbitMQ HTTP API has to be [configured to use TLS](http://www.rabbitmq.com/management.html#web-dispatch-config).
-
-[API reference](http://godoc.org/github.com/michaelklishin/rabbit-hole) is available on [godoc.org](http://godoc.org).
+RabbitMQ HTTP API has to be [configured to use TLS](http://www.rabbitmq.com/management.html#single-listener-https).
 
 
 ### Getting Overview
@@ -147,6 +158,16 @@ resp, err := rmqc.PutUserWithoutPassword("my.user", UserSettings{Tags: "manageme
 
 // deletes individual user
 resp, err := rmqc.DeleteUser("my.user")
+// => *http.Response, err
+```
+
+``` go
+// creates or updates individual user with a SHA256 password hash
+hash := SaltedPasswordHashSHA256("password-s3krE7")
+resp, err := rmqc.PutUser("my.user", UserSettings{
+  PasswordHash: hash,
+  HashingAlgorithm: HashingAlgorithmSHA256,
+  Tags: "management,policymaker"})
 // => *http.Response, err
 ```
 
@@ -241,6 +262,14 @@ bs, err := rmqc.ListBindingsIn("/")
 bs, err := rmqc.ListQueueBindings("/", "a.queue")
 // => []BindingInfo, err
 
+// list all bindings having the exchange as source
+bs1, err := rmqc.ListExchangeBindingsWithSource("/", "an.exchange")
+// => []BindingInfo, err
+
+// list all bindings having the exchange as destinattion
+bs2, err := rmqc.ListExchangeBindingsWithDestination("/", "an.exchange")
+// => []BindingInfo, err
+
 // declare a binding
 resp, err := rmqc.DeclareBinding("/", BindingInfo{
 	Source: "an.exchange",
@@ -313,7 +342,7 @@ rmqc, err := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport
 ### Changing Transport Layer
 
 ``` go
-var transport *http.Transport
+var transport http.RoundTripper
 
 ...
 
@@ -335,4 +364,4 @@ See [CONTRIBUTING.md](https://github.com/michaelklishin/rabbit-hole/blob/master/
 
 2-clause BSD license.
 
-(c) Michael S. Klishin, 2013-2018.
+(c) Michael S. Klishin, 2013-2019.

@@ -76,8 +76,8 @@ func (client *Client) UpdateAccessKeyWithCallback(request *UpdateAccessKeyReques
 // UpdateAccessKeyRequest is the request struct for api UpdateAccessKey
 type UpdateAccessKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserAccessKeyId string `position:"Query" name:"UserAccessKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 	Status          string `position:"Query" name:"Status"`
 }
 
@@ -92,7 +92,7 @@ func CreateUpdateAccessKeyRequest() (request *UpdateAccessKeyRequest) {
 	request = &UpdateAccessKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateAccessKey", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateAccessKey", "ram", "openAPI")
 	return
 }
 

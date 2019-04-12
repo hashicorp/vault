@@ -62,6 +62,13 @@ type Installation struct {
 	UpdatedAt           *Timestamp               `json:"updated_at,omitempty"`
 }
 
+// Attachment represents a GitHub Apps attachment.
+type Attachment struct {
+	ID    *int64  `json:"id,omitempty"`
+	Title *string `json:"title,omitempty"`
+	Body  *string `json:"body,omitempty"`
+}
+
 func (i Installation) String() string {
 	return Stringify(i)
 }
@@ -181,6 +188,29 @@ func (s *AppsService) CreateInstallationToken(ctx context.Context, id int64) (*I
 	}
 
 	return t, resp, nil
+}
+
+// Create a new attachment on user comment containing a url.
+//
+// GitHub API docs: https://developer.github.com/v3/apps/#create-a-content-attachment
+func (s *AppsService) CreateAttachment(ctx context.Context, contentReferenceID int64, title, body string) (*Attachment, *Response, error) {
+	u := fmt.Sprintf("content_references/%v/attachments", contentReferenceID)
+	payload := &Attachment{Title: String(title), Body: String(body)}
+	req, err := s.client.NewRequest("POST", u, payload)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept headers when APIs fully launch.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
+	m := &Attachment{}
+	resp, err := s.client.Do(ctx, req, m)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return m, resp, nil
 }
 
 // FindOrganizationInstallation finds the organization's installation information.

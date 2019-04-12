@@ -90,7 +90,7 @@ func CreateGetSecurityPreferenceRequest() (request *GetSecurityPreferenceRequest
 	request = &GetSecurityPreferenceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetSecurityPreference", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetSecurityPreference", "ram", "openAPI")
 	return
 }
 

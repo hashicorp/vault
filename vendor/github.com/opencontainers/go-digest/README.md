@@ -86,19 +86,17 @@ New additions will be met with skepticism. If you think there is a
 missing feature, please file a bug clearly describing the problem and 
 the alternatives you tried before submitting a PR.
 
-# Reporting security issues
+## Code of Conduct
 
-Please DO NOT file a public issue, instead send your report privately to
-security@opencontainers.org.
+Participation in the OpenContainers community is governed by [OpenContainer's Code of Conduct][code-of-conduct].
 
-The maintainers take security seriously. If you discover a security issue,
-please bring it to their attention right away!
+## Security
 
-If you are reporting a security issue, do not create an issue or file a pull
-request on GitHub. Instead, disclose the issue responsibly by sending an email
-to security@opencontainers.org (which is inhabited only by the maintainers of
-the various OCI projects).
+If you find an issue, please follow the [security][security] protocol to report it.
 
 # Copyright and license
 
 Copyright © 2016 Docker, Inc. All rights reserved, except as follows. Code is released under the [Apache 2.0 license](LICENSE). This `README.md` file and the [`CONTRIBUTING.md`](CONTRIBUTING.md) file are licensed under the Creative Commons Attribution 4.0 International License under the terms and conditions set forth in the file [`LICENSE.docs`](LICENSE.docs). You may obtain a duplicate copy of the same license, titled CC BY-SA 4.0, at http://creativecommons.org/licenses/by-sa/4.0/.
+
+[security]: https://github.com/opencontainers/org/blob/master/security
+[code-of-conduct]: https://github.com/opencontainers/org/blob/master/CODE_OF_CONDUCT.md

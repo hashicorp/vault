@@ -329,7 +329,9 @@ func (s *ReactionsService) ListTeamDiscussionCommentReactions(ctx context.Contex
 
 	var m []*Reaction
 	resp, err := s.client.Do(ctx, req, &m)
-
+	if err != nil {
+		return nil, nil, err
+	}
 	return m, resp, nil
 }
 

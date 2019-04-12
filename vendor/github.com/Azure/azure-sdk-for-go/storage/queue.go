@@ -169,7 +169,7 @@ func (q *Queue) GetMetadata(options *QueueServiceOptions) error {
 		params = addTimeout(params, options.Timeout)
 		headers = mergeHeaders(headers, headersFromStruct(*options))
 	}
-	uri := q.qsc.client.getEndpoint(queueServiceName, q.buildPath(), params)
+	uri := q.qsc.client.getEndpoint(queueServiceName, q.buildPath(), url.Values{"comp": {"metadata"}})
 
 	resp, err := q.qsc.client.exec(http.MethodGet, uri, headers, nil, q.qsc.auth)
 	if err != nil {
