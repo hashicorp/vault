@@ -72,11 +72,12 @@ func (s *AppsService) ListUserRepos(ctx context.Context, id int64, opt *ListOpti
 //
 // GitHub API docs: https://developer.github.com/v3/apps/installations/#add-repository-to-installation
 func (s *AppsService) AddRepository(ctx context.Context, instID, repoID int64) (*Repository, *Response, error) {
-	u := fmt.Sprintf("apps/installations/%v/repositories/%v", instID, repoID)
+	u := fmt.Sprintf("user/installations/%v/repositories/%v", instID, repoID)
 	req, err := s.client.NewRequest("PUT", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
+	req.Header.Set("Accept", mediaTypeIntegrationPreview)
 
 	r := new(Repository)
 	resp, err := s.client.Do(ctx, req, r)
@@ -91,11 +92,12 @@ func (s *AppsService) AddRepository(ctx context.Context, instID, repoID int64) (
 //
 // GitHub docs: https://developer.github.com/v3/apps/installations/#remove-repository-from-installation
 func (s *AppsService) RemoveRepository(ctx context.Context, instID, repoID int64) (*Response, error) {
-	u := fmt.Sprintf("apps/installations/%v/repositories/%v", instID, repoID)
+	u := fmt.Sprintf("user/installations/%v/repositories/%v", instID, repoID)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Accept", mediaTypeIntegrationPreview)
 
 	return s.client.Do(ctx, req, nil)
 }

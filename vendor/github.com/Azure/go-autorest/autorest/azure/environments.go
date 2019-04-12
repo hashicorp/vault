@@ -54,6 +54,7 @@ type Environment struct {
 	ServiceManagementVMDNSSuffix string `json:"serviceManagementVMDNSSuffix"`
 	ResourceManagerVMDNSSuffix   string `json:"resourceManagerVMDNSSuffix"`
 	ContainerRegistryDNSSuffix   string `json:"containerRegistryDNSSuffix"`
+	CosmosDBDNSSuffix            string `json:"cosmosDBDNSSuffix"`
 	TokenAudience                string `json:"tokenAudience"`
 }
 
@@ -79,6 +80,7 @@ var (
 		ServiceManagementVMDNSSuffix: "cloudapp.net",
 		ResourceManagerVMDNSSuffix:   "cloudapp.azure.com",
 		ContainerRegistryDNSSuffix:   "azurecr.io",
+		CosmosDBDNSSuffix:            "documents.azure.com",
 		TokenAudience:                "https://management.azure.com/",
 	}
 
@@ -102,7 +104,8 @@ var (
 		ServiceBusEndpointSuffix:     "servicebus.usgovcloudapi.net",
 		ServiceManagementVMDNSSuffix: "usgovcloudapp.net",
 		ResourceManagerVMDNSSuffix:   "cloudapp.windowsazure.us",
-		ContainerRegistryDNSSuffix:   "azurecr.io",
+		ContainerRegistryDNSSuffix:   "azurecr.us",
+		CosmosDBDNSSuffix:            "documents.azure.us",
 		TokenAudience:                "https://management.usgovcloudapi.net/",
 	}
 
@@ -126,7 +129,8 @@ var (
 		ServiceBusEndpointSuffix:     "servicebus.chinacloudapi.cn",
 		ServiceManagementVMDNSSuffix: "chinacloudapp.cn",
 		ResourceManagerVMDNSSuffix:   "cloudapp.azure.cn",
-		ContainerRegistryDNSSuffix:   "azurecr.io",
+		ContainerRegistryDNSSuffix:   "azurecr.cn",
+		CosmosDBDNSSuffix:            "documents.azure.cn",
 		TokenAudience:                "https://management.chinacloudapi.cn/",
 	}
 
@@ -150,8 +154,9 @@ var (
 		ServiceBusEndpointSuffix:     "servicebus.cloudapi.de",
 		ServiceManagementVMDNSSuffix: "azurecloudapp.de",
 		ResourceManagerVMDNSSuffix:   "cloudapp.microsoftazure.de",
-		ContainerRegistryDNSSuffix:   "azurecr.io",
-		TokenAudience:                "https://management.microsoftazure.de/",
+		// ContainerRegistryDNSSuffix:   "", ACR not present yet in the German Cloud
+		CosmosDBDNSSuffix: "documents.microsoftazure.de",
+		TokenAudience:     "https://management.microsoftazure.de/",
 	}
 )
 

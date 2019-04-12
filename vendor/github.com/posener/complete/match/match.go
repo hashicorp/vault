@@ -1,3 +1,4 @@
+// Package match contains matchers that decide if to apply completion.
 package match
 
 // Match matches two strings

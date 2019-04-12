@@ -68,6 +68,11 @@ func (k *KeyManager) streamKeyResp(resp *KeyResponse, ch <-chan NodeResponse) {
 			resp.NumErr++
 		}
 
+		if nodeResponse.Result && len(nodeResponse.Message) > 0 {
+			resp.Messages[r.From] = nodeResponse.Message
+			k.serf.logger.Println("[WARN] serf:", nodeResponse.Message)
+		}
+
 		// Currently only used for key list queries, this adds keys to a counter
 		// and increments them for each node response which contains them.
 		for _, key := range nodeResponse.Keys {

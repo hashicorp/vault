@@ -120,9 +120,6 @@ func (s *RepositoriesService) AddCollaborator(ctx context.Context, owner, repo, 
 		return nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
-
 	return s.client.Do(ctx, req, nil)
 }
 

@@ -5,7 +5,6 @@
 package packet
 
 import (
-	"crypto/rsa"
 	"encoding/binary"
 	"io"
 	"math/big"
@@ -14,6 +13,7 @@ import (
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 const encryptedKeyVersion = 3
@@ -83,6 +83,10 @@ func checksumKeyMaterial(key []byte) uint16 {
 // private key must have been decrypted first.
 // If config is nil, sensible defaults will be used.
 func (e *EncryptedKey) Decrypt(priv *PrivateKey, config *Config) error {
+	if priv == nil || priv.PrivateKey == nil {
+		return errors.InvalidArgumentError("attempting to decrypt with nil PrivateKey")
+	}
+
 	var err error
 	var b []byte
 

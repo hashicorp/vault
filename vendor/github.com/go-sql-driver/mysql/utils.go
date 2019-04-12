@@ -684,7 +684,7 @@ type atomicBool struct {
 	value   uint32
 }
 
-// IsSet returns wether the current boolean value is true
+// IsSet returns whether the current boolean value is true
 func (ab *atomicBool) IsSet() bool {
 	return atomic.LoadUint32(&ab.value) > 0
 }
@@ -698,7 +698,7 @@ func (ab *atomicBool) Set(value bool) {
 	}
 }
 
-// TrySet sets the value of the bool and returns wether the value changed
+// TrySet sets the value of the bool and returns whether the value changed
 func (ab *atomicBool) TrySet(value bool) bool {
 	if value {
 		return atomic.SwapUint32(&ab.value, 1) == 0

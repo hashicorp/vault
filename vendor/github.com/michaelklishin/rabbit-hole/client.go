@@ -17,7 +17,7 @@ type Client struct {
 	// Password to use.
 	Password  string
 	host      string
-	transport *http.Transport
+	transport http.RoundTripper
 	timeout   time.Duration
 }
 
@@ -38,7 +38,7 @@ func NewClient(uri string, username string, password string) (me *Client, err er
 }
 
 // Creates a client with a transport; it is up to the developer to make that layer secure.
-func NewTLSClient(uri string, username string, password string, transport *http.Transport) (me *Client, err error) {
+func NewTLSClient(uri string, username string, password string, transport http.RoundTripper) (me *Client, err error) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func NewTLSClient(uri string, username string, password string, transport *http.
 }
 
 //SetTransport changes the Transport Layer that the Client will use.
-func (c *Client) SetTransport(transport *http.Transport) {
+func (c *Client) SetTransport(transport http.RoundTripper) {
 	c.transport = transport
 }
 
@@ -72,9 +72,6 @@ func newGETRequest(client *Client, path string) (*http.Request, error) {
 
 	req.Close = true
 	req.SetBasicAuth(client.Username, client.Password)
-
-	// set Opaque to preserve the percent-encoded path. MK.
-	req.URL.Opaque = "//" + client.host + "/api/" + path
 
 	return req, err
 }
@@ -96,8 +93,6 @@ func newRequestWithBody(client *Client, method string, path string, body []byte)
 
 	req.Close = true
 	req.SetBasicAuth(client.Username, client.Password)
-	// set Opaque to preserve the percent-encoded path.
-	req.URL.Opaque = "//" + client.host + "/api/" + path
 
 	req.Header.Add("Content-Type", "application/json")
 

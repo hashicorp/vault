@@ -106,7 +106,7 @@ We determine how to encode or decode by walking this decision tree
   - is there an extension registered for the type?
   - is format binary, and is type a encoding.BinaryMarshaler and BinaryUnmarshaler?
   - is format specifically json, and is type a encoding/json.Marshaler and Unmarshaler?
-  - is format text-based, and type an encoding.TextMarshaler?
+  - is format text-based, and type an encoding.TextMarshaler and TextUnmarshaler?
   - else we use a pair of functions based on the "kind" of the type e.g. map, slice, int64, etc
 
 This symmetry is important to reduce chances of issues happening because the

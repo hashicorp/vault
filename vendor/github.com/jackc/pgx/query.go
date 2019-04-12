@@ -137,7 +137,8 @@ func (rows *Rows) Next() bool {
 					rows.fields[i].DataTypeName = dt.Name
 					rows.fields[i].FormatCode = TextFormatCode
 				} else {
-					rows.fatal(errors.Errorf("unknown oid: %d", rows.fields[i].DataType))
+					fd := rows.fields[i]
+					rows.fatal(errors.Errorf("unknown oid: %d, name: %s", fd.DataType, fd.Name))
 					return false
 				}
 			}
@@ -259,7 +260,7 @@ func (rows *Rows) Scan(dest ...interface{}) (err error) {
 					}
 				}
 			} else {
-				rows.fatal(scanArgError{col: i, err: errors.Errorf("unknown oid: %v", fd.DataType)})
+				rows.fatal(scanArgError{col: i, err: errors.Errorf("unknown oid: %v, name: %s", fd.DataType, fd.Name)})
 			}
 		}
 
@@ -368,6 +369,7 @@ type QueryExOptions struct {
 }
 
 func (c *Conn) QueryEx(ctx context.Context, sql string, options *QueryExOptions, args ...interface{}) (rows *Rows, err error) {
+	c.lastStmtSent = false
 	c.lastActivityTime = time.Now()
 	rows = c.getRows(sql, args)
 
@@ -395,6 +397,7 @@ func (c *Conn) QueryEx(ctx context.Context, sql string, options *QueryExOptions,
 	}
 
 	if (options == nil && c.config.PreferSimpleProtocol) || (options != nil && options.SimpleProtocol) {
+		c.lastStmtSent = true
 		err = c.sanitizeAndSendSimpleQuery(sql, args...)
 		if err != nil {
 			rows.fatal(err)
@@ -414,8 +417,9 @@ func (c *Conn) QueryEx(ctx context.Context, sql string, options *QueryExOptions,
 
 		buf = appendSync(buf)
 
-		n, err := c.conn.Write(buf)
-		if err != nil && fatalWriteErr(n, err) {
+		c.lastStmtSent = true
+		_, err = c.conn.Write(buf)
+		if err != nil {
 			rows.fatal(err)
 			c.die(err)
 			return rows, err
@@ -460,6 +464,7 @@ func (c *Conn) QueryEx(ctx context.Context, sql string, options *QueryExOptions,
 	rows.sql = ps.SQL
 	rows.fields = ps.FieldDescriptions
 
+	c.lastStmtSent = true
 	err = c.sendPreparedQuery(ps, args...)
 	if err != nil {
 		rows.fatal(err)
@@ -503,7 +508,8 @@ func (c *Conn) readUntilRowDescription() ([]FieldDescription, error) {
 				if dt, ok := c.ConnInfo.DataTypeForOID(fieldDescriptions[i].DataType); ok {
 					fieldDescriptions[i].DataTypeName = dt.Name
 				} else {
-					return nil, errors.Errorf("unknown oid: %d", fieldDescriptions[i].DataType)
+					fd := fieldDescriptions[i]
+					return nil, errors.Errorf("unknown oid: %d, name: %s", fd.DataType, fd.Name)
 				}
 			}
 			return fieldDescriptions, nil

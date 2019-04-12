@@ -101,6 +101,12 @@ func (f *ParameterFieldSet) String() string {
 }
 
 func (f *ParameterFieldSet) read(rd *bufio.Reader) {
+	// This function is likely to be called multiple times on the same prepared
+	// statement (because HANA may send PARAMETERMETADATA parts even when
+	// executing the statement), so we need to empty these slices lest they keep
+	// growing.
+	f._inputFields = f._inputFields[:0]
+	f._outputFields = f._outputFields[:0]
 	for i := 0; i < len(f.fields); i++ {
 		field := newParameterField(f.names)
 		field.read(rd)

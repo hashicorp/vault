@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -58,6 +59,16 @@ func NewWithoutDefaults() BaseClient {
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the key.
 func (client BaseClient) BackupKey(ctx context.Context, vaultBaseURL string, keyName string) (result BackupKeyResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.BackupKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.BackupKeyPreparer(ctx, vaultBaseURL, keyName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupKey", nil, "Failure preparing request")
@@ -128,6 +139,16 @@ func (client BaseClient) BackupKeyResponder(resp *http.Response) (result BackupK
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the secret.
 func (client BaseClient) BackupSecret(ctx context.Context, vaultBaseURL string, secretName string) (result BackupSecretResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.BackupSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.BackupSecretPreparer(ctx, vaultBaseURL, secretName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "BackupSecret", nil, "Failure preparing request")
@@ -199,6 +220,16 @@ func (client BaseClient) BackupSecretResponder(resp *http.Response) (result Back
 // certificateName - the name of the certificate.
 // parameters - the parameters to create a certificate.
 func (client BaseClient) CreateCertificate(ctx context.Context, vaultBaseURL string, certificateName string, parameters CertificateCreateParameters) (result CertificateOperation, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.CreateCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: certificateName,
 			Constraints: []validation.Constraint{{Target: "certificateName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z-]+$`, Chain: nil}}},
@@ -285,6 +316,16 @@ func (client BaseClient) CreateCertificateResponder(resp *http.Response) (result
 // keyName - the name for the new key. The system will generate the version name for the new key.
 // parameters - the parameters to create a key.
 func (client BaseClient) CreateKey(ctx context.Context, vaultBaseURL string, keyName string, parameters KeyCreateParameters) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.CreateKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: keyName,
 			Constraints: []validation.Constraint{{Target: "keyName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z-]+$`, Chain: nil}}}}); err != nil {
@@ -368,6 +409,16 @@ func (client BaseClient) CreateKeyResponder(resp *http.Response) (result KeyBund
 // keyVersion - the version of the key.
 // parameters - the parameters for the decryption operation.
 func (client BaseClient) Decrypt(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyOperationsParameters) (result KeyOperationResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.Decrypt")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Value", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -448,6 +499,16 @@ func (client BaseClient) DecryptResponder(resp *http.Response) (result KeyOperat
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate.
 func (client BaseClient) DeleteCertificate(ctx context.Context, vaultBaseURL string, certificateName string) (result DeletedCertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteCertificatePreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificate", nil, "Failure preparing request")
@@ -517,6 +578,16 @@ func (client BaseClient) DeleteCertificateResponder(resp *http.Response) (result
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 func (client BaseClient) DeleteCertificateContacts(ctx context.Context, vaultBaseURL string) (result Contacts, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteCertificateContacts")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteCertificateContactsPreparer(ctx, vaultBaseURL)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateContacts", nil, "Failure preparing request")
@@ -583,6 +654,16 @@ func (client BaseClient) DeleteCertificateContactsResponder(resp *http.Response)
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // issuerName - the name of the issuer.
 func (client BaseClient) DeleteCertificateIssuer(ctx context.Context, vaultBaseURL string, issuerName string) (result IssuerBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteCertificateIssuer")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteCertificateIssuerPreparer(ctx, vaultBaseURL, issuerName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateIssuer", nil, "Failure preparing request")
@@ -653,6 +734,16 @@ func (client BaseClient) DeleteCertificateIssuerResponder(resp *http.Response) (
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate.
 func (client BaseClient) DeleteCertificateOperation(ctx context.Context, vaultBaseURL string, certificateName string) (result CertificateOperation, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteCertificateOperation")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteCertificateOperationPreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteCertificateOperation", nil, "Failure preparing request")
@@ -724,6 +815,16 @@ func (client BaseClient) DeleteCertificateOperationResponder(resp *http.Response
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the key to delete.
 func (client BaseClient) DeleteKey(ctx context.Context, vaultBaseURL string, keyName string) (result DeletedKeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteKeyPreparer(ctx, vaultBaseURL, keyName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteKey", nil, "Failure preparing request")
@@ -795,6 +896,16 @@ func (client BaseClient) DeleteKeyResponder(resp *http.Response) (result Deleted
 // storageAccountName - the name of the storage account.
 // sasDefinitionName - the name of the SAS definition.
 func (client BaseClient) DeleteSasDefinition(ctx context.Context, vaultBaseURL string, storageAccountName string, sasDefinitionName string) (result SasDefinitionBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteSasDefinition")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -874,6 +985,16 @@ func (client BaseClient) DeleteSasDefinitionResponder(resp *http.Response) (resu
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the secret.
 func (client BaseClient) DeleteSecret(ctx context.Context, vaultBaseURL string, secretName string) (result DeletedSecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeleteSecretPreparer(ctx, vaultBaseURL, secretName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "DeleteSecret", nil, "Failure preparing request")
@@ -943,6 +1064,16 @@ func (client BaseClient) DeleteSecretResponder(resp *http.Response) (result Dele
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // storageAccountName - the name of the storage account.
 func (client BaseClient) DeleteStorageAccount(ctx context.Context, vaultBaseURL string, storageAccountName string) (result StorageBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.DeleteStorageAccount")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}}}); err != nil {
@@ -1018,7 +1149,7 @@ func (client BaseClient) DeleteStorageAccountResponder(resp *http.Response) (res
 // dependent on the target key and the encryption algorithm to be used. The ENCRYPT operation is only strictly
 // necessary for symmetric keys stored in Azure Key Vault since protection with an asymmetric key can be performed
 // using public portion of the key. This operation is supported for asymmetric keys as a convenience for callers that
-// have a key-reference but do not have access to the public key material. This operation requires the keys/encypt
+// have a key-reference but do not have access to the public key material. This operation requires the keys/encrypt
 // permission.
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
@@ -1026,6 +1157,16 @@ func (client BaseClient) DeleteStorageAccountResponder(resp *http.Response) (res
 // keyVersion - the version of the key.
 // parameters - the parameters for the encryption operation.
 func (client BaseClient) Encrypt(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyOperationsParameters) (result KeyOperationResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.Encrypt")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Value", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -1106,6 +1247,16 @@ func (client BaseClient) EncryptResponder(resp *http.Response) (result KeyOperat
 // certificateName - the name of the certificate in the given vault.
 // certificateVersion - the version of the certificate.
 func (client BaseClient) GetCertificate(ctx context.Context, vaultBaseURL string, certificateName string, certificateVersion string) (result CertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetCertificatePreparer(ctx, vaultBaseURL, certificateName, certificateVersion)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificate", nil, "Failure preparing request")
@@ -1176,6 +1327,16 @@ func (client BaseClient) GetCertificateResponder(resp *http.Response) (result Ce
 // Parameters:
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 func (client BaseClient) GetCertificateContacts(ctx context.Context, vaultBaseURL string) (result Contacts, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateContacts")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetCertificateContactsPreparer(ctx, vaultBaseURL)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateContacts", nil, "Failure preparing request")
@@ -1242,6 +1403,16 @@ func (client BaseClient) GetCertificateContactsResponder(resp *http.Response) (r
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // issuerName - the name of the issuer.
 func (client BaseClient) GetCertificateIssuer(ctx context.Context, vaultBaseURL string, issuerName string) (result IssuerBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateIssuer")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetCertificateIssuerPreparer(ctx, vaultBaseURL, issuerName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateIssuer", nil, "Failure preparing request")
@@ -1313,6 +1484,16 @@ func (client BaseClient) GetCertificateIssuerResponder(resp *http.Response) (res
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetCertificateIssuers(ctx context.Context, vaultBaseURL string, maxresults *int32) (result CertificateIssuerListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateIssuers")
+		defer func() {
+			sc := -1
+			if result.cilr.Response.Response != nil {
+				sc = result.cilr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -1387,8 +1568,8 @@ func (client BaseClient) GetCertificateIssuersResponder(resp *http.Response) (re
 }
 
 // getCertificateIssuersNextResults retrieves the next set of results, if any.
-func (client BaseClient) getCertificateIssuersNextResults(lastResults CertificateIssuerListResult) (result CertificateIssuerListResult, err error) {
-	req, err := lastResults.certificateIssuerListResultPreparer()
+func (client BaseClient) getCertificateIssuersNextResults(ctx context.Context, lastResults CertificateIssuerListResult) (result CertificateIssuerListResult, err error) {
+	req, err := lastResults.certificateIssuerListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getCertificateIssuersNextResults", nil, "Failure preparing next results request")
 	}
@@ -1409,6 +1590,16 @@ func (client BaseClient) getCertificateIssuersNextResults(lastResults Certificat
 
 // GetCertificateIssuersComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetCertificateIssuersComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result CertificateIssuerListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateIssuers")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetCertificateIssuers(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -1419,6 +1610,16 @@ func (client BaseClient) GetCertificateIssuersComplete(ctx context.Context, vaul
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate.
 func (client BaseClient) GetCertificateOperation(ctx context.Context, vaultBaseURL string, certificateName string) (result CertificateOperation, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateOperation")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetCertificateOperationPreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificateOperation", nil, "Failure preparing request")
@@ -1489,6 +1690,16 @@ func (client BaseClient) GetCertificateOperationResponder(resp *http.Response) (
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate in a given key vault.
 func (client BaseClient) GetCertificatePolicy(ctx context.Context, vaultBaseURL string, certificateName string) (result CertificatePolicy, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificatePolicy")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetCertificatePolicyPreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetCertificatePolicy", nil, "Failure preparing request")
@@ -1560,6 +1771,16 @@ func (client BaseClient) GetCertificatePolicyResponder(resp *http.Response) (res
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetCertificates(ctx context.Context, vaultBaseURL string, maxresults *int32) (result CertificateListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificates")
+		defer func() {
+			sc := -1
+			if result.clr.Response.Response != nil {
+				sc = result.clr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -1634,8 +1855,8 @@ func (client BaseClient) GetCertificatesResponder(resp *http.Response) (result C
 }
 
 // getCertificatesNextResults retrieves the next set of results, if any.
-func (client BaseClient) getCertificatesNextResults(lastResults CertificateListResult) (result CertificateListResult, err error) {
-	req, err := lastResults.certificateListResultPreparer()
+func (client BaseClient) getCertificatesNextResults(ctx context.Context, lastResults CertificateListResult) (result CertificateListResult, err error) {
+	req, err := lastResults.certificateListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getCertificatesNextResults", nil, "Failure preparing next results request")
 	}
@@ -1656,6 +1877,16 @@ func (client BaseClient) getCertificatesNextResults(lastResults CertificateListR
 
 // GetCertificatesComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetCertificatesComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result CertificateListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificates")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetCertificates(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -1668,6 +1899,16 @@ func (client BaseClient) GetCertificatesComplete(ctx context.Context, vaultBaseU
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetCertificateVersions(ctx context.Context, vaultBaseURL string, certificateName string, maxresults *int32) (result CertificateListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateVersions")
+		defer func() {
+			sc := -1
+			if result.clr.Response.Response != nil {
+				sc = result.clr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -1746,8 +1987,8 @@ func (client BaseClient) GetCertificateVersionsResponder(resp *http.Response) (r
 }
 
 // getCertificateVersionsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getCertificateVersionsNextResults(lastResults CertificateListResult) (result CertificateListResult, err error) {
-	req, err := lastResults.certificateListResultPreparer()
+func (client BaseClient) getCertificateVersionsNextResults(ctx context.Context, lastResults CertificateListResult) (result CertificateListResult, err error) {
+	req, err := lastResults.certificateListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getCertificateVersionsNextResults", nil, "Failure preparing next results request")
 	}
@@ -1768,6 +2009,16 @@ func (client BaseClient) getCertificateVersionsNextResults(lastResults Certifica
 
 // GetCertificateVersionsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetCertificateVersionsComplete(ctx context.Context, vaultBaseURL string, certificateName string, maxresults *int32) (result CertificateListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetCertificateVersions")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetCertificateVersions(ctx, vaultBaseURL, certificateName, maxresults)
 	return
 }
@@ -1779,6 +2030,16 @@ func (client BaseClient) GetCertificateVersionsComplete(ctx context.Context, vau
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate
 func (client BaseClient) GetDeletedCertificate(ctx context.Context, vaultBaseURL string, certificateName string) (result DeletedCertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetDeletedCertificatePreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedCertificate", nil, "Failure preparing request")
@@ -1852,6 +2113,16 @@ func (client BaseClient) GetDeletedCertificateResponder(resp *http.Response) (re
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetDeletedCertificates(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedCertificateListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedCertificates")
+		defer func() {
+			sc := -1
+			if result.dclr.Response.Response != nil {
+				sc = result.dclr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -1926,8 +2197,8 @@ func (client BaseClient) GetDeletedCertificatesResponder(resp *http.Response) (r
 }
 
 // getDeletedCertificatesNextResults retrieves the next set of results, if any.
-func (client BaseClient) getDeletedCertificatesNextResults(lastResults DeletedCertificateListResult) (result DeletedCertificateListResult, err error) {
-	req, err := lastResults.deletedCertificateListResultPreparer()
+func (client BaseClient) getDeletedCertificatesNextResults(ctx context.Context, lastResults DeletedCertificateListResult) (result DeletedCertificateListResult, err error) {
+	req, err := lastResults.deletedCertificateListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getDeletedCertificatesNextResults", nil, "Failure preparing next results request")
 	}
@@ -1948,6 +2219,16 @@ func (client BaseClient) getDeletedCertificatesNextResults(lastResults DeletedCe
 
 // GetDeletedCertificatesComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetDeletedCertificatesComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedCertificateListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedCertificates")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetDeletedCertificates(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -1959,6 +2240,16 @@ func (client BaseClient) GetDeletedCertificatesComplete(ctx context.Context, vau
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the key.
 func (client BaseClient) GetDeletedKey(ctx context.Context, vaultBaseURL string, keyName string) (result DeletedKeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetDeletedKeyPreparer(ctx, vaultBaseURL, keyName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedKey", nil, "Failure preparing request")
@@ -2032,6 +2323,16 @@ func (client BaseClient) GetDeletedKeyResponder(resp *http.Response) (result Del
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetDeletedKeys(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedKeyListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedKeys")
+		defer func() {
+			sc := -1
+			if result.dklr.Response.Response != nil {
+				sc = result.dklr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -2106,8 +2407,8 @@ func (client BaseClient) GetDeletedKeysResponder(resp *http.Response) (result De
 }
 
 // getDeletedKeysNextResults retrieves the next set of results, if any.
-func (client BaseClient) getDeletedKeysNextResults(lastResults DeletedKeyListResult) (result DeletedKeyListResult, err error) {
-	req, err := lastResults.deletedKeyListResultPreparer()
+func (client BaseClient) getDeletedKeysNextResults(ctx context.Context, lastResults DeletedKeyListResult) (result DeletedKeyListResult, err error) {
+	req, err := lastResults.deletedKeyListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getDeletedKeysNextResults", nil, "Failure preparing next results request")
 	}
@@ -2128,6 +2429,16 @@ func (client BaseClient) getDeletedKeysNextResults(lastResults DeletedKeyListRes
 
 // GetDeletedKeysComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetDeletedKeysComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedKeyListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedKeys")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetDeletedKeys(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -2138,6 +2449,16 @@ func (client BaseClient) GetDeletedKeysComplete(ctx context.Context, vaultBaseUR
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the secret.
 func (client BaseClient) GetDeletedSecret(ctx context.Context, vaultBaseURL string, secretName string) (result DeletedSecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetDeletedSecretPreparer(ctx, vaultBaseURL, secretName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetDeletedSecret", nil, "Failure preparing request")
@@ -2209,6 +2530,16 @@ func (client BaseClient) GetDeletedSecretResponder(resp *http.Response) (result 
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetDeletedSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedSecretListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedSecrets")
+		defer func() {
+			sc := -1
+			if result.dslr.Response.Response != nil {
+				sc = result.dslr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -2283,8 +2614,8 @@ func (client BaseClient) GetDeletedSecretsResponder(resp *http.Response) (result
 }
 
 // getDeletedSecretsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getDeletedSecretsNextResults(lastResults DeletedSecretListResult) (result DeletedSecretListResult, err error) {
-	req, err := lastResults.deletedSecretListResultPreparer()
+func (client BaseClient) getDeletedSecretsNextResults(ctx context.Context, lastResults DeletedSecretListResult) (result DeletedSecretListResult, err error) {
+	req, err := lastResults.deletedSecretListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getDeletedSecretsNextResults", nil, "Failure preparing next results request")
 	}
@@ -2305,6 +2636,16 @@ func (client BaseClient) getDeletedSecretsNextResults(lastResults DeletedSecretL
 
 // GetDeletedSecretsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetDeletedSecretsComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result DeletedSecretListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetDeletedSecrets")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetDeletedSecrets(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -2316,6 +2657,16 @@ func (client BaseClient) GetDeletedSecretsComplete(ctx context.Context, vaultBas
 // keyName - the name of the key to get.
 // keyVersion - adding the version parameter retrieves a specific version of a key.
 func (client BaseClient) GetKey(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetKeyPreparer(ctx, vaultBaseURL, keyName, keyVersion)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetKey", nil, "Failure preparing request")
@@ -2390,6 +2741,16 @@ func (client BaseClient) GetKeyResponder(resp *http.Response) (result KeyBundle,
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetKeys(ctx context.Context, vaultBaseURL string, maxresults *int32) (result KeyListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKeys")
+		defer func() {
+			sc := -1
+			if result.klr.Response.Response != nil {
+				sc = result.klr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -2464,8 +2825,8 @@ func (client BaseClient) GetKeysResponder(resp *http.Response) (result KeyListRe
 }
 
 // getKeysNextResults retrieves the next set of results, if any.
-func (client BaseClient) getKeysNextResults(lastResults KeyListResult) (result KeyListResult, err error) {
-	req, err := lastResults.keyListResultPreparer()
+func (client BaseClient) getKeysNextResults(ctx context.Context, lastResults KeyListResult) (result KeyListResult, err error) {
+	req, err := lastResults.keyListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getKeysNextResults", nil, "Failure preparing next results request")
 	}
@@ -2486,6 +2847,16 @@ func (client BaseClient) getKeysNextResults(lastResults KeyListResult) (result K
 
 // GetKeysComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetKeysComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result KeyListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKeys")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetKeys(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -2498,6 +2869,16 @@ func (client BaseClient) GetKeysComplete(ctx context.Context, vaultBaseURL strin
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetKeyVersions(ctx context.Context, vaultBaseURL string, keyName string, maxresults *int32) (result KeyListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKeyVersions")
+		defer func() {
+			sc := -1
+			if result.klr.Response.Response != nil {
+				sc = result.klr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -2576,8 +2957,8 @@ func (client BaseClient) GetKeyVersionsResponder(resp *http.Response) (result Ke
 }
 
 // getKeyVersionsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getKeyVersionsNextResults(lastResults KeyListResult) (result KeyListResult, err error) {
-	req, err := lastResults.keyListResultPreparer()
+func (client BaseClient) getKeyVersionsNextResults(ctx context.Context, lastResults KeyListResult) (result KeyListResult, err error) {
+	req, err := lastResults.keyListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getKeyVersionsNextResults", nil, "Failure preparing next results request")
 	}
@@ -2598,6 +2979,16 @@ func (client BaseClient) getKeyVersionsNextResults(lastResults KeyListResult) (r
 
 // GetKeyVersionsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetKeyVersionsComplete(ctx context.Context, vaultBaseURL string, keyName string, maxresults *int32) (result KeyListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetKeyVersions")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetKeyVersions(ctx, vaultBaseURL, keyName, maxresults)
 	return
 }
@@ -2609,6 +3000,16 @@ func (client BaseClient) GetKeyVersionsComplete(ctx context.Context, vaultBaseUR
 // storageAccountName - the name of the storage account.
 // sasDefinitionName - the name of the SAS definition.
 func (client BaseClient) GetSasDefinition(ctx context.Context, vaultBaseURL string, storageAccountName string, sasDefinitionName string) (result SasDefinitionBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSasDefinition")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -2690,6 +3091,16 @@ func (client BaseClient) GetSasDefinitionResponder(resp *http.Response) (result 
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetSasDefinitions(ctx context.Context, vaultBaseURL string, storageAccountName string, maxresults *int32) (result SasDefinitionListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSasDefinitions")
+		defer func() {
+			sc := -1
+			if result.sdlr.Response.Response != nil {
+				sc = result.sdlr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -2770,8 +3181,8 @@ func (client BaseClient) GetSasDefinitionsResponder(resp *http.Response) (result
 }
 
 // getSasDefinitionsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getSasDefinitionsNextResults(lastResults SasDefinitionListResult) (result SasDefinitionListResult, err error) {
-	req, err := lastResults.sasDefinitionListResultPreparer()
+func (client BaseClient) getSasDefinitionsNextResults(ctx context.Context, lastResults SasDefinitionListResult) (result SasDefinitionListResult, err error) {
+	req, err := lastResults.sasDefinitionListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getSasDefinitionsNextResults", nil, "Failure preparing next results request")
 	}
@@ -2792,6 +3203,16 @@ func (client BaseClient) getSasDefinitionsNextResults(lastResults SasDefinitionL
 
 // GetSasDefinitionsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetSasDefinitionsComplete(ctx context.Context, vaultBaseURL string, storageAccountName string, maxresults *int32) (result SasDefinitionListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSasDefinitions")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetSasDefinitions(ctx, vaultBaseURL, storageAccountName, maxresults)
 	return
 }
@@ -2803,6 +3224,16 @@ func (client BaseClient) GetSasDefinitionsComplete(ctx context.Context, vaultBas
 // secretName - the name of the secret.
 // secretVersion - the version of the secret.
 func (client BaseClient) GetSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string) (result SecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetSecretPreparer(ctx, vaultBaseURL, secretName, secretVersion)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "GetSecret", nil, "Failure preparing request")
@@ -2876,6 +3307,16 @@ func (client BaseClient) GetSecretResponder(resp *http.Response) (result SecretB
 // maxresults - maximum number of results to return in a page. If not specified, the service will return up to
 // 25 results.
 func (client BaseClient) GetSecrets(ctx context.Context, vaultBaseURL string, maxresults *int32) (result SecretListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecrets")
+		defer func() {
+			sc := -1
+			if result.slr.Response.Response != nil {
+				sc = result.slr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -2950,8 +3391,8 @@ func (client BaseClient) GetSecretsResponder(resp *http.Response) (result Secret
 }
 
 // getSecretsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getSecretsNextResults(lastResults SecretListResult) (result SecretListResult, err error) {
-	req, err := lastResults.secretListResultPreparer()
+func (client BaseClient) getSecretsNextResults(ctx context.Context, lastResults SecretListResult) (result SecretListResult, err error) {
+	req, err := lastResults.secretListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getSecretsNextResults", nil, "Failure preparing next results request")
 	}
@@ -2972,6 +3413,16 @@ func (client BaseClient) getSecretsNextResults(lastResults SecretListResult) (re
 
 // GetSecretsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetSecretsComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result SecretListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecrets")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetSecrets(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -2984,6 +3435,16 @@ func (client BaseClient) GetSecretsComplete(ctx context.Context, vaultBaseURL st
 // maxresults - maximum number of results to return in a page. If not specified, the service will return up to
 // 25 results.
 func (client BaseClient) GetSecretVersions(ctx context.Context, vaultBaseURL string, secretName string, maxresults *int32) (result SecretListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecretVersions")
+		defer func() {
+			sc := -1
+			if result.slr.Response.Response != nil {
+				sc = result.slr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -3062,8 +3523,8 @@ func (client BaseClient) GetSecretVersionsResponder(resp *http.Response) (result
 }
 
 // getSecretVersionsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getSecretVersionsNextResults(lastResults SecretListResult) (result SecretListResult, err error) {
-	req, err := lastResults.secretListResultPreparer()
+func (client BaseClient) getSecretVersionsNextResults(ctx context.Context, lastResults SecretListResult) (result SecretListResult, err error) {
+	req, err := lastResults.secretListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getSecretVersionsNextResults", nil, "Failure preparing next results request")
 	}
@@ -3084,6 +3545,16 @@ func (client BaseClient) getSecretVersionsNextResults(lastResults SecretListResu
 
 // GetSecretVersionsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetSecretVersionsComplete(ctx context.Context, vaultBaseURL string, secretName string, maxresults *int32) (result SecretListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetSecretVersions")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetSecretVersions(ctx, vaultBaseURL, secretName, maxresults)
 	return
 }
@@ -3094,6 +3565,16 @@ func (client BaseClient) GetSecretVersionsComplete(ctx context.Context, vaultBas
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // storageAccountName - the name of the storage account.
 func (client BaseClient) GetStorageAccount(ctx context.Context, vaultBaseURL string, storageAccountName string) (result StorageBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetStorageAccount")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}}}); err != nil {
@@ -3171,6 +3652,16 @@ func (client BaseClient) GetStorageAccountResponder(resp *http.Response) (result
 // maxresults - maximum number of results to return in a page. If not specified the service will return up to
 // 25 results.
 func (client BaseClient) GetStorageAccounts(ctx context.Context, vaultBaseURL string, maxresults *int32) (result StorageListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetStorageAccounts")
+		defer func() {
+			sc := -1
+			if result.slr.Response.Response != nil {
+				sc = result.slr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: maxresults,
 			Constraints: []validation.Constraint{{Target: "maxresults", Name: validation.Null, Rule: false,
@@ -3245,8 +3736,8 @@ func (client BaseClient) GetStorageAccountsResponder(resp *http.Response) (resul
 }
 
 // getStorageAccountsNextResults retrieves the next set of results, if any.
-func (client BaseClient) getStorageAccountsNextResults(lastResults StorageListResult) (result StorageListResult, err error) {
-	req, err := lastResults.storageListResultPreparer()
+func (client BaseClient) getStorageAccountsNextResults(ctx context.Context, lastResults StorageListResult) (result StorageListResult, err error) {
+	req, err := lastResults.storageListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "keyvault.BaseClient", "getStorageAccountsNextResults", nil, "Failure preparing next results request")
 	}
@@ -3267,6 +3758,16 @@ func (client BaseClient) getStorageAccountsNextResults(lastResults StorageListRe
 
 // GetStorageAccountsComplete enumerates all values, automatically crossing page boundaries as required.
 func (client BaseClient) GetStorageAccountsComplete(ctx context.Context, vaultBaseURL string, maxresults *int32) (result StorageListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.GetStorageAccounts")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.GetStorageAccounts(ctx, vaultBaseURL, maxresults)
 	return
 }
@@ -3279,6 +3780,16 @@ func (client BaseClient) GetStorageAccountsComplete(ctx context.Context, vaultBa
 // certificateName - the name of the certificate.
 // parameters - the parameters to import the certificate.
 func (client BaseClient) ImportCertificate(ctx context.Context, vaultBaseURL string, certificateName string, parameters CertificateImportParameters) (result CertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.ImportCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: certificateName,
 			Constraints: []validation.Constraint{{Target: "certificateName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z-]+$`, Chain: nil}}},
@@ -3367,6 +3878,16 @@ func (client BaseClient) ImportCertificateResponder(resp *http.Response) (result
 // keyName - name for the imported key.
 // parameters - the parameters to import a key.
 func (client BaseClient) ImportKey(ctx context.Context, vaultBaseURL string, keyName string, parameters KeyImportParameters) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.ImportKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: keyName,
 			Constraints: []validation.Constraint{{Target: "keyName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z-]+$`, Chain: nil}}},
@@ -3448,6 +3969,16 @@ func (client BaseClient) ImportKeyResponder(resp *http.Response) (result KeyBund
 // certificateName - the name of the certificate.
 // parameters - the parameters to merge certificate.
 func (client BaseClient) MergeCertificate(ctx context.Context, vaultBaseURL string, certificateName string, parameters CertificateMergeParameters) (result CertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.MergeCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.X509Certificates", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -3527,6 +4058,16 @@ func (client BaseClient) MergeCertificateResponder(resp *http.Response) (result 
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the certificate
 func (client BaseClient) PurgeDeletedCertificate(ctx context.Context, vaultBaseURL string, certificateName string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.PurgeDeletedCertificate")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.PurgeDeletedCertificatePreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedCertificate", nil, "Failure preparing request")
@@ -3597,6 +4138,16 @@ func (client BaseClient) PurgeDeletedCertificateResponder(resp *http.Response) (
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the key
 func (client BaseClient) PurgeDeletedKey(ctx context.Context, vaultBaseURL string, keyName string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.PurgeDeletedKey")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.PurgeDeletedKeyPreparer(ctx, vaultBaseURL, keyName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedKey", nil, "Failure preparing request")
@@ -3667,6 +4218,16 @@ func (client BaseClient) PurgeDeletedKeyResponder(resp *http.Response) (result a
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the secret.
 func (client BaseClient) PurgeDeletedSecret(ctx context.Context, vaultBaseURL string, secretName string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.PurgeDeletedSecret")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.PurgeDeletedSecretPreparer(ctx, vaultBaseURL, secretName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "PurgeDeletedSecret", nil, "Failure preparing request")
@@ -3737,6 +4298,16 @@ func (client BaseClient) PurgeDeletedSecretResponder(resp *http.Response) (resul
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // certificateName - the name of the deleted certificate
 func (client BaseClient) RecoverDeletedCertificate(ctx context.Context, vaultBaseURL string, certificateName string) (result CertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RecoverDeletedCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.RecoverDeletedCertificatePreparer(ctx, vaultBaseURL, certificateName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedCertificate", nil, "Failure preparing request")
@@ -3809,6 +4380,16 @@ func (client BaseClient) RecoverDeletedCertificateResponder(resp *http.Response)
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // keyName - the name of the deleted key.
 func (client BaseClient) RecoverDeletedKey(ctx context.Context, vaultBaseURL string, keyName string) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RecoverDeletedKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.RecoverDeletedKeyPreparer(ctx, vaultBaseURL, keyName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedKey", nil, "Failure preparing request")
@@ -3879,6 +4460,16 @@ func (client BaseClient) RecoverDeletedKeyResponder(resp *http.Response) (result
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // secretName - the name of the deleted secret.
 func (client BaseClient) RecoverDeletedSecret(ctx context.Context, vaultBaseURL string, secretName string) (result SecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RecoverDeletedSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.RecoverDeletedSecretPreparer(ctx, vaultBaseURL, secretName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "RecoverDeletedSecret", nil, "Failure preparing request")
@@ -3950,6 +4541,16 @@ func (client BaseClient) RecoverDeletedSecretResponder(resp *http.Response) (res
 // storageAccountName - the name of the storage account.
 // parameters - the parameters to regenerate storage account key.
 func (client BaseClient) RegenerateStorageAccountKey(ctx context.Context, vaultBaseURL string, storageAccountName string, parameters StorageAccountRegenerteKeyParameters) (result StorageBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RegenerateStorageAccountKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -4037,6 +4638,16 @@ func (client BaseClient) RegenerateStorageAccountKeyResponder(resp *http.Respons
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // parameters - the parameters to restore the key.
 func (client BaseClient) RestoreKey(ctx context.Context, vaultBaseURL string, parameters KeyRestoreParameters) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RestoreKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.KeyBundleBackup", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -4111,6 +4722,16 @@ func (client BaseClient) RestoreKeyResponder(resp *http.Response) (result KeyBun
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // parameters - the parameters to restore the secret.
 func (client BaseClient) RestoreSecret(ctx context.Context, vaultBaseURL string, parameters SecretRestoreParameters) (result SecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.RestoreSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.SecretBundleBackup", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -4185,6 +4806,16 @@ func (client BaseClient) RestoreSecretResponder(resp *http.Response) (result Sec
 // vaultBaseURL - the vault name, for example https://myvault.vault.azure.net.
 // contacts - the contacts for the key vault certificate.
 func (client BaseClient) SetCertificateContacts(ctx context.Context, vaultBaseURL string, contacts Contacts) (result Contacts, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.SetCertificateContacts")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.SetCertificateContactsPreparer(ctx, vaultBaseURL, contacts)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "SetCertificateContacts", nil, "Failure preparing request")
@@ -4254,6 +4885,16 @@ func (client BaseClient) SetCertificateContactsResponder(resp *http.Response) (r
 // issuerName - the name of the issuer.
 // parameter - certificate issuer set parameter.
 func (client BaseClient) SetCertificateIssuer(ctx context.Context, vaultBaseURL string, issuerName string, parameter CertificateIssuerSetParameters) (result IssuerBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.SetCertificateIssuer")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameter,
 			Constraints: []validation.Constraint{{Target: "parameter.Provider", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -4334,6 +4975,16 @@ func (client BaseClient) SetCertificateIssuerResponder(resp *http.Response) (res
 // sasDefinitionName - the name of the SAS definition.
 // parameters - the parameters to create a SAS definition.
 func (client BaseClient) SetSasDefinition(ctx context.Context, vaultBaseURL string, storageAccountName string, sasDefinitionName string, parameters SasDefinitionCreateParameters) (result SasDefinitionBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.SetSasDefinition")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -4418,6 +5069,16 @@ func (client BaseClient) SetSasDefinitionResponder(resp *http.Response) (result 
 // secretName - the name of the secret.
 // parameters - the parameters for setting the secret.
 func (client BaseClient) SetSecret(ctx context.Context, vaultBaseURL string, secretName string, parameters SecretSetParameters) (result SecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.SetSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: secretName,
 			Constraints: []validation.Constraint{{Target: "secretName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z-]+$`, Chain: nil}}},
@@ -4498,6 +5159,16 @@ func (client BaseClient) SetSecretResponder(resp *http.Response) (result SecretB
 // storageAccountName - the name of the storage account.
 // parameters - the parameters to create a storage account.
 func (client BaseClient) SetStorageAccount(ctx context.Context, vaultBaseURL string, storageAccountName string, parameters StorageAccountCreateParameters) (result StorageBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.SetStorageAccount")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -4582,6 +5253,16 @@ func (client BaseClient) SetStorageAccountResponder(resp *http.Response) (result
 // keyVersion - the version of the key.
 // parameters - the parameters for the signing operation.
 func (client BaseClient) Sign(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeySignParameters) (result KeyOperationResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.Sign")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Value", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -4665,6 +5346,16 @@ func (client BaseClient) SignResponder(resp *http.Response) (result KeyOperation
 // keyVersion - the version of the key.
 // parameters - the parameters for the key operation.
 func (client BaseClient) UnwrapKey(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyOperationsParameters) (result KeyOperationResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UnwrapKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Value", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
@@ -4746,6 +5437,16 @@ func (client BaseClient) UnwrapKeyResponder(resp *http.Response) (result KeyOper
 // certificateVersion - the version of the certificate.
 // parameters - the parameters for certificate update.
 func (client BaseClient) UpdateCertificate(ctx context.Context, vaultBaseURL string, certificateName string, certificateVersion string, parameters CertificateUpdateParameters) (result CertificateBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateCertificate")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateCertificatePreparer(ctx, vaultBaseURL, certificateName, certificateVersion, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificate", nil, "Failure preparing request")
@@ -4820,6 +5521,16 @@ func (client BaseClient) UpdateCertificateResponder(resp *http.Response) (result
 // issuerName - the name of the issuer.
 // parameter - certificate issuer update parameter.
 func (client BaseClient) UpdateCertificateIssuer(ctx context.Context, vaultBaseURL string, issuerName string, parameter CertificateIssuerUpdateParameters) (result IssuerBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateCertificateIssuer")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateCertificateIssuerPreparer(ctx, vaultBaseURL, issuerName, parameter)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificateIssuer", nil, "Failure preparing request")
@@ -4893,6 +5604,16 @@ func (client BaseClient) UpdateCertificateIssuerResponder(resp *http.Response) (
 // certificateName - the name of the certificate.
 // certificateOperation - the certificate operation response.
 func (client BaseClient) UpdateCertificateOperation(ctx context.Context, vaultBaseURL string, certificateName string, certificateOperation CertificateOperationUpdateParameter) (result CertificateOperation, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateCertificateOperation")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateCertificateOperationPreparer(ctx, vaultBaseURL, certificateName, certificateOperation)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificateOperation", nil, "Failure preparing request")
@@ -4966,6 +5687,16 @@ func (client BaseClient) UpdateCertificateOperationResponder(resp *http.Response
 // certificateName - the name of the certificate in the given vault.
 // certificatePolicy - the policy for the certificate.
 func (client BaseClient) UpdateCertificatePolicy(ctx context.Context, vaultBaseURL string, certificateName string, certificatePolicy CertificatePolicy) (result CertificatePolicy, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateCertificatePolicy")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateCertificatePolicyPreparer(ctx, vaultBaseURL, certificateName, certificatePolicy)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateCertificatePolicy", nil, "Failure preparing request")
@@ -5040,6 +5771,16 @@ func (client BaseClient) UpdateCertificatePolicyResponder(resp *http.Response) (
 // keyVersion - the version of the key to update.
 // parameters - the parameters of the key to update.
 func (client BaseClient) UpdateKey(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyUpdateParameters) (result KeyBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateKeyPreparer(ctx, vaultBaseURL, keyName, keyVersion, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateKey", nil, "Failure preparing request")
@@ -5115,6 +5856,16 @@ func (client BaseClient) UpdateKeyResponder(resp *http.Response) (result KeyBund
 // sasDefinitionName - the name of the SAS definition.
 // parameters - the parameters to update a SAS definition.
 func (client BaseClient) UpdateSasDefinition(ctx context.Context, vaultBaseURL string, storageAccountName string, sasDefinitionName string, parameters SasDefinitionUpdateParameters) (result SasDefinitionBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateSasDefinition")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}},
@@ -5199,6 +5950,16 @@ func (client BaseClient) UpdateSasDefinitionResponder(resp *http.Response) (resu
 // secretVersion - the version of the secret.
 // parameters - the parameters for update secret operation.
 func (client BaseClient) UpdateSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string, parameters SecretUpdateParameters) (result SecretBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateSecret")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateSecretPreparer(ctx, vaultBaseURL, secretName, secretVersion, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.BaseClient", "UpdateSecret", nil, "Failure preparing request")
@@ -5273,6 +6034,16 @@ func (client BaseClient) UpdateSecretResponder(resp *http.Response) (result Secr
 // storageAccountName - the name of the storage account.
 // parameters - the parameters to update a storage account.
 func (client BaseClient) UpdateStorageAccount(ctx context.Context, vaultBaseURL string, storageAccountName string, parameters StorageAccountUpdateParameters) (result StorageBundle, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.UpdateStorageAccount")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: storageAccountName,
 			Constraints: []validation.Constraint{{Target: "storageAccountName", Name: validation.Pattern, Rule: `^[0-9a-zA-Z]+$`, Chain: nil}}}}); err != nil {
@@ -5355,6 +6126,16 @@ func (client BaseClient) UpdateStorageAccountResponder(resp *http.Response) (res
 // keyVersion - the version of the key.
 // parameters - the parameters for verify operations.
 func (client BaseClient) Verify(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyVerifyParameters) (result KeyVerifyResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.Verify")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Digest", Name: validation.Null, Rule: true, Chain: nil},
@@ -5440,6 +6221,16 @@ func (client BaseClient) VerifyResponder(resp *http.Response) (result KeyVerifyR
 // keyVersion - the version of the key.
 // parameters - the parameters for wrap operation.
 func (client BaseClient) WrapKey(ctx context.Context, vaultBaseURL string, keyName string, keyVersion string, parameters KeyOperationsParameters) (result KeyOperationResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/BaseClient.WrapKey")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
 			Constraints: []validation.Constraint{{Target: "parameters.Value", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
