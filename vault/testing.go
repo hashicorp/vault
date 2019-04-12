@@ -1360,7 +1360,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		switch {
 		case localConfig.LicensingConfig != nil:
-			localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey.(ed25519.PublicKey))
+			if pubKey != nil {
+				localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey.(ed25519.PublicKey))
+			}
 		default:
 			localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
 		}
