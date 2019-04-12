@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 )

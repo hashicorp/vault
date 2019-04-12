@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/helper/reload"
-	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )

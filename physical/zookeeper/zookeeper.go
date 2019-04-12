@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/samuel/go-zookeeper/zk"
 )
 

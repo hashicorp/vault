@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310
 	github.com/fatih/structs v1.1.0
+	github.com/go-ldap/ldap v3.0.2+incompatible
 	github.com/go-test/deep v1.0.1
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
@@ -31,4 +32,5 @@ require (
 	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
 	google.golang.org/grpc v1.19.1
+	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 )

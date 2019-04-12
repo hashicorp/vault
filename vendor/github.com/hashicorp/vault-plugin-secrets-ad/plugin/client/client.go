@@ -9,7 +9,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"golang.org/x/text/encoding/unicode"
 )
 

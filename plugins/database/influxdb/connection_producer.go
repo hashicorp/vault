@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	influx "github.com/influxdata/influxdb/client/v2"
 	"github.com/mitchellh/mapstructure"
