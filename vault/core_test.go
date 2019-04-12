@@ -9,7 +9,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logging"
@@ -904,7 +904,150 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	}
 }
 
-// Ensure we get a client token
+func TestCore_HandleRequest_AuditTrail_invalidWrappingToken(t *testing.T) {
+	// Create a noop audit backend
+	var noop *NoopAudit
+	c, _, root := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+		noop = &NoopAudit{
+			Config: config,
+		}
+		return noop, nil
+	}
+
+	// Enable the audit backend
+	req := logical.TestRequest(t, logical.UpdateOperation, "sys/audit/noop")
+	req.Data["type"] = "noop"
+	req.ClientToken = root
+	_, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	{
+		// Make a wrapping/unwrap request with an invalid token
+		req := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "sys/wrapping/unwrap",
+			Data: map[string]interface{}{
+				"token": "foo",
+			},
+			ClientToken: root,
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatal("expected invalid request error")
+		}
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 1 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[0]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 1 || !reflect.DeepEqual(req, noop.Req[0]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.Req[0])
+		}
+
+		if len(noop.RespAuth) != 2 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		if !reflect.DeepEqual(auth, noop.RespAuth[1]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", auth, noop.RespAuth[1])
+		}
+		if len(noop.RespReq) != 2 || !reflect.DeepEqual(req, noop.RespReq[1]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.RespReq[1])
+		}
+		if len(noop.Resp) != 2 || !reflect.DeepEqual(resp, noop.Resp[1]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", resp, noop.Resp[1])
+		}
+	}
+
+	{
+		// Make a wrapping/rewrap request with an invalid token
+		req := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "sys/wrapping/rewrap",
+			Data: map[string]interface{}{
+				"token": "foo",
+			},
+			ClientToken: root,
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatal("expected invalid request error")
+		}
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 2 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[1]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 2 || !reflect.DeepEqual(req, noop.Req[1]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.Req[1])
+		}
+
+		if len(noop.RespAuth) != 3 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		if !reflect.DeepEqual(auth, noop.RespAuth[2]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", auth, noop.RespAuth[2])
+		}
+		if len(noop.RespReq) != 3 || !reflect.DeepEqual(req, noop.RespReq[2]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.RespReq[2])
+		}
+		if len(noop.Resp) != 3 || !reflect.DeepEqual(resp, noop.Resp[2]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", resp, noop.Resp[2])
+		}
+	}
+
+	{
+		// Make a wrapping/lookup request with an invalid token
+		req := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "sys/wrapping/lookup",
+			Data: map[string]interface{}{
+				"token": "foo",
+			},
+			ClientToken: root,
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatal("expected invalid request error")
+		}
+
+		// Check the audit trail on request and response
+		if len(noop.ReqAuth) != 3 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		auth := noop.ReqAuth[2]
+		if auth.ClientToken != root {
+			t.Fatalf("bad client token: %#v", auth)
+		}
+		if len(noop.Req) != 3 || !reflect.DeepEqual(req, noop.Req[2]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.Req[2])
+		}
+
+		if len(noop.RespAuth) != 4 {
+			t.Fatalf("bad: %#v", noop)
+		}
+		if !reflect.DeepEqual(auth, noop.RespAuth[3]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", auth, noop.RespAuth[3])
+		}
+		if len(noop.RespReq) != 4 || !reflect.DeepEqual(req, noop.RespReq[3]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", req, noop.RespReq[3])
+		}
+		if len(noop.Resp) != 4 || !reflect.DeepEqual(resp, noop.Resp[3]) {
+			t.Fatalf("bad:\nexpected:\n%#v\ngot:\n%#v", resp, noop.Resp[3])
+		}
+	}
+}
+
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
 	noop := &NoopAudit{}

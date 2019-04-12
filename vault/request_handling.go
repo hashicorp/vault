@@ -589,21 +589,28 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		// Perform audit logging before returning if there's an issue with checking
 		// the wrapping token
 		if err != nil || !valid {
+			// We log the Auth object like so here since the wrapping token can
+			// come from the header, which gets set as the ClientToken
+			auth := &logical.Auth{
+				ClientToken: req.ClientToken,
+				Accessor:    req.ClientTokenAccessor,
+			}
+
 			logInput := &audit.LogInput{
-				Auth:               req.Auth,
+				Auth:               auth,
 				Request:            req,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
 			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
-		}
 
-		if err != nil {
-			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
+			switch {
+			case err != nil:
+				return nil, auth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+			case !valid:
+				return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), auth, logical.ErrInvalidRequest
+			}
 		}
 	}
 
@@ -949,21 +956,29 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Perform audit logging before returning if there's an issue with checking
 		// the wrapping token
 		if err != nil || !valid {
+			// We log the Auth object like so here since the wrapping token can
+			// come from the header, which gets set as the ClientToken
+			auth := &logical.Auth{
+				ClientToken: req.ClientToken,
+				Accessor:    req.ClientTokenAccessor,
+			}
 
 			logInput := &audit.LogInput{
-				Auth:               req.Auth,
+				Auth:               auth,
 				Request:            req,
 				NonHMACReqDataKeys: nonHMACReqDataKeys,
 			}
 			if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 				c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			}
-		}
-		if err != nil {
-			return nil, nil, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
-		}
-		if !valid {
-			return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), nil, logical.ErrInvalidRequest
+
+			switch {
+			case err != nil:
+				return nil, auth, errwrap.Wrapf("error validating wrapping token: {{err}}", err)
+			case !valid:
+				return logical.ErrorResponse(consts.ErrInvalidWrappingToken.Error()), auth, logical.ErrInvalidRequest
+
+			}
 		}
 	}
 
