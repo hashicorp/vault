@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 )

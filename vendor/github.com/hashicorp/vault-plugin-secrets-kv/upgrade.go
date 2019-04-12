@@ -13,7 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"

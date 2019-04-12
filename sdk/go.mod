@@ -20,6 +20,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
+	github.com/mitchellh/copystructure v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pierrec/lz4 v2.0.5+incompatible

@@ -36,7 +36,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/kdf"
+	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
