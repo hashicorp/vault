@@ -1,3 +1,11 @@
+## Next
+
+CHANGES:
+
+ * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
+   will now be preferred over regions set in the enclosing environment.
+   This is a _breaking_ change.
+
 ## 1.1.1 (April 11th, 2019)
 
 SECURITY:
