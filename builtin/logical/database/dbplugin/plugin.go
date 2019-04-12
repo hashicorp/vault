@@ -46,7 +46,7 @@ type Database interface {
 	// do a creds call after Vault's been restarted. The config provided won't
 	// hold all the keys and values provided in the API call, some will be
 	// stripped by the database engine before the config is provided. The config
-	// returned with be stored, which will persist it across shutdowns.
+	// returned will be stored, which will persist it across shutdowns.
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 
 	// Close attempts to close the underlying database connection that was
