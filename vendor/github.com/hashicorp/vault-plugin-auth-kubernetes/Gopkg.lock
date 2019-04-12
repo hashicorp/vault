@@ -473,7 +473,7 @@
     "github.com/hashicorp/go-sockaddr",
     "github.com/hashicorp/vault/helper/cidrutil",
     "github.com/hashicorp/vault/helper/logging",
-    "github.com/hashicorp/vault/helper/parseutil",
+    "github.com/hashicorp/vault/sdk/helper/parseutil",
     "github.com/hashicorp/vault/helper/pluginutil",
     "github.com/hashicorp/vault/helper/policyutil",
     "github.com/hashicorp/vault/helper/strutil",

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	rabbithole "github.com/michaelklishin/rabbit-hole"

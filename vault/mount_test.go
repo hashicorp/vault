@@ -11,7 +11,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/logical"
 )

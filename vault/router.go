@@ -10,7 +10,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"

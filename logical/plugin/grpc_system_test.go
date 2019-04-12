@@ -10,7 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin/pb"
 )
