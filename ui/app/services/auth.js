@@ -298,7 +298,7 @@ export default Service.extend({
     }
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
-      if (data.policies.includes('root')) {
+      if (data && data.policies.includes('root')) {
         this.removeTokenData(key);
       }
     });
