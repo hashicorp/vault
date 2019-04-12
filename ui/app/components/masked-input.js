@@ -12,6 +12,7 @@ import autosize from 'autosize';
  *  @value={{attr.options.defaultValue}}
  *  @placeholder="secret"
  *  @allowCopy={{true}}
+ *  @onChange={{action "someAction"}}
  * />
  * ```
  *
@@ -19,6 +20,8 @@ import autosize from 'autosize';
  * @param [placeholder=value] {String} - The placeholder to display before the user has entered any input.
  * @param [allowCopy=null] {bool} - Whether or not the input should render with a copy button.
  * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
+ * @param [onChange=false] {Function|action} - A function to call when the value of the input changes.
+ *
  *
  */
 
@@ -63,8 +66,9 @@ export default Component.extend({
       this.toggleProperty('isMasked');
     },
     updateValue(e) {
-      this.set('value', e.target.value);
-      this.onChange();
+      let value = e.target.value;
+      this.set('value', value);
+      this.onChange(value);
     },
   },
 });

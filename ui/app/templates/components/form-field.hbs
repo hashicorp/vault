@@ -138,6 +138,7 @@
     @value={{or (get model valuePath) attr.options.defaultValue}}
     @placeholder=""
     @allowCopy="true"
+    @onChange={{action (action "setAndBroadcast" valuePath)}}
    />
 
 {{else if (or (eq attr.type "number") (eq attr.type "string"))}}
