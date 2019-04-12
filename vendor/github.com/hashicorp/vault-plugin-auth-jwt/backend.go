@@ -6,8 +6,8 @@ import (
 	"time"
 
 	oidc "github.com/coreos/go-oidc"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/framework"
 	cache "github.com/patrickmn/go-cache"
 )
 

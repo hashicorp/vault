@@ -8,10 +8,10 @@ import (
 	"sync"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	bplugin "github.com/hashicorp/vault/logical/plugin"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	bplugin "github.com/hashicorp/vault/sdk/plugin"
 )
 
 var (

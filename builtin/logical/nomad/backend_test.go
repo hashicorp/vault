@@ -10,7 +10,7 @@ import (
 
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
 )

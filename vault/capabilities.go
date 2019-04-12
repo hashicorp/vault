@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Capabilities is used to fetch the capabilities of the given token on the

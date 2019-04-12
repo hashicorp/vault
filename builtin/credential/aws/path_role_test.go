@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestBackend_pathRoleEc2(t *testing.T) {

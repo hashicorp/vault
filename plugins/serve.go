@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Serve is used to start a plugin's RPC server. It takes an interface that must
@@ -13,7 +13,7 @@ import (
 // use during the initial unwrap request to vault. The api config is particularly
 // useful when vault is setup to require client cert checking.
 func Serve(plugin interface{}, tlsConfig *api.TLSConfig) {
-	tlsProvider := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProvider := api.VaultPluginTLSProvider(tlsConfig)
 
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/errwrap"
 )

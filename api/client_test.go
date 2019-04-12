@@ -2,7 +2,7 @@ package api
 
 import (
 	"bytes"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"io"
 	"net/http"
 	"os"
