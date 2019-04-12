@@ -47,7 +47,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 
 			//TODO wrap in WAL, rollback
 			// TODO: pop and replace item from queue?
-			_, err = b.createUpdateStaticAccount(ctx, req.Storage, &setPasswordInput{
+			_, err = b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
 				RoleName: name,
 				Role:     role,
 			})

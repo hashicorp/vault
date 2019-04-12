@@ -28,9 +28,9 @@ const (
 	databaseRolePath   = "role/"
 
 	// interval to check the queue for items needing rotation
-	QueueTickInterval = 5 * time.Second
+	queueTickInterval = 5 * time.Second
 
-	// key used for WAL entry kind information
+	// wal storage key used for static account rotations
 	walRotationKey = "staticRotationKey"
 )
 
@@ -326,7 +326,6 @@ func (b *databaseBackend) checkQueueWAL(ctx context.Context, conf *logical.Backe
 			continue
 		}
 
-		// TODO: just use createUpdateStaticAccount
 		// load matching role and verify
 		role, err := b.Role(ctx, conf.StorageView, walEntry.RoleName)
 		if err != nil {
@@ -354,9 +353,9 @@ func (b *databaseBackend) checkQueueWAL(ctx context.Context, conf *logical.Backe
 			continue
 		}
 
-		// createUpdateStaticAccount which will attempt to set the password and
+		// setStaticAccount which will attempt to set the password and
 		// delete the WAL if successful
-		resp, err := b.createUpdateStaticAccount(ctx, conf.StorageView, &setPasswordInput{
+		resp, err := b.setStaticAccount(ctx, conf.StorageView, &setStaticAccountInput{
 			RoleName: walEntry.RoleName,
 			Role:     role,
 			WALID:    walID,
@@ -511,7 +510,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 // rotation method at a determined interval
 func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
 	b.logger.Info("starting periodic ticker")
-	tick := time.NewTicker(QueueTickInterval)
+	tick := time.NewTicker(queueTickInterval)
 	defer tick.Stop()
 	for {
 		select {
@@ -529,17 +528,13 @@ func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
 // walSetCredentials is used to store information in a WAL that can retry a
 // credential setting or rotation in the event of partial failure.
 type walSetCredentials struct {
-	// TODO: need this?
-	ID       string
-	Attempts int
-	//
+	NewPassword string
+	OldPassword string
+	RoleName    string
+	Username    string
 
-	Username          string
-	NewPassword       string
-	OldPassword       string
-	RoleName          string
-	Statements        []string
 	LastVaultRotation time.Time
+	Statements        []string
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -570,7 +565,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 
 		if time.Now().Unix() > item.Priority {
 			// We've found our first item not in need of rotation
-			input := &setPasswordInput{
+			input := &setStaticAccountInput{
 				RoleName: item.Key,
 				Role:     role,
 			}
@@ -585,7 +580,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			}
 
 			// lvr is the roles' last vault rotation
-			resp, err := b.createUpdateStaticAccount(ctx, s, input)
+			resp, err := b.setStaticAccount(ctx, s, input)
 			if err != nil {
 				b.logger.Warn("unable rotate credentials in periodic function", "error", err)
 				// add the item to the re-queue slice
@@ -654,7 +649,7 @@ func (b *databaseBackend) walForItemValue(ctx context.Context, s logical.Storage
 }
 
 // TODO: rename to match the method these go with
-type setPasswordInput struct {
+type setStaticAccountInput struct {
 	RoleName   string
 	Role       *roleEntry
 	Password   string
@@ -662,18 +657,18 @@ type setPasswordInput struct {
 	WALID      string
 }
 
-type setPasswordResponse struct {
+type setStaticAccountOutput struct {
 	RotationTime time.Time
 	// Optional return field, in the event WAL was created and not destroyed
 	// during the operation
 	WALID string
 }
 
-func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logical.Storage, input *setPasswordInput) (*setPasswordResponse, error) {
+func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
 	var lvr time.Time
 	var merr error
 	// re-use WAL ID if present, otherwise PUT a new WAL
-	setResponse := &setPasswordResponse{WALID: input.WALID}
+	setResponse := &setStaticAccountOutput{WALID: input.WALID}
 
 	dbConfig, err := b.DatabaseConfig(ctx, s, input.Role.DBName)
 	if err != nil {
@@ -764,6 +759,6 @@ func (b *databaseBackend) createUpdateStaticAccount(ctx context.Context, s logic
 		merr = multierror.Append(merr, err)
 	}
 
-	// return a new setPasswordResponse without the WALID, since we deleted it
-	return &setPasswordResponse{RotationTime: lvr}, merr
+	// return a new setStaticAccountOutput without the WALID, since we deleted it
+	return &setStaticAccountOutput{RotationTime: lvr}, merr
 }

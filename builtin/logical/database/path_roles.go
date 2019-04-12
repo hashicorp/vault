@@ -355,11 +355,11 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		// lvr represents the roles' LastVaultRotation
 		lvr := role.StaticAccount.LastVaultRotation
 
-		// only call createUpdateStaticAccount if we're creating the role for the
+		// only call setStaticAccount if we're creating the role for the
 		// first time
 		switch req.Operation {
 		case logical.CreateOperation:
-			resp, err := b.createUpdateStaticAccount(ctx, req.Storage, &setPasswordInput{
+			resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
 				RoleName:   name,
 				Role:       role,
 				CreateUser: createRole,
