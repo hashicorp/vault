@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 // This can be one of a few key types so the different params may or may not be filled

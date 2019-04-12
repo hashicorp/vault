@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/api"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
@@ -123,10 +122,8 @@ func TestCertBundleParsing(t *testing.T) {
 			t.Fatalf(err.Error())
 		}
 
-		secret := &api.Secret{
-			Data: structs.New(cbut).Map(),
-		}
-		pcbut, err = ParsePKIMap(secret.Data)
+		dataMap := structs.New(cbut).Map()
+		pcbut, err = ParsePKIMap(dataMap)
 		if err != nil {
 			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
 			t.Fatalf("Error during JSON bundle handling: %s", err)

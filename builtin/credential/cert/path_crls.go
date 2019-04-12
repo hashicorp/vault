@@ -9,7 +9,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )

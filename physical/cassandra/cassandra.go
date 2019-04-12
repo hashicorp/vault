@@ -15,7 +15,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/physical"
 )
 
