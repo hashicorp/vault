@@ -183,7 +183,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			case "WAITING":
 				verifyReq, err := client.NewRequest("POST", requestPath, payload)
 				if err != nil {
-					return nil, err
+					return nil, nil, nil, err
 				}
 				rsp, err := client.Do(verifyReq, &result)
 				if err != nil {
