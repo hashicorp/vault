@@ -43,7 +43,7 @@ path is prefixed with `secret/`, otherwise this example won't work. The
 You can even write multiple pieces of data, if you want:
 
 ```text
-$ vault kv put secret/hello foo=world excited=yes
+$ vault kv patch secret/hello foo=world excited=yes
 Success! Data written to: secret/hello
 ```
 
