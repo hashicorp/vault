@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	pwd "github.com/hashicorp/vault/helper/password"
+	pwd "github.com/hashicorp/vault/sdk/helper/password"
 )
 
 // CLIHandler struct

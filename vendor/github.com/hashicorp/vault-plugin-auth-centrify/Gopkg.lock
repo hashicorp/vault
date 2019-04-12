@@ -394,7 +394,7 @@
     "github.com/hashicorp/go-cleanhttp",
     "github.com/hashicorp/go-hclog",
     "github.com/hashicorp/vault/api",
-    "github.com/hashicorp/vault/helper/password",
+    "github.com/hashicorp/vault/sdk/helper/password",
     "github.com/hashicorp/vault/sdk/helper/pluginutil",
     "github.com/hashicorp/vault/sdk/helper/policyutil",
     "github.com/hashicorp/vault/sdk/logical",

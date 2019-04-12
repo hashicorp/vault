@@ -13,7 +13,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/password"
+	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/mitchellh/cli"
