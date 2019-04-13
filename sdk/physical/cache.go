@@ -84,7 +84,7 @@ func NewTransactionalCache(b Backend, size int, logger log.Logger) *Transactiona
 	return c
 }
 
-func (c *Cache) shouldCache(key string) bool {
+func (c *Cache) ShouldCache(key string) bool {
 	if atomic.LoadUint32(c.enabled) == 0 {
 		return false
 	}
@@ -114,7 +114,7 @@ func (c *Cache) Purge(ctx context.Context) {
 }
 
 func (c *Cache) Put(ctx context.Context, entry *Entry) error {
-	if entry != nil && !c.shouldCache(entry.Key) {
+	if entry != nil && !c.ShouldCache(entry.Key) {
 		return c.backend.Put(ctx, entry)
 	}
 
@@ -130,7 +130,7 @@ func (c *Cache) Put(ctx context.Context, entry *Entry) error {
 }
 
 func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
-	if !c.shouldCache(key) {
+	if !c.ShouldCache(key) {
 		return c.backend.Get(ctx, key)
 	}
 
@@ -159,7 +159,7 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 }
 
 func (c *Cache) Delete(ctx context.Context, key string) error {
-	if !c.shouldCache(key) {
+	if !c.ShouldCache(key) {
 		return c.backend.Delete(ctx, key)
 	}
 
@@ -179,6 +179,14 @@ func (c *Cache) List(ctx context.Context, prefix string) ([]string, error) {
 	// reason we don't lock as we can't reasonably know which locks to readlock
 	// ahead of time.
 	return c.backend.List(ctx, prefix)
+}
+
+func (c *TransactionalCache) Locks() []*locksutil.LockEntry {
+	return c.locks
+}
+
+func (c *TransactionalCache) LRU() *lru.TwoQueueCache {
+	return c.lru
 }
 
 func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) error {
@@ -203,7 +211,7 @@ func (c *TransactionalCache) Transaction(ctx context.Context, txns []*TxnEntry) 
 	}
 
 	for _, txn := range txns {
-		if !c.shouldCache(txn.Entry.Key) {
+		if !c.ShouldCache(txn.Entry.Key) {
 			continue
 		}
 

@@ -4,12 +4,14 @@
 package pb
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	logical "github.com/hashicorp/vault/sdk/logical"
-	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	math "math"
 )
 
@@ -22,7 +24,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Empty struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -3026,6 +3028,32 @@ type BackendServer interface {
 	Type(context.Context, *Empty) (*TypeReply, error)
 }
 
+// UnimplementedBackendServer can be embedded to have forward compatible implementations.
+type UnimplementedBackendServer struct {
+}
+
+func (*UnimplementedBackendServer) HandleRequest(ctx context.Context, req *HandleRequestArgs) (*HandleRequestReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HandleRequest not implemented")
+}
+func (*UnimplementedBackendServer) SpecialPaths(ctx context.Context, req *Empty) (*SpecialPathsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SpecialPaths not implemented")
+}
+func (*UnimplementedBackendServer) HandleExistenceCheck(ctx context.Context, req *HandleExistenceCheckArgs) (*HandleExistenceCheckReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HandleExistenceCheck not implemented")
+}
+func (*UnimplementedBackendServer) Cleanup(ctx context.Context, req *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Cleanup not implemented")
+}
+func (*UnimplementedBackendServer) InvalidateKey(ctx context.Context, req *InvalidateKeyArgs) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidateKey not implemented")
+}
+func (*UnimplementedBackendServer) Setup(ctx context.Context, req *SetupArgs) (*SetupReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Setup not implemented")
+}
+func (*UnimplementedBackendServer) Type(ctx context.Context, req *Empty) (*TypeReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
+}
+
 func RegisterBackendServer(s *grpc.Server, srv BackendServer) {
 	s.RegisterService(&_Backend_serviceDesc, srv)
 }
@@ -3253,6 +3281,23 @@ type StorageServer interface {
 	Get(context.Context, *StorageGetArgs) (*StorageGetReply, error)
 	Put(context.Context, *StoragePutArgs) (*StoragePutReply, error)
 	Delete(context.Context, *StorageDeleteArgs) (*StorageDeleteReply, error)
+}
+
+// UnimplementedStorageServer can be embedded to have forward compatible implementations.
+type UnimplementedStorageServer struct {
+}
+
+func (*UnimplementedStorageServer) List(ctx context.Context, req *StorageListArgs) (*StorageListReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (*UnimplementedStorageServer) Get(ctx context.Context, req *StorageGetArgs) (*StorageGetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (*UnimplementedStorageServer) Put(ctx context.Context, req *StoragePutArgs) (*StoragePutReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
+}
+func (*UnimplementedStorageServer) Delete(ctx context.Context, req *StorageDeleteArgs) (*StorageDeleteReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 
 func RegisterStorageServer(s *grpc.Server, srv StorageServer) {
@@ -3543,6 +3588,44 @@ type SystemViewServer interface {
 	EntityInfo(context.Context, *EntityInfoArgs) (*EntityInfoReply, error)
 	// PluginEnv returns Vault environment information used by plugins
 	PluginEnv(context.Context, *Empty) (*PluginEnvReply, error)
+}
+
+// UnimplementedSystemViewServer can be embedded to have forward compatible implementations.
+type UnimplementedSystemViewServer struct {
+}
+
+func (*UnimplementedSystemViewServer) DefaultLeaseTTL(ctx context.Context, req *Empty) (*TTLReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DefaultLeaseTTL not implemented")
+}
+func (*UnimplementedSystemViewServer) MaxLeaseTTL(ctx context.Context, req *Empty) (*TTLReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MaxLeaseTTL not implemented")
+}
+func (*UnimplementedSystemViewServer) SudoPrivilege(ctx context.Context, req *SudoPrivilegeArgs) (*SudoPrivilegeReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SudoPrivilege not implemented")
+}
+func (*UnimplementedSystemViewServer) Tainted(ctx context.Context, req *Empty) (*TaintedReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Tainted not implemented")
+}
+func (*UnimplementedSystemViewServer) CachingDisabled(ctx context.Context, req *Empty) (*CachingDisabledReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CachingDisabled not implemented")
+}
+func (*UnimplementedSystemViewServer) ReplicationState(ctx context.Context, req *Empty) (*ReplicationStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplicationState not implemented")
+}
+func (*UnimplementedSystemViewServer) ResponseWrapData(ctx context.Context, req *ResponseWrapDataArgs) (*ResponseWrapDataReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResponseWrapData not implemented")
+}
+func (*UnimplementedSystemViewServer) MlockEnabled(ctx context.Context, req *Empty) (*MlockEnabledReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MlockEnabled not implemented")
+}
+func (*UnimplementedSystemViewServer) LocalMount(ctx context.Context, req *Empty) (*LocalMountReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LocalMount not implemented")
+}
+func (*UnimplementedSystemViewServer) EntityInfo(ctx context.Context, req *EntityInfoArgs) (*EntityInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EntityInfo not implemented")
+}
+func (*UnimplementedSystemViewServer) PluginEnv(ctx context.Context, req *Empty) (*PluginEnvReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PluginEnv not implemented")
 }
 
 func RegisterSystemViewServer(s *grpc.Server, srv SystemViewServer) {
