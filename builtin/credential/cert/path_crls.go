@@ -9,9 +9,9 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func pathCRLs(b *backend) *framework.Path {

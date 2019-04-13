@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // maxTokenNameLength is the maximum length for the name of a Nomad access

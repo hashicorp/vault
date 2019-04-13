@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func pathListRoles(b *backend) *framework.Path {

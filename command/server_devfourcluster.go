@@ -21,8 +21,8 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/vault"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 )

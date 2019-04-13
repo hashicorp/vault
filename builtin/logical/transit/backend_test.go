@@ -15,10 +15,10 @@ import (
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/mitchellh/mapstructure"
 )
 

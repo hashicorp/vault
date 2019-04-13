@@ -7,8 +7,8 @@ import (
 
 	"github.com/chrismalek/oktasdk-go/okta"
 	"github.com/hashicorp/vault/helper/mfa"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

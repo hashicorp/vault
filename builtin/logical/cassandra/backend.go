@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Factory creates a new backend

@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 	bplugin "github.com/hashicorp/vault/sdk/plugin"
 )
 
