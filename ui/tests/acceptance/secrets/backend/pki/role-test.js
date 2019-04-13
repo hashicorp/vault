@@ -1,4 +1,4 @@
-import { settled, waitFor, currentRouteName } from '@ember/test-helpers';
+import { settled, waitUntil, waitFor, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -25,8 +25,10 @@ module('Acceptance | secrets/pki/create', function(hooks) {
   test('it creates a role and redirects', async function(assert) {
     const path = await mountAndNav(assert);
     await editPage.createRole('role', 'example.com');
+    // redirect
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await waitUntil(() => showPage.generateCertIsPresent && showPage.signCertIsPresent);
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     assert.ok(showPage.generateCertIsPresent, 'shows the generate button');
     assert.ok(showPage.signCertIsPresent, 'shows the sign button');

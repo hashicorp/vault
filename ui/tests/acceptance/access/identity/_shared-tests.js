@@ -6,6 +6,7 @@ import indexPage from 'vault/tests/pages/access/identity/index';
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
   await page.editForm.name(name).submit();
+  await settled();
   assert.ok(
     showPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
@@ -31,6 +32,7 @@ export const testCRUD = async (name, itemType, assert) => {
   let btnIndex = itemType === 'groups' ? 0 : 1;
   await indexPage.buttons[btnIndex].delete();
   await indexPage.confirmDelete();
+  await settled();
   assert.ok(
     indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
@@ -50,6 +52,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   );
   await page.editForm.delete();
   await page.editForm.confirmDelete();
+  await settled();
   assert.ok(
     indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`

@@ -107,6 +107,7 @@ module('Acceptance | ssh secret backend', function(hooks) {
 
       // generate creds
       await click('[data-test-secret-generate]');
+      await settled();
       await role.assertAfterGenerate(assert, sshPath);
 
       // click the "Back" button
@@ -134,7 +135,6 @@ module('Acceptance | ssh secret backend', function(hooks) {
       await settled();
       await click(`[data-test-confirm-action-trigger]`);
       await click(`[data-test-confirm-button]`);
-
       await settled();
       assert
         .dom(`[data-test-secret-link="${role.name}"]`)

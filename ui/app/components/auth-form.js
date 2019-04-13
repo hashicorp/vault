@@ -6,7 +6,6 @@ import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import withTestWaiter from 'ember-concurrency-test-waiter/with-test-waiter';
 import { task } from 'ember-concurrency';
 const BACKENDS = supportedAuthBackends();
 

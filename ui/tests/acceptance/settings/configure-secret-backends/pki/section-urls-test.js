@@ -32,6 +32,7 @@ module('Acceptance | settings/configure/secrets/pki/urls', function(hooks) {
       .input('foo.example.com')
       .change();
     await page.form.submit();
+    await settled();
     assert.equal(page.lastMessage, 'The urls config for this backend has been updated.');
   });
 });

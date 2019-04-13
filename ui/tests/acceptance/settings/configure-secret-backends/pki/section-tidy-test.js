@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
@@ -20,6 +20,7 @@ module('Acceptance | settings/configure/secrets/pki/tidy', function(hooks) {
     await page.form.fields.objectAt(0).clickLabel();
 
     await page.form.submit();
+    await settled();
     assert.equal(page.lastMessage, 'The tidy config for this backend has been updated.');
   });
 });

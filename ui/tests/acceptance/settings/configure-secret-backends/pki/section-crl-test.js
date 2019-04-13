@@ -1,4 +1,4 @@
-import { currentRouteName } from '@ember/test-helpers';
+import { settled, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/settings/configure-secret-backends/pki/section';
@@ -21,6 +21,7 @@ module('Acceptance | settings/configure/secrets/pki/crl', function(hooks) {
     await page.form.fillInField('time', 3);
     await page.form.fillInField('unit', 'h');
     await page.form.submit();
+    await settled();
     assert.equal(page.lastMessage, 'The crl config for this backend has been updated.');
   });
 });

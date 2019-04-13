@@ -19,6 +19,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   await page.visit({ item_type: itemType, id: itemID });
 
   await page.editForm.name(name).submit();
+  await settled();
   assert.ok(
     aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
@@ -47,6 +48,7 @@ export const testAliasCRUD = async function(name, itemType, assert) {
   await settled();
   await aliasIndexPage.delete();
   await aliasIndexPage.confirmDelete();
+  await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
@@ -81,6 +83,7 @@ export const testAliasDeleteFromForm = async function(name, itemType, assert) {
   );
   await page.editForm.delete();
   await page.editForm.confirmDelete();
+  await settled();
   assert.ok(
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`

@@ -1,6 +1,7 @@
 import { settled, click, fillIn, find, findAll, currentURL, visit } from '@ember/test-helpers';
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
+import { run } from '@ember/runloop';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
@@ -40,7 +41,7 @@ module('Acceptance | tools', function(hooks) {
     TOOLS_ACTIONS.forEach(action => {
       assert.ok(find(`[data-test-tools-action-link="${action}"]`), `${action} link renders`);
     });
-    findAll('.CodeMirror')[0].CodeMirror.setValue(DATA_TO_WRAP);
+    await run(() => findAll('.CodeMirror')[0].CodeMirror.setValue(DATA_TO_WRAP));
 
     // wrap
     await click('[data-test-tools-submit]');
