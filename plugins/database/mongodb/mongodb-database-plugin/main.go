@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 )
 
