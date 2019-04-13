@@ -77,7 +77,7 @@ type VhostInfo struct {
 	SendOctDetails RateDetails `json:"send_oct_details"`
 }
 
-// ListVhosts returns a list of virtual hosts.
+// Returns a list of virtual hosts.
 func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
 	req, err := newGETRequest(c, "vhosts")
 	if err != nil {
@@ -95,7 +95,7 @@ func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
 // GET /api/vhosts/{name}
 //
 
-// GetVhost returns information about a specific virtual host.
+// Returns information about a specific virtual host.
 func (c *Client) GetVhost(vhostname string) (rec *VhostInfo, err error) {
 	req, err := newGETRequest(c, "vhosts/"+PathEscape(vhostname))
 	if err != nil {

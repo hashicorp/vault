@@ -137,8 +137,7 @@ func (rows *Rows) Next() bool {
 					rows.fields[i].DataTypeName = dt.Name
 					rows.fields[i].FormatCode = TextFormatCode
 				} else {
-					fd := rows.fields[i]
-					rows.fatal(errors.Errorf("unknown oid: %d, name: %s", fd.DataType, fd.Name))
+					rows.fatal(errors.Errorf("unknown oid: %d", rows.fields[i].DataType))
 					return false
 				}
 			}
@@ -260,7 +259,7 @@ func (rows *Rows) Scan(dest ...interface{}) (err error) {
 					}
 				}
 			} else {
-				rows.fatal(scanArgError{col: i, err: errors.Errorf("unknown oid: %v, name: %s", fd.DataType, fd.Name)})
+				rows.fatal(scanArgError{col: i, err: errors.Errorf("unknown oid: %v", fd.DataType)})
 			}
 		}
 
@@ -418,8 +417,8 @@ func (c *Conn) QueryEx(ctx context.Context, sql string, options *QueryExOptions,
 		buf = appendSync(buf)
 
 		c.lastStmtSent = true
-		_, err = c.conn.Write(buf)
-		if err != nil {
+		n, err := c.conn.Write(buf)
+		if err != nil && fatalWriteErr(n, err) {
 			rows.fatal(err)
 			c.die(err)
 			return rows, err
@@ -508,8 +507,7 @@ func (c *Conn) readUntilRowDescription() ([]FieldDescription, error) {
 				if dt, ok := c.ConnInfo.DataTypeForOID(fieldDescriptions[i].DataType); ok {
 					fieldDescriptions[i].DataTypeName = dt.Name
 				} else {
-					fd := fieldDescriptions[i]
-					return nil, errors.Errorf("unknown oid: %d, name: %s", fd.DataType, fd.Name)
+					return nil, errors.Errorf("unknown oid: %d", fieldDescriptions[i].DataType)
 				}
 			}
 			return fieldDescriptions, nil

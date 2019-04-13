@@ -95,7 +95,7 @@ type ProcStat struct {
 	// in clock ticks.
 	Starttime uint64
 	// Virtual memory size in bytes.
-	VSize uint
+	VSize int
 	// Resident set size in pages.
 	RSS int
 
@@ -164,7 +164,7 @@ func (p Proc) NewStat() (ProcStat, error) {
 }
 
 // VirtualMemory returns the virtual memory size in bytes.
-func (s ProcStat) VirtualMemory() uint {
+func (s ProcStat) VirtualMemory() int {
 	return s.VSize
 }
 

@@ -84,11 +84,7 @@ func (ae *Exporter) indefiniteBackgroundConnection() error {
 		// agent-exporters. Lockstep retrials could result in an
 		// innocent DDOS, by clogging the machine's resources and network.
 		jitter := time.Duration(rng.Int63n(maxJitter))
-		select {
-		case <-ae.stopCh:
-			return errStopped
-		case <-time.After(connReattemptPeriod + jitter):
-		}
+		<-time.After(connReattemptPeriod + jitter)
 	}
 }
 

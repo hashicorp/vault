@@ -56,7 +56,6 @@ type Repository struct {
 	AllowSquashMerge *bool            `json:"allow_squash_merge,omitempty"`
 	AllowMergeCommit *bool            `json:"allow_merge_commit,omitempty"`
 	Topics           []string         `json:"topics,omitempty"`
-	Archived         *bool            `json:"archived,omitempty"`
 
 	// Only provided when using RepositoriesService.Get while in preview
 	License *License `json:"license,omitempty"`
@@ -70,6 +69,7 @@ type Repository struct {
 	HasDownloads      *bool   `json:"has_downloads,omitempty"`
 	LicenseTemplate   *string `json:"license_template,omitempty"`
 	GitignoreTemplate *string `json:"gitignore_template,omitempty"`
+	Archived          *bool   `json:"archived,omitempty"`
 
 	// Creating an organization repository. Required for non-owners.
 	TeamID *int64 `json:"team_id,omitempty"`
@@ -179,7 +179,7 @@ func (s *RepositoriesService) List(ctx context.Context, user string, opt *Reposi
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeTopicsPreview}
+	acceptHeaders := []string{mediaTypeCodesOfConductPreview, mediaTypeTopicsPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var repos []*Repository
@@ -217,7 +217,7 @@ func (s *RepositoriesService) ListByOrg(ctx context.Context, org string, opt *Re
 	}
 
 	// TODO: remove custom Accept headers when APIs fully launch.
-	acceptHeaders := []string{mediaTypeTopicsPreview}
+	acceptHeaders := []string{mediaTypeCodesOfConductPreview, mediaTypeTopicsPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var repos []*Repository
@@ -259,39 +259,9 @@ func (s *RepositoriesService) ListAll(ctx context.Context, opt *RepositoryListAl
 	return repos, resp, nil
 }
 
-// createRepoRequest is a subset of Repository and is used internally
-// by Create to pass only the known fields for the endpoint.
-//
-// See https://github.com/google/go-github/issues/1014 for more
-// information.
-type createRepoRequest struct {
-	// Name is required when creating a repo.
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Homepage    *string `json:"homepage,omitempty"`
-
-	Private     *bool `json:"private,omitempty"`
-	HasIssues   *bool `json:"has_issues,omitempty"`
-	HasProjects *bool `json:"has_projects,omitempty"`
-	HasWiki     *bool `json:"has_wiki,omitempty"`
-
-	// Creating an organization repository. Required for non-owners.
-	TeamID *int64 `json:"team_id,omitempty"`
-
-	AutoInit          *bool   `json:"auto_init,omitempty"`
-	GitignoreTemplate *string `json:"gitignore_template,omitempty"`
-	LicenseTemplate   *string `json:"license_template,omitempty"`
-	AllowSquashMerge  *bool   `json:"allow_squash_merge,omitempty"`
-	AllowMergeCommit  *bool   `json:"allow_merge_commit,omitempty"`
-	AllowRebaseMerge  *bool   `json:"allow_rebase_merge,omitempty"`
-}
-
 // Create a new repository. If an organization is specified, the new
 // repository will be created under that org. If the empty string is
 // specified, it will be created for the authenticated user.
-//
-// Note that only a subset of the repo fields are used and repo must
-// not be nil.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#create
 func (s *RepositoriesService) Create(ctx context.Context, org string, repo *Repository) (*Repository, *Response, error) {
@@ -302,24 +272,7 @@ func (s *RepositoriesService) Create(ctx context.Context, org string, repo *Repo
 		u = "user/repos"
 	}
 
-	repoReq := &createRepoRequest{
-		Name:              repo.Name,
-		Description:       repo.Description,
-		Homepage:          repo.Homepage,
-		Private:           repo.Private,
-		HasIssues:         repo.HasIssues,
-		HasProjects:       repo.HasProjects,
-		HasWiki:           repo.HasWiki,
-		TeamID:            repo.TeamID,
-		AutoInit:          repo.AutoInit,
-		GitignoreTemplate: repo.GitignoreTemplate,
-		LicenseTemplate:   repo.LicenseTemplate,
-		AllowSquashMerge:  repo.AllowSquashMerge,
-		AllowMergeCommit:  repo.AllowMergeCommit,
-		AllowRebaseMerge:  repo.AllowRebaseMerge,
-	}
-
-	req, err := s.client.NewRequest("POST", u, repoReq)
+	req, err := s.client.NewRequest("POST", u, repo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -698,13 +651,6 @@ type DismissalRestrictionsRequest struct {
 	Teams *[]string `json:"teams,omitempty"`
 }
 
-// SignaturesProtectedBranch represents the protection status of an individual branch.
-type SignaturesProtectedBranch struct {
-	URL *string `json:"url,omitempty"`
-	// Commits pushed to matching branches must have verified signatures.
-	Enabled *bool `json:"enabled,omitempty"`
-}
-
 // ListBranches lists branches for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#list-branches
@@ -853,67 +799,6 @@ func (s *RepositoriesService) RemoveBranchProtection(ctx context.Context, owner,
 
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeRequiredApprovingReviewsPreview)
-
-	return s.client.Do(ctx, req, nil)
-}
-
-// GetSignaturesProtectedBranch gets required signatures of protected branch.
-//
-// GitHub API docs: https://developer.github.com/v3/repos/branches/#get-required-signatures-of-protected-branch
-func (s *RepositoriesService) GetSignaturesProtectedBranch(ctx context.Context, owner, repo, branch string) (*SignaturesProtectedBranch, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/required_signatures", owner, repo, branch)
-	req, err := s.client.NewRequest("GET", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeSignaturePreview)
-
-	p := new(SignaturesProtectedBranch)
-	resp, err := s.client.Do(ctx, req, p)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return p, resp, nil
-}
-
-// RequireSignaturesOnProtectedBranch makes signed commits required on a protected branch.
-// It requires admin access and branch protection to be enabled.
-//
-// GitHub API docs: https://developer.github.com/v3/repos/branches/#add-required-signatures-of-protected-branch
-func (s *RepositoriesService) RequireSignaturesOnProtectedBranch(ctx context.Context, owner, repo, branch string) (*SignaturesProtectedBranch, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/required_signatures", owner, repo, branch)
-	req, err := s.client.NewRequest("POST", u, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeSignaturePreview)
-
-	r := new(SignaturesProtectedBranch)
-	resp, err := s.client.Do(ctx, req, r)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return r, resp, err
-}
-
-// OptionalSignaturesOnProtectedBranch removes required signed commits on a given branch.
-//
-// GitHub API docs: https://developer.github.com/v3/repos/branches/#remove-required-signatures-of-protected-branch
-func (s *RepositoriesService) OptionalSignaturesOnProtectedBranch(ctx context.Context, owner, repo, branch string) (*Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection/required_signatures", owner, repo, branch)
-	req, err := s.client.NewRequest("DELETE", u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: remove custom Accept header when this API fully launches
-	req.Header.Set("Accept", mediaTypeSignaturePreview)
 
 	return s.client.Do(ctx, req, nil)
 }

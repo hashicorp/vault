@@ -798,7 +798,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	case reflect.Bool:
 		x.line("r.EncodeBool(bool(" + varname + "))")
 	case reflect.String:
-		x.linef("if z.EncBasicHandle().StringToRaw { r.EncodeStringBytesRaw(z.BytesView(string(%s))) } else { r.EncodeStringEnc(codecSelferCcUTF8%s, string(%s)) }", varname, x.xs, varname)
+		x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + ", string(" + varname + "))")
 	case reflect.Chan:
 		x.xtraSM(varname, t, true, false)
 		// x.encListFallback(varname, rtid, t)
@@ -862,7 +862,7 @@ func (x *genRunner) encZero(t reflect.Type) {
 	case reflect.Bool:
 		x.line("r.EncodeBool(false)")
 	case reflect.String:
-		x.linef(`if z.EncBasicHandle().StringToRaw { r.EncodeStringBytesRaw([]byte{}) } else { r.EncodeStringEnc(codecSelferCcUTF8%s, "") }`, x.xs)
+		x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + `, "")`)
 	default:
 		x.line("r.EncodeNil()")
 	}
@@ -1051,6 +1051,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		}
 		x.line("r.WriteMapElemKey()")
 
+		// x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + ", `" + si.encName + "`)")
 		// emulate EncStructFieldKey
 		switch ti.keyType {
 		case valueTypeInt:
@@ -1936,8 +1937,7 @@ func genInternalEncCommandAsString(s string, vname string) string {
 	case "int", "int8", "int16", "int32", "int64":
 		return "ee.EncodeInt(int64(" + vname + "))"
 	case "string":
-		return "if e.h.StringToRaw { ee.EncodeStringBytesRaw(bytesView(" + vname + ")) " +
-			"} else { ee.EncodeStringEnc(cUTF8, " + vname + ") }"
+		return "ee.EncodeStringEnc(cUTF8, " + vname + ")"
 	case "float32":
 		return "ee.EncodeFloat32(" + vname + ")"
 	case "float64":

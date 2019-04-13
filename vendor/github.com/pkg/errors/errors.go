@@ -82,7 +82,7 @@
 //
 //     if err, ok := err.(stackTracer); ok {
 //             for _, f := range err.StackTrace() {
-//                     fmt.Printf("%+s:%d\n", f, f)
+//                     fmt.Printf("%+s:%d", f)
 //             }
 //     }
 //

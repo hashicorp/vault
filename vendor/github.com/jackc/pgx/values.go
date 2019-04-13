@@ -189,15 +189,7 @@ func encodePreparedStatementArgument(ci *pgtype.ConnInfo, buf []byte, oid pgtype
 
 		sp := len(buf)
 		buf = pgio.AppendInt32(buf, -1)
-		var argBuf []byte
-		switch valueEncoder := value.(type) {
-		case pgtype.BinaryEncoder:
-			argBuf, err = valueEncoder.EncodeBinary(ci, buf)
-		case pgtype.TextEncoder:
-			argBuf, err = valueEncoder.EncodeText(ci, buf)
-		default:
-			return nil, fmt.Errorf("invalid encode type %v", valueEncoder)
-		}
+		argBuf, err := value.(pgtype.BinaryEncoder).EncodeBinary(ci, buf)
 		if err != nil {
 			return nil, err
 		}

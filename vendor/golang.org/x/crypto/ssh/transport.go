@@ -53,14 +53,14 @@ type transport struct {
 // packetCipher represents a combination of SSH encryption/MAC
 // protocol.  A single instance should be used for one direction only.
 type packetCipher interface {
-	// writeCipherPacket encrypts the packet and writes it to w. The
+	// writePacket encrypts the packet and writes it to w. The
 	// contents of the packet are generally scrambled.
-	writeCipherPacket(seqnum uint32, w io.Writer, rand io.Reader, packet []byte) error
+	writePacket(seqnum uint32, w io.Writer, rand io.Reader, packet []byte) error
 
-	// readCipherPacket reads and decrypts a packet of data. The
+	// readPacket reads and decrypts a packet of data. The
 	// returned packet may be overwritten by future calls of
 	// readPacket.
-	readCipherPacket(seqnum uint32, r io.Reader) ([]byte, error)
+	readPacket(seqnum uint32, r io.Reader) ([]byte, error)
 }
 
 // connectionState represents one side (read or write) of the
@@ -127,7 +127,7 @@ func (t *transport) readPacket() (p []byte, err error) {
 }
 
 func (s *connectionState) readPacket(r *bufio.Reader) ([]byte, error) {
-	packet, err := s.packetCipher.readCipherPacket(s.seqNum, r)
+	packet, err := s.packetCipher.readPacket(s.seqNum, r)
 	s.seqNum++
 	if err == nil && len(packet) == 0 {
 		err = errors.New("ssh: zero length packet")
@@ -175,7 +175,7 @@ func (t *transport) writePacket(packet []byte) error {
 func (s *connectionState) writePacket(w *bufio.Writer, rand io.Reader, packet []byte) error {
 	changeKeys := len(packet) > 0 && packet[0] == msgNewKeys
 
-	err := s.packetCipher.writeCipherPacket(s.seqNum, w, rand, packet)
+	err := s.packetCipher.writePacket(s.seqNum, w, rand, packet)
 	if err != nil {
 		return err
 	}

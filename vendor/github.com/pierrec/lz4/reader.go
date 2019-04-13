@@ -158,9 +158,6 @@ func (z *Reader) Read(buf []byte) (int, error) {
 		if debugFlag {
 			debug("reading block from writer")
 		}
-		// Reset uncompressed buffer
-		z.data = z.zdata[:cap(z.zdata)][len(z.zdata):]
-
 		// Block length: 0 = end of frame, highest bit set: uncompressed.
 		bLen, err := z.readUint32()
 		if err != nil {

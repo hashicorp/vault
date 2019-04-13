@@ -41,43 +41,42 @@ const (
 var (
 	// eventTypeMapping maps webhooks types to their corresponding go-github struct types.
 	eventTypeMapping = map[string]string{
-		"check_run":                      "CheckRunEvent",
-		"check_suite":                    "CheckSuiteEvent",
-		"commit_comment":                 "CommitCommentEvent",
-		"create":                         "CreateEvent",
-		"delete":                         "DeleteEvent",
-		"deployment":                     "DeploymentEvent",
-		"deployment_status":              "DeploymentStatusEvent",
-		"fork":                           "ForkEvent",
-		"gollum":                         "GollumEvent",
-		"installation":                   "InstallationEvent",
-		"installation_repositories":      "InstallationRepositoriesEvent",
-		"issue_comment":                  "IssueCommentEvent",
-		"issues":                         "IssuesEvent",
-		"label":                          "LabelEvent",
-		"marketplace_purchase":           "MarketplacePurchaseEvent",
-		"member":                         "MemberEvent",
-		"membership":                     "MembershipEvent",
-		"milestone":                      "MilestoneEvent",
-		"organization":                   "OrganizationEvent",
-		"org_block":                      "OrgBlockEvent",
-		"page_build":                     "PageBuildEvent",
-		"ping":                           "PingEvent",
-		"project":                        "ProjectEvent",
-		"project_card":                   "ProjectCardEvent",
-		"project_column":                 "ProjectColumnEvent",
-		"public":                         "PublicEvent",
-		"pull_request_review":            "PullRequestReviewEvent",
-		"pull_request_review_comment":    "PullRequestReviewCommentEvent",
-		"pull_request":                   "PullRequestEvent",
-		"push":                           "PushEvent",
-		"repository":                     "RepositoryEvent",
-		"repository_vulnerability_alert": "RepositoryVulnerabilityAlertEvent",
-		"release":                        "ReleaseEvent",
-		"status":                         "StatusEvent",
-		"team":                           "TeamEvent",
-		"team_add":                       "TeamAddEvent",
-		"watch":                          "WatchEvent",
+		"check_run":                   "CheckRunEvent",
+		"check_suite":                 "CheckSuiteEvent",
+		"commit_comment":              "CommitCommentEvent",
+		"create":                      "CreateEvent",
+		"delete":                      "DeleteEvent",
+		"deployment":                  "DeploymentEvent",
+		"deployment_status":           "DeploymentStatusEvent",
+		"fork":                        "ForkEvent",
+		"gollum":                      "GollumEvent",
+		"installation":                "InstallationEvent",
+		"installation_repositories":   "InstallationRepositoriesEvent",
+		"issue_comment":               "IssueCommentEvent",
+		"issues":                      "IssuesEvent",
+		"label":                       "LabelEvent",
+		"marketplace_purchase":        "MarketplacePurchaseEvent",
+		"member":                      "MemberEvent",
+		"membership":                  "MembershipEvent",
+		"milestone":                   "MilestoneEvent",
+		"organization":                "OrganizationEvent",
+		"org_block":                   "OrgBlockEvent",
+		"page_build":                  "PageBuildEvent",
+		"ping":                        "PingEvent",
+		"project":                     "ProjectEvent",
+		"project_card":                "ProjectCardEvent",
+		"project_column":              "ProjectColumnEvent",
+		"public":                      "PublicEvent",
+		"pull_request_review":         "PullRequestReviewEvent",
+		"pull_request_review_comment": "PullRequestReviewCommentEvent",
+		"pull_request":                "PullRequestEvent",
+		"push":                        "PushEvent",
+		"repository":                  "RepositoryEvent",
+		"release":                     "ReleaseEvent",
+		"status":                      "StatusEvent",
+		"team":                        "TeamEvent",
+		"team_add":                    "TeamAddEvent",
+		"watch":                       "WatchEvent",
 	}
 )
 
@@ -129,9 +128,7 @@ func messageMAC(signature string) ([]byte, func() hash.Hash, error) {
 // and returns the (JSON) payload.
 // The Content-Type header of the payload can be "application/json" or "application/x-www-form-urlencoded".
 // If the Content-Type is neither then an error is returned.
-// secretToken is the GitHub Webhook secret token.
-// If your webhook does not contain a secret token, you can pass nil or an empty slice.
-// This is intended for local development purposes only and all webhooks should ideally set up a secret token.
+// secretKey is the GitHub Webhook secret message.
 //
 // Example usage:
 //
@@ -141,7 +138,7 @@ func messageMAC(signature string) ([]byte, func() hash.Hash, error) {
 //       // Process payload...
 //     }
 //
-func ValidatePayload(r *http.Request, secretToken []byte) (payload []byte, err error) {
+func ValidatePayload(r *http.Request, secretKey []byte) (payload []byte, err error) {
 	var body []byte // Raw body that GitHub uses to calculate the signature.
 
 	switch ct := r.Header.Get("Content-Type"); ct {
@@ -177,30 +174,25 @@ func ValidatePayload(r *http.Request, secretToken []byte) (payload []byte, err e
 		return nil, fmt.Errorf("Webhook request has unsupported Content-Type %q", ct)
 	}
 
-	// Only validate the signature if a secret token exists. This is intended for
-	// local development only and all webhooks should ideally set up a secret token.
-	if len(secretToken) > 0 {
-		sig := r.Header.Get(signatureHeader)
-		if err := ValidateSignature(sig, body, secretToken); err != nil {
-			return nil, err
-		}
+	sig := r.Header.Get(signatureHeader)
+	if err := validateSignature(sig, body, secretKey); err != nil {
+		return nil, err
 	}
-
 	return payload, nil
 }
 
-// ValidateSignature validates the signature for the given payload.
+// validateSignature validates the signature for the given payload.
 // signature is the GitHub hash signature delivered in the X-Hub-Signature header.
 // payload is the JSON payload sent by GitHub Webhooks.
-// secretToken is the GitHub Webhook secret token.
+// secretKey is the GitHub Webhook secret message.
 //
 // GitHub API docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
-func ValidateSignature(signature string, payload, secretToken []byte) error {
+func validateSignature(signature string, payload, secretKey []byte) error {
 	messageMAC, hashFunc, err := messageMAC(signature)
 	if err != nil {
 		return err
 	}
-	if !checkMAC(payload, messageMAC, secretToken, hashFunc) {
+	if !checkMAC(payload, messageMAC, secretKey, hashFunc) {
 		return errors.New("payload signature check failed")
 	}
 	return nil

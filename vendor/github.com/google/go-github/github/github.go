@@ -54,17 +54,20 @@ const (
 	// https://developer.github.com/changes/2016-04-06-deployment-and-deployment-status-enhancements/
 	mediaTypeDeploymentStatusPreview = "application/vnd.github.ant-man-preview+json"
 
-	// https://developer.github.com/changes/2018-10-16-deployments-environments-states-and-auto-inactive-updates/
-	mediaTypeExpandDeploymentStatusPreview = "application/vnd.github.flash-preview+json"
-
 	// https://developer.github.com/changes/2016-02-19-source-import-preview-api/
 	mediaTypeImportPreview = "application/vnd.github.barred-rock-preview"
 
 	// https://developer.github.com/changes/2016-05-12-reactions-api-preview/
 	mediaTypeReactionsPreview = "application/vnd.github.squirrel-girl-preview"
 
+	// https://developer.github.com/changes/2016-04-04-git-signing-api-preview/
+	mediaTypeGitSigningPreview = "application/vnd.github.cryptographer-preview+json"
+
 	// https://developer.github.com/changes/2016-05-23-timeline-preview-api/
 	mediaTypeTimelinePreview = "application/vnd.github.mockingbird-preview+json"
+
+	// https://developer.github.com/changes/2016-06-14-repository-invitations/
+	mediaTypeRepositoryInvitationsPreview = "application/vnd.github.swamp-thing-preview+json"
 
 	// https://developer.github.com/changes/2016-07-06-github-pages-preiew-api/
 	mediaTypePagesPreview = "application/vnd.github.mister-fantastic-preview+json"
@@ -119,18 +122,6 @@ const (
 
 	// https://developer.github.com/enterprise/2.13/v3/repos/pre_receive_hooks/
 	mediaTypePreReceiveHooksPreview = "application/vnd.github.eye-scream-preview"
-
-	// https://developer.github.com/changes/2018-02-22-protected-branches-required-signatures/
-	mediaTypeSignaturePreview = "application/vnd.github.zzzax-preview+json"
-
-	// https://developer.github.com/changes/2018-09-05-project-card-events/
-	mediaTypeProjectCardDetailsPreview = "application/vnd.github.starfox-preview+json"
-
-	// https://developer.github.com/changes/2018-12-18-interactions-preview/
-	mediaTypeInteractionRestrictionsPreview = "application/vnd.github.sombra-preview+json"
-
-	// https://developer.github.com/changes/2019-02-14-draft-pull-requests/
-	mediaTypeDraftPreview = "application/vnd.github.shadow-cat-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -163,7 +154,6 @@ type Client struct {
 	Gists          *GistsService
 	Git            *GitService
 	Gitignores     *GitignoresService
-	Interactions   *InteractionsService
 	Issues         *IssuesService
 	Licenses       *LicensesService
 	Marketplace    *MarketplaceService
@@ -194,9 +184,7 @@ type ListOptions struct {
 
 // UploadOptions specifies the parameters to methods that support uploads.
 type UploadOptions struct {
-	Name      string `url:"name,omitempty"`
-	Label     string `url:"label,omitempty"`
-	MediaType string `url:"-"`
+	Name string `url:"name,omitempty"`
 }
 
 // RawType represents type of raw format of a request instead of JSON.
@@ -258,7 +246,6 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Gists = (*GistsService)(&c.common)
 	c.Git = (*GitService)(&c.common)
 	c.Gitignores = (*GitignoresService)(&c.common)
-	c.Interactions = (*InteractionsService)(&c.common)
 	c.Issues = (*IssuesService)(&c.common)
 	c.Licenses = (*LicensesService)(&c.common)
 	c.Marketplace = &MarketplaceService{client: c}
@@ -388,9 +375,7 @@ type Response struct {
 	FirstPage int
 	LastPage  int
 
-	// Explicitly specify the Rate type so Rate's String() receiver doesn't
-	// propagate to Response.
-	Rate Rate
+	Rate
 }
 
 // newResponse creates a new Response for the provided http.Response.
@@ -515,23 +500,13 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 
 	err = CheckResponse(resp)
 	if err != nil {
-		// Special case for AcceptedErrors. If an AcceptedError
-		// has been encountered, the response's payload will be
-		// added to the AcceptedError and returned.
-		//
-		// Issue #1022
-		aerr, ok := err.(*AcceptedError)
-		if ok {
-			b, readErr := ioutil.ReadAll(resp.Body)
-			if readErr != nil {
-				return response, readErr
-			}
-
-			aerr.Raw = b
-			return response, aerr
+		// Even though there was an error, we still return the response
+		// in case the caller wants to inspect it further.
+		// However, if the error is AcceptedError, decode it below before
+		// returning from this function and closing the response body.
+		if _, ok := err.(*AcceptedError); !ok {
+			return response, err
 		}
-
-		return response, err
 	}
 
 	if v != nil {
@@ -633,10 +608,7 @@ func (r *RateLimitError) Error() string {
 // Technically, 202 Accepted is not a real error, it's just used to
 // indicate that results are not ready yet, but should be available soon.
 // The request can be repeated after some time.
-type AcceptedError struct {
-	// Raw contains the response body.
-	Raw []byte
-}
+type AcceptedError struct{}
 
 func (*AcceptedError) Error() string {
 	return "job scheduled on GitHub side; try again later"

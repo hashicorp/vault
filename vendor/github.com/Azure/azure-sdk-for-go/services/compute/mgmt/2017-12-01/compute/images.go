@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -45,6 +46,16 @@ func NewImagesClientWithBaseURI(baseURI string, subscriptionID string) ImagesCli
 // imageName - the name of the image.
 // parameters - parameters supplied to the Create Image operation.
 func (client ImagesClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, imageName string, parameters Image) (result ImagesCreateOrUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.CreateOrUpdate")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, imageName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "CreateOrUpdate", nil, "Failure preparing request")
@@ -92,10 +103,6 @@ func (client ImagesClient) CreateOrUpdateSender(req *http.Request) (future Image
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -118,6 +125,16 @@ func (client ImagesClient) CreateOrUpdateResponder(resp *http.Response) (result 
 // resourceGroupName - the name of the resource group.
 // imageName - the name of the image.
 func (client ImagesClient) Delete(ctx context.Context, resourceGroupName string, imageName string) (result ImagesDeleteFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, resourceGroupName, imageName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Delete", nil, "Failure preparing request")
@@ -163,10 +180,6 @@ func (client ImagesClient) DeleteSender(req *http.Request) (future ImagesDeleteF
 	if err != nil {
 		return
 	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted, http.StatusNoContent))
-	if err != nil {
-		return
-	}
 	future.Future, err = azure.NewFutureFromResponse(resp)
 	return
 }
@@ -190,6 +203,16 @@ func (client ImagesClient) DeleteResponder(resp *http.Response) (result Operatio
 // imageName - the name of the image.
 // expand - the expand expression to apply on the operation.
 func (client ImagesClient) Get(ctx context.Context, resourceGroupName string, imageName string, expand string) (result Image, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, resourceGroupName, imageName, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Get", nil, "Failure preparing request")
@@ -258,6 +281,16 @@ func (client ImagesClient) GetResponder(resp *http.Response) (result Image, err 
 // List gets the list of Images in the subscription. Use nextLink property in the response to get the next page of
 // Images. Do this till nextLink is null to fetch all the Images.
 func (client ImagesClient) List(ctx context.Context) (result ImageListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.List")
+		defer func() {
+			sc := -1
+			if result.ilr.Response.Response != nil {
+				sc = result.ilr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx)
 	if err != nil {
@@ -320,8 +353,8 @@ func (client ImagesClient) ListResponder(resp *http.Response) (result ImageListR
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client ImagesClient) listNextResults(lastResults ImageListResult) (result ImageListResult, err error) {
-	req, err := lastResults.imageListResultPreparer()
+func (client ImagesClient) listNextResults(ctx context.Context, lastResults ImageListResult) (result ImageListResult, err error) {
+	req, err := lastResults.imageListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "compute.ImagesClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -342,6 +375,16 @@ func (client ImagesClient) listNextResults(lastResults ImageListResult) (result 
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client ImagesClient) ListComplete(ctx context.Context) (result ImageListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx)
 	return
 }
@@ -350,6 +393,16 @@ func (client ImagesClient) ListComplete(ctx context.Context) (result ImageListRe
 // Parameters:
 // resourceGroupName - the name of the resource group.
 func (client ImagesClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result ImageListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.ListByResourceGroup")
+		defer func() {
+			sc := -1
+			if result.ilr.Response.Response != nil {
+				sc = result.ilr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listByResourceGroupNextResults
 	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName)
 	if err != nil {
@@ -413,8 +466,8 @@ func (client ImagesClient) ListByResourceGroupResponder(resp *http.Response) (re
 }
 
 // listByResourceGroupNextResults retrieves the next set of results, if any.
-func (client ImagesClient) listByResourceGroupNextResults(lastResults ImageListResult) (result ImageListResult, err error) {
-	req, err := lastResults.imageListResultPreparer()
+func (client ImagesClient) listByResourceGroupNextResults(ctx context.Context, lastResults ImageListResult) (result ImageListResult, err error) {
+	req, err := lastResults.imageListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "compute.ImagesClient", "listByResourceGroupNextResults", nil, "Failure preparing next results request")
 	}
@@ -435,6 +488,16 @@ func (client ImagesClient) listByResourceGroupNextResults(lastResults ImageListR
 
 // ListByResourceGroupComplete enumerates all values, automatically crossing page boundaries as required.
 func (client ImagesClient) ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result ImageListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.ListByResourceGroup")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.ListByResourceGroup(ctx, resourceGroupName)
 	return
 }
@@ -445,6 +508,16 @@ func (client ImagesClient) ListByResourceGroupComplete(ctx context.Context, reso
 // imageName - the name of the image.
 // parameters - parameters supplied to the Update Image operation.
 func (client ImagesClient) Update(ctx context.Context, resourceGroupName string, imageName string, parameters ImageUpdate) (result ImagesUpdateFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ImagesClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response() != nil {
+				sc = result.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdatePreparer(ctx, resourceGroupName, imageName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "compute.ImagesClient", "Update", nil, "Failure preparing request")
@@ -489,10 +562,6 @@ func (client ImagesClient) UpdateSender(req *http.Request) (future ImagesUpdateF
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req,
 		azure.DoRetryWithRegistration(client.Client))
-	if err != nil {
-		return
-	}
-	err = autorest.Respond(resp, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusCreated))
 	if err != nil {
 		return
 	}

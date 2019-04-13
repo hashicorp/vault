@@ -28,7 +28,7 @@ type ConnPool struct {
 	resetCount           int
 	afterConnect         func(*Conn) error
 	logger               Logger
-	logLevel             LogLevel
+	logLevel             int
 	closed               bool
 	preparedStatements   map[string]*PreparedStatement
 	acquireTimeout       time.Duration
@@ -553,10 +553,10 @@ func (p *ConnPool) CopyFrom(tableName Identifier, columnNames []string, rowSrc C
 }
 
 // CopyFromReader acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
+func (p *ConnPool) CopyFromReader(r io.Reader, sql string) error {
 	c, err := p.Acquire()
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer p.Release(c)
 
@@ -564,10 +564,10 @@ func (p *ConnPool) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
 }
 
 // CopyToWriter acquires a connection, delegates the call to that connection, and releases the connection
-func (p *ConnPool) CopyToWriter(w io.Writer, sql string, args ...interface{}) (CommandTag, error) {
+func (p *ConnPool) CopyToWriter(w io.Writer, sql string, args ...interface{}) error {
 	c, err := p.Acquire()
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer p.Release(c)
 

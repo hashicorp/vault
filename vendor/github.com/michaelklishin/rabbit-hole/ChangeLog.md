@@ -1,9 +1,4 @@
-## Changes Between 1.5.0 and 1.6.0 (unreleased)
-
-No changes yet.
-
-
-## Changes Between 1.4.0 and 1.5.0 (February 13th, 2019)
+## Changes Between 1.4.0 and 1.5.0 (unreleased)
 
 ### More Binding Management Functions
 

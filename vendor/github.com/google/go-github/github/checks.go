@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"net/url"
 )
 
 // ChecksService provides access to the Checks API in the
@@ -20,12 +19,10 @@ type ChecksService service
 // CheckRun represents a GitHub check run on a repository associated with a GitHub app.
 type CheckRun struct {
 	ID           *int64          `json:"id,omitempty"`
-	NodeID       *string         `json:"node_id,omitempty"`
 	HeadSHA      *string         `json:"head_sha,omitempty"`
 	ExternalID   *string         `json:"external_id,omitempty"`
 	URL          *string         `json:"url,omitempty"`
 	HTMLURL      *string         `json:"html_url,omitempty"`
-	DetailsURL   *string         `json:"details_url,omitempty"`
 	Status       *string         `json:"status,omitempty"`
 	Conclusion   *string         `json:"conclusion,omitempty"`
 	StartedAt    *Timestamp      `json:"started_at,omitempty"`
@@ -50,14 +47,14 @@ type CheckRunOutput struct {
 
 // CheckRunAnnotation represents an annotation object for a CheckRun output.
 type CheckRunAnnotation struct {
-	Path            *string `json:"path,omitempty"`
-	BlobHRef        *string `json:"blob_href,omitempty"`
-	StartLine       *int    `json:"start_line,omitempty"`
-	EndLine         *int    `json:"end_line,omitempty"`
-	AnnotationLevel *string `json:"annotation_level,omitempty"`
-	Message         *string `json:"message,omitempty"`
-	Title           *string `json:"title,omitempty"`
-	RawDetails      *string `json:"raw_details,omitempty"`
+	FileName     *string `json:"filename,omitempty"`
+	BlobHRef     *string `json:"blob_href,omitempty"`
+	StartLine    *int    `json:"start_line,omitempty"`
+	EndLine      *int    `json:"end_line,omitempty"`
+	WarningLevel *string `json:"warning_level,omitempty"`
+	Message      *string `json:"message,omitempty"`
+	Title        *string `json:"title,omitempty"`
+	RawDetails   *string `json:"raw_details,omitempty"`
 }
 
 // CheckRunImage represents an image object for a CheckRun output.
@@ -70,7 +67,6 @@ type CheckRunImage struct {
 // CheckSuite represents a suite of check runs.
 type CheckSuite struct {
 	ID           *int64         `json:"id,omitempty"`
-	NodeID       *string        `json:"node_id,omitempty"`
 	HeadBranch   *string        `json:"head_branch,omitempty"`
 	HeadSHA      *string        `json:"head_sha,omitempty"`
 	URL          *string        `json:"url,omitempty"`
@@ -81,9 +77,6 @@ type CheckSuite struct {
 	App          *App           `json:"app,omitempty"`
 	Repository   *Repository    `json:"repository,omitempty"`
 	PullRequests []*PullRequest `json:"pull_requests,omitempty"`
-
-	// The following fields are only populated by Webhook events.
-	HeadCommit *Commit `json:"head_commit,omitempty"`
 }
 
 func (c CheckRun) String() string {
@@ -138,24 +131,16 @@ func (s *ChecksService) GetCheckSuite(ctx context.Context, owner, repo string, c
 
 // CreateCheckRunOptions sets up parameters needed to create a CheckRun.
 type CreateCheckRunOptions struct {
-	Name        string            `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
-	HeadBranch  string            `json:"head_branch"`            // The name of the branch to perform a check against. (Required.)
-	HeadSHA     string            `json:"head_sha"`               // The SHA of the commit. (Required.)
-	DetailsURL  *string           `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
-	ExternalID  *string           `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)
-	Status      *string           `json:"status,omitempty"`       // The current status. Can be one of "queued", "in_progress", or "completed". Default: "queued". (Optional.)
-	Conclusion  *string           `json:"conclusion,omitempty"`   // Can be one of "success", "failure", "neutral", "cancelled", "timed_out", or "action_required". (Optional. Required if you provide a status of "completed".)
-	StartedAt   *Timestamp        `json:"started_at,omitempty"`   // The time that the check run began. (Optional.)
-	CompletedAt *Timestamp        `json:"completed_at,omitempty"` // The time the check completed. (Optional. Required if you provide conclusion.)
-	Output      *CheckRunOutput   `json:"output,omitempty"`       // Provide descriptive details about the run. (Optional)
-	Actions     []*CheckRunAction `json:"actions,omitempty"`      // Possible further actions the integrator can perform, which a user may trigger. (Optional.)
-}
-
-// CheckRunAction exposes further actions the integrator can perform, which a user may trigger.
-type CheckRunAction struct {
-	Label       string `json:"label"`       // The text to be displayed on a button in the web UI. The maximum size is 20 characters. (Required.)
-	Description string `json:"description"` // A short explanation of what this action would do. The maximum size is 40 characters. (Required.)
-	Identifier  string `json:"identifier"`  // A reference for the action on the integrator's system. The maximum size is 20 characters. (Required.)
+	Name        string          `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
+	HeadBranch  string          `json:"head_branch"`            // The name of the branch to perform a check against. (Required.)
+	HeadSHA     string          `json:"head_sha"`               // The SHA of the commit. (Required.)
+	DetailsURL  *string         `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
+	ExternalID  *string         `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)
+	Status      *string         `json:"status,omitempty"`       // The current status. Can be one of "queued", "in_progress", or "completed". Default: "queued". (Optional.)
+	Conclusion  *string         `json:"conclusion,omitempty"`   // Can be one of "success", "failure", "neutral", "cancelled", "timed_out", or "action_required". (Optional. Required if you provide a status of "completed".)
+	StartedAt   *Timestamp      `json:"started_at,omitempty"`   // The time that the check run began. (Optional.)
+	CompletedAt *Timestamp      `json:"completed_at,omitempty"` // The time the check completed. (Optional. Required if you provide conclusion.)
+	Output      *CheckRunOutput `json:"output,omitempty"`       // Provide descriptive details about the run. (Optional)
 }
 
 // CreateCheckRun creates a check run for repository.
@@ -181,16 +166,15 @@ func (s *ChecksService) CreateCheckRun(ctx context.Context, owner, repo string, 
 
 // UpdateCheckRunOptions sets up parameters needed to update a CheckRun.
 type UpdateCheckRunOptions struct {
-	Name        string            `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
-	HeadBranch  *string           `json:"head_branch,omitempty"`  // The name of the branch to perform a check against. (Optional.)
-	HeadSHA     *string           `json:"head_sha,omitempty"`     // The SHA of the commit. (Optional.)
-	DetailsURL  *string           `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
-	ExternalID  *string           `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)
-	Status      *string           `json:"status,omitempty"`       // The current status. Can be one of "queued", "in_progress", or "completed". Default: "queued". (Optional.)
-	Conclusion  *string           `json:"conclusion,omitempty"`   // Can be one of "success", "failure", "neutral", "cancelled", "timed_out", or "action_required". (Optional. Required if you provide a status of "completed".)
-	CompletedAt *Timestamp        `json:"completed_at,omitempty"` // The time the check completed. (Optional. Required if you provide conclusion.)
-	Output      *CheckRunOutput   `json:"output,omitempty"`       // Provide descriptive details about the run. (Optional)
-	Actions     []*CheckRunAction `json:"actions,omitempty"`      // Possible further actions the integrator can perform, which a user may trigger. (Optional.)
+	Name        string          `json:"name"`                   // The name of the check (e.g., "code-coverage"). (Required.)
+	HeadBranch  *string         `json:"head_branch,omitempty"`  // The name of the branch to perform a check against. (Optional.)
+	HeadSHA     *string         `json:"head_sha,omitempty"`     // The SHA of the commit. (Optional.)
+	DetailsURL  *string         `json:"details_url,omitempty"`  // The URL of the integrator's site that has the full details of the check. (Optional.)
+	ExternalID  *string         `json:"external_id,omitempty"`  // A reference for the run on the integrator's system. (Optional.)
+	Status      *string         `json:"status,omitempty"`       // The current status. Can be one of "queued", "in_progress", or "completed". Default: "queued". (Optional.)
+	Conclusion  *string         `json:"conclusion,omitempty"`   // Can be one of "success", "failure", "neutral", "cancelled", "timed_out", or "action_required". (Optional. Required if you provide a status of "completed".)
+	CompletedAt *Timestamp      `json:"completed_at,omitempty"` // The time the check completed. (Optional. Required if you provide conclusion.)
+	Output      *CheckRunOutput `json:"output,omitempty"`       // Provide descriptive details about the run. (Optional)
 }
 
 // UpdateCheckRun updates a check run for a specific commit in a repository.
@@ -259,7 +243,7 @@ type ListCheckRunsResults struct {
 //
 // GitHub API docs: https://developer.github.com/v3/checks/runs/#list-check-runs-for-a-specific-ref
 func (s *ChecksService) ListCheckRunsForRef(ctx context.Context, owner, repo, ref string, opt *ListCheckRunsOptions) (*ListCheckRunsResults, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/commits/%v/check-runs", owner, repo, url.QueryEscape(ref))
+	u := fmt.Sprintf("repos/%v/%v/commits/%v/check-runs", owner, repo, ref)
 	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -325,7 +309,7 @@ type ListCheckSuiteResults struct {
 //
 // GitHub API docs: https://developer.github.com/v3/checks/suites/#list-check-suites-for-a-specific-ref
 func (s *ChecksService) ListCheckSuitesForRef(ctx context.Context, owner, repo, ref string, opt *ListCheckSuiteOptions) (*ListCheckSuiteResults, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/commits/%v/check-suites", owner, repo, url.QueryEscape(ref))
+	u := fmt.Sprintf("repos/%v/%v/commits/%v/check-suites", owner, repo, ref)
 	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -417,11 +401,20 @@ func (s *ChecksService) CreateCheckSuite(ctx context.Context, owner, repo string
 	return checkSuite, resp, nil
 }
 
-// ReRequestCheckSuite triggers GitHub to rerequest an existing check suite, without pushing new code to a repository.
+// RequestCheckSuiteOptions sets up the parameters for a request check suite endpoint.
+type RequestCheckSuiteOptions struct {
+	HeadSHA string `json:"head_sha"` // The sha of the head commit. (Required.)
+}
+
+// RequestCheckSuite triggers GitHub to create a new check suite, without pushing new code to a repository.
 //
-// GitHub API docs: https://developer.github.com/v3/checks/suites/#rerequest-check-suite
-func (s *ChecksService) ReRequestCheckSuite(ctx context.Context, owner, repo string, checkSuiteID int64) (*Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/check-suites/%v/rerequest", owner, repo, checkSuiteID)
+// GitHub API docs: https://developer.github.com/v3/checks/suites/#request-check-suites
+func (s *ChecksService) RequestCheckSuite(ctx context.Context, owner, repo string, opt RequestCheckSuiteOptions) (*Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/check-suite-requests", owner, repo)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := s.client.NewRequest("POST", u, nil)
 	if err != nil {

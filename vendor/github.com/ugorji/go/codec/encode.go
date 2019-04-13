@@ -48,12 +48,13 @@ type encDriver interface {
 	// encodeExtPreamble(xtag byte, length int)
 	EncodeRawExt(re *RawExt, e *Encoder)
 	EncodeExt(v interface{}, xtag uint64, ext Ext, e *Encoder)
-	// Deprecated: use EncodeStringEnc instead
+	// Deprecated: try to use EncodeStringEnc instead
 	EncodeString(c charEncoding, v string)
-	// Deprecated: use EncodeStringBytesRaw instead
-	EncodeStringBytes(c charEncoding, v []byte)
-	EncodeStringEnc(c charEncoding, v string) // c cannot be cRAW
+	// c cannot be cRAW
+	EncodeStringEnc(c charEncoding, v string)
 	// EncodeSymbol(v string)
+	// Deprecated: try to use EncodeStringBytesRaw instead
+	EncodeStringBytes(c charEncoding, v []byte)
 	EncodeStringBytesRaw(v []byte)
 	EncodeTime(time.Time)
 	//encBignum(f *big.Int)
@@ -167,19 +168,6 @@ type EncodeOptions struct {
 	// if they are a correct representation of a value in that format.
 	// If unset, we error out.
 	Raw bool
-
-	// StringToRaw controls how strings are encoded.
-	//
-	// As a go string is just an (immutable) sequence of bytes,
-	// it can be encoded either as raw bytes or as a UTF string.
-	//
-	// By default, strings are encoded as UTF-8.
-	// but can be treated as []byte during an encode.
-	//
-	// Note that things which we know (by definition) to be UTF-8
-	// are ALWAYS encoded as UTF-8 strings.
-	// These include encoding.TextMarshaler, time.Format calls, struct field names, etc.
-	StringToRaw bool
 
 	// // AsSymbols defines what should be encoded as symbols.
 	// //
@@ -330,20 +318,16 @@ func (z *bufioEncWriter) release() {
 }
 
 //go:noinline - flush only called intermittently
-func (z *bufioEncWriter) flushErr() (err error) {
+func (z *bufioEncWriter) flush() {
 	n, err := z.w.Write(z.buf[:z.n])
 	z.n -= n
 	if z.n > 0 && err == nil {
 		err = io.ErrShortWrite
 	}
-	if n > 0 && z.n > 0 {
-		copy(z.buf, z.buf[n:z.n+n])
-	}
-	return err
-}
-
-func (z *bufioEncWriter) flush() {
-	if err := z.flushErr(); err != nil {
+	if err != nil {
+		if n > 0 && z.n > 0 {
+			copy(z.buf, z.buf[n:z.n+n])
+		}
 		panic(err)
 	}
 }
@@ -390,11 +374,10 @@ func (z *bufioEncWriter) writen2(b1, b2 byte) {
 	z.n += 2
 }
 
-func (z *bufioEncWriter) endErr() (err error) {
+func (z *bufioEncWriter) end() {
 	if z.n > 0 {
-		err = z.flushErr()
+		z.flush()
 	}
-	return
 }
 
 // ---------------------------------------------
@@ -417,9 +400,8 @@ func (z *bytesEncAppender) writen1(b1 byte) {
 func (z *bytesEncAppender) writen2(b1, b2 byte) {
 	z.b = append(z.b, b1, b2)
 }
-func (z *bytesEncAppender) endErr() error {
+func (z *bytesEncAppender) end() {
 	*(z.out) = z.b
-	return nil
 }
 func (z *bytesEncAppender) reset(in []byte, out *[]byte) {
 	z.b = in[:0]
@@ -655,13 +637,15 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 		if e.esep {
 			for _, si := range tisfi {
 				ee.WriteMapElemKey()
-				e.kStructFieldKey(fti.keyType, si.encNameAsciiAlphaNum, si.encName)
+				// ee.EncodeStringEnc(cUTF8, si.encName)
+				e.kStructFieldKey(fti.keyType, si)
 				ee.WriteMapElemValue()
 				e.encodeValue(sfn.field(si), nil, true)
 			}
 		} else {
 			for _, si := range tisfi {
-				e.kStructFieldKey(fti.keyType, si.encNameAsciiAlphaNum, si.encName)
+				// ee.EncodeStringEnc(cUTF8, si.encName)
+				e.kStructFieldKey(fti.keyType, si)
 				e.encodeValue(sfn.field(si), nil, true)
 			}
 		}
@@ -682,8 +666,40 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 	}
 }
 
-func (e *Encoder) kStructFieldKey(keyType valueType, encNameAsciiAlphaNum bool, encName string) {
-	encStructFieldKey(encName, e.e, e.w, keyType, encNameAsciiAlphaNum, e.js)
+func (e *Encoder) kStructFieldKey(keyType valueType, s *structFieldInfo) {
+	var m must
+	// use if-else-if, not switch (which compiles to binary-search)
+	// since keyType is typically valueTypeString, branch prediction is pretty good.
+	if keyType == valueTypeString {
+		if e.js && s.encNameAsciiAlphaNum { // keyType == valueTypeString
+			e.w.writen1('"')
+			e.w.writestr(s.encName)
+			e.w.writen1('"')
+		} else { // keyType == valueTypeString
+			e.e.EncodeStringEnc(cUTF8, s.encName)
+		}
+	} else if keyType == valueTypeInt {
+		e.e.EncodeInt(m.Int(strconv.ParseInt(s.encName, 10, 64)))
+	} else if keyType == valueTypeUint {
+		e.e.EncodeUint(m.Uint(strconv.ParseUint(s.encName, 10, 64)))
+	} else if keyType == valueTypeFloat {
+		e.e.EncodeFloat64(m.Float(strconv.ParseFloat(s.encName, 64)))
+	}
+}
+
+func (e *Encoder) kStructFieldKeyName(keyType valueType, encName string) {
+	var m must
+	// use if-else-if, not switch (which compiles to binary-search)
+	// since keyType is typically valueTypeString, branch prediction is pretty good.
+	if keyType == valueTypeString {
+		e.e.EncodeStringEnc(cUTF8, encName)
+	} else if keyType == valueTypeInt {
+		e.e.EncodeInt(m.Int(strconv.ParseInt(encName, 10, 64)))
+	} else if keyType == valueTypeUint {
+		e.e.EncodeUint(m.Uint(strconv.ParseUint(encName, 10, 64)))
+	} else if keyType == valueTypeFloat {
+		e.e.EncodeFloat64(m.Float(strconv.ParseFloat(encName, 64)))
+	}
 }
 
 func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
@@ -780,21 +796,23 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 			for j = 0; j < len(fkvs); j++ {
 				kv = fkvs[j]
 				ee.WriteMapElemKey()
-				e.kStructFieldKey(fti.keyType, kv.v.encNameAsciiAlphaNum, kv.v.encName)
+				// ee.EncodeStringEnc(cUTF8, kv.v)
+				e.kStructFieldKey(fti.keyType, kv.v)
 				ee.WriteMapElemValue()
 				e.encodeValue(kv.r, nil, true)
 			}
 		} else {
 			for j = 0; j < len(fkvs); j++ {
 				kv = fkvs[j]
-				e.kStructFieldKey(fti.keyType, kv.v.encNameAsciiAlphaNum, kv.v.encName)
+				// ee.EncodeStringEnc(cUTF8, kv.v)
+				e.kStructFieldKey(fti.keyType, kv.v)
 				e.encodeValue(kv.r, nil, true)
 			}
 		}
 		// now, add the others
 		for k, v := range mf {
 			ee.WriteMapElemKey()
-			e.kStructFieldKey(fti.keyType, false, k)
+			e.kStructFieldKeyName(fti.keyType, k)
 			ee.WriteMapElemValue()
 			e.encode(v)
 		}
@@ -879,11 +897,7 @@ func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
 			ee.WriteMapElemKey()
 		}
 		if keyTypeIsString {
-			if e.h.StringToRaw {
-				ee.EncodeStringBytesRaw(bytesView(mks[j].String()))
-			} else {
-				ee.EncodeStringEnc(cUTF8, mks[j].String())
-			}
+			ee.EncodeStringEnc(cUTF8, mks[j].String())
 		} else {
 			e.encodeValue(mks[j], keyFn, true)
 		}
@@ -933,11 +947,7 @@ func (e *Encoder) kMapCanonical(rtkey reflect.Type, rv reflect.Value, mks []refl
 			if elemsep {
 				ee.WriteMapElemKey()
 			}
-			if e.h.StringToRaw {
-				ee.EncodeStringBytesRaw(bytesView(mksv[i].v))
-			} else {
-				ee.EncodeStringEnc(cUTF8, mksv[i].v)
-			}
+			ee.EncodeStringEnc(cUTF8, mksv[i].v)
 			if elemsep {
 				ee.WriteMapElemValue()
 			}
@@ -1109,16 +1119,11 @@ func (z *encWriterSwitch) writen2(b1, b2 byte) {
 		z.wf.writen2(b1, b2)
 	}
 }
-func (z *encWriterSwitch) endErr() error {
-	if z.bytes {
-		return z.wb.endErr()
-	}
-	return z.wf.endErr()
-}
-
 func (z *encWriterSwitch) end() {
-	if err := z.endErr(); err != nil {
-		panic(err)
+	if z.bytes {
+		z.wb.end()
+	} else {
+		z.wf.end()
 	}
 }
 
@@ -1451,13 +1456,8 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 	}
 	if recoverPanicToErr {
 		defer func() {
-			// if error occurred during encoding, return that error;
-			// else if error occurred on end'ing (i.e. during flush), return that error.
-			err = e.w.endErr()
-			x := recover()
-			if x == nil {
-				e.err = err
-			} else {
+			e.w.end()
+			if x := recover(); x != nil {
 				panicValToErr(e, x, &e.err)
 				err = e.err
 			}
@@ -1546,11 +1546,7 @@ func (e *Encoder) encode(iv interface{}) {
 		e.encodeValue(v, nil, true)
 
 	case string:
-		if e.h.StringToRaw {
-			e.e.EncodeStringBytesRaw(bytesView(v))
-		} else {
-			e.e.EncodeStringEnc(cUTF8, v)
-		}
+		e.e.EncodeStringEnc(cUTF8, v)
 	case bool:
 		e.e.EncodeBool(v)
 	case int:
@@ -1588,11 +1584,7 @@ func (e *Encoder) encode(iv interface{}) {
 		e.rawBytes(*v)
 
 	case *string:
-		if e.h.StringToRaw {
-			e.e.EncodeStringBytesRaw(bytesView(*v))
-		} else {
-			e.e.EncodeStringEnc(cUTF8, *v)
-		}
+		e.e.EncodeStringEnc(cUTF8, *v)
 	case *bool:
 		e.e.EncodeBool(*v)
 	case *int:
@@ -1711,7 +1703,7 @@ TOP:
 // 	} else if asis {
 // 		e.asis(bs)
 // 	} else {
-// 		e.e.EncodeStringBytesRaw(bs)
+// 		e.e.EncodeStringBytes(c, bs)
 // 	}
 // }
 
@@ -1767,42 +1759,3 @@ func (e *Encoder) rawBytes(vv Raw) {
 func (e *Encoder) wrapErr(v interface{}, err *error) {
 	*err = encodeError{codecError{name: e.hh.Name(), err: v}}
 }
-
-func encStructFieldKey(encName string, ee encDriver, w *encWriterSwitch,
-	keyType valueType, encNameAsciiAlphaNum bool, js bool) {
-	var m must
-	// use if-else-if, not switch (which compiles to binary-search)
-	// since keyType is typically valueTypeString, branch prediction is pretty good.
-	if keyType == valueTypeString {
-		if js && encNameAsciiAlphaNum { // keyType == valueTypeString
-			// w.writen1('"')
-			// w.writestr(encName)
-			// w.writen1('"')
-			// ----
-			// w.writestr(`"` + encName + `"`)
-			// ----
-			// do concat myself, so it is faster than the generic string concat
-			b := make([]byte, len(encName)+2)
-			copy(b[1:], encName)
-			b[0] = '"'
-			b[len(b)-1] = '"'
-			w.writeb(b)
-		} else { // keyType == valueTypeString
-			ee.EncodeStringEnc(cUTF8, encName)
-		}
-	} else if keyType == valueTypeInt {
-		ee.EncodeInt(m.Int(strconv.ParseInt(encName, 10, 64)))
-	} else if keyType == valueTypeUint {
-		ee.EncodeUint(m.Uint(strconv.ParseUint(encName, 10, 64)))
-	} else if keyType == valueTypeFloat {
-		ee.EncodeFloat64(m.Float(strconv.ParseFloat(encName, 64)))
-	}
-}
-
-// func encStringAsRawBytesMaybe(ee encDriver, s string, stringToRaw bool) {
-// 	if stringToRaw {
-// 		ee.EncodeStringBytesRaw(bytesView(s))
-// 	} else {
-// 		ee.EncodeStringEnc(cUTF8, s)
-// 	}
-// }

@@ -17,7 +17,7 @@ type Client struct {
 	// Password to use.
 	Password  string
 	host      string
-	transport http.RoundTripper
+	transport *http.Transport
 	timeout   time.Duration
 }
 
@@ -38,7 +38,7 @@ func NewClient(uri string, username string, password string) (me *Client, err er
 }
 
 // Creates a client with a transport; it is up to the developer to make that layer secure.
-func NewTLSClient(uri string, username string, password string, transport http.RoundTripper) (me *Client, err error) {
+func NewTLSClient(uri string, username string, password string, transport *http.Transport) (me *Client, err error) {
 	u, err := url.Parse(uri)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func NewTLSClient(uri string, username string, password string, transport http.R
 }
 
 //SetTransport changes the Transport Layer that the Client will use.
-func (c *Client) SetTransport(transport http.RoundTripper) {
+func (c *Client) SetTransport(transport *http.Transport) {
 	c.transport = transport
 }
 
