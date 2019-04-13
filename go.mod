@@ -2,6 +2,10 @@ module github.com/hashicorp/vault
 
 go 1.12
 
+replace github.com/hashicorp/vault/api => ./api
+
+replace github.com/hashicorp/vault/sdk => ./sdk
+
 require (
 	cloud.google.com/go v0.37.4
 	github.com/Azure/azure-sdk-for-go v27.1.0+incompatible
