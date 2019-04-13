@@ -268,6 +268,7 @@ func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClu
 		"local-kv":  PassthroughWithLocalPathsFactory,
 		"leased-kv": vault.LeasedPassthroughBackendFactory,
 	}
+	vault.AddNoopAudit(&coreConfig)
 	cluster := vault.NewTestCluster(t, &coreConfig, opts)
 	cluster.Start()
 
