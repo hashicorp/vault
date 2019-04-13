@@ -1271,12 +1271,6 @@
 			"revisionTime": "2019-04-11T16:15:46Z"
 		},
 		{
-			"checksumSHA1": "e6BszMbYDBCEGX/E1/cArahasWw=",
-			"path": "github.com/hashicorp/consul/lib",
-			"revision": "9ef28293e87b44cddd59a09377ba80c8a3ba2e9c",
-			"revisionTime": "2019-04-11T16:15:46Z"
-		},
-		{
 			"checksumSHA1": "cj9AiHvddtPUSx1JsP6yuMEh5mY=",
 			"path": "github.com/hashicorp/consul/version",
 			"revision": "9ef28293e87b44cddd59a09377ba80c8a3ba2e9c",
