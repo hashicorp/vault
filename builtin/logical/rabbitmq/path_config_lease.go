@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfigLease(b *backend) *framework.Path {

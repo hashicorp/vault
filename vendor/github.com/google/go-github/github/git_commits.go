@@ -58,7 +58,7 @@ func (c CommitAuthor) String() string {
 	return Stringify(c)
 }
 
-// GetCommit fetches the Commit object for a given SHA.
+// GetCommit fetchs the Commit object for a given SHA.
 //
 // GitHub API docs: https://developer.github.com/v3/git/commits/#get-a-commit
 func (s *GitService) GetCommit(ctx context.Context, owner string, repo string, sha string) (*Commit, *Response, error) {
@@ -67,6 +67,9 @@ func (s *GitService) GetCommit(ctx context.Context, owner string, repo string, s
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept headers when APIs fully launch.
+	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	c := new(Commit)
 	resp, err := s.client.Do(ctx, req, c)
@@ -84,7 +87,6 @@ type createCommit struct {
 	Message   *string       `json:"message,omitempty"`
 	Tree      *string       `json:"tree,omitempty"`
 	Parents   []string      `json:"parents,omitempty"`
-	Signature *string       `json:"signature,omitempty"`
 }
 
 // CreateCommit creates a new commit in a repository.
@@ -115,9 +117,6 @@ func (s *GitService) CreateCommit(ctx context.Context, owner string, repo string
 	}
 	if commit.Tree != nil {
 		body.Tree = commit.Tree.SHA
-	}
-	if commit.Verification != nil {
-		body.Signature = commit.Verification.Signature
 	}
 
 	req, err := s.client.NewRequest("POST", u, body)

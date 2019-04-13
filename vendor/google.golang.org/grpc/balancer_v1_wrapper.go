@@ -120,7 +120,7 @@ func (bw *balancerWrapper) lbWatcher() {
 	}
 
 	for addrs := range notifyCh {
-		grpclog.Infof("balancerWrapper: got update addr from Notify: %v", addrs)
+		grpclog.Infof("balancerWrapper: got update addr from Notify: %v\n", addrs)
 		if bw.pickfirst {
 			var (
 				oldA  resolver.Address

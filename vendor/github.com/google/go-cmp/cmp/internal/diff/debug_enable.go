@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE.md file.
 
-// +build cmp_debug
+// +build debug
 
 package diff
 
@@ -14,7 +14,7 @@ import (
 )
 
 // The algorithm can be seen running in real-time by enabling debugging:
-//	go test -tags=cmp_debug -v
+//	go test -tags=debug -v
 //
 // Example output:
 //	=== RUN   TestDifference/#34

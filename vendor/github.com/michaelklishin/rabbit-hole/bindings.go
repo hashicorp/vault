@@ -49,7 +49,7 @@ type BindingInfo struct {
 	PropertiesKey   string                 `json:"properties_key"`
 }
 
-// ListBindings returns all bindings
+// Returns all bindings
 func (c *Client) ListBindings() (rec []BindingInfo, err error) {
 	req, err := newGETRequest(c, "bindings/")
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *Client) listBindingsVia(path string) (rec []BindingInfo, err error) {
 // GET /api/bindings/{vhost}
 //
 
-// ListBindingsIn returns all bindings in a virtual host.
+// Returns all bindings in a virtual host.
 func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
 	return c.listBindingsVia("bindings/" + PathEscape(vhost))
 }
@@ -107,7 +107,7 @@ func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
 //    "properties_key":"~"}
 // ]
 
-// ListQueueBindings returns all bindings of individual queue.
+// Returns all bindings of individual queue.
 func (c *Client) ListQueueBindings(vhost, queue string) (rec []BindingInfo, err error) {
 	return c.listBindingsVia("queues/" + PathEscape(vhost) + "/" + PathEscape(queue) + "/bindings")
 }
@@ -132,7 +132,7 @@ func (c *Client) ListExchangeBindingsWithDestination(vhost, exchange string) (re
 // GET /api/exchanges/{vhost}/{exchange}/bindings/{source-or-destination}
 //
 
-// ListExchangeBindings returns all bindings having the exchange as source or destination as defined by the Target
+// Returns all bindings having the exchange as source or destination as defined by the Target
 func (c *Client) ListExchangeBindings(vhost, exchange string, sourceOrDestination BindingVertex) (rec []BindingInfo, err error) {
 	return c.listBindingsVia("exchanges/" + PathEscape(vhost) + "/" + PathEscape(exchange) + "/bindings/" + sourceOrDestination.String())
 }

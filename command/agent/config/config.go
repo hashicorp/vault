@@ -28,12 +28,13 @@ type Config struct {
 }
 
 type Vault struct {
-	Address       string `hcl:"address"`
-	CACert        string `hcl:"ca_cert"`
-	CAPath        string `hcl:"ca_path"`
-	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
-	ClientCert    string `hcl:"client_cert"`
-	ClientKey     string `hcl:"client_key"`
+	Address          string      `hcl:"address"`
+	CACert           string      `hcl:"ca_cert"`
+	CAPath           string      `hcl:"ca_path"`
+	TLSSkipVerify    bool        `hcl:"-"`
+	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
+	ClientCert       string      `hcl:"client_cert"`
+	ClientKey        string      `hcl:"client_key"`
 }
 
 type Cache struct {
@@ -169,6 +170,13 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	err := hcl.DecodeObject(&v, item.Val)
 	if err != nil {
 		return err
+	}
+
+	if v.TLSSkipVerifyRaw != nil {
+		v.TLSSkipVerify, err = parseutil.ParseBool(v.TLSSkipVerifyRaw)
+		if err != nil {
+			return err
+		}
 	}
 
 	result.Vault = &v

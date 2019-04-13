@@ -12,7 +12,7 @@ import (
 
 // PromoteSiteAdmin promotes a user to a site administrator of a GitHub Enterprise instance.
 //
-// GitHub API docs: https://developer.github.com/enterprise/v3/enterprise-admin/users/#promote-an-ordinary-user-to-a-site-administrator
+// GitHub API docs: https://developer.github.com/v3/users/administration/#promote-an-ordinary-user-to-a-site-administrator
 func (s *UsersService) PromoteSiteAdmin(ctx context.Context, user string) (*Response, error) {
 	u := fmt.Sprintf("users/%v/site_admin", user)
 
@@ -26,7 +26,7 @@ func (s *UsersService) PromoteSiteAdmin(ctx context.Context, user string) (*Resp
 
 // DemoteSiteAdmin demotes a user from site administrator of a GitHub Enterprise instance.
 //
-// GitHub API docs: https://developer.github.com/enterprise/v3/enterprise-admin/users/#demote-a-site-administrator-to-an-ordinary-user
+// GitHub API docs: https://developer.github.com/v3/users/administration/#demote-a-site-administrator-to-an-ordinary-user
 func (s *UsersService) DemoteSiteAdmin(ctx context.Context, user string) (*Response, error) {
 	u := fmt.Sprintf("users/%v/site_admin", user)
 
@@ -38,18 +38,13 @@ func (s *UsersService) DemoteSiteAdmin(ctx context.Context, user string) (*Respo
 	return s.client.Do(ctx, req, nil)
 }
 
-// UserSuspendOptions represents the reason a user is being suspended.
-type UserSuspendOptions struct {
-	Reason *string `json:"reason,omitempty"`
-}
-
 // Suspend a user on a GitHub Enterprise instance.
 //
-// GitHub API docs: https://developer.github.com/enterprise/v3/enterprise-admin/users/#suspend-a-user
-func (s *UsersService) Suspend(ctx context.Context, user string, opt *UserSuspendOptions) (*Response, error) {
+// GitHub API docs: https://developer.github.com/v3/users/administration/#suspend-a-user
+func (s *UsersService) Suspend(ctx context.Context, user string) (*Response, error) {
 	u := fmt.Sprintf("users/%v/suspended", user)
 
-	req, err := s.client.NewRequest("PUT", u, opt)
+	req, err := s.client.NewRequest("PUT", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +54,7 @@ func (s *UsersService) Suspend(ctx context.Context, user string, opt *UserSuspen
 
 // Unsuspend a user on a GitHub Enterprise instance.
 //
-// GitHub API docs: https://developer.github.com/enterprise/v3/enterprise-admin/users/#unsuspend-a-user
+// GitHub API docs: https://developer.github.com/v3/users/administration/#unsuspend-a-user
 func (s *UsersService) Unsuspend(ctx context.Context, user string) (*Response, error) {
 	u := fmt.Sprintf("users/%v/suspended", user)
 

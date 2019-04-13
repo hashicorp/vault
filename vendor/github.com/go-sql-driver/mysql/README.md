@@ -40,7 +40,7 @@ A MySQL-Driver for Go's [database/sql](https://golang.org/pkg/database/sql/) pac
   * Optional placeholder interpolation
 
 ## Requirements
-  * Go 1.9 or higher. We aim to support the 3 latest versions of Go.
+  * Go 1.7 or higher. We aim to support the 3 latest versions of Go.
   * MySQL (4.1+), MariaDB, Percona Server, Google CloudSQL or Sphinx (2.2.3+)
 
 ---------------------------------------
@@ -171,17 +171,12 @@ Unless you need the fallback behavior, please use `collation` instead.
 ```
 Type:           string
 Valid Values:   <name>
-Default:        utf8mb4_general_ci
+Default:        utf8_general_ci
 ```
 
 Sets the collation used for client-server interaction on connection. In contrast to `charset`, `collation` does not issue additional queries. If the specified collation is unavailable on the target server, the connection will fail.
 
 A list of valid charsets for a server is retrievable with `SHOW COLLATION`.
-
-The default collation (`utf8mb4_general_ci`) is supported from MySQL 5.5.  You should use an older collation (e.g. `utf8_general_ci`) for older MySQL.
-
-Collations for charset "ucs2", "utf16", "utf16le", and "utf32" can not be used ([ref](https://dev.mysql.com/doc/refman/5.7/en/charset-connection.html#charset-connection-impermissible-client-charset)).
-
 
 ##### `clientFoundRows`
 
@@ -333,11 +328,11 @@ Timeout for establishing connections, aka dial timeout. The value must be a deci
 
 ```
 Type:           bool / string
-Valid Values:   true, false, skip-verify, preferred, <name>
+Valid Values:   true, false, skip-verify, <name>
 Default:        false
 ```
 
-`tls=true` enables TLS / SSL encrypted connection to the server. Use `skip-verify` if you want to use a self-signed or invalid certificate (server side) or use `preferred` to use TLS only when advertised by the server. This is similar to `skip-verify`, but additionally allows a fallback to a connection which is not encrypted. Neither `skip-verify` nor `preferred` add any reliable security. You can use a custom TLS config after registering it with [`mysql.RegisterTLSConfig`](https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig).
+`tls=true` enables TLS / SSL encrypted connection to the server. Use `skip-verify` if you want to use a self-signed or invalid certificate (server side). Use a custom value registered with [`mysql.RegisterTLSConfig`](https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig).
 
 
 ##### `writeTimeout`
@@ -449,7 +444,7 @@ See the [godoc of Go-MySQL-Driver](https://godoc.org/github.com/go-sql-driver/my
 ### `time.Time` support
 The default internal output type of MySQL `DATE` and `DATETIME` values is `[]byte` which allows you to scan the value into a `[]byte`, `string` or `sql.RawBytes` variable in your program.
 
-However, many want to scan MySQL `DATE` and `DATETIME` values into `time.Time` variables, which is the logical equivalent in Go to `DATE` and `DATETIME` in MySQL. You can do that by changing the internal output type from `[]byte` to `time.Time` with the DSN parameter `parseTime=true`. You can set the default [`time.Time` location](https://golang.org/pkg/time/#Location) with the `loc` DSN parameter.
+However, many want to scan MySQL `DATE` and `DATETIME` values into `time.Time` variables, which is the logical opposite in Go to `DATE` and `DATETIME` in MySQL. You can do that by changing the internal output type from `[]byte` to `time.Time` with the DSN parameter `parseTime=true`. You can set the default [`time.Time` location](https://golang.org/pkg/time/#Location) with the `loc` DSN parameter.
 
 **Caution:** As of Go 1.1, this makes `time.Time` the only variable type you can scan `DATE` and `DATETIME` values into. This breaks for example [`sql.RawBytes` support](https://github.com/go-sql-driver/mysql/wiki/Examples#rawbytes).
 

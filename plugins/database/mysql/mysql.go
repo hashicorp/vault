@@ -10,11 +10,11 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const (

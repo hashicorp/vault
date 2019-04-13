@@ -193,7 +193,7 @@ func (s *MigrationService) DeleteUserMigration(ctx context.Context, id int64) (*
 	return s.client.Do(ctx, req, nil)
 }
 
-// UnlockUserRepo will unlock a repo that was locked for migration.
+// UnlockUserRepository will unlock a repo that was locked for migration.
 // id is migration ID.
 // You should unlock each migrated repository and delete them when the migration
 // is complete and you no longer need the source data.

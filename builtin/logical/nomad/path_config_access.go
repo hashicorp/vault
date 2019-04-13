@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const configAccessKey = "config/access"

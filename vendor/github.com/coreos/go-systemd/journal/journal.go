@@ -33,10 +33,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"syscall"
-	"unsafe"
 )
 
 // Priority of a journal message
@@ -53,35 +50,19 @@ const (
 	PriDebug
 )
 
-var (
-	// This can be overridden at build-time:
-	// https://github.com/golang/go/wiki/GcToolchainTricks#including-build-information-in-the-executable
-	journalSocket = "/run/systemd/journal/socket"
-
-	// unixConnPtr atomically holds the local unconnected Unix-domain socket.
-	// Concrete safe pointer type: *net.UnixConn
-	unixConnPtr unsafe.Pointer
-	// onceConn ensures that unixConnPtr is initialized exactly once.
-	onceConn sync.Once
-)
+var conn net.Conn
 
 func init() {
-	onceConn.Do(initConn)
+	var err error
+	conn, err = net.Dial("unixgram", "/run/systemd/journal/socket")
+	if err != nil {
+		conn = nil
+	}
 }
 
-// Enabled checks whether the local systemd journal is available for logging.
+// Enabled returns true if the local systemd journal is available for logging
 func Enabled() bool {
-	onceConn.Do(initConn)
-
-	if (*net.UnixConn)(atomic.LoadPointer(&unixConnPtr)) == nil {
-		return false
-	}
-
-	if _, err := net.Dial("unixgram", journalSocket); err != nil {
-		return false
-	}
-
-	return true
+	return conn != nil
 }
 
 // Send a message to the local systemd journal. vars is a map of journald
@@ -92,14 +73,8 @@ func Enabled() bool {
 // (http://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html)
 // for more details.  vars may be nil.
 func Send(message string, priority Priority, vars map[string]string) error {
-	conn := (*net.UnixConn)(atomic.LoadPointer(&unixConnPtr))
 	if conn == nil {
-		return errors.New("could not initialize socket to journald")
-	}
-
-	socketAddr := &net.UnixAddr{
-		Name: journalSocket,
-		Net:  "unixgram",
+		return journalError("could not connect to journald socket")
 	}
 
 	data := new(bytes.Buffer)
@@ -109,30 +84,32 @@ func Send(message string, priority Priority, vars map[string]string) error {
 		appendVariable(data, k, v)
 	}
 
-	_, _, err := conn.WriteMsgUnix(data.Bytes(), nil, socketAddr)
-	if err == nil {
-		return nil
-	}
-	if !isSocketSpaceError(err) {
-		return err
-	}
+	_, err := io.Copy(conn, data)
+	if err != nil && isSocketSpaceError(err) {
+		file, err := tempFd()
+		if err != nil {
+			return journalError(err.Error())
+		}
+		defer file.Close()
+		_, err = io.Copy(file, data)
+		if err != nil {
+			return journalError(err.Error())
+		}
 
-	// Large log entry, send it via tempfile and ancillary-fd.
-	file, err := tempFd()
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = io.Copy(file, data)
-	if err != nil {
-		return err
-	}
-	rights := syscall.UnixRights(int(file.Fd()))
-	_, _, err = conn.WriteMsgUnix([]byte{}, rights, socketAddr)
-	if err != nil {
-		return err
-	}
+		rights := syscall.UnixRights(int(file.Fd()))
 
+		/* this connection should always be a UnixConn, but better safe than sorry */
+		unixConn, ok := conn.(*net.UnixConn)
+		if !ok {
+			return journalError("can't send file through non-Unix connection")
+		}
+		_, _, err = unixConn.WriteMsgUnix([]byte{}, rights, nil)
+		if err != nil {
+			return journalError(err.Error())
+		}
+	} else if err != nil {
+		return journalError(err.Error())
+	}
 	return nil
 }
 
@@ -142,8 +119,8 @@ func Print(priority Priority, format string, a ...interface{}) error {
 }
 
 func appendVariable(w io.Writer, name, value string) {
-	if err := validVarName(name); err != nil {
-		fmt.Fprintf(os.Stderr, "variable name %s contains invalid character, ignoring\n", name)
+	if !validVarName(name) {
+		journalError("variable name contains invalid character, ignoring")
 	}
 	if strings.ContainsRune(value, '\n') {
 		/* When the value contains a newline, we write:
@@ -160,42 +137,32 @@ func appendVariable(w io.Writer, name, value string) {
 	}
 }
 
-// validVarName validates a variable name to make sure journald will accept it.
-// The variable name must be in uppercase and consist only of characters,
-// numbers and underscores, and may not begin with an underscore:
-// https://www.freedesktop.org/software/systemd/man/sd_journal_print.html
-func validVarName(name string) error {
-	if name == "" {
-		return errors.New("Empty variable name")
-	} else if name[0] == '_' {
-		return errors.New("Variable name begins with an underscore")
-	}
+func validVarName(name string) bool {
+	/* The variable name must be in uppercase and consist only of characters,
+	 * numbers and underscores, and may not begin with an underscore. (from the docs)
+	 */
 
+	valid := name[0] != '_'
 	for _, c := range name {
-		if !(('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_') {
-			return errors.New("Variable name contains invalid characters")
-		}
+		valid = valid && ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_'
 	}
-	return nil
+	return valid
 }
 
-// isSocketSpaceError checks whether the error is signaling
-// an "overlarge message" condition.
 func isSocketSpaceError(err error) bool {
 	opErr, ok := err.(*net.OpError)
-	if !ok || opErr == nil {
+	if !ok {
 		return false
 	}
 
-	sysErr, ok := opErr.Err.(*os.SyscallError)
-	if !ok || sysErr == nil {
+	sysErr, ok := opErr.Err.(syscall.Errno)
+	if !ok {
 		return false
 	}
 
-	return sysErr.Err == syscall.EMSGSIZE || sysErr.Err == syscall.ENOBUFS
+	return sysErr == syscall.EMSGSIZE || sysErr == syscall.ENOBUFS
 }
 
-// tempFd creates a temporary, unlinked file under `/dev/shm`.
 func tempFd() (*os.File, error) {
 	file, err := ioutil.TempFile("/dev/shm/", "journal.XXXXX")
 	if err != nil {
@@ -208,18 +175,8 @@ func tempFd() (*os.File, error) {
 	return file, nil
 }
 
-// initConn initializes the global `unixConnPtr` socket.
-// It is meant to be called exactly once, at program startup.
-func initConn() {
-	autobind, err := net.ResolveUnixAddr("unixgram", "")
-	if err != nil {
-		return
-	}
-
-	sock, err := net.ListenUnixgram("unixgram", autobind)
-	if err != nil {
-		return
-	}
-
-	atomic.StorePointer(&unixConnPtr, unsafe.Pointer(sock))
+func journalError(s string) error {
+	s = "journal error: " + s
+	fmt.Fprintln(os.Stderr, s)
+	return errors.New(s)
 }

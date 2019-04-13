@@ -14,7 +14,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"math/big"
 	"net"
 	"net/url"
 	"sort"
@@ -71,26 +70,6 @@ func NewConfig() *Config {
 		MaxAllowedPacket:     defaultMaxAllowedPacket,
 		AllowNativePasswords: true,
 	}
-}
-
-func (cfg *Config) Clone() *Config {
-	cp := *cfg
-	if cp.tls != nil {
-		cp.tls = cfg.tls.Clone()
-	}
-	if len(cp.Params) > 0 {
-		cp.Params = make(map[string]string, len(cfg.Params))
-		for k, v := range cfg.Params {
-			cp.Params[k] = v
-		}
-	}
-	if cfg.pubKey != nil {
-		cp.pubKey = &rsa.PublicKey{
-			N: new(big.Int).Set(cfg.pubKey.N),
-			E: cfg.pubKey.E,
-		}
-	}
-	return &cp
 }
 
 func (cfg *Config) normalize() error {
@@ -581,7 +560,7 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 				} else {
 					cfg.TLSConfig = "false"
 				}
-			} else if vl := strings.ToLower(value); vl == "skip-verify" || vl == "preferred" {
+			} else if vl := strings.ToLower(value); vl == "skip-verify" {
 				cfg.TLSConfig = vl
 				cfg.tls = &tls.Config{InsecureSkipVerify: true}
 			} else {

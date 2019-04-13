@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	jose "gopkg.in/square/go-jose.v2"
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"

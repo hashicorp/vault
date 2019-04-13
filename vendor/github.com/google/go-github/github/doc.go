@@ -8,8 +8,7 @@ Package github provides a client for using the GitHub API.
 
 Usage:
 
-	import "github.com/google/go-github/v24/github"	// with go modules enabled (GO111MODULE=on or outside GOPATH)
-	import "github.com/google/go-github/github"     // with go modules disabled
+	import "github.com/google/go-github/github"
 
 Construct a new GitHub client, then use the various services on the client to
 access different parts of the GitHub API. For example:

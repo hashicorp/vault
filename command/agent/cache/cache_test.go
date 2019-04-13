@@ -19,10 +19,10 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agent/sink/mock"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )

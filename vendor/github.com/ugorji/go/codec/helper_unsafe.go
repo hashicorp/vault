@@ -408,12 +408,7 @@ func (e *Encoder) kTime(f *codecFnInfo, rv reflect.Value) {
 
 func (e *Encoder) kString(f *codecFnInfo, rv reflect.Value) {
 	v := (*unsafeReflectValue)(unsafe.Pointer(&rv))
-	s := *(*string)(v.ptr)
-	if e.h.StringToRaw {
-		e.e.EncodeStringBytesRaw(bytesView(s))
-	} else {
-		e.e.EncodeStringEnc(cUTF8, s)
-	}
+	e.e.EncodeStringEnc(cUTF8, *(*string)(v.ptr))
 }
 
 func (e *Encoder) kFloat64(f *codecFnInfo, rv reflect.Value) {

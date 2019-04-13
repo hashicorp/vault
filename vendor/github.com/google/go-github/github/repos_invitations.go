@@ -40,6 +40,9 @@ func (s *RepositoriesService) ListInvitations(ctx context.Context, owner, repo s
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
+
 	invites := []*RepositoryInvitation{}
 	resp, err := s.client.Do(ctx, req, &invites)
 	if err != nil {
@@ -58,6 +61,9 @@ func (s *RepositoriesService) DeleteInvitation(ctx context.Context, owner, repo 
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
 
 	return s.client.Do(ctx, req, nil)
 }
@@ -78,6 +84,9 @@ func (s *RepositoriesService) UpdateInvitation(ctx context.Context, owner, repo 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
 
 	invite := &RepositoryInvitation{}
 	resp, err := s.client.Do(ctx, req, invite)

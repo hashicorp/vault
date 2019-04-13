@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 )
 
 func TestBackend_basic(t *testing.T) {

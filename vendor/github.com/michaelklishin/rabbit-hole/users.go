@@ -54,7 +54,7 @@ type UserSettings struct {
 // Example response:
 // [{"name":"guest","password_hash":"8LYTIFbVUwi8HuV/dGlp2BYsD1I=","tags":"administrator"}]
 
-// ListUsers returns a list of all users in a cluster.
+// Returns a list of all users in a cluster.
 func (c *Client) ListUsers() (rec []UserInfo, err error) {
 	req, err := newGETRequest(c, "users/")
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *Client) ListUsers() (rec []UserInfo, err error) {
 // GET /api/users/{name}
 //
 
-// GetUser returns information about individual user.
+// Returns information about individual user.
 func (c *Client) GetUser(username string) (rec *UserInfo, err error) {
 	req, err := newGETRequest(c, "users/"+PathEscape(username))
 	if err != nil {

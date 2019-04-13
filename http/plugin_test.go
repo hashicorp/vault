@@ -14,10 +14,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/plugin"
-	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 )
 

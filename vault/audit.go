@@ -9,8 +9,8 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )

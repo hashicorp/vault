@@ -3,8 +3,8 @@ package mock
 import (
 	"context"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathRaw is used to test raw responses.

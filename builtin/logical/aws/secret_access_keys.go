@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const secretAccessKeyType = "access_keys"

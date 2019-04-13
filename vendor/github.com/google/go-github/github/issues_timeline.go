@@ -8,7 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -116,8 +115,7 @@ type Timeline struct {
 	Source *Source `json:"source,omitempty"`
 	// An object containing rename details including 'from' and 'to' attributes.
 	// Only provided for 'renamed' events.
-	Rename      *Rename      `json:"rename,omitempty"`
-	ProjectCard *ProjectCard `json:"project_card,omitempty"`
+	Rename *Rename `json:"rename,omitempty"`
 }
 
 // Source represents a reference's source.
@@ -125,8 +123,6 @@ type Source struct {
 	ID    *int64  `json:"id,omitempty"`
 	URL   *string `json:"url,omitempty"`
 	Actor *User   `json:"actor,omitempty"`
-	Type  *string `json:"type,omitempty"`
-	Issue *Issue  `json:"issue,omitempty"`
 }
 
 // ListIssueTimeline lists events for the specified issue.
@@ -145,8 +141,7 @@ func (s *IssuesService) ListIssueTimeline(ctx context.Context, owner, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeTimelinePreview, mediaTypeProjectCardDetailsPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeTimelinePreview)
 
 	var events []*Timeline
 	resp, err := s.client.Do(ctx, req, &events)

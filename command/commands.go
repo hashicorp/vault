@@ -49,7 +49,6 @@ import (
 	physFile "github.com/hashicorp/vault/physical/file"
 	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
-	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
@@ -58,6 +57,7 @@ import (
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 const (

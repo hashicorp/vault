@@ -58,13 +58,7 @@ func ssl(o values) (func(net.Conn) (net.Conn, error), error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Accept renegotiation requests initiated by the backend.
-	//
-	// Renegotiation was deprecated then removed from PostgreSQL 9.5, but
-	// the default configuration of older versions has it enabled. Redshift
-	// also initiates renegotiations and cannot be reconfigured.
-	tlsConf.Renegotiation = tls.RenegotiateFreelyAsClient
+	sslRenegotiation(&tlsConf)
 
 	return func(conn net.Conn) (net.Conn, error) {
 		client := tls.Client(conn, &tlsConf)

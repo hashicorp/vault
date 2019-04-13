@@ -133,9 +133,11 @@ func (b *Batch) Send(ctx context.Context, txOptions *TxOptions) error {
 		b.conn.pendingReadyForQueryCount++
 	}
 
-	_, err = b.conn.conn.Write(buf)
+	n, err := b.conn.conn.Write(buf)
 	if err != nil {
-		b.conn.die(err)
+		if fatalWriteErr(n, err) {
+			b.conn.die(err)
+		}
 		return err
 	}
 

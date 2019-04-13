@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // MakeTestBackend creates a simple MFA enabled backend.

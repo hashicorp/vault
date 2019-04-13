@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
 

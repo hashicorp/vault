@@ -36,10 +36,10 @@ import (
 
 	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 )

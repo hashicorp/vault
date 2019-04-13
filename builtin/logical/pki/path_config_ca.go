@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func pathConfigCA(b *backend) *framework.Path {

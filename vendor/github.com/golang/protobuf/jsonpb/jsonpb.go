@@ -182,12 +182,7 @@ func (m *Marshaler) marshalObject(out *errWriter, v proto.Message, indent, typeU
 				return fmt.Errorf("failed to marshal type URL %q to JSON: %v", typeURL, err)
 			}
 			js["@type"] = (*json.RawMessage)(&turl)
-			if m.Indent != "" {
-				b, err = json.MarshalIndent(js, indent, m.Indent)
-			} else {
-				b, err = json.Marshal(js)
-			}
-			if err != nil {
+			if b, err = json.Marshal(js); err != nil {
 				return err
 			}
 		}

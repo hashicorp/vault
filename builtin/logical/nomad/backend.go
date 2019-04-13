@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/nomad/api"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Factory returns a Nomad backend that satisfies the logical.Backend interface

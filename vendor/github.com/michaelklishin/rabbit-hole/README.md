@@ -9,8 +9,7 @@ Rabbit Hole supports 3 most recent Go releases.
 
 ## Supported RabbitMQ Versions
 
- * RabbitMQ `3.7.x` is the primary target series
- * Most API functions would work against RabbitMQ `3.6.x` nodes or earlier but those releases are officially out of support
+ * RabbitMQ 3.x
 
 All versions require [RabbitMQ Management UI plugin](https://www.rabbitmq.com/management.html) to be installed and enabled.
 
@@ -23,12 +22,6 @@ APIs. Breaking API changes are not out of the question but not without
 a reasonable version bump.
 
 It is largely (80-90%) feature complete and decently documented.
-
-
-## Change Log
-
-If upgrading from an earlier release, please consult with
-the [change log](https://github.com/michaelklishin/rabbit-hole/blob/master/ChangeLog.md).
 
 
 ## Installation
@@ -342,7 +335,7 @@ rmqc, err := NewTLSClient("https://127.0.0.1:15672", "guest", "guest", transport
 ### Changing Transport Layer
 
 ``` go
-var transport http.RoundTripper
+var transport *http.Transport
 
 ...
 

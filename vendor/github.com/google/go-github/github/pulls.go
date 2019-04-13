@@ -32,7 +32,6 @@ type PullRequest struct {
 	MergedAt            *time.Time `json:"merged_at,omitempty"`
 	Labels              []*Label   `json:"labels,omitempty"`
 	User                *User      `json:"user,omitempty"`
-	Draft               *bool      `json:"draft,omitempty"`
 	Merged              *bool      `json:"merged,omitempty"`
 	Mergeable           *bool      `json:"mergeable,omitempty"`
 	MergeableState      *string    `json:"mergeable_state,omitempty"`
@@ -53,7 +52,6 @@ type PullRequest struct {
 	CommentsURL         *string    `json:"comments_url,omitempty"`
 	ReviewCommentsURL   *string    `json:"review_comments_url,omitempty"`
 	ReviewCommentURL    *string    `json:"review_comment_url,omitempty"`
-	ReviewComments      *int       `json:"review_comments,omitempty"`
 	Assignee            *User      `json:"assignee,omitempty"`
 	Assignees           []*User    `json:"assignees,omitempty"`
 	Milestone           *Milestone `json:"milestone,omitempty"`
@@ -62,13 +60,8 @@ type PullRequest struct {
 	NodeID              *string    `json:"node_id,omitempty"`
 	RequestedReviewers  []*User    `json:"requested_reviewers,omitempty"`
 
-	// RequestedTeams is populated as part of the PullRequestEvent.
-	// See, https://developer.github.com/v3/activity/events/types/#pullrequestevent for an example.
-	RequestedTeams []*Team `json:"requested_teams,omitempty"`
-
-	Links *PRLinks           `json:"_links,omitempty"`
-	Head  *PullRequestBranch `json:"head,omitempty"`
-	Base  *PullRequestBranch `json:"base,omitempty"`
+	Head *PullRequestBranch `json:"head,omitempty"`
+	Base *PullRequestBranch `json:"base,omitempty"`
 
 	// ActiveLockReason is populated only when LockReason is provided while locking the pull request.
 	// Possible values are: "off-topic", "too heated", "resolved", and "spam".
@@ -77,23 +70,6 @@ type PullRequest struct {
 
 func (p PullRequest) String() string {
 	return Stringify(p)
-}
-
-// PRLink represents a single link object from Github pull request _links.
-type PRLink struct {
-	HRef *string `json:"href,omitempty"`
-}
-
-// PRLinks represents the "_links" object in a Github pull request.
-type PRLinks struct {
-	Self           *PRLink `json:"self,omitempty"`
-	HTML           *PRLink `json:"html,omitempty"`
-	Issue          *PRLink `json:"issue,omitempty"`
-	Comments       *PRLink `json:"comments,omitempty"`
-	ReviewComments *PRLink `json:"review_comments,omitempty"`
-	ReviewComment  *PRLink `json:"review_comment,omitempty"`
-	Commits        *PRLink `json:"commits,omitempty"`
-	Statuses       *PRLink `json:"statuses,omitempty"`
 }
 
 // PullRequestBranch represents a base or head branch in a GitHub pull request.
@@ -109,7 +85,7 @@ type PullRequestBranch struct {
 // PullRequestsService.List method.
 type PullRequestListOptions struct {
 	// State filters pull requests based on their state. Possible values are:
-	// open, closed, all. Default is "open".
+	// open, closed. Default is "open".
 	State string `url:"state,omitempty"`
 
 	// Head filters pull requests by head user and branch name in the format of:
@@ -147,7 +123,7 @@ func (s *PullRequestsService) List(ctx context.Context, owner string, repo strin
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview, mediaTypeDraftPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	var pulls []*PullRequest
@@ -170,7 +146,7 @@ func (s *PullRequestsService) Get(ctx context.Context, owner string, repo string
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview, mediaTypeDraftPreview}
+	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeLockReasonPreview}
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	pull := new(PullRequest)
@@ -216,7 +192,6 @@ type NewPullRequest struct {
 	Body                *string `json:"body,omitempty"`
 	Issue               *int    `json:"issue,omitempty"`
 	MaintainerCanModify *bool   `json:"maintainer_can_modify,omitempty"`
-	Draft               *bool   `json:"draft,omitempty"`
 }
 
 // Create a new pull request on the specified repository.
@@ -230,8 +205,7 @@ func (s *PullRequestsService) Create(ctx context.Context, owner string, repo str
 	}
 
 	// TODO: remove custom Accept header when this API fully launches.
-	acceptHeaders := []string{mediaTypeLabelDescriptionSearchPreview, mediaTypeDraftPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeLabelDescriptionSearchPreview)
 
 	p := new(PullRequest)
 	resp, err := s.client.Do(ctx, req, p)
@@ -306,6 +280,9 @@ func (s *PullRequestsService) ListCommits(ctx context.Context, owner string, rep
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	var commits []*RepositoryCommit
 	resp, err := s.client.Do(ctx, req, &commits)

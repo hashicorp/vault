@@ -284,13 +284,13 @@ func (c *Conn) CopyFrom(tableName Identifier, columnNames []string, rowSrc CopyF
 }
 
 // CopyFromReader uses the PostgreSQL textual format of the copy protocol
-func (c *Conn) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
+func (c *Conn) CopyFromReader(r io.Reader, sql string) error {
 	if err := c.sendSimpleQuery(sql); err != nil {
-		return "", err
+		return err
 	}
 
 	if err := c.readUntilCopyInResponse(); err != nil {
-		return "", err
+		return err
 	}
 	buf := c.wbuf
 
@@ -305,7 +305,7 @@ func (c *Conn) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
 		pgio.SetInt32(buf[sp:], int32(n+4))
 
 		if _, err := c.conn.Write(buf); err != nil {
-			return "", err
+			return err
 		}
 	}
 
@@ -314,25 +314,26 @@ func (c *Conn) CopyFromReader(r io.Reader, sql string) (CommandTag, error) {
 	buf = pgio.AppendInt32(buf, 4)
 
 	if _, err := c.conn.Write(buf); err != nil {
-		return "", err
+		return err
 	}
 
 	for {
 		msg, err := c.rxMsg()
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		switch msg := msg.(type) {
 		case *pgproto3.ReadyForQuery:
 			c.rxReadyForQuery(msg)
-			return "", err
+			return nil
 		case *pgproto3.CommandComplete:
-			return CommandTag(msg.CommandTag), nil
 		case *pgproto3.ErrorResponse:
-			return "", c.rxErrorResponse(msg)
+			return c.rxErrorResponse(msg)
 		default:
-			return "", c.processContextFreeMsg(msg)
+			return c.processContextFreeMsg(msg)
 		}
 	}
+
+	return nil
 }

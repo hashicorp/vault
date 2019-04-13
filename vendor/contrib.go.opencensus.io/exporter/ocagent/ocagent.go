@@ -86,8 +86,6 @@ type Exporter struct {
 	viewDataBundler *bundler.Bundler
 
 	clientTransportCredentials credentials.TransportCredentials
-
-	grpcDialOptions []grpc.DialOption
 }
 
 func NewExporter(opts ...ExporterOption) (*Exporter, error) {
@@ -272,9 +270,6 @@ func (ae *Exporter) dialToAgent() (*grpc.ClientConn, error) {
 		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(ae.compressor)))
 	}
 	dialOpts = append(dialOpts, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
-	if len(ae.grpcDialOptions) != 0 {
-		dialOpts = append(dialOpts, ae.grpcDialOptions...)
-	}
 
 	ctx := context.Background()
 	if len(ae.headers) > 0 {

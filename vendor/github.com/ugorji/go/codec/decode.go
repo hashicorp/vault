@@ -257,10 +257,6 @@ type DecodeOptions struct {
 	// If true, we will delete the mapping of the key.
 	// Else, just set the mapping to the zero value of the type.
 	DeleteOnNilMapValue bool
-
-	// RawToString controls how raw bytes in a stream are decoded into a nil interface{}.
-	// By default, they are decoded as []byte, but can be decoded as string (if configured).
-	RawToString bool
 }
 
 // ------------------------------------------------
@@ -3096,14 +3092,4 @@ func decReadFull(r io.Reader, bs []byte) (n uint, err error) {
 	// do not do this - it serves no purpose
 	// if n != len(bs) && err == io.EOF { err = io.ErrUnexpectedEOF }
 	return
-}
-
-func decNakedReadRawBytes(dr decDriver, d *Decoder, n *decNaked, rawToString bool) {
-	if rawToString {
-		n.v = valueTypeString
-		n.s = string(dr.DecodeBytes(d.b[:], true))
-	} else {
-		n.v = valueTypeBytes
-		n.l = dr.DecodeBytes(nil, false)
-	}
 }

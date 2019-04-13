@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func pathLoginWithAppIDPath(b *backend) *framework.Path {

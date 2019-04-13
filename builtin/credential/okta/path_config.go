@@ -9,8 +9,8 @@ import (
 
 	"github.com/chrismalek/oktasdk-go/okta"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (

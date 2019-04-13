@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/vault"
 )
 
 func handleSysHealth(core *vault.Core) http.Handler {

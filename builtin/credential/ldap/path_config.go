@@ -3,10 +3,10 @@ package ldap
 import (
 	"context"
 
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func pathConfig(b *backend) *framework.Path {

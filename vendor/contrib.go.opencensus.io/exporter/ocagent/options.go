@@ -17,7 +17,6 @@ package ocagent
 import (
 	"time"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -126,19 +125,4 @@ func WithTLSCredentials(creds credentials.TransportCredentials) ExporterOption {
 
 func (cc *clientCredentials) withExporter(e *Exporter) {
 	e.clientTransportCredentials = cc.TransportCredentials
-}
-
-type grpcDialOptions []grpc.DialOption
-
-var _ ExporterOption = (*grpcDialOptions)(nil)
-
-// WithGRPCDialOption opens support to any grpc.DialOption to be used. If it conflicts
-// with some other configuration the GRPC specified via the agent the ones here will
-// take preference since they are set last.
-func WithGRPCDialOption(opts ...grpc.DialOption) ExporterOption {
-	return grpcDialOptions(opts)
-}
-
-func (opts grpcDialOptions) withExporter(e *Exporter) {
-	e.grpcDialOptions = opts
 }
