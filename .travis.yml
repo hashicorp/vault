@@ -14,7 +14,7 @@ services:
   - docker
 
 go:
-  - "1.12.4"
+  - "1.12"
 
 go_import_path: github.com/hashicorp/vault
 
@@ -41,7 +41,7 @@ env:
   - TEST_COMMAND='make dev test-ember'
   - TEST_COMMAND='travis_wait 75 make testtravis'
   - TEST_COMMAND='travis_wait 75 make testracetravis'
-
+  - GO111MODULE=on
 
 script:
   - make bootstrap
