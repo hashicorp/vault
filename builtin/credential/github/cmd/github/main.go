@@ -4,8 +4,8 @@ import (
 	"os"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/github"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
