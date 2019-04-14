@@ -147,6 +147,48 @@ func TestCertBundleParsing(t *testing.T) {
 	}
 }
 
+func TestCertBundleSignatureChecks(t *testing.T) {
+	cbuts := []*CertBundle{
+		refreshWrongECCertBundleWithChain(),
+		refreshWrongIntCertBundleWithChain(),
+	}
+
+	for i, cbut := range cbuts {
+		jsonString, err := json.Marshal(cbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error marshaling testing certbundle to JSON: %s", err)
+		}
+		pcbut, err := ParsePKIJSON(jsonString)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error during JSON bundle handling: %s", err)
+		}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf(err.Error())
+		}
+
+		dataMap := structs.New(cbut).Map()
+		pcbut, err = ParsePKIMap(dataMap)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error during JSON bundle handling: %s", err)
+		}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf(err.Error())
+		}
+
+		_, err = ParsePEMBundle(cbut.ToPEMBundle())
+		if err == nil {
+			panic("an invalid cert chain was parsed without errors")
+		}
+	}
+}
+
 func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBundle) error {
 	if cbut == nil {
 		return fmt.Errorf("got nil bundle")
@@ -467,6 +509,24 @@ func refreshECCSRBundle() *CSRBundle {
 	}
 }
 
+func refreshWrongIntCertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: certECPem,
+		CAChain:     []string{wrongIntCAPem, issuingCaChainPem[1]},
+		PrivateKey:  privECKeyPem,
+	}
+}
+
+func refreshWrongECCertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: wrongCertPem,
+		CAChain:     issuingCaChainPem,
+		PrivateKey:  privECKeyPem,
+	}
+}
+
 func refreshEC8CertBundle() *CertBundle {
 	initTest.Do(setCerts)
 	return &CertBundle{
@@ -483,15 +543,57 @@ func refreshEC8CertBundleWithChain() *CertBundle {
 	return ret
 }
 
-func setCerts() {
+func generateECKeyAndSubjectKeyId() (caKey *ecdsa.PrivateKey, subjectKeyId []byte) {
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		panic(err)
 	}
-	subjKeyID, err := GetSubjKeyID(caKey)
+	subjectKeyId, err = GetSubjKeyID(caKey)
 	if err != nil {
 		panic(err)
 	}
+	return
+}
+
+func createCSRPEM(cn string, privateKey interface{}) (csrPem string) {
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: cn,
+		},
+		DNSNames: []string{cn},
+	}
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privateKey)
+	if err != nil {
+		panic(err)
+	}
+	csrPEMBlock := &pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	}
+	csrPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+	return
+}
+
+func generateCertificateAndPEM(template *x509.Certificate, parent *x509.Certificate,
+	public interface{}, private interface{}) (cert *x509.Certificate, certPem string) {
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, parent, public, private)
+	if err != nil {
+		panic(err)
+	}
+	cert, err = x509.ParseCertificate(certBytes)
+	if err != nil {
+		panic(err)
+	}
+	certPEMBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	}
+	certPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+	return
+}
+
+func setCerts() {
+	caKey, subjKeyID := generateECKeyAndSubjectKeyId()
 	caCertTemplate := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "root.localhost",
@@ -505,28 +607,8 @@ func setCerts() {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
-	if err != nil {
-		panic(err)
-	}
-	caCert, err := x509.ParseCertificate(caBytes)
-	if err != nil {
-		panic(err)
-	}
-	caCertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: caBytes,
-	}
-	caCertPEM := strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
-
-	intKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	subjKeyID, err = GetSubjKeyID(intKey)
-	if err != nil {
-		panic(err)
-	}
+	caCert, caCertPEM := generateCertificateAndPEM(caCertTemplate, caCertTemplate, caKey.Public(), caKey)
+	intKey, subjKeyID := generateECKeyAndSubjectKeyId()
 	intCertTemplate := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "int.localhost",
@@ -540,30 +622,11 @@ func setCerts() {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	intBytes, err := x509.CreateCertificate(rand.Reader, intCertTemplate, caCert, intKey.Public(), caKey)
-	if err != nil {
-		panic(err)
-	}
-	intCert, err := x509.ParseCertificate(intBytes)
-	if err != nil {
-		panic(err)
-	}
-	intCertPEMBlock := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: intBytes,
-	}
-	intCertPEM := strings.TrimSpace(string(pem.EncodeToMemory(intCertPEMBlock)))
-
+	intCert, intCertPEM := generateCertificateAndPEM(intCertTemplate, caCert, intKey.Public(), caKey)
+	_, wrongIntCAPem = generateCertificateAndPEM(intCertTemplate, caCert, intKey.Public(), intKey)
 	// EC generation
 	{
-		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			panic(err)
-		}
-		subjKeyID, err := GetSubjKeyID(key)
-		if err != nil {
-			panic(err)
-		}
+		key, subjKeyID := generateECKeyAndSubjectKeyId()
 		certTemplate := &x509.Certificate{
 			Subject: pkix.Name{
 				CommonName: "localhost",
@@ -579,30 +642,9 @@ func setCerts() {
 			NotBefore:    time.Now().Add(-30 * time.Second),
 			NotAfter:     time.Now().Add(262980 * time.Hour),
 		}
-		csrTemplate := &x509.CertificateRequest{
-			Subject: pkix.Name{
-				CommonName: "localhost",
-			},
-			DNSNames: []string{"localhost"},
-		}
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
-		if err != nil {
-			panic(err)
-		}
-		csrPEMBlock := &pem.Block{
-			Type:  "CERTIFICATE REQUEST",
-			Bytes: csrBytes,
-		}
-		csrECPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
-		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, key.Public(), intKey)
-		if err != nil {
-			panic(err)
-		}
-		certPEMBlock := &pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: certBytes,
-		}
-		certECPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		csrECPem = createCSRPEM("localhost", key)
+		_, certECPem = generateCertificateAndPEM(certTemplate, intCert, key.Public(), intKey)
+		_, wrongCertPem = generateCertificateAndPEM(certTemplate, intCert, key.Public(), caKey)
 		marshaledKey, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
 			panic(err)
@@ -648,30 +690,8 @@ func setCerts() {
 			NotBefore:    time.Now().Add(-30 * time.Second),
 			NotAfter:     time.Now().Add(262980 * time.Hour),
 		}
-		csrTemplate := &x509.CertificateRequest{
-			Subject: pkix.Name{
-				CommonName: "localhost",
-			},
-			DNSNames: []string{"localhost"},
-		}
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
-		if err != nil {
-			panic(err)
-		}
-		csrPEMBlock := &pem.Block{
-			Type:  "CERTIFICATE REQUEST",
-			Bytes: csrBytes,
-		}
-		csrRSAPem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
-		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, key.Public(), intKey)
-		if err != nil {
-			panic(err)
-		}
-		certPEMBlock := &pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: certBytes,
-		}
-		certRSAPem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		csrRSAPem = createCSRPEM("localhost", key)
+		_, certRSAPem = generateCertificateAndPEM(certTemplate, intCert, key.Public(), intKey)
 		marshaledKey := x509.MarshalPKCS1PrivateKey(key)
 		keyPEMBlock := &pem.Block{
 			Type:  "RSA PRIVATE KEY",
@@ -703,4 +723,6 @@ var (
 	privEC8KeyPem     string
 	certECPem         string
 	issuingCaChainPem []string
+	wrongIntCAPem     string
+	wrongCertPem      string
 )
