@@ -119,7 +119,7 @@ type databaseBackend struct {
 	//
 	// cancelQueue is used to remove the priority queue and terminate the
 	// background ticker.
-	credRotationQueue queue.PriorityQueue
+	credRotationQueue *queue.PriorityQueue
 	cancelQueue       context.CancelFunc
 }
 
@@ -539,9 +539,9 @@ func (b *databaseBackend) runTicker(ctx context.Context, s logical.Storage) {
 	}
 }
 
-// walSetCredentials is used to store information in a WAL that can retry a
+// setCredentialsWAL is used to store information in a WAL that can retry a
 // credential setting or rotation in the event of partial failure.
-type walSetCredentials struct {
+type setCredentialsWAL struct {
 	NewPassword string
 	OldPassword string
 	RoleName    string
@@ -638,7 +638,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 
 // findStaticWAL loads a WAL entry by ID. If found, only return the WAL if it
 // is of type staticWALKey, otherwise return nil
-func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) *walSetCredentials {
+func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) *setCredentialsWAL {
 	wal, err := framework.GetWAL(ctx, s, id)
 	if err != nil {
 		b.Logger().Warn(fmt.Sprintf("error reading WAL for ID (%s):", id), err)
@@ -649,7 +649,7 @@ func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, 
 		return nil
 	}
 
-	var walEntry walSetCredentials
+	var walEntry setCredentialsWAL
 	if mapErr := mapstructure.Decode(wal.Data, &walEntry); err != nil {
 		b.Logger().Warn("error decoding walEntry", mapErr.Error())
 		return nil
@@ -737,7 +737,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	}
 
 	if output.WALID == "" {
-		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &walSetCredentials{
+		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
 			RoleName:          input.RoleName,
 			Username:          config.Username,
 			NewPassword:       config.Password,

@@ -1619,7 +1619,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	_, err := framework.PutWAL(ctx, config.StorageView, staticWALKey, &walSetCredentials{
+	_, err := framework.PutWAL(ctx, config.StorageView, staticWALKey, &setCredentialsWAL{
 		RoleName: "doesnotexist",
 	})
 	if err != nil {
@@ -1737,7 +1737,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	// make a fake WAL entry with an older time
 	oldRotationTime := roleTime.Add(time.Hour * -1)
 	walPassword := "somejunkpassword"
-	_, err = framework.PutWAL(ctx, config.StorageView, staticWALKey, &walSetCredentials{
+	_, err = framework.PutWAL(ctx, config.StorageView, staticWALKey, &setCredentialsWAL{
 		RoleName:          roleName,
 		NewPassword:       walPassword,
 		LastVaultRotation: oldRotationTime,
