@@ -1,4 +1,4 @@
-package api
+package plugins
 
 import (
 	"crypto/tls"
