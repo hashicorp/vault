@@ -280,8 +280,6 @@ github.com/hashicorp/vault-plugin-auth-azure v0.5.1 h1:1CTmC68zYhp/cKuHW8K0QbnWE
 github.com/hashicorp/vault-plugin-auth-azure v0.5.1/go.mod h1:D/slkpcqcZMqslj1X9jfU9aIOrC41LVkfDQ9lFhYg0o=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.1 h1:kHWphxtASUJVYgqvfr6KjCN74qWLJeLhSRE5kBQ4iiQ=
 github.com/hashicorp/vault-plugin-auth-centrify v0.5.1/go.mod h1:GHplZPj7NfPWdeCkgTRnNzbjVP5IW5MNm7+MMsjobpQ=
-github.com/hashicorp/vault-plugin-auth-gcp v0.5.0 h1:7mydlUN3w1LL7eKpy7i6Zzta8f0nDmBo8jxAaj1eBfg=
-github.com/hashicorp/vault-plugin-auth-gcp v0.5.0/go.mod h1:ll5vk2qVxmCzzDM+gl2Qdd9vGOf2FyUg9hspbyvBpQ0=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1 h1:8DR00s+Wmc21i3sfzvsqW88VMdf6NI2ue+onGoHshww=
 github.com/hashicorp/vault-plugin-auth-gcp v0.5.1/go.mod h1:eLj92eX8MPI4vY1jaazVLF2sVbSAJ3LRHLRhF/pUmlI=
 github.com/hashicorp/vault-plugin-auth-jwt v0.5.1 h1:d9WLI7oF6VMtwBZwS5bbChc4kW+UwNZUKIGXH6wnnTc=
@@ -294,8 +292,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1 h1:72K91p4uLhT/jgtBq2z
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1/go.mod h1:MspbyD2pPrYgBnYIawkBsFinaDb9lx9PA6uBYOG+d8I=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.1 h1:6XFAkvpQl4zrXpZLSW9TCfF2z0mb2vwbrNmX2nzn480=
 github.com/hashicorp/vault-plugin-secrets-azure v0.5.1/go.mod h1:9D3lbhWkN7kTCIrQl8yxMU4IkisAY3SYZaRvseih6ZE=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.5.1 h1:u4rOnhR1iLNxgi03bhJeNpdAr+2YVVOdYgN0IWztj+Q=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.5.1/go.mod h1:kVy5kaH4qjHX6d2eB3zPI/h/6edpNBF8LBoRC6zEbbs=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2 h1:oH5EVMJCOHb81Ib9E7/ps1WrN3zkS6SnkbCW4tlk6Ro=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2/go.mod h1:2VjVlKHTwqvcVCkZBhYks+HASDzQ4/bIsJoOpO2YJFY=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1 h1:v25YWb7eMPe9DjGsUexRRuWwPlFNh+lbEGOeNrZalf8=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1/go.mod h1:seBkt6x33ZT20koMcUwV/viMomnXDipsLgK5KUKz2ik=
 github.com/hashicorp/vault-plugin-secrets-kv v0.5.1 h1:awaZ/UoeiDD0j3xF1E0kmXWJvAZw8ULayQu46mB6Un4=
