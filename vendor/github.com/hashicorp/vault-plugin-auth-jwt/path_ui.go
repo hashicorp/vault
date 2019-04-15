@@ -5,8 +5,8 @@ import (
 	"context"
 	"io/ioutil"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUI(b *jwtAuthBackend) *framework.Path {

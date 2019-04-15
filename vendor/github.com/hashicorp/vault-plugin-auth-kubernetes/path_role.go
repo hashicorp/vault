@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 // pathsRole returns the path configurations for the CRUD operations on roles

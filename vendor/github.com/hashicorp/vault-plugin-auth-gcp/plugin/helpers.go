@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // validateFields verifies that no bad arguments were given to the request.

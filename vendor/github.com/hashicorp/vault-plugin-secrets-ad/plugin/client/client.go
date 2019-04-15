@@ -62,7 +62,7 @@ func (c *Client) UpdateEntry(cfg *ADConf, filters map[*Field][]string, newValues
 		return err
 	}
 	if len(entries) != 1 {
-		return fmt.Errorf("filter of %s doesn't match just one entry: %s", filters, entries)
+		return fmt.Errorf("filter of %s doesn't match just one entry: %+v", filters, entries)
 	}
 
 	modifyReq := &ldap.ModifyRequest{

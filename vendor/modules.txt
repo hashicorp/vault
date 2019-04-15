@@ -315,40 +315,40 @@ github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.0
+# github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
-# github.com/hashicorp/vault-plugin-auth-azure v0.5.0
+# github.com/hashicorp/vault-plugin-auth-azure v0.5.1
 github.com/hashicorp/vault-plugin-auth-azure
-# github.com/hashicorp/vault-plugin-auth-centrify v0.5.0
+# github.com/hashicorp/vault-plugin-auth-centrify v0.5.1
 github.com/hashicorp/vault-plugin-auth-centrify
-# github.com/hashicorp/vault-plugin-auth-gcp v0.5.0
+# github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
 github.com/hashicorp/vault-plugin-auth-gcp/plugin
 github.com/hashicorp/vault-plugin-auth-gcp/plugin/cache
-# github.com/hashicorp/vault-plugin-auth-jwt v0.5.0
+# github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
 github.com/hashicorp/vault-plugin-auth-jwt
-# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.0
+# github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
 github.com/hashicorp/vault-plugin-auth-kubernetes
-# github.com/hashicorp/vault-plugin-secrets-ad v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
 github.com/hashicorp/vault-plugin-secrets-ad/plugin
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/client
 github.com/hashicorp/vault-plugin-secrets-ad/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
 github.com/hashicorp/vault-plugin-secrets-alicloud
 github.com/hashicorp/vault-plugin-secrets-alicloud/clients
-# github.com/hashicorp/vault-plugin-secrets-azure v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 github.com/hashicorp/vault-plugin-secrets-azure
-# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-gcp v0.5.1
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil
 github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util
-# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
 github.com/hashicorp/vault-plugin-secrets-gcpkms
-# github.com/hashicorp/vault-plugin-secrets-kv v0.5.0
+# github.com/hashicorp/vault-plugin-secrets-kv v0.5.1
 github.com/hashicorp/vault-plugin-secrets-kv
-# github.com/hashicorp/vault/api v1.0.0 => ./api
+# github.com/hashicorp/vault/api v1.0.1 => ./api
 github.com/hashicorp/vault/api
-# github.com/hashicorp/vault/sdk v0.1.7 => ./sdk
+# github.com/hashicorp/vault/sdk v0.1.8 => ./sdk
 github.com/hashicorp/vault/sdk/helper/salt
 github.com/hashicorp/vault/sdk/helper/strutil
 github.com/hashicorp/vault/sdk/helper/wrapping
@@ -365,20 +365,27 @@ github.com/hashicorp/vault/sdk/helper/certutil
 github.com/hashicorp/vault/sdk/helper/password
 github.com/hashicorp/vault/sdk/helper/ldaputil
 github.com/hashicorp/vault/sdk/helper/tlsutil
-github.com/hashicorp/vault/sdk/helper/pluginutil
+github.com/hashicorp/vault/sdk/database/dbplugin
+github.com/hashicorp/vault/sdk/database/helper/dbutil
+github.com/hashicorp/vault/sdk/helper/dbtxn
 github.com/hashicorp/vault/sdk/helper/errutil
 github.com/hashicorp/vault/sdk/helper/keysutil
+github.com/hashicorp/vault/sdk/helper/base62
 github.com/hashicorp/vault/sdk/helper/logging
 github.com/hashicorp/vault/sdk/helper/mlock
 github.com/hashicorp/vault/sdk/physical
+github.com/hashicorp/vault/sdk/physical/file
 github.com/hashicorp/vault/sdk/physical/inmem
 github.com/hashicorp/vault/sdk/version
 github.com/hashicorp/vault/sdk/helper/useragent
 github.com/hashicorp/vault/sdk/helper/cryptoutil
 github.com/hashicorp/vault/sdk/helper/hclutil
+github.com/hashicorp/vault/sdk/database/helper/credsutil
 github.com/hashicorp/vault/sdk/helper/compressutil
 github.com/hashicorp/vault/sdk/helper/pathmanager
+github.com/hashicorp/vault/sdk/database/helper/connutil
 github.com/hashicorp/vault/sdk/helper/license
+github.com/hashicorp/vault/sdk/helper/pluginutil
 github.com/hashicorp/vault/sdk/plugin/pb
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/plugin/mock
@@ -626,9 +633,9 @@ golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/net/idna
 golang.org/x/net/http2
 golang.org/x/net/context
-golang.org/x/net/trace
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
+golang.org/x/net/trace
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/timeseries
 # golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
@@ -690,23 +697,22 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 # google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
 google.golang.org/genproto/googleapis/cloud/kms/v1
-google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/protobuf/field_mask
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/spanner/v1
+google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/api/httpbody
 # google.golang.org/grpc v1.20.0
-google.golang.org/grpc
-google.golang.org/grpc/codes
-google.golang.org/grpc/status
 google.golang.org/grpc/grpclog
+google.golang.org/grpc/codes
+google.golang.org/grpc
 google.golang.org/grpc/keepalive
+google.golang.org/grpc/status
 google.golang.org/grpc/credentials
-google.golang.org/grpc/health
-google.golang.org/grpc/health/grpc_health_v1
+google.golang.org/grpc/metadata
 google.golang.org/grpc/balancer
 google.golang.org/grpc/balancer/roundrobin
 google.golang.org/grpc/connectivity
@@ -721,7 +727,6 @@ google.golang.org/grpc/internal/envconfig
 google.golang.org/grpc/internal/grpcrand
 google.golang.org/grpc/internal/grpcsync
 google.golang.org/grpc/internal/transport
-google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/resolver
@@ -729,11 +734,13 @@ google.golang.org/grpc/resolver/dns
 google.golang.org/grpc/resolver/passthrough
 google.golang.org/grpc/stats
 google.golang.org/grpc/tap
+google.golang.org/grpc/health
+google.golang.org/grpc/health/grpc_health_v1
 google.golang.org/grpc/credentials/internal
+google.golang.org/grpc/credentials/oauth
 google.golang.org/grpc/balancer/base
 google.golang.org/grpc/binarylog/grpc_binarylog_v1
 google.golang.org/grpc/internal/syscall
-google.golang.org/grpc/credentials/oauth
 # gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d
 gopkg.in/asn1-ber.v1
 # gopkg.in/inf.v0 v0.9.1

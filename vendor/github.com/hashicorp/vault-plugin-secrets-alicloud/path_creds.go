@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault-plugin-secrets-alicloud/clients"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (b *backend) pathCreds() *framework.Path {

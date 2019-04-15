@@ -11,8 +11,8 @@ import (
 
 	"github.com/centrify/cloud-golang-sdk/oauth"
 	"github.com/centrify/cloud-golang-sdk/restapi"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const sourceHeader string = "vault-plugin-auth-centrify"

@@ -3,8 +3,8 @@ package azureauth
 import (
 	"context"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *azureAuthBackend) *framework.Path {

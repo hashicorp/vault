@@ -7,8 +7,8 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/vault/api v1.0.0
-	github.com/hashicorp/vault/sdk v0.1.5
+	github.com/hashicorp/vault/api v1.0.1
+	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/kr/pretty v0.1.0 // indirect

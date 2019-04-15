@@ -13,8 +13,8 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/iterator"
 	"google.golang.org/genproto/protobuf/field_mask"
 

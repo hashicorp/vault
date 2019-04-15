@@ -10,8 +10,8 @@ require (
 	github.com/hashicorp/errwrap v1.0.0
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/vault/api v1.0.0
-	github.com/hashicorp/vault/sdk v0.1.5
+	github.com/hashicorp/vault/api v1.0.1
+	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/framework"
 )
 
 // pathsRole returns the path configurations for the CRUD operations on roles
@@ -189,11 +189,11 @@ func (b *azureAuthBackend) pathRoleRead(ctx context.Context, req *logical.Reques
 	// Create a map of data to be returned
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"max_ttl":  role.MaxTTL,
-			"num_uses": role.NumUses,
-			"policies": role.Policies,
-			"period":   role.Period,
-			"ttl":      role.TTL,
+			"max_ttl":                     role.MaxTTL,
+			"num_uses":                    role.NumUses,
+			"policies":                    role.Policies,
+			"period":                      role.Period,
+			"ttl":                         role.TTL,
 			"bound_service_principal_ids": role.BoundServicePrincipalIDs,
 			"bound_group_ids":             role.BoundGroupIDs,
 			"bound_subscription_ids":      role.BoundSubscriptionsIDs,
@@ -306,7 +306,7 @@ func (b *azureAuthBackend) pathRoleCreateUpdate(ctx context.Context, req *logica
 		len(role.BoundGroupIDs) == 0 &&
 		len(role.BoundSubscriptionsIDs) == 0 &&
 		len(role.BoundResourceGroups) == 0 &&
-		len(role.BoundLocations) == 0 && 
+		len(role.BoundLocations) == 0 &&
 		len(role.BoundScaleSets) == 0 {
 		return logical.ErrorResponse("must have at least one bound constraint when creating/updating a role"), nil
 	}

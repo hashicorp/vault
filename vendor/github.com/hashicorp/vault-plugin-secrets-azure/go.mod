@@ -13,7 +13,7 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/go-uuid v1.0.1
-	github.com/hashicorp/vault/api v1.0.0
-	github.com/hashicorp/vault/sdk v0.1.5
+	github.com/hashicorp/vault/api v1.0.1
+	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 )

@@ -15,11 +15,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
-var ()
-
-// APIClientMeta is a helper that plugins can use to configure TLS connections
+// PluginAPIClientMeta is a helper that plugins can use to configure TLS connections
 // back to Vault.
-type APIClientMeta struct {
+type PluginAPIClientMeta struct {
 	// These are set by the command line flags.
 	flagCACert     string
 	flagCAPath     string
@@ -29,7 +27,7 @@ type APIClientMeta struct {
 }
 
 // FlagSet returns the flag set for configuring the TLS connection
-func (f *APIClientMeta) FlagSet() *flag.FlagSet {
+func (f *PluginAPIClientMeta) FlagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("vault plugin settings", flag.ContinueOnError)
 
 	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
@@ -42,7 +40,7 @@ func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 }
 
 // GetTLSConfig will return a TLSConfig based off the values from the flags
-func (f *APIClientMeta) GetTLSConfig() *TLSConfig {
+func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 	// If we need custom TLS configuration, then set it
 	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
 		t := &TLSConfig{

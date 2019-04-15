@@ -1,7 +1,9 @@
 language: go
 
 go:
-- '1.11'
+- '1.12'
+env:
+- GO111MODULE=on
 
 git:
   depth: 1
