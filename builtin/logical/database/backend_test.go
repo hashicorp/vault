@@ -1619,7 +1619,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
 
-	_, err := framework.PutWAL(ctx, config.StorageView, walRotationKey, &walSetCredentials{
+	_, err := framework.PutWAL(ctx, config.StorageView, staticWALKey, &walSetCredentials{
 		RoleName: "doesnotexist",
 	})
 	if err != nil {
@@ -1737,7 +1737,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	// make a fake WAL entry with an older time
 	oldRotationTime := roleTime.Add(time.Hour * -1)
 	walPassword := "somejunkpassword"
-	_, err = framework.PutWAL(ctx, config.StorageView, walRotationKey, &walSetCredentials{
+	_, err = framework.PutWAL(ctx, config.StorageView, staticWALKey, &walSetCredentials{
 		RoleName:          roleName,
 		NewPassword:       walPassword,
 		LastVaultRotation: oldRotationTime,
@@ -1759,10 +1759,10 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 	}
 	defer b.Cleanup(ctx)
 
-	// allow enough time for checkQueueWAL to work after boot
+	// allow enough time for loadStaticWALs to work after boot
 	time.Sleep(time.Second * 12)
 
-	// checkQueueWAL should have processed the entry and removed the WAL log by now
+	// loadStaticWALs should have processed the entry and removed the WAL log by now
 	assertWALCount(t, config.StorageView, 0)
 
 	// Read the role
@@ -1820,7 +1820,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 			continue
 		}
 
-		if walEntry.Kind != walRotationKey {
+		if walEntry.Kind != staticWALKey {
 			continue
 		}
 		count++
