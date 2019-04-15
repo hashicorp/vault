@@ -5,7 +5,7 @@ import (
 
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 )
 

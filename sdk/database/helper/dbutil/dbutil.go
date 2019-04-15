@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 var (

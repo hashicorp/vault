@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 const (

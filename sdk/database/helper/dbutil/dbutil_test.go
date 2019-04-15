@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 func TestStatementCompatibilityHelper(t *testing.T) {

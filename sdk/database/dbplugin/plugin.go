@@ -16,17 +16,48 @@ import (
 
 // Database is the interface that all database objects must implement.
 type Database interface {
+	// Type returns the TypeName for the particular database backend
+	// implementation. This type name is usually set as a constant within the
+	// database backend implementation, e.g. "mysql" for the MySQL database
+	// backend.
 	Type() (string, error)
+
+	// CreateUser is called on `$ vault read database/creds/:role-name` and it's
+	// also the first time anything is touched from `$ vault write
+	// database/roles/:role-name`. This is likely to be the highest-throughput
+	// method for most plugins.
 	CreateUser(ctx context.Context, statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
+
+	// RenewUser is triggered by a renewal call to the API. In many database
+	// backends, this triggers a call on the underlying database that extends a
+	// VALID UNTIL clause on a user. However, if no such need exists, setting
+	// this as a NO-OP means that when renewal is called, the lease renewal time
+	// is pushed further out as appropriate, thus pushing out the time until the
+	// RevokeUser method is called.
 	RenewUser(ctx context.Context, statements Statements, username string, expiration time.Time) error
+
+	// RevokeUser is triggered either automatically by a lease expiration, or by
+	// a revocation call to the API.
 	RevokeUser(ctx context.Context, statements Statements, username string) error
 
+	// RotateRootCredentials is triggered by a root credential rotation call to
+	// the API.
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 
+	// Init is called on `$ vault write database/config/:db-name`, or when you
+	// do a creds call after Vault's been restarted. The config provided won't
+	// hold all the keys and values provided in the API call, some will be
+	// stripped by the database engine before the config is provided. The config
+	// returned will be stored, which will persist it across shutdowns.
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
+
+	// Close attempts to close the underlying database connection that was
+	// established by the backend.
 	Close() error
 
-	// DEPRECATED, will be removed in a future plugin version bump.
+	// DEPRECATED: Will be removed in a future plugin version bump.
+	// Initialize is a backwards-compatible implementation that simply calls
+	// Init, dropping the saveConfig, and returning the err.
 	Initialize(ctx context.Context, config map[string]interface{}, verifyConnection bool) (err error)
 }
 

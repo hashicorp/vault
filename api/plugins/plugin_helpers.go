@@ -6,16 +6,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"flag"
+	"fmt"
 	"net/url"
 	"os"
 
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
-
-var ()
 
 // APIClientMeta is a helper that plugins can use to configure TLS connections
 // back to Vault.
@@ -42,10 +43,10 @@ func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 }
 
 // GetTLSConfig will return a TLSConfig based off the values from the flags
-func (f *APIClientMeta) GetTLSConfig() *TLSConfig {
+func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
 	// If we need custom TLS configuration, then set it
 	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
-		t := &TLSConfig{
+		t := &api.TLSConfig{
 			CACert:        f.flagCACert,
 			CAPath:        f.flagCAPath,
 			ClientCert:    f.flagClientCert,
@@ -62,7 +63,7 @@ func (f *APIClientMeta) GetTLSConfig() *TLSConfig {
 
 // VaultPluginTLSProvider is run inside a plugin and retrieves the response
 // wrapped TLS certificate from vault. It returns a configured TLS Config.
-func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
+func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
 	if os.Getenv(pluginutil.PluginMetadataModeEnv) == "true" {
 		return nil
 	}
@@ -98,7 +99,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 		}
 
 		// Unwrap the token
-		clientConf := DefaultConfig()
+		clientConf := api.DefaultConfig()
 		clientConf.Address = vaultAddr
 		if apiTLSConfig != nil {
 			err := clientConf.ConfigureTLS(apiTLSConfig)
@@ -106,7 +107,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 				return nil, errwrap.Wrapf("error configuring api client {{err}}", err)
 			}
 		}
-		client, err := NewClient(clientConf)
+		client, err := api.NewClient(clientConf)
 		if err != nil {
 			return nil, errwrap.Wrapf("error during api client creation: {{err}}", err)
 		}
@@ -175,5 +176,27 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 		tlsConfig.BuildNameToCertificate()
 
 		return tlsConfig, nil
+	}
+}
+
+// ServeDBPlugin is used to start a database plugin's RPC server. It takes an
+// interface that must implement a known plugin interface to vault and an
+// optional api.TLSConfig for use during the initial unwrap request to vault.
+// The api config is particularly useful when vault is setup to require client
+// cert checking. It's in the API package to avoid SDK depending on API.
+func ServeDBPlugin(plugin interface{}, tlsConfig *api.TLSConfig) {
+	tlsProvider := VaultPluginTLSProvider(tlsConfig)
+
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	switch p := plugin.(type) {
+	case dbplugin.Database:
+		dbplugin.Serve(p, tlsProvider)
+	default:
+		fmt.Println("Unsupported plugin type")
 	}
 }

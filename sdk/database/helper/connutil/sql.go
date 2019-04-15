@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/dbplugin/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )

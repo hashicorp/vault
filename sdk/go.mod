@@ -29,7 +29,7 @@ require (
 	github.com/pierrec/lz4 v2.0.5+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
-	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
 	golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
 	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107 // indirect
