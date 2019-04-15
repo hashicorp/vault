@@ -3,15 +3,51 @@ package queue
 import (
 	"container/heap"
 	"errors"
+	"fmt"
 	"sync"
 )
+
+// PriorityQueue interface defines what a Queue must include, which is satisfying
+// heap.Interface, and a few additional methods
+// TODO: refactor to be just Queue, or add a generic Queue type that implements
+// the methods except Less() so each Queue type can do it's own sorting of
+// priority
+// type PriorityQueue interface {
+// 	heap.Interface
+
+// 	// PopItem pops the highest priority item from the queue. This is a
+// 	// wrapper/convienence method that calls heap.Pop, so consumers do not need to
+// 	// invoke heap functions directly
+// 	PopItem() (*Item, error)
+
+// 	// PushItem pushes an item on to the queue. This is a wrapper/convienence
+// 	// method that calls heap.Push, so consumers do not need to invoke heap
+// 	// functions directly
+// 	PushItem(*Item) error
+
+// 	// PopItemByKey searchs the queue for an item with the given key and removes it
+// 	// from the queue if found. Returns ErrItemNotFound(key) if not found. This
+// 	// method must fix the queue after removal.
+// 	PopItemByKey(string) (*Item, error)
+
+// 	// // Updates an item in the queue. This must call heap.Fix()
+// 	// UpdateItem(*Item) error
+
+// 	// // Peek returns the highest priority item, but does not remove it from the
+// 	// // queue
+// 	// Peek() (*Item, error)
+
+// 	// // Find searches and returns item from the queue, if found. This does not
+// 	// // remove the item. If no item is found, returns NewErrItemNotFound
+// 	// Find(string) (*Item, error)
+// }
 
 var ErrEmpty = errors.New("queue is empty")
 var ErrDuplicateItem = errors.New("duplicate item")
 
-// NewTimeQueue initializes a TimeQueue struct for use as a PriorityQueue
-func NewTimeQueue() *TimeQueue {
-	tq := TimeQueue{
+// NewPriorityQueue initializes a PriorityQueue struct for use as a PriorityQueue
+func NewPriorityQueue() *PriorityQueue {
+	tq := PriorityQueue{
 		data:    make([]*Item, 0),
 		dataMap: make(map[string]*Item),
 	}
@@ -19,9 +55,9 @@ func NewTimeQueue() *TimeQueue {
 	return &tq
 }
 
-// TimeQueue is a priority queue who's ordering is determined by the time in
+// PriorityQueue is a priority queue who's ordering is determined by the time in
 // Unix of the item (nanoseconds elapsed since January 1, 1970 UTC)
-type TimeQueue struct {
+type PriorityQueue struct {
 	// data is the internal structure that holds the queue, and is operated on by
 	// heap functions
 	data []*Item
@@ -37,7 +73,7 @@ type TimeQueue struct {
 // PopItem pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
-func (tq *TimeQueue) PopItem() (*Item, error) {
+func (tq *PriorityQueue) PopItem() (*Item, error) {
 	tq.dataMutex.Lock()
 	defer tq.dataMutex.Unlock()
 
@@ -53,7 +89,7 @@ func (tq *TimeQueue) PopItem() (*Item, error) {
 // PushItem pushes an item on to the queue. This is a wrapper/convenience
 // method that calls heap.Push, so consumers do not need to invoke heap
 // functions directly
-func (tq *TimeQueue) PushItem(i *Item) error {
+func (tq *PriorityQueue) PushItem(i *Item) error {
 	if i.Key == "" {
 		return errors.New("error adding item: Item Key is required")
 	}
@@ -71,7 +107,7 @@ func (tq *TimeQueue) PushItem(i *Item) error {
 }
 
 // PopItemByKey removes an item from the queue by key, if found
-func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
+func (tq *PriorityQueue) PopItemByKey(key string) (*Item, error) {
 	tq.dataMutex.Lock()
 	defer tq.dataMutex.Unlock()
 
@@ -98,16 +134,16 @@ func (tq *TimeQueue) PopItemByKey(key string) (*Item, error) {
 //////
 
 // Len returns the count of items in the queue.
-func (tq *TimeQueue) Len() int { return len(tq.data) }
+func (tq *PriorityQueue) Len() int { return len(tq.data) }
 
 // Less returns the less of two things, which in this case, we return the
 // highest thing.
-func (tq *TimeQueue) Less(i, j int) bool {
+func (tq *PriorityQueue) Less(i, j int) bool {
 	return tq.data[i].Priority < tq.data[j].Priority
 }
 
 // Swap swaps things in-place
-func (tq *TimeQueue) Swap(i, j int) {
+func (tq *PriorityQueue) Swap(i, j int) {
 	tq.data[i], tq.data[j] = tq.data[j], tq.data[i]
 	tq.data[i].index = i
 	tq.data[j].index = j
@@ -115,7 +151,7 @@ func (tq *TimeQueue) Swap(i, j int) {
 
 // Push is used by heap.Interface to push items onto the heap. Do not use this
 // to add items to a queue: use PushItem instead
-func (tq *TimeQueue) Push(x interface{}) {
+func (tq *PriorityQueue) Push(x interface{}) {
 	n := len(tq.data)
 	item := x.(*Item)
 	item.index = n
@@ -123,7 +159,7 @@ func (tq *TimeQueue) Push(x interface{}) {
 }
 
 // Pop removes the highest priority thing
-func (tq *TimeQueue) Pop() interface{} {
+func (tq *PriorityQueue) Pop() interface{} {
 	old := tq.data
 	n := len(old)
 	item := old[n-1]
@@ -135,3 +171,18 @@ func (tq *TimeQueue) Pop() interface{} {
 //////
 // end heap.Interface methods
 //////
+
+// NewErrItemNotFound creates a "not found" error for the given key
+func NewErrItemNotFound(key string) error {
+	return &ErrItemNotFound{
+		Key: key,
+	}
+}
+
+type ErrItemNotFound struct {
+	Key string
+}
+
+func (e *ErrItemNotFound) Error() string {
+	return fmt.Sprintf("queue item with key (%s) not found", e.Key)
+}

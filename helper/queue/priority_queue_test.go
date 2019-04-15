@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// Compile time test to enforce TimeQueue satisfies the heap.Interface interface
-var _ PriorityQueue = &TimeQueue{}
-
 // some tests rely on the ordering of items from this method
 func testCases() (tc []*Item) {
 	// create a slice of items with priority / times offest by these seconds
@@ -37,36 +34,36 @@ func testCases() (tc []*Item) {
 	return
 }
 
-func TestNewTimeQueue(t *testing.T) {
-	tq := NewTimeQueue()
+func TestPriorityQueue_New(t *testing.T) {
+	pq := NewPriorityQueue()
 
-	if len(tq.data) != len(tq.dataMap) || len(tq.data) != 0 {
-		t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(tq.data), len(tq.dataMap))
+	if len(pq.data) != len(pq.dataMap) || len(pq.data) != 0 {
+		t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(pq.data), len(pq.dataMap))
 	}
 
-	if tq.Len() != 0 {
-		t.Fatalf("expected new queue to have zero size, got (%d)", tq.Len())
+	if pq.Len() != 0 {
+		t.Fatalf("expected new queue to have zero size, got (%d)", pq.Len())
 	}
 }
 
-func TestTimeQueue_PushItem(t *testing.T) {
-	tq := NewTimeQueue()
+func TestPriorityQueue_PushItem(t *testing.T) {
+	pq := NewPriorityQueue()
 
 	tc := testCases()
 	tcl := len(tc)
 	for _, i := range tc {
-		if err := tq.PushItem(i); err != nil {
+		if err := pq.PushItem(i); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if tq.Len() != tcl {
-		t.Fatalf("error adding items, expected (%d) items, got (%d)", tcl, tq.Len())
+	if pq.Len() != tcl {
+		t.Fatalf("error adding items, expected (%d) items, got (%d)", tcl, pq.Len())
 	}
 
-	testValidateInternalData(t, tq, len(tc), false)
+	testValidateInternalData(t, pq, len(tc), false)
 
-	item, err := tq.PopItem()
+	item, err := pq.PopItem()
 	if err != nil {
 		t.Fatalf("error popping item: %s", err)
 	}
@@ -77,20 +74,20 @@ func TestTimeQueue_PushItem(t *testing.T) {
 		t.Fatal("expected test case and popped item match")
 	}
 
-	testValidateInternalData(t, tq, len(tc)-1, true)
+	testValidateInternalData(t, pq, len(tc)-1, true)
 }
 
-func TestTimeQueue_PopItem(t *testing.T) {
-	tq := NewTimeQueue()
+func TestPriorityQueue_PopItem(t *testing.T) {
+	pq := NewPriorityQueue()
 
 	tc := testCases()
 	for _, i := range tc {
-		if err := tq.PushItem(i); err != nil {
+		if err := pq.PushItem(i); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	topItem, err := tq.PopItem()
+	topItem, err := pq.PopItem()
 	if err != nil {
 		t.Fatalf("error calling pop: %s", err)
 	}
@@ -104,52 +101,52 @@ func TestTimeQueue_PopItem(t *testing.T) {
 	var items []*Item
 	items = append(items, topItem)
 	// pop the remaining items, compare size of input and output
-	it, _ := tq.PopItem()
-	for ; it != nil; it, _ = tq.PopItem() {
+	it, _ := pq.PopItem()
+	for ; it != nil; it, _ = pq.PopItem() {
 		items = append(items, it)
 	}
 	if len(items) != len(tc) {
 		t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
 	}
 
-	testValidateInternalData(t, tq, 0, true)
+	testValidateInternalData(t, pq, 0, true)
 }
 
-func TestTimeQueue_PopItemByKey(t *testing.T) {
-	tq := NewTimeQueue()
+func TestPriorityQueue_PopItemByKey(t *testing.T) {
+	pq := NewPriorityQueue()
 
 	tc := testCases()
 	for _, i := range tc {
-		if err := tq.PushItem(i); err != nil {
+		if err := pq.PushItem(i); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	// grab the top priority item, to capture it's value for checking later
-	item, _ := tq.PopItem()
+	item, _ := pq.PopItem()
 	oldPriority := item.Priority
 	oldKey := item.Key
 
 	// push the item back on, so it gets removed with PopItemByKey and we verify
 	// the top item has changed later
-	err := tq.PushItem(item)
+	err := pq.PushItem(item)
 	if err != nil {
 		t.Fatalf("error re-pushing top item: %s", err)
 	}
 
 	popKeys := []int{2, 4, 7, 1, 0}
 	for _, i := range popKeys {
-		item, err := tq.PopItemByKey(fmt.Sprintf("item-%d", i))
+		item, err := pq.PopItemByKey(fmt.Sprintf("item-%d", i))
 		if err != nil || item == nil {
 			t.Fatalf("failed to pop item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
 		}
 	}
 
-	testValidateInternalData(t, tq, len(tc)-len(popKeys), false)
+	testValidateInternalData(t, pq, len(tc)-len(popKeys), false)
 
 	// grab the top priority item again, to compare with the top item priority
 	// from above
-	item, _ = tq.PopItem()
+	item, _ = pq.PopItem()
 	newPriority := item.Priority
 	newKey := item.Key
 
@@ -157,30 +154,29 @@ func TestTimeQueue_PopItemByKey(t *testing.T) {
 		t.Fatalf("expected old/new key and priority to differ, got (%s/%s) and (%d/%d)", oldKey, newKey, oldPriority, newPriority)
 	}
 
-	testValidateInternalData(t, tq, len(tc)-len(popKeys)-1, true)
+	testValidateInternalData(t, pq, len(tc)-len(popKeys)-1, true)
 }
 
-// testValidateInternalData checks the internal data stucture of the TimeQueue
+// testValidateInternalData checks the internal data stucture of the PriorityQueue
 // and verifies that items are in-sync. Use drain only at the end of a test,
 // because it will mutate the input queue
-func testValidateInternalData(t *testing.T, pq PriorityQueue, expectedSize int, drain bool) {
+func testValidateInternalData(t *testing.T, pq *PriorityQueue, expectedSize int, drain bool) {
 	actualSize := pq.Len()
 	if actualSize != expectedSize {
 		t.Fatalf("expected new queue size to be (%d), got (%d)", expectedSize, actualSize)
 	}
 
-	tq := pq.(*TimeQueue)
-	if len(tq.data) != len(tq.dataMap) || len(tq.data) != expectedSize {
-		t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tq.data), len(tq.dataMap))
+	if len(pq.data) != len(pq.dataMap) || len(pq.data) != expectedSize {
+		t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(pq.data), len(pq.dataMap))
 	}
 
-	if drain && tq.Len() > 0 {
+	if drain && pq.Len() > 0 {
 		// pop all the items, verify lengths
-		i, _ := tq.PopItem()
-		for ; i != nil; i, _ = tq.PopItem() {
+		i, _ := pq.PopItem()
+		for ; i != nil; i, _ = pq.PopItem() {
 			expectedSize--
-			if len(tq.data) != len(tq.dataMap) || len(tq.data) != expectedSize {
-				t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(tq.data), len(tq.dataMap))
+			if len(pq.data) != len(pq.dataMap) || len(pq.data) != expectedSize {
+				t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(pq.data), len(pq.dataMap))
 			}
 		}
 	}
