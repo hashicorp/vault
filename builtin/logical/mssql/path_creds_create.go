@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )

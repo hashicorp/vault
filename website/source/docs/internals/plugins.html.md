@@ -129,7 +129,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-	"github.com/hashicorp/vault/plugins"
+	"github.com/hashicorp/vault/api/plugins"
 )
 
 func main() {

@@ -67,7 +67,6 @@ require (
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/hashicorp/go-memdb v1.0.0
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/go-plugin v1.0.0
 	github.com/hashicorp/go-rootcerts v1.0.0
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
@@ -75,20 +74,20 @@ require (
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/hashicorp/hcl v1.0.0
 	github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.5.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.5.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.5.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.5.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-ad v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.0
-	github.com/hashicorp/vault/api v1.0.0
-	github.com/hashicorp/vault/sdk v0.1.7
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
+	github.com/hashicorp/vault-plugin-auth-azure v0.5.1
+	github.com/hashicorp/vault-plugin-auth-centrify v0.5.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.5.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.5.1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-ad v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.1
+	github.com/hashicorp/vault/api v1.0.1
+	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible // indirect

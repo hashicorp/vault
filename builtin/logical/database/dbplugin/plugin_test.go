@@ -9,10 +9,9 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/plugins"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -113,11 +112,11 @@ func TestPlugin_GRPC_Main(t *testing.T) {
 
 	args := []string{"--tls-skip-verify=true"}
 
-	apiClientMeta := &api.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	plugins.Serve(plugin, apiClientMeta.GetTLSConfig())
+	dbplugin.Serve(plugin, api.VaultPluginTLSProvider(apiClientMeta.GetTLSConfig()))
 }
 
 func TestPlugin_Init(t *testing.T) {

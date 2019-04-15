@@ -1,7 +1,7 @@
 package builtinplugins
 
 import (
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 

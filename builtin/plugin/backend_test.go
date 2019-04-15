@@ -56,7 +56,7 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &api.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
