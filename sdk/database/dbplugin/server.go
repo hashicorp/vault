@@ -2,8 +2,10 @@ package dbplugin
 
 import (
 	"crypto/tls"
+	fmt "fmt"
 
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Serve is called from within a plugin and wraps the provided
@@ -14,6 +16,12 @@ func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 }
 
 func ServeConfig(db Database, tlsProvider func() (*tls.Config, error)) *plugin.ServeConfig {
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
