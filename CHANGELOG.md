@@ -1,3 +1,12 @@
+## 1.1.2 (Unreleased)
+
+BUG FIXES:
+
+ * auth/okta: Fix a potential dropped error [GH-6592]
+ * secrets/kv: Fix a regression on upgrade where a KVv2 mount could fail to be
+   mounted on unseal if it had previously been mounted but not written to
+   [KV-31]
+
 ## 1.1.1 (April 11th, 2019)
 
 SECURITY:
