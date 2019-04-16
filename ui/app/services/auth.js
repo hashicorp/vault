@@ -12,7 +12,7 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
-const ROOT_PREFIX = '🗝';
+const ROOT_PREFIX = '_root_';
 const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
@@ -296,6 +296,7 @@ export default Service.extend({
     if (this.environment() === 'development') {
       return;
     }
+
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
       if (data && data.policies.includes('root')) {
