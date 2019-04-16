@@ -42,9 +42,6 @@ export default Route.extend(UnloadModelRoute, {
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
   beforeModel() {
-    // currently there is no recursive delete for folders in vault, so there's no need to 'edit folders'
-    // perhaps in the future we could recurse _for_ users, but for now, just kick them
-    // back to the list
     let secret = this.secretParam();
     return this.buildModel(secret).then(() => {
       const parentKey = utils.parentKeyForKey(secret);
@@ -91,7 +88,7 @@ export default Route.extend(UnloadModelRoute, {
       // version passed in via the url
       return parseInt(paramsVersion || currentVersion, 10);
     } else {
-      // we've got a stub model because we can't read the metadata
+      // we've got a stub model because don't have read access on the metadata endpoint
       return paramsVersion ? parseInt(paramsVersion, 10) : null;
     }
   },
@@ -155,7 +152,9 @@ export default Route.extend(UnloadModelRoute, {
         // so that it won't try to create the record on save
         if (versionModel.isNew) {
           versionModel.set('id', JSON.stringify(versionId));
-          //TODO 😭 because we want this to be update instead of create
+          //TODO make this a util to better show what's happening
+          // this is because we want the ember-data model save to call update instead of create
+          // in the adapter so we have to force the frontend model to a "saved" state
           versionModel.send('pushedData');
         }
       } else {
@@ -166,17 +165,15 @@ export default Route.extend(UnloadModelRoute, {
   },
 
   handleSecretModelError(capabilities, secret, modelType, error) {
-    // can't read the path and don't have update permission, so re-throw
+    // can't read the path and don't have update capability, so re-throw
     if (!capabilities.get('canUpdate') && modelType === 'secret') {
       throw error;
     }
     // don't have access to the metadata for v2 or the secret for v1,
-    // so we make a model and mark it as `failedServerRead`
+    // so we make a stub model and mark it as `failedServerRead`
     let secretModel = this.store.createRecord(modelType);
     secretModel.setProperties({
       id: secret,
-      // so we know it's a stub model and won't be saving it
-      // because we don't have access to that endpoint
       failedServerRead: true,
     });
     return secretModel;
