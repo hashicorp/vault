@@ -182,6 +182,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			switch result.FactorResult {
 			case "WAITING":
 				verifyReq, err := client.NewRequest("POST", requestPath, payload)
+				if err != nil {
+					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
+				}
 				rsp, err := client.Do(verifyReq, &result)
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
