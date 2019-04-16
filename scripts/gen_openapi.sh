@@ -22,6 +22,7 @@ sleep 2
 VAULT_PID=$!
 
 echo "Mounting all builtin backends..."
+export VAULT_ADDR=http://localhost:8200
 
 #  auth backends
 vault auth enable alicloud
@@ -67,3 +68,5 @@ kill $VAULT_PID
 sleep 1
 
 echo "\nopenapi.json generated."
+
+unset VAULT_ADDR
