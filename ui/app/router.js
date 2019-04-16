@@ -40,6 +40,7 @@ Router.map(function() {
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
+          this.route('list', { path: '/list/:item_type' });
         });
         this.route('leases', function() {
           // lookup
@@ -131,6 +132,7 @@ Router.map(function() {
       });
 
       this.route('not-found', { path: '/*path' });
+      this.route('mount');
     });
     this.route('not-found', { path: '/*path' });
   });

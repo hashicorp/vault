@@ -1,4 +1,5 @@
 import { helper as buildHelper } from '@ember/component/helper';
+import { pluralize } from 'ember-inflector';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -73,11 +74,11 @@ const TABS_FOR_SETTINGS = {
 
 const TABS_FOR_SHOW = {};
 
-export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
+export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
-
+  debugger; // eslint-disable-line
   if (sectionType === 'authSettings') {
-    tabs = (TABS_FOR_SETTINGS[methodType] || []).slice();
+    tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
       label: 'Method Options',
       routeParams: ['vault.cluster.settings.auth.configure.section', 'options'],
@@ -85,7 +86,23 @@ export function tabsForAuthSection([methodType, sectionType = 'authSettings']) {
     return tabs;
   }
 
-  tabs = (TABS_FOR_SHOW[methodType] || []).slice();
+  if (paths) {
+    debugger; // eslint-disable-line
+    tabs =
+      paths.list.length > 0
+        ? paths.list.map(path => {
+            return {
+              label:
+                pluralize(path.slice(1))
+                  .charAt(0)
+                  .toUpperCase() + pluralize(path.slice(1)).slice(1),
+              routeParams: ['vault.cluster.access.method.list', path.slice(1)],
+            };
+          })
+        : [];
+  } else {
+    tabs = (TABS_FOR_SHOW[model.type] || []).slice();
+  }
   tabs.push({
     label: 'Configuration',
     routeParams: ['vault.cluster.access.method.section', 'configuration'],

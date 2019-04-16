@@ -35,6 +35,36 @@ export default Service.extend({
     });
   },
 
+  getPaths(apiPath, backend) {
+    let helpUrl = `/v1/${apiPath}?help=1`;
+    return this.ajax(helpUrl, backend).then(help => {
+      let paths = Object.keys(help.openapi.paths);
+      let listPaths = paths
+        .map(path => {
+          if (
+            help.openapi.paths[path].get &&
+            help.openapi.paths[path].get.parameters &&
+            help.openapi.paths[path].get.parameters[0].name == 'list'
+          ) {
+            return path;
+          }
+        })
+        .filter(path => path != undefined);
+      let createPaths = paths.filter(path => path.includes('{') && !path.includes('login'));
+      return { apiPath: apiPath, list: listPaths, create: createPaths };
+    });
+  },
+
+  // getPathsForModel(modelType, owner, backend){
+  //   let name = `model:${modelType}`;
+  //   let newModel = owner.factoryFor(name).class;
+  //   let modelProto = newModel.proto();
+  //   let helpUrl = modelProto.getHelpUrl(backend);
+  //   return this.getPaths(helpUrl, backend).then(paths => {
+  //     return paths;
+  //   });
+  // },
+
   getNewModel(modelType, owner, backend) {
     let name = `model:${modelType}`;
     let newModel = owner.factoryFor(name).class;
@@ -51,7 +81,6 @@ export default Service.extend({
       } else {
         //generate a whole new model
       }
-
       newModel.reopenClass({ merged: true });
       owner.unregister(name);
       owner.register(name, newModel);
