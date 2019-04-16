@@ -18,12 +18,12 @@ package spanner
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"log"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 )
 
@@ -147,31 +147,33 @@ func (t *BatchReadOnlyTransaction) PartitionQuery(ctx context.Context, statement
 		return nil, err
 	}
 	sid, client := sh.getID(), sh.getClient()
-	var (
-		resp       *sppb.PartitionResponse
-		partitions []*Partition
-	)
+	params, paramTypes, err := statement.convertParams()
+	if err != nil {
+		return nil, err
+	}
+
 	// request Partitions
 	req := &sppb.PartitionQueryRequest{
 		Session:          sid,
 		Transaction:      ts,
 		Sql:              statement.SQL,
 		PartitionOptions: opt.toProto(),
+		Params:           params,
+		ParamTypes:       paramTypes,
 	}
-	if err := statement.bindParams(req); err != nil {
-		return nil, err
-	}
-	resp, err = client.PartitionQuery(ctx, req)
+	resp, err := client.PartitionQuery(ctx, req)
+
 	// prepare ExecuteSqlRequest
 	r := &sppb.ExecuteSqlRequest{
 		Session:     sid,
 		Transaction: ts,
 		Sql:         statement.SQL,
+		Params:      params,
+		ParamTypes:  paramTypes,
 	}
-	if err := statement.bindParams(r); err != nil {
-		return nil, err
-	}
+
 	// generate Partitions
+	var partitions []*Partition
 	for _, p := range resp.GetPartitions() {
 		partitions = append(partitions, &Partition{
 			pt:   p.PartitionToken,

@@ -14,6 +14,8 @@ export default create({
   toggleIsPresent: isPresent('[data-test-secret-json-toggle]'),
   edit: clickable('[data-test-secret-edit]'),
   editIsPresent: isPresent('[data-test-secret-edit]'),
+  noReadIsPresent: isPresent('[data-test-write-without-read-empty-message]'),
+  noReadMessage: text('data-test-empty-state-message'),
   editor: {
     content: code('[data-test-component="json-editor"]'),
   },

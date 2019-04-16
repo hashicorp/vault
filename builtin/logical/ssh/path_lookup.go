@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLookup(b *backend) *framework.Path {

@@ -1,0 +1,6 @@
+.idea/
+node_modules/
+*.iml
+*.exe
+.cover/
+vendor/

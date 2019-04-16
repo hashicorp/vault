@@ -321,10 +321,10 @@ $ curl \
 <!--apidoc_start path:/pki/config/urls method:post -->
 <!-- This section is auto-generated and must be updated in the Go source file. -->
 
-This endpoint allows setting the issuing certificate endpoints, CRL distribution points, and OCSP
-server endpoints that will be encoded into issued certificates. You can update any of the values
-at any time without affecting the other existing values. To remove the values, simply use a blank
-string as the parameter.
+This endpoint allows setting the issuing certificate endpoints, CRL distribution 				points, and
+OCSP server endpoints that will be encoded into issued certificates. 				You can update any of the
+values at any time without affecting the other 				existing values. To remove the values, simply use
+a blank string as the 				parameter.
 
 | Method  | Path                |
 | :------ | :------------------ |

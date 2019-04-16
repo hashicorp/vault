@@ -238,7 +238,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue)
+		data, err = awsauth.GenerateLoginData(a.lastCreds, a.headerValue, "")
 		if err != nil {
 			retErr = errwrap.Wrapf("error creating login value: {{err}}", err)
 			return

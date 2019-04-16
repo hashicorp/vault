@@ -12,9 +12,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 

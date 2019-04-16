@@ -8,7 +8,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 var output string
