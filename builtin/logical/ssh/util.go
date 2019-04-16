@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	log "github.com/hashicorp/go-hclog"
 	"golang.org/x/crypto/ssh"

@@ -19,6 +19,7 @@ package spanner
 import (
 	"container/heap"
 	"container/list"
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -26,8 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
+	"cloud.google.com/go/internal/trace"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -258,7 +258,7 @@ func (s *session) destroy(isExpire bool) bool {
 	// Unregister s from healthcheck queue.
 	s.pool.hc.unregister(s)
 	// Remove s from Cloud Spanner service.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	s.delete(ctx)
 	return true
@@ -293,13 +293,15 @@ func (s *session) prepareForWrite(ctx context.Context) error {
 type SessionPoolConfig struct {
 	// getRPCClient is the caller supplied method for getting a gRPC client to Cloud Spanner, this makes session pool able to use client pooling.
 	getRPCClient func() (sppb.SpannerClient, error)
-	// MaxOpened is the maximum number of opened sessions allowed by the
-	// session pool. Defaults to NumChannels * 100.
+	// MaxOpened is the maximum number of opened sessions allowed by the session
+	// pool. Defaults to NumChannels * 100. If the client tries to open a session and
+	// there are already MaxOpened sessions, it will block until one becomes
+	// available or the context passed to the client method is canceled or times out.
 	MaxOpened uint64
 	// MinOpened is the minimum number of opened sessions that the session pool
 	// tries to maintain. Session pool won't continue to expire sessions if number
-	// of opened connections drops below MinOpened. However, if session is found
-	// to be broken, it will still be evicted from session pool, therefore it is
+	// of opened connections drops below MinOpened. However, if a session is found
+	// to be broken, it will still be evicted from the session pool, therefore it is
 	// posssible that the number of opened sessions drops below MinOpened.
 	MinOpened uint64
 	// MaxIdle is the maximum number of idle sessions, pool is allowed to keep. Defaults to 0.
@@ -449,7 +451,7 @@ func (p *sessionPool) shouldPrepareWrite() bool {
 }
 
 func (p *sessionPool) createSession(ctx context.Context) (*session, error) {
-	tracePrintf(ctx, nil, "Creating a new session")
+	trace.TracePrintf(ctx, nil, "Creating a new session")
 	doneCreate := func(done bool) {
 		p.mu.Lock()
 		if !done {
@@ -516,7 +518,7 @@ func (p *sessionPool) isHealthy(s *session) bool {
 // take returns a cached session if there are available ones; if there isn't any, it tries to allocate a new one.
 // Session returned by take should be used for read operations.
 func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
-	tracePrintf(ctx, nil, "Acquiring a read-only session")
+	trace.TracePrintf(ctx, nil, "Acquiring a read-only session")
 	ctx = contextWithOutgoingMetadata(ctx, p.md)
 	for {
 		var (
@@ -532,11 +534,11 @@ func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 		if p.idleList.Len() > 0 {
 			// Idle sessions are available, get one from the top of the idle list.
 			s = p.idleList.Remove(p.idleList.Front()).(*session)
-			tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
+			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 				"Acquired read-only session")
 		} else if p.idleWriteList.Len() > 0 {
 			s = p.idleWriteList.Remove(p.idleWriteList.Front()).(*session)
-			tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
+			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 				"Acquired read-write session")
 		}
 		if s != nil {
@@ -554,10 +556,10 @@ func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 		if (p.MaxOpened > 0 && p.numOpened >= p.MaxOpened) || (p.MaxBurst > 0 && p.createReqs >= p.MaxBurst) {
 			mayGetSession := p.mayGetSession
 			p.mu.Unlock()
-			tracePrintf(ctx, nil, "Waiting for read-only session to become available")
+			trace.TracePrintf(ctx, nil, "Waiting for read-only session to become available")
 			select {
 			case <-ctx.Done():
-				tracePrintf(ctx, nil, "Context done waiting for session")
+				trace.TracePrintf(ctx, nil, "Context done waiting for session")
 				return nil, errGetSessionTimeout()
 			case <-mayGetSession:
 			}
@@ -569,10 +571,10 @@ func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 		p.createReqs++
 		p.mu.Unlock()
 		if s, err = p.createSession(ctx); err != nil {
-			tracePrintf(ctx, nil, "Error creating session: %v", err)
+			trace.TracePrintf(ctx, nil, "Error creating session: %v", err)
 			return nil, toSpannerError(err)
 		}
-		tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
+		trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 			"Created session")
 		return &sessionHandle{session: s}, nil
 	}
@@ -581,7 +583,7 @@ func (p *sessionPool) take(ctx context.Context) (*sessionHandle, error) {
 // takeWriteSession returns a write prepared cached session if there are available ones; if there isn't any, it tries to allocate a new one.
 // Session returned should be used for read write transactions.
 func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, error) {
-	tracePrintf(ctx, nil, "Acquiring a read-write session")
+	trace.TracePrintf(ctx, nil, "Acquiring a read-write session")
 	ctx = contextWithOutgoingMetadata(ctx, p.md)
 	for {
 		var (
@@ -597,10 +599,10 @@ func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, err
 		if p.idleWriteList.Len() > 0 {
 			// Idle sessions are available, get one from the top of the idle list.
 			s = p.idleWriteList.Remove(p.idleWriteList.Front()).(*session)
-			tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()}, "Acquired read-write session")
+			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()}, "Acquired read-write session")
 		} else if p.idleList.Len() > 0 {
 			s = p.idleList.Remove(p.idleList.Front()).(*session)
-			tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()}, "Acquired read-only session")
+			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()}, "Acquired read-only session")
 		}
 		if s != nil {
 			s.setIdleList(nil)
@@ -616,10 +618,10 @@ func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, err
 			if (p.MaxOpened > 0 && p.numOpened >= p.MaxOpened) || (p.MaxBurst > 0 && p.createReqs >= p.MaxBurst) {
 				mayGetSession := p.mayGetSession
 				p.mu.Unlock()
-				tracePrintf(ctx, nil, "Waiting for read-write session to become available")
+				trace.TracePrintf(ctx, nil, "Waiting for read-write session to become available")
 				select {
 				case <-ctx.Done():
-					tracePrintf(ctx, nil, "Context done waiting for session")
+					trace.TracePrintf(ctx, nil, "Context done waiting for session")
 					return nil, errGetSessionTimeout()
 				case <-mayGetSession:
 				}
@@ -632,16 +634,16 @@ func (p *sessionPool) takeWriteSession(ctx context.Context) (*sessionHandle, err
 			p.createReqs++
 			p.mu.Unlock()
 			if s, err = p.createSession(ctx); err != nil {
-				tracePrintf(ctx, nil, "Error creating session: %v", err)
+				trace.TracePrintf(ctx, nil, "Error creating session: %v", err)
 				return nil, toSpannerError(err)
 			}
-			tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
+			trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 				"Created session")
 		}
 		if !s.isWritePrepared() {
 			if err = s.prepareForWrite(ctx); err != nil {
 				s.recycle()
-				tracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
+				trace.TracePrintf(ctx, map[string]interface{}{"sessionID": s.getID()},
 					"Error preparing session for write")
 				return nil, toSpannerError(err)
 			}
@@ -758,7 +760,8 @@ type healthChecker struct {
 	// done is used to signal that health checker should be closed.
 	done chan struct{}
 	// once is used for closing channel done only once.
-	once sync.Once
+	once             sync.Once
+	maintainerCancel func()
 }
 
 // newHealthChecker initializes new instance of healthChecker.
@@ -767,12 +770,13 @@ func newHealthChecker(interval time.Duration, workers int, sampleInterval time.D
 		workers = 1
 	}
 	hc := &healthChecker{
-		interval:       interval,
-		workers:        workers,
-		pool:           pool,
-		sampleInterval: sampleInterval,
-		ready:          make(chan struct{}),
-		done:           make(chan struct{}),
+		interval:         interval,
+		workers:          workers,
+		pool:             pool,
+		sampleInterval:   sampleInterval,
+		ready:            make(chan struct{}),
+		done:             make(chan struct{}),
+		maintainerCancel: func() {},
 	}
 	hc.waitWorkers.Add(1)
 	go hc.maintainer()
@@ -785,6 +789,9 @@ func newHealthChecker(interval time.Duration, workers int, sampleInterval time.D
 
 // close closes the healthChecker and waits for all healthcheck workers to exit.
 func (hc *healthChecker) close() {
+	hc.mu.Lock()
+	hc.maintainerCancel()
+	hc.mu.Unlock()
 	hc.once.Do(func() { close(hc.done) })
 	hc.waitWorkers.Wait()
 }
@@ -940,9 +947,7 @@ func (hc *healthChecker) worker(i int) {
 				}
 				select {
 				case <-time.After(time.Duration(rand.Int63n(pause) + pause/2)):
-					break
 				case <-hc.done:
-					break
 				}
 
 			}
@@ -961,84 +966,7 @@ func (hc *healthChecker) maintainer() {
 	var (
 		windowSize uint64 = 10
 		iteration  uint64
-		timeout    <-chan time.Time
 	)
-
-	// replenishPool is run if numOpened is less than sessionsToKeep, timeouts on sampleInterval.
-	replenishPool := func(sessionsToKeep uint64) {
-		ctx, _ := context.WithTimeout(context.Background(), hc.sampleInterval)
-		for {
-			select {
-			case <-timeout:
-				return
-			default:
-				break
-			}
-
-			p := hc.pool
-			p.mu.Lock()
-			// Take budget before the actual session creation.
-			if sessionsToKeep <= p.numOpened {
-				p.mu.Unlock()
-				break
-			}
-			p.numOpened++
-			recordStat(ctx, OpenSessionCount, int64(p.numOpened))
-			p.createReqs++
-			shouldPrepareWrite := p.shouldPrepareWrite()
-			p.mu.Unlock()
-			var (
-				s   *session
-				err error
-			)
-			if s, err = p.createSession(ctx); err != nil {
-				log.Printf("Failed to create session, error: %v", toSpannerError(err))
-				continue
-			}
-			if shouldPrepareWrite {
-				if err = s.prepareForWrite(ctx); err != nil {
-					p.recycle(s)
-					log.Printf("Failed to prepare session, error: %v", toSpannerError(err))
-					continue
-				}
-			}
-			p.recycle(s)
-		}
-	}
-
-	// shrinkPool, scales down the session pool.
-	shrinkPool := func(sessionsToKeep uint64) {
-		for {
-			select {
-			case <-timeout:
-				return
-			default:
-				break
-			}
-
-			p := hc.pool
-			p.mu.Lock()
-
-			if sessionsToKeep >= p.numOpened {
-				p.mu.Unlock()
-				break
-			}
-
-			var s *session
-			if p.idleList.Len() > 0 {
-				s = p.idleList.Front().Value.(*session)
-			} else if p.idleWriteList.Len() > 0 {
-				s = p.idleWriteList.Front().Value.(*session)
-			}
-			p.mu.Unlock()
-			if s != nil {
-				// destroy session as expire.
-				s.destroy(true)
-			} else {
-				break
-			}
-		}
-	}
 
 	for {
 		if hc.isClosing() {
@@ -1061,25 +989,94 @@ func (hc *healthChecker) maintainer() {
 		}
 		sessionsToKeep := maxUint64(hc.pool.MinOpened,
 			minUint64(currSessionsOpened, hc.pool.MaxIdle+maxSessionsInUse))
+		ctx, cancel := context.WithTimeout(context.Background(), hc.sampleInterval)
+		hc.maintainerCancel = cancel
 		hc.mu.Unlock()
 
-		timeout = time.After(hc.sampleInterval)
 		// Replenish or Shrink pool if needed.
 		// Note: we don't need to worry about pending create session requests, we only need to sample the current sessions in use.
 		// the routines will not try to create extra / delete creating sessions.
 		if sessionsToKeep > currSessionsOpened {
-			replenishPool(sessionsToKeep)
+			hc.replenishPool(ctx, sessionsToKeep)
 		} else {
-			shrinkPool(sessionsToKeep)
+			hc.shrinkPool(ctx, sessionsToKeep)
 		}
 
 		select {
-		case <-timeout:
-			break
+		case <-ctx.Done():
 		case <-hc.done:
-			break
+			cancel()
 		}
 		iteration++
+	}
+}
+
+// replenishPool is run if numOpened is less than sessionsToKeep, timeouts on sampleInterval.
+func (hc *healthChecker) replenishPool(ctx context.Context, sessionsToKeep uint64) {
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		p := hc.pool
+		p.mu.Lock()
+		// Take budget before the actual session creation.
+		if sessionsToKeep <= p.numOpened {
+			p.mu.Unlock()
+			break
+		}
+		p.numOpened++
+		recordStat(ctx, OpenSessionCount, int64(p.numOpened))
+		p.createReqs++
+		shouldPrepareWrite := p.shouldPrepareWrite()
+		p.mu.Unlock()
+		var (
+			s   *session
+			err error
+		)
+		if s, err = p.createSession(ctx); err != nil {
+			log.Printf("Failed to create session, error: %v", toSpannerError(err))
+			continue
+		}
+		if shouldPrepareWrite {
+			if err = s.prepareForWrite(ctx); err != nil {
+				p.recycle(s)
+				log.Printf("Failed to prepare session, error: %v", toSpannerError(err))
+				continue
+			}
+		}
+		p.recycle(s)
+	}
+}
+
+// shrinkPool, scales down the session pool.
+func (hc *healthChecker) shrinkPool(ctx context.Context, sessionsToKeep uint64) {
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		p := hc.pool
+		p.mu.Lock()
+
+		if sessionsToKeep >= p.numOpened {
+			p.mu.Unlock()
+			break
+		}
+
+		var s *session
+		if p.idleList.Len() > 0 {
+			s = p.idleList.Front().Value.(*session)
+		} else if p.idleWriteList.Len() > 0 {
+			s = p.idleWriteList.Front().Value.(*session)
+		}
+		p.mu.Unlock()
+		if s != nil {
+			// destroy session as expire.
+			s.destroy(true)
+		} else {
+			break
+		}
 	}
 }
 
@@ -1091,8 +1088,24 @@ func shouldDropSession(err error) bool {
 	// If a Cloud Spanner can no longer locate the session (for example, if session is garbage collected), then caller
 	// should not try to return the session back into the session pool.
 	// TODO: once gRPC can return auxiliary error information, stop parsing the error message.
-	if ErrCode(err) == codes.NotFound && strings.Contains(ErrDesc(err), "Session not found:") {
+	if ErrCode(err) == codes.NotFound && strings.Contains(ErrDesc(err), "Session not found") {
 		return true
 	}
 	return false
+}
+
+// maxUint64 returns the maximum of two uint64
+func maxUint64(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// minUint64 returns the minimum of two uint64
+func minUint64(a, b uint64) uint64 {
+	if a > b {
+		return b
+	}
+	return a
 }

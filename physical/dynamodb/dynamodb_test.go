@@ -11,8 +11,8 @@ import (
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"

@@ -77,8 +77,8 @@ func (client *Client) DetachPolicyFromRoleWithCallback(request *DetachPolicyFrom
 type DetachPolicyFromRoleRequest struct {
 	*requests.RpcRequest
 	PolicyType string `position:"Query" name:"PolicyType"`
-	PolicyName string `position:"Query" name:"PolicyName"`
 	RoleName   string `position:"Query" name:"RoleName"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // DetachPolicyFromRoleResponse is the response struct for api DetachPolicyFromRole
@@ -92,7 +92,7 @@ func CreateDetachPolicyFromRoleRequest() (request *DetachPolicyFromRoleRequest) 
 	request = &DetachPolicyFromRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DetachPolicyFromRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DetachPolicyFromRole", "ram", "openAPI")
 	return
 }
 

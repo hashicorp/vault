@@ -18,7 +18,13 @@ export default ApplicationSerializer.extend({
   },
   serialize(snapshot) {
     let secret = snapshot.belongsTo('secret');
-    let version = secret.record.isStub ? snapshot.attr('version') : secret.attr('currentVersion');
+    // if both models failed to read from the server, we need to write without CAS
+    if (secret.record.failedServerRead && snapshot.record.failedServerRead) {
+      return {
+        data: snapshot.attr('secretData'),
+      };
+    }
+    let version = secret.record.failedServerRead ? snapshot.attr('version') : secret.attr('currentVersion');
     version = version || 0;
     return {
       data: snapshot.attr('secretData'),

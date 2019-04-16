@@ -595,10 +595,10 @@ SSH into the machine where the Vault server is running, and check the stored
 values in the `/tmp/vault` directory.
 
 ```plaintext
-$ cd /tmp/vault/logical
+$ cd /tmp/vault/sdk/logical
 ```
 
-Under the `/tmp/vault/logical` directory, there are two sub-directories. One
+Under the `/tmp/vault/sdk/logical` directory, there are two sub-directories. One
 maps to `secret/` and another maps to `secret2/` although you cannot tell by
 the folder names.
 

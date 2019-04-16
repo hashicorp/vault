@@ -19,7 +19,7 @@ export default DS.Model.extend(KeyMixin, {
 
   isAdvancedFormat: computed('secretData', function() {
     const data = this.get('secretData');
-    return Object.keys(data).some(key => typeof data[key] !== 'string');
+    return data && Object.keys(data).some(key => typeof data[key] !== 'string');
   }),
 
   helpText: attr('string'),

@@ -1,0 +1,27 @@
+language: go
+
+go:
+- '1.12'
+env:
+- GO111MODULE=on
+
+git:
+  depth: 1
+  quiet: true
+
+env:
+- GOMAXPROCS=4
+  GOOGLE_CLOUD_PROJECT=sethvargo-kms-test
+  GOOGLE_APPLICATION_CREDENTIALS=${TRAVIS_BUILD_DIR}/service-account.json
+
+before_install:
+- openssl aes-256-cbc -K $encrypted_78b5b8c7292e_key -iv $encrypted_78b5b8c7292e_iv -in test/service-account.json.enc -out ${GOOGLE_APPLICATION_CREDENTIALS} -d
+
+branches:
+  only:
+  - master
+
+matrix:
+  fast_finish: true
+
+script: make test

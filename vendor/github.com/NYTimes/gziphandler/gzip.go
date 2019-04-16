@@ -1,4 +1,4 @@
-package gziphandler
+package gziphandler // import "github.com/NYTimes/gziphandler"
 
 import (
 	"bufio"

@@ -17,7 +17,7 @@ import (
 // 			Value int
 // 		}
 //
-// 		func (u *exampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
+// 		func (u *ExampleUnmarshaler) UnmarshalDynamoDBAttributeValue(av *dynamodb.AttributeValue) error {
 // 			if av.N == nil {
 // 				return nil
 // 			}
@@ -27,7 +27,7 @@ import (
 // 				return err
 // 			}
 //
-// 			u.Value = n
+// 			u.Value = int(n)
 // 			return nil
 // 		}
 type Unmarshaler interface {
@@ -738,9 +738,9 @@ func (e *InvalidUnmarshalError) Message() string {
 	return "cannot unmarshal to nil value, " + e.Type.String()
 }
 
-// An UnmarshalError wraps an error that occured while unmarshaling a DynamoDB
+// An UnmarshalError wraps an error that occurred while unmarshaling a DynamoDB
 // AttributeValue element into a Go type. This is different from UnmarshalTypeError
-// in that it wraps the underlying error that occured.
+// in that it wraps the underlying error that occurred.
 type UnmarshalError struct {
 	Err   error
 	Value string

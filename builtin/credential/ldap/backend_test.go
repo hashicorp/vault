@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 

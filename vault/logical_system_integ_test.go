@@ -11,13 +11,13 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	lplugin "github.com/hashicorp/vault/logical/plugin"
-	"github.com/hashicorp/vault/logical/plugin/mock"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	lplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -581,11 +581,11 @@ func TestBackend_PluginMainLogical(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
@@ -610,11 +610,11 @@ func TestBackend_PluginMainCredentials(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
@@ -646,11 +646,11 @@ func TestBackend_PluginMainEnv(t *testing.T) {
 	}
 	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 

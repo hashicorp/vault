@@ -90,7 +90,7 @@ func CreateDeleteRoleRequest() (request *DeleteRoleRequest) {
 	request = &DeleteRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteRole", "ram", "openAPI")
 	return
 }
 

@@ -56,7 +56,6 @@ type Repository struct {
 	AllowSquashMerge *bool            `json:"allow_squash_merge,omitempty"`
 	AllowMergeCommit *bool            `json:"allow_merge_commit,omitempty"`
 	Topics           []string         `json:"topics,omitempty"`
-	Archived         *bool            `json:"archived,omitempty"`
 
 	// Only provided when using RepositoriesService.Get while in preview
 	License *License `json:"license,omitempty"`
@@ -70,6 +69,7 @@ type Repository struct {
 	HasDownloads      *bool   `json:"has_downloads,omitempty"`
 	LicenseTemplate   *string `json:"license_template,omitempty"`
 	GitignoreTemplate *string `json:"gitignore_template,omitempty"`
+	Archived          *bool   `json:"archived,omitempty"`
 
 	// Creating an organization repository. Required for non-owners.
 	TeamID *int64 `json:"team_id,omitempty"`
@@ -259,39 +259,9 @@ func (s *RepositoriesService) ListAll(ctx context.Context, opt *RepositoryListAl
 	return repos, resp, nil
 }
 
-// createRepoRequest is a subset of Repository and is used internally
-// by Create to pass only the known fields for the endpoint.
-//
-// See https://github.com/google/go-github/issues/1014 for more
-// information.
-type createRepoRequest struct {
-	// Name is required when creating a repo.
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Homepage    *string `json:"homepage,omitempty"`
-
-	Private     *bool `json:"private,omitempty"`
-	HasIssues   *bool `json:"has_issues,omitempty"`
-	HasProjects *bool `json:"has_projects,omitempty"`
-	HasWiki     *bool `json:"has_wiki,omitempty"`
-
-	// Creating an organization repository. Required for non-owners.
-	TeamID *int64 `json:"team_id,omitempty"`
-
-	AutoInit          *bool   `json:"auto_init,omitempty"`
-	GitignoreTemplate *string `json:"gitignore_template,omitempty"`
-	LicenseTemplate   *string `json:"license_template,omitempty"`
-	AllowSquashMerge  *bool   `json:"allow_squash_merge,omitempty"`
-	AllowMergeCommit  *bool   `json:"allow_merge_commit,omitempty"`
-	AllowRebaseMerge  *bool   `json:"allow_rebase_merge,omitempty"`
-}
-
 // Create a new repository. If an organization is specified, the new
 // repository will be created under that org. If the empty string is
 // specified, it will be created for the authenticated user.
-//
-// Note that only a subset of the repo fields are used and repo must
-// not be nil.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#create
 func (s *RepositoriesService) Create(ctx context.Context, org string, repo *Repository) (*Repository, *Response, error) {
@@ -302,24 +272,7 @@ func (s *RepositoriesService) Create(ctx context.Context, org string, repo *Repo
 		u = "user/repos"
 	}
 
-	repoReq := &createRepoRequest{
-		Name:              repo.Name,
-		Description:       repo.Description,
-		Homepage:          repo.Homepage,
-		Private:           repo.Private,
-		HasIssues:         repo.HasIssues,
-		HasProjects:       repo.HasProjects,
-		HasWiki:           repo.HasWiki,
-		TeamID:            repo.TeamID,
-		AutoInit:          repo.AutoInit,
-		GitignoreTemplate: repo.GitignoreTemplate,
-		LicenseTemplate:   repo.LicenseTemplate,
-		AllowSquashMerge:  repo.AllowSquashMerge,
-		AllowMergeCommit:  repo.AllowMergeCommit,
-		AllowRebaseMerge:  repo.AllowRebaseMerge,
-	}
-
-	req, err := s.client.NewRequest("POST", u, repoReq)
+	req, err := s.client.NewRequest("POST", u, repo)
 	if err != nil {
 		return nil, nil, err
 	}
