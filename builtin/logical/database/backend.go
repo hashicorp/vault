@@ -24,8 +24,9 @@ import (
 )
 
 const (
-	databaseConfigPath = "database/config/"
-	databaseRolePath   = "role/"
+	databaseConfigPath     = "database/config/"
+	databaseRolePath       = "role/"
+	databaseStaticRolePath = "static-role/"
 
 	// interval to check the queue for items needing rotation
 	queueTickInterval = 5 * time.Second
@@ -81,16 +82,18 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				// in them
 			},
 		},
-		Paths: []*framework.Path{
-			pathListPluginConnection(&b),
-			pathConfigurePluginConnection(&b),
+		Paths: framework.PathAppend(
+			[]*framework.Path{
+				pathListPluginConnection(&b),
+				pathConfigurePluginConnection(&b),
+				pathResetConnection(&b),
+				pathRotateRoleCredentials(&b),
+			},
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
-			pathResetConnection(&b),
 			pathRotateCredentials(&b),
-			pathRotateRoleCredentials(&b),
-		},
+		),
 
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
@@ -156,7 +159,15 @@ type upgradeCheck struct {
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
-	entry, err := s.Get(ctx, "role/"+roleName)
+	return b.role(ctx, s, roleName, databaseRolePath)
+}
+
+func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
+	return b.role(ctx, s, roleName, databaseStaticRolePath)
+}
+
+func (b *databaseBackend) role(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
+	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +217,7 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 	case strings.HasPrefix(key, databaseConfigPath):
 		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.ClearConnection(name)
-	case strings.HasPrefix(key, databaseRolePath):
+	case strings.HasPrefix(key, databaseStaticRolePath):
 		b.invalidateQueue()
 	}
 }
