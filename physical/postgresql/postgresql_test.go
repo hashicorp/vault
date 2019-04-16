@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/logging"
@@ -93,7 +94,196 @@ func TestPostgreSQLBackend(t *testing.T) {
 	if ha1.HAEnabled() && ha2.HAEnabled() {
 		logger.Info("Running ha backend tests")
 		physical.ExerciseHABackend(t, ha1, ha2)
+		testPostgresSQLLockTTL(t, ha1)
+		testPostgresSQLLockRenewal(t, ha1)
 	}
+}
+
+// Similar to testHABackend, but using internal implementation details to
+// trigger the lock failure scenario by setting the lock renew period for one
+// of the locks to a higher value than the lock TTL.
+func testPostgresSQLLockTTL(t *testing.T, ha physical.HABackend) {
+	// Set much smaller lock times to speed up the test.
+	lockTTL := 3
+	renewInterval := time.Second * 1
+	watchInterval := time.Second * 1
+
+	// Get the lock
+	origLock, err := ha.LockWith("dynamodbttl", "bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	// set the first lock renew period to double the expected TTL.
+	lock := origLock.(*PostgreSQLLock)
+	lock.renewInterval = time.Duration(lockTTL*2) * time.Second
+	lock.ttlSeconds = lockTTL
+	// lock.retryInterval = watchInterval
+
+	// Attempt to lock
+	leaderCh, err := lock.Lock(nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh == nil {
+		t.Fatalf("failed to get leader ch")
+	}
+
+	// Check the value
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "bar" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Second acquisition should succeed because the first lock should
+	// not renew within the 3 sec TTL.
+	origLock2, err := ha.LockWith("dynamodbttl", "baz")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	lock2 := origLock2.(*PostgreSQLLock)
+	lock2.renewInterval = renewInterval
+	lock2.ttlSeconds = lockTTL
+	// lock2.retryInterval = watchInterval
+
+	// Cancel attempt in 6 sec so as not to block unit tests forever
+	stopCh := make(chan struct{})
+	time.AfterFunc(time.Duration(lockTTL*2)*time.Second, func() {
+		close(stopCh)
+	})
+
+	// Attempt to lock should work
+	leaderCh2, err := lock2.Lock(stopCh)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh2 == nil {
+		t.Fatalf("should get leader ch")
+	}
+
+	// Check the value
+	held, val, err = lock2.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "baz" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// The first lock should have lost the leader channel
+	leaderChClosed := false
+	blocking := make(chan struct{})
+	// Attempt to read from the leader or the blocking channel, which ever one
+	// happens first.
+	go func() {
+		select {
+		case <-time.After(watchInterval * 3):
+			return
+		case <-leaderCh:
+			leaderChClosed = true
+			close(blocking)
+		case <-blocking:
+			return
+		}
+	}()
+
+	<-blocking
+	if !leaderChClosed {
+		t.Fatalf("original lock did not have its leader channel closed.")
+	}
+
+	// Cleanup
+	lock2.Unlock()
+}
+
+// Verify that once Unlock is called, we don't keep trying to renew the original
+// lock.
+func testPostgresSQLLockRenewal(t *testing.T, ha physical.HABackend) {
+	// Get the lock
+	origLock, err := ha.LockWith("pgrenewal", "bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// customize the renewal and watch intervals
+	lock := origLock.(*PostgreSQLLock)
+	// lock.renewInterval = time.Second * 1
+
+	// Attempt to lock
+	leaderCh, err := lock.Lock(nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh == nil {
+		t.Fatalf("failed to get leader ch")
+	}
+
+	// Check the value
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "bar" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Release the lock, which will delete the stored item
+	if err := lock.Unlock(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait longer than the renewal time
+	time.Sleep(1500 * time.Millisecond)
+
+	// Attempt to lock with new lock
+	newLock, err := ha.LockWith("pgrenewal", "baz")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Cancel attempt after lock ttl + 1s so as not to block unit tests forever
+	stopCh := make(chan struct{})
+	timeout := time.Duration(lock.ttlSeconds)*time.Second + lock.retryInterval + time.Second
+	time.AfterFunc(timeout, func() {
+		t.Logf("giving up on lock attempt after %v", timeout)
+		close(stopCh)
+	})
+
+	// Attempt to lock should work
+	leaderCh2, err := newLock.Lock(stopCh)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh2 == nil {
+		t.Fatalf("should get leader ch")
+	}
+
+	// Check the value
+	held, val, err = newLock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "baz" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Cleanup
+	newLock.Unlock()
 }
 
 func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retConnString string) {
@@ -165,7 +355,7 @@ func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend
 	}
 
 	createHaTableSQL :=
-		" CREATE TABLE IF NOT EXISTS vault_ha_store ( " +
+		" CREATE TABLE IF NOT EXISTS vault_ha_locks ( " +
 			" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
 			" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
 			" ha_value                                    TEXT COLLATE \"C\", " +
