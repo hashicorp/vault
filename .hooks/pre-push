@@ -10,7 +10,7 @@ if [ "$remote" = "ent" ]; then
     exit 0
 fi
 
-if [ -f version/version_ent.go ]; then
+if [ -f command/version_ent.go ]; then
     echo "Found enterprise version file while pushing to oss remote"
     exit 1
 fi
