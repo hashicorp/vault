@@ -6,6 +6,17 @@ CHANGES:
    will now be preferred over regions set in the enclosing environment.
    This is a _breaking_ change.
 
+IMPROVEMENTS: 
+
+ * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
+   workflow in the UI [GH-6570]
+
+BUG FIXES: 
+
+ * ui: fix an issue where sensitive input values weren't being saved to the
+   server [GH-6586]
+   
+
 ## 1.1.1 (April 11th, 2019)
 
 SECURITY:
