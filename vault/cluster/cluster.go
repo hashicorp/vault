@@ -118,6 +118,12 @@ func (cl *Listener) StopHandler(alpn string) {
 	}
 }
 
+// Handler returns the handler for the provided ALPN name
+func (cl *Listener) Handler(alpn string) (Handler, bool) {
+	handler, ok := cl.handlers[alpn]
+	return handler, ok
+}
+
 // Server returns the http2 server that the cluster listener is using
 func (cl *Listener) Server() *http2.Server {
 	return cl.server
