@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
@@ -260,6 +259,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
 	}
+	// TODO add TTL
 
 	return &logical.Response{
 		Data: data,
@@ -310,9 +310,12 @@ func pathRoleReadCommon(role *roleEntry) map[string]interface{} {
 }
 
 func (b *databaseBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	q.Q("request path:", req.Path)
 	// TODO: update for static
-	entries, err := req.Storage.List(ctx, "role/")
+	path := "role/"
+	if req.Path == "static-roles/" {
+		path = "static-role/"
+	}
+	entries, err := req.Storage.List(ctx, path)
 	if err != nil {
 		return nil, err
 	}
@@ -357,6 +360,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 	if err != nil {
 		return nil, err
 	}
+
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
@@ -443,9 +447,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("rotation_statements is a required field for static accounts"), nil
 	}
 
-	// in create/update of static accounts, we only care if the operation
-	// err'd , and this call does not return credentials
-
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation
 
@@ -453,6 +454,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	// first time
 	switch req.Operation {
 	case logical.CreateOperation:
+		// setStaticAccount calls Storage.Put and saves the role to storage
 		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
 			RoleName:   name,
 			Role:       role,
@@ -467,6 +469,14 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			lvr = time.Now()
 		}
 	case logical.UpdateOperation:
+		// store updated Role
+		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(ctx, entry); err != nil {
+			return nil, err
+		}
 		// In case this is an update, remove any previous version of the item from the queue
 		if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
 			if _, ok := err.(*queue.ErrItemNotFound); !ok {
@@ -483,15 +493,6 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 	// END create/update static account
-
-	// Store it
-	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
-	}
 
 	return nil, nil
 }

@@ -78,8 +78,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			},
 			SealWrapStorage: []string{
 				"config/*",
-				// TODO: will want to encrypt static accounts / roles with password info
-				// in them
+				"static-role/*",
 			},
 		},
 		Paths: framework.PathAppend(
@@ -87,7 +86,6 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 				pathListPluginConnection(&b),
 				pathConfigurePluginConnection(&b),
 				pathResetConnection(&b),
-				pathRotateRoleCredentials(&b),
 			},
 			pathListRoles(&b),
 			pathRoles(&b),
@@ -159,14 +157,14 @@ type upgradeCheck struct {
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
-	return b.role(ctx, s, roleName, databaseRolePath)
+	return b.roleAtPath(ctx, s, roleName, databaseRolePath)
 }
 
 func (b *databaseBackend) StaticRole(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {
-	return b.role(ctx, s, roleName, databaseStaticRolePath)
+	return b.roleAtPath(ctx, s, roleName, databaseStaticRolePath)
 }
 
-func (b *databaseBackend) role(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
+func (b *databaseBackend) roleAtPath(ctx context.Context, s logical.Storage, roleName string, pathPrefix string) (*roleEntry, error) {
 	entry, err := s.Get(ctx, pathPrefix+roleName)
 	if err != nil {
 		return nil, err
@@ -218,6 +216,7 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.ClearConnection(name)
 	case strings.HasPrefix(key, databaseStaticRolePath):
+		// TODO revoke users
 		b.invalidateQueue()
 	}
 }
@@ -388,7 +387,6 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 			Password: walEntry.NewPassword,
 		})
 		if err != nil {
-			merr = multierror.Append(merr, err)
 			// if response contains a WALID, create an item to push to the queue with
 			// a backoff time and include the WAL ID
 			merr = multierror.Append(merr, err)
@@ -580,7 +578,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		}
 
 		// validate the role still exists
-		role, err := b.Role(ctx, s, item.Key)
+		role, err := b.StaticRole(ctx, s, item.Key)
 		if err != nil {
 			b.logger.Warn(fmt.Sprintf("unable load role (%s)", item.Key), "error", err)
 			continue
@@ -679,6 +677,7 @@ type setStaticAccountInput struct {
 
 type setStaticAccountOutput struct {
 	RotationTime time.Time
+	Password     string
 	// Optional return field, in the event WAL was created and not destroyed
 	// during the operation
 	WALID string
@@ -732,6 +731,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			return output, err
 		}
 	}
+	output.Password = newPassword
 
 	db.RLock()
 	defer db.RUnlock()
@@ -777,7 +777,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	input.Role.StaticAccount.Password = password
 	output.RotationTime = lvr
 
-	entry, err := logical.StorageEntryJSON("role/"+input.RoleName, input.Role)
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
 	if err != nil {
 		return output, err
 	}

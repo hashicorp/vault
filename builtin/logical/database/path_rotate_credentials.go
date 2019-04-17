@@ -103,12 +103,12 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
 
-		role, err := b.Role(ctx, req.Storage, data.Get("name").(string))
+		role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
 		if err != nil {
 			return nil, err
 		}
 		if role == nil {
-			return nil, nil
+			return logical.ErrorResponse("cannot rotate credentials of non-static accounts"), nil
 		}
 
 		if role.StaticAccount != nil {
@@ -135,8 +135,6 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			if err := b.credRotationQueue.PushItem(item); err != nil {
 				return nil, err
 			}
-		} else {
-			return logical.ErrorResponse("cannot rotate credentials of non-static accounts"), nil
 		}
 		return nil, nil
 	}

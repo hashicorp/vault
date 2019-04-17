@@ -1450,6 +1450,25 @@ func TestBackend_Static_Rotations(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 	}
+	// TODO
+	data = map[string]interface{}{
+		"db_name":               "plugin-test",
+		"creation_statements":   testRole,
+		"revocation_statements": defaultRevocationSQL,
+		"default_ttl":           "5m",
+		"max_ttl":               "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "roles/normal-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// END TODO
 
 	// verify the queue has 3 items in it
 	if bd.credRotationQueue.Len() != 3 {
@@ -1468,6 +1487,7 @@ func TestBackend_Static_Rotations(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
+
 	keys := resp.Data["keys"].([]string)
 	if len(keys) != 3 {
 		t.Fatalf("expected 3 roles, got: (%d)", len(keys))

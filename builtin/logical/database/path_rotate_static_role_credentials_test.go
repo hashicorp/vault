@@ -66,7 +66,7 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
 
 	req = &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "roles/plugin-role-test",
+		Path:      "static-roles/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -80,10 +80,11 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test",
+		Path:      "static-creds/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
+
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
@@ -102,7 +103,7 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test",
+		Path:      "static-creds/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -136,7 +137,7 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test",
+		Path:      "static-creds/plugin-role-test",
 		Storage:   config.StorageView,
 		Data:      data,
 	}

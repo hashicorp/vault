@@ -60,7 +60,6 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 		expected map[string]interface{}
 		err      error
 	}{
-		"normal": {},
 		"basic": {
 			account: map[string]interface{}{
 				"username":        "statictest",
@@ -97,7 +96,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 
 			req := &logical.Request{
 				Operation: logical.CreateOperation,
-				Path:      "roles/plugin-role-test",
+				Path:      "static-roles/plugin-role-test",
 				Storage:   config.StorageView,
 				Data:      data,
 			}
@@ -140,7 +139,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			data = map[string]interface{}{}
 			req = &logical.Request{
 				Operation: logical.ReadOperation,
-				Path:      "roles/plugin-role-test",
+				Path:      "static-roles/plugin-role-test",
 				Storage:   config.StorageView,
 				Data:      data,
 			}
@@ -186,7 +185,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			// Delete role for next run
 			req = &logical.Request{
 				Operation: logical.DeleteOperation,
-				Path:      "roles/plugin-role-test",
+				Path:      "static-roles/plugin-role-test",
 				Storage:   config.StorageView,
 			}
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -252,7 +251,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 
 	req = &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -266,7 +265,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -280,7 +279,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	// capture the password to verify it doesn't change
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test-updates",
+		Path:      "static-creds/plugin-role-test-updates",
 		Storage:   config.StorageView,
 	}
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -303,7 +302,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}
@@ -317,7 +316,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      data,
 	}
@@ -334,7 +333,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	// re-capture the password to ensure it did not change
 	req = &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test-updates",
+		Path:      "static-creds/plugin-role-test-updates",
 		Storage:   config.StorageView,
 	}
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -358,7 +357,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}
@@ -376,7 +375,7 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test-updates",
+		Path:      "static-roles/plugin-role-test-updates",
 		Storage:   config.StorageView,
 		Data:      updateData,
 	}
@@ -469,30 +468,6 @@ func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
 	}
 	if _, ok := resp.Data["static_account"]; ok {
 		t.Fatalf("expected no static account, got: %#v", resp.Data["static_account"])
-	}
-
-	// update with a username, expect failure
-	updateData := map[string]interface{}{
-		"name":            "plugin-role-normal",
-		"db_name":         "plugin-test",
-		"username":        "statictest",
-		"rotation_period": "6400s",
-	}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-normal",
-		Storage:   config.StorageView,
-		Data:      updateData,
-	}
-
-	resp, _ = b.HandleRequest(namespace.RootContext(nil), req)
-	if !resp.IsError() {
-		t.Fatal("expected response error, got none")
-	}
-
-	err = resp.Error()
-	if err.Error() != "cannot change an existing role to a static account" {
-		t.Fatalf("expected change error, got: (%s)", err)
 	}
 }
 
