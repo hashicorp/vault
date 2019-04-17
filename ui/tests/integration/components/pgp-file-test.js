@@ -6,7 +6,8 @@ import hbs from 'htmlbars-inline-precompile';
 let file;
 const fileEvent = () => {
   const data = { some: 'content' };
-  file = new File([JSON.stringify(data, null, 2)], 'file.json', { type: 'application/json' });
+  file = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  file.name = 'file.json';
   return ['change', { files: [file] }];
 };
 
