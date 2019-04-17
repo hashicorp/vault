@@ -14,7 +14,7 @@ The PostgreSQL storage backend is used to persist Vault's data in a
 [PostgreSQL][postgresql] server or cluster.
 
 - **High Availability** – the PostgreSQL storage backend supports
-  high availability.
+  high availability. Requires PostgreSQL 9.5 or later.
 
 - **Community Supported** – the PostgreSQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -99,7 +99,7 @@ LANGUAGE plpgsql;
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to PostgreSQL.
 
-- `ha_enabled` `(string: "true|false")` – Default not enabled
+- `ha_enabled` `(string: "true|false")` – Default not enabled, requires 9.5 or later.
 
 ## `postgresql` Examples
 
