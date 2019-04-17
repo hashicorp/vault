@@ -172,7 +172,7 @@ func NewMySQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	// Prepare all the statements required
 	statements := map[string]string{
 		"put": "INSERT INTO " + dbTable +
-			" VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
+			" (vault_key,vault_value) VALUES( ?, ? ) ON DUPLICATE KEY UPDATE vault_value=VALUES(vault_value)",
 		"get":    "SELECT vault_value FROM " + dbTable + " WHERE vault_key = ?",
 		"delete": "DELETE FROM " + dbTable + " WHERE vault_key = ?",
 		"list":   "SELECT vault_key FROM " + dbTable + " WHERE vault_key LIKE ?",
