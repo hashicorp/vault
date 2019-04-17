@@ -103,13 +103,13 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	checkListenersFunc := func(expectFail bool) {
-		cores[0].clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+		cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 
 		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
-		dialer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+		dialer := cores[0].getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 		for i := range cores[0].Listeners {
 
-			clnAddr := cores[0].clusterListener.clusterListenerAddrs[i]
+			clnAddr := cores[0].clusterListener.Addrs()[i]
 			netConn, err := dialer(clnAddr.String(), 0)
 			conn := netConn.(*tls.Conn)
 			if err != nil {
@@ -130,7 +130,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			switch {
 			case connState.Version != tls.VersionTLS12:
 				t.Fatal("version mismatch")
-			case connState.NegotiatedProtocol != requestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
+			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
 			t.Logf("testing %s successful", clnAddr)
@@ -382,12 +382,12 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	core.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{core.Core})
+	core.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{core.Core})
 
 	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dialer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+	dialer := core.getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 
-	netConn, err := dialer(core.clusterListener.clusterListenerAddrs[0].String(), 0)
+	netConn, err := dialer(core.clusterListener.Addrs()[0].String(), 0)
 	conn := netConn.(*tls.Conn)
 	if err != nil {
 		t.Fatal(err)
