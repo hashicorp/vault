@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -419,7 +420,7 @@ type Core struct {
 	loadCaseSensitiveIdentityStore bool
 
 	// clusterListener starts up and manages connections on the cluster ports
-	clusterListener *ClusterListener
+	clusterListener *cluster.Listener
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
