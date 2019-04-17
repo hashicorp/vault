@@ -179,16 +179,16 @@ func (rf *requestForwardingHandler) Stop() error {
 
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding(ctx context.Context) error {
-	c.logger.Debug("cluster listener setup function")
-	defer c.logger.Debug("leaving cluster listener setup function")
+	c.logger.Debug("request forwarding setup function")
+	defer c.logger.Debug("leaving request forwarding setup function")
 
 	// Clean up in case we have transitioned from a client to a server
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Resolve locally to avoid races
 	if c.ha == nil || c.clusterListener == nil {
+		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
 

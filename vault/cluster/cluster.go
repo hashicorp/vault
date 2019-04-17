@@ -77,7 +77,7 @@ func NewListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger)
 
 		listenerAddrs: addrs,
 		cipherSuites:  cipherSuites,
-		logger:        logger.Named("cluster-listener"),
+		logger:        logger,
 	}
 }
 
