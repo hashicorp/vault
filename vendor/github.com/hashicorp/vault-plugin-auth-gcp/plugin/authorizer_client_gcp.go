@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
 )

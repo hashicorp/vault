@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAuditFile_fileModeNew(t *testing.T) {

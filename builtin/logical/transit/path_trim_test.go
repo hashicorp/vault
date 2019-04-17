@@ -3,9 +3,9 @@ package transit
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Trim(t *testing.T) {

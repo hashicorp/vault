@@ -10,9 +10,9 @@ import (
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )

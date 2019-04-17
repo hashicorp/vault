@@ -24,6 +24,10 @@ type Logger struct {
 	// own that implements the `Formatter` interface, see the `README` or included
 	// formatters for examples.
 	Formatter Formatter
+
+	// Flag for whether to log caller info (off by default)
+	ReportCaller bool
+
 	// The logging level the logger should log at. This is typically (and defaults
 	// to) `logrus.Info`, which allows Info(), Warn(), Error() and Fatal() to be
 	// logged.
@@ -73,11 +77,12 @@ func (mw *MutexWrap) Disable() {
 // It's recommended to make this a global instance called `log`.
 func New() *Logger {
 	return &Logger{
-		Out:       os.Stderr,
-		Formatter: new(TextFormatter),
-		Hooks:     make(LevelHooks),
-		Level:     InfoLevel,
-		ExitFunc:  os.Exit,
+		Out:          os.Stderr,
+		Formatter:    new(TextFormatter),
+		Hooks:        make(LevelHooks),
+		Level:        InfoLevel,
+		ExitFunc:     os.Exit,
+		ReportCaller: false,
 	}
 }
 
@@ -124,6 +129,14 @@ func (logger *Logger) WithTime(t time.Time) *Entry {
 	entry := logger.newEntry()
 	defer logger.releaseEntry(entry)
 	return entry.WithTime(t)
+}
+
+func (logger *Logger) Tracef(format string, args ...interface{}) {
+	if logger.IsLevelEnabled(TraceLevel) {
+		entry := logger.newEntry()
+		entry.Tracef(format, args...)
+		logger.releaseEntry(entry)
+	}
 }
 
 func (logger *Logger) Debugf(format string, args ...interface{}) {
@@ -189,6 +202,14 @@ func (logger *Logger) Panicf(format string, args ...interface{}) {
 	}
 }
 
+func (logger *Logger) Trace(args ...interface{}) {
+	if logger.IsLevelEnabled(TraceLevel) {
+		entry := logger.newEntry()
+		entry.Trace(args...)
+		logger.releaseEntry(entry)
+	}
+}
+
 func (logger *Logger) Debug(args ...interface{}) {
 	if logger.IsLevelEnabled(DebugLevel) {
 		entry := logger.newEntry()
@@ -248,6 +269,14 @@ func (logger *Logger) Panic(args ...interface{}) {
 	if logger.IsLevelEnabled(PanicLevel) {
 		entry := logger.newEntry()
 		entry.Panic(args...)
+		logger.releaseEntry(entry)
+	}
+}
+
+func (logger *Logger) Traceln(args ...interface{}) {
+	if logger.IsLevelEnabled(TraceLevel) {
+		entry := logger.newEntry()
+		entry.Traceln(args...)
 		logger.releaseEntry(entry)
 	}
 }
@@ -368,6 +397,12 @@ func (logger *Logger) SetOutput(output io.Writer) {
 	logger.mu.Lock()
 	defer logger.mu.Unlock()
 	logger.Out = output
+}
+
+func (logger *Logger) SetReportCaller(reportCaller bool) {
+	logger.mu.Lock()
+	defer logger.mu.Unlock()
+	logger.ReportCaller = reportCaller
 }
 
 // ReplaceHooks replaces the logger hooks and returns the old ones

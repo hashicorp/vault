@@ -118,8 +118,11 @@ module('Integration | Component | form field', function(hooks) {
   });
 
   test('it renders: sensitive', async function(assert) {
-    await setup.call(this, createAttr('password', 'string', { sensitive: true }));
+    let [model, spy] = await setup.call(this, createAttr('password', 'string', { sensitive: true }));
     assert.ok(component.hasMaskedInput, 'renders the masked-input component');
+    await component.fields[0].textarea('secret');
+    assert.equal(model.get('password'), 'secret');
+    assert.ok(spy.calledWith('password', 'secret'), 'onChange called with correct args');
   });
 
   test('it uses a passed label', async function(assert) {

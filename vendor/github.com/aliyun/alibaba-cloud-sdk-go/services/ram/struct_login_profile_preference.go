@@ -17,8 +17,8 @@ package ram
 
 // LoginProfilePreference is a nested struct in ram response
 type LoginProfilePreference struct {
+	LoginNetworkMasks         string `json:"LoginNetworkMasks" xml:"LoginNetworkMasks"`
 	LoginSessionDuration      int    `json:"LoginSessionDuration" xml:"LoginSessionDuration"`
 	EnableSaveMFATicket       bool   `json:"EnableSaveMFATicket" xml:"EnableSaveMFATicket"`
-	LoginNetworkMasks         string `json:"LoginNetworkMasks" xml:"LoginNetworkMasks"`
 	AllowUserToChangePassword bool   `json:"AllowUserToChangePassword" xml:"AllowUserToChangePassword"`
 }

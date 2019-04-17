@@ -29,6 +29,14 @@ should work in place of HCL. To work around this error, pretty print the JSON po
 or add spaces between repeating brackets.  This regression will be addressed in
 a future release.
 
+### Common Mount Prefixes
+
+Before running the upgrade, users should run `vault secrets list` and `vault auth list` 
+to check their mount table to ensure that mounts do not have common prefix "folders".  
+For example, if there is a mount with path `team1/` and a mount with path `team1/secrets`, 
+Vault will fail to unseal. Before upgrade, these mounts must be remounted at a path that 
+does not share a common prefix.
+
 ## Changes Since 0.10.4
 
 ### Request Timeouts

@@ -18,7 +18,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // Config represents the configuration information used *along with* the MFA
 // secret tied to caller's identity, to verify the MFA credentials supplied.
@@ -164,116 +164,14 @@ func (m *Config) GetPingIDConfig() *PingIDConfig {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Config) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Config_OneofMarshaler, _Config_OneofUnmarshaler, _Config_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*Config) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*Config_TOTPConfig)(nil),
 		(*Config_OktaConfig)(nil),
 		(*Config_DuoConfig)(nil),
 		(*Config_PingIDConfig)(nil),
 	}
-}
-
-func _Config_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Config)
-	// config
-	switch x := m.Config.(type) {
-	case *Config_TOTPConfig:
-		b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.TOTPConfig); err != nil {
-			return err
-		}
-	case *Config_OktaConfig:
-		b.EncodeVarint(7<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.OktaConfig); err != nil {
-			return err
-		}
-	case *Config_DuoConfig:
-		b.EncodeVarint(8<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.DuoConfig); err != nil {
-			return err
-		}
-	case *Config_PingIDConfig:
-		b.EncodeVarint(9<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.PingIDConfig); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Config.Config has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Config_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Config)
-	switch tag {
-	case 6: // config.totp_config
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(TOTPConfig)
-		err := b.DecodeMessage(msg)
-		m.Config = &Config_TOTPConfig{msg}
-		return true, err
-	case 7: // config.okta_config
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(OktaConfig)
-		err := b.DecodeMessage(msg)
-		m.Config = &Config_OktaConfig{msg}
-		return true, err
-	case 8: // config.duo_config
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(DuoConfig)
-		err := b.DecodeMessage(msg)
-		m.Config = &Config_DuoConfig{msg}
-		return true, err
-	case 9: // config.pingid_config
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(PingIDConfig)
-		err := b.DecodeMessage(msg)
-		m.Config = &Config_PingIDConfig{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Config_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Config)
-	// config
-	switch x := m.Config.(type) {
-	case *Config_TOTPConfig:
-		s := proto.Size(x.TOTPConfig)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Config_OktaConfig:
-		s := proto.Size(x.OktaConfig)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Config_DuoConfig:
-		s := proto.Size(x.DuoConfig)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Config_PingIDConfig:
-		s := proto.Size(x.PingIDConfig)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 // TOTPConfig represents the configuration information required to generate
@@ -662,59 +560,11 @@ func (m *Secret) GetTOTPSecret() *TOTPSecret {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Secret) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Secret_OneofMarshaler, _Secret_OneofUnmarshaler, _Secret_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*Secret) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*Secret_TOTPSecret)(nil),
 	}
-}
-
-func _Secret_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Secret)
-	// value
-	switch x := m.Value.(type) {
-	case *Secret_TOTPSecret:
-		b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.TOTPSecret); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Secret.Value has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Secret_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Secret)
-	switch tag {
-	case 2: // value.totp_secret
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(TOTPSecret)
-		err := b.DecodeMessage(msg)
-		m.Value = &Secret_TOTPSecret{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Secret_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Secret)
-	// value
-	switch x := m.Value.(type) {
-	case *Secret_TOTPSecret:
-		s := proto.Size(x.TOTPSecret)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 // TOTPSecret represents the secret that gets stored in the entity about a

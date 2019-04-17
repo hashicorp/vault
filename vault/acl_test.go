@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestACL_NewACL(t *testing.T) {

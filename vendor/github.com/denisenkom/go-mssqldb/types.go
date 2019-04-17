@@ -62,6 +62,7 @@ const (
 	typeNChar      = 0xef
 	typeXml        = 0xf1
 	typeUdt        = 0xf0
+	typeTvp        = 0xf3
 
 	// long length types
 	typeText    = 0x23
@@ -72,6 +73,14 @@ const (
 const _PLP_NULL = 0xFFFFFFFFFFFFFFFF
 const _UNKNOWN_PLP_LEN = 0xFFFFFFFFFFFFFFFE
 const _PLP_TERMINATOR = 0x00000000
+const _TVP_NULL_TOKEN = 0xffff
+
+// TVP COLUMN FLAGS
+const _TVP_COLUMN_DEFAULT_FLAG = 0x200
+const _TVP_END_TOKEN = 0x00
+const _TVP_ROW_TOKEN = 0x01
+const _TVP_ORDER_UNIQUE_TOKEN = 0x10
+const _TVP_COLUMN_ORDERING_TOKEN = 0x11
 
 // TYPE_INFO rule
 // http://msdn.microsoft.com/en-us/library/dd358284.aspx
@@ -145,6 +154,8 @@ func writeTypeInfo(w io.Writer, ti *typeInfo) (err error) {
 		// those are fixed length
 		// https://msdn.microsoft.com/en-us/library/dd341171.aspx
 		ti.Writer = writeFixedType
+	case typeTvp:
+		ti.Writer = writeFixedType
 	default: // all others are VARLENTYPE
 		err = writeVarLen(w, ti)
 		if err != nil {
@@ -162,6 +173,7 @@ func writeFixedType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 // https://msdn.microsoft.com/en-us/library/dd358341.aspx
 func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 	switch ti.TypeId {
+
 	case typeDateN:
 		ti.Writer = writeByteLenType
 	case typeTimeN, typeDateTime2N, typeDateTimeOffsetN:
@@ -203,6 +215,7 @@ func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 		ti.Writer = writeByteLenType
 	case typeBigVarBin, typeBigVarChar, typeBigBinary, typeBigChar,
 		typeNVarChar, typeNChar, typeXml, typeUdt:
+
 		// short len types
 		if ti.Size > 8000 || ti.Size == 0 {
 			if err = binary.Write(w, binary.LittleEndian, uint16(0xffff)); err != nil {
@@ -1219,6 +1232,11 @@ func makeDecl(ti typeInfo) string {
 		return ti.UdtInfo.TypeName
 	case typeGuid:
 		return "uniqueidentifier"
+	case typeTvp:
+		if ti.UdtInfo.SchemaName != "" {
+			return fmt.Sprintf("%s.%s READONLY", ti.UdtInfo.SchemaName, ti.UdtInfo.TypeName)
+		}
+		return fmt.Sprintf("%s READONLY", ti.UdtInfo.TypeName)
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %#x", ti.TypeId))
 	}

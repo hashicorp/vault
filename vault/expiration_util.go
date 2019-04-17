@@ -5,7 +5,7 @@ package vault
 import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func (m *ExpirationManager) leaseView(*namespace.Namespace) *BarrierView {

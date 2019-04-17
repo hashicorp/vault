@@ -91,7 +91,7 @@ func CreateListAccessKeysRequest() (request *ListAccessKeysRequest) {
 	request = &ListAccessKeysRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "ListAccessKeys", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "ListAccessKeys", "ram", "openAPI")
 	return
 }
 
