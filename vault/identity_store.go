@@ -9,12 +9,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -205,6 +206,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			if err != nil {
 				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
 				return
+			}
+
+			if group.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete group alias from MemDB", "error", err)
+					return
+				}
 			}
 		}
 
@@ -406,6 +415,7 @@ func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor,
 func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
 	var entity *identity.Entity
 	var err error
+	var update bool
 
 	if alias == nil {
 		return nil, fmt.Errorf("alias is nil")
@@ -428,12 +438,12 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		return nil, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
-	// Check if an entity already exists for the given alais
+	// Check if an entity already exists for the given alias
 	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
 	if err != nil {
 		return nil, err
 	}
-	if entity != nil {
+	if entity != nil && changedAliasIndex(entity, alias) == -1 {
 		return entity, nil
 	}
 
@@ -445,40 +455,50 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	defer txn.Abort()
 
 	// Check if an entity was created before acquiring the lock
-	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
 	if err != nil {
 		return nil, err
 	}
 	if entity != nil {
-		return entity, nil
+		idx := changedAliasIndex(entity, alias)
+		if idx == -1 {
+			return entity, nil
+		}
+		a := entity.Aliases[idx]
+		a.Metadata = alias.Metadata
+		a.LastUpdateTime = ptypes.TimestampNow()
+
+		update = true
 	}
 
-	entity = new(identity.Entity)
-	err = i.sanitizeEntity(ctx, entity)
-	if err != nil {
-		return nil, err
-	}
+	if !update {
+		entity = new(identity.Entity)
+		err = i.sanitizeEntity(ctx, entity)
+		if err != nil {
+			return nil, err
+		}
 
-	// Create a new alias
-	newAlias := &identity.Alias{
-		CanonicalID:   entity.ID,
-		Name:          alias.Name,
-		MountAccessor: alias.MountAccessor,
-		Metadata:      alias.Metadata,
-		MountPath:     mountValidationResp.MountPath,
-		MountType:     mountValidationResp.MountType,
-	}
+		// Create a new alias
+		newAlias := &identity.Alias{
+			CanonicalID:   entity.ID,
+			Name:          alias.Name,
+			MountAccessor: alias.MountAccessor,
+			Metadata:      alias.Metadata,
+			MountPath:     mountValidationResp.MountPath,
+			MountType:     mountValidationResp.MountType,
+		}
 
-	err = i.sanitizeAlias(ctx, newAlias)
-	if err != nil {
-		return nil, err
-	}
+		err = i.sanitizeAlias(ctx, newAlias)
+		if err != nil {
+			return nil, err
+		}
 
-	i.logger.Debug("creating a new entity", "alias", newAlias)
+		i.logger.Debug("creating a new entity", "alias", newAlias)
 
-	// Append the new alias to the new entity
-	entity.Aliases = []*identity.Alias{
-		newAlias,
+		// Append the new alias to the new entity
+		entity.Aliases = []*identity.Alias{
+			newAlias,
+		}
 	}
 
 	// Update MemDB and persist entity object
@@ -490,4 +510,18 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	txn.Commit()
 
 	return entity, nil
+}
+
+// changedAliasIndex searches an entity for changed alias metadata.
+//
+// If a match is found, the changed alias's index is returned. If no alias
+// names match or no metadata is different, -1 is returned.
+func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
+	for i, a := range entity.Aliases {
+		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
+			return i
+		}
+	}
+
+	return -1
 }

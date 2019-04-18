@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathCredsCreate(b *databaseBackend) *framework.Path {
@@ -51,7 +51,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// If role name isn't in the database's allowed roles, send back a
 		// permission denied.
 		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
-			return nil, logical.ErrPermissionDenied
+			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
 
 		// Get the Database object

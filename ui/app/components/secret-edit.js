@@ -134,14 +134,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
-  buttonDisabled: or(
-    'requestInFlight',
-    'model.isFolder',
-    'model.isError',
-    'model.flagsIsInvalid',
-    'hasLintError',
-    'error'
-  ),
+  buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid', 'hasLintError', 'error'),
 
   modelForData: computed('isV2', 'model', function() {
     return this.isV2 ? this.model.belongsTo('selectedVersion').value() : this.model;
@@ -162,6 +155,22 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
   showAdvancedMode: computed('preferAdvancedEdit', 'secretDataIsAdvanced', 'lastChange', function() {
     return this.secretDataIsAdvanced || this.preferAdvancedEdit;
   }),
+
+  isWriteWithoutRead: computed(
+    'model.{failedServerRead,selectedVersion.failedServerRead}',
+    'isV2',
+    function() {
+      // if the version couldn't be read from the server
+      if (this.isV2 && this.model.selectedVersion.failedServerRead) {
+        return true;
+      }
+      // if the model couldn't be read from the server
+      if (!this.isV2 && this.model.failedServerRead) {
+        return true;
+      }
+      return false;
+    }
+  ),
 
   transitionToRoute() {
     return this.router.transitionTo(...arguments);

@@ -1,8 +1,8 @@
 <ICon
-  @glyph="{{alertType.glyph}}"
-  @class="{{alertType.glyphClass}}"
+  @glyph="{{this.alertType.glyph}}"
+  @class="{{this.alertType.glyphClass}}"
   @size="16"
 />
-<p class="{{textClass}}">
-  {{message}}
+<p class="{{this.textClass}}">
+  {{@message}}
 </p>

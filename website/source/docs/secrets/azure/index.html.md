@@ -63,7 +63,7 @@ To configure a role called "my-role" with an existing service principal:
     $ vault write azure/roles/my-role application_object_id=<existing_app_obj_id> ttl=1h
     ```
 
-    Alternatively, to configure the role to create a new service principal with Azure roles:
+Alternatively, to configure the role to create a new service principal with Azure roles:
 
     ```text
     $ vault write azure/roles/my-role ttl=1h azure_roles=-<<EOF
@@ -167,7 +167,6 @@ If the client ID or secret are not present and Vault is running on and Azure VM,
 The following Azure roles and Azure Active Directory (AAD) permissions are required, regardless of which authentication method is used:
 
 - "Owner" role for the subscription scope
-- "Read and write directory data" permission in AAD
 - "Read and write all applications" permission in AAD
 
 These permissions can be configured through the Azure Portal, CLI tool, or PowerShell.

@@ -82,8 +82,8 @@ znodes and, potentially, take Vault out of service.
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum TLS version to
   use. Accepted values are `"tls10"`, `"tls11"` or `"tls12"`.
 
-- `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
-  should be disabled. It is highly discouraged that you disable this option.
+- `tls_skip_verify` `(bool: false)` – Disable verification of TLS certificates.
+  Using this option is highly discouraged.
 
 - `tls_verify_ip` `(bool: false)` - This property comes into play only when
   'tls_skip_verify' is set to false. When 'tls_verify_ip' is set to 'true', the

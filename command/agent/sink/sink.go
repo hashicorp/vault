@@ -13,11 +13,15 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/dhutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 type Sink interface {
 	WriteToken(string) error
+}
+
+type SinkReader interface {
+	Token() string
 }
 
 type SinkConfig struct {
@@ -67,8 +71,30 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
 func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) {
+	latestToken := new(string)
+	writeSink := func(currSink *SinkConfig, currToken string) error {
+		if currToken != *latestToken {
+			return nil
+		}
+		var err error
+
+		if currSink.WrapTTL != 0 {
+			if currToken, err = currSink.wrapToken(ss.client, currSink.WrapTTL, currToken); err != nil {
+				return err
+			}
+		}
+
+		if currSink.DHType != "" {
+			if currToken, err = currSink.encryptToken(currToken); err != nil {
+				return err
+			}
+		}
+
+		return currSink.WriteToken(currToken)
+	}
+
 	if incoming == nil {
-		panic("incoming or shutdown channel are nil")
+		panic("incoming channel is nil")
 	}
 
 	ss.logger.Info("starting sink server")
@@ -77,8 +103,11 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 		close(ss.DoneCh)
 	}()
 
-	latestToken := new(string)
-	sinkCh := make(chan func() error, len(sinks))
+	type sinkToken struct {
+		sink  *SinkConfig
+		token string
+	}
+	sinkCh := make(chan sinkToken, len(sinks))
 	for {
 		select {
 		case <-ctx.Done():
@@ -100,36 +129,13 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 				*latestToken = token
 
-				sinkFunc := func(currSink *SinkConfig, currToken string) func() error {
-					return func() error {
-						if currToken != *latestToken {
-							return nil
-						}
-						var err error
-
-						if currSink.WrapTTL != 0 {
-							if currToken, err = currSink.wrapToken(ss.client, currSink.WrapTTL, currToken); err != nil {
-								return err
-							}
-						}
-
-						if currSink.DHType != "" {
-							if currToken, err = currSink.encryptToken(currToken); err != nil {
-								return err
-							}
-						}
-
-						return currSink.WriteToken(currToken)
-					}
-				}
-
 				for _, s := range sinks {
 					atomic.AddInt32(ss.remaining, 1)
-					sinkCh <- sinkFunc(s, token)
+					sinkCh <- sinkToken{s, token}
 				}
 			}
 
-		case sinkFunc := <-sinkCh:
+		case st := <-sinkCh:
 			atomic.AddInt32(ss.remaining, -1)
 			select {
 			case <-ctx.Done():
@@ -137,7 +143,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			default:
 			}
 
-			if err := sinkFunc(); err != nil {
+			if err := writeSink(st.sink, st.token); err != nil {
 				backoff := 2*time.Second + time.Duration(ss.random.Int63()%int64(time.Second*2)-int64(time.Second))
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
 				select {
@@ -145,7 +151,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 					return
 				case <-time.After(backoff):
 					atomic.AddInt32(ss.remaining, 1)
-					sinkCh <- sinkFunc
+					sinkCh <- st
 				}
 			} else {
 				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {

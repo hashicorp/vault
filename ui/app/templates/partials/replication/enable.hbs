@@ -59,7 +59,7 @@
     {{else}}
       <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
         <label for="replication-mode" class="is-label is-block">
-          Type of Replication
+          Type of replication
         </label>
         In both Performance and Disaster Recovery (DR) Replication, secondaries share the underlying configuration, policies, and supporting secrets as their primary cluster.
       </p>
@@ -102,7 +102,7 @@
                 </p>
               {{else}}
                 <p class="help has-text-grey-dark">
-                  Performance replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
+                  Performance Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.
                 </p>
               {{/if}}
             </div>
@@ -141,11 +141,11 @@
         </select>
       </div>
       {{#if (eq mode 'secondary')}}
-          <AlertInline
-            @class="has-top"
-            @type="warning"
-            @message="This will immediately clear all data in this cluster!"
-          />
+        <AlertInline
+          @class="has-top"
+          @type="warning"
+          @message="This will immediately clear all data in this cluster!"
+        />
       {{/if}}
     </div>
     {{#if (eq mode 'primary')}}
@@ -163,7 +163,7 @@
         </div>
       {{else}}
         <p>
-        The token you are using is not authorized to enable primary replication.
+          The token you are using is not authorized to enable primary replication.
         </p>
       {{/if}}
     {{else}}
@@ -184,8 +184,8 @@
             }}
             {{#if showExplanation}}
               <p>
-                When running as a DR secondary Vault is read only.
-                For this reason, we don't allow other replication modes to operate at the same time. This cluster is also
+                When running as a DR Secondary Vault is read only.
+                For this reason, we don't allow other Replication modes to operate at the same time. This cluster is also
                 currently operating as a Performance {{capitalize cluster.performance.modeForUrl}}.
               </p>
             {{/if}}
@@ -250,7 +250,7 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button type="submit" class="button is-primary" disabled={{disallowEnable}} data-test-replication-enable=true>
-          Enable replication
+          Enable Replication
         </button>
       </div>
     </div>

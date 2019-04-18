@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -108,7 +108,7 @@ func (c *CORSConfig) Enable(ctx context.Context, urls []string, headers []string
 	c.AllowedOrigins = urls
 
 	// Start with the standard headers to Vault accepts.
-	c.AllowedHeaders = append(c.AllowedHeaders, StdAllowedHeaders...)
+	c.AllowedHeaders = append([]string{}, StdAllowedHeaders...)
 
 	// Allow the user to add additional headers to the list of
 	// headers allowed on cross-origin requests.

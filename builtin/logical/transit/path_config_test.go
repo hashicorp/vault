@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_ConfigSettings(t *testing.T) {
@@ -101,6 +101,7 @@ func TestTransit_ConfigSettings(t *testing.T) {
 
 	req.Data = map[string]interface{}{
 		"plaintext": "abcd",
+		"input":     "abcd",
 		"context":   "abcd",
 	}
 

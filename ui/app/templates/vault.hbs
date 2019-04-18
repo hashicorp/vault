@@ -1,0 +1,29 @@
+
+{{outlet}}
+  <footer class="footer has-text-grey has-text-centered">
+    <span class="is-inline-block">
+      <ICon @glyph="hashicorp" @size=20 @aria-label="HashiCorp logo" @class="has-text-grey-light" />
+      &copy; {{date-format (now) "YYYY"}} HashiCorp
+    </span>
+    <span>
+      Vault {{activeCluster.leaderNode.version}}
+    </span>
+    {{#if (is-version "OSS")}}
+      <span>
+        {{#upgrade-link linkClass="has-text-grey"}}
+          Upgrade to Vault Enterprise
+        {{/upgrade-link}}
+      </span>
+    {{/if}}
+    <span>
+      <a class="has-text-grey" target="_blank" rel="noreferrer noopener" href="https://www.vaultproject.io/docs/index.html">Documentation</a>
+    </span>
+  </footer>
+  {{#if (eq env "development") }}
+    <div class="env-banner level development">
+      <div class="level-item notification has-background-dark has-text-white">
+        {{i-con glyph="wand" class="type-icon"}}Local development
+      </div>
+    </div>
+  {{/if}}
+  <div id="modal-wormhole"></div>

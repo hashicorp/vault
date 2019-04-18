@@ -21,8 +21,8 @@ import (
 	metrics "github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify MySQLBackend satisfies the correct interfaces
@@ -561,8 +561,8 @@ var (
 	// ErrUnlockFailed
 	ErrUnlockFailed = errors.New("mysql: unable to release lock, already released or not held by this session")
 	// You were unable to update that you are the new leader in the DB
-	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader infromation")
-	// Error to thow if inbetween getting the lock and checking the ID of it we lost it.
+	ErrClaimFailed = errors.New("mysql: unable to update DB with new leader information")
+	// Error to throw if between getting the lock and checking the ID of it we lost it.
 	ErrSettingGlobalID = errors.New("mysql: getting global lock id failed")
 )
 
@@ -639,7 +639,7 @@ func (i *MySQLLock) Lock() error {
 	}
 
 	// 1 is returned from GET_LOCK if it was able to get the lock
-	// 0 if it failed and NULL if some stange error happened.
+	// 0 if it failed and NULL if some strange error happened.
 	// https://dev.mysql.com/doc/refman/8.0/en/miscellaneous-functions.html#function_get-lock
 	if !lock.Valid || lock.Int64 != 1 {
 		return ErrLockHeld

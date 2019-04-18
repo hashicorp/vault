@@ -59,5 +59,7 @@ flags](/docs/commands/index.html) included on all commands.
 
 ### Command Options
 
+- `-migrate` `(bool: false)` - Indicate that this share is provided with the intent that it is part of a seal migration process.
+
 - `-reset` `(bool: false)` - Discard any previously entered keys to the unseal
   process.

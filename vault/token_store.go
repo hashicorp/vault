@@ -21,19 +21,19 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/logical/plugin/pb"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -85,16 +85,8 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		tokenNS, err := NamespaceByID(ctx, te.NamespaceID, ts.core)
-		if err != nil {
-			return err
-		}
-		if tokenNS == nil {
-			return namespace.ErrNoNamespace
-		}
-
-		switch tokenNS.ID {
-		case namespace.RootNamespaceID:
+		switch {
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -696,7 +688,7 @@ func (ts *TokenStore) tokenStoreAccessorList(ctx context.Context, req *logical.R
 	for _, entry := range entries {
 		aEntry, err := ts.lookupByAccessor(ctx, entry, true, false)
 		if err != nil {
-			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry that could not be successfully decoded; associated error is %q", err.Error()))
 			continue
 		}
 
@@ -1722,7 +1714,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed get namespace from context: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to get namespace from context: {{err}}", err)
 	}
 
 	go func() {
@@ -1749,6 +1741,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			parentList, err := ts.parentView(ns).List(quitCtx, "")
 			if err != nil {
 				return errwrap.Wrapf("failed to fetch secondary index entries: {{err}}", err)
+			}
+
+			// List all the cubbyhole storage keys
+			cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(quitCtx, "")
+			if err != nil {
+				return errwrap.Wrapf("failed to fetch cubbyhole storage keys: {{err}}", err)
 			}
 
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
@@ -1824,9 +1822,13 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			var countAccessorList,
+				countCubbyholeKeys,
 				deletedCountAccessorEmptyToken,
 				deletedCountAccessorInvalidToken,
-				deletedCountInvalidTokenInAccessor int64
+				deletedCountInvalidTokenInAccessor,
+				deletedCountInvalidCubbyholeKey int64
+
+			validCubbyholeKeys := make(map[string]bool)
 
 			// For each of the accessor, see if the token ID associated with it is
 			// a valid one. If not, delete the leases associated with that token
@@ -1871,10 +1873,12 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 
 				lock.RUnlock()
 
-				// If token entry is not found assume that the token is not valid any
-				// more and conclude that accessor, leases, and secondary index entries
-				// for this token should not exist as well.
-				if te == nil {
+				switch {
+				case te == nil:
+					// If token entry is not found assume that the token is not valid any
+					// more and conclude that accessor, leases, and secondary index entries
+					// for this token should not exist as well.
+
 					ts.logger.Info("deleting token with nil entry referenced by accessor", "salted_accessor", saltedAccessor)
 
 					// RevokeByToken expects a '*logical.TokenEntry'. For the
@@ -1904,6 +1908,41 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 						continue
 					}
 					deletedCountAccessorInvalidToken++
+				default:
+					// Cache the cubbyhole storage key when the token is valid
+					switch {
+					case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(te.ID, "s."):
+						saltedID, err := ts.SaltID(quitCtx, te.ID)
+						if err != nil {
+							tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf("failed to create salted token id: {{err}}", err))
+							continue
+						}
+						validCubbyholeKeys[salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash)] = true
+					default:
+						if te.CubbyholeID == "" {
+							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing cubbyhole ID for a valid token"))
+							continue
+						}
+						validCubbyholeKeys[te.CubbyholeID] = true
+					}
+				}
+			}
+
+			// Revoke invalid cubbyhole storage keys
+			for _, key := range cubbyholeKeys {
+				countCubbyholeKeys++
+				if countCubbyholeKeys%500 == 0 {
+					ts.logger.Info("checking if there are invalid cubbyholes", "progress", countCubbyholeKeys)
+				}
+
+				key := strings.TrimSuffix(key, "/")
+				if !validCubbyholeKeys[key] {
+					ts.logger.Info("deleting invalid cubbyhole", "key", key)
+					err = ts.cubbyholeBackend.revoke(quitCtx, key)
+					if err != nil {
+						tidyErrors = multierror.Append(tidyErrors, errwrap.Wrapf(fmt.Sprintf("failed to revoke cubbyhole key %q: {{err}}", key), err))
+					}
+					deletedCountInvalidCubbyholeKey++
 				}
 			}
 
@@ -1915,6 +1954,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			ts.logger.Info("number of deleted accessors which had empty tokens", "count", deletedCountAccessorEmptyToken)
 			ts.logger.Info("number of revoked tokens which were invalid but present in accessors", "count", deletedCountInvalidTokenInAccessor)
 			ts.logger.Info("number of deleted accessors which had invalid tokens", "count", deletedCountAccessorInvalidToken)
+			ts.logger.Info("number of deleted cubbyhole keys that were invalid", "count", deletedCountInvalidCubbyholeKey)
 
 			return tidyErrors.ErrorOrNil()
 		}
@@ -2094,7 +2134,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 
 		if !isSudo {
-			return logical.ErrorResponse("root or sudo privileges required generate a namespace admin token"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("root or sudo privileges required to directly generate a token in a child namespace"), logical.ErrInvalidRequest
 		}
 
 		if strutil.StrListContains(data.Policies, "root") {
@@ -2388,10 +2428,17 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 	// At this point, it is clear whether the token is going to be an orphan or
 	// not. If the token is not going to be an orphan, inherit the parent's
-	// entity identifier into the child token. We must also verify that, if
-	// it's not an orphan, the parent isn't a batch token.
+	// entity identifier into the child token.
 	if te.Parent != "" {
 		te.EntityID = parent.EntityID
+
+		// If the parent has bound CIDRs, copy those into the child. We don't
+		// do this if role is not nil because then we always use the role's
+		// bound CIDRs; roles allow escalation of privilege in proper
+		// circumstances.
+		if role == nil {
+			te.BoundCIDRs = parent.BoundCIDRs
+		}
 	}
 
 	var explicitMaxTTLToUse time.Duration
@@ -2533,6 +2580,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		ExplicitMaxTTL: explicitMaxTTLToUse,
 		CreationPath:   te.Path,
 		TokenType:      te.Type,
+		Orphan:         te.Parent == "",
 	}
 
 	for _, p := range te.Policies {
@@ -2977,7 +3025,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	boundCIDRsRaw, ok := data.GetOk("bound_cidrs")
 	if ok {
 		boundCIDRs := boundCIDRsRaw.([]string)
-		if len(boundCIDRs) > 0 {
+		if len(boundCIDRs) == 0 {
+			entry.BoundCIDRs = nil
+		} else {
 			var parsedCIDRs []*sockaddr.SockAddrMarshaler
 			for _, v := range boundCIDRs {
 				parsedCIDR, err := sockaddr.NewSockAddr(v)
@@ -3014,15 +3064,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 	pathSuffixInt, ok := data.GetOk("path_suffix")
 	if ok {
 		pathSuffix := pathSuffixInt.(string)
-		if pathSuffix != "" {
+		switch {
+		case pathSuffix != "":
 			matched := pathSuffixSanitize.MatchString(pathSuffix)
 			if !matched {
 				return logical.ErrorResponse(fmt.Sprintf(
 					"given role path suffix contains invalid characters; must match %s",
 					pathSuffixSanitize.String())), nil
 			}
-			entry.PathSuffix = pathSuffix
 		}
+		entry.PathSuffix = pathSuffix
 	} else if req.Operation == logical.CreateOperation {
 		entry.PathSuffix = data.Get("path_suffix").(string)
 	}

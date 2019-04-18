@@ -54,7 +54,6 @@ allows for writing keys with arbitrary values.
     $ vault kv get kv/my-secret
     Key                 Value
     ---                 -----
-    refresh_interval    768h
     my-value            s3cr3t
     ```
 
@@ -78,8 +77,7 @@ allows for writing keys with arbitrary values.
 
 Unlike other secrets engines, the KV secrets engine does not enforce TTLs
 for expiration. Instead, the `lease_duration` is a hint for how often consumers
-should check back for a new value. This is commonly displayed as
-`refresh_interval` instead of `lease_duration` to clarify this in output.
+should check back for a new value.
 
 If provided a key of `ttl`, the KV secrets engine will utilize this value
 as the lease duration:
@@ -99,7 +97,6 @@ will reflect the value:
 $ vault kv get kv/my-secret
 Key                 Value
 ---                 -----
-refresh_interval    30m
 my-value            s3cr3t
 ttl                 30m
 ```

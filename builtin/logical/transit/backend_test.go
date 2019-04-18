@@ -15,10 +15,10 @@ import (
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/keysutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -205,11 +205,8 @@ func testTransit_RSA(t *testing.T, keyType string) {
 		"hash_algorithm": "invalid",
 	}
 	resp, err = b.HandleRequest(context.Background(), signReq)
-	if err != nil {
+	if err == nil {
 		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatal("expected an error response")
 	}
 
 	signReq.Data = map[string]interface{}{

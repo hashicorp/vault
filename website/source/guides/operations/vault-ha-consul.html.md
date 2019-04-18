@@ -230,7 +230,7 @@ PermissionsStartOnly=true
 ExecStartPre=-/bin/mkdir -p /var/run/consul
 ExecStartPre=/bin/chown -R consul:consul /var/run/consul
 ExecStart=/usr/local/bin/consul agent \
-    -config-file=/usr/local/etc/consul/server_agent.json \
+    -config-file=/usr/local/etc/consul/client_agent.json \
     -pid-file=/var/run/consul/consul.pid
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
@@ -268,7 +268,7 @@ system and verify the status:
        Memory: 13.6M
           CPU: 0m 52.784s
        CGroup: /system.slice/consul.service
-               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/server_agent.json -pid-file=/var/run/consul/consul.pid
+               └─2068 /usr/local/bin/consul agent -config-file=/usr/local/etc/consul/client_agent.json -pid-file=/var/run/consul/consul.pid
 
 After starting all Consul server agents, let’s check the Consul cluster status:
 

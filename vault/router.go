@@ -10,16 +10,15 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	radix "github.com/armon/go-radix"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	denylistHeaders = []string{
-		"Authorization",
+	deniedPassthroughRequestHeaders = []string{
 		consts.AuthHeaderName,
 	}
 )
@@ -125,7 +124,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		tainted:       false,
 		backend:       backend,
 		mountEntry:    mountEntry,
-		storagePrefix: storageView.prefix,
+		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
 	re.rootPaths.Store(pathsToRadix(paths.Root))
@@ -499,9 +498,14 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
-	// being reloaded during a request.
-	re.l.RLock()
-	defer re.l.RUnlock()
+	// being reloaded during a request. The exception is a renew request on the
+	// token store; such a request will have already been routed through the
+	// token store -> exp manager -> here so we need to not grab the lock again
+	// or we'll be recursively grabbing it.
+	if !(req.Operation == logical.RenewOperation && strings.HasPrefix(req.Path, "auth/token/")) {
+		re.l.RLock()
+		defer re.l.RUnlock()
+	}
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
@@ -526,8 +530,6 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	if req.Path == "/" {
 		req.Path = ""
 	}
-
-	originalEntReq := req.EntReq()
 
 	// Attach the storage view for the request
 	req.Storage = re.storageView
@@ -588,18 +590,29 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	origMFACreds := req.MFACreds
+	originalMFACreds := req.MFACreds
 	req.MFACreds = nil
+
+	originalControlGroup := req.ControlGroup
+	req.ControlGroup = nil
 
 	// Cache the headers
 	headers := req.Headers
+	req.Headers = nil
 
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
 		passthroughRequestHeaders = rawVal.([]string)
 	}
-	req.Headers = filteredPassthroughHeaders(headers, passthroughRequestHeaders)
+	var allowedResponseHeaders []string
+	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("allowed_response_headers"); ok {
+		allowedResponseHeaders = rawVal.([]string)
+	}
+
+	if len(passthroughRequestHeaders) > 0 {
+		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
+	}
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
@@ -638,10 +651,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 		req.EntityID = originalEntityID
 
-		req.MFACreds = origMFACreds
+		req.MFACreds = originalMFACreds
 
 		req.SetTokenEntry(reqTokenEntry)
-		req.SetEntReq(originalEntReq)
+		req.ControlGroup = originalControlGroup
 	}()
 
 	// Invoke the backend
@@ -650,43 +663,50 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		return nil, ok, exists, err
 	} else {
 		resp, err := re.backend.HandleRequest(ctx, req)
-		if resp != nil &&
-			resp.Auth != nil {
-			// When a token gets renewed, the request hits this path and
-			// reaches token store. Token store delegates the renewal to the
-			// expiration manager. Expiration manager in-turn creates a
-			// different logical request and forwards the request to the auth
-			// backend that had initially authenticated the login request. The
-			// forwarding to auth backend will make this code path hit for the
-			// second time for the same renewal request. The accessors in the
-			// Alias structs should be of the auth backend and not of the token
-			// store. Therefore, avoiding the overwriting of accessors by
-			// having a check for path prefix having "renew". This gets applied
-			// for "renew" and "renew-self" requests.
-			if !strings.HasPrefix(req.Path, "renew") {
-				if resp.Auth.Alias != nil {
-					resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
-				}
-				for _, alias := range resp.Auth.GroupAliases {
-					alias.MountAccessor = re.mountEntry.Accessor
-				}
+		if resp != nil {
+			if len(allowedResponseHeaders) > 0 {
+				resp.Headers = filteredHeaders(resp.Headers, allowedResponseHeaders, nil)
+			} else {
+				resp.Headers = nil
 			}
 
-			switch re.mountEntry.Type {
-			case "token", "ns_token":
-				// Nothing; we respect what the token store is telling us and
-				// we don't allow tuning
-			default:
-				switch re.mountEntry.Config.TokenType {
-				case logical.TokenTypeService, logical.TokenTypeBatch:
-					resp.Auth.TokenType = re.mountEntry.Config.TokenType
-				case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
-					if resp.Auth.TokenType == logical.TokenTypeDefault {
-						resp.Auth.TokenType = logical.TokenTypeService
+			if resp.Auth != nil {
+				// When a token gets renewed, the request hits this path and
+				// reaches token store. Token store delegates the renewal to the
+				// expiration manager. Expiration manager in-turn creates a
+				// different logical request and forwards the request to the auth
+				// backend that had initially authenticated the login request. The
+				// forwarding to auth backend will make this code path hit for the
+				// second time for the same renewal request. The accessors in the
+				// Alias structs should be of the auth backend and not of the token
+				// store. Therefore, avoiding the overwriting of accessors by
+				// having a check for path prefix having "renew". This gets applied
+				// for "renew" and "renew-self" requests.
+				if !strings.HasPrefix(req.Path, "renew") {
+					if resp.Auth.Alias != nil {
+						resp.Auth.Alias.MountAccessor = re.mountEntry.Accessor
 					}
-				case logical.TokenTypeDefaultBatch:
-					if resp.Auth.TokenType == logical.TokenTypeDefault {
-						resp.Auth.TokenType = logical.TokenTypeBatch
+					for _, alias := range resp.Auth.GroupAliases {
+						alias.MountAccessor = re.mountEntry.Accessor
+					}
+				}
+
+				switch re.mountEntry.Type {
+				case "token", "ns_token":
+					// Nothing; we respect what the token store is telling us and
+					// we don't allow tuning
+				default:
+					switch re.mountEntry.Config.TokenType {
+					case logical.TokenTypeService, logical.TokenTypeBatch:
+						resp.Auth.TokenType = re.mountEntry.Config.TokenType
+					case logical.TokenTypeDefault, logical.TokenTypeDefaultService:
+						if resp.Auth.TokenType == logical.TokenTypeDefault {
+							resp.Auth.TokenType = logical.TokenTypeService
+						}
+					case logical.TokenTypeDefaultBatch:
+						if resp.Auth.TokenType == logical.TokenTypeDefault {
+							resp.Auth.TokenType = logical.TokenTypeBatch
+						}
 					}
 				}
 			}
@@ -770,8 +790,7 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	return match == remain
 }
 
-// pathsToRadix converts a the mapping of special paths to a mapping
-// of special paths to radix trees.
+// pathsToRadix converts a list of special paths to a radix tree.
 func pathsToRadix(paths []string) *radix.Tree {
 	tree := radix.New()
 	for _, path := range paths {
@@ -787,34 +806,35 @@ func pathsToRadix(paths []string) *radix.Tree {
 	return tree
 }
 
-// filteredPassthroughHeaders returns a headers map[string][]string that
-// contains the filtered values contained in passthroughHeaders. Filtering of
-// passthroughHeaders from the origHeaders is done is a case-insensitive manner.
-// Headers that match values from denylistHeaders will be ignored.
-func filteredPassthroughHeaders(origHeaders map[string][]string, passthroughHeaders []string) map[string][]string {
-	retHeaders := make(map[string][]string)
-
+// filteredHeaders returns a headers map[string][]string that
+// contains the filtered values contained in candidateHeaders. Filtering of
+// candidateHeaders from the origHeaders is done is a case-insensitive manner.
+// Headers that match values from deniedHeaders will be ignored.
+func filteredHeaders(origHeaders map[string][]string, candidateHeaders, deniedHeaders []string) map[string][]string {
 	// Short-circuit if there's nothing to filter
-	if len(passthroughHeaders) == 0 {
-		return retHeaders
+	if len(candidateHeaders) == 0 {
+		return nil
 	}
 
-	// Filter passthroughHeaders values through denyListHeaders first. Returns the
-	// lowercased the complement set.
-	passthroughHeadersSubset := strutil.Difference(passthroughHeaders, denylistHeaders, true)
+	retHeaders := make(map[string][]string, len(origHeaders))
+
+	// Filter candidateHeaders values through deniedHeaders first. Returns the
+	// lowercased complement set. We call even if no denied headers to get the
+	// values lowercased.
+	allowedCandidateHeaders := strutil.Difference(candidateHeaders, deniedHeaders, true)
 
 	// Create a map that uses lowercased header values as the key and the original
 	// header naming as the value for comparison down below.
-	lowerHeadersRef := make(map[string]string, len(origHeaders))
+	lowerOrigHeaderKeys := make(map[string]string, len(origHeaders))
 	for key := range origHeaders {
-		lowerHeadersRef[strings.ToLower(key)] = key
+		lowerOrigHeaderKeys[strings.ToLower(key)] = key
 	}
 
 	// Case-insensitive compare of passthrough headers against originating
 	// headers. The returned headers will be the same casing as the originating
 	// header name.
-	for _, ph := range passthroughHeadersSubset {
-		if header, ok := lowerHeadersRef[ph]; ok {
+	for _, ch := range allowedCandidateHeaders {
+		if header, ok := lowerOrigHeaderKeys[ch]; ok {
 			retHeaders[header] = origHeaders[header]
 		}
 	}

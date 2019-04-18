@@ -1,11 +1,13 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/textproto"
@@ -19,12 +21,12 @@ import (
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	sockaddr "github.com/hashicorp/go-sockaddr"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/pathmanager"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/pathmanager"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -444,7 +446,7 @@ func (fs *UIAssetWrapper) Open(name string) (http.File, error) {
 	return nil, err
 }
 
-func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
+func parseRequest(core *vault.Core, r *http.Request, w http.ResponseWriter, out interface{}) (io.ReadCloser, error) {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
@@ -453,17 +455,27 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 	if maxRequestSize != nil {
 		max, ok := maxRequestSize.(int64)
 		if !ok {
-			return errors.New("could not parse max_request_size from request context")
+			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
 			reader = http.MaxBytesReader(w, r.Body, max)
 		}
 	}
+	var origBody io.ReadWriter
+	if core.PerfStandby() {
+		// Since we're checking PerfStandby here we key on origBody being nil
+		// or not later, so we need to always allocate so it's non-nil
+		origBody = new(bytes.Buffer)
+		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
-		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
+		return nil, errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
-	return err
+	if origBody != nil {
+		return ioutil.NopCloser(origBody), err
+	}
+	return nil, err
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
@@ -561,7 +573,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 // request is a helper to perform a request and properly exit in the
 // case of an error.
-func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
+func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
 	resp, err := core.HandleRequest(rawReq.Context(), r)
 	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
 		if resp == nil {
@@ -571,14 +583,43 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 	}
 	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
-		return resp, false
+		return resp, false, false
+	}
+	if err != nil && errwrap.Contains(err, logical.ErrPerfStandbyPleaseForward.Error()) {
+		return nil, false, true
+	}
+
+	if resp != nil && len(resp.Headers) > 0 {
+		// Set this here so it will take effect regardless of any other type of
+		// response processing
+		header := w.Header()
+		for k, v := range resp.Headers {
+			for _, h := range v {
+				header.Add(k, h)
+			}
+		}
+
+		switch {
+		case resp.Secret != nil,
+			resp.Auth != nil,
+			len(resp.Data) > 0,
+			resp.Redirect != "",
+			len(resp.Warnings) > 0,
+			resp.WrapInfo != nil:
+			// Nothing, resp has data
+
+		default:
+			// We have an otherwise totally empty response except for headers,
+			// so nil out the response now that the headers are written out
+			resp = nil
+		}
 	}
 
 	if respondErrorCommon(w, r, resp, err) {
-		return resp, false
+		return resp, false, false
 	}
 
-	return resp, true
+	return resp, true, false
 }
 
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
@@ -631,39 +672,53 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	w.WriteHeader(307)
 }
 
-// getTokenFromReq parse headers of the incoming request to extract token if present
-// it accepts Authorization Bearer (RFC6750) and X-Vault-Token header
-func getTokenFromReq(r *http.Request) (string, error) {
+// getTokenFromReq parse headers of the incoming request to extract token if
+// present it accepts Authorization Bearer (RFC6750) and X-Vault-Token header.
+// Returns true if the token was sourced from a Bearer header.
+func getTokenFromReq(r *http.Request) (string, bool) {
 	if token := r.Header.Get(consts.AuthHeaderName); token != "" {
-		return token, nil
+		return token, false
 	}
-	if v := r.Header.Get("Authorization"); v != "" {
+	if headers, ok := r.Header["Authorization"]; ok {
 		// Reference for Authorization header format: https://tools.ietf.org/html/rfc7236#section-3
 
-		// If string does not start by Bearer, or contains any space after it. It is a formatting error
-		if !strings.HasPrefix(v, "Bearer ") || strings.LastIndexByte(v, ' ') > 7 {
-			return "", fmt.Errorf("the Authorization header provided is wrongly formatted. Please use \"Bearer <token>\"")
+		// If string does not start by 'Bearer ', it is not one we would use,
+		// but might be used by plugins
+		for _, v := range headers {
+			if !strings.HasPrefix(v, "Bearer ") {
+				continue
+			}
+			return strings.TrimSpace(v[7:]), true
 		}
-		return v[7:], nil
 	}
-	return "", nil
+	return "", false
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
 func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
-	if token, err := getTokenFromReq(r); err != nil {
-		return req, err
-	} else if token != "" {
+	token, fromAuthzHeader := getTokenFromReq(r)
+	if token != "" {
 		req.ClientToken = token
+		req.ClientTokenSource = logical.ClientTokenFromVaultHeader
+		if fromAuthzHeader {
+			req.ClientTokenSource = logical.ClientTokenFromAuthzHeader
+		}
 
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
-		// a token from a Vault version pre-accessors.
+		// a token from a Vault version pre-accessors. We ignore errors for
+		// JWTs.
 		te, err := core.LookupToken(r.Context(), token)
-		if err != nil && strings.Count(token, ".") != 2 {
-			return req, err
+		if err != nil {
+			dotCount := strings.Count(token, ".")
+			// If we have two dots but the second char is a dot it's a vault
+			// token of the form s.SOMETHING.nsid, not a JWT
+			if dotCount != 2 ||
+				dotCount == 2 && token[1] == '.' {
+				return req, err
+			}
 		}
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
@@ -743,7 +798,7 @@ func parseMFAHeader(req *logical.Request) error {
 		// Handle the case where only method name is mentioned and no value
 		// is supplied
 		if !strings.Contains(mfaHeaderValue, ":") {
-			// Mark the presense of method name, but set an empty set to it
+			// Mark the presence of method name, but set an empty set to it
 			// indicating that there were no values supplied for the method
 			if req.MFACreds[mfaHeaderValue] == nil {
 				req.MFACreds[mfaHeaderValue] = []string{}
@@ -767,18 +822,7 @@ func parseMFAHeader(req *logical.Request) error {
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
-	logical.AdjustErrorStatusCode(&status, err)
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
+	logical.RespondError(w, status, err)
 }
 
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
@@ -801,8 +845,4 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
-}
-
-type ErrorResponse struct {
-	Errors []string `json:"errors"`
 }

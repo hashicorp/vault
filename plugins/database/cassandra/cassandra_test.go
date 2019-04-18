@@ -11,7 +11,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/ory/dockertest"
 )
 
@@ -94,7 +94,7 @@ func TestCassandra_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()

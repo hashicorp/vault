@@ -10,9 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
 
@@ -148,7 +148,7 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
 	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
-		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
+		if b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby) {
 			// safety_buffer defaults to 180 days for roletag blacklist
 			safety_buffer := 15552000
 			tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(ctx, req.Storage)

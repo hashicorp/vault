@@ -16,8 +16,8 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )

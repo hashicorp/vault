@@ -3,10 +3,10 @@ package ldap
 import (
 	"context"
 
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/ldaputil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -67,7 +67,7 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldaputil.C
 		persistNeeded = true
 	}
 
-	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
 		if err != nil {
 			return nil, err

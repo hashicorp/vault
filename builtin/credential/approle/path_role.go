@@ -9,13 +9,13 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // roleStorageEntry stores all the options that are set on an role
@@ -847,7 +847,7 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
-	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if needsUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), &role)
 		if err != nil {
 			return nil, err

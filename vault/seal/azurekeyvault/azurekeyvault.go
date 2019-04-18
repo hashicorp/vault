@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
+
+	"github.com/armon/go-metrics"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
@@ -16,7 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -168,7 +171,20 @@ func (v *AzureKeyVaultSeal) KeyID() string {
 // Encrypt is used to encrypt using Azure Key Vault.
 // This returns the ciphertext, and/or any errors from this
 // call.
-func (v *AzureKeyVaultSeal) Encrypt(ctx context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (v *AzureKeyVaultSeal) Encrypt(ctx context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "azurekeyvault", "encrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "azurekeyvault", "encrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "azurekeyvault", "encrypt"}, 1)
+
 	if plaintext == nil {
 		return nil, errors.New("given plaintext for encryption is nil")
 	}
@@ -206,7 +222,20 @@ func (v *AzureKeyVaultSeal) Encrypt(ctx context.Context, plaintext []byte) (*phy
 }
 
 // Decrypt is used to decrypt the ciphertext.
-func (v *AzureKeyVaultSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (v *AzureKeyVaultSeal) Decrypt(ctx context.Context, in *physical.EncryptedBlobInfo) (pt []byte, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "azurekeyvault", "decrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "azurekeyvault", "decrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "azurekeyvault", "decrypt"}, 1)
+
 	if in == nil {
 		return nil, errors.New("given input for decryption is nil")
 	}

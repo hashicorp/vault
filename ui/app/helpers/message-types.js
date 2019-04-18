@@ -1,6 +1,6 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
-const MESSAGE_TYPES = {
+export const MESSAGE_TYPES = {
   info: {
     class: 'is-info',
     glyphClass: 'has-text-info',
@@ -16,7 +16,7 @@ const MESSAGE_TYPES = {
   danger: {
     class: 'is-danger',
     glyphClass: 'has-text-danger',
-    glyph: 'close-circled',
+    glyph: 'cancel-square-fill',
     text: 'Error',
   },
   warning: {

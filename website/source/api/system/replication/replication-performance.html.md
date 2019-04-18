@@ -18,9 +18,9 @@ sync progress, etc).
 
 This is an authenticated endpoint.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/performance/status`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/status`    |
 
 ### Sample Request
 
@@ -79,9 +79,9 @@ must be promoted).
 !> Only one primary should be active at a given time. Multiple primaries may
 result in data loss!
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/primary/enable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/enable` |
 
 ### Parameters
 
@@ -114,9 +114,9 @@ This secondary cluster will not attempt to connect to a primary (see the update-
 but will maintain knowledge of its cluster ID and can be reconnected to the same
 replication set without wiping local storage.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/primary/demote` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/demote` |
 
 ### Sample Request
 
@@ -136,9 +136,9 @@ case this means a wipe of the underlying storage when connected to a primary,
 and in the primary case, secondaries connecting back to the cluster (even if
 they have connected before) will require a wipe of the underlying storage.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/primary/disable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/disable` |
 
 
 ### Sample Request
@@ -158,9 +158,9 @@ identifier can later be used to revoke a secondary's access.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/sys/replication/performance/primary/secondary-token` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/sys/replication/performance/primary/secondary-token` |
 
 ### Parameters
 
@@ -212,9 +212,9 @@ This endpoint revokes a performance secondary's ability to connect to the
 performance primary cluster; the secondary will immediately be disconnected and
 will not be allowed to connect again unless given a new activation token.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/primary/revoke-secondary` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/revoke-secondary` |
 
 ### Parameters
 
@@ -245,9 +245,9 @@ Filtering can be specified in whitelist mode or blacklist mode.  In whitelist
 mode the secret and auth mounts that are specified are included to the
 selected secondary.  In blacklist mode, the mount paths are excluded.
 
-| Method   | Path                                                     | Produces               |
-| :------- | :------------------------------------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/primary/mount-filter/:id` | `204 (empty body)` |
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/mount-filter/:id` |
 
 ### Parameters
 
@@ -282,8 +282,8 @@ $ curl \
 This endpoint is used to read the mode and the mount paths that are filtered
 for a secondary.
 
-| Method   | Path                                                     | Produces               |
-| :------- | :------------------------------------------------------- | :--------------------- |
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
 | `GET`    | `/sys/replication/performance/primary/mount-filter/:id`  | `200 (empty body)` |
 
 ### Parameters
@@ -311,9 +311,9 @@ $ curl \
 
 This endpoint is used to delete the mount filters for a secondary.
 
-| Method   | Path                                                     | Produces               |
-| :------- | :------------------------------------------------------- | :--------------------- |
-| `DELETE` | `/sys/replication/performance/primary/mount-filter/:id`  | `204 (empty body)` |
+| Method   | Path                                                     |
+| :------------------------------------------------------- | :--------------------- |
+| `DELETE` | `/sys/replication/performance/primary/mount-filter/:id`  |
 
 ### Parameters
 
@@ -335,9 +335,9 @@ token.
 
 !> This will immediately clear all data in the secondary cluster!
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/secondary/enable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/enable` |
 
 ### Parameters
 
@@ -382,9 +382,9 @@ For data safety and security reasons, new secondary tokens will need to be
 issued to other secondaries, and there should never be more than one performance
 primary at a time.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/secondary/promote` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/promote` |
 
 ### Parameters
 
@@ -423,9 +423,9 @@ to a primary, and in the primary case, secondaries connecting back to the
 cluster (even if they have connected before) will require a wipe of the
 underlying storage.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/secondary/disable` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/disable` |
 
 
 ### Sample Request
@@ -442,9 +442,9 @@ $ curl \
 This endpoint changes a performance secondary cluster's assigned primary cluster using a
 secondary activation token. This does not wipe all data in the cluster.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/performance/secondary/update-primary` | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/update-primary` |
 
 ### Parameters
 

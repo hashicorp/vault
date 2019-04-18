@@ -13,15 +13,16 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pluginutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
@@ -119,7 +120,7 @@ func TestBackend_PluginMain(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
@@ -1156,8 +1157,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// update connection with glob allowed roles connection
@@ -1254,8 +1255,8 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrPermissionDenied {
-		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	if err == nil {
+		t.Fatal("expected error because role is denied")
 	}
 
 	// Get creds from allowed role, should work.

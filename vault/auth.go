@@ -8,11 +8,11 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -517,7 +517,7 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   path,
 			Value: compressedBytes,
 		}

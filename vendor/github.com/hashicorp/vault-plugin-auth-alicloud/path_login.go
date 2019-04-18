@@ -13,9 +13,9 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/endpoints"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -84,7 +84,8 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 	roleNameIfc, ok := data.GetOk("role")
 	if ok {
 		roleName = roleNameIfc.(string)
-	} else {
+	}
+	if roleName == "" {
 		roleName = parsedARN.RoleName
 	}
 

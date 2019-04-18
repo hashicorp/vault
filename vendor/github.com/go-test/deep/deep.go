@@ -140,6 +140,16 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 		return
 	}
 
+	// Types with an Equal(), like time.Time.
+	eqFunc := a.MethodByName("Equal")
+	if eqFunc.IsValid() {
+		retVals := eqFunc.Call([]reflect.Value{b})
+		if !retVals[0].Bool() {
+			c.saveDiff(a, b)
+		}
+		return
+	}
+
 	switch aKind {
 
 	/////////////////////////////////////////////////////////////////////
@@ -157,29 +167,6 @@ func (c *cmp) equals(a, b reflect.Value, level int) {
 
 			Iterate through the fields (FirstName, LastName), recurse into their values.
 		*/
-
-		// Types with an Equal() method, like time.Time, only if struct field
-		// is exported (CanInterface)
-		if eqFunc := a.MethodByName("Equal"); eqFunc.IsValid() && eqFunc.CanInterface() {
-			// Handle https://github.com/go-test/deep/issues/15:
-			// Don't call T.Equal if the method is from an embedded struct, like:
-			//   type Foo struct { time.Time }
-			// First, we'll encounter Equal(Ttime, time.Time) but if we pass b
-			// as the 2nd arg we'll panic: "Call using pkg.Foo as type time.Time"
-			// As far as I can tell, there's no way to see that the method is from
-			// time.Time not Foo. So we check the type of the 1st (0) arg and skip
-			// unless it's b type. Later, we'll encounter the time.Time anonymous/
-			// embedded field and then we'll have Equal(time.Time, time.Time).
-			funcType := eqFunc.Type()
-			if funcType.NumIn() == 1 && funcType.In(0) == bType {
-				retVals := eqFunc.Call([]reflect.Value{b})
-				if !retVals[0].Bool() {
-					c.saveDiff(a, b)
-				}
-				return
-			}
-		}
-
 		for i := 0; i < a.NumField(); i++ {
 			if aType.Field(i).PkgPath != "" && !CompareUnexportedFields {
 				continue // skip unexported field, e.g. s in type T struct {s string}

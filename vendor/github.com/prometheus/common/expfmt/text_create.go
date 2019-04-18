@@ -19,6 +19,7 @@ import (
 	"io"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/prometheus/common/model"
@@ -43,7 +44,7 @@ const (
 var (
 	bufPool = sync.Pool{
 		New: func() interface{} {
-			return bytes.NewBuffer(make([]byte, 0, initialNumBufSize))
+			return bytes.NewBuffer(make([]byte, 0, initialBufSize))
 		},
 	}
 	numBufPool = sync.Pool{
@@ -416,32 +417,17 @@ func writeLabelPairs(
 
 // writeEscapedString replaces '\' by '\\', new line character by '\n', and - if
 // includeDoubleQuote is true - '"' by '\"'.
+var (
+	escaper       = strings.NewReplacer("\\", `\\`, "\n", `\n`)
+	quotedEscaper = strings.NewReplacer("\\", `\\`, "\n", `\n`, "\"", `\"`)
+)
+
 func writeEscapedString(w enhancedWriter, v string, includeDoubleQuote bool) (int, error) {
-	var (
-		written, n int
-		err        error
-	)
-	for _, r := range v {
-		switch r {
-		case '\\':
-			n, err = w.WriteString(`\\`)
-		case '\n':
-			n, err = w.WriteString(`\n`)
-		case '"':
-			if includeDoubleQuote {
-				n, err = w.WriteString(`\"`)
-			} else {
-				n, err = w.WriteRune(r)
-			}
-		default:
-			n, err = w.WriteRune(r)
-		}
-		written += n
-		if err != nil {
-			return written, err
-		}
+	if includeDoubleQuote {
+		return quotedEscaper.WriteString(w, v)
+	} else {
+		return escaper.WriteString(w, v)
 	}
-	return written, nil
 }
 
 // writeFloat is equivalent to fmt.Fprint with a float64 argument but hardcodes

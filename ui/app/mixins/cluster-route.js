@@ -6,6 +6,7 @@ const INIT = 'vault.cluster.init';
 const UNSEAL = 'vault.cluster.unseal';
 const AUTH = 'vault.cluster.auth';
 const CLUSTER = 'vault.cluster';
+const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
 const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
 
 export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
@@ -13,8 +14,8 @@ export { INIT, UNSEAL, AUTH, CLUSTER, DR_REPLICATION_SECONDARY };
 export default Mixin.create({
   auth: service(),
 
-  transitionToTargetRoute() {
-    const targetRoute = this.targetRouteName();
+  transitionToTargetRoute(transition) {
+    const targetRoute = this.targetRouteName(transition);
     if (targetRoute && targetRoute !== this.routeName) {
       return this.transitionTo(targetRoute);
     }
@@ -38,7 +39,7 @@ export default Mixin.create({
     return !!get(this.controllerFor(INIT), 'keyData');
   },
 
-  targetRouteName() {
+  targetRouteName(transition) {
     const cluster = this.clusterModel();
     const isAuthed = this.authToken();
     if (get(cluster, 'needsInit')) {
@@ -54,6 +55,9 @@ export default Mixin.create({
       return DR_REPLICATION_SECONDARY;
     }
     if (!isAuthed) {
+      if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
+        return OIDC_CALLBACK;
+      }
       return AUTH;
     }
     if (

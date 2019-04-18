@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/ory/dockertest"
 )
 
@@ -77,7 +77,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -227,7 +227,7 @@ func TestMySQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)

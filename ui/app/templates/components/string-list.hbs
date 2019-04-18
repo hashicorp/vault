@@ -2,17 +2,12 @@
   <label class="title is-5" data-test-string-list-label="true">
     {{label}}
     {{#if helpText}}
-      {{#info-tooltip}}
-        {{helpText}}
-      {{/info-tooltip}}
+      {{#info-tooltip}}{{helpText}}{{/info-tooltip}}
     {{/if}}
   </label>
 {{/if}}
 {{#if warning}}
-  <AlertBanner
-    @type="warning"
-    @message={{warning}}
-  />
+  <AlertBanner @type="warning" @message={{warning}} />
 {{/if}}
 {{#each inputList as |data index|}}
   <div class="field is-grouped" data-test-string-list-row="{{index}}">
@@ -30,12 +25,27 @@
     </div>
     <div class="control">
       {{#if (eq (inc index) inputList.length)}}
-        <button type="button" class="button is-outlined is-primary" {{action "addInput"}} data-test-string-list-button="add">
+        <button
+          type="button"
+          class="button is-outlined is-primary"
+          data-test-string-list-button="add"
+          {{action "addInput"}}
+        >
           Add
         </button>
       {{else}}
-        <button type="button" class="button is-expanded is-icon" {{action "removeInput" index}} data-test-string-list-button="delete" >
-          {{i-con size=22 glyph='trash-a' excludeIconClass=true class="is-large has-text-grey-light"}}
+        <button
+          type="button"
+          class="button is-expanded is-icon"
+          data-test-string-list-button="delete"
+          {{action "removeInput" index}}
+        >
+          {{i-con
+            size=22
+            glyph="trash-a"
+            excludeIconClass=true
+            class="is-large has-text-grey-light"
+          }}
         </button>
       {{/if}}
     </div>

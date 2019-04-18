@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 

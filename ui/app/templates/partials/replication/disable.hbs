@@ -1,9 +1,9 @@
 <h4 class="title is-5 is-marginless">
-  Disable replication
+  Disable Replication
 </h4>
 <div class="content">
   <p>
-    Disable {{replicationDisplayMode}} replication entirely on the cluster.
+    Disable {{replicationDisplayMode}} Replication entirely on the cluster.
     {{#if model.replicationAttrs.isPrimary}}
       Any secondaries will no longer be able to connect.
     {{else if (eq model.replicationAttrs.modeForUrl 'bootstrapping')}}
@@ -30,11 +30,11 @@
     {{else}}
       The cluster will no longer be able to connect to the primary.
     {{/if}}
+    <AlertInline
+      @type="danger"
+      @message="Caution: re-enabling this node as a primary or secondary will change its cluster ID."
+    />
   </p>
-  <AlertInline
-    @type="danger"
-    @message="Caution: re-enabling this node as a primary or secondary will change its cluster ID."
-  />
   <p>
     In the secondary case this means a wipe of the
     underlying storage when connected to a primary, and in the primary case,
@@ -55,12 +55,12 @@
         )
       )
       buttonClasses="button is-primary"
-      confirmMessage=(concat "Are you sure you want to disable replication on this cluster?")
+      confirmMessage=(concat "Are you sure you want to disable Replication on this cluster?")
       confirmButtonText="Disable"
       cancelButtonText="Cancel"
       data-test-disable-replication=true
       }}
-      Disable replication
+      Disable Replication
     {{/confirm-action}}
   </div>
 </div>

@@ -13,10 +13,9 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -61,7 +60,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(*MongoDB), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -223,5 +222,5 @@ func (m *MongoDB) RevokeUser(ctx context.Context, statements dbplugin.Statements
 
 // RotateRootCredentials is not currently supported on MongoDB
 func (m *MongoDB) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+	return nil, errors.New("root credential rotation is not currently implemented in this database secrets engine")
 }

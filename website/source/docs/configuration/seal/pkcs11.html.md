@@ -128,12 +128,6 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
-- `regenerate_key` `(string: "false")`: Force generation of a new key even if
-  one with the given `key_label` and `hmac_key_label` already exists. _**This
-  will render previous data unrecoverable**_ and is meant for testing scenarios.
-  This is a boolean expressed as a string (e.g. `"true"`). May also be
-  specified by the `VAULT_HSM_REGENERATE_KEY` environment variable.
-
 ### Mechanism Specific Flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
@@ -168,7 +162,6 @@ VAULT_HSM_HMAC_DEFAULT_KEY_LABEL
 VAULT_HSM_MECHANISM
 VAULT_HSM_HMAC_MECHANISM
 VAULT_HSM_GENERATE_KEY
-VAULT_HSM_REGENERATE_KEY
 VAULT_HSM_RSA_ENCRYPT_LOCAL
 VAULT_HSM_RSA_OAEP_HASH
 ```

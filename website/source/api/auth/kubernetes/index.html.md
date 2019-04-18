@@ -24,13 +24,13 @@ existence with the Kubernetes TokenReview API. This endpoint configures the
 public key used to validate the JWT signature and the necessary information to
 access the Kubernetes API.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/kubernetes/config`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/kubernetes/config`    |
 
 ### Parameters
  - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
- - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API.
+ - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: \n
  - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
     API to validate other JWTs during login. If not set
     the JWT used for login will be used to access the API.
@@ -45,7 +45,7 @@ access the Kubernetes API.
 ```json
 {
   "kubernetes_host": "https://192.168.99.100:8443",
-  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----.....-----END CERTIFICATE-----",
+  "kubernetes_ca_cert": "-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----",
   "pem_keys": "-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----"
 }
 ```
@@ -64,9 +64,9 @@ $ curl \
 
 Returns the previously configured config, including credentials.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/kubernetes/config`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/kubernetes/config`    |
 
 ### Sample Request
 
@@ -95,9 +95,9 @@ that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/kubernetes/role/:name`| `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/kubernetes/role/:name`|
 
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
@@ -145,9 +145,9 @@ $ curl \
 
 Returns the previously registered role configuration.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`   | `/auth/kubernetes/role/:name` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`   | `/auth/kubernetes/role/:name` |
 
 ### Parameters
 
@@ -183,10 +183,10 @@ $ curl \
 
 Lists all the roles that are registered with the auth method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/kubernetes/role`            | `200 application/json` |
-| `GET`   | `/auth/kubernetes/role?list=true`   | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/kubernetes/role`            |
+| `GET`   | `/auth/kubernetes/role?list=true`   |
 
 ### Sample Request
 
@@ -214,9 +214,9 @@ $ curl \
 
 Deletes the previously registered role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/kubernetes/role/:role`| `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/kubernetes/role/:role`|
 
 ### Parameters
 
@@ -237,9 +237,9 @@ Fetch a token. This endpoint takes a signed JSON Web Token (JWT) and
 a role name for some entity. It verifies the JWT signature to authenticate that
 entity and then authorizes the entity for the given role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/kubernetes/login`            | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/kubernetes/login`            |
 
 ### Sample Payload
 

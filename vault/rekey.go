@@ -11,11 +11,11 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 )
 
@@ -519,7 +519,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newMasterKey []byte) log
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.barrierRekeyConfig.Nonce),
 	}); err != nil {
@@ -721,7 +721,7 @@ func (c *Core) performRecoveryRekey(ctx context.Context, newMasterKey []byte) lo
 
 	// Write to the canary path, which will force a synchronous truing during
 	// replication
-	if err := c.barrier.Put(ctx, &Entry{
+	if err := c.barrier.Put(ctx, &logical.StorageEntry{
 		Key:   coreKeyringCanaryPath,
 		Value: []byte(c.recoveryRekeyConfig.Nonce),
 	}); err != nil {
@@ -908,8 +908,6 @@ func (c *Core) RekeyVerifyRestart(recovery bool) logical.HTTPCodedError {
 // RekeyRetrieveBackup is used to retrieve any backed-up PGP-encrypted unseal
 // keys
 func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBackup, logical.HTTPCodedError) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return nil, logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}
@@ -945,8 +943,6 @@ func (c *Core) RekeyRetrieveBackup(ctx context.Context, recovery bool) (*RekeyBa
 
 // RekeyDeleteBackup is used to delete any backed-up PGP-encrypted unseal keys
 func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTTPCodedError {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
 	if c.Sealed() {
 		return logical.CodedError(http.StatusServiceUnavailable, consts.ErrSealed.Error())
 	}

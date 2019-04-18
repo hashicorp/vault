@@ -48,7 +48,8 @@
                   'awskms',
                   'azurekeyvault',
                   'gcpckms',
-                  'pkcs11'
+                  'pkcs11',
+                  'transit'
                 ]
               }, {
                 category: 'storage',
@@ -190,7 +191,8 @@
                     content: ['file']
                   }
                 ]
-              }
+              },
+              { category: 'caching' }
             ]
           },
           '----------------',
@@ -207,6 +209,7 @@
                 category: 'databases',
                 content: [
                   'cassandra',
+                  'influxdb',
                   'hanadb',
                   'mongodb',
                   'mssql',
@@ -320,7 +323,9 @@
               'upgrade-to-0.11.0',
               'upgrade-to-0.11.2',
               'upgrade-to-0.11.6',
-              'upgrade-to-1.0.0'
+              'upgrade-to-1.0.0',
+              'upgrade-to-1.1.0',
+              'upgrade-to-1.1.1'
             ]
           },
           '----------------',

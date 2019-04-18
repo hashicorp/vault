@@ -42,6 +42,7 @@
     "circonus_check_display_name": "node1:vault",
     "circonus_check_tags": "cat1:tag1,cat2:tag2",
     "circonus_broker_id": "0",
-    "circonus_broker_select_tag": "dc:sfo"
+    "circonus_broker_select_tag": "dc:sfo",
+    "prometheus_retention_time": "30s"
   }
 }

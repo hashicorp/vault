@@ -90,7 +90,7 @@ func CreateDeletePolicyRequest() (request *DeletePolicyRequest) {
 	request = &DeletePolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DeletePolicy", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DeletePolicy", "ram", "openAPI")
 	return
 }
 

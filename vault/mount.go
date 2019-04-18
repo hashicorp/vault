@@ -12,11 +12,11 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -174,6 +174,21 @@ func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, erro
 	return nil, nil
 }
 
+func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error) {
+	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < n; i++ {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
+			return entry, nil
+		}
+	}
+	return nil, nil
+}
+
 // sortEntriesByPath sorts the entries in the table by path and returns the
 // table; this is useful for tests
 func (t *MountTable) sortEntriesByPath() *MountTable {
@@ -227,6 +242,7 @@ type MountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -244,6 +260,7 @@ type APIMountConfig struct {
 	AuditNonHMACResponseKeys  []string              `json:"audit_non_hmac_response_keys,omitempty" structs:"audit_non_hmac_response_keys" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         ListingVisibilityType `json:"listing_visibility,omitempty" structs:"listing_visibility" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string              `json:"passthrough_request_headers,omitempty" structs:"passthrough_request_headers" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -295,6 +312,12 @@ func (e *MountEntry) SyncCache() {
 		e.synthesizedConfigCache.Delete("passthrough_request_headers")
 	} else {
 		e.synthesizedConfigCache.Store("passthrough_request_headers", e.Config.PassthroughRequestHeaders)
+	}
+
+	if len(e.Config.AllowedResponseHeaders) == 0 {
+		e.synthesizedConfigCache.Delete("allowed_response_headers")
+	} else {
+		e.synthesizedConfigCache.Store("allowed_response_headers", e.Config.AllowedResponseHeaders)
 	}
 }
 
@@ -843,6 +866,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 		for _, coreMount := range c.mounts.Entries {
 			if coreMount.Type == requiredMount.Type {
 				foundRequired = true
+				coreMount.Config = requiredMount.Config
 				break
 			}
 		}
@@ -957,7 +981,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		}
 
 		// Create an entry
-		entry := &Entry{
+		entry := &logical.StorageEntry{
 			Key:   path,
 			Value: compressedBytes,
 		}
@@ -1185,36 +1209,37 @@ func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
 		Type: mountTableType,
 	}
-	mountUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
-	}
-	mountAccessor, err := c.generateMountAccessor("kv")
-	if err != nil {
-		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
-	}
-	bUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
+
+	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
+		mountUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
+		}
+		mountAccessor, err := c.generateMountAccessor("kv")
+		if err != nil {
+			panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
+		}
+		bUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			panic(fmt.Sprintf("could not create default secret mount backend UUID: %v", err))
+		}
+
+		kvMount := &MountEntry{
+			Table:            mountTableType,
+			Path:             "secret/",
+			Type:             "kv",
+			Description:      "key/value secret storage",
+			UUID:             mountUUID,
+			Accessor:         mountAccessor,
+			BackendAwareUUID: bUUID,
+			Options: map[string]string{
+				"version": "2",
+			},
+		}
+		table.Entries = append(table.Entries, kvMount)
 	}
 
-	kvMount := &MountEntry{
-		Table:            mountTableType,
-		Path:             "secret/",
-		Type:             "kv",
-		Description:      "key/value secret storage",
-		UUID:             mountUUID,
-		Accessor:         mountAccessor,
-		BackendAwareUUID: bUUID,
-		Options: map[string]string{
-			"version": "1",
-		},
-	}
-	if os.Getenv("VAULT_INTERACTIVE_DEMO_SERVER") != "" {
-		kvMount.Options["version"] = "2"
-	}
-	table.Entries = append(table.Entries, kvMount)
-	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }
 
@@ -1267,6 +1292,9 @@ func (c *Core) requiredMountTable() *MountTable {
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
 		BackendAwareUUID: sysBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Accept"},
+		},
 	}
 
 	identityUUID, err := uuid.GenerateUUID()

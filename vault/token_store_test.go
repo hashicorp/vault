@@ -13,14 +13,174 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-sockaddr"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestTokenStore_CreateOrphanResponse(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "auth/token/create-orphan",
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"policies": "default",
+		},
+	})
+	if err != nil && (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v, resp: %#v", err, resp)
+	}
+	if !resp.Auth.Orphan {
+		t.Fatalf("failed to set orphan as true in the response")
+	}
+}
+
+func TestTokenStore_CubbyholeDeletion(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 0; i < 10; i++ {
+		// Create a token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%2 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Write data in the token's cubbyhole
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+
+		// Revoke the token
+		resp, err = ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Path:        "revoke-self",
+			Operation:   logical.UpdateOperation,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// List the cubbyhole keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// There should be no entries
+	if len(cubbyholeKeys) != 0 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 0, actual: %d", len(cubbyholeKeys))
+	}
+}
+
+func TestTokenStore_CubbyholeTidy(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+
+	for i := 1; i <= 20; i++ {
+		// Create 20 tokens
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+		}
+
+		resp := testMakeTokenViaRequest(t, ts, tokenReq)
+		token := resp.Auth.ClientToken
+
+		// Supplying token ID forces SHA1 hashing to be used
+		if i%3 == 0 {
+			tokenReq.Data = map[string]interface{}{
+				"id": "testroot",
+			}
+		}
+
+		// Create 4 junk cubbyhole entries
+		if i%5 == 0 {
+			invalidToken, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err := ts.cubbyholeBackend.HandleRequest(namespace.RootContext(nil), &logical.Request{
+				ClientToken: invalidToken,
+				Operation:   logical.UpdateOperation,
+				Path:        "cubbyhole/sample/data",
+				Data: map[string]interface{}{
+					"foo": "bar",
+				},
+				Storage: ts.cubbyholeBackend.storageView,
+			})
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+			}
+		}
+
+		// Write into cubbyholes of 10 tokens
+		if i%2 == 0 {
+			continue
+		}
+		resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
+			ClientToken: token,
+			Operation:   logical.UpdateOperation,
+			Path:        "cubbyhole/sample/data",
+			Data: map[string]interface{}{
+				"foo": "bar",
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+		}
+	}
+
+	// Tidy cubbyhole storage
+	resp, err := ts.HandleRequest(namespace.RootContext(nil), &logical.Request{
+		Path:      "tidy",
+		Operation: logical.UpdateOperation,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
+	}
+
+	// Wait for tidy operation to complete
+	time.Sleep(2 * time.Second)
+
+	// List all the cubbyhole storage keys
+	cubbyholeKeys, err := ts.cubbyholeBackend.storageView.List(namespace.RootContext(nil), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The junk entries must have been cleaned up
+	if len(cubbyholeKeys) != 10 {
+		t.Fatalf("bad: len(cubbyholeKeys); expected: 10, actual: %d", len(cubbyholeKeys))
+	}
+}
 
 func TestTokenStore_Salting(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -2518,6 +2678,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"period":           "72h",
 		"allowed_policies": "test1,test2",
 		"path_suffix":      "happenin",
+		"bound_cidrs":      []string{"0.0.0.0/0"},
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2552,6 +2713,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"renewable":           true,
 		"token_type":          "default-service",
 	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2599,6 +2765,11 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"token_type":          "default-service",
 	}
 
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
+
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
 	}
@@ -2632,6 +2803,49 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies":    []string{"test3"},
 		"disallowed_policies": []string{},
 		"path_suffix":         "happenin",
+		"period":              int64(0),
+		"renewable":           false,
+		"token_type":          "default-service",
+	}
+
+	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "bound_cidrs")
+
+	if diff := deep.Equal(expected, resp.Data); diff != nil {
+		t.Fatal(diff)
+	}
+
+	// Update path_suffix and bound_cidrs with empty values
+	req.Operation = logical.CreateOperation
+	req.Data = map[string]interface{}{
+		"path_suffix": "",
+		"bound_cidrs": []string{},
+	}
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Data = map[string]interface{}{}
+
+	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v\nresp: %#v", err, resp)
+	}
+	if resp == nil {
+		t.Fatalf("got a nil response")
+	}
+
+	expected = map[string]interface{}{
+		"name":                "test",
+		"orphan":              true,
+		"explicit_max_ttl":    int64(5),
+		"allowed_policies":    []string{"test3"},
+		"disallowed_policies": []string{},
+		"path_suffix":         "",
 		"period":              int64(0),
 		"renewable":           false,
 		"token_type":          "default-service",

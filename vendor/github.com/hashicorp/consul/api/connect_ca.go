@@ -23,7 +23,10 @@ type CAConfig struct {
 
 // CommonCAProviderConfig is the common options available to all CA providers.
 type CommonCAProviderConfig struct {
-	LeafCertTTL time.Duration
+	LeafCertTTL      time.Duration
+	SkipValidate     bool
+	CSRMaxPerSecond  float32
+	CSRMaxConcurrent int
 }
 
 // ConsulCAProviderConfig is the config for the built-in Consul CA provider.
@@ -41,7 +44,6 @@ func ParseConsulCAConfig(raw map[string]interface{}) (*ConsulCAProviderConfig, e
 	var config ConsulCAProviderConfig
 	decodeConf := &mapstructure.DecoderConfig{
 		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
-		ErrorUnused:      true,
 		Result:           &config,
 		WeaklyTypedInput: true,
 	}

@@ -28,11 +28,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/strutil"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
@@ -2112,7 +2112,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // top-level sequence; see
 // https://lapo.it/asn1js/#3046A020060A2B060104018237140203A0120C106465766F7073406C6F63616C686F7374A022060A2B060104018237140204A0140C12322D6465766F7073406C6F63616C686F7374 for an openssl-generated example.
 //
-// The good news is that it's valid to simply copy and paste the PEM ouput from
+// The good news is that it's valid to simply copy and paste the PEM output from
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {

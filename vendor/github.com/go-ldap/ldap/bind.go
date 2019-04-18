@@ -79,7 +79,7 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 	}
 
 	if l.Debug {
-		if err := addLDAPDescriptions(packet); err != nil {
+		if err = addLDAPDescriptions(packet); err != nil {
 			return nil, err
 		}
 		ber.PrintPacket(packet)
@@ -91,20 +91,16 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 
 	if len(packet.Children) == 3 {
 		for _, child := range packet.Children[2].Children {
-			decodedChild, err := DecodeControl(child)
-			if err != nil {
-				return nil, fmt.Errorf("failed to decode child control: %s", err)
+			decodedChild, decodeErr := DecodeControl(child)
+			if decodeErr != nil {
+				return nil, fmt.Errorf("failed to decode child control: %s", decodeErr)
 			}
 			result.Controls = append(result.Controls, decodedChild)
 		}
 	}
 
-	resultCode, resultDescription := getLDAPResultCode(packet)
-	if resultCode != 0 {
-		return result, NewError(resultCode, errors.New(resultDescription))
-	}
-
-	return result, nil
+	err = GetLDAPError(packet)
+	return result, err
 }
 
 // Bind performs a bind with the given username and password.

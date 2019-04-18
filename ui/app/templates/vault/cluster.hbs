@@ -22,38 +22,47 @@
             "vault.cluster.secrets"
             current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
             invokeAction=(action Nav.closeDrawer)
+            data-test-navbar-item='secrets'
           }}
             Secrets
           {{/link-to}}
         </li>
-        <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.access"
+        {{#if (has-permission 'access')}}
+          <li class="{{if (is-active-route 'vault.cluster.access') 'is-active'}}">
+            {{#link-to
+              params=(route-params-for 'access')
               current-when="vault.cluster.access vault.cluster.settings.auth"
               invokeAction=(action Nav.closeDrawer)
+              data-test-navbar-item='access'
+              }}
+              Access
+            {{/link-to}}
+          </li>
+        {{/if}}
+        {{#if (has-permission 'policies')}}
+          <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
+            {{#link-to
+              "vault.cluster.policies"
+              (route-params-for 'policies')
+              current-when="vault.cluster.policies vault.cluster.policy"
+              invokeAction=(action Nav.closeDrawer)
+              data-test-navbar-item='policies'
             }}
-            Access
-          {{/link-to}}
-        </li>
-        <li class="{{if (is-active-route (array 'vault.cluster.policies' 'vault.cluster.policy')) 'is-active'}}">
-          {{#link-to
-            "vault.cluster.policies"
-            "acl"
-            current-when="vault.cluster.policies vault.cluster.policy"
-            invokeAction=(action Nav.closeDrawer)
-          }}
-            Policies
-          {{/link-to}}
-        </li>
-        <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
-          {{#link-to
-            "vault.cluster.tools.tool"
-            "wrap"
-            invokeAction=(action Nav.closeDrawer)
-          }}
-            Tools
-          {{/link-to}}
-        </li>
+              Policies
+            {{/link-to}}
+          </li>
+        {{/if}}
+        {{#if (has-permission 'tools')}}
+          <li class="{{if (is-active-route 'vault.cluster.tools') 'is-active'}}">
+            {{#link-to
+              "vault.cluster.tools.tool"
+              (route-params-for 'tools')
+              invokeAction=(action Nav.closeDrawer)
+            }}
+              Tools
+            {{/link-to}}
+          </li>
+        {{/if}}
       </ul>
     </Nav.main>
     <Nav.items>
@@ -86,26 +95,7 @@
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <div class="message {{get (message-types flash.type) "class"}}">
-          <div class="columns is-mobile is-variable is-1">
-            <div class="column is-narrow message-icon">
-              <ICon @glyph="{{get (message-types flash.type) "glyph"}}" @size="20" @excludeIconClass={{true}} />
-            </div>
-            <div class="column">
-              <button type="button" class="close-button" {{action close}}>
-                {{i-con excludeIconClass=true glyph="close" aria-label="Close"}}
-              </button>
-              <div class="message-title">
-                {{get (message-types flash.type) "text"}}
-              </div>
-              {{#if flash.message}}
-                <p class="message-body" data-test-flash-message-body="true">
-                  {{flash.message}}
-                </p>
-              {{/if}}
-            </div>
-          </div>
-        </div>
+        <AlertPopup @type={{message-types flash.type}} @message={{flash.message}} @close={{close}}/>
       {{/if}}
     {{/flash-message}}
   {{/each}}

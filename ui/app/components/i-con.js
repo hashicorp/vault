@@ -3,34 +3,48 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import hbs from 'htmlbars-inline-precompile';
 
-const GLYPHS_WITH_SVG_TAG = [
-  'learn',
-  'video',
-  'tour',
-  'stopwatch',
-  'download',
-  'folder',
-  'file',
-  'hidden',
-  'perf-replication',
-  'role',
-  'visible',
-  'information-reversed',
-  'true',
-  'false',
-  'upload',
-  'control-lock',
-  'edition-enterprise',
-  'edition-oss',
-  'check-plain',
-  'check-circle-fill',
+/**
+ * @module ICon
+ * `ICon` components are glyphs used to indicate important information.
+ *
+ * @example
+ * ```js
+ * <ICon @glyph="cancel-square-outline" />
+ * ```
+ * @param glyph=null {String} - The glyph type.
+ *
+ */
+
+export const GLYPHS_WITH_SVG_TAG = [
   'cancel-square-outline',
-  'status-indicator',
-  'person',
-  'console',
+  'cancel-square-fill',
+  'check-circle-fill',
+  'check-plain',
   'checkmark-circled-outline',
   'close-circled-outline',
+  'console',
+  'control-lock',
+  'docs',
+  'download',
+  'edition-enterprise',
+  'edition-oss',
+  'false',
+  'file',
+  'folder',
+  'hidden',
+  'information-reversed',
+  'learn',
   'neutral-circled-outline',
+  'perf-replication',
+  'person',
+  'role',
+  'status-indicator',
+  'stopwatch',
+  'tour',
+  'true',
+  'upload',
+  'video',
+  'visible',
 ];
 
 export default Component.extend({

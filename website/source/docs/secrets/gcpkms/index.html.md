@@ -353,7 +353,7 @@ on [Google Compute Engine][gce] or [Google Kubernetes Engine][gke]
 For more information on service accounts, please see the [Google Cloud Service
 Accounts documentation][service-accounts].
 
-To use this storage backend, the service account must have the following
+To use this secrets engine, the service account must have the following
 minimum scope(s):
 
 ```text
@@ -362,28 +362,7 @@ https://www.googleapis.com/auth/kms
 
 ### Required Permissions
 
-The credentials given to Vault must have the following permissions:
-
-```text
-locations.keyRings.create
-locations.keyRings.cryptoKeys.list
-locations.keyRings.cryptoKeys.get
-locations.keyRings.cryptoKeys.create
-locations.keyRings.cryptoKeys.encrypt
-locations.keyRings.cryptoKeys.decrypt
-locations.keyRings.cryptoKeys.patch
-locations.keyRings.cryptoKeys.updatePrimaryVersion
-locations.keyRings.cryptoKeys.cryptoKeyVersions.list
-locations.keyRings.cryptoKeys.cryptoKeyVersions.get
-locations.keyRings.cryptoKeys.cryptoKeyVersions.create
-locations.keyRings.cryptoKeys.cryptoKeyVersions.patch
-locations.keyRings.cryptoKeys.cryptoKeyVersions.destroy
-locations.keyRings.cryptoKeys.cryptoKeyVersions.asymmetricDecrypt
-locations.keyRings.cryptoKeys.cryptoKeyVersions.asymmetricSign
-locations.keyRings.cryptoKeys.cryptoKeyVersions.getPublicKey
-```
-
-For simplicity, you can use this role instead:
+The credentials given to Vault must have the following role:
 
 ```text
 roles/cloudkms.admin
@@ -403,7 +382,7 @@ To sign and verify, you only need the following permissions:
 roles/cloudkms.signerVerifier
 ```
 
-For more information, please see the [Google Cloud KMS IAM documentation][kms-iam]
+For more information, please see the [Google Cloud KMS IAM documentation][kms-iam].
 
 ## FAQ
 

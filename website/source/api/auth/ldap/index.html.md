@@ -21,9 +21,9 @@ please update your API calls accordingly.
 
 This endpoint configures the LDAP auth method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/auth/ldap/config`         | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/auth/ldap/config`         |
 
 ### Parameters
 
@@ -111,9 +111,9 @@ $ curl \
 
 This endpoint retrieves the LDAP configuration for the auth method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/ldap/config`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/ldap/config`          |
 
 ### Sample Request
 
@@ -158,9 +158,9 @@ $ curl \
 
 This endpoint returns a list of existing groups in the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/ldap/groups`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/ldap/groups`          |
 
 ### Sample Request
 
@@ -194,9 +194,9 @@ $ curl \
 
 This endpoint returns the policies associated with a LDAP group.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/ldap/groups/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/ldap/groups/:name`     |
 
 ### Parameters
 
@@ -231,9 +231,9 @@ $ curl \
 
 This endpoint creates or updates LDAP group policies.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/auth/ldap/groups/:name`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/auth/ldap/groups/:name`   |
 
 ### Parameters
 
@@ -263,9 +263,9 @@ $ curl \
 
 This endpoint deletes the LDAP group and policy association.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/ldap/groups/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/ldap/groups/:name`    |
 
 ### Parameters
 
@@ -284,9 +284,9 @@ $ curl \
 
 This endpoint returns a list of existing users in the method.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/auth/ldap/users`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/auth/ldap/users`           |
 
 ### Sample Request
 
@@ -320,9 +320,9 @@ $ curl \
 
 This endpoint returns the policies associated with a LDAP user.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/auth/ldap/users/:username` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/auth/ldap/users/:username` |
 
 ### Parameters
 
@@ -358,9 +358,9 @@ $ curl \
 
 This endpoint creates or updates LDAP users policies and group associations.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`    | `/auth/ldap/users/:username`   | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`    | `/auth/ldap/users/:username`   |
 
 ### Parameters
 
@@ -392,9 +392,9 @@ $ curl \
 
 This endpoint deletes the LDAP user and policy association.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/auth/ldap/users/:username` | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/auth/ldap/users/:username` |
 
 ### Parameters
 
@@ -413,9 +413,9 @@ $ curl \
 
 This endpoint allows you to log in with LDAP credentials
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/auth/ldap/login/:username` | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/auth/ldap/login/:username` |
 
 ### Parameters
 

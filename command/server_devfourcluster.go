@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
-	"github.com/hashicorp/vault/version"
 	testing "github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 )
@@ -292,7 +292,7 @@ func (c *ServerCommand) enableFourClusterDev(base *vault.CoreConfig, info map[st
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 
-			// Stop the listners so that we don't process further client requests.
+			// Stop the listeners so that we don't process further client requests.
 			c.cleanupGuard.Do(clusterCleanup)
 
 			shutdownTriggered = true

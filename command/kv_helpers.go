@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 func kvReadRequest(client *api.Client, path string, params map[string]string) (*api.Secret, error) {
@@ -46,6 +46,9 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	currentWrappingLookupFunc := client.CurrentWrappingLookupFunc()
 	client.SetWrappingLookupFunc(nil)
 	defer client.SetWrappingLookupFunc(currentWrappingLookupFunc)
+	currentOutputCurlString := client.OutputCurlString()
+	client.SetOutputCurlString(false)
+	defer client.SetOutputCurlString(currentOutputCurlString)
 
 	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
 	resp, err := client.RawRequest(r)

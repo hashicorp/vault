@@ -3,7 +3,7 @@ package seal
 import (
 	"context"
 
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -13,6 +13,7 @@ const (
 	AWSKMS        = "awskms"
 	GCPCKMS       = "gcpckms"
 	AzureKeyVault = "azurekeyvault"
+	Transit       = "transit"
 	Test          = "test-auto"
 
 	// HSMAutoDeprecated is a deprecated seal type prior to 0.9.0.

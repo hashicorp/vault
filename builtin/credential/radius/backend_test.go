@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ory/dockertest"
 )
 
@@ -214,7 +214,7 @@ func TestBackend_acceptance(t *testing.T) {
 		PreCheck:          testAccPreCheck(t, host, port),
 		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
-			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
+			// Login with valid but unknown user will fail because unregistered_user_policies is empty
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),
 			testAccUserLogin(t, username, dataRealpassword, true),
 			// Once the user is registered auth will succeed

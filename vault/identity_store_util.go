@@ -11,18 +11,22 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
 	errDuplicateIdentityName = errors.New("duplicate identity name")
 )
+
+func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
+	c.loadCaseSensitiveIdentityStore = caseSensitive
+}
 
 func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	if c.identityStore == nil {
@@ -38,14 +42,16 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return c.identityStore.loadGroups(ctx)
 	}
 
-	// Load everything when memdb is set to operate on lower cased names
-	err := loadFunc(ctx)
-	switch {
-	case err == nil:
-		// If it succeeds, all is well
-		return nil
-	case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
-		return err
+	if !c.loadCaseSensitiveIdentityStore {
+		// Load everything when memdb is set to operate on lower cased names
+		err := loadFunc(ctx)
+		switch {
+		case err == nil:
+			// If it succeeds, all is well
+			return nil
+		case err != nil && !errwrap.Contains(err, errDuplicateIdentityName.Error()):
+			return err
+		}
 	}
 
 	c.identityStore.logger.Warn("enabling case sensitive identity names")
@@ -56,8 +62,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// Swap the memdb instance by the one which operates on case sensitive
 	// names, hence obviating the need to unload anything that's already
 	// loaded.
-	err = c.identityStore.resetDB(ctx)
-	if err != nil {
+	if err := c.identityStore.resetDB(ctx); err != nil {
 		return err
 	}
 
@@ -100,8 +105,27 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
+			ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
+			if err != nil {
+				return err
+			}
+			if ns == nil {
+				// Remove dangling groups
+				if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+					// Group's namespace doesn't exist anymore but the group
+					// from the namespace still exists.
+					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
+					err = i.groupPacker.DeleteItem(group.ID)
+					if err != nil {
+						return err
+					}
+				}
+				continue
+			}
+			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+
 			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
 			if err != nil {
 				return err
 			}
@@ -244,13 +268,31 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-
 				if entity == nil {
 					continue
 				}
 
+				ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+				if err != nil {
+					return err
+				}
+				if ns == nil {
+					// Remove dangling entities
+					if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
+						// Entity's namespace doesn't exist anymore but the
+						// entity from the namespace still exists.
+						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
+						err = i.entityPacker.DeleteItem(entity.ID)
+						if err != nil {
+							return err
+						}
+					}
+					continue
+				}
+				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+
 				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(ctx, entity.Name, false)
+				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
 				if err != nil {
 					return nil
 				}
@@ -262,7 +304,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				}
 
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(ctx, entity, nil, false)
+				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
@@ -334,13 +376,15 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			fallthrough
 		default:
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
-			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true)
+
+			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true, persist)
 			switch {
 			case respErr != nil:
 				return respErr
 			case intErr != nil:
 				return intErr
 			}
+
 			// The entity and aliases will be loaded into memdb and persisted
 			// as a result of the merge so we are done here
 			return nil
@@ -363,23 +407,25 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	// If previous entity is set, update it in MemDB and persist it
-	if previousEntity != nil && persist {
+	if previousEntity != nil {
 		err = i.MemDBUpsertEntityInTxn(txn, previousEntity)
 		if err != nil {
 			return err
 		}
 
-		// Persist the previous entity object
-		marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
-		if err != nil {
-			return err
-		}
-		err = i.entityPacker.PutItem(&storagepacker.Item{
-			ID:      previousEntity.ID,
-			Message: marshaledPreviousEntity,
-		})
-		if err != nil {
-			return err
+		if persist {
+			// Persist the previous entity object
+			marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
+			if err != nil {
+				return err
+			}
+			err = i.entityPacker.PutItem(&storagepacker.Item{
+				ID:      previousEntity.ID,
+				Message: marshaledPreviousEntity,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1041,14 +1087,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
+	var currentMemberGroupIDs []string
+	var currentMemberGroups []*identity.Group
+
+	// If there are no member group IDs supplied, then it shouldn't be
+	// processed. If an empty set of member group IDs are supplied, then it
+	// should be processed. Hence the nil check instead of the length check.
+	if memberGroupIDs == nil {
+		goto ALIAS
+	}
+
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
 
 	// For those group member IDs that are removed from the list, remove current
 	// group ID as their respective ParentGroupID.
 
 	// Get the current MemberGroups IDs for this group
-	var currentMemberGroupIDs []string
-	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	currentMemberGroups, err = i.MemDBGroupsByParentGroupID(group.ID, false)
 	if err != nil {
 		return err
 	}
@@ -1139,6 +1194,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
+ALIAS:
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
@@ -1859,7 +1915,7 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(entityID strin
 
 		// If the external group is from a different mount, don't remove the
 		// entity ID from it.
-		if mountAccessor != "" && group.Alias.MountAccessor != mountAccessor {
+		if mountAccessor != "" && group.Alias != nil && group.Alias.MountAccessor != mountAccessor {
 			continue
 		}
 

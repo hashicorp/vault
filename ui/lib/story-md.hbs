@@ -1,0 +1,28 @@
+{{#if (showMainIndex)~}}
+{{>module-index~}}
+{{>global-index~}}
+{{/if~}}
+{{#orphans ~}}
+
+{{>heading-indent}}{{>sig-name}}
+
+{{>description~}}
+
+{{>params~}}
+
+{{>properties~}}
+
+{{#examples}}
+**Example**
+{{#if caption}} *({{caption}})*  {{else}}  {{/if}}
+{{{inlineLinks example}}}
+{{/examples}}
+
+{{>member-index~}}
+
+{{>separator~}}
+
+{{>members~}}
+
+{{/orphans~}}
+---

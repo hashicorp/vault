@@ -65,6 +65,7 @@ $ Install-Package Vault
 
 ### Elixir
 
+* [libvault](https://hex.pm/packages/libvault)
 * [vaultex](https://hex.pm/packages/vaultex)
 
 ### Go

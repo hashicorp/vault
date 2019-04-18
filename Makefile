@@ -3,7 +3,7 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
 TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /integ)
-TEST_TIMEOUT?=20m
+TEST_TIMEOUT?=30m
 EXTENDED_TEST_TIMEOUT=45m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
@@ -14,7 +14,7 @@ EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-GO_VERSION_MIN=1.10
+GO_VERSION_MIN=1.11
 CGO_ENABLED=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1
@@ -31,7 +31,7 @@ bin: prep
 # into ./bin/ as well as $GOPATH/bin
 dev: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-ui: prep
+dev-ui: assetcheck prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
@@ -42,7 +42,7 @@ dev-dynamic: prep
 dev-mem: BUILD_TAGS+=memprofiler
 dev-mem: dev
 dev-ui-mem: BUILD_TAGS+=memprofiler
-dev-ui-mem: dev-ui
+dev-ui-mem: assetcheck dev-ui
 dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
 
@@ -91,7 +91,7 @@ cover:
 vet:
 	@go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
-		| xargs go tool vet ; if [ $$? -eq 1 ]; then \
+		| xargs go vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Vet found suspicious constructs. Please check the reported constructs"; \
 			echo "and fix them if necessary before submitting the code for reviewal."; \
@@ -147,18 +147,17 @@ static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets
 
 proto:
-	protoc vault/*.proto --go_out=plugins=grpc:../../..
-	protoc helper/storagepacker/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
-	protoc logical/*.proto --go_out=plugins=grpc:../../..
-	protoc physical/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
-	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
-	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
-	sed -i '1s;^;// +build !enterprise\n;' helper/identity/mfa/types.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go logical/identity.pb.go
-	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
+	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/physical/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go
+	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' sdk/physical/types.pb.go
 
 fmtcheck:
 	@true
@@ -166,6 +165,10 @@ fmtcheck:
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
+
+assetcheck:
+	@echo "==> Checking compiled UI assets..."
+	@sh -c "'$(CURDIR)/scripts/assetcheck.sh'"
 
 spellcheck:
 	@echo "==> Spell checking website..."
@@ -180,6 +183,9 @@ mysql-legacy-database-plugin:
 cassandra-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/cassandra-database-plugin ./plugins/database/cassandra/cassandra-database-plugin
 
+influxdb-database-plugin:
+	@CGO_ENABLED=0 go build -o bin/influxdb-database-plugin ./plugins/database/influxdb/influxdb-database-plugin
+
 postgresql-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
 
@@ -192,4 +198,6 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 go build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev
+.PHONY: bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck
+
+.NOTPARALLEL: ember-dist ember-dist-dev static-assets

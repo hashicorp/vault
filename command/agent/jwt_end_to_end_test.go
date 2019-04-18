@@ -16,10 +16,10 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/helper/dhutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -62,6 +62,7 @@ func testJWTEndToEnd(t *testing.T, ahWrapping bool) {
 	}
 
 	_, err = client.Logical().Write("auth/jwt/role/test", map[string]interface{}{
+		"role_type":       "jwt",
 		"bound_subject":   "r3qXcK2bix9eFECzsU3Sbmh0K16fatW6@clients",
 		"bound_audiences": "https://vault.plugin.auth.jwt.test",
 		"user_claim":      "https://vault/user",

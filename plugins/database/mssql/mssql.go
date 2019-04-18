@@ -10,14 +10,14 @@ import (
 
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/dbtxn"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/plugins"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 const msSQLTypeName = "mssql"
@@ -62,7 +62,7 @@ func Run(apiTLSConfig *api.TLSConfig) error {
 		return err
 	}
 
-	plugins.Serve(dbType.(dbplugin.Database), apiTLSConfig)
+	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
 
 	return nil
 }
@@ -172,12 +172,7 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 		return err
 	}
 
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	var result error
 
 	// Execute each query
 	for _, stmt := range statements.Revocation {
@@ -190,18 +185,13 @@ func (m *MSSQL) RevokeUser(ctx context.Context, statements dbplugin.Statements, 
 			m := map[string]string{
 				"name": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return err
+			if err := dbtxn.ExecuteDBQuery(ctx, db, m, query); err != nil {
+				result = multierror.Append(result, err)
 			}
 		}
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return result
 }
 
 func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
@@ -266,13 +256,15 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var loginName, dbName, qUsername string
-		var aliasName sql.NullString
+		var loginName, dbName, qUsername, aliasName sql.NullString
 		err = rows.Scan(&loginName, &dbName, &qUsername, &aliasName)
 		if err != nil {
 			return err
 		}
-		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName, username, username))
+		if !dbName.Valid {
+			continue
+		}
+		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName.String, username, username))
 	}
 
 	// we do not stop on error, as we want to remove as

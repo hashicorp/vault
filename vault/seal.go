@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 
 	"github.com/keybase/go-crypto/openpgp"
@@ -67,6 +67,7 @@ type Seal interface {
 	RecoveryKeySupported() bool
 	RecoveryType() string
 	RecoveryConfig(context.Context) (*SealConfig, error)
+	RecoveryKey(context.Context) ([]byte, error)
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
@@ -230,6 +231,14 @@ func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
 			SecretThreshold: 3,
 		}, nil
 	}
+	return nil, fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
+	if d.PretendToAllowRecoveryKeys {
+		return d.PretendRecoveryKey, nil
+	}
+
 	return nil, fmt.Errorf("recovery not supported")
 }
 

@@ -5,8 +5,8 @@ sidebar_current: "guides-operations-deployment-guide"
 description: |-
   This deployment guide covers the steps required to install and
   configure a single HashiCorp Vault cluster as defined in the
-  Vault Reference Architecture
-product_version: 1.0
+  Vault Reference Architecture.
+ea_version: 1.0
 ---
 
 # Vault Deployment Guide
@@ -210,7 +210,7 @@ listener "tcp" {
 
 The following parameters are set for the `tcp` listener stanza:
 
-- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` – Changing from the loopback address to allow external access to the Vault UI
+- [`address`](/docs/configuration/listener/tcp.html#address) `(string: "127.0.0.1:8200")` - Changing from the loopback address to allow external access to the Vault UI
 - [`tls_cert_file`](/docs/configuration/listener/tcp.html#tls_cert_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 - [`tls_key_file`](/docs/configuration/listener/tcp.html#tls_key_file) `(string: <required-if-enabled>, reloads-on-SIGHUP)` - Must be set when using TLS
 

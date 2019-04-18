@@ -131,7 +131,7 @@ resource "aws_dynamodb_table" "dynamodb-table" {
   write_capacity = 1
 	hash_key       = "Path"
 	range_key      = "Key"
-	attribute [
+	attribute      = [
 		{
 			name = "Path"
 			type = "S"

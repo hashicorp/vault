@@ -1,9 +1,10 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { click, currentURL, visit, settled } from '@ember/test-helpers';
+import { currentURL, visit, settled } from '@ember/test-helpers';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import authForm from '../pages/components/auth-form';
+import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
@@ -12,6 +13,7 @@ import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 const consoleComponent = create(consoleClass);
 const component = create(authForm);
+const jwtComponent = create(jwtForm);
 
 module('Acceptance | auth', function(hooks) {
   setupApplicationTest(hooks);
@@ -33,10 +35,11 @@ module('Acceptance | auth', function(hooks) {
 
   test('auth query params', async function(assert) {
     let backends = supportedAuthBackends();
+    assert.expect(backends.length + 1);
     await visit('/vault/auth');
     assert.equal(currentURL(), '/vault/auth?with=token');
     for (let backend of backends.reverse()) {
-      await click(`[data-test-auth-method-link="${backend.type}"]`);
+      await component.selectMethod(backend.type);
       assert.equal(
         currentURL(),
         `/vault/auth?with=${backend.type}`,
@@ -48,11 +51,8 @@ module('Acceptance | auth', function(hooks) {
   test('it clears token when changing selected auth method', async function(assert) {
     await visit('/vault/auth');
     assert.equal(currentURL(), '/vault/auth?with=token');
-    await component
-      .token('token')
-      .tabs.filterBy('name', 'GitHub')[0]
-      .link();
-    await component.tabs.filterBy('name', 'Token')[0].link();
+    await component.token('token').selectMethod('github');
+    await component.selectMethod('token');
     assert.equal(component.tokenValue, '', 'it clears the token value when toggling methods');
   });
 
@@ -60,9 +60,13 @@ module('Acceptance | auth', function(hooks) {
     let backends = supportedAuthBackends();
     await visit('/vault/auth');
     for (let backend of backends.reverse()) {
-      await click(`[data-test-auth-method-link="${backend.type}"]`);
+      await component.selectMethod(backend.type);
       if (backend.type === 'github') {
         await component.token('token');
+      }
+      if (backend.type === 'jwt' || backend.type === 'oidc') {
+        await jwtComponent.jwt('1');
+        await jwtComponent.role('test');
       }
       await component.login();
       let lastRequest = this.server.passthroughRequests[this.server.passthroughRequests.length - 1];
@@ -74,6 +78,11 @@ module('Acceptance | auth', function(hooks) {
         );
       } else if (backend.type === 'github') {
         assert.ok(Object.keys(body).includes('token'), 'GitHub includes token');
+      } else if (backend.type === 'jwt' || backend.type === 'oidc') {
+        let authReq = this.server.passthroughRequests[this.server.passthroughRequests.length - 2];
+        body = JSON.parse(authReq.requestBody);
+        assert.ok(Object.keys(body).includes('jwt'), `${backend.type} includes jwt`);
+        assert.ok(Object.keys(body).includes('role'), `${backend.type} includes role`);
       } else {
         assert.ok(Object.keys(body).includes('password'), `${backend.type} includes password`);
       }

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -26,8 +26,9 @@ type AuthEnableCommand struct {
 	flagAuditNonHMACRequestKeys   []string
 	flagAuditNonHMACResponseKeys  []string
 	flagListingVisibility         string
-	flagPassthroughRequestHeaders []string
 	flagPluginName                string
+	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
@@ -113,14 +114,14 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the request data object.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit" +
+		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
 			"devices in the response data object.",
 	})
 
@@ -134,7 +135,14 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
 		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the backend",
+			"will be sent to the plugin",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedResponseHeaders,
+		Target: &c.flagAllowedResponseHeaders,
+		Usage: "Comma-separated string or list of response header values that " +
+			"plugins will be allowed to set",
 	})
 
 	f.StringVar(&StringVar{
@@ -270,6 +278,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePassthroughRequestHeaders {
 			authOpts.Config.PassthroughRequestHeaders = c.flagPassthroughRequestHeaders
+		}
+
+		if fl.Name == flagNameAllowedResponseHeaders {
+			authOpts.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
 		}
 
 		if fl.Name == flagNameTokenType {
