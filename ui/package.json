@@ -148,7 +148,8 @@
   "ember-addon": {
     "paths": [
       "lib/core",
-      "lib/css"
+      "lib/css",
+      "lib/replication"
     ]
   },
   "husky": {
