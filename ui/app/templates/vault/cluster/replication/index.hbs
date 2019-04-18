@@ -10,8 +10,8 @@
     @title="The current cluster configuration does not support replication"
   />
 {{else}}
-  {{replication-summary
-    cluster=model
-    showModeSummary=true
-  }}
+  <ReplicationSummary
+    @cluster={{model}}
+    @showModeSummary={{true}}
+  />
 {{/if}}
