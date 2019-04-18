@@ -76,7 +76,6 @@ const TABS_FOR_SHOW = {};
 
 export function tabsForAuthSection([model, sectionType = 'authSettings', paths]) {
   let tabs;
-  debugger; // eslint-disable-line
   if (sectionType === 'authSettings') {
     tabs = (TABS_FOR_SETTINGS[model.type] || []).slice();
     tabs.push({
@@ -87,7 +86,6 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
   }
 
   if (paths) {
-    debugger; // eslint-disable-line
     tabs =
       paths.list.length > 0
         ? paths.list.map(path => {

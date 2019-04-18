@@ -8,6 +8,7 @@ import Service from '@ember/service';
 import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import { resolve } from 'rsvp';
+import DS from 'ember-data';
 
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -29,6 +30,19 @@ export default Service.extend({
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     return this.ajax(helpUrl, backend).then(help => {
+      let path = Object.keys(help.openapi.paths)[0];
+      let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
+      return expandOpenApiProps(props);
+    });
+  },
+
+  //Makes a call to grab the OpenAPI document.
+  //Returns relevant information from OpenAPI
+  //as determined by the expandOpenApiProps util
+  getPathHelp(apiPath, backend) {
+    let helpUrl = `/v1/${apiPath}?help=1`;
+    return this.ajax(helpUrl, backend).then(help => {
+      debugger; // eslint-disable-line
       let path = Object.keys(help.openapi.paths)[0];
       let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
@@ -65,22 +79,26 @@ export default Service.extend({
   //   });
   // },
 
-  getNewModel(modelType, owner, backend) {
+  getNewModel(modelType, owner, backend, apiPath) {
+    debugger; // eslint-disable-line
     let name = `model:${modelType}`;
-    let newModel = owner.factoryFor(name).class;
-    let modelProto = newModel.proto();
-    if (newModel.merged || modelProto.useOpenAPI !== true) {
-      return resolve();
+    let factory = owner.factoryFor(name);
+    let newModel, helpUrl;
+    if (factory) {
+      newModel = factory.class;
+      let modelProto = newModel.proto();
+      if (newModel.merged || modelProto.useOpenAPI !== true) {
+        return resolve();
+      }
+      helpUrl = apiPath ? `/v1/${apiPath}?help=1` : modelProto.getHelpUrl(backend);
+    } else {
+      newModel = DS.Model.extend({});
+      helpUrl = `/v1/${apiPath}?help=1`;
     }
-    let helpUrl = modelProto.getHelpUrl(backend);
 
     return this.getProps(helpUrl, backend).then(props => {
-      if (owner.hasRegistration(name) && !newModel.merged) {
-        let { attrs, newFields } = combineAttributes(newModel.attributes, props);
-        newModel = newModel.extend(attrs, { newFields });
-      } else {
-        //generate a whole new model
-      }
+      let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+      newModel = newModel.extend(attrs, { newFields });
       newModel.reopenClass({ merged: true });
       owner.unregister(name);
       owner.register(name, newModel);
