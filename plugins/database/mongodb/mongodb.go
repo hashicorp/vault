@@ -80,45 +80,30 @@ func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
 	return session.(*mgo.Session), nil
 }
 
-// CreateUser generates the username/password on the underlying secret backend as instructed by
-// the CreationStatement provided. The creation statement is a JSON blob that has a db value,
-// and an array of roles that accepts a role, and an optional db value pair. This array will
-// be normalized the format specified in the mongoDB docs:
-// https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
-//
-// JSON Example:
-//  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
-func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
-	}
-
 	session, err := m.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
 
-	username, err = m.GenerateUsername(usernameConfig)
-	if err != nil {
-		return "", "", err
-	}
-
-	password, err = m.GeneratePassword()
-	if err != nil {
-		return "", "", err
-	}
+	username = staticUser.Username
+	password = staticUser.Password
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
+	err = json.Unmarshal([]byte(statements[0]), &mongoCS)
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
 
 	// Default to "admin" if no db provided
@@ -127,7 +112,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	}
 
 	if len(mongoCS.Roles) == 0 {
-		return "", "", fmt.Errorf("roles array is required in creation statement")
+		return "", "", false, fmt.Errorf("roles array is required in creation statement")
 	}
 
 	createUserCmd := createUserCommand{
@@ -143,17 +128,51 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
-			return "", "", err
+			return "", "", false, err
 		}
 		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
 		if err != nil {
-			return "", "", err
+			return "", "", false, err
 		}
 	default:
+		return "", "", false, err
+	}
+
+	return username, password, false, nil
+}
+
+// CreateUser generates the username/password on the underlying secret backend as instructed by
+// the CreationStatement provided. The creation statement is a JSON blob that has a db value,
+// and an array of roles that accepts a role, and an optional db value pair. This array will
+// be normalized the format specified in the mongoDB docs:
+// https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
+//
+// JSON Example:
+//  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
+func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+	statements = dbutil.StatementCompatibilityHelper(statements)
+
+	if len(statements.Creation) == 0 {
+		return "", "", dbutil.ErrEmptyCreationStatement
+	}
+
+	username, err = m.GenerateUsername(usernameConfig)
+	if err != nil {
 		return "", "", err
 	}
 
-	return username, password, nil
+	password, err = m.GeneratePassword()
+	if err != nil {
+		return "", "", err
+	}
+
+	stu := dbplugin.StaticUserConfig{
+		Username: username,
+		Password: password,
+	}
+
+	username, password, _, err = m.SetCredentials(ctx, stu, statements.Creation)
+	return username, password, err
 }
 
 // RenewUser is not supported on MongoDB, so this is a no-op.
