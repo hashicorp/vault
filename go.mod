@@ -85,7 +85,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 	github.com/hashicorp/vault/api v1.0.1
 	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4

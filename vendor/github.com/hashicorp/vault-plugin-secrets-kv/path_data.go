@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -65,6 +66,13 @@ func (b *versionedKVBackend) dataExistenceCheck() framework.ExistenceFunc {
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
+			// If we are returning a readonly error it means we are attempting
+			// to write the policy for the first time. This means no data exists
+			// yet and we can safely return false here.
+			if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return false, nil
+			}
+
 			return false, err
 		}
 
