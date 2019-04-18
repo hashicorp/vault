@@ -24,6 +24,7 @@ export function hasFeature(featureName, features) {
 
 export default Helper.extend({
   version: service(),
+  /* eslint-disable-next-line ember/no-observers */
   onFeaturesChange: observer('version.features.[]', function() {
     this.recompute();
   }),
