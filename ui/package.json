@@ -85,6 +85,7 @@
     "ember-copy": "^1.0.0",
     "ember-data": "~3.4.0",
     "ember-data-model-fragments": "^3.3.0",
+    "ember-engines": "^0.7.0",
     "ember-export-application-global": "^2.0.0",
     "ember-fetch": "^6.1.0",
     "ember-inflector": "^3.0.0",
@@ -139,11 +140,12 @@
     "lint-staged": "^8.0.4"
   },
   "engines": {
-    "node": "6.* || 8.* || >= 10.*"
+    "node": " >= 10.*"
   },
   "private": true,
   "ember-addon": {
     "paths": [
+      "lib/core",
       "lib/css"
     ]
   },
