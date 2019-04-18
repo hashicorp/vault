@@ -15,7 +15,7 @@ BUG FIXES:
 
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
-   
+
 
 ## 1.1.1 (April 11th, 2019)
 
