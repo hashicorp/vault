@@ -1,4 +1,7 @@
-## 1.1.2 (Unreleased)
+## 1.1.2 (April 18th, 2019)
+
+This is a bug fix release containing the two items below. It is otherwise
+unchanged from 1.1.1.
 
 BUG FIXES:
 
