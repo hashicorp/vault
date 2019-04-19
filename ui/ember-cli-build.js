@@ -2,6 +2,7 @@
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
+const config = require('./config/environment')();
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
@@ -9,6 +10,12 @@ const isTest = environment === 'test';
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+    assetLoader: {
+      generateURI: function(filePath) {
+        return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
+      },
+    },
+
     codemirror: {
       modes: ['javascript', 'ruby'],
       keyMaps: ['sublime'],
