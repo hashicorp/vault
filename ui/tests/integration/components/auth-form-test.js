@@ -53,6 +53,11 @@ module('Integration | Component | auth form', function(hooks) {
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function(assert) {
+    // skip this test if running in ie11 because it doesn't support CSP. 😭
+    if (!!window.MSInputMethodContext && !!document.documentMode) {
+      assert.ok(true);
+      return;
+    }
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', authService);
     this.auth = this.owner.lookup('service:auth');
