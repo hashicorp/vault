@@ -9,7 +9,7 @@ import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import { resolve } from 'rsvp';
 import DS from 'ember-data';
-
+import itemListAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
   return path.trim().replace(/^\/+|\/+$/g, '');
@@ -42,7 +42,6 @@ export default Service.extend({
   getPathHelp(apiPath, backend) {
     let helpUrl = `/v1/${apiPath}?help=1`;
     return this.ajax(helpUrl, backend).then(help => {
-      debugger; // eslint-disable-line
       let path = Object.keys(help.openapi.paths)[0];
       let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
       return expandOpenApiProps(props);
@@ -79,8 +78,7 @@ export default Service.extend({
   //   });
   // },
 
-  getNewModel(modelType, owner, backend, apiPath) {
-    debugger; // eslint-disable-line
+  getNewModel(modelType, owner, backend, apiPath, itemType) {
     let name = `model:${modelType}`;
     let factory = owner.factoryFor(name);
     let newModel, helpUrl;
@@ -94,6 +92,8 @@ export default Service.extend({
     } else {
       newModel = DS.Model.extend({});
       helpUrl = `/v1/${apiPath}?help=1`;
+      let newAdapter = itemListAdapter.extend({ itemType });
+      owner.register(`adapter:${modelType}`, newAdapter);
     }
 
     return this.getProps(helpUrl, backend).then(props => {

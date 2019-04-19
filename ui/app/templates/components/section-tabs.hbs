@@ -4,15 +4,37 @@
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
-            {{#link-to
-              params=tab.routeParams
-              tagName="li"
-              data-test-auth-section-tab=true
-            }}
-              {{#link-to params=tab.routeParams}}
-                {{tab.label}}
+            {{#if tab.tab}}
+              {{#link-to
+                "vault.cluster.access.method.list"
+                (query-params tab=tab.tab)
+                tagName="li"
+                activeClass="is-active"
+                data-test-tab=tab.label
+              }}
+                {{#link-to
+                  "vault.cluster.access.method.list"
+                  (query-params tab=tab.tab)
+                }}
+                  {{tab.label}}
+                {{/link-to}}
               {{/link-to}}
-            {{/link-to}}
+            {{else}}
+              {{#link-to
+                "vault.cluster.access.method.list"
+                (query-params tab="")
+                tagName="li"
+                activeClass="is-active"
+                data-test-tab=tab.label
+              }}
+                {{#link-to
+                  "vault.cluster.access.method.list"
+                  (query-params tab="")
+                }}
+                  {{tab.label}}
+                {{/link-to}}
+              {{/link-to}}
+            {{/if}}
           {{/each}}
         </ul>
       </nav>

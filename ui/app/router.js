@@ -39,8 +39,8 @@ Router.map(function() {
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
           this.route('list', { path: '/list/:item_type' });
+          this.route('section', { path: '/:section_name' });
         });
         this.route('leases', function() {
           // lookup
