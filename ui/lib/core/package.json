@@ -4,8 +4,9 @@
     "ember-addon"
   ],
   "dependencies": {
-    "ember-cli-htmlbars": "^3.0.0",
-    "ember-cli-babel": "^6.16.0",
-    "ember-cli-htmlbars-inline-precompile": "^1.0.3"
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "ember-composable-helpers": "*",
+    "ember-truth-helpers": "*"
   }
 }
