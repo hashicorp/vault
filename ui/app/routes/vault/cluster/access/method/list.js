@@ -11,7 +11,6 @@ export default Route.extend(ListRoute, {
   pathHelp: service('path-help'),
 
   beforeModel(params) {
-    debugger; // eslint-disable-line
     const { item_type: itemType } = this.paramsFor(this.routeName);
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     let methodModel = this.modelFor('vault.cluster.access.method');
@@ -22,10 +21,9 @@ export default Route.extend(ListRoute, {
   },
 
   model(params) {
-    debugger; // eslint-disable-line
     let { item_type: itemType, page, pageFilter } = this.paramsFor(this.routeName);
     const methodModel = this.modelFor('vault.cluster.access.method');
-    const { type, apiPath } = methodModel;
+    const { type } = methodModel;
     let modelType = `generated-${singularize(itemType)}-${type}`;
     const { path: method } = this.paramsFor('vault.cluster.access.method');
 
@@ -48,6 +46,11 @@ export default Route.extend(ListRoute, {
   setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor(this.routeName);
+    const { apiPath } = this.modelFor('vault.cluster.access.method');
+    let { path } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
+    this.pathHelp.getPaths(apiPath, path).then(paths => {
+      controller.set('paths', paths);
+    });
   },
 });

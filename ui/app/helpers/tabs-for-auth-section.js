@@ -1,5 +1,5 @@
 import { helper as buildHelper } from '@ember/component/helper';
-import { pluralize, singularize } from 'ember-inflector';
+import { pluralize } from 'ember-inflector';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -84,18 +84,17 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
     });
     return tabs;
   }
+
   if (paths) {
     tabs =
       paths.list.length > 0
         ? paths.list.map(path => {
             return {
-              name: path.slice(1),
               label:
                 pluralize(path.slice(1))
                   .charAt(0)
                   .toUpperCase() + pluralize(path.slice(1)).slice(1),
-              item: singularize(path.slice(1)),
-              tab: path.slice(1),
+              routeParams: ['vault.cluster.access.method.list', path.slice(1)],
             };
           })
         : [];
