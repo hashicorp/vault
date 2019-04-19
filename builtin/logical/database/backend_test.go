@@ -2,11 +2,16 @@ package database
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -20,12 +25,14 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
+	"gopkg.in/mgo.v2"
 )
 
 var (
@@ -102,12 +109,13 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain(t *testing.T) {
+func TestBackend_PluginMain_Postgres(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
 	}
@@ -124,6 +132,25 @@ func TestBackend_PluginMain(t *testing.T) {
 	flags.Parse(args)
 
 	postgresql.Run(apiClientMeta.GetTLSConfig())
+}
+
+func TestBackend_PluginMain_Mongo(t *testing.T) {
+	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	args := []string{"--ca-cert=" + caPEM}
+
+	apiClientMeta := &pluginutil.APIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	mongodb.Run(apiClientMeta.GetTLSConfig())
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -1380,7 +1407,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 }
 
-func TestBackend_Static_Rotations(t *testing.T) {
+func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1436,6 +1463,163 @@ func TestBackend_Static_Rotations(t *testing.T) {
 			"revocation_statements": defaultRevocationSQL,
 			"username":              "statictest" + tc,
 			"rotation_period":       tc,
+		}
+
+		req = &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      "static-roles/" + roleName,
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+	}
+	// TODO
+	data = map[string]interface{}{
+		"db_name":               "plugin-test",
+		"creation_statements":   testRole,
+		"revocation_statements": defaultRevocationSQL,
+		"default_ttl":           "5m",
+		"max_ttl":               "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "roles/normal-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+	// END TODO
+
+	// verify the queue has 3 items in it
+	if bd.credRotationQueue.Len() != 3 {
+		t.Fatalf("expected 3 items in the rotation queue, got: (%d)", bd.credRotationQueue.Len())
+	}
+
+	// List the roles
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "static-roles/",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 3 {
+		t.Fatalf("expected 3 roles, got: (%d)", len(keys))
+	}
+
+	// capture initial passwords, before the periodic function is triggered
+	pws := make(map[string][]string, 0)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// sleep to make sure the 65s role will be up for rotation by the time the
+	// periodic function ticks
+	time.Sleep(7 * time.Second)
+
+	// sleep 75 to make sure the periodic func has time to actually run
+	time.Sleep(75 * time.Second)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// sleep more, this should allow both sr65 and sr130 to rotate
+	time.Sleep(140 * time.Second)
+	pws = capturePasswords(t, b, config, testCases, pws)
+
+	// verify all pws are as they should
+	pass := true
+	for k, v := range pws {
+		switch {
+		case k == "plugin-static-role-65":
+			// expect all passwords to be different
+			if v[0] == v[1] || v[1] == v[2] || v[0] == v[2] {
+				pass = false
+			}
+		case k == "plugin-static-role-130":
+			// expect the first two to be equal, but different from the third
+			if v[0] != v[1] || v[0] == v[2] {
+				pass = false
+			}
+		case k == "plugin-static-role-5400":
+			// expect all passwords to be equal
+			if v[0] != v[1] || v[1] != v[2] {
+				pass = false
+			}
+		}
+	}
+	if !pass {
+		t.Fatalf("password rotations did not match expected: %#v", pws)
+	}
+}
+
+// copied from plugins/database/mongodb_test.go
+func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	// allow initQueue to finish
+	time.Sleep(1 * time.Second)
+	bd := b.(*databaseBackend)
+	if bd.credRotationQueue == nil {
+		t.Fatal("database backend had no credential rotation queue")
+	}
+
+	// configure backend, add item and confirm length
+	cleanup, connURL := prepareMongoDBTestContainer(t)
+	defer cleanup()
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "mongodb-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-mongo-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-mongo-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// create three static roles with different rotation periods
+	testCases := []string{"65", "130", "5400"}
+	for _, tc := range testCases {
+		roleName := "mongo-static-role-" + tc
+		data = map[string]interface{}{
+			"name":                roleName,
+			"db_name":             "plugin-mongo-test",
+			"creation_statements": testMongoDBRole,
+			// TODO: don't require rotation statements
+			"rotation_statements": "empty",
+			"username":            "statictestMongo" + tc,
+			"rotation_period":     tc,
 		}
 
 		req = &logical.Request{
@@ -1627,6 +1811,7 @@ REVOKE USAGE ON SCHEMA public FROM {{name}};
 
 DROP ROLE IF EXISTS {{name}};
 `
+const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 //
 // WAL testing
@@ -1856,3 +2041,122 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 //
 // end WAL testing
 //
+
+// copied from plugins/database/mongodb/mongodb_test.go
+// maybe move to a new builtin/logical/database/dbplugin/helper
+func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if os.Getenv("MONGODB_URL") != "" {
+		return func() {}, os.Getenv("MONGODB_URL")
+	}
+
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("Failed to connect to docker: %s", err)
+	}
+
+	resource, err := pool.Run("mongo", "latest", []string{})
+	if err != nil {
+		t.Fatalf("Could not start local mongo docker container: %s", err)
+	}
+
+	cleanup = func() {
+		err := pool.Purge(resource)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
+	}
+
+	retURL = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
+
+	// exponential backoff-retry
+	if err = pool.Retry(func() error {
+		var err error
+		dialInfo, err := parseMongoURL(retURL)
+		if err != nil {
+			return err
+		}
+
+		session, err := mgo.DialWithInfo(dialInfo)
+		if err != nil {
+			return err
+		}
+		defer session.Close()
+		session.SetSyncTimeout(1 * time.Minute)
+		session.SetSocketTimeout(1 * time.Minute)
+		return session.Ping()
+	}); err != nil {
+		cleanup()
+		t.Fatalf("Could not connect to mongo docker container: %s", err)
+	}
+
+	return
+}
+
+// copied from plugins/database/mongodb/connection_producer.go
+func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+	url, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	info := mgo.DialInfo{
+		Addrs:    strings.Split(url.Host, ","),
+		Database: strings.TrimPrefix(url.Path, "/"),
+		Timeout:  10 * time.Second,
+	}
+
+	if url.User != nil {
+		info.Username = url.User.Username()
+		info.Password, _ = url.User.Password()
+	}
+
+	query := url.Query()
+	for key, values := range query {
+		var value string
+		if len(values) > 0 {
+			value = values[0]
+		}
+
+		switch key {
+		case "authSource":
+			info.Source = value
+		case "authMechanism":
+			info.Mechanism = value
+		case "gssapiServiceName":
+			info.Service = value
+		case "replicaSet":
+			info.ReplicaSetName = value
+		case "maxPoolSize":
+			poolLimit, err := strconv.Atoi(value)
+			if err != nil {
+				return nil, errors.New("bad value for maxPoolSize: " + value)
+			}
+			info.PoolLimit = poolLimit
+		case "ssl":
+			// Unfortunately, mgo doesn't support the ssl parameter in its MongoDB URI parsing logic, so we have to handle that
+			// ourselves. See https://github.com/go-mgo/mgo/issues/84
+			ssl, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, errors.New("bad value for ssl: " + value)
+			}
+			if ssl {
+				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+					return tls.Dial("tcp", addr.String(), &tls.Config{})
+				}
+			}
+		case "connect":
+			if value == "direct" {
+				info.Direct = true
+				break
+			}
+			if value == "replicaSet" {
+				break
+			}
+			fallthrough
+		default:
+			return nil, errors.New("unsupported connection URL option: " + key + "=" + value)
+		}
+	}
+
+	return &info, nil
+}

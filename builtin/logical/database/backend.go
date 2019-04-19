@@ -760,7 +760,6 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			return output, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 		}
 	}
-
 	_, password, _, err := db.SetCredentials(ctx, config, stmts)
 	if err != nil {
 		b.CloseIfShutdown(db, err)

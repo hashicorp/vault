@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
+	"github.com/y0ssar1an/q"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -118,6 +119,7 @@ func (c *mongoDBConnectionProducer) Connection(_ context.Context) (interface{}, 
 		c.session.Close()
 	}
 
+	q.Q("conn url in Connection:", c.ConnectionURL)
 	dialInfo, err := parseMongoURL(c.ConnectionURL)
 	if err != nil {
 		return nil, err
