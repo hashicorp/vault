@@ -8,10 +8,18 @@ defineModifier();
 
 let App;
 
+/* eslint-disable ember/avoid-leaking-state-in-ember-objects */
 App = Application.extend({
   modulePrefix: config.modulePrefix,
   podModulePrefix: config.podModulePrefix,
   Resolver,
+  engines: {
+    replication: {
+      dependencies: {
+        services: ['store', 'replication-mode'],
+      },
+    },
+  },
 });
 
 loadInitializers(App, config.modulePrefix);
