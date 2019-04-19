@@ -157,6 +157,8 @@ github.com/go-stomp/stomp v2.0.2+incompatible h1:0yPknMJh32lE2xiCFGW5t/KgamhUC4O
 github.com/go-stomp/stomp v2.0.2+incompatible/go.mod h1:VqCtqNZv1226A1/79yh+rMiFUcfY3R109np+7ke4n0c=
 github.com/go-test/deep v1.0.1 h1:UQhStjbkDClarlmv0am7OXXO4/GaPdCGiUiMTvi28sg=
 github.com/go-test/deep v1.0.1/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
+github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31 h1:28FVBuwkwowZMjbA7M0wXsI6t3PYulRTMio3SO+eKCM=
+github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df h1:fwXmhM0OqixzJDOGgTSyNH9eEDij9uGTXwsyWXvyR0A=
 github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df/go.mod h1:4Fw1eo5iaEhDUs8XyuhSVCVy52Jq3L+/3GJgYkwc+/0=
 github.com/gogo/googleapis v1.1.0/go.mod h1:gf4bu3Q80BeJ6H1S1vYPm8/ELATdvryBaNFGgqEef3s=

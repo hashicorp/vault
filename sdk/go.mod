@@ -7,7 +7,7 @@ require (
 	github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310
 	github.com/fatih/structs v1.1.0
 	github.com/go-ldap/ldap v3.0.2+incompatible
-	github.com/go-test/deep v1.0.1
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/golang/snappy v0.0.1

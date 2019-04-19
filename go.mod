@@ -54,7 +54,7 @@ require (
 	github.com/go-errors/errors v1.0.1
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stomp/stomp v2.0.2+incompatible // indirect
-	github.com/go-test/deep v1.0.1
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-github v17.0.0+incompatible
