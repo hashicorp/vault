@@ -32,6 +32,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
+	"github.com/y0ssar1an/q"
 	"gopkg.in/mgo.v2"
 )
 
@@ -150,7 +151,12 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	mongodb.Run(apiClientMeta.GetTLSConfig())
+	q.Q("trying run")
+	err := mongodb.Run(apiClientMeta.GetTLSConfig())
+	if err != nil {
+		q.Q("err with mongo run:", err)
+	}
+	q.Q("after run")
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -1564,6 +1570,11 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 
 // copied from plugins/database/mongodb_test.go
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	q.Q("--- start")
+	defer func() {
+		q.Q("---- end")
+		q.Q("")
+	}()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1589,6 +1600,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	defer cleanup()
 
 	// Configure a connection
+	q.Q("conn url:", connURL)
 	data := map[string]interface{}{
 		"connection_url":    connURL,
 		"plugin_name":       "mongodb-database-plugin",

@@ -12,6 +12,7 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/y0ssar1an/q"
 )
 
 // Database is the interface that all database objects must implement.
@@ -38,6 +39,7 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, consts.PluginTypeDatabase)
 	if err != nil {
+		q.Q("error at plugin sys lookup")
 		return nil, err
 	}
 

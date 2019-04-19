@@ -101,9 +101,11 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements[0]), &mongoCS)
-	if err != nil {
-		return "", "", false, err
+	if len(statements) >= 1 {
+		err = json.Unmarshal([]byte(statements[0]), &mongoCS)
+		if err != nil {
+			return "", "", false, err
+		}
 	}
 
 	// Default to "admin" if no db provided
@@ -111,9 +113,9 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 		mongoCS.DB = "admin"
 	}
 
-	if len(mongoCS.Roles) == 0 {
-		return "", "", false, fmt.Errorf("roles array is required in creation statement")
-	}
+	// if len(mongoCS.Roles) == 0 {
+	// 	return "", "", false, fmt.Errorf("roles array is required in creation statement")
+	// }
 
 	// createUserCmd := createUserCommand{
 	// 	Username: username,

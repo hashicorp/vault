@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/y0ssar1an/q"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
@@ -369,6 +370,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 }
 
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	q.Q("creating static role")
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
@@ -382,6 +384,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	if role == nil {
 		role = &roleEntry{}
 	}
+	q.Q("data raw pre:", data.Raw)
 
 	if err := pathRoleCreateUpdateCommon(ctx, role, req.Operation, data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -407,7 +410,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount = &staticAccount{}
 	}
 
+	q.Q("data in create:", data.Raw)
 	username := data.Get("username").(string)
+	q.Q("username:", username)
 	if username == "" && createRole {
 		return logical.ErrorResponse("username is a required field to create a static account"), nil
 	}
@@ -443,9 +448,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.Statements.Rotation = data.Get("rotation_statements").([]string)
 	}
 
-	if len(role.Statements.Rotation) == 0 {
-		return logical.ErrorResponse("rotation_statements is a required field for static accounts"), nil
-	}
+	// if len(role.Statements.Rotation) == 0 {
+	// 	return logical.ErrorResponse("rotation_statements is a required field for static accounts"), nil
+	// }
 
 	// lvr represents the roles' LastVaultRotation
 	lvr := role.StaticAccount.LastVaultRotation

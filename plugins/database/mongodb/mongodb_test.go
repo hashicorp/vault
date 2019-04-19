@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/ory/dockertest"
-	"github.com/y0ssar1an/q"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
@@ -65,7 +64,6 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 		t.Fatalf("Could not connect to mongo docker container: %s", err)
 	}
 
-	q.Q("ret url from setup:", retURL)
 	return
 }
 

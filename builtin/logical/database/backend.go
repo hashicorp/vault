@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
+	"github.com/y0ssar1an/q"
 )
 
 const (
@@ -310,6 +311,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		}
 
 		// load roles and populate queue with static accounts
+		q.Q("populate queue calleD")
 		b.populateQueue(ctx, conf.StorageView)
 
 		// launch ticker
@@ -361,20 +363,23 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 
 		if role == nil || role.StaticAccount == nil {
 			b.Logger().Warn("role or static account not found")
-			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with no static account", err)
-				merr = multierror.Append(merr, err)
-			}
+			// TODO can't delete from wwal during setup
+			// if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+			// 	q.Q("err:", err)
+			// 	b.Logger().Warn("error deleting WAL for role with no static account", err)
+			// 	merr = multierror.Append(merr, err)
+			// }
 			continue
 		}
 
 		if role.StaticAccount.LastVaultRotation.After(walEntry.LastVaultRotation) {
 			// role password has been rotated since the WAL was created, so let's
 			// delete this
-			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with newer rotation date", err)
-				merr = multierror.Append(merr, err)
-			}
+			// TODO can't delete from wal during setup
+			// if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+			// 	b.Logger().Warn("error deleting WAL for role with newer rotation date", err)
+			// 	merr = multierror.Append(merr, err)
+			// }
 			continue
 		}
 
@@ -491,7 +496,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 	log := b.Logger()
 	log.Info("populating role rotation queue")
 
-	roles, err := s.List(ctx, "role/")
+	roles, err := s.List(ctx, "static-role/")
 	if err != nil {
 		log.Warn("unable to list role for enqueueing", "error", err)
 		return
@@ -512,9 +517,9 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		default:
 		}
 
-		role, err := b.Role(ctx, s, roleName)
+		role, err := b.StaticRole(ctx, s, roleName)
 		if err != nil {
-			log.Warn("unable to read role", "error", err, "role", roleName)
+			log.Warn("unable to read static role", "error", err, "role", roleName)
 			continue
 		}
 		if role == nil || role.StaticAccount == nil {
@@ -760,7 +765,10 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 			return output, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 		}
 	}
+
+	q.Q("calling set credentials: ", config.Username, config.Password)
 	_, password, _, err := db.SetCredentials(ctx, config, stmts)
+	q.Q("returned password:", password)
 	if err != nil {
 		b.CloseIfShutdown(db, err)
 		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
@@ -778,9 +786,11 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
 	if err != nil {
+		q.Q("error storage")
 		return output, err
 	}
 	if err := s.Put(ctx, entry); err != nil {
+		q.Q("error put")
 		return output, err
 	}
 
