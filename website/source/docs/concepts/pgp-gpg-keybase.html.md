@@ -164,7 +164,7 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "wcBMA37..." | base64 -d | gpg -dq
+$ echo "wcBMA37..." | base64 --decode | gpg -dq
 ```
 
 And replace `wcBMA37...` with the encrypted key.
