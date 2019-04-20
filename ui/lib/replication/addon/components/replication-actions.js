@@ -1,7 +1,8 @@
 import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import ReplicationActions from 'vault/mixins/replication-actions';
+import ReplicationActions from 'replication/mixins/replication-actions';
+import layout from '../templates/components/replication-actions';
 
 const DEFAULTS = {
   token: null,
@@ -14,6 +15,7 @@ const DEFAULTS = {
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
+  layout,
   replicationMode: null,
   selectedAction: null,
   tagName: 'form',

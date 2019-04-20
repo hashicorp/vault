@@ -1,0 +1,83 @@
+{{#if (not (has-feature "DR Replication"))}}
+  {{upgrade-page title="Replication"}}
+{{else if (or cluster.allReplicationDisabled cluster.replicationAttrs.replicationDisabled)}}
+  <ReplicationEnable
+    @initialReplicationMode={{initialReplicationMode}}
+    @cluster={{cluster}}
+  />
+{{else if showModeSummary}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        Replication
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <h3 class="title is-flex-center is-5 is-marginless">
+      {{i-con class="has-text-grey is-medium" glyph="replication" size=20}}
+      Disaster Recovery (DR)
+    </h3>
+    {{#if cluster.dr.replicationEnabled}}
+      {{#link-to
+        "vault.cluster.replication.mode.index"
+        "dr"
+        class="link-plain"
+      }}
+        {{replication-mode-summary
+          mode="dr"
+          cluster=cluster
+          tagName="span"
+        }}
+      {{/link-to}}
+    {{else}}
+      {{replication-mode-summary
+        mode="dr"
+        cluster=cluster
+        tagName="div"
+      }}
+    {{/if}}
+  </div>
+  <div class="box is-bottomless is-fullwidth is-marginless">
+    <h3 class="title is-flex-center is-5 is-marginless">
+      {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
+      Performance
+    </h3>
+    {{#if cluster.dr.replicationEnabled}}
+      {{#link-to
+        "vault.cluster.replication.mode.index"
+        "performance"
+        class="link-plain"
+      }}
+        {{replication-mode-summary
+          mode="performance"
+          cluster=cluster
+          tagName="span"
+        }}
+      {{/link-to}}
+    {{else}}
+      {{replication-mode-summary
+        mode="performance"
+        cluster=cluster
+        tagName="div"
+      }}
+    {{/if}}
+  </div>
+{{else}}
+  {{#if (eq replicationAttrs.mode 'initializing')}}
+    The cluster is initializing replication. This may take some time.
+  {{else}}
+    {{info-table-row label="Mode" value=replicationAttrs.mode}}
+    {{info-table-row label="Replication set" value=replicationAttrs.clusterId}}
+    {{info-table-row label="Secondary ID" value=replicationAttrs.secondaryId}}
+    {{info-table-row label="State" value=replicationAttrs.state}}
+    {{info-table-row label="Primary cluster address" value=replicationAttrs.primaryClusterAddr}}
+    {{info-table-row label="Replication state" value=replicationAttrs.replicationState}}
+    {{info-table-row label="Last WAL entry" value=replicationAttrs.lastWAL}}
+    {{info-table-row label="Last Remote WAL entry" value=replicationAttrs.lastRemoteWAL}}
+    {{info-table-row label="Merkle root index" value=replicationAttrs.merkleRoot}}
+    {{#if replicationAttrs.syncProgress}}
+      {{info-table-row label="Sync progress" value=(concat replicationAttrs.syncProgress.progress '/' replicationAttrs.syncProgress.total)}}
+    {{/if}}
+  {{/if}}
+{{/if}}
