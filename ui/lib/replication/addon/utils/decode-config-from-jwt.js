@@ -1,4 +1,4 @@
-import { decodeString } from 'vault/utils/b64';
+import { decodeString } from 'core/utils/b64';
 
 /*
  * @param token - Replication Secondary Activation Token
