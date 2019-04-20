@@ -4,9 +4,14 @@
     "ember-addon"
   ],
   "dependencies": {
+    "ember-auto-import": "*",
     "ember-cli-htmlbars": "*",
+    "ember-cli-htmlbars-inline-precompile": "*",
     "ember-cli-babel": "*",
+    "ember-radio-button": "*",
     "ember-composable-helpers": "*",
-    "ember-truth-helpers": "*"
+    "ember-truth-helpers": "*",
+    "ember-concurrency": "*",
+    "base64-js": "*"
   }
 }
