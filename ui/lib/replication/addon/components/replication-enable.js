@@ -1,10 +1,12 @@
-import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
-import { get, computed } from '@ember/object';
 import Component from '@ember/component';
-import decodeConfigFromJWT from 'vault/utils/decode-config-from-jwt';
-import ReplicationActions from 'vault/mixins/replication-actions';
+import { get, computed } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+
+import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
+import ReplicationActions from 'replication/mixins/replication-actions';
+
+import layout from '../templates/components/replication-enable';
 
 const DEFAULTS = {
   mode: 'primary',
@@ -20,8 +22,10 @@ const DEFAULTS = {
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
+  layout,
   wizard: service(),
-  version: service(),
+  tagName: '',
+
   didReceiveAttrs() {
     this._super(...arguments);
     const initialReplicationMode = this.get('initialReplicationMode');
@@ -29,11 +33,6 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
       this.set('replicationMode', initialReplicationMode);
     }
   },
-  showModeSummary: false,
-  initialReplicationMode: null,
-  cluster: null,
-
-  replicationAttrs: alias('cluster.replicationAttrs'),
 
   tokenIncludesAPIAddr: computed('token', function() {
     const config = decodeConfigFromJWT(get(this, 'token'));

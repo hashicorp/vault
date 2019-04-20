@@ -2,6 +2,7 @@ import { inject as service } from '@ember/service';
 import { equal } from '@ember/object/computed';
 import { getProperties, get, computed } from '@ember/object';
 import Component from '@ember/component';
+import layout from '../templates/components/replication-mode-summary';
 
 const replicationAttr = function(attr) {
   return computed('mode', `cluster.{dr,performance}.${attr}`, function() {
@@ -10,6 +11,7 @@ const replicationAttr = function(attr) {
   });
 };
 export default Component.extend({
+  layout,
   version: service(),
   router: service(),
   namespace: service(),
@@ -50,9 +52,4 @@ export default Component.extend({
   clusterIdDisplay: replicationAttr('clusterIdDisplay'),
   mode: null,
   cluster: null,
-  partialName: computed('display', function() {
-    return this.get('display') === 'menu'
-      ? 'partials/replication/replication-mode-summary-menu'
-      : 'partials/replication/replication-mode-summary';
-  }),
 });

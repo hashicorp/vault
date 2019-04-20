@@ -46,7 +46,7 @@
           {{i-con class="is-medium" glyph="perf-replication" size=20}}
           Performance Replication
         </h3>
-          {{#if (not version.hasPerfReplication)}}
+        {{#if (not (has-feature "Performance Replication"))}}
             <p class="help has-text-grey-dark">
               Performance Replication is a feature of {{#upgrade-link pageName="Performance Replication"}}Vault Enterprise Premium{{/upgrade-link}}
             </p>
@@ -92,11 +92,11 @@
               <h3 class="box-label-header title is-6">
                 {{i-con class="is-medium" glyph="perf-replication" size=20}}
                  Performance
-                 {{#if (not version.hasPerfReplication)}}
+                 {{#if (not (has-feature "Performance Replication"))}}
                    {{edition-badge edition="Premium"}}
                  {{/if}}
               </h3>
-              {{#if (not version.hasPerfReplication)}}
+              {{#if (not (has-feature "Performance Replication"))}}
                 <p class="help has-text-grey-dark">
                   Performance Replication is a feature of {{#upgrade-link pageName="Performance Replication"}}Vault Enterprise Premium{{/upgrade-link}}
                 </p>
@@ -107,7 +107,7 @@
               {{/if}}
             </div>
             <div>
-              {{#if version.hasPerfReplication}}
+              {{#if (has-feature "Performance Replication")}}
                 {{radio-button
                   value="performance"
                   groupValue=replicationMode
@@ -171,7 +171,7 @@
         {{#if (and
             (eq replicationMode 'dr')
             (not cluster.performance.replicationDisabled)
-            version.hasPerfReplication
+            (has-feature "Performance Replication")
           )
         }}
           <div class="has-text-danger">
