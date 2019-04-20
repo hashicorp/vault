@@ -6,6 +6,7 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 
 export default Route.extend(ClusterRoute, {
   version: service(),
+  store: service(),
 
   beforeModel() {
     return this.get('version')
@@ -16,7 +17,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    return this.modelFor('vault.cluster');
+    return this.store.findRecord('cluster', 'vault');
   },
 
   afterModel(model) {
