@@ -5,6 +5,9 @@ import Route from '@ember/routing/route';
 import UnloadModelRouteMixin from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRouteMixin, {
+  store: service(),
+  version: service(),
+  rm: service('replication-mode'),
   modelPath: 'model.config',
   fetchMounts() {
     return hash({
@@ -15,7 +18,5 @@ export default Route.extend(UnloadModelRouteMixin, {
     });
   },
 
-  version: service(),
-  rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
 });

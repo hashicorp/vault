@@ -7,6 +7,6 @@ export default Route.extend({
     this.get('replicationMode').setMode(null);
   },
   model() {
-    return this.modelFor('vault.cluster.replication');
+    return this.modelFor('application');
   },
 });
