@@ -9,7 +9,7 @@ import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import { resolve } from 'rsvp';
 import DS from 'ember-data';
-import itemListAdapter from 'vault/adapters/generated-item-list';
+import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
   return path.trim().replace(/^\/+|\/+$/g, '');
@@ -92,7 +92,7 @@ export default Service.extend({
     } else {
       newModel = DS.Model.extend({});
       helpUrl = `/v1/${apiPath}?help=1`;
-      let newAdapter = itemListAdapter.extend({ itemType });
+      let newAdapter = generatedItemAdapter.extend({ itemType });
       owner.register(`adapter:${modelType}`, newAdapter);
     }
 

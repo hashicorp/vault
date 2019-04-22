@@ -1,10 +1,26 @@
+<PageHeader as |p|>
+  <p.top>
+    {{key-value-header
+      baseKey=model
+      path="vault.cluster.access.method"
+      root=root
+      showCurrent=true
+    }}
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{capitalize method}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 {{section-tabs model "authShow" paths}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
+    {{debugger}}
     {{#linked-block
       "vault.cluster.access.method.show"
+      (pluralize itemType)
       item.id
-      "details"
       class="list-item-row"
       data-test-method-row=true
     }}
@@ -12,24 +28,19 @@
         <div class="column is-7-tablet is-10-mobile">
           {{#link-to
             "vault.cluster.access.method.show"
+            (pluralize itemType)
             item.id
-            "details"
             class="is-block has-text-black has-text-weight-semibold"
             data-test-method-link=true
           }}
             {{i-con glyph="role" size=14 class="has-text-grey-light"}}
             <span class="has-text-weight-semibold">
-              {{item.name}}
+              {{item.id}}
             </span>
           {{/link-to}}
           <div class="has-text-grey is-size-8">
             {{item.id}}
           </div>
-        </div>
-        <div class="column is-3 is-hidden-mobile">
-          {{#if item.aliases.length}}
-            {{pluralize item.aliases.length "alias"}}
-          {{/if}}
         </div>
       </div>
     {{/linked-block}}

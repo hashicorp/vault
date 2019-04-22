@@ -40,10 +40,15 @@ export default ApplicationAdapter.extend({
   // },
 
   urlForItem(method, id, type) {
-    let url = `${this.buildURL()}/${encodePath(method)}/${type}`;
+    let url = `${this.buildURL()}/auth/${encodePath(method)}/${type}/`;
     if (id) {
-      url = url + '/' + encodePath(id);
+      url = url + encodePath(id);
     }
+    return url;
+  },
+
+  urlForFindRecord(id, modelName, snapshot) {
+    let url = `${this.buildURL()}/auth/${snapshot.adapterOptions.path}/${id}`;
     return url;
   },
 
@@ -57,7 +62,6 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { id, method, type } = query;
-    debugger; // eslint-disable-line
     return this.ajax(this.urlForItem(method, id, type), 'GET', this.optionsForQuery(id)).then(resp => {
       const data = {
         id,

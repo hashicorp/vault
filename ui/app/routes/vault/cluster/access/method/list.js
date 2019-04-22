@@ -1,10 +1,8 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { hash } from 'rsvp';
 import { getOwner } from '@ember/application';
 import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
-import { set } from '@ember/object';
 
 export default Route.extend(ListRoute, {
   wizard: service(),
@@ -43,12 +41,14 @@ export default Route.extend(ListRoute, {
         }
       });
   },
+
   setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor(this.routeName);
     const { apiPath } = this.modelFor('vault.cluster.access.method');
     let { path } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
+    controller.set('method', path);
     this.pathHelp.getPaths(apiPath, path).then(paths => {
       controller.set('paths', paths);
     });
