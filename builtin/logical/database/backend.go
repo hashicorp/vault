@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/mitchellh/mapstructure"
-	"github.com/y0ssar1an/q"
 )
 
 const (
@@ -217,7 +216,6 @@ func (b *databaseBackend) invalidate(ctx context.Context, key string) {
 		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.ClearConnection(name)
 	case strings.HasPrefix(key, databaseStaticRolePath):
-		// TODO revoke users
 		b.invalidateQueue()
 	}
 }
@@ -311,7 +309,6 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		}
 
 		// load roles and populate queue with static accounts
-		q.Q("populate queue calleD")
 		b.populateQueue(ctx, conf.StorageView)
 
 		// launch ticker
@@ -354,7 +351,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 		}
 
 		// load matching role and verify
-		role, err := b.Role(ctx, conf.StorageView, walEntry.RoleName)
+		role, err := b.StaticRole(ctx, conf.StorageView, walEntry.RoleName)
 		if err != nil {
 			b.Logger().Warn("error loading role", err)
 			merr = multierror.Append(merr, err)
@@ -363,23 +360,20 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 
 		if role == nil || role.StaticAccount == nil {
 			b.Logger().Warn("role or static account not found")
-			// TODO can't delete from wwal during setup
-			// if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-			// 	q.Q("err:", err)
-			// 	b.Logger().Warn("error deleting WAL for role with no static account", err)
-			// 	merr = multierror.Append(merr, err)
-			// }
+			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+				b.Logger().Warn("error deleting WAL for role with no static account", err)
+				merr = multierror.Append(merr, err)
+			}
 			continue
 		}
 
 		if role.StaticAccount.LastVaultRotation.After(walEntry.LastVaultRotation) {
 			// role password has been rotated since the WAL was created, so let's
 			// delete this
-			// TODO can't delete from wal during setup
-			// if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-			// 	b.Logger().Warn("error deleting WAL for role with newer rotation date", err)
-			// 	merr = multierror.Append(merr, err)
-			// }
+			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
+				b.Logger().Warn("error deleting WAL for role with newer rotation date", err)
+				merr = multierror.Append(merr, err)
+			}
 			continue
 		}
 
@@ -766,9 +760,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	q.Q("calling set credentials: ", config.Username, config.Password)
-	_, password, _, err := db.SetCredentials(ctx, config, stmts)
-	q.Q("returned password:", password)
+	_, password, err := db.SetCredentials(ctx, config, stmts)
 	if err != nil {
 		b.CloseIfShutdown(db, err)
 		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)
@@ -786,11 +778,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
 	if err != nil {
-		q.Q("error storage")
 		return output, err
 	}
 	if err := s.Put(ctx, entry); err != nil {
-		q.Q("error put")
 		return output, err
 	}
 

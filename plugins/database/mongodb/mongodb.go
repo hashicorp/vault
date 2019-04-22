@@ -86,14 +86,14 @@ func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
 
 	session, err := m.getConnection(ctx)
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
 
 	username = staticUser.Username
@@ -104,7 +104,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 	if len(statements) >= 1 {
 		err = json.Unmarshal([]byte(statements[0]), &mongoCS)
 		if err != nil {
-			return "", "", false, err
+			return "", "", err
 		}
 	}
 
@@ -114,7 +114,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 	}
 
 	// if len(mongoCS.Roles) == 0 {
-	// 	return "", "", false, fmt.Errorf("roles array is required in creation statement")
+	// 	return "", "",  fmt.Errorf("roles array is required in creation statement")
 	// }
 
 	// createUserCmd := createUserCommand{
@@ -141,17 +141,17 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 		// Call getConnection to reset and retry query if we get an EOF error on first attempt.
 		session, err := m.getConnection(ctx)
 		if err != nil {
-			return "", "", false, err
+			return "", "", err
 		}
 		err = session.DB(mongoCS.DB).Run(upsertUserCmd, nil)
 		if err != nil {
-			return "", "", false, err
+			return "", "", err
 		}
 	default:
-		return "", "", false, err
+		return "", "", err
 	}
 
-	return username, password, false, nil
+	return username, password, nil
 }
 
 // CreateUser generates the username/password on the underlying secret backend as instructed by
@@ -184,7 +184,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Password: password,
 	}
 
-	username, password, _, err = m.SetCredentials(ctx, stu, statements.Creation)
+	username, password, err = m.SetCredentials(ctx, stu, statements.Creation)
 	return username, password, err
 }
 

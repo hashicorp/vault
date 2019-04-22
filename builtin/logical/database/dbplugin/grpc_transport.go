@@ -129,7 +129,7 @@ func (s *gRPCServer) GenerateCredentials(ctx context.Context, _ *Empty) (*Genera
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-	username, password, restored, err := s.impl.SetCredentials(ctx, *req.StaticUserConfig, req.Statements)
+	username, password, err := s.impl.SetCredentials(ctx, *req.StaticUserConfig, req.Statements)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,6 @@ func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequ
 	return &SetCredentialsResponse{
 		Username: username,
 		Password: password,
-		Restored: restored,
 	}, err
 }
 
@@ -337,7 +336,7 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 
 	return resp.Password, nil
 }
-func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserConfig, statements []string) (username, password string, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
@@ -356,14 +355,14 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserCo
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			// TODO: a better or const error type here
-			return "", "", false, fmt.Errorf("backend/version does not support Static Accounts")
+			return "", "", fmt.Errorf("backend/version does not support Static Accounts")
 		}
 
 		if c.doneCtx.Err() != nil {
-			return "", "", false, ErrPluginShutdown
+			return "", "", ErrPluginShutdown
 		}
-		return "", "", false, err
+		return "", "", err
 	}
 
-	return resp.Username, resp.Password, resp.Restored, err
+	return resp.Username, resp.Password, err
 }

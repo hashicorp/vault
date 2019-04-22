@@ -118,7 +118,7 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-// func (m *MySQL) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string, restored bool, err error) {
+// func (m *MySQL) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string,  err error) {
 // 	return
 // }
 

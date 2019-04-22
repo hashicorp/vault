@@ -95,7 +95,7 @@ func (mw *databaseTracingMiddleware) GenerateCredentials(ctx context.Context) (p
 	return mw.next.GenerateCredentials(ctx)
 }
 
-func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+func (mw *databaseTracingMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, err error) {
 	defer func(then time.Time) {
 		mw.logger.Trace("set credentials", "status", "finished", "err", err, "took", time.Since(then))
 	}(time.Now())
@@ -235,7 +235,7 @@ func (mw *databaseMetricsMiddleware) GenerateCredentials(ctx context.Context) (p
 	return mw.next.GenerateCredentials(ctx)
 }
 
-func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+func (mw *databaseMetricsMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "SetCredentials"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "SetCredentials"}, now)
@@ -329,7 +329,7 @@ func (mw *DatabaseErrorSanitizerMiddleware) GenerateCredentials(ctx context.Cont
 	return password, mw.sanitize(err)
 }
 
-func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
-	username, password, restored, err = mw.next.SetCredentials(ctx, staticConfig, statements)
-	return username, password, restored, mw.sanitize(err)
+func (mw *DatabaseErrorSanitizerMiddleware) SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username, password string, err error) {
+	username, password, err = mw.next.SetCredentials(ctx, staticConfig, statements)
+	return username, password, mw.sanitize(err)
 }

@@ -95,15 +95,15 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, restored bool, err error) {
+func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
 	if len(statements) == 0 {
-		return "", "", false, errors.New("empty creation or rotation statements")
+		return "", "", errors.New("empty creation or rotation statements")
 	}
 
 	username = staticUser.Username
 	password = staticUser.Password
 	if username == "" || password == "" {
-		return "", "", false, errors.New("must provide both username and password")
+		return "", "", errors.New("must provide both username and password")
 	}
 
 	// Grab the lock
@@ -113,13 +113,13 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
 	// Get the connection
 	db, err := p.getConnection(ctx)
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
 	defer func() {
 		_ = tx.Rollback()
@@ -139,17 +139,17 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.Sta
 				"password": password,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return "", "", false, err
+				return "", "", err
 			}
 		}
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
 
-	return username, password, false, nil
+	return username, password, nil
 }
 
 func (p *PostgreSQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {

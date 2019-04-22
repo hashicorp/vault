@@ -12,7 +12,6 @@ import (
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/y0ssar1an/q"
 )
 
 // Database is the interface that all database objects must implement.
@@ -24,7 +23,7 @@ type Database interface {
 
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 	GenerateCredentials(ctx context.Context) (string, error)
-	SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username string, password string, restored bool, err error)
+	SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username string, password string, err error)
 
 	Init(ctx context.Context, config map[string]interface{}, verifyConnection bool) (saveConfig map[string]interface{}, err error)
 	Close() error
@@ -39,7 +38,6 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, consts.PluginTypeDatabase)
 	if err != nil {
-		q.Q("error at plugin sys lookup")
 		return nil, err
 	}
 

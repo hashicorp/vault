@@ -32,7 +32,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
-	"github.com/y0ssar1an/q"
 	"gopkg.in/mgo.v2"
 )
 
@@ -151,12 +150,10 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	q.Q("trying run")
 	err := mongodb.Run(apiClientMeta.GetTLSConfig())
 	if err != nil {
-		q.Q("err with mongo run:", err)
+		t.Fatal(err)
 	}
-	q.Q("after run")
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -1570,11 +1567,6 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 
 // copied from plugins/database/mongodb_test.go
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	q.Q("--- start")
-	defer func() {
-		q.Q("---- end")
-		q.Q("")
-	}()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1600,7 +1592,6 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	defer cleanup()
 
 	// Configure a connection
-	q.Q("conn url:", connURL)
 	data := map[string]interface{}{
 		"connection_url":    connURL,
 		"plugin_name":       "mongodb-database-plugin",
@@ -2026,6 +2017,7 @@ func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) 
 
 // helper to assert the number of WAL entries is what we expect
 func assertWALCount(t *testing.T, s logical.Storage, expected int) {
+	var count int
 	ctx := context.Background()
 	keys, err := framework.ListWAL(ctx, s)
 	if err != nil {
@@ -2033,7 +2025,6 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int) {
 	}
 
 	// loop through WAL keys and process any rotation ones
-	var count int
 	for _, k := range keys {
 		walEntry, _ := framework.GetWAL(ctx, s, k)
 		if walEntry == nil {
