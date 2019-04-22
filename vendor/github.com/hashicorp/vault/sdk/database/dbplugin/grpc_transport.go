@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	fmt "fmt"
 	"time"
 
 	"google.golang.org/grpc"
@@ -16,7 +15,9 @@ import (
 )
 
 var (
-	ErrPluginShutdown = errors.New("plugin shutdown")
+	ErrPluginShutdown            = errors.New("plugin shutdown")
+	ErrPluginGenCredsUnsupported = errors.New("backend/version does not support generating credentials")
+	ErrPluginStaticUnsupported   = errors.New("backend/version does not support Static Accounts")
 )
 
 // ---- gRPC Server domain ----
@@ -325,7 +326,7 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			// TODO: a better or const error type here
-			return "", fmt.Errorf("backend/version does not support generating credentials")
+			return "", ErrPluginGenCredsUnsupported
 		}
 
 		if c.doneCtx.Err() != nil {
@@ -355,7 +356,7 @@ func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserCo
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			// TODO: a better or const error type here
-			return "", "", fmt.Errorf("backend/version does not support Static Accounts")
+			return "", "", ErrPluginStaticUnsupported
 		}
 
 		if c.doneCtx.Err() != nil {

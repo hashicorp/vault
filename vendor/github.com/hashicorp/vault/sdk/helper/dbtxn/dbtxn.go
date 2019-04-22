@@ -31,7 +31,6 @@ func ExecuteDBQuery(ctx context.Context, db *sql.DB, params map[string]string, q
 // - config: 	Optional, may be nil
 // - query: 	Required
 func ExecuteTxQuery(ctx context.Context, tx *sql.Tx, params map[string]string, query string) error {
-
 	parsedQuery := parseQuery(params, query)
 
 	stmt, err := tx.PrepareContext(ctx, parsedQuery)

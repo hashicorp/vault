@@ -326,7 +326,7 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
 			// TODO: a better or const error type here
-			return "", ErrPluginSetCredsUnsupported
+			return "", ErrPluginGenCredsUnsupported
 		}
 
 		if c.doneCtx.Err() != nil {

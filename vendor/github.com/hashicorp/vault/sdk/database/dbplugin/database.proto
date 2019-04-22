@@ -52,6 +52,7 @@ message Statements {
 	repeated string revocation = 6;
 	repeated string rollback  = 7;
 	repeated string renewal = 8;
+	repeated string rotation = 9;
 }
 
 message UsernameConfig {
@@ -78,6 +79,26 @@ message RotateRootCredentialsResponse {
 
 message Empty {}
 
+message GenerateCredentialsResponse {
+  string password = 1;
+}
+
+message StaticUserConfig{
+  string Username = 1;
+  string Password = 2;
+  bool Create = 3;
+}
+
+message SetCredentialsRequest {
+  StaticUserConfig static_user_config = 1;
+  repeated string statements = 2;
+}
+
+message SetCredentialsResponse {
+  string username = 1;
+  string password = 2;
+}
+
 service Database {
 	rpc Type(Empty) returns (TypeResponse);
 	rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
@@ -86,6 +107,8 @@ service Database {
 	rpc RotateRootCredentials(RotateRootCredentialsRequest) returns (RotateRootCredentialsResponse);
 	rpc Init(InitRequest) returns (InitResponse);
 	rpc Close(Empty) returns (Empty);
+  rpc SetCredentials(SetCredentialsRequest) returns (SetCredentialsResponse);
+  rpc GenerateCredentials(Empty) returns (GenerateCredentialsResponse);
 	
 	rpc Initialize(InitializeRequest) returns (Empty) {
 		option deprecated = true;
