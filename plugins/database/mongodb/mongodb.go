@@ -113,27 +113,19 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 		mongoCS.DB = "admin"
 	}
 
-	// if len(mongoCS.Roles) == 0 {
-	// 	return "", "",  fmt.Errorf("roles array is required in creation statement")
-	// }
-
-	// createUserCmd := createUserCommand{
-	// 	Username: username,
-	// 	Password: password,
-	// 	Roles:    mongoCS.Roles.toStandardRolesArray(),
-	// }
-	upsertUserCmd := upsertUserCommand{
-		Username: username,
-		Password: password,
-		Roles:    mongoCS.Roles.toStandardRolesArray(),
+	if staticUser.Create {
+		if len(mongoCS.Roles) == 0 {
+			return "", "", fmt.Errorf("roles array is required in creation statement")
+		}
 	}
 
-	// err = session.DB(mongoCS.DB).Run(upsertUserCmd, nil)
-	err = session.DB(mongoCS.DB).UpsertUser(&mgo.User{
+	mongoUser := mgo.User{
 		Username: username,
 		Password: password,
 		Roles:    mongoCS.Roles.toStandardRolesStringArray(),
-	})
+	}
+
+	err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
 
 	switch {
 	case err == nil:
@@ -143,7 +135,7 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 		if err != nil {
 			return "", "", err
 		}
-		err = session.DB(mongoCS.DB).Run(upsertUserCmd, nil)
+		err = session.DB(mongoCS.DB).UpsertUser(&mongoUser)
 		if err != nil {
 			return "", "", err
 		}
@@ -182,6 +174,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 	stu := dbplugin.StaticUserConfig{
 		Username: username,
 		Password: password,
+		Create:   true,
 	}
 
 	username, password, err = m.SetCredentials(ctx, stu, statements.Creation)
