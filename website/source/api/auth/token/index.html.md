@@ -84,10 +84,11 @@ during this call.
   to be renewed past its initial TTL.  Setting the value to `true` will allow
   the token to be renewable up to the system/mount maximum TTL.
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
-- `ttl` `(string: "")`  -The TTL period of the token, provided as "1h", where
+- `ttl` `(string: "")` - The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
   [default lease TTL](/docs/configuration/index.html), or indefinitely if the
   root policy is used.
+- `type` `(string: "")` - The token type. Can be "batch" or "service". Defaults to the type specified by the role configuration named by `role_name`.
 - `explicit_max_ttl` `(string: "")` - If set, the token will have an explicit
   max TTL set upon it. This maximum token TTL *cannot* be changed later, and
   unlike with normal tokens, updates to the system/mount max TTL value will
