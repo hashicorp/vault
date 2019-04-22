@@ -86,8 +86,11 @@ func TestGetOrDefaultRegion_ConfigFilesPreferredThird(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_ConfigFileUnfound(t *testing.T) {
-	configuredRegion := ""
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
 
+	configuredRegion := ""
 	cleanupEnv := setEnvRegion(t, "")
 	defer cleanupEnv()
 
@@ -125,6 +128,10 @@ func TestGetOrDefaultRegion_EC2InstanceMetadataPreferredFourth(t *testing.T) {
 }
 
 func TestGetOrDefaultRegion_DefaultsToDefaultRegionWhenRegionUnavailable(t *testing.T) {
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
+
 	configuredRegion := ""
 
 	cleanupEnv := setEnvRegion(t, "")
