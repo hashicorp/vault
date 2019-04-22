@@ -26,11 +26,7 @@ export default Component.extend({
       return 'https://www.hashicorp.com/products/vault';
     }
     if (this.get('replicationEnabled') || display === 'menu') {
-      return this.get('router').urlFor(
-        'vault.cluster.replication.mode.index',
-        this.get('cluster.name'),
-        mode
-      );
+      return this.get('router').urlFor('vault.cluster.replication.mode.index', this.get('cluster.id'), mode);
     }
     return null;
   }),
