@@ -16,7 +16,7 @@ App = Application.extend({
   engines: {
     replication: {
       dependencies: {
-        services: ['auth', 'replication-mode', 'router', 'store', 'version', 'wizard'],
+        services: ['auth', 'namespace', 'replication-mode', 'router', 'store', 'version', 'wizard'],
       },
     },
   },
