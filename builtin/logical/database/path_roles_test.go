@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_period"}

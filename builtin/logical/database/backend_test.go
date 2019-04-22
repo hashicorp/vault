@@ -145,7 +145,7 @@ func TestBackend_PluginMain_Mongo(t *testing.T) {
 
 	args := []string{"--ca-cert=" + caPEM}
 
-	apiClientMeta := &pluginutil.APIClientMeta{}
+	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
@@ -1566,6 +1566,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 
 // copied from plugins/database/mongodb_test.go
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+	t.Skip()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
