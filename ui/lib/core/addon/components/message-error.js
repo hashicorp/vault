@@ -1,7 +1,9 @@
 import { computed } from '@ember/object';
 import Component from '@ember/component';
+import layout from '../templates/components/message-error';
 
 export default Component.extend({
+  layout,
   model: null,
   errors: computed(function() {
     return [];
