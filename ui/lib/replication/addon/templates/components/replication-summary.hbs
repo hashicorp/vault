@@ -15,7 +15,9 @@
   </PageHeader>
   <div class="box is-sideless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
+      {{!-- TODO convert to a new component that doesn't use partials
       {{i-con class="has-text-grey is-medium" glyph="replication" size=20}}
+      --}}
       Disaster Recovery (DR)
     </h3>
     {{#if cluster.dr.replicationEnabled}}
@@ -40,7 +42,9 @@
   </div>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
+      {{!-- TODO convert to a new component that doesn't use partials
       {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
+      --}}
       Performance
     </h3>
     {{#if cluster.dr.replicationEnabled}}

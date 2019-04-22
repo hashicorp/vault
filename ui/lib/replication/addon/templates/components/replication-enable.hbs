@@ -35,7 +35,9 @@
     {{#if initialReplicationMode}}
       {{#if (eq initialReplicationMode 'dr')}}
         <h3 class="title is-flex-center is-5 is-marginless">
+          {{!-- TODO convert to a new component that doesn't use partials
           {{i-con class="is-medium" glyph="replication" size=24}}
+          --}}
           Disaster Recovery (DR) Replication
         </h3>
         <p class="help has-text-grey-dark">
@@ -43,7 +45,9 @@
         </p>
       {{else if (eq initialReplicationMode 'performance')}}
         <h3 class="title is-flex-center is-5 is-marginless">
+          {{!-- TODO convert to a new component that doesn't use partials
           {{i-con class="is-medium" glyph="perf-replication" size=20}}
+          --}}
           Performance Replication
         </h3>
         {{#if (not (has-feature "Performance Replication"))}}
@@ -68,7 +72,9 @@
           <label for="dr" class="box-label is-column {{if (eq replicationMode 'dr') 'is-selected'}}">
             <div>
               <h3 class="box-label-header title is-6">
+                {{!-- TODO convert to a new component that doesn't use partials
                 {{i-con class="is-medium" glyph="replication" size=24}}
+                --}}
                 Disaster Recovery (DR)
               </h3>
               <p class="help has-text-grey-dark">
@@ -90,7 +96,9 @@
           <label for="performance" class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
             <div>
               <h3 class="box-label-header title is-6">
+                {{!-- TODO convert to a new component that doesn't use partials
                 {{i-con class="is-medium" glyph="perf-replication" size=20}}
+                --}}
                  Performance
                  {{#if (not (has-feature "Performance Replication"))}}
                    {{edition-badge edition="Premium"}}
