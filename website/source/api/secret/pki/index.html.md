@@ -455,12 +455,12 @@ can be set in a CSR are supported.
   only current valid type is `UTF8`. This can be a comma-delimited list or a
   JSON string slice.
 
-- `format` `(string: "")` – Specifies the format for returned data. This can be
+- `format` `(string: "pem")` – Specifies the format for returned data. This can be
   `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
   base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
   (if exported) and CSR, concatenated.
 
-- `private_key_format` `(string: "")` – Specifies the format for marshaling the
+- `private_key_format` `(string: "der")` – Specifies the format for marshaling the
   private key. Defaults to `der` which will return either base64-encoded DER or
   PEM-encoded DER, depending on the value of `format`. The other option is
   `pkcs8` which will return the key marshalled as PEM-encoded PKCS8.

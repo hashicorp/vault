@@ -1,10 +1,10 @@
-<div class="empty-state">
+<div class="empty-state" ...attributes>
   <div class="empty-state-content">
     <h3 class="empty-state-title">
       {{title}}
     </h3>
     {{#if message}}
-    <p class="empty-state-message">
+    <p class="empty-state-message" data-test-empty-state-message>
       {{message}}
     </p>
     {{/if}}

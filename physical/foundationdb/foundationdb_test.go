@@ -16,8 +16,8 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
@@ -151,8 +151,18 @@ func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), stri
 	clusterFile := tmpFile.Name()
 
 	cleanup := func() {
-		pool.Purge(resource)
+		var err error
+		for i := 0; i < 10; i++ {
+			err = pool.Purge(resource)
+			if err == nil {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
 		os.Remove(clusterFile)
+		if err != nil {
+			t.Fatalf("Failed to cleanup local container: %s", err)
+		}
 	}
 
 	setup := func() error {

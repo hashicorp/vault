@@ -34,9 +34,10 @@ type JSONFormatter struct {
 	// As an example:
 	// formatter := &JSONFormatter{
 	//   	FieldMap: FieldMap{
-	// 		 FieldKeyTime: "@timestamp",
+	// 		 FieldKeyTime:  "@timestamp",
 	// 		 FieldKeyLevel: "@level",
-	// 		 FieldKeyMsg: "@message",
+	// 		 FieldKeyMsg:   "@message",
+	// 		 FieldKeyFunc:  "@caller",
 	//    },
 	// }
 	FieldMap FieldMap
@@ -47,7 +48,7 @@ type JSONFormatter struct {
 
 // Format renders a single log entry
 func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
-	data := make(Fields, len(entry.Data)+3)
+	data := make(Fields, len(entry.Data)+4)
 	for k, v := range entry.Data {
 		switch v := v.(type) {
 		case error:
@@ -65,7 +66,7 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 		data = newData
 	}
 
-	prefixFieldClashes(data, f.FieldMap)
+	prefixFieldClashes(data, f.FieldMap, entry.HasCaller())
 
 	timestampFormat := f.TimestampFormat
 	if timestampFormat == "" {
@@ -80,6 +81,10 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 	}
 	data[f.FieldMap.resolve(FieldKeyMsg)] = entry.Message
 	data[f.FieldMap.resolve(FieldKeyLevel)] = entry.Level.String()
+	if entry.HasCaller() {
+		data[f.FieldMap.resolve(FieldKeyFunc)] = entry.Caller.Function
+		data[f.FieldMap.resolve(FieldKeyFile)] = fmt.Sprintf("%s:%d", entry.Caller.File, entry.Caller.Line)
+	}
 
 	var b *bytes.Buffer
 	if entry.Buffer != nil {

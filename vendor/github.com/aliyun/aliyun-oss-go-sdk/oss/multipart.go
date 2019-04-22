@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 // InitiateMultipartUpload initializes multipart upload
 //
 // objectKey    object name
-// options    the object constricts for upload. The valid options are CacheControl, ContentDisposition, ContentEncoding, Expires, 
+// options    the object constricts for upload. The valid options are CacheControl, ContentDisposition, ContentEncoding, Expires,
 //            ServerSideEncryption, Meta, check out the following link:
 //            https://help.aliyun.com/document_detail/oss/api-reference/multipart-upload/InitiateMultipartUpload.html
 //
@@ -106,11 +107,11 @@ func (bucket Bucket) UploadPartFromFile(imur InitiateMultipartUploadResult, file
 //
 func (bucket Bucket) DoUploadPart(request *UploadPartRequest, options []Option) (*UploadPartResult, error) {
 	listener := getProgressListener(options)
-	opts := []Option{ContentLength(request.PartSize)}
+	options = append(options, ContentLength(request.PartSize))
 	params := map[string]interface{}{}
 	params["partNumber"] = strconv.Itoa(request.PartNumber)
 	params["uploadId"] = request.InitResult.UploadID
-	resp, err := bucket.do("PUT", request.InitResult.Key, params, opts,
+	resp, err := bucket.do("PUT", request.InitResult.Key, params, options,
 		&io.LimitedReader{R: request.Reader, N: request.PartSize}, listener)
 	if err != nil {
 		return &UploadPartResult{}, err
@@ -151,7 +152,7 @@ func (bucket Bucket) UploadPartCopy(imur InitiateMultipartUploadResult, srcBucke
 	var out UploadPartCopyResult
 	var part UploadPart
 
-	opts := []Option{CopySource(srcBucketName, srcObjectKey),
+	opts := []Option{CopySource(srcBucketName, url.QueryEscape(srcObjectKey)),
 		CopySourceRange(startPosition, partSize)}
 	opts = append(opts, options...)
 	params := map[string]interface{}{}
@@ -182,7 +183,7 @@ func (bucket Bucket) UploadPartCopy(imur InitiateMultipartUploadResult, srcBucke
 // error    it's nil if the operation succeeds, otherwise it's an error object.
 //
 func (bucket Bucket) CompleteMultipartUpload(imur InitiateMultipartUploadResult,
-	parts []UploadPart) (CompleteMultipartUploadResult, error) {
+	parts []UploadPart, options ...Option) (CompleteMultipartUploadResult, error) {
 	var out CompleteMultipartUploadResult
 
 	sort.Sort(uploadParts(parts))
@@ -197,7 +198,7 @@ func (bucket Bucket) CompleteMultipartUpload(imur InitiateMultipartUploadResult,
 
 	params := map[string]interface{}{}
 	params["uploadId"] = imur.UploadID
-	resp, err := bucket.do("POST", imur.Key, params, nil, buffer, nil)
+	resp, err := bucket.do("POST", imur.Key, params, options, buffer, nil)
 	if err != nil {
 		return out, err
 	}
@@ -213,10 +214,10 @@ func (bucket Bucket) CompleteMultipartUpload(imur InitiateMultipartUploadResult,
 //
 // error    it's nil if the operation succeeds, otherwise it's an error object.
 //
-func (bucket Bucket) AbortMultipartUpload(imur InitiateMultipartUploadResult) error {
+func (bucket Bucket) AbortMultipartUpload(imur InitiateMultipartUploadResult, options ...Option) error {
 	params := map[string]interface{}{}
 	params["uploadId"] = imur.UploadID
-	resp, err := bucket.do("DELETE", imur.Key, params, nil, nil, nil)
+	resp, err := bucket.do("DELETE", imur.Key, params, options, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -231,9 +232,16 @@ func (bucket Bucket) AbortMultipartUpload(imur InitiateMultipartUploadResult) er
 // ListUploadedPartsResponse    the return value if it succeeds, only valid when error is nil.
 // error    it's nil if the operation succeeds, otherwise it's an error object.
 //
-func (bucket Bucket) ListUploadedParts(imur InitiateMultipartUploadResult) (ListUploadedPartsResult, error) {
+func (bucket Bucket) ListUploadedParts(imur InitiateMultipartUploadResult, options ...Option) (ListUploadedPartsResult, error) {
 	var out ListUploadedPartsResult
+	options = append(options, EncodingType("url"))
+
 	params := map[string]interface{}{}
+	params, err := getRawParams(options)
+	if err != nil {
+		return out, err
+	}
+
 	params["uploadId"] = imur.UploadID
 	resp, err := bucket.do("GET", imur.Key, params, nil, nil, nil)
 	if err != nil {
@@ -242,6 +250,10 @@ func (bucket Bucket) ListUploadedParts(imur InitiateMultipartUploadResult) (List
 	defer resp.Body.Close()
 
 	err = xmlUnmarshal(resp.Body, &out)
+	if err != nil {
+		return out, err
+	}
+	err = decodeListUploadedPartsResult(&out)
 	return out, err
 }
 
@@ -263,7 +275,7 @@ func (bucket Bucket) ListMultipartUploads(options ...Option) (ListMultipartUploa
 	}
 	params["uploads"] = nil
 
-	resp, err := bucket.do("GET", "", params, nil, nil, nil)
+	resp, err := bucket.do("GET", "", params, options, nil, nil)
 	if err != nil {
 		return out, err
 	}

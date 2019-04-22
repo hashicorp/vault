@@ -90,7 +90,7 @@ func CreateDeleteVirtualMFADeviceRequest() (request *DeleteVirtualMFADeviceReque
 	request = &DeleteVirtualMFADeviceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteVirtualMFADevice", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteVirtualMFADevice", "ram", "openAPI")
 	return
 }
 

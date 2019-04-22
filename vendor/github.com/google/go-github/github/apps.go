@@ -164,7 +164,7 @@ func (s *AppsService) ListUserInstallations(ctx context.Context, opt *ListOption
 //
 // GitHub API docs: https://developer.github.com/v3/apps/#create-a-new-installation-token
 func (s *AppsService) CreateInstallationToken(ctx context.Context, id int64) (*InstallationToken, *Response, error) {
-	u := fmt.Sprintf("app/installations/%v/access_tokens", id)
+	u := fmt.Sprintf("installations/%v/access_tokens", id)
 
 	req, err := s.client.NewRequest("POST", u, nil)
 	if err != nil {
@@ -195,13 +195,6 @@ func (s *AppsService) FindOrganizationInstallation(ctx context.Context, org stri
 // GitHub API docs: https://developer.github.com/v3/apps/#find-repository-installation
 func (s *AppsService) FindRepositoryInstallation(ctx context.Context, owner, repo string) (*Installation, *Response, error) {
 	return s.getInstallation(ctx, fmt.Sprintf("repos/%v/%v/installation", owner, repo))
-}
-
-// FindRepositoryInstallationByID finds the repository's installation information.
-//
-// Note: FindRepositoryInstallationByID uses the undocumented GitHub API endpoint /repositories/:id/installation.
-func (s *AppsService) FindRepositoryInstallationByID(ctx context.Context, id int64) (*Installation, *Response, error) {
-	return s.getInstallation(ctx, fmt.Sprintf("repositories/%d/installation", id))
 }
 
 // FindUserInstallation finds the user's installation information.

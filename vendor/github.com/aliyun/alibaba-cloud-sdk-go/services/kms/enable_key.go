@@ -76,8 +76,7 @@ func (client *Client) EnableKeyWithCallback(request *EnableKeyRequest, callback 
 // EnableKeyRequest is the request struct for api EnableKey
 type EnableKeyRequest struct {
 	*requests.RpcRequest
-	KeyId    string `position:"Query" name:"KeyId"`
-	STSToken string `position:"Query" name:"STSToken"`
+	KeyId string `position:"Query" name:"KeyId"`
 }
 
 // EnableKeyResponse is the response struct for api EnableKey

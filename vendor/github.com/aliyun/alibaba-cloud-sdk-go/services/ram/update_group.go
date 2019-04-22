@@ -76,9 +76,9 @@ func (client *Client) UpdateGroupWithCallback(request *UpdateGroupRequest, callb
 // UpdateGroupRequest is the request struct for api UpdateGroup
 type UpdateGroupRequest struct {
 	*requests.RpcRequest
-	GroupName    string `position:"Query" name:"GroupName"`
 	NewGroupName string `position:"Query" name:"NewGroupName"`
 	NewComments  string `position:"Query" name:"NewComments"`
+	GroupName    string `position:"Query" name:"GroupName"`
 }
 
 // UpdateGroupResponse is the response struct for api UpdateGroup
@@ -93,7 +93,7 @@ func CreateUpdateGroupRequest() (request *UpdateGroupRequest) {
 	request = &UpdateGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "UpdateGroup", "ram", "openAPI")
 	return
 }
 

@@ -132,7 +132,7 @@ type RetryableQuery interface {
 	Attempts() int
 	SetConsistency(c Consistency)
 	GetConsistency() Consistency
-	GetContext() context.Context
+	Context() context.Context
 }
 
 type RetryType uint16
@@ -424,6 +424,10 @@ func (t *tokenAwareHostPolicy) IsLocal(host *HostInfo) bool {
 }
 
 func (t *tokenAwareHostPolicy) KeyspaceChanged(update KeyspaceUpdateEvent) {
+	t.updateKeyspaceMetadata(update.Keyspace)
+}
+
+func (t *tokenAwareHostPolicy) updateKeyspaceMetadata(keyspace string) {
 	meta, _ := t.keyspaces.Load().(*keyspaceMeta)
 	var size = 1
 	if meta != nil {
@@ -434,18 +438,20 @@ func (t *tokenAwareHostPolicy) KeyspaceChanged(update KeyspaceUpdateEvent) {
 		replicas: make(map[string]map[token][]*HostInfo, size),
 	}
 
-	ks, err := t.session.KeyspaceMetadata(update.Keyspace)
+	ks, err := t.session.KeyspaceMetadata(keyspace)
 	if err == nil {
 		strat := getStrategy(ks)
-		tr := t.tokenRing.Load().(*tokenRing)
-		if tr != nil {
-			newMeta.replicas[update.Keyspace] = strat.replicaMap(t.hosts.get(), tr.tokens)
+		if strat != nil {
+			tr, _ := t.tokenRing.Load().(*tokenRing)
+			if tr != nil {
+				newMeta.replicas[keyspace] = strat.replicaMap(t.hosts.get(), tr.tokens)
+			}
 		}
 	}
 
 	if meta != nil {
 		for ks, replicas := range meta.replicas {
-			if ks != update.Keyspace {
+			if ks != keyspace {
 				newMeta.replicas[ks] = replicas
 			}
 		}
@@ -467,6 +473,20 @@ func (t *tokenAwareHostPolicy) SetPartitioner(partitioner string) {
 }
 
 func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
+	t.HostUp(host)
+	if t.session != nil { // disable for unit tests
+		t.updateKeyspaceMetadata(t.session.cfg.Keyspace)
+	}
+}
+
+func (t *tokenAwareHostPolicy) RemoveHost(host *HostInfo) {
+	t.HostDown(host)
+	if t.session != nil { // disable for unit tests
+		t.updateKeyspaceMetadata(t.session.cfg.Keyspace)
+	}
+}
+
+func (t *tokenAwareHostPolicy) HostUp(host *HostInfo) {
 	t.hosts.add(host)
 	t.fallback.AddHost(host)
 
@@ -476,7 +496,7 @@ func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
 	t.resetTokenRing(partitioner)
 }
 
-func (t *tokenAwareHostPolicy) RemoveHost(host *HostInfo) {
+func (t *tokenAwareHostPolicy) HostDown(host *HostInfo) {
 	t.hosts.remove(host.ConnectAddress())
 	t.fallback.RemoveHost(host)
 
@@ -484,17 +504,6 @@ func (t *tokenAwareHostPolicy) RemoveHost(host *HostInfo) {
 	partitioner := t.partitioner
 	t.mu.RUnlock()
 	t.resetTokenRing(partitioner)
-}
-
-func (t *tokenAwareHostPolicy) HostUp(host *HostInfo) {
-	// TODO: need to avoid doing all the work on AddHost on hostup/down
-	// because it now expensive to calculate the replica map for each
-	// token
-	t.AddHost(host)
-}
-
-func (t *tokenAwareHostPolicy) HostDown(host *HostInfo) {
-	t.RemoveHost(host)
 }
 
 func (t *tokenAwareHostPolicy) resetTokenRing(partitioner string) {
@@ -520,8 +529,8 @@ func (t *tokenAwareHostPolicy) getReplicas(keyspace string, token token) ([]*Hos
 	if meta == nil {
 		return nil, false
 	}
-	tokens, ok := meta.replicas[keyspace][token]
-	return tokens, ok
+	replicas, ok := meta.replicas[keyspace][token]
+	return replicas, ok
 }
 
 func (t *tokenAwareHostPolicy) Pick(qry ExecutableQuery) NextHost {
@@ -541,9 +550,7 @@ func (t *tokenAwareHostPolicy) Pick(qry ExecutableQuery) NextHost {
 		return t.fallback.Pick(qry)
 	}
 
-	token := tr.partitioner.Hash(routingKey)
-	primaryEndpoint := tr.GetHostForToken(token)
-
+	primaryEndpoint, token := tr.GetHostForPartitionKey(routingKey)
 	if primaryEndpoint == nil || token == nil {
 		return t.fallback.Pick(qry)
 	}

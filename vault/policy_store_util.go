@@ -6,7 +6,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type entPolicyStore struct{}

@@ -5,11 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"hash"
 	"hash/crc64"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -27,23 +30,32 @@ func (bucket Bucket) DownloadFile(objectKey, filePath string, partSize int64, op
 		return errors.New("oss: part size smaller than 1")
 	}
 
-	cpConf, err := getCpConfig(options, filePath)
-	if err != nil {
-		return err
-	}
-
 	uRange, err := getRangeConfig(options)
 	if err != nil {
 		return err
 	}
 
+	cpConf := getCpConfig(options)
 	routines := getRoutines(options)
 
-	if cpConf.IsEnable {
-		return bucket.downloadFileWithCp(objectKey, filePath, partSize, options, cpConf.FilePath, routines, uRange)
+	if cpConf != nil && cpConf.IsEnable {
+		cpFilePath := getDownloadCpFilePath(cpConf, bucket.BucketName, objectKey, filePath)
+		if cpFilePath != "" {
+			return bucket.downloadFileWithCp(objectKey, filePath, partSize, options, cpFilePath, routines, uRange)
+		}
 	}
 
 	return bucket.downloadFile(objectKey, filePath, partSize, options, routines, uRange)
+}
+
+func getDownloadCpFilePath(cpConf *cpConfig, srcBucket, srcObject, destFile string) string {
+	if cpConf.FilePath == "" && cpConf.DirPath != "" {
+		src := fmt.Sprintf("oss://%v/%v", srcBucket, srcObject)
+		absPath, _ := filepath.Abs(destFile)
+		cpFileName := getCpFileName(src, absPath)
+		cpConf.FilePath = cpConf.DirPath + string(os.PathSeparator) + cpFileName
+	}
+	return cpConf.FilePath
 }
 
 // getRangeConfig gets the download range from the options.
@@ -76,7 +88,7 @@ func defaultDownloadPartHook(part downloadPart) error {
 	return nil
 }
 
-// defaultDownloadProgressListener defines default ProgressListener, shields the ProgressListener in options of GetObject. 
+// defaultDownloadProgressListener defines default ProgressListener, shields the ProgressListener in options of GetObject.
 type defaultDownloadProgressListener struct {
 }
 
@@ -168,27 +180,8 @@ type downloadPart struct {
 }
 
 // getDownloadParts gets download parts
-func getDownloadParts(bucket *Bucket, objectKey string, partSize int64, uRange *unpackedRange) ([]downloadPart, bool, uint64, error) {
-	meta, err := bucket.GetObjectDetailedMeta(objectKey)
-	if err != nil {
-		return nil, false, 0, err
-	}
-
+func getDownloadParts(objectSize, partSize int64, uRange *unpackedRange) []downloadPart {
 	parts := []downloadPart{}
-	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
-	if err != nil {
-		return nil, false, 0, err
-	}
-
-	enableCRC := false
-	crcVal := (uint64)(0)
-	if bucket.getConfig().IsEnableCRC && meta.Get(HTTPHeaderOssCRC64) != "" {
-		if uRange == nil || (!uRange.hasStart && !uRange.hasEnd) {
-			enableCRC = true
-			crcVal, _ = strconv.ParseUint(meta.Get(HTTPHeaderOssCRC64), 10, 0)
-		}
-	}
-
 	part := downloadPart{}
 	i := 0
 	start, end := adjustRange(uRange, objectSize)
@@ -201,7 +194,7 @@ func getDownloadParts(bucket *Bucket, objectKey string, partSize int64, uRange *
 		parts = append(parts, part)
 		i++
 	}
-	return parts, enableCRC, crcVal, nil
+	return parts
 }
 
 // getObjectBytes gets object bytes length
@@ -232,6 +225,12 @@ func (bucket Bucket) downloadFile(objectKey, filePath string, partSize int64, op
 	tempFilePath := filePath + TempFileSuffix
 	listener := getProgressListener(options)
 
+	payerOptions := []Option{}
+	payer := getPayer(options)
+	if payer != "" {
+		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
+	}
+
 	// If the file does not exist, create one. If exists, the download will overwrite it.
 	fd, err := os.OpenFile(tempFilePath, os.O_WRONLY|os.O_CREATE, FilePermMode)
 	if err != nil {
@@ -239,12 +238,27 @@ func (bucket Bucket) downloadFile(objectKey, filePath string, partSize int64, op
 	}
 	fd.Close()
 
-	// Get the parts of the file
-	parts, enableCRC, expectedCRC, err := getDownloadParts(&bucket, objectKey, partSize, uRange)
+	meta, err := bucket.GetObjectDetailedMeta(objectKey, payerOptions...)
 	if err != nil {
 		return err
 	}
 
+	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
+	if err != nil {
+		return err
+	}
+
+	enableCRC := false
+	expectedCRC := (uint64)(0)
+	if bucket.getConfig().IsEnableCRC && meta.Get(HTTPHeaderOssCRC64) != "" {
+		if uRange == nil || (!uRange.hasStart && !uRange.hasEnd) {
+			enableCRC = true
+			expectedCRC, _ = strconv.ParseUint(meta.Get(HTTPHeaderOssCRC64), 10, 0)
+		}
+	}
+
+	// Get the parts of the file
+	parts := getDownloadParts(objectSize, partSize, uRange)
 	jobs := make(chan downloadPart, len(parts))
 	results := make(chan downloadPart, len(parts))
 	failed := make(chan error)
@@ -325,7 +339,7 @@ type objectStat struct {
 }
 
 // isValid flags of checkpoint data is valid. It returns true when the data is valid and the checkpoint is valid and the object is not updated.
-func (cp downloadCheckpoint) isValid(bucket *Bucket, objectKey string, uRange *unpackedRange) (bool, error) {
+func (cp downloadCheckpoint) isValid(meta http.Header, uRange *unpackedRange) (bool, error) {
 	// Compare the CP's Magic and the MD5
 	cpb := cp
 	cpb.MD5 = ""
@@ -335,12 +349,6 @@ func (cp downloadCheckpoint) isValid(bucket *Bucket, objectKey string, uRange *u
 
 	if cp.Magic != downloadCpMagic || b64 != cp.MD5 {
 		return false, nil
-	}
-
-	// Ensure the object is not updated.
-	meta, err := bucket.GetObjectDetailedMeta(objectKey)
-	if err != nil {
-		return false, err
 	}
 
 	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
@@ -424,17 +432,11 @@ func (cp downloadCheckpoint) getCompletedBytes() int64 {
 }
 
 // prepare initiates download tasks
-func (cp *downloadCheckpoint) prepare(bucket *Bucket, objectKey, filePath string, partSize int64, uRange *unpackedRange) error {
+func (cp *downloadCheckpoint) prepare(meta http.Header, bucket *Bucket, objectKey, filePath string, partSize int64, uRange *unpackedRange) error {
 	// CP
 	cp.Magic = downloadCpMagic
 	cp.FilePath = filePath
 	cp.Object = objectKey
-
-	// Object
-	meta, err := bucket.GetObjectDetailedMeta(objectKey)
-	if err != nil {
-		return err
-	}
 
 	objectSize, err := strconv.ParseInt(meta.Get(HTTPHeaderContentLength), 10, 0)
 	if err != nil {
@@ -445,11 +447,15 @@ func (cp *downloadCheckpoint) prepare(bucket *Bucket, objectKey, filePath string
 	cp.ObjStat.LastModified = meta.Get(HTTPHeaderLastModified)
 	cp.ObjStat.Etag = meta.Get(HTTPHeaderEtag)
 
-	// Parts
-	cp.Parts, cp.enableCRC, cp.CRC, err = getDownloadParts(bucket, objectKey, partSize, uRange)
-	if err != nil {
-		return err
+	if bucket.getConfig().IsEnableCRC && meta.Get(HTTPHeaderOssCRC64) != "" {
+		if uRange == nil || (!uRange.hasStart && !uRange.hasEnd) {
+			cp.enableCRC = true
+			cp.CRC, _ = strconv.ParseUint(meta.Get(HTTPHeaderOssCRC64), 10, 0)
+		}
 	}
+
+	// Parts
+	cp.Parts = getDownloadParts(objectSize, partSize, uRange)
 	cp.PartStat = make([]bool, len(cp.Parts))
 	for i := range cp.PartStat {
 		cp.PartStat[i] = false
@@ -468,6 +474,12 @@ func (bucket Bucket) downloadFileWithCp(objectKey, filePath string, partSize int
 	tempFilePath := filePath + TempFileSuffix
 	listener := getProgressListener(options)
 
+	payerOptions := []Option{}
+	payer := getPayer(options)
+	if payer != "" {
+		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
+	}
+
 	// Load checkpoint data.
 	dcp := downloadCheckpoint{}
 	err := dcp.load(cpFilePath)
@@ -475,10 +487,16 @@ func (bucket Bucket) downloadFileWithCp(objectKey, filePath string, partSize int
 		os.Remove(cpFilePath)
 	}
 
+	// Get the object detailed meta.
+	meta, err := bucket.GetObjectDetailedMeta(objectKey, payerOptions...)
+	if err != nil {
+		return err
+	}
+
 	// Load error or data invalid. Re-initialize the download.
-	valid, err := dcp.isValid(&bucket, objectKey, uRange)
+	valid, err := dcp.isValid(meta, uRange)
 	if err != nil || !valid {
-		if err = dcp.prepare(&bucket, objectKey, filePath, partSize, uRange); err != nil {
+		if err = dcp.prepare(meta, &bucket, objectKey, filePath, partSize, uRange); err != nil {
 			return err
 		}
 		os.Remove(cpFilePath)

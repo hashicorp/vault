@@ -60,13 +60,8 @@ type PullRequest struct {
 	NodeID              *string    `json:"node_id,omitempty"`
 	RequestedReviewers  []*User    `json:"requested_reviewers,omitempty"`
 
-	// RequestedTeams is populated as part of the PullRequestEvent.
-	// See, https://developer.github.com/v3/activity/events/types/#pullrequestevent for an example.
-	RequestedTeams []*Team `json:"requested_teams,omitempty"`
-
-	Links *PRLinks           `json:"_links,omitempty"`
-	Head  *PullRequestBranch `json:"head,omitempty"`
-	Base  *PullRequestBranch `json:"base,omitempty"`
+	Head *PullRequestBranch `json:"head,omitempty"`
+	Base *PullRequestBranch `json:"base,omitempty"`
 
 	// ActiveLockReason is populated only when LockReason is provided while locking the pull request.
 	// Possible values are: "off-topic", "too heated", "resolved", and "spam".
@@ -75,23 +70,6 @@ type PullRequest struct {
 
 func (p PullRequest) String() string {
 	return Stringify(p)
-}
-
-// PRLink represents a single link object from Github pull request _links.
-type PRLink struct {
-	HRef *string `json:"href,omitempty"`
-}
-
-// PRLinks represents the "_links" object in a Github pull request.
-type PRLinks struct {
-	Self           *PRLink `json:"self,omitempty"`
-	HTML           *PRLink `json:"html,omitempty"`
-	Issue          *PRLink `json:"issue,omitempty"`
-	Comments       *PRLink `json:"comments,omitempty"`
-	ReviewComments *PRLink `json:"review_comments,omitempty"`
-	ReviewComment  *PRLink `json:"review_comment,omitempty"`
-	Commits        *PRLink `json:"commits,omitempty"`
-	Statuses       *PRLink `json:"statuses,omitempty"`
 }
 
 // PullRequestBranch represents a base or head branch in a GitHub pull request.

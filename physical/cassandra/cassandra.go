@@ -15,8 +15,8 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // CassandraBackend is a physical backend that stores data in Cassandra.

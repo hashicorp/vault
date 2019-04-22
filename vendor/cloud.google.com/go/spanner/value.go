@@ -41,8 +41,8 @@ var (
 	// InsertStruct or InsertMap. See ExampleCommitTimestamp.
 	// This is just a placeholder and the actual value stored in this
 	// variable has no meaning.
-	CommitTimestamp time.Time = commitTimestamp
-	commitTimestamp           = time.Unix(0, 0).In(time.FixedZone("CommitTimestamp placeholder", 0xDB))
+	CommitTimestamp = commitTimestamp
+	commitTimestamp = time.Unix(0, 0).In(time.FixedZone("CommitTimestamp placeholder", 0xDB))
 )
 
 // NullInt64 represents a Cloud Spanner INT64 that may be NULL.
@@ -129,7 +129,7 @@ type NullTime struct {
 // String implements Stringer.String for NullTime
 func (n NullTime) String() string {
 	if !n.Valid {
-		return fmt.Sprintf("%s", "<null>")
+		return "<null>"
 	}
 	return fmt.Sprintf("%q", n.Time.Format(time.RFC3339Nano))
 }
@@ -143,7 +143,7 @@ type NullDate struct {
 // String implements Stringer.String for NullDate
 func (n NullDate) String() string {
 	if !n.Valid {
-		return fmt.Sprintf("%s", "<null>")
+		return "<null>"
 	}
 	return fmt.Sprintf("%q", n.Date)
 }
@@ -1487,7 +1487,7 @@ func encodeStruct(v interface{}) (*proto3.Value, *sppb.Type, error) {
 			continue
 		}
 
-		fname, ok := structTagLookup(sf.Tag, "spanner")
+		fname, ok := sf.Tag.Lookup("spanner")
 		if !ok {
 			fname = sf.Name
 		}
@@ -1551,7 +1551,7 @@ func isStructOrArrayOfStructValue(v interface{}) bool {
 
 func isSupportedMutationType(v interface{}) bool {
 	switch v.(type) {
-	case string, NullString, []string, []NullString,
+	case nil, string, NullString, []string, []NullString,
 		[]byte, [][]byte,
 		int, []int, int64, []int64, NullInt64, []NullInt64,
 		bool, []bool, NullBool, []NullBool,

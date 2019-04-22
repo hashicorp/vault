@@ -61,6 +61,7 @@ export default Component.extend({
     * used to track the state of values bound to the various inputs
     *
     */
+  /* eslint-disable ember/no-side-effects */
   inputList: computed(function() {
     return ArrayProxy.create({
       content: [],

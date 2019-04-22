@@ -45,22 +45,23 @@ type ClusterConfig struct {
 	// highest supported protocol for the cluster. In clusters with nodes of different
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
 	ProtoVersion       int
-	Timeout            time.Duration      // connection timeout (default: 600ms)
-	ConnectTimeout     time.Duration      // initial connection timeout, used during initial dial to server (default: 600ms)
-	Port               int                // port (default: 9042)
-	Keyspace           string             // initial keyspace (optional)
-	NumConns           int                // number of connections per host (default: 2)
-	Consistency        Consistency        // default consistency level (default: Quorum)
-	Compressor         Compressor         // compression algorithm (default: nil)
-	Authenticator      Authenticator      // authenticator (default: nil)
-	RetryPolicy        RetryPolicy        // Default retry policy to use for queries (default: 0)
-	ConvictionPolicy   ConvictionPolicy   // Decide whether to mark host as down based on the error and host info (default: SimpleConvictionPolicy)
-	ReconnectionPolicy ReconnectionPolicy // Default reconnection policy to use for reconnecting before trying to mark host as down (default: see below)
-	SocketKeepalive    time.Duration      // The keepalive period to use, enabled if > 0 (default: 0)
-	MaxPreparedStmts   int                // Sets the maximum cache size for prepared statements globally for gocql (default: 1000)
-	MaxRoutingKeyInfo  int                // Sets the maximum cache size for query info about statements for each session (default: 1000)
-	PageSize           int                // Default page size to use for created sessions (default: 5000)
-	SerialConsistency  SerialConsistency  // Sets the consistency for the serial part of queries, values can be either SERIAL or LOCAL_SERIAL (default: unset)
+	Timeout            time.Duration                            // connection timeout (default: 600ms)
+	ConnectTimeout     time.Duration                            // initial connection timeout, used during initial dial to server (default: 600ms)
+	Port               int                                      // port (default: 9042)
+	Keyspace           string                                   // initial keyspace (optional)
+	NumConns           int                                      // number of connections per host (default: 2)
+	Consistency        Consistency                              // default consistency level (default: Quorum)
+	Compressor         Compressor                               // compression algorithm (default: nil)
+	Authenticator      Authenticator                            // authenticator (default: nil)
+	AuthProvider       func(h *HostInfo) (Authenticator, error) // an authenticator factory. Can be used to create alternative authenticators (default: nil)
+	RetryPolicy        RetryPolicy                              // Default retry policy to use for queries (default: 0)
+	ConvictionPolicy   ConvictionPolicy                         // Decide whether to mark host as down based on the error and host info (default: SimpleConvictionPolicy)
+	ReconnectionPolicy ReconnectionPolicy                       // Default reconnection policy to use for reconnecting before trying to mark host as down (default: see below)
+	SocketKeepalive    time.Duration                            // The keepalive period to use, enabled if > 0 (default: 0)
+	MaxPreparedStmts   int                                      // Sets the maximum cache size for prepared statements globally for gocql (default: 1000)
+	MaxRoutingKeyInfo  int                                      // Sets the maximum cache size for query info about statements for each session (default: 1000)
+	PageSize           int                                      // Default page size to use for created sessions (default: 5000)
+	SerialConsistency  SerialConsistency                        // Sets the consistency for the serial part of queries, values can be either SERIAL or LOCAL_SERIAL (default: unset)
 	SslOpts            *SslOptions
 	DefaultTimestamp   bool // Sends a client side timestamp for all requests which overrides the timestamp at which it arrives at the server. (default: true, only enabled for protocol 3 and above)
 	// PoolConfig configures the underlying connection pool, allowing the
@@ -71,7 +72,7 @@ type ClusterConfig struct {
 	ReconnectInterval time.Duration
 
 	// The maximum amount of time to wait for schema agreement in a cluster after
-	// receiving a schema change frame. (deault: 60s)
+	// receiving a schema change frame. (default: 60s)
 	MaxWaitSchemaAgreement time.Duration
 
 	// HostFilter will filter all incoming events for host, any which don't pass
