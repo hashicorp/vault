@@ -10,6 +10,7 @@
     "ember-cli-babel": "*",
     "ember-radio-button": "*",
     "ember-composable-helpers": "*",
+    "ember-cli-string-helpers": "*",
     "ember-truth-helpers": "*",
     "ember-concurrency": "*",
     "base64-js": "*"
