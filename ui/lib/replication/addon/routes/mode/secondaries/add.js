@@ -4,7 +4,7 @@ import Base from '../../replication-base';
 export default Base.extend({
   model() {
     return hash({
-      cluster: this.modelFor('vault.cluster.replication.mode.secondaries'),
+      cluster: this.modelFor('mode.secondaries'),
       mounts: this.fetchMounts(),
     });
   },
@@ -12,7 +12,7 @@ export default Base.extend({
   redirect(model) {
     const replicationMode = this.get('replicationMode');
     if (!model.cluster.get(`${replicationMode}.isPrimary`) || !model.cluster.get('canAddSecondary')) {
-      return this.transitionTo('vault.cluster.replication.mode', model.cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', model.cluster.get('name'), replicationMode);
     }
   },
 

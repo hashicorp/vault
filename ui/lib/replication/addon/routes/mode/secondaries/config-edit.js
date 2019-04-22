@@ -6,7 +6,7 @@ export default Base.extend({
 
   model(params) {
     return hash({
-      cluster: this.modelFor('vault.cluster.replication.mode.secondaries'),
+      cluster: this.modelFor('mode.secondaries'),
       config: this.store.findRecord('mount-filter-config', params.secondary_id),
       mounts: this.fetchMounts(),
     });
@@ -21,7 +21,7 @@ export default Base.extend({
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')
     ) {
-      return this.transitionTo('vault.cluster.replication.mode', cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', cluster.get('name'), replicationMode);
     }
   },
 });

@@ -13,7 +13,7 @@ export default Base.extend({
       .findRecord('mount-filter-config', id)
       .then(() => {
         // if we find a record, transition to the edit view
-        return this.transitionTo('vault.cluster.replication.mode.secondaries.config-edit', id)
+        return this.transitionTo('mode.secondaries.config-edit', id)
           .followRedirects()
           .then(() => {
             flash.info(
@@ -41,13 +41,13 @@ export default Base.extend({
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')
     ) {
-      return this.transitionTo('vault.cluster.replication.mode', cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', cluster.get('name'), replicationMode);
     }
   },
 
   model(params) {
     return hash({
-      cluster: this.modelFor('vault.cluster.replication.mode'),
+      cluster: this.modelFor('mode'),
       config: this.findOrCreate(params.secondary_id),
       mounts: this.fetchMounts(),
     });

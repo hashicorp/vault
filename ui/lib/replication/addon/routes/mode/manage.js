@@ -2,7 +2,7 @@ import { camelize } from '@ember/string';
 import { all } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { replicationActionForMode } from 'vault/helpers/replication-action-for-mode';
+import { replicationActionForMode } from 'replication/helpers/replication-action-for-mode';
 
 const pathForAction = (action, replicationMode, clusterMode) => {
   let path;
@@ -18,9 +18,9 @@ export default Route.extend({
   store: service(),
   model() {
     const store = this.get('store');
-    const model = this.modelFor('vault.cluster.replication.mode');
+    const model = this.modelFor('mode');
 
-    const replicationMode = this.paramsFor('vault.cluster.replication.mode').replication_mode;
+    const replicationMode = this.paramsFor('mode').replication_mode;
     const clusterMode = model.get(replicationMode).get('modeForUrl');
     const actions = replicationActionForMode([replicationMode, clusterMode]);
     return all(
@@ -35,13 +35,13 @@ export default Route.extend({
   },
 
   beforeModel() {
-    const model = this.modelFor('vault.cluster.replication.mode');
-    const replicationMode = this.paramsFor('vault.cluster.replication.mode').replication_mode;
+    const model = this.modelFor('mode');
+    const replicationMode = this.paramsFor('mode').replication_mode;
     if (
       model.get(replicationMode).get('replicationDisabled') ||
       model.get(replicationMode).get('replicationUnsupported')
     ) {
-      return this.transitionTo('vault.cluster.replication.mode', replicationMode);
+      return this.transitionTo('mode', replicationMode);
     }
   },
 });
