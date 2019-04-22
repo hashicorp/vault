@@ -3,6 +3,7 @@ import { or } from '@ember/object/computed';
 import { isPresent } from '@ember/utils';
 import Mixin from '@ember/object/mixin';
 import { task } from 'ember-concurrency';
+import Promise from 'rsvp';
 
 export default Mixin.create({
   store: service(),
@@ -78,7 +79,7 @@ export default Mixin.create({
     }
     const router = this.get('router');
     if (action === 'disable') {
-      yield router.transitionTo('vault.cluster.replication.mode', replicationMode);
+      yield router.transitionTo('mode', replicationMode);
     }
     try {
       yield cluster.reload();
@@ -87,11 +88,12 @@ export default Mixin.create({
     }
     cluster.rollbackAttributes();
     if (action === 'enable') {
-      yield router.transitionTo('vault.cluster.replication.mode', replicationMode);
+      yield router.transitionTo('mode', replicationMode);
     }
 
     if (mode === 'secondary' && replicationMode === 'dr') {
-      yield router.transitionTo('vault.cluster');
+      window.location = '/ui/';
+      yield new Promise();
     }
   }).drop(),
 

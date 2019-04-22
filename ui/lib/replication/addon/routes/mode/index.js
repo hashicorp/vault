@@ -3,11 +3,9 @@ import Route from '@ember/routing/route';
 
 export default Route.extend({
   replicationMode: service(),
-  beforeModel() {
+  model() {
     const replicationMode = this.paramsFor('mode').replication_mode;
     this.get('replicationMode').setMode(replicationMode);
-  },
-  model() {
     return this.modelFor('mode');
   },
 });

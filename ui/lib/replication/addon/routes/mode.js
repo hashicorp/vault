@@ -1,4 +1,3 @@
-import { on } from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
@@ -6,22 +5,15 @@ const SUPPORTED_REPLICATION_MODES = ['dr', 'performance'];
 
 export default Route.extend({
   replicationMode: service(),
+  store: service(),
+  model(params) {
+    const replicationMode = params.replication_mode;
 
-  beforeModel() {
-    const replicationMode = this.paramsFor(this.routeName).replication_mode;
     if (!SUPPORTED_REPLICATION_MODES.includes(replicationMode)) {
       return this.transitionTo('application');
     } else {
-      return this._super(...arguments);
+      this.replicationMode.setMode(replicationMode);
+      return this.modelFor('application');
     }
   },
-
-  model() {
-    return this.modelFor('application');
-  },
-
-  setReplicationMode: on('activate', 'enter', function() {
-    const replicationMode = this.paramsFor(this.routeName).replication_mode;
-    this.get('replicationMode').setMode(replicationMode);
-  }),
 });
