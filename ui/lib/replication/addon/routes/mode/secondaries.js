@@ -1,13 +1,15 @@
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
   model() {
-    const replicationMode = this.paramsFor('vault.cluster.replication.mode').replication_mode;
+    const replicationMode = this.paramsFor('mode').replication_mode;
 
     return hash({
-      cluster: this.modelFor('vault.cluster.replication.mode'),
+      cluster: this.modelFor('mode'),
       canAddSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/secondary-token`)
         .then(c => c.get('canUpdate')),
@@ -23,13 +25,13 @@ export default Route.extend({
     });
   },
   afterModel(model) {
-    const replicationMode = this.paramsFor('vault.cluster.replication.mode').replication_mode;
+    const replicationMode = this.paramsFor('mode').replication_mode;
     if (
       !model.get(`${replicationMode}.isPrimary`) ||
       model.get(`${replicationMode}.replicationDisabled`) ||
       model.get(`${replicationMode}.replicationUnsupported`)
     ) {
-      return this.transitionTo('vault.cluster.replication.mode', replicationMode);
+      return this.transitionTo('mode', replicationMode);
     }
   },
 });

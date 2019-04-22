@@ -10,14 +10,14 @@ export default Route.extend({
   beforeModel() {
     const replicationMode = this.paramsFor(this.routeName).replication_mode;
     if (!SUPPORTED_REPLICATION_MODES.includes(replicationMode)) {
-      return this.transitionTo('vault.cluster.replication');
+      return this.transitionTo('application');
     } else {
       return this._super(...arguments);
     }
   },
 
   model() {
-    return this.modelFor('vault.cluster.replication');
+    return this.modelFor('application');
   },
 
   setReplicationMode: on('activate', 'enter', function() {

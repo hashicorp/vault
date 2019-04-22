@@ -31,7 +31,7 @@
                     {{/if}}
                     {{#if (eq replicationMode 'performance')}}
                       <li class="action">
-                        {{#link-to "vault.cluster.replication.mode.secondaries.config-show" model.name replicationMode secondary data-test-replication-mount-filter-link=true}}
+                        {{#link-to "mode.secondaries.config-show" replicationMode secondary data-test-replication-mount-filter-link=true}}
                           Mount filter config
                         {{/link-to}}
                       </li>
@@ -51,7 +51,7 @@
       @message="Associated secondary clusters will be listed here. Add your first secondary cluster to get started."
     >
       {{#if model.canAddSecondary}}
-        {{#link-to 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode class="link" }}
+        {{#link-to "mode.secondaries.add" replicationMode class="link" }}
           Add secondary
         {{/link-to}}
       {{/if}}
@@ -63,14 +63,14 @@
   <div class="field is-grouped box is-shadowless is-fullwidth">
     {{#if model.canAddSecondary}}
       <div class="control">
-        {{#link-to 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode class="button" data-test-secondary-add=true }}
+        {{#link-to "mode.secondaries.add" replicationMode class="button" data-test-secondary-add=true }}
           Add
         {{/link-to}}
       </div>
     {{/if}}
     {{#if model.canRevokeSecondary}}
       <div class="control">
-        {{#link-to 'vault.cluster.replication.mode.secondaries.revoke' model.name replicationMode class="button"}}
+        {{#link-to "mode.secondaries.revoke" replicationMode class="button"}}
           Revoke
         {{/link-to}}
       </div>

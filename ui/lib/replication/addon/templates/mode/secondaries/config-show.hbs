@@ -25,7 +25,7 @@
   {{#if model.config.mode}}
     <div class="control">
       {{#link-to
-        'vault.cluster.replication.mode.secondaries.config-edit'
+        "mode.secondaries.config-edit"
         model.config.id
         class="button"
         data-test-replication-link="edit-mount-config"
@@ -36,7 +36,7 @@
   {{else}}
     <div class="control">
       {{#link-to
-        'vault.cluster.replication.mode.secondaries.config-create'
+        "mode.secondaries.config-create"
         model.config.id
         class="button"
         data-test-replication-link="create-mount-config"

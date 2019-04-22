@@ -2,13 +2,13 @@ import Base from '../../replication-base';
 
 export default Base.extend({
   model() {
-    return this.modelFor('vault.cluster.replication.mode.secondaries');
+    return this.modelFor('mode.secondaries');
   },
 
   redirect(model) {
     const replicationMode = this.get('replicationMode');
     if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canRevokeSecondary')) {
-      return this.transitionTo('vault.cluster.replication', model.get('name'));
+      return this.transitionTo('application', model.get('name'));
     }
   },
 
