@@ -13,6 +13,7 @@
     "ember-cli-string-helpers": "*",
     "ember-truth-helpers": "*",
     "ember-concurrency": "*",
-    "base64-js": "*"
+    "base64-js": "*",
+    "Duration.js": "*"
   }
 }
