@@ -3,10 +3,12 @@ import EmberError from '@ember/error';
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
 import Duration from 'Duration.js';
+import layout from '../templates/components/ttl-picker';
 
 const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
 
 export default Component.extend({
+  layout,
   'data-test-component': 'ttl-picker',
   classNames: 'field',
   setDefaultValue: true,

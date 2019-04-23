@@ -10,7 +10,7 @@ export default Route.extend({
     const replicationMode = params.replication_mode;
 
     if (!SUPPORTED_REPLICATION_MODES.includes(replicationMode)) {
-      return this.transitionTo('application');
+      return this.transitionTo('index');
     } else {
       this.replicationMode.setMode(replicationMode);
       return this.modelFor('application');
