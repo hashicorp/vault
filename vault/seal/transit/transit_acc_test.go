@@ -1,4 +1,4 @@
-package transit
+package transit_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/vault/seal/transit"
 	"github.com/ory/dockertest"
 )
 
@@ -30,7 +31,7 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err := s.SetConfig(sealConfig)
 	if err != nil {
 		t.Fatalf("error setting seal config: %v", err)
@@ -87,7 +88,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err = s.SetConfig(sealConfig)
 	if err != nil {
 		t.Fatalf("error setting seal config: %v", err)
