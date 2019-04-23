@@ -1,6 +1,7 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { messageTypes } from 'core/helpers/message-types';
+import layout from '../templates/components/alert-inline';
 
 /**
  * @module AlertInline
@@ -17,6 +18,7 @@ import { messageTypes } from 'core/helpers/message-types';
  */
 
 export default Component.extend({
+  layout,
   type: null,
   message: null,
 
