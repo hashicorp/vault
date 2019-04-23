@@ -13,6 +13,8 @@ IMPROVEMENTS:
 
 BUG FIXES: 
 
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
 
