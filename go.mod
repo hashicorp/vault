@@ -138,7 +138,7 @@ require (
 	google.golang.org/grpc v1.20.0
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
-	gopkg.in/ory-am/dockertest.v2 v2.2.3
+	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.3.1
 	gotest.tools v2.2.0+incompatible // indirect
