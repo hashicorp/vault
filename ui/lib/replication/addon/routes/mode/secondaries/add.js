@@ -10,9 +10,9 @@ export default Base.extend({
   },
 
   redirect(model) {
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.paramsFor('mode').replication_mode;
     if (!model.cluster.get(`${replicationMode}.isPrimary`) || !model.cluster.get('canAddSecondary')) {
-      return this.transitionTo('mode', model.cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', replicationMode);
     }
   },
 
