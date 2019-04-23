@@ -173,6 +173,10 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 			// Accessor indexes were not getting cleaned up until 0.9.3. This is a fix
 			// to clean up the dangling accessor entries.
 			if len(accessorMap) > 0 {
+				// This simulates an artificial delay for cleaning up each accessor
+				// It is used during testing to make sure that large amounts of accessors
+				// will not block new secret-ids from being created
+				time.Sleep(b.testTidyAccessorDelay)
 				logger.Trace(fmt.Sprintf("dangling accessorMap length: %d", len(accessorMap)))
 				for accessorHash := range accessorMap {
 					logger.Trace("found dangling accessor, removing", accessorHash)

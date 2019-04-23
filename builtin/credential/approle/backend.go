@@ -58,7 +58,8 @@ type backend struct {
 	// for all the SecretIDs issued against an approle
 	secretIDListingLock sync.RWMutex
 
-	testTidyDelay time.Duration
+	testTidyAccessorDelay time.Duration
+	testTidyDelay         time.Duration
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
