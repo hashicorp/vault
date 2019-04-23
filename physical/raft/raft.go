@@ -236,6 +236,19 @@ func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error
 	return future.Error()
 }
 
+func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return errors.New("raft storage backend is sealed")
+	}
+
+	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
+
+	return future.Error()
+}
+
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	command := &LogData{
 		Operations: []*LogOperation{

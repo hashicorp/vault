@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -215,12 +216,31 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/bootstrap/answer",
 
 			Fields: map[string]*framework.FieldSchema{
-				"secondary_id": {
+				"peer_id": {
 					Type: framework.TypeString,
 				},
-				"challenge_answer": {
+				"answer": {
 					Type: framework.TypeString,
 				},
+				"cluster_addr": {
+					Type: framework.TypeString,
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRaftBootstrapAnswerWrite(),
+					Summary:  "Update the value of the key at the given path.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
+		},
+		{
+			Pattern: "storage/raft/bootstrap/challenge",
+
+			Fields: map[string]*framework.FieldSchema{
 				"cluster_addr": {
 					Type: framework.TypeString,
 				},
@@ -238,8 +258,16 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 		},
 	}
 }
+
+var pendingRaftPeers = make(map[string][]byte)
+
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		peerID, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, err
+		}
+
 		uuid, err := uuid.GenerateRandomBytes(16)
 		if err != nil {
 			return nil, err
@@ -255,11 +283,62 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
+		pendingRaftPeers[peerID] = uuid
+
 		return &logical.Response{
 			Data: map[string]interface{}{
+				"id":        peerID,
 				"challenge": base64.StdEncoding.EncodeToString(protoBlob),
 			},
 		}, nil
+	}
+}
+
+func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		peerID := d.Get("peer_id").(string)
+		if len(peerID) == 0 {
+			return logical.ErrorResponse("no peer_id provided"), logical.ErrInvalidRequest
+		}
+		answerRaw := d.Get("answer").(string)
+		if len(answerRaw) == 0 {
+			return logical.ErrorResponse("no answer provided"), logical.ErrInvalidRequest
+		}
+		clusterAddr := d.Get("cluster_addr").(string)
+		if len(clusterAddr) == 0 {
+			return logical.ErrorResponse("no cluster_addr provided"), logical.ErrInvalidRequest
+		}
+
+		answer, err := base64.StdEncoding.DecodeString(answerRaw)
+		if err != nil {
+			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
+		}
+
+		expectedAnswer, ok := pendingRaftPeers[peerID]
+		if !ok {
+			// TODO: Should we return error or hid the fact the peer ID was
+			// invalid
+			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
+		}
+
+		// TODO: Should we delete after every attempt or allow multiple tries?
+		delete(pendingRaftPeers, peerID)
+
+		if subtle.ConstantTimeCompare(answer, expectedAnswer) == 0 {
+			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
+		}
+
+		if err := raftStorage.AddPeer(ctx, peerID, clusterAddr); err != nil {
+			return nil, err
+		}
+
+		// TODO: return list of peers here
+		return nil, nil
 	}
 }
 
