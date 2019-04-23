@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func (c *Core) joinRaftCluster(ctx context.Context, leaderAddr string, retry bool) (bool, error) {

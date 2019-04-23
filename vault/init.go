@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/physical/raft"
 
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
