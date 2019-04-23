@@ -180,9 +180,15 @@ func (b *backend) secretAccessKeysCreate(
 		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 	}
 
+	userPath := role.UserPath
+	if userPath == "" {
+		userPath = "/"
+	}
+
 	// Create the user
 	_, err = iamClient.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(username),
+		Path:     aws.String(userPath),
 	})
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
