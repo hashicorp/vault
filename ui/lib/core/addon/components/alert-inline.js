@@ -1,6 +1,6 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { messageTypes } from 'vault/helpers/message-types';
+import { messageTypes } from 'core/helpers/message-types';
 
 /**
  * @module AlertInline
