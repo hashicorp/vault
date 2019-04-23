@@ -571,10 +571,28 @@ func (l *DynamoDBLock) Unlock() error {
 	}
 
 	l.held = false
-	if err := l.backend.Delete(context.Background(), l.key); err != nil {
-		return err
+
+	// Conditionally delete after check that the key is actually this Vault's and
+	// not been already claimed by another leader
+	condition := "#identity = :identity"
+	deleteMyLock := &dynamodb.DeleteItemInput{
+		TableName:           &l.backend.table,
+		ConditionExpression: &condition,
+		Key: map[string]*dynamodb.AttributeValue{
+			"Path": &dynamodb.AttributeValue{S: aws.String(recordPathForVaultKey(l.key))},
+			"Key":  &dynamodb.AttributeValue{S: aws.String(recordKeyForVaultKey(l.key))},
+		},
+		ExpressionAttributeNames: map[string]*string{
+			"#identity": aws.String("Identity"),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":identity": &dynamodb.AttributeValue{B: []byte(l.identity)},
+		},
 	}
-	return nil
+
+	 _, err := l.backend.client.DeleteItem(deleteMyLock)
+
+	return err
 }
 
 // Value checks whether or not the lock is held by any instance of DynamoDBLock,
@@ -634,7 +652,10 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 		select {
 		case <-ticker.C:
 			// This should not renew the lock if the lock was deleted from under you.
-			l.updateItem(false)
+			err := l.updateItem(false)
+			if err != nil {
+				l.backend.logger.Error("error renewing leadership lock", err)
+			}
 		case <-done:
 			ticker.Stop()
 			return
