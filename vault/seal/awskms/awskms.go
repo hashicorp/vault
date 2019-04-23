@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 	"sync/atomic"
+	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
@@ -16,7 +17,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -88,33 +89,8 @@ func (k *AWSKMSSeal) SetConfig(config map[string]string) (map[string]string, err
 		return nil, fmt.Errorf("'kms_key_id' not found for AWS KMS seal configuration")
 	}
 
-	// Check and set region
-	region, regionOk := config["region"]
-	switch {
-	case os.Getenv("AWS_REGION") != "":
-		k.region = os.Getenv("AWS_REGION")
-	case os.Getenv("AWS_DEFAULT_REGION") != "":
-		k.region = os.Getenv("AWS_DEFAULT_REGION")
-	case regionOk && region != "":
-		k.region = region
-	default:
-		k.region = "us-east-1"
-
-		// If available, get the region from EC2 instance metadata
-		sess, err := session.NewSession(nil)
-		if err != nil {
-			k.logger.Warn(fmt.Sprintf("unable to begin session: %s, defaulting region to %s", err, k.region))
-			break
-		}
-
-		// This will hang for ~10 seconds if the agent isn't running on an EC2 instance
-		region, err := ec2metadata.New(sess).Region()
-		if err != nil {
-			k.logger.Warn(fmt.Sprintf("unable to retrieve region from ec2 instance metadata: %s, defaulting region to %s", err, k.region))
-			break
-		}
-		k.region = region
-	}
+	// Please see GetOrDefaultRegion for an explanation of the order in which region is parsed.
+	k.region = awsutil.GetOrDefaultRegion(k.logger, config["region"])
 
 	// Check and set AWS access key, secret key, and session token
 	k.accessKey = config["access_key"]
@@ -185,7 +161,20 @@ func (k *AWSKMSSeal) KeyID() string {
 // Encrypt is used to encrypt the master key using the the AWS CMK.
 // This returns the ciphertext, and/or any errors from this
 // call. This should be called after the KMS client has been instantiated.
-func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "awskms", "encrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "awskms", "encrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "awskms", "encrypt"}, 1)
+
 	if plaintext == nil {
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
@@ -229,7 +218,20 @@ func (k *AWSKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.Enc
 }
 
 // Decrypt is used to decrypt the ciphertext. This should be called after Init.
-func (k *AWSKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (k *AWSKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) (pt []byte, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "awskms", "decrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "awskms", "decrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "awskms", "decrypt"}, 1)
+
 	if in == nil {
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}

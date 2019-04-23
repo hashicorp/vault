@@ -6,13 +6,17 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func waitForReplicationState(context.Context, *Core, *logical.Request) error { return nil }
 
 func checkNeedsCG(context.Context, *Core, *logical.Request, *logical.Auth, error, []string) (error, *logical.Response, *logical.Auth, error) {
 	return nil, nil, nil, nil
+}
+
+func checkErrControlGroupTokenNeedsCreated(err error) bool {
+	return false
 }
 
 func shouldForward(c *Core, routeErr error) bool {

@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	proto3 "github.com/golang/protobuf/ptypes/struct"
-
+	structpb "github.com/golang/protobuf/ptypes/struct"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc/codes"
 )
@@ -48,6 +48,36 @@ func NewStatement(sql string) Statement {
 	return Statement{SQL: sql, Params: map[string]interface{}{}}
 }
 
+var (
+	errNilParam = errors.New("use T(nil), not nil")
+	errNoType   = errors.New("no type information")
+)
+
+// convertParams converts a statement's parameters into proto Param and
+// ParamTypes.
+func (s *Statement) convertParams() (*structpb.Struct, map[string]*sppb.Type, error) {
+	params := &proto3.Struct{
+		Fields: map[string]*proto3.Value{},
+	}
+	paramTypes := map[string]*sppb.Type{}
+	for k, v := range s.Params {
+		if v == nil {
+			return nil, nil, errBindParam(k, v, errNilParam)
+		}
+		val, t, err := encodeValue(v)
+		if err != nil {
+			return nil, nil, errBindParam(k, v, err)
+		}
+		if t == nil { // should not happen, because of nil check above
+			return nil, nil, errBindParam(k, v, errNoType)
+		}
+		params.Fields[k] = val
+		paramTypes[k] = t
+	}
+
+	return params, paramTypes, nil
+}
+
 // errBindParam returns error for not being able to bind parameter to query request.
 func errBindParam(k string, v interface{}, err error) error {
 	if err == nil {
@@ -59,43 +89,4 @@ func errBindParam(k string, v interface{}, err error) error {
 	}
 	se.decorate(fmt.Sprintf("failed to bind query parameter(name: %q, value: %v)", k, v))
 	return se
-}
-
-var (
-	errNilParam = errors.New("use T(nil), not nil")
-	errNoType   = errors.New("no type information")
-)
-
-// bindParams binds parameters in a Statement to a sppb.ExecuteSqlRequest or sppb.PartitionQueryRequest.
-func (s *Statement) bindParams(i interface{}) error {
-	params := &proto3.Struct{
-		Fields: map[string]*proto3.Value{},
-	}
-	paramTypes := map[string]*sppb.Type{}
-	for k, v := range s.Params {
-		if v == nil {
-			return errBindParam(k, v, errNilParam)
-		}
-		val, t, err := encodeValue(v)
-		if err != nil {
-			return errBindParam(k, v, err)
-		}
-		if t == nil { // should not happen, because of nil check above
-			return errBindParam(k, v, errNoType)
-		}
-		params.Fields[k] = val
-		paramTypes[k] = t
-	}
-
-	switch r := i.(type) {
-	default:
-		return fmt.Errorf("failed to bind query parameter, unexpected request type: %v", r)
-	case *sppb.ExecuteSqlRequest:
-		r.Params = params
-		r.ParamTypes = paramTypes
-	case *sppb.PartitionQueryRequest:
-		r.Params = params
-		r.ParamTypes = paramTypes
-	}
-	return nil
 }

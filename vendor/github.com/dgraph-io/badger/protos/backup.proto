@@ -22,8 +22,7 @@ package protos;
 message KVPair {
         bytes key = 1;
         bytes value = 2;
-        bytes userMeta = 3;
+        bytes  userMeta = 3;
         uint64 version = 4;
         uint64 expires_at = 5;
-        bytes meta = 6;
 }

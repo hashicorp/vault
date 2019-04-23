@@ -63,7 +63,7 @@ export default DS.RESTAdapter.extend({
     let options = passedOptions;
     let controlGroup = this.get('controlGroup');
     let controlGroupToken = controlGroup.tokenForUrl(url);
-    // if we have a control group token that matches the intendedUrl,
+    // if we have a Control Group token that matches the intendedUrl,
     // then we want to unwrap it and return the unwrapped response as
     // if it were the initial request
     // To do this, we rewrite the function args

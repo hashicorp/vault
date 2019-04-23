@@ -56,7 +56,7 @@ const routerStub = Service.extend({
   },
 });
 
-const renderIt = async (context, path) => {
+const renderIt = async (context, path = 'jwt') => {
   let handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
   };
@@ -131,13 +131,16 @@ module('Integration | Component | auth jwt', function(hooks) {
 
   test('jwt: it renders', async function(assert) {
     await renderIt(this);
+    await settled();
     assert.ok(component.jwtPresent, 'renders jwt field');
     assert.ok(component.rolePresent, 'renders jwt field');
-    assert.equal(this.server.handledRequests.length, 0, 'no requests made when there is no path set');
+    assert.equal(this.server.handledRequests.length, 1, 'request to the default path is made');
+    assert.equal(this.server.handledRequests[0].url, '/v1/auth/jwt/oidc/auth_url');
     this.set('selectedAuthPath', 'foo');
     await settled();
+    assert.equal(this.server.handledRequests.length, 2, 'a second request was made');
     assert.equal(
-      this.server.handledRequests[0].url,
+      this.server.handledRequests[1].url,
       '/v1/auth/foo/oidc/auth_url',
       'requests when path is set'
     );
@@ -151,14 +154,16 @@ module('Integration | Component | auth jwt', function(hooks) {
 
   test('oidc: test role: it renders', async function(assert) {
     await renderIt(this);
+    await settled();
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
+    await settled();
     assert.notOk(component.jwtPresent, 'does not show jwt input for OIDC type login');
     assert.equal(component.loginButtonText, 'Sign in with OIDC Provider');
 
     await component.role('okta');
     // 1 for initial render, 1 for each time role changed = 3
-    assert.equal(this.server.handledRequests.length, 3, 'fetches the auth_url when the path changes');
+    assert.equal(this.server.handledRequests.length, 4, 'fetches the auth_url when the path changes');
     assert.equal(component.loginButtonText, 'Sign in with Okta', 'recognizes auth methods with certain urls');
   });
 

@@ -1,10 +1,15 @@
 package farm
 
+import (
+	"encoding/binary"
+	"math/bits"
+)
+
 func uoH(x, y, mul uint64, r uint) uint64 {
 	a := (x ^ y) * mul
 	a ^= (a >> 47)
 	b := (y ^ a) * mul
-	return rotate64(b, r) * mul
+	return bits.RotateLeft64(b, -int(r)) * mul
 }
 
 // Hash64WithSeeds hashes a byte slice and two uint64 seeds and returns a uint64 hash value
@@ -31,14 +36,14 @@ func Hash64WithSeeds(s []byte, seed0, seed1 uint64) uint64 {
 	last64 := s[last64Idx:]
 
 	for len(s) > 64 {
-		a0 := fetch64(s, 0)
-		a1 := fetch64(s, 8)
-		a2 := fetch64(s, 16)
-		a3 := fetch64(s, 24)
-		a4 := fetch64(s, 32)
-		a5 := fetch64(s, 40)
-		a6 := fetch64(s, 48)
-		a7 := fetch64(s, 56)
+		a0 := binary.LittleEndian.Uint64(s[0 : 0+8])
+		a1 := binary.LittleEndian.Uint64(s[8 : 8+8])
+		a2 := binary.LittleEndian.Uint64(s[16 : 16+8])
+		a3 := binary.LittleEndian.Uint64(s[24 : 24+8])
+		a4 := binary.LittleEndian.Uint64(s[32 : 32+8])
+		a5 := binary.LittleEndian.Uint64(s[40 : 40+8])
+		a6 := binary.LittleEndian.Uint64(s[48 : 48+8])
+		a7 := binary.LittleEndian.Uint64(s[56 : 56+8])
 		x += a0 + a1
 		y += a2
 		z += a3
@@ -47,15 +52,15 @@ func Hash64WithSeeds(s []byte, seed0, seed1 uint64) uint64 {
 		w.lo += a6
 		w.hi += a7
 
-		x = rotate64(x, 26)
+		x = bits.RotateLeft64(x, -26)
 		x *= 9
-		y = rotate64(y, 29)
+		y = bits.RotateLeft64(y, -29)
 		z *= mul
-		v.lo = rotate64(v.lo, 33)
-		v.hi = rotate64(v.hi, 30)
+		v.lo = bits.RotateLeft64(v.lo, -33)
+		v.hi = bits.RotateLeft64(v.hi, -30)
 		w.lo ^= x
 		w.lo *= 9
-		z = rotate64(z, 32)
+		z = bits.RotateLeft64(z, -32)
 		z += w.hi
 		w.hi += z
 		z *= 9
@@ -75,25 +80,25 @@ func Hash64WithSeeds(s []byte, seed0, seed1 uint64) uint64 {
 		w.lo += v.hi
 		w.hi += x - y
 		x += w.hi
-		w.hi = rotate64(w.hi, 34)
+		w.hi = bits.RotateLeft64(w.hi, -34)
 		u, z = z, u
 		s = s[64:]
 	}
 	// Make s point to the last 64 bytes of input.
 	s = last64
 	u *= 9
-	v.hi = rotate64(v.hi, 28)
-	v.lo = rotate64(v.lo, 20)
+	v.hi = bits.RotateLeft64(v.hi, -28)
+	v.lo = bits.RotateLeft64(v.lo, -20)
 	w.lo += (uint64(slen-1) & 63)
 	u += y
 	y += u
-	x = rotate64(y-x+v.lo+fetch64(s, 8), 37) * mul
-	y = rotate64(y^v.hi^fetch64(s, 48), 42) * mul
+	x = bits.RotateLeft64(y-x+v.lo+binary.LittleEndian.Uint64(s[8:8+8]), -37) * mul
+	y = bits.RotateLeft64(y^v.hi^binary.LittleEndian.Uint64(s[48:48+8]), -42) * mul
 	x ^= w.hi * 9
-	y += v.lo + fetch64(s, 40)
-	z = rotate64(z+w.lo, 33) * mul
+	y += v.lo + binary.LittleEndian.Uint64(s[40:40+8])
+	z = bits.RotateLeft64(z+w.lo, -33) * mul
 	v.lo, v.hi = weakHashLen32WithSeeds(s, v.hi*mul, x+w.lo)
-	w.lo, w.hi = weakHashLen32WithSeeds(s[32:], z+w.hi, y+fetch64(s, 16))
+	w.lo, w.hi = weakHashLen32WithSeeds(s[32:], z+w.hi, y+binary.LittleEndian.Uint64(s[16:16+8]))
 	return uoH(hashLen16Mul(v.lo+x, w.lo^y, mul)+z-u,
 		uoH(v.hi+y, w.hi+z, k2, 30)^x,
 		k2,

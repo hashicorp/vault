@@ -41,13 +41,6 @@ type keyOffset struct {
 	len    int
 }
 
-// TableInterface is useful for testing.
-type TableInterface interface {
-	Smallest() []byte
-	Biggest() []byte
-	DoesNotHave(key []byte) bool
-}
-
 // Table represents a loaded table file with the info we have about it
 type Table struct {
 	sync.Mutex

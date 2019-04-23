@@ -181,7 +181,7 @@ qa: fmtcheck test vet lint coverage cyclo ineffassign misspell structcheck varch
 # Get the dependencies
 deps:
 	GOPATH=$(GOPATH) go get ./...
-	GOPATH=$(GOPATH) go get github.com/golang/lint/golint
+	GOPATH=$(GOPATH) go get golang.org/x/lint/golint
 	GOPATH=$(GOPATH) go get github.com/jstemmer/go-junit-report
 	GOPATH=$(GOPATH) go get github.com/axw/gocov/gocov
 	GOPATH=$(GOPATH) go get github.com/fzipp/gocyclo

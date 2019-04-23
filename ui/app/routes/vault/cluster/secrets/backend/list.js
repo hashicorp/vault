@@ -160,7 +160,8 @@ export default Route.extend({
   resetController(controller, isExiting) {
     this._super(...arguments);
     if (isExiting) {
-      controller.set('filter', '');
+      controller.set('pageFilter', null);
+      controller.set('filter', null);
     }
   },
 

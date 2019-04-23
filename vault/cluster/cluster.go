@@ -11,7 +11,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"golang.org/x/net/http2"
 )
 
@@ -24,14 +24,14 @@ const (
 	ListenerAcceptDeadline = 500 * time.Millisecond
 )
 
-// ClusterClient is used to lookup a client certificate.
-type ClusterClient interface {
+// Client is used to lookup a client certificate.
+type Client interface {
 	ClientLookup(context.Context, *tls.CertificateRequestInfo) (*tls.Certificate, error)
 }
 
-// ClusterHandler exposes functions for looking up TLS configuration and handing
+// Handler exposes functions for looking up TLS configuration and handing
 // off a connection for a cluster listener application.
-type ClusterHandler interface {
+type Handler interface {
 	ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error)
 	CALookup(context.Context) (*x509.Certificate, error)
 
@@ -42,15 +42,31 @@ type ClusterHandler interface {
 }
 
 type ClusterHook interface {
-	AddClient(alpn string, client ClusterClient)
+	AddClient(alpn string, client Client)
 	RemoveClient(alpn string)
-	AddHandler(alpn string, handler ClusterHandler)
+	AddHandler(alpn string, handler Handler)
 	StopHandler(alpn string)
 	TLSConfig(ctx context.Context) (*tls.Config, error)
 	Addr() net.Addr
 }
 
-func NewClusterListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger) *ClusterListener {
+// Listener is the source of truth for cluster handlers and connection
+// clients. It dynamically builds the cluster TLS information. It's also
+// responsible for starting tcp listeners and accepting new cluster connections.
+type Listener struct {
+	handlers   map[string]Handler
+	clients    map[string]Client
+	shutdown   *uint32
+	shutdownWg *sync.WaitGroup
+	server     *http2.Server
+
+	listenerAddrs []*net.TCPAddr
+	cipherSuites  []uint16
+	logger        log.Logger
+	l             sync.RWMutex
+}
+
+func NewListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.Logger) *Listener {
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -61,56 +77,44 @@ func NewClusterListener(addrs []*net.TCPAddr, cipherSuites []uint16, logger log.
 		IdleTimeout: 5 * HeartbeatInterval,
 	}
 
-	return &ClusterListener{
-		handlers:   make(map[string]ClusterHandler),
-		clients:    make(map[string]ClusterClient),
+	return &Listener{
+		handlers:   make(map[string]Handler),
+		clients:    make(map[string]Client),
 		shutdown:   new(uint32),
 		shutdownWg: &sync.WaitGroup{},
 		server:     h2Server,
 
-		clusterListenerAddrs: addrs,
-		clusterCipherSuites:  cipherSuites,
-		logger:               logger.Named("cluster-listener"),
+		listenerAddrs: addrs,
+		cipherSuites:  cipherSuites,
+		logger:        logger,
 	}
 }
 
-// ClusterListener is the source of truth for cluster handlers and connection
-// clients. It dynamically builds the cluster TLS information. It's also
-// responsible for starting tcp listeners and accepting new cluster connections.
-type ClusterListener struct {
-	handlers   map[string]ClusterHandler
-	clients    map[string]ClusterClient
-	shutdown   *uint32
-	shutdownWg *sync.WaitGroup
-	server     *http2.Server
-
-	clusterListenerAddrs []*net.TCPAddr
-	clusterCipherSuites  []uint16
-	logger               log.Logger
-	l                    sync.RWMutex
+// TODO: This probably isn't correct
+func (cl *Listener) Addr() net.Addr {
+	return cl.listenerAddrs[0]
 }
 
-// TODO: This probably isn't correct
-func (cl *ClusterListener) Addr() net.Addr {
-	return cl.clusterListenerAddrs[0]
+func (cl *Listener) Addrs() []*net.TCPAddr {
+	return cl.listenerAddrs
 }
 
 // AddClient adds a new client for an ALPN name
-func (cl *ClusterListener) AddClient(alpn string, client ClusterClient) {
+func (cl *Listener) AddClient(alpn string, client Client) {
 	cl.l.Lock()
 	cl.clients[alpn] = client
 	cl.l.Unlock()
 }
 
 // RemoveClient removes the client for the specified ALPN name
-func (cl *ClusterListener) RemoveClient(alpn string) {
+func (cl *Listener) RemoveClient(alpn string) {
 	cl.l.Lock()
 	delete(cl.clients, alpn)
 	cl.l.Unlock()
 }
 
 // AddHandler registers a new cluster handler for the provided ALPN name.
-func (cl *ClusterListener) AddHandler(alpn string, handler ClusterHandler) {
+func (cl *Listener) AddHandler(alpn string, handler Handler) {
 	cl.l.Lock()
 	cl.handlers[alpn] = handler
 	cl.l.Unlock()
@@ -118,7 +122,7 @@ func (cl *ClusterListener) AddHandler(alpn string, handler ClusterHandler) {
 
 // StopHandler stops the cluster handler for the provided ALPN name, it also
 // calls stop on the handler.
-func (cl *ClusterListener) StopHandler(alpn string) {
+func (cl *Listener) StopHandler(alpn string) {
 	cl.l.Lock()
 	handler, ok := cl.handlers[alpn]
 	delete(cl.handlers, alpn)
@@ -128,14 +132,20 @@ func (cl *ClusterListener) StopHandler(alpn string) {
 	}
 }
 
+// Handler returns the handler for the provided ALPN name
+func (cl *Listener) Handler(alpn string) (Handler, bool) {
+	handler, ok := cl.handlers[alpn]
+	return handler, ok
+}
+
 // Server returns the http2 server that the cluster listener is using
-func (cl *ClusterListener) Server() *http2.Server {
+func (cl *Listener) Server() *http2.Server {
 	return cl.server
 }
 
 // TLSConfig returns a tls config object that uses dynamic lookups to correctly
 // authenticate registered handlers/clients
-func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
+func (cl *Listener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 	serverLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		cl.logger.Debug("performing server cert lookup")
 
@@ -178,7 +188,7 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 			RootCAs:              caPool,
 			ClientCAs:            caPool,
 			NextProtos:           clientHello.SupportedProtos,
-			CipherSuites:         cl.clusterCipherSuites,
+			CipherSuites:         cl.cipherSuites,
 		}
 
 		cl.l.RLock()
@@ -205,13 +215,13 @@ func (cl *ClusterListener) TLSConfig(ctx context.Context) (*tls.Config, error) {
 		GetClientCertificate: clientLookup,
 		GetConfigForClient:   serverConfigLookup,
 		MinVersion:           tls.VersionTLS12,
-		CipherSuites:         cl.clusterCipherSuites,
+		CipherSuites:         cl.cipherSuites,
 	}, nil
 }
 
 // Run starts the tcp listeners and will accept connections until stop is
 // called. This function blocks so should be called in a go routine.
-func (cl *ClusterListener) Run(ctx context.Context) error {
+func (cl *Listener) Run(ctx context.Context) error {
 	// Get our TLS config
 	tlsConfig, err := cl.TLSConfig(ctx)
 	if err != nil {
@@ -220,44 +230,44 @@ func (cl *ClusterListener) Run(ctx context.Context) error {
 	}
 
 	// The server supports all of the possible protos
-	tlsConfig.NextProtos = []string{"h2", consts.RequestForwardingALPN, consts.PerfStandbyALPN, consts.PerformanceReplicationALPN, consts.DRReplicationALPN, consts.RaftStorageALPN}
+	tlsConfig.NextProtos = []string{"h2", consts.RequestForwardingALPN, consts.PerfStandbyALPN, consts.PerformanceReplicationALPN, consts.DRReplicationALPN}
 
-	for _, addr := range cl.clusterListenerAddrs {
+	for i, laddr := range cl.listenerAddrs {
+		// closeCh is used to shutdown the spawned goroutines once this
+		// function returns
+		closeCh := make(chan struct{})
+
+		if cl.logger.IsInfo() {
+			cl.logger.Info("starting listener", "listener_address", laddr)
+		}
+
+		// Create a TCP listener. We do this separately and specifically
+		// with TCP so that we can set deadlines.
+		tcpLn, err := net.ListenTCP("tcp", laddr)
+		if err != nil {
+			cl.logger.Error("error starting listener", "error", err)
+			continue
+		}
+		if laddr.String() != tcpLn.Addr().String() {
+			// If we listened on port 0, record the port the OS gave us.
+			cl.listenerAddrs[i] = tcpLn.Addr().(*net.TCPAddr)
+		}
+
+		// Wrap the listener with TLS
+		tlsLn := tls.NewListener(tcpLn, tlsConfig)
+
+		if cl.logger.IsInfo() {
+			cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
+		}
+
 		cl.shutdownWg.Add(1)
-
-		// Force a local resolution to avoid data races
-		laddr := addr
-
 		// Start our listening loop
-		go func() {
-			defer cl.shutdownWg.Done()
-
-			// closeCh is used to shutdown the spawned goroutines once this
-			// function returns
-			closeCh := make(chan struct{})
+		go func(closeCh chan struct{}, tlsLn net.Listener) {
 			defer func() {
+				cl.shutdownWg.Done()
+				tlsLn.Close()
 				close(closeCh)
 			}()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("starting listener", "listener_address", laddr)
-			}
-
-			// Create a TCP listener. We do this separately and specifically
-			// with TCP so that we can set deadlines.
-			tcpLn, err := net.ListenTCP("tcp", laddr)
-			if err != nil {
-				cl.logger.Error("error starting listener", "error", err)
-				return
-			}
-
-			// Wrap the listener with TLS
-			tlsLn := tls.NewListener(tcpLn, tlsConfig)
-			defer tlsLn.Close()
-
-			if cl.logger.IsInfo() {
-				cl.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
-			}
 
 			for {
 				if atomic.LoadUint32(cl.shutdown) > 0 {
@@ -334,14 +344,14 @@ func (cl *ClusterListener) Run(ctx context.Context) error {
 					continue
 				}
 			}
-		}()
+		}(closeCh, tlsLn)
 	}
 
 	return nil
 }
 
 // Stop stops the cluster listner
-func (cl *ClusterListener) Stop() {
+func (cl *Listener) Stop() {
 	// Set the shutdown flag. This will cause the listeners to shut down
 	// within the deadline in clusterListenerAcceptDeadline
 	atomic.StoreUint32(cl.shutdown, 1)

@@ -336,6 +336,11 @@ func (kl *klexer) Next() (lex, bool) {
 		}
 	}
 
+	if kl.readErr != nil && kl.readErr != io.EOF {
+		// Don't return any tokens after a read error occurs.
+		return lex{value: zEOF}, false
+	}
+
 	if str.Len() > 0 {
 		// Send remainder
 		l.value = zValue

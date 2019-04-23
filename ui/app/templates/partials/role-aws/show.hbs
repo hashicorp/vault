@@ -9,7 +9,7 @@
   {{#each model.fields as |attr|}}
     {{#if (eq attr.name "policyDocument")}}
       {{#info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=model.policyDocument}}
-      <pre><code class="is-paddingless">{{stringify (jsonify model.policyDocument)}}</code></pre>
+        <pre><code class="is-paddingless">{{stringify (jsonify model.policyDocument)}}</code></pre>
       {{/info-table-row}}
     {{else}}
       {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}

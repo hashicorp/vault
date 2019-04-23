@@ -27,16 +27,16 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
-	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/mlock"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
@@ -425,7 +425,7 @@ type Core struct {
 	loadCaseSensitiveIdentityStore bool
 
 	// clusterListener starts up and manages connections on the cluster ports
-	clusterListener *cluster.ClusterListener
+	clusterListener *cluster.Listener
 
 	// Telemetry objects
 	metricsHelper *metricsutil.MetricsHelper
@@ -599,7 +599,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                  conf.MaxLeaseTTL,
 		cachingDisabled:              conf.DisableCache,
 		clusterName:                  conf.ClusterName,
-		clusterPeerClusterAddrsCache: cache.New(3*HeartbeatInterval, time.Second),
+		clusterPeerClusterAddrsCache: cache.New(3*cluster.HeartbeatInterval, time.Second),
 		enableMlock:                  !conf.DisableMlock,
 		rawEnabled:                   conf.EnableRaw,
 		replicationState:             new(uint32),
@@ -1755,7 +1755,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		return nil, nil, errwrap.Wrapf("failed to validate barrier seal configuration at migration check time: {{err}}", err)
 	}
 	// In older versions of vault the default seal would not store a type. This
-	// is here to offer backwards compatability for older seal configs.
+	// is here to offer backwards compatibility for older seal configs.
 	if barrierConf.Type == "" {
 		barrierConf.Type = seal.Shamir
 	}
@@ -1775,7 +1775,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 			return nil, nil, errwrap.Wrapf("failed to validate seal configuration at migration check time: {{err}}", err)
 		}
 		// In older versions of vault the default seal would not store a type. This
-		// is here to offer backwards compatability for older seal configs.
+		// is here to offer backwards compatibility for older seal configs.
 		if recoveryConf.Type == "" {
 			recoveryConf.Type = seal.Shamir
 		}

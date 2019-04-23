@@ -1,9 +1,9 @@
 package builtinplugins
 
 import (
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"

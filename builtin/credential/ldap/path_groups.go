@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathGroupsList(b *backend) *framework.Path {
@@ -150,7 +150,7 @@ type GroupEntry struct {
 }
 
 const pathGroupHelpSyn = `
-Manage users allowed to authenticate.
+Manage additional groups for users allowed to authenticate.
 `
 
 const pathGroupHelpDesc = `

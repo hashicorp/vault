@@ -6,19 +6,19 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/SermoDigital/jose/crypto"
-	"github.com/SermoDigital/jose/jws"
-	"github.com/SermoDigital/jose/jwt"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	jose "gopkg.in/square/go-jose.v2"
+	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 )
 
 const (
@@ -165,26 +165,44 @@ DONELISTHANDLING:
 	switch resp.WrapInfo.Format {
 	case "jwt":
 		// Create the JWT
-		claims := jws.Claims{}
-		// Map the JWT ID to the token ID for ease of use
-		claims.SetJWTID(te.ID)
-		// Set the issue time to the creation time
-		claims.SetIssuedAt(creationTime)
-		// Set the expiration to the TTL
-		claims.SetExpiration(creationTime.Add(resp.WrapInfo.TTL))
-		if resp.Auth != nil {
-			claims.Set("accessor", resp.Auth.Accessor)
+		claims := squarejwt.Claims{
+			// Map the JWT ID to the token ID for ease of use
+			ID: te.ID,
+			// Set the issue time to the creation time
+			IssuedAt: squarejwt.NewNumericDate(creationTime),
+			// Set the expiration to the TTL
+			Expiry: squarejwt.NewNumericDate(creationTime.Add(resp.WrapInfo.TTL)),
+			// Set a reasonable not-before time; since unwrapping happens on this
+			// node we shouldn't have to worry much about drift
+			NotBefore: squarejwt.NewNumericDate(time.Now().Add(-5 * time.Second)),
 		}
-		claims.Set("type", "wrapping")
-		claims.Set("addr", c.redirectAddr)
-		jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
-		serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
+		type privateClaims struct {
+			Accessor string `json:"accessor"`
+			Type     string `json:"type"`
+			Addr     string `json:"addr"`
+		}
+		priClaims := &privateClaims{
+			Type: "wrapping",
+			Addr: c.redirectAddr,
+		}
+		if resp.Auth != nil {
+			priClaims.Accessor = resp.Auth.Accessor
+		}
+		sig, err := jose.NewSigner(
+			jose.SigningKey{Algorithm: jose.ES512, Key: c.wrappingJWTKey},
+			(&jose.SignerOptions{}).WithType("JWT"))
+		if err != nil {
+			c.tokenStore.revokeOrphan(ctx, te.ID)
+			c.logger.Error("failed to create JWT builder", "error", err)
+			return nil, ErrInternalError
+		}
+		ser, err := squarejwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
 			return nil, ErrInternalError
 		}
-		resp.WrapInfo.Token = string(serWebToken)
+		resp.WrapInfo.Token = ser
 		if c.redirectAddr == "" {
 			resp.AddWarning("No redirect address set in Vault so none could be encoded in the token. You may need to supply Vault's API address when unwrapping the token.")
 		}
@@ -315,26 +333,39 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
-	// internal client token from it and use that during lookup.
-	if strings.Count(token, ".") == 2 {
-		wt, err := jws.ParseJWT([]byte(token))
-		// If there's an error we simply fall back to attempting to use it as a regular token
-		if err == nil && wt != nil {
-			validator := &jwt.Validator{}
-			validator.SetClaim("type", "wrapping")
-			if err = wt.Validate(&c.wrappingJWTKey.PublicKey, crypto.SigningMethodES512, []*jwt.Validator{validator}...); err != nil {
-				return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
-			}
-			token, _ = wt.Claims().JWTID()
-			// We override the given request client token so that the rest of
-			// Vault sees the real value. This also ensures audit logs are
-			// consistent with the actual token that was issued.
-			if !thirdParty {
-				req.ClientToken = token
-			} else {
-				req.Data["token"] = token
-			}
+	// internal client token from it and use that during lookup. The second
+	// check is a quick check to verify that we don't consider a namespaced
+	// token to be a JWT -- namespaced tokens have two dots too, but Vault
+	// token types (for now at least) begin with a letter representing a type
+	// and then a dot.
+	if strings.Count(token, ".") == 2 && token[1] != '.' {
+		// Implement the jose library way
+		parsedJWT, err := squarejwt.ParseSigned(token)
+		if err != nil {
+			return false, errwrap.Wrapf("wrapping token could not be parsed: {{err}}", err)
 		}
+		var claims squarejwt.Claims
+		var allClaims = make(map[string]interface{})
+		if err = parsedJWT.Claims(&c.wrappingJWTKey.PublicKey, &claims, &allClaims); err != nil {
+			return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
+		}
+		typeClaimRaw, ok := allClaims["type"]
+		if !ok {
+			return false, errors.New("could not validate type claim")
+		}
+		typeClaim, ok := typeClaimRaw.(string)
+		if !ok {
+			return false, errors.New("could not parse type claim")
+		}
+		if typeClaim != "wrapping" {
+			return false, errors.New("unexpected type claim")
+		}
+		if !thirdParty {
+			req.ClientToken = claims.ID
+		} else {
+			req.Data["token"] = claims.ID
+		}
+		token = claims.ID
 	}
 
 	if token == "" {

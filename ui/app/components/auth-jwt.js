@@ -5,6 +5,7 @@ import { next, later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
 
+/* eslint-disable ember/no-ember-testing-in-module-scope */
 const WAIT_TIME = Ember.testing ? 0 : 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
@@ -28,10 +29,13 @@ export default Component.extend({
   didReceiveAttrs() {
     next(() => {
       let { oldSelectedAuthPath, selectedAuthPath } = this;
+      let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
       if (oldSelectedAuthPath !== selectedAuthPath) {
         this.set('role', null);
-        this.onRoleName(null);
+        this.onRoleName(this.roleName);
         this.fetchRole.perform(null, { debounce: false });
+      } else if (shouldDebounce) {
+        this.fetchRole.perform(this.roleName);
       }
       this.set('oldSelectedAuthPath', selectedAuthPath);
     });

@@ -8,6 +8,7 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
     ttl: {
       type: 'string',
       format: 'seconds',
+      description: 'this is a TTL!',
       'x-vault-displayName': 'TTL',
     },
     'awesome-people': {
@@ -30,9 +31,15 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       default: 30,
       type: 'integer',
     },
+    'super-secret': {
+      type: 'string',
+      'x-vault-displaySensitive': true,
+      description: 'A really secret thing',
+    },
   };
   const EXPANDED_PROPS = {
     ttl: {
+      helpText: 'this is a TTL!',
       editType: 'ttl',
       type: 'string',
       label: 'TTL',
@@ -56,6 +63,13 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       editType: 'number',
       type: 'number',
       defaultValue: 30,
+    },
+
+    superSecret: {
+      type: 'string',
+      editType: 'string',
+      sensitive: true,
+      helpText: 'A really secret thing',
     },
   };
 
@@ -93,6 +107,7 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       editType: 'ttl',
       type: 'string',
       label: 'TTL',
+      helpText: 'this is a TTL!',
     }),
     awesomePeople: attr({
       label: 'People Who Are Awesome',
@@ -104,6 +119,12 @@ module('Unit | Util | OpenAPI Data Utilities', function() {
       type: 'string',
       editType: 'string',
       possibleValues: ['vanilla', 'chocolate', 'strawberry'],
+    }),
+    superSecret: attr('string', {
+      type: 'string',
+      editType: 'string',
+      sensitive: true,
+      description: 'A really secret thing',
     }),
   };
 

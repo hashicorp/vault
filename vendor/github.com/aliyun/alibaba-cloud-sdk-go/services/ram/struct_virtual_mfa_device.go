@@ -17,9 +17,9 @@ package ram
 
 // VirtualMFADevice is a nested struct in ram response
 type VirtualMFADevice struct {
-	ActivateDate     string `json:"ActivateDate" xml:"ActivateDate"`
-	SerialNumber     string `json:"SerialNumber" xml:"SerialNumber"`
 	QRCodePNG        string `json:"QRCodePNG" xml:"QRCodePNG"`
+	ActivateDate     string `json:"ActivateDate" xml:"ActivateDate"`
 	Base32StringSeed string `json:"Base32StringSeed" xml:"Base32StringSeed"`
+	SerialNumber     string `json:"SerialNumber" xml:"SerialNumber"`
 	User             User   `json:"User" xml:"User"`
 }

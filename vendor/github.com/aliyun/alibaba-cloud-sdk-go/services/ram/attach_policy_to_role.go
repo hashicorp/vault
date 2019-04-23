@@ -77,8 +77,8 @@ func (client *Client) AttachPolicyToRoleWithCallback(request *AttachPolicyToRole
 type AttachPolicyToRoleRequest struct {
 	*requests.RpcRequest
 	PolicyType string `position:"Query" name:"PolicyType"`
-	PolicyName string `position:"Query" name:"PolicyName"`
 	RoleName   string `position:"Query" name:"RoleName"`
+	PolicyName string `position:"Query" name:"PolicyName"`
 }
 
 // AttachPolicyToRoleResponse is the response struct for api AttachPolicyToRole
@@ -92,7 +92,7 @@ func CreateAttachPolicyToRoleRequest() (request *AttachPolicyToRoleRequest) {
 	request = &AttachPolicyToRoleRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToRole", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "AttachPolicyToRole", "ram", "openAPI")
 	return
 }
 

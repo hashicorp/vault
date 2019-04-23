@@ -5,7 +5,7 @@ export default Fragment.extend({
   version: attr('number', {
     label: 'Version',
     helpText:
-      'The KV Secrets engine can operate in different modes. Version 1 is the original generic secrets engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+      'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
     possibleValues: [2, 1],
     defaultFormValue: 2,
   }),

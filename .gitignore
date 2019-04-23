@@ -47,10 +47,8 @@ Vagrantfile
 
 # Configs
 *.hcl
-!command/agent/config/test-fixtures/config.hcl
-!command/agent/config/test-fixtures/config-cache.hcl
-!command/agent/config/test-fixtures/config-embedded-type.hcl
-!command/agent/config/test-fixtures/config-cache-embedded-type.hcl
+!command/agent/config/test-fixtures/*.hcl
+
 
 .DS_Store
 .idea
@@ -86,6 +84,7 @@ ui/connect.lock
 ui/coverage/*
 ui/libpeerconnection.log
 ui/npm-debug.log
+ui/test-reports/*
 ui/testem.log
 
 # used for JS acceptance tests

@@ -9,7 +9,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestLoadConfigFile(t *testing.T) {

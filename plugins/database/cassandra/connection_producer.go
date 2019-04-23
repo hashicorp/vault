@@ -12,11 +12,11 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 )
 
 // cassandraConnectionProducer implements ConnectionProducer and provides an
@@ -33,6 +33,7 @@ type cassandraConnectionProducer struct {
 	SocketKeepAliveRaw interface{} `json:"socket_keep_alive" structs:"socket_keep_alive" mapstructure:"socket_keep_alive"`
 	TLSMinVersion      string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency        string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
+	LocalDatacenter    string      `json:"local_datacenter" structs:"local_datacenter" mapstructure:"local_datacenter"`
 	PemBundle          string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
 	PemJSON            string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
@@ -232,6 +233,10 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 		clusterConfig.SslOpts = &gocql.SslOptions{
 			Config: tlsConfig,
 		}
+	}
+
+	if c.LocalDatacenter != "" {
+		clusterConfig.PoolConfig.HostSelectionPolicy = gocql.DCAwareRoundRobinPolicy(c.LocalDatacenter)
 	}
 
 	session, err := clusterConfig.CreateSession()

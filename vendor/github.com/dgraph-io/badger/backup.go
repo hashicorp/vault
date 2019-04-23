@@ -18,13 +18,14 @@ package badger
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"io"
+	"log"
 	"sync"
 
-	"github.com/dgraph-io/badger/protos"
 	"github.com/dgraph-io/badger/y"
+
+	"github.com/dgraph-io/badger/protos"
 )
 
 func writeTo(entry *protos.KVPair, w io.Writer) error {
@@ -48,7 +49,6 @@ func writeTo(entry *protos.KVPair, w io.Writer) error {
 // This can be used to backup the data in a database at a given point in time.
 func (db *DB) Backup(w io.Writer, since uint64) (uint64, error) {
 	var tsNew uint64
-	var skipKey []byte
 	err := db.View(func(txn *Txn) error {
 		opts := DefaultIteratorOptions
 		opts.AllVersions = true
@@ -57,53 +57,27 @@ func (db *DB) Backup(w io.Writer, since uint64) (uint64, error) {
 
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			if item.Version() < since || bytes.Equal(skipKey, item.Key()) {
-				// Ignore versions less than given timestamp, or skip older
-				// versions of the given skipKey.
+			if item.Version() < since {
+				// Ignore versions less than given timestamp
 				continue
 			}
-			skipKey = skipKey[:0]
-
-			var valCopy []byte
-			if !item.IsDeletedOrExpired() {
-				// No need to copy value, if item is deleted or expired.
-				var err error
-				valCopy, err = item.ValueCopy(nil)
-				if err != nil {
-					Errorf("Key [%x, %d]. Error while fetching value [%v]\n",
-						item.Key(), item.Version(), err)
-					continue
-				}
+			val, err := item.Value()
+			if err != nil {
+				log.Printf("Key [%x]. Error while fetching value [%v]\n", item.Key(), err)
+				continue
 			}
-
-			// clear txn bits
-			meta := item.meta &^ (bitTxn | bitFinTxn)
 
 			entry := &protos.KVPair{
 				Key:       y.Copy(item.Key()),
-				Value:     valCopy,
+				Value:     y.Copy(val),
 				UserMeta:  []byte{item.UserMeta()},
 				Version:   item.Version(),
 				ExpiresAt: item.ExpiresAt(),
-				Meta:      []byte{meta},
 			}
+
+			// Write entries to disk
 			if err := writeTo(entry, w); err != nil {
 				return err
-			}
-
-			switch {
-			case item.DiscardEarlierVersions():
-				// If we need to discard earlier versions of this item, add a delete
-				// marker just below the current version.
-				entry.Version -= 1
-				entry.Meta = []byte{bitDelete}
-				if err := writeTo(entry, w); err != nil {
-					return err
-				}
-				skipKey = item.KeyCopy(skipKey)
-
-			case item.IsDeletedOrExpired():
-				skipKey = item.KeyCopy(skipKey)
 			}
 		}
 		tsNew = txn.readTs
@@ -169,12 +143,11 @@ func (db *DB) Load(r io.Reader) error {
 			Value:     e.Value,
 			UserMeta:  e.UserMeta[0],
 			ExpiresAt: e.ExpiresAt,
-			meta:      e.Meta[0],
 		})
-		// Update nextTxnTs, memtable stores this timestamp in badger head
+		// Update nextCommit, memtable stores this timestamp in badger head
 		// when flushed.
-		if e.Version >= db.orc.nextTxnTs {
-			db.orc.nextTxnTs = e.Version + 1
+		if e.Version >= db.orc.commitTs() {
+			db.orc.nextCommit = e.Version + 1
 		}
 
 		if len(entries) == 1000 {
@@ -190,14 +163,14 @@ func (db *DB) Load(r io.Reader) error {
 			return err
 		}
 	}
+
 	wg.Wait()
 
 	select {
 	case err := <-errChan:
 		return err
 	default:
-		// Mark all versions done up until nextTxnTs.
-		db.orc.txnMark.Done(db.orc.nextTxnTs - 1)
+		db.orc.curRead = db.orc.commitTs() - 1
 		return nil
 	}
 }

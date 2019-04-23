@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ory/dockertest"
 )
 
@@ -48,10 +49,7 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 	}
 
 	cleanup := func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	port, _ := strconv.Atoi(resource.GetPort("1812/udp"))
@@ -214,7 +212,7 @@ func TestBackend_acceptance(t *testing.T) {
 		PreCheck:          testAccPreCheck(t, host, port),
 		AcceptanceTest:    true,
 		Steps: []logicaltest.TestStep{
-			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
+			// Login with valid but unknown user will fail because unregistered_user_policies is empty
 			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),
 			testAccUserLogin(t, username, dataRealpassword, true),
 			// Once the user is registered auth will succeed

@@ -147,10 +147,16 @@ func (i *InmemTransport) makeRPC(target ServerAddress, args interface{}, r io.Re
 
 	// Send the RPC over
 	respCh := make(chan RPCResponse)
-	peer.consumerCh <- RPC{
+	req := RPC{
 		Command:  args,
 		Reader:   r,
 		RespChan: respCh,
+	}
+	select {
+	case peer.consumerCh <- req:
+	case <-time.After(timeout):
+		err = fmt.Errorf("send timed out")
+		return
 	}
 
 	// Wait for a response

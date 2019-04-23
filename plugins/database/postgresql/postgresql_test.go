@@ -10,7 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/ory/dockertest"
 )
 
@@ -34,10 +35,7 @@ func preparePostgresTestContainer(t *testing.T) (cleanup func(), retURL string) 
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("postgres://postgres:secret@localhost:%s/database?sslmode=disable", resource.GetPort("5432/tcp"))
@@ -76,7 +74,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -186,7 +184,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Sleep longer than the inital expiration time
+	// Sleep longer than the initial expiration time
 	time.Sleep(2 * time.Second)
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
@@ -207,7 +205,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Sleep longer than the inital expiration time
+	// Sleep longer than the initial expiration time
 	time.Sleep(2 * time.Second)
 
 	if err = testCredsExist(t, connURL, username, password); err != nil {
@@ -239,7 +237,7 @@ func TestPostgreSQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !connProducer.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)

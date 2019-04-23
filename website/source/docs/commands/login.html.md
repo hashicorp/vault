@@ -122,6 +122,9 @@ flags](/docs/commands/index.html) included on all commands.
   "userpass" or "ldap". Note this corresponds to the TYPE, not the enabled path.
   Use -path to specify the path where the authentication is enabled.
 
+- `-no-print` `(bool: false)` - Do not display the token. The token will be
+  still be stored to the configured token helper. The default is false.
+
 - `-no-store` `(bool: false)` - Do not persist the token to the token helper
   (usually the local filesystem) after authentication for use in future
   requests. The token will only be displayed in the command output.

@@ -26,14 +26,36 @@ import (
 	"github.com/pkg/errors"
 )
 
-// OpenManaged returns a new DB, which allows more control over setting
-// transaction timestamps, by setting managedDB=true.
+// ManagedDB allows end users to manage the transactions themselves. Transaction
+// start and commit timestamps are set by end-user.
 //
 // This is only useful for databases built on top of Badger (like Dgraph), and
 // can be ignored by most users.
-func OpenManaged(opts Options) (*DB, error) {
+//
+// WARNING: This is an experimental feature and may be changed significantly in
+// a future release. So please proceed with caution.
+type ManagedDB struct {
+	*DB
+}
+
+// OpenManaged returns a new ManagedDB, which allows more control over setting
+// transaction timestamps.
+//
+// This is only useful for databases built on top of Badger (like Dgraph), and
+// can be ignored by most users.
+func OpenManaged(opts Options) (*ManagedDB, error) {
 	opts.managedTxns = true
-	return Open(opts)
+	db, err := Open(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &ManagedDB{db}, nil
+}
+
+// NewTransaction overrides DB.NewTransaction() and panics when invoked. Use
+// NewTransactionAt() instead.
+func (db *ManagedDB) NewTransaction(update bool) {
+	panic("Cannot use NewTransaction() for ManagedDB. Use NewTransactionAt() instead.")
 }
 
 // NewTransactionAt follows the same logic as DB.NewTransaction(), but uses the
@@ -41,39 +63,35 @@ func OpenManaged(opts Options) (*DB, error) {
 //
 // This is only useful for databases built on top of Badger (like Dgraph), and
 // can be ignored by most users.
-func (db *DB) NewTransactionAt(readTs uint64, update bool) *Txn {
-	if !db.opt.managedTxns {
-		panic("Cannot use NewTransactionAt with managedDB=false. Use NewTransaction instead.")
-	}
-	txn := db.newTransaction(update, true)
+func (db *ManagedDB) NewTransactionAt(readTs uint64, update bool) *Txn {
+	txn := db.DB.NewTransaction(update)
 	txn.readTs = readTs
 	return txn
 }
 
 // CommitAt commits the transaction, following the same logic as Commit(), but
-// at the given commit timestamp. This will panic if not used with managed transactions.
+// at the given commit timestamp. This will panic if not used with ManagedDB.
 //
 // This is only useful for databases built on top of Badger (like Dgraph), and
 // can be ignored by most users.
 func (txn *Txn) CommitAt(commitTs uint64, callback func(error)) error {
 	if !txn.db.opt.managedTxns {
-		panic("Cannot use CommitAt with managedDB=false. Use Commit instead.")
+		return ErrManagedTxn
 	}
 	txn.commitTs = commitTs
-	if callback == nil {
-		return txn.Commit()
-	}
-	txn.CommitWith(callback)
-	return nil
+	return txn.Commit(callback)
+}
+
+// GetSequence is not supported on ManagedDB. Calling this would result
+// in a panic.
+func (db *ManagedDB) GetSequence(_ []byte, _ uint64) (*Sequence, error) {
+	panic("Cannot use GetSequence for ManagedDB.")
 }
 
 // SetDiscardTs sets a timestamp at or below which, any invalid or deleted
 // versions can be discarded from the LSM tree, and thence from the value log to
-// reclaim disk space. Can only be used with managed transactions.
-func (db *DB) SetDiscardTs(ts uint64) {
-	if !db.opt.managedTxns {
-		panic("Cannot use SetDiscardTs with managedDB=false.")
-	}
+// reclaim disk space.
+func (db *ManagedDB) SetDiscardTs(ts uint64) {
 	db.orc.setDiscardTs(ts)
 }
 
@@ -88,12 +106,7 @@ var errDone = errors.New("Done deleting keys")
 // - Iterate over the KVs in Level 0, and run deletes on them via transactions.
 // - The deletions are done at the same timestamp as the latest version of the
 // key. Thus, we could write the keys back at the same timestamp as before.
-//
-// DropAll is only available with managed transactions.
-func (db *DB) DropAll() error {
-	if !db.opt.managedTxns {
-		panic("DropAll is only available with managedDB=true.")
-	}
+func (db *ManagedDB) DropAll() error {
 	// Stop accepting new writes.
 	atomic.StoreInt32(&db.blockWrites, 1)
 

@@ -30,25 +30,26 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/copystructure"
 
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/reload"
-	"github.com/hashicorp/vault/helper/salt"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/physical"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	testing "github.com/mitchellh/go-testing-interface"
 
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -151,11 +152,19 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.LicensingConfig = opts.LicensingConfig
 	conf.DisableKeyEncodingChecks = opts.DisableKeyEncodingChecks
 
+	if opts.Logger != nil {
+		conf.Logger = opts.Logger
+	}
+
 	for k, v := range opts.LogicalBackends {
 		conf.LogicalBackends[k] = v
 	}
 	for k, v := range opts.CredentialBackends {
 		conf.CredentialBackends[k] = v
+	}
+
+	for k, v := range opts.AuditBackends {
+		conf.AuditBackends[k] = v
 	}
 
 	c, err := NewCore(conf)
@@ -232,13 +241,12 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 // the key that must be used to unseal the core and a root token.
 func TestCoreInit(t testing.T, core *Core) ([][]byte, string) {
 	t.Helper()
-	secretShares, _, root := TestCoreInitClusterWrapperSetup(t, core, nil, nil)
+	secretShares, _, root := TestCoreInitClusterWrapperSetup(t, core, nil)
 	return secretShares, root
 }
 
-func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*net.TCPAddr, handler http.Handler) ([][]byte, [][]byte, string) {
+func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handler) ([][]byte, [][]byte, string) {
 	t.Helper()
-	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
 
 	barrierConfig := &SealConfig{
@@ -628,6 +636,26 @@ func (n *noopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	}
 	n.salt = salt
 	return salt, nil
+}
+
+func AddNoopAudit(conf *CoreConfig) {
+	conf.AuditBackends = map[string]audit.Factory{
+		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			view := &logical.InmemStorage{}
+			view.Put(context.Background(), &logical.StorageEntry{
+				Key:   "salt",
+				Value: []byte("foo"),
+			})
+			config.SaltConfig = &salt.Config{
+				HMAC:     sha256.New,
+				HMACType: "hmac-sha256",
+			}
+			config.SaltView = view
+			return &noopAudit{
+				Config: config,
+			}, nil
+		},
+	}
 }
 
 type rawHTTP struct{}
@@ -1223,7 +1251,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
 		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port+105),
+		ClusterAddr:        "https://127.0.0.1:0",
 		DisableMlock:       true,
 		EnableUI:           true,
 		EnableRaw:          true,
@@ -1243,6 +1271,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSealWrap = base.DisableSealWrap
 		coreConfig.DevLicenseDuration = base.DevLicenseDuration
 		coreConfig.DisableCache = base.DisableCache
+		coreConfig.LicensingConfig = base.LicensingConfig
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
 		}
@@ -1319,9 +1348,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		localConfig := *coreConfig
 		localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port)
-		if localConfig.ClusterAddr != "" {
-			localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[i][0].Address.Port+105)
-		}
 
 		// if opts.SealFunc is provided, use that to generate a seal for the config instead
 		if opts != nil && opts.SealFunc != nil {
@@ -1332,7 +1358,14 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			localConfig.Logger = opts.Logger.Named(fmt.Sprintf("core%d", i))
 		}
 
-		localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+		switch {
+		case localConfig.LicensingConfig != nil:
+			if pubKey != nil {
+				localConfig.LicensingConfig.AdditionalPublicKeys = append(localConfig.LicensingConfig.AdditionalPublicKeys, pubKey.(ed25519.PublicKey))
+			}
+		default:
+			localConfig.LicensingConfig = testGetLicensingConfig(pubKey)
+		}
 
 		c, err := NewCore(&localConfig)
 		if err != nil {
@@ -1363,7 +1396,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		for i, ln := range lns {
 			ret[i] = &net.TCPAddr{
 				IP:   ln.Address.IP,
-				Port: ln.Address.Port + 105,
+				Port: 0,
 			}
 		}
 		return ret
@@ -1377,7 +1410,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if opts == nil || !opts.SkipInit {
-		bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, cores[0], clusterAddrGen(listeners[0]), handlers[0])
+		bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, cores[0], handlers[0])
 		barrierKeys, _ := copystructure.Copy(bKeys)
 		testCluster.BarrierKeys = barrierKeys.([][]byte)
 		recoveryKeys, _ := copystructure.Copy(rKeys)

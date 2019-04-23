@@ -2,6 +2,7 @@ import DS from 'ember-data';
 const { attr } = DS;
 import { assign } from '@ember/polyfills';
 import { isEmpty } from '@ember/utils';
+import { camelize, capitalize } from '@ember/string';
 
 export const expandOpenApiProps = function(props) {
   let attrs = {};
@@ -18,25 +19,25 @@ export const expandOpenApiProps = function(props) {
     if (details.format === 'seconds') {
       editType = 'ttl';
     } else if (details.items) {
-      editType = details.items.type + details.type.capitalize();
+      editType = details.items.type + capitalize(details.type);
     }
-    attrs[prop.camelize()] = {
+    let attrDefn = {
       editType: editType,
       type: details.type,
+      helpText: details.description,
+      sensitive: details['x-vault-displaySensitive'],
+      label: details['x-vault-displayName'],
+      possibleValues: details['enum'],
+      defaultValue:
+        details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
     };
-    if (details['x-vault-displayName']) {
-      attrs[prop.camelize()].label = details['x-vault-displayName'];
-    }
-    if (details['enum']) {
-      attrs[prop.camelize()].possibleValues = details['enum'];
-    }
-    if (details['x-vault-displayValue']) {
-      attrs[prop.camelize()].defaultValue = details['x-vault-displayValue'];
-    } else {
-      if (!isEmpty(details['default'])) {
-        attrs[prop.camelize()].defaultValue = details['default'];
+    // loop to remove empty vals
+    for (let attrProp in attrDefn) {
+      if (attrDefn[attrProp] == null) {
+        delete attrDefn[attrProp];
       }
     }
+    attrs[camelize(prop)] = attrDefn;
   }
   return attrs;
 };

@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	vaultconsts "github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	vaultconsts "github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -595,6 +595,9 @@ type gcpRole struct {
 	// Service accounts allowed to login under this role.
 	BoundServiceAccounts []string `json:"bound_service_accounts,omitempty"`
 
+	// AddGroupAliases adds Vault group aliases to the response.
+	AddGroupAliases bool `json:"add_group_aliases,omitempty"`
+
 	// --| IAM-only attributes |--
 	// MaxJwtExp is the duration from time of authentication that a JWT used to authenticate to role must expire within.
 	// TODO(emilymye): Allow this to be updated for GCE roles once 'exp' parameter has been allowed for GCE metadata.
@@ -616,8 +619,6 @@ type gcpRole struct {
 
 	// BoundLabels that instances must currently have set in order to login under this role.
 	BoundLabels map[string]string `json:"bound_labels,omitempty"`
-
-	AddGroupAliases bool `json:"add_group_aliases,omitempty"`
 
 	// Deprecated fields
 	// TODO: Remove in 0.5.0+

@@ -11,13 +11,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -105,13 +105,13 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 				continue
 			}
 
-			// Remove dangling groups
-			if group.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
-				ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
-				if err != nil {
-					return err
-				}
-				if ns == nil {
+			ns, err := NamespaceByID(ctx, group.NamespaceID, i.core)
+			if err != nil {
+				return err
+			}
+			if ns == nil {
+				// Remove dangling groups
+				if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
 					// Group's namespace doesn't exist anymore but the group
 					// from the namespace still exists.
 					i.logger.Warn("deleting group and its any existing aliases", "name", group.Name, "namespace_id", group.NamespaceID)
@@ -119,12 +119,13 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 					if err != nil {
 						return err
 					}
-					continue
 				}
+				continue
 			}
+			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 
 			// Ensure that there are no groups with duplicate names
-			groupByName, err := i.MemDBGroupByName(ctx, group.Name, false)
+			groupByName, err := i.MemDBGroupByName(nsCtx, group.Name, false)
 			if err != nil {
 				return err
 			}
@@ -271,13 +272,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					continue
 				}
 
-				// Remove dangling entities
-				if entity.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
-					ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
-					if err != nil {
-						return err
-					}
-					if ns == nil {
+				ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+				if err != nil {
+					return err
+				}
+				if ns == nil {
+					// Remove dangling entities
+					if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
 						// Entity's namespace doesn't exist anymore but the
 						// entity from the namespace still exists.
 						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
@@ -285,12 +286,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						if err != nil {
 							return err
 						}
-						continue
 					}
+					continue
 				}
+				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 
 				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(ctx, entity.Name, false)
+				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
 				if err != nil {
 					return nil
 				}
@@ -302,7 +304,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				}
 
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(ctx, entity, nil, false)
+				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
@@ -1085,14 +1087,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
+	var currentMemberGroupIDs []string
+	var currentMemberGroups []*identity.Group
+
+	// If there are no member group IDs supplied, then it shouldn't be
+	// processed. If an empty set of member group IDs are supplied, then it
+	// should be processed. Hence the nil check instead of the length check.
+	if memberGroupIDs == nil {
+		goto ALIAS
+	}
+
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
 
 	// For those group member IDs that are removed from the list, remove current
 	// group ID as their respective ParentGroupID.
 
 	// Get the current MemberGroups IDs for this group
-	var currentMemberGroupIDs []string
-	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	currentMemberGroups, err = i.MemDBGroupsByParentGroupID(group.ID, false)
 	if err != nil {
 		return err
 	}
@@ -1183,6 +1194,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
+ALIAS:
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID

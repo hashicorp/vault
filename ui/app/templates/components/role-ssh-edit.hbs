@@ -11,11 +11,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq mode "create") }}
-        Create an SSH Role
+        Create an SSH role
       {{else if (eq mode 'edit')}}
-        Edit SSH Role
+        Edit SSH role
       {{else}}
-        SSH Role <code>{{model.id}}</code>
+        SSH role <code>{{model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -29,6 +29,7 @@
               mode="edit"
               replace=true
               class="button has-icon-right is-ghost is-compact"
+              data-test-edit-link=true
               }}
               Edit role
               {{i-con glyph="chevron-right" size=11}}
@@ -43,7 +44,7 @@
               class="button has-icon-right is-ghost is-compact"
               data-test-backend-credentials=true
             }}
-             Generate Credentials
+             Generate credentials
              {{i-con glyph="chevron-right" size=11}}
             {{/secret-link}}
           {{else}}
@@ -53,7 +54,7 @@
               class="button has-icon-right is-ghost is-compact"
               data-test-backend-credentials=true
             }}
-              Sign Keys
+              Sign keys
               {{i-con glyph="chevron-right" size=11}}
             {{/secret-link}}
           {{/if}}

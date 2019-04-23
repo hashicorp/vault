@@ -33,7 +33,8 @@ renders the access keys invalid from that point forward.
 
 Revocation can happen manually via the API, via the `vault revoke` cli command,
 or automatically by Vault. When a lease is expired, Vault will automatically
-revoke that lease.
+revoke that lease. When a token is revoked, Vault will revoke all leases that
+were created using that token.
 
 **Note**: The [Key/Value Backend](/docs/secrets/kv/index.html) which stores
 arbitrary secrets does not issue leases although it will sometimes return a

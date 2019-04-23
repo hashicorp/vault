@@ -1,0 +1,112 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
+  },
+  "paths": {
+    "/foo/{id}": {
+      "description": "Synopsis",
+      "x-vault-createSupported": true,
+      "x-vault-sudo": true,
+      "parameters": [
+        {
+          "name": "format",
+          "description": "a query param",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "description": "id path parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        },
+        {
+          "name": "x-abc-token",
+          "description": "a header value",
+          "in": "header",
+          "schema": {
+            "type": "string",
+            "enum": ["a", "b", "c"]
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getFooId",
+        "tags": ["secrets"],
+        "summary": "My Summary",
+        "description": "My Description",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "list",
+            "description": "Return a list if `true`",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "postFooId",
+        "tags": ["secrets"],
+        "summary": "Update Summary",
+        "description": "Update Description",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["age"],
+                "properties": {
+                  "flavors": {
+                    "type": "array",
+                    "description": "the flavors",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "age": {
+                    "type": "integer",
+                    "description": "the age",
+                    "enum": [1, 2, 3],
+                    "x-vault-displayName": "Age",
+                    "x-vault-displayValue": 7,
+                    "x-vault-displaySensitive": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "the name",
+                    "default": "Larry",
+                    "pattern": "\\w([\\w-.]*\\w)?"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

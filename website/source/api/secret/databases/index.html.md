@@ -28,9 +28,9 @@ list of additional parameters.
 
 ~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/config/:name`     | `204 (empty body)` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/config/:name`     |
 
 ### Parameters
 - `name` `(string: <required>)` – Specifies the name for this database
@@ -75,9 +75,9 @@ $ curl \
 
 This endpoint returns the configuration settings for a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/config/:name`     | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/config/:name`     |
 
 ### Parameters
 
@@ -115,9 +115,9 @@ $ curl \
 This endpoint returns a list of available connections. Only the connection names
 are returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/database/config`           | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/config`           |
 
 ### Sample Request
 
@@ -142,9 +142,9 @@ $ curl \
 
 This endpoint deletes a connection.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/database/config/:name`     | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/config/:name`     |
 
 ### Parameters
 
@@ -165,9 +165,9 @@ $ curl \
 This endpoint closes a connection and it's underlying plugin and restarts it
 with the configuration stored in the barrier.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/reset/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/reset/:name`      |
 
 ### Parameters
 
@@ -189,9 +189,9 @@ This endpoint is used to rotate the root superuser credentials stored for
 the database connection.  This user must have permissions to update its own
 password.
 
-| Method   | Path                          | Produces               |
-| :------- | :---------------------------- | :--------------------- |
-| `POST`   | `/database/rotate-root/:name` | `204 (empty body)`     |
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `POST`   | `/database/rotate-root/:name` |
 
 ### Parameters
 
@@ -213,9 +213,9 @@ This endpoint creates or updates a role definition.
 
 ~> This endpoint distinguishes between `create` and `update` ACL capabilities.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/database/roles/:name`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/roles/:name`      |
 
 ### Parameters
 
@@ -278,9 +278,9 @@ $ curl \
 
 This endpoint queries the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/roles/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/roles/:name`    |
 
 ### Parameters
 
@@ -316,9 +316,9 @@ $ curl \
 This endpoint returns a list of available roles. Only the role names are
 returned, not any values.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/database/roles`          | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/roles`          |
 
 ### Sample Request
 
@@ -347,9 +347,9 @@ $ curl \
 
 This endpoint deletes the role definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/database/roles/:name`    | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/roles/:name`    |
 
 ### Parameters
 
@@ -370,9 +370,9 @@ $ curl \
 This endpoint generates a new set of dynamic credentials based on the named
 role.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/database/creds/:name`    | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/creds/:name`    |
 
 ### Parameters
 

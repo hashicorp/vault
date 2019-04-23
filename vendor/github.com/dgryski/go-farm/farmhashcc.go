@@ -1,23 +1,28 @@
 package farm
 
+import (
+	"encoding/binary"
+	"math/bits"
+)
+
 // This file provides a 32-bit hash equivalent to CityHash32 (v1.1.1)
 // and a 128-bit hash equivalent to CityHash128 (v1.1.1).  It also provides
 // a seeded 32-bit hash function similar to CityHash32.
 
 func hash32Len13to24Seed(s []byte, seed uint32) uint32 {
 	slen := len(s)
-	a := fetch32(s, -4+(slen>>1))
-	b := fetch32(s, 4)
-	c := fetch32(s, slen-8)
-	d := fetch32(s, (slen >> 1))
-	e := fetch32(s, 0)
-	f := fetch32(s, slen-4)
+	a := binary.LittleEndian.Uint32(s[-4+(slen>>1) : -4+(slen>>1)+4])
+	b := binary.LittleEndian.Uint32(s[4 : 4+4])
+	c := binary.LittleEndian.Uint32(s[slen-8 : slen-8+4])
+	d := binary.LittleEndian.Uint32(s[(slen >> 1) : (slen>>1)+4])
+	e := binary.LittleEndian.Uint32(s[0 : 0+4])
+	f := binary.LittleEndian.Uint32(s[slen-4 : slen-4+4])
 	h := d*c1 + uint32(slen) + seed
-	a = rotate32(a, 12) + f
+	a = bits.RotateLeft32(a, -12) + f
 	h = mur(c, h) + a
-	a = rotate32(a, 3) + c
+	a = bits.RotateLeft32(a, -3) + c
 	h = mur(e, h) + a
-	a = rotate32(a+f, 12) + d
+	a = bits.RotateLeft32(a+f, -12) + d
 	h = mur(b^seed, h) + a
 	return fmix(h)
 }
@@ -63,19 +68,19 @@ func cityMurmur(s []byte, seed uint128) uint128 {
 		a = shiftMix(a*k1) * k1
 		c = b*k1 + hashLen0to16(s)
 		if slen >= 8 {
-			d = shiftMix(a + fetch64(s, 0))
+			d = shiftMix(a + binary.LittleEndian.Uint64(s[0:0+8]))
 		} else {
 			d = shiftMix(a + c)
 		}
 	} else { // len > 16
-		c = hashLen16(fetch64(s, slen-8)+k1, a)
-		d = hashLen16(b+uint64(slen), c+fetch64(s, slen-16))
+		c = hashLen16(binary.LittleEndian.Uint64(s[slen-8:slen-8+8])+k1, a)
+		d = hashLen16(b+uint64(slen), c+binary.LittleEndian.Uint64(s[slen-16:slen-16+8]))
 		a += d
 		for {
-			a ^= shiftMix(fetch64(s, 0)*k1) * k1
+			a ^= shiftMix(binary.LittleEndian.Uint64(s[0:0+8])*k1) * k1
 			a *= k1
 			b ^= a
-			c ^= shiftMix(fetch64(s, 8)*k1) * k1
+			c ^= shiftMix(binary.LittleEndian.Uint64(s[8:8+8])*k1) * k1
 			c *= k1
 			d ^= c
 			s = s[16:]
@@ -107,29 +112,29 @@ func cityHash128WithSeed(s []byte, seed uint128) uint128 {
 	x := seed.lo
 	y := seed.hi
 	z := uint64(slen) * k1
-	v1 = rotate64(y^k1, 49)*k1 + fetch64(s, 0)
-	v2 = rotate64(v1, 42)*k1 + fetch64(s, 8)
-	w1 = rotate64(y+z, 35)*k1 + x
-	w2 = rotate64(x+fetch64(s, 88), 53) * k1
+	v1 = bits.RotateLeft64(y^k1, -49)*k1 + binary.LittleEndian.Uint64(s[0:0+8])
+	v2 = bits.RotateLeft64(v1, -42)*k1 + binary.LittleEndian.Uint64(s[8:8+8])
+	w1 = bits.RotateLeft64(y+z, -35)*k1 + x
+	w2 = bits.RotateLeft64(x+binary.LittleEndian.Uint64(s[88:88+8]), -53) * k1
 
 	// This is the same inner loop as CityHash64(), manually unrolled.
 	for {
-		x = rotate64(x+y+v1+fetch64(s, 8), 37) * k1
-		y = rotate64(y+v2+fetch64(s, 48), 42) * k1
+		x = bits.RotateLeft64(x+y+v1+binary.LittleEndian.Uint64(s[8:8+8]), -37) * k1
+		y = bits.RotateLeft64(y+v2+binary.LittleEndian.Uint64(s[48:48+8]), -42) * k1
 		x ^= w2
-		y += v1 + fetch64(s, 40)
-		z = rotate64(z+w1, 33) * k1
+		y += v1 + binary.LittleEndian.Uint64(s[40:40+8])
+		z = bits.RotateLeft64(z+w1, -33) * k1
 		v1, v2 = weakHashLen32WithSeeds(s, v2*k1, x+w1)
-		w1, w2 = weakHashLen32WithSeeds(s[32:], z+w2, y+fetch64(s, 16))
+		w1, w2 = weakHashLen32WithSeeds(s[32:], z+w2, y+binary.LittleEndian.Uint64(s[16:16+8]))
 		z, x = x, z
 		s = s[64:]
-		x = rotate64(x+y+v1+fetch64(s, 8), 37) * k1
-		y = rotate64(y+v2+fetch64(s, 48), 42) * k1
+		x = bits.RotateLeft64(x+y+v1+binary.LittleEndian.Uint64(s[8:8+8]), -37) * k1
+		y = bits.RotateLeft64(y+v2+binary.LittleEndian.Uint64(s[48:48+8]), -42) * k1
 		x ^= w2
-		y += v1 + fetch64(s, 40)
-		z = rotate64(z+w1, 33) * k1
+		y += v1 + binary.LittleEndian.Uint64(s[40:40+8])
+		z = bits.RotateLeft64(z+w1, -33) * k1
 		v1, v2 = weakHashLen32WithSeeds(s, v2*k1, x+w1)
-		w1, w2 = weakHashLen32WithSeeds(s[32:], z+w2, y+fetch64(s, 16))
+		w1, w2 = weakHashLen32WithSeeds(s[32:], z+w2, y+binary.LittleEndian.Uint64(s[16:16+8]))
 		z, x = x, z
 		s = s[64:]
 		slen -= 128
@@ -137,18 +142,18 @@ func cityHash128WithSeed(s []byte, seed uint128) uint128 {
 			break
 		}
 	}
-	x += rotate64(v1+z, 49) * k0
-	y = y*k0 + rotate64(w2, 37)
-	z = z*k0 + rotate64(w1, 27)
+	x += bits.RotateLeft64(v1+z, -49) * k0
+	y = y*k0 + bits.RotateLeft64(w2, -37)
+	z = z*k0 + bits.RotateLeft64(w1, -27)
 	w1 *= 9
 	v1 *= k0
 	// If 0 < len < 128, hash up to 4 chunks of 32 bytes each from the end of s.
 	for tailDone := 0; tailDone < slen; {
 		tailDone += 32
-		y = rotate64(x+y, 42)*k0 + v2
-		w1 += fetch64(last, 128-tailDone+16)
+		y = bits.RotateLeft64(x+y, -42)*k0 + v2
+		w1 += binary.LittleEndian.Uint64(last[128-tailDone+16 : 128-tailDone+16+8])
 		x = x*k0 + w1
-		z += w2 + fetch64(last, 128-tailDone)
+		z += w2 + binary.LittleEndian.Uint64(last[128-tailDone:128-tailDone+8])
 		w2 += v1
 		v1, v2 = weakHashLen32WithSeeds(last[128-tailDone:], v1+z, v2)
 		v1 *= k0
@@ -166,7 +171,7 @@ func cityHash128WithSeed(s []byte, seed uint128) uint128 {
 func cityHash128(s []byte) uint128 {
 	slen := len(s)
 	if slen >= 16 {
-		return cityHash128WithSeed(s[16:], uint128{fetch64(s, 0), fetch64(s, 8) + k0})
+		return cityHash128WithSeed(s[16:], uint128{binary.LittleEndian.Uint64(s[0 : 0+8]), binary.LittleEndian.Uint64(s[8:8+8]) + k0})
 	}
 	return cityHash128WithSeed(s, uint128{k0, k1})
 }
@@ -175,16 +180,6 @@ func cityHash128(s []byte) uint128 {
 func Fingerprint128(s []byte) (lo, hi uint64) {
 	h := cityHash128(s)
 	return h.lo, h.hi
-}
-
-// Fingerprint64 is a 64-bit fingerprint function for byte-slices
-func Fingerprint64(s []byte) uint64 {
-	return naHash64(s)
-}
-
-// Fingerprint32 is a 32-bit fingerprint function for byte-slices
-func Fingerprint32(s []byte) uint32 {
-	return Hash32(s)
 }
 
 // Hash128 is a 128-bit hash function for byte-slices

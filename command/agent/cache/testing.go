@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -46,9 +47,11 @@ func newTestSendResponse(status int, body string) *SendResponse {
 		Response: &api.Response{
 			Response: &http.Response{
 				StatusCode: status,
+				Header:     http.Header{},
 			},
 		},
 	}
+	resp.Response.Header.Set("Date", time.Now().Format(http.TimeFormat))
 
 	if body != "" {
 		resp.Response.Body = ioutil.NopCloser(strings.NewReader(body))
@@ -56,7 +59,6 @@ func newTestSendResponse(status int, body string) *SendResponse {
 	}
 
 	if json.Valid([]byte(body)) {
-		resp.Response.Header = http.Header{}
 		resp.Response.Header.Set("content-type", "application/json")
 	}
 

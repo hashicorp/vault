@@ -10,7 +10,7 @@ fuzz:
 	go test -timeout=300s ./fuzzy
 	
 deps:
-	go get -d -v ./...
+	go get -t -d -v ./...
 	echo $(DEPS) | xargs -n1 go get -d
 
 cov:

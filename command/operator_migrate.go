@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
@@ -311,7 +311,9 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 			// remove List-triggering key and add children in reverse order
 			dfs = dfs[:len(dfs)-1]
 			for i := len(children) - 1; i >= 0; i-- {
-				dfs = append(dfs, key+children[i])
+				if children[i] != "" {
+					dfs = append(dfs, key+children[i])
+				}
 			}
 		} else {
 			err := cb(ctx, key)

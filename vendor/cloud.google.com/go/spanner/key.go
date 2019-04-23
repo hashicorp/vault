@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	"cloud.google.com/go/civil"
 	proto3 "github.com/golang/protobuf/ptypes/struct"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
+	"google.golang.org/grpc/codes"
 )
 
 // A Key can be either a Cloud Spanner row's primary key or a secondary index key.

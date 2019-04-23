@@ -1,5 +1,7 @@
 package farm
 
+import "math/bits"
+
 // Some primes between 2^63 and 2^64 for various uses.
 const k0 uint64 = 0xc3a5c85c97cb3127
 const k1 uint64 = 0xb492b66fbe98f273
@@ -22,9 +24,9 @@ func fmix(h uint32) uint32 {
 func mur(a, h uint32) uint32 {
 	// Helper from Murmur3 for combining two 32-bit values.
 	a *= c1
-	a = rotate32(a, 17)
+	a = bits.RotateLeft32(a, -17)
 	a *= c2
 	h ^= a
-	h = rotate32(h, 19)
+	h = bits.RotateLeft32(h, -19)
 	return h*5 + 0xe6546b64
 }

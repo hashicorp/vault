@@ -23,9 +23,9 @@ This endpoint configures the access information for Consul. This access
 information is used so that Vault can communicate with Consul and generate
 Consul tokens.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/consul/config/access`      | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/consul/config/access`      |
 
 ### Parameters
 
@@ -63,9 +63,9 @@ This endpoint creates or updates the Consul role definition. If the role does
 not exist, it will be created. If the role already exists, it will receive
 updated attributes.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/consul/roles/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/consul/roles/:name`        |
 
 ### Parameters for Consul version below 1.4
 
@@ -154,9 +154,9 @@ curl \
 This endpoint queries for information about a Consul role with the given name.
 If no role exists with that name, a 404 is returned.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/consul/roles/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/consul/roles/:name`        |
 
 ### Parameters
 
@@ -187,9 +187,9 @@ $ curl \
 
 This endpoint lists all existing roles in the secrets engine.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/consul/roles`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/consul/roles`              |
 
 ### Sample Request
 
@@ -217,9 +217,9 @@ $ curl \
 This endpoint deletes a Consul role with the given name. Even if the role does
 not exist, this endpoint will still return a successful response.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/consul/roles/:name`        | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/consul/roles/:name`        |
 
 ### Parameters
 
@@ -240,9 +240,9 @@ $ curl \
 This endpoint generates a dynamic Consul token based on the given role
 definition.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/consul/creds/:name`        | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/consul/creds/:name`        |
 
 ### Parameters
 

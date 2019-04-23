@@ -7,13 +7,16 @@ import (
 	"fmt"
 	"os"
 	"sync/atomic"
+	"time"
+
+	"github.com/armon/go-metrics"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/kms"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -169,7 +172,20 @@ func (k *AliCloudKMSSeal) KeyID() string {
 // Encrypt is used to encrypt the master key using the the AliCloud CMK.
 // This returns the ciphertext, and/or any errors from this
 // call. This should be called after the KMS client has been instantiated.
-func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
+func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (blob *physical.EncryptedBlobInfo, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "alicloudkms", "encrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "alicloudkms", "encrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "alicloudkms", "encrypt"}, 1)
+
 	if plaintext == nil {
 		return nil, fmt.Errorf("given plaintext for encryption is nil")
 	}
@@ -206,7 +222,20 @@ func (k *AliCloudKMSSeal) Encrypt(_ context.Context, plaintext []byte) (*physica
 }
 
 // Decrypt is used to decrypt the ciphertext. This should be called after Init.
-func (k *AliCloudKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) ([]byte, error) {
+func (k *AliCloudKMSSeal) Decrypt(_ context.Context, in *physical.EncryptedBlobInfo) (pt []byte, err error) {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", "alicloudkms", "decrypt", "time"}, now)
+
+		if err != nil {
+			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", "alicloudkms", "decrypt", "error"}, 1)
+		}
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", "alicloudkms", "decrypt"}, 1)
+
 	if in == nil {
 		return nil, fmt.Errorf("given input for decryption is nil")
 	}

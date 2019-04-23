@@ -3,7 +3,7 @@ package awsutil
 import (
 	awsRequest "github.com/aws/aws-sdk-go/aws/request"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // CheckAWSError will examine an error and convert to a logical error if

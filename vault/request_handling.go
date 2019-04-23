@@ -13,16 +13,16 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -352,6 +352,23 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	if !authResults.Allowed {
 		retErr := authResults.Error
+
+		// If we get a control group error and we are a performance standby,
+		// restore the client token information to the request so that we can
+		// forward this request properly to the active node.
+		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
+			c.perfStandby && len(req.ClientToken) != 0 {
+			switch req.ClientTokenSource {
+			case logical.ClientTokenFromVaultHeader:
+				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
+			case logical.ClientTokenFromAuthzHeader:
+				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
+			}
+			// We also return the appropriate error so that the caller can forward the
+			// request to the active node
+			return auth, te, logical.ErrPerfStandbyPleaseForward
+		}
+
 		if authResults.Error.ErrorOrNil() == nil || authResults.DeniedError {
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
@@ -363,13 +380,24 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-	c.stateLock.RLock()
+	return c.switchedLockHandleRequest(httpCtx, req, true)
+}
+
+func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.Request, doLocking bool) (resp *logical.Response, err error) {
+	if doLocking {
+		c.stateLock.RLock()
+	}
+	unlockFunc := func() {
+		if doLocking {
+			c.stateLock.RUnlock()
+		}
+	}
 	if c.Sealed() {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrStandby
 	}
 
@@ -385,7 +413,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
@@ -394,7 +422,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 
 	req.SetTokenEntry(nil)
 	cancel()
-	c.stateLock.RUnlock()
+	unlockFunc()
 	return resp, err
 }
 

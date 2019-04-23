@@ -17,17 +17,14 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/forwarding"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-)
-
-var (
-	// Making this a package var allows tests to modify
-	HeartbeatInterval = 5 * time.Second
 )
 
 type requestForwardingHandler struct {
@@ -51,7 +48,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 
 	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
@@ -184,16 +181,16 @@ func (rf *requestForwardingHandler) Stop() error {
 
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding(ctx context.Context) error {
-	c.logger.Debug("cluster listener setup function")
-	defer c.logger.Debug("leaving cluster listener setup function")
+	c.logger.Debug("request forwarding setup function")
+	defer c.logger.Debug("leaving request forwarding setup function")
 
 	// Clean up in case we have transitioned from a client to a server
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Resolve locally to avoid races
 	if c.ha == nil || c.clusterListener == nil {
+		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
 
@@ -264,7 +261,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithDialer(c.getGRPCDialer(ctx, consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
@@ -280,7 +277,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:                    c,
-		echoTicker:              time.NewTicker(HeartbeatInterval),
+		echoTicker:              time.NewTicker(cluster.HeartbeatInterval),
 		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()

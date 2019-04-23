@@ -21,9 +21,9 @@ location, please update your API calls accordingly.
 
 This endpoint retrieves the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/secret/:path`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/secret/:path`              |
 
 ### Parameters
 
@@ -67,9 +67,9 @@ value. Note that no policy-based filtering is performed on keys; do not encode
 sensitive information in key names. The values themselves are not accessible via
 this command.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `LIST`   | `/secret/:path`              | `200 application/json` |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/secret/:path`              |
 
 ### Parameters
 
@@ -110,10 +110,10 @@ yet exist, the calling token must have an ACL policy granting the `create`
 capability. If the value already exists, the calling token must have an ACL
 policy granting the `update` capability.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/secret/:path`              | `204 (empty body)`     |
-| `PUT`    | `/secret/:path`              | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/secret/:path`              |
+| `PUT`    | `/secret/:path`              |
 
 ### Parameters
 
@@ -149,9 +149,9 @@ $ curl \
 
 This endpoint deletes the secret at the specified location.
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `DELETE` | `/secret/:path`              | `204 (empty body)`     |
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/secret/:path`              |
 
 ### Parameters
 

@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	glob "github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
@@ -1416,7 +1416,7 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		certTemplate.DNSNames = data.params.DNSNames
 		certTemplate.EmailAddresses = data.params.EmailAddresses
 		certTemplate.IPAddresses = data.params.IPAddresses
-		certTemplate.URIs = data.csr.URIs
+		certTemplate.URIs = data.params.URIs
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {

@@ -9,7 +9,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
 

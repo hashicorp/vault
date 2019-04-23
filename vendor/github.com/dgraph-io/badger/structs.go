@@ -119,7 +119,7 @@ func encodeEntry(e *Entry, buf *bytes.Buffer) (int, error) {
 	buf.Write(e.Value)
 	hash.Write(e.Value)
 
-	var crcBuf [crc32.Size]byte
+	var crcBuf [4]byte
 	binary.BigEndian.PutUint32(crcBuf[:], hash.Sum32())
 	buf.Write(crcBuf[:])
 

@@ -15,12 +15,13 @@ import (
 	mathrand "math/rand"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
@@ -295,8 +296,17 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	c.clusterListener = cluster.NewClusterListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener"))
-	return c.clusterListener.Run(ctx)
+	c.clusterListener = cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener"))
+
+	err := c.clusterListener.Run(ctx)
+	if err != nil {
+		return err
+	}
+	if strings.HasSuffix(c.clusterAddr, ":0") {
+		// If we listened on port 0, record the port the OS gave us.
+		c.clusterAddr = fmt.Sprintf("https://%s", c.clusterListener.Addrs()[0])
+	}
+	return nil
 }
 
 // stopClusterListener stops any existing listeners during seal. It is

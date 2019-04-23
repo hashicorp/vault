@@ -1,4 +1,4 @@
-# BadgerDB [![GoDoc](https://godoc.org/github.com/dgraph-io/badger?status.svg)](https://godoc.org/github.com/dgraph-io/badger) [![Go Report Card](https://goreportcard.com/badge/github.com/dgraph-io/badger)](https://goreportcard.com/report/github.com/dgraph-io/badger) [![Sourcegraph](https://sourcegraph.com/github.com/dgraph-io/badger/-/badge.svg)](https://sourcegraph.com/github.com/dgraph-io/badger?badge) [![Build Status](https://teamcity.dgraph.io/guestAuth/app/rest/builds/buildType:(id:Badger_UnitTests)/statusIcon.svg)](https://teamcity.dgraph.io/viewLog.html?buildTypeId=Badger_UnitTests&buildId=lastFinished&guest=1) ![Appveyor](https://ci.appveyor.com/api/projects/status/github/dgraph-io/badger?branch=master&svg=true) [![Coverage Status](https://coveralls.io/repos/github/dgraph-io/badger/badge.svg?branch=master)](https://coveralls.io/github/dgraph-io/badger?branch=master)
+# BadgerDB [![GoDoc](https://godoc.org/github.com/dgraph-io/badger?status.svg)](https://godoc.org/github.com/dgraph-io/badger) [![Go Report Card](https://goreportcard.com/badge/github.com/dgraph-io/badger)](https://goreportcard.com/report/github.com/dgraph-io/badger) [![Build Status](https://teamcity.dgraph.io/guestAuth/app/rest/builds/buildType:(id:Badger_UnitTests)/statusIcon.svg)](https://teamcity.dgraph.io/viewLog.html?buildTypeId=Badger_UnitTests&buildId=lastFinished&guest=1) ![Appveyor](https://ci.appveyor.com/api/projects/status/github/dgraph-io/badger?branch=master&svg=true) [![Coverage Status](https://coveralls.io/repos/github/dgraph-io/badger/badge.svg?branch=master)](https://coveralls.io/github/dgraph-io/badger?branch=master)
 
 ![Badger mascot](images/diggy-shadow.png)
 
@@ -6,19 +6,19 @@ BadgerDB is an embeddable, persistent, simple and fast key-value (KV) database
 written in pure Go. It's meant to be a performant alternative to non-Go-based
 key-value stores like [RocksDB](https://github.com/facebook/rocksdb).
 
-## Project Status [Oct 27, 2018]
-
-Badger is stable and is being used to serve data sets worth hundreds of
-terabytes. Badger supports concurrent ACID transactions with serializable
-snapshot isolation (SSI) guarantees. A Jepsen-style bank test runs nightly for
-8h, with `--race` flag and ensures maintainance of transactional guarantees.
-Badger has also been tested to work with filesystem level anomalies, to ensure
-persistence and consistency.
-
-Badger v1.0 was released in Nov 2017, with a Badger v2.0 release coming up in a
-few months. The [Changelog] is kept fairly up-to-date.
+## Project Status
+Badger v1.0 was released in Nov 2017. Check the [Changelog] for the full details.
 
 [Changelog]:https://github.com/dgraph-io/badger/blob/master/CHANGELOG.md
+
+We introduced transactions in [v0.9.0] which involved a major API change. If you have a Badger
+datastore prior to that, please use [v0.8.1], but we strongly urge you to upgrade. Upgrading from
+both v0.8 and v0.9 will require you to [take backups](#database-backup) and restore using the new
+version.
+
+[v1.0.1]: //github.com/dgraph-io/badger/tree/v1.0.1
+[v0.8.1]: //github.com/dgraph-io/badger/tree/v0.8.1
+[v0.9.0]: //github.com/dgraph-io/badger/tree/v0.9.0
 
 ## Table of Contents
  * [Getting Started](#getting-started)
@@ -214,35 +214,14 @@ value, we can use the `Txn.Get()` method:
 ```go
 err := db.View(func(txn *badger.Txn) error {
   item, err := txn.Get([]byte("answer"))
-  handle(err)
-
-  var valNot, valCopy []byte
-  err := item.Value(func(val []byte) error {
-    // This func with val would only be called if item.Value encounters no error.
-
-    // Accessing val here is valid.
-    fmt.Printf("The answer is: %s\n", val)
-
-    // Copying or parsing val is valid.
-    valCopy = append([]byte{}, val...)
-
-    // Assigning val slice to another variable is NOT OK.
-    valNot = val // Do not do this.
-    return nil
-  })
-  handle(err)
-
-  // DO NOT access val here. It is the most common cause of bugs.
-  fmt.Printf("NEVER do this. %s\n", valNot)
-
-  // You must copy it to use it outside item.Value(...).
-  fmt.Printf("The answer is: %s\n", valCopy)
-
-  // Alternatively, you could also use item.ValueCopy().
-  valCopy, err = item.ValueCopy(nil)
-  handle(err)
-  fmt.Printf("The answer is: %s\n", valCopy)
-
+  if err != nil {
+    return err
+  }
+  val, err := item.Value()
+  if err != nil {
+    return err
+  }
+  fmt.Printf("The answer is: %s\n", val)
   return nil
 })
 ```
@@ -284,7 +263,7 @@ operation. All values are specified in byte arrays. For e.g., here is a merge
 function (`add`) which adds a `uint64` value to an existing `uint64` value.
 
 ```Go
-func uint64ToBytes(i uint64) []byte {
+uint64ToBytes(i uint64) []byte {
   var buf [8]byte
   binary.BigEndian.PutUint64(buf[:], i)
   return buf[:]
@@ -350,13 +329,11 @@ err := db.View(func(txn *badger.Txn) error {
   for it.Rewind(); it.Valid(); it.Next() {
     item := it.Item()
     k := item.Key()
-    err := item.Value(func(v []byte) error {
-      fmt.Printf("key=%s, value=%s\n", k, v)
-      return nil
-    })
+    v, err := item.Value()
     if err != nil {
       return err
     }
+    fmt.Printf("key=%s, value=%s\n", k, v)
   }
   return nil
 })
@@ -382,13 +359,11 @@ db.View(func(txn *badger.Txn) error {
   for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
     item := it.Item()
     k := item.Key()
-    err := item.Value(func(v []byte) error {
-      fmt.Printf("key=%s, value=%s\n", k, v)
-      return nil
-    })
+    v, err := item.Value()
     if err != nil {
       return err
     }
+    fmt.Printf("key=%s, value=%s\n", k, v)
   }
   return nil
 })
@@ -574,7 +549,6 @@ Below is a list of known projects that use Badger:
 
 * [0-stor](https://github.com/zero-os/0-stor) - Single device object store.
 * [Dgraph](https://github.com/dgraph-io/dgraph) - Distributed graph database.
-* [Dispatch Protocol](https://github.com/dispatchlabs/disgo) - Blockchain protocol for distributed application data analytics.
 * [Sandglass](https://github.com/celrenheit/sandglass) - distributed, horizontally scalable, persistent, time sorted message queue.
 * [Usenet Express](https://usenetexpress.com/) - Serving over 300TB of data with Badger.
 * [go-ipfs](https://github.com/ipfs/go-ipfs) - Go client for the InterPlanetary File System (IPFS), a new hypermedia distribution protocol.
@@ -586,11 +560,6 @@ If you are using Badger in a project please send a pull request to add it to the
 
 ## Frequently Asked Questions
 - **My writes are getting stuck. Why?**
-
-**Update: With the new `Value(func(v []byte))` API, this deadlock can no longer
-happen.**
-
-The following is true for users on Badger v1.x.
 
 This can happen if a long running iteration with `Prefetch` is set to false, but
 a `Item::Value` call is made internally in the loop. That causes Badger to
@@ -614,26 +583,51 @@ There are multiple workarounds during iteration:
 
 Are you creating a new transaction for every single key update, and waiting for
 it to `Commit` fully before creating a new one? This will lead to very low
-throughput.
+throughput. To get best write performance, batch up multiple writes inside a
+transaction using single `DB.Update()` call. You could also have multiple such
+`DB.Update()` calls being made concurrently from multiple goroutines.
 
-We have created `WriteBatch` API which provides a way to batch up
-many updates into a single transaction and `Commit` that transaction using
-callbacks to avoid blocking. This amortizes the cost of a transaction really
-well, and provides the most efficient way to do bulk writes.
+The way to achieve the highest write throughput via Badger, is to do serial
+writes and use callbacks in `txn.Commit`, like so:
 
 ```go
-wb := db.NewWriteBatch()
-defer wb.Cancel()
-
-for i := 0; i < N; i++ {
-  err := wb.Set(key(i), value(i), 0) // Will create txns as needed.
-  handle(err)
+che := make(chan error, 1)
+storeErr := func(err error) {
+  if err == nil {
+    return
+  }
+  select {
+    case che <- err:
+    default:
+  }
 }
-handle(wb.Flush()) // Wait for all txns to finish.
+
+getErr := func() error {
+  select {
+    case err := <-che:
+      return err
+    default:
+      return nil
+  }
+}
+
+var wg sync.WaitGroup
+for _, kv := range kvs {
+  wg.Add(1)
+  txn := db.NewTransaction(true)
+  handle(txn.Set(kv.Key, kv.Value))
+  handle(txn.Commit(func(err error) {
+    storeErr(err)
+    wg.Done()
+  }))
+}
+wg.Wait()
+return getErr()
 ```
 
-Note that `WriteBatch` API does not allow any reads. For read-modify-write
-workloads, you should be using the `Transaction` API.
+In this code, we passed a callback function to `txn.Commit`, which can pick up
+and return the first error encountered, if any. Callbacks can be made to do more
+things, like retrying commits etc.
 
 - **I don't see any disk write. Why?**
 

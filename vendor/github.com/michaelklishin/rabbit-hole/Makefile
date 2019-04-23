@@ -9,6 +9,14 @@ all: test
 test: install-dependencies
 	go test -race -v
 
+tests: test
+
+test_only:
+	go test -race -v
+
+ginkgo:
+	./bin/ginkgo -race -v
+
 cover: install-dependencies install-cover
 	go test -v -test.coverprofile="$(COVER_FILE).prof"
 	sed -i.bak 's|_'$(GOPATH)'|.|g' $(COVER_FILE).prof

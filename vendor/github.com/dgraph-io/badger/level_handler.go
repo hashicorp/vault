@@ -266,26 +266,16 @@ func (s *levelHandler) get(key []byte) (y.ValueStruct, error) {
 
 // appendIterators appends iterators to an array of iterators, for merging.
 // Note: This obtains references for the table handlers. Remember to close these iterators.
-func (s *levelHandler) appendIterators(iters []y.Iterator, opt *IteratorOptions) []y.Iterator {
+func (s *levelHandler) appendIterators(iters []y.Iterator, reversed bool) []y.Iterator {
 	s.RLock()
 	defer s.RUnlock()
-
-	tables := make([]*table.Table, 0, len(s.tables))
-	for _, t := range s.tables {
-		if opt.PickTable(t) {
-			tables = append(tables, t)
-		}
-	}
-	if len(tables) == 0 {
-		return iters
-	}
 
 	if s.level == 0 {
 		// Remember to add in reverse order!
 		// The newer table at the end of s.tables should be added first as it takes precedence.
-		return appendIteratorsReversed(iters, tables, opt.Reverse)
+		return appendIteratorsReversed(iters, s.tables, reversed)
 	}
-	return append(iters, table.NewConcatIterator(tables, opt.Reverse))
+	return append(iters, table.NewConcatIterator(s.tables, reversed))
 }
 
 type levelHandlerRLocked struct{}

@@ -17,13 +17,13 @@ package ram
 
 // Policy is a nested struct in ram response
 type Policy struct {
+	PolicyDocument  string `json:"PolicyDocument" xml:"PolicyDocument"`
+	AttachDate      string `json:"AttachDate" xml:"AttachDate"`
 	CreateDate      string `json:"CreateDate" xml:"CreateDate"`
 	PolicyType      string `json:"PolicyType" xml:"PolicyType"`
-	PolicyDocument  string `json:"PolicyDocument" xml:"PolicyDocument"`
-	Description     string `json:"Description" xml:"Description"`
-	AttachmentCount int    `json:"AttachmentCount" xml:"AttachmentCount"`
-	AttachDate      string `json:"AttachDate" xml:"AttachDate"`
-	DefaultVersion  string `json:"DefaultVersion" xml:"DefaultVersion"`
-	PolicyName      string `json:"PolicyName" xml:"PolicyName"`
 	UpdateDate      string `json:"UpdateDate" xml:"UpdateDate"`
+	AttachmentCount int    `json:"AttachmentCount" xml:"AttachmentCount"`
+	PolicyName      string `json:"PolicyName" xml:"PolicyName"`
+	DefaultVersion  string `json:"DefaultVersion" xml:"DefaultVersion"`
+	Description     string `json:"Description" xml:"Description"`
 }

@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/physical"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/physical"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
 )
 
@@ -90,6 +90,7 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		},
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
+		SigUSR2Ch:  MakeSigUSR2Ch(),
 		PhysicalBackends: map[string]physical.Factory{
 			"inmem":    physInmem.NewInmem,
 			"inmem_ha": physInmem.NewInmemHA,

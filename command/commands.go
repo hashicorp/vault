@@ -7,9 +7,9 @@ import (
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/cli"
 
 	/*
@@ -46,10 +46,8 @@ import (
 	physCouchDB "github.com/hashicorp/vault/physical/couchdb"
 	physDynamoDB "github.com/hashicorp/vault/physical/dynamodb"
 	physEtcd "github.com/hashicorp/vault/physical/etcd"
-	physFile "github.com/hashicorp/vault/physical/file"
 	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
 	physManta "github.com/hashicorp/vault/physical/manta"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
@@ -59,6 +57,8 @@ import (
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
+	physFile "github.com/hashicorp/vault/sdk/physical/file"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 const (
@@ -468,6 +468,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				PhysicalBackends:   physicalBackends,
 				ShutdownCh:         MakeShutdownCh(),
 				SighupCh:           MakeSighupCh(),
+				SigUSR2Ch:          MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {

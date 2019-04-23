@@ -20,21 +20,12 @@ package badger
 
 // OpenDir opens a directory in windows with write access for syncing.
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/pkg/errors"
-)
-
-// FILE_ATTRIBUTE_TEMPORARY - A file that is being used for temporary storage.
-// FILE_FLAG_DELETE_ON_CLOSE - The file is to be deleted immediately after all of its handles are
-// closed, which includes the specified handle and any other open or duplicated handles.
-// See: https://docs.microsoft.com/en-us/windows/desktop/FileIO/file-attribute-constants
-// NOTE: Added here to avoid importing golang.org/x/sys/windows
-const (
-	FILE_ATTRIBUTE_TEMPORARY  = 0x00000100
-	FILE_FLAG_DELETE_ON_CLOSE = 0x04000000
 )
 
 func openDir(path string) (*os.File, error) {
@@ -62,7 +53,6 @@ func openDirWin(path string) (fd syscall.Handle, err error) {
 
 // DirectoryLockGuard holds a lock on the directory.
 type directoryLockGuard struct {
-	h    syscall.Handle
 	path string
 }
 
@@ -79,28 +69,26 @@ func acquireDirectoryLock(dirPath string, pidFileName string, readOnly bool) (*d
 		return nil, errors.Wrap(err, "Cannot get absolute path for pid lock file")
 	}
 
-	// This call creates a file handler in memory that only one process can use at a time. When
-	// that process ends, the file is deleted by the system.
-	// FILE_ATTRIBUTE_TEMPORARY is used to tell Windows to try to create the handle in memory.
-	// FILE_FLAG_DELETE_ON_CLOSE is not specified in syscall_windows.go but tells Windows to delete
-	// the file when all processes holding the handler are closed.
-	// XXX: this works but it's a bit klunky. i'd prefer to use LockFileEx but it needs unsafe pkg.
-	h, err := syscall.CreateFile(
-		syscall.StringToUTF16Ptr(absLockFilePath), 0, 0, nil,
-		syscall.OPEN_ALWAYS,
-		uint32(FILE_ATTRIBUTE_TEMPORARY|FILE_FLAG_DELETE_ON_CLOSE),
-		0)
+	f, err := os.OpenFile(absLockFilePath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return nil, errors.Wrapf(err,
-			"Cannot create lock file %q.  Another process is using this Badger database",
+			"Cannot create pid lock file %q.  Another process is using this Badger database",
 			absLockFilePath)
 	}
-
-	return &directoryLockGuard{h: h, path: absLockFilePath}, nil
+	_, err = fmt.Fprintf(f, "%d\n", os.Getpid())
+	closeErr := f.Close()
+	if err != nil {
+		return nil, errors.Wrap(err, "Cannot write to pid lock file")
+	}
+	if closeErr != nil {
+		return nil, errors.Wrap(closeErr, "Cannot close pid lock file")
+	}
+	return &directoryLockGuard{path: absLockFilePath}, nil
 }
 
 // Release removes the directory lock.
 func (g *directoryLockGuard) release() error {
+	path := g.path
 	g.path = ""
-	return syscall.CloseHandle(g.h)
+	return os.Remove(path)
 }

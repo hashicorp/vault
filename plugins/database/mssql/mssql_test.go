@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 )
 
 func TestMSSQL_Initialize(t *testing.T) {
@@ -29,7 +29,7 @@ func TestMSSQL_Initialize(t *testing.T) {
 	}
 
 	if !db.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	err = db.Close()
@@ -112,7 +112,7 @@ func TestMSSQL_RotateRootCredentials(t *testing.T) {
 	}
 
 	if !connProducer.Initialized {
-		t.Fatal("Database should be initalized")
+		t.Fatal("Database should be initialized")
 	}
 
 	newConf, err := db.RotateRootCredentials(context.Background(), nil)

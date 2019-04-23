@@ -39,8 +39,8 @@ type Options struct {
 
 	// 2. Frequently modified flags
 	// -----------------------------
-	// Sync all writes to disk. Setting this to false would achieve better
-	// performance, but may cause data to be lost.
+	// Sync all writes to disk. Setting this to true would slow down data
+	// loading significantly.
 	SyncWrites bool
 
 	// How should LSM tree be accessed.
@@ -83,9 +83,8 @@ type Options struct {
 	// Number of compaction workers to run concurrently.
 	NumCompactors int
 
-	// Transaction start and commit timestamps are managed by end-user.
-	// This is only useful for databases built on top of Badger (like Dgraph).
-	// Not recommended for most users.
+	// Transaction start and commit timestamps are manaVgedTxns by end-user. This
+	// is a private option used by ManagedDB.
 	managedTxns bool
 
 	// 4. Flags for testing purposes
@@ -134,24 +133,15 @@ var DefaultOptions = Options{
 	Truncate:           false,
 }
 
-// LSMOnlyOptions follows from DefaultOptions, but sets a higher ValueThreshold
-// so values would be colocated with the LSM tree, with value log largely acting
-// as a write-ahead log only. These options would reduce the disk usage of value
-// log, and make Badger act more like a typical LSM tree.
+// LSMOnlyOptions follows from DefaultOptions, but sets a higher ValueThreshold so values would
+// be colocated with the LSM tree, with value log largely acting as a write-ahead log only. These
+// options would reduce the disk usage of value log, and make Badger act like a typical LSM tree.
 var LSMOnlyOptions = Options{}
 
 func init() {
 	LSMOnlyOptions = DefaultOptions
 
-	LSMOnlyOptions.ValueThreshold = 65500 // Max value length which fits in uint16.
-	// Let's not set any other options, because they can cause issues with the
-	// size of key-value a user can pass to Badger. For e.g., if we set
-	// ValueLogFileSize to 64MB, a user can't pass a value more than that.
-	// Setting it to ValueLogMaxEntries to 1000, can generate too many files.
-	// These options are better configured on a usage basis, than broadly here.
-	// The ValueThreshold is the most important setting a user needs to do to
-	// achieve a heavier usage of LSM tree.
-	// NOTE: If a user does not want to set 64KB as the ValueThreshold because
-	// of performance reasons, 1KB would be a good option too, allowing
-	// values smaller than 1KB to be colocated with the keys in the LSM tree.
+	LSMOnlyOptions.ValueThreshold = 65500      // Max value length which fits in uint16.
+	LSMOnlyOptions.ValueLogFileSize = 64 << 20 // Allow easy space reclamation.
+	LSMOnlyOptions.ValueLogLoadingMode = options.FileIO
 }

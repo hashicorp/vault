@@ -38,10 +38,11 @@ export default Service.extend({
   getNewModel(modelType, owner, backend) {
     let name = `model:${modelType}`;
     let newModel = owner.factoryFor(name).class;
-    if (newModel.merged || newModel.prototype.useOpenAPI !== true) {
+    let modelProto = newModel.proto();
+    if (newModel.merged || modelProto.useOpenAPI !== true) {
       return resolve();
     }
-    let helpUrl = newModel.prototype.getHelpUrl(backend);
+    let helpUrl = modelProto.getHelpUrl(backend);
 
     return this.getProps(helpUrl, backend).then(props => {
       if (owner.hasRegistration(name) && !newModel.merged) {
