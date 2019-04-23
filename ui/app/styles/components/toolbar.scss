@@ -4,17 +4,19 @@
 
 .toolbar {
   background-color: $ui-gray-010;
-  border-top: $base-border;
-  box-shadow: 0 2px 0 -1px $ui-gray-300;
+  border: 1px solid $ui-gray-200;
+  border-bottom-color: $ui-gray-300;
+  border-top-color: $ui-gray-300;
   position: relative;
 
   &::after {
     background: linear-gradient(to right, rgba($ui-gray-010, 0), $ui-gray-010);
-    bottom: 0;
+    border-radius: $radius-large;
+    bottom: 1px;
     content: '';
     position: absolute;
-    right: 0;
-    top: 0;
+    right: 1px;
+    top: 1px;
     width: $spacing-s;
     z-index: 2;
   }
