@@ -13,9 +13,24 @@ IMPROVEMENTS:
 
 BUG FIXES: 
 
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * replication: Properly update mount entry cache on a secondary to apply all
+   new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
-   
+
+## 1.1.2 (April 18th, 2019)
+
+This is a bug fix release containing the two items below. It is otherwise
+unchanged from 1.1.1.
+
+BUG FIXES:
+
+ * auth/okta: Fix a potential dropped error [GH-6592]
+ * secrets/kv: Fix a regression on upgrade where a KVv2 mount could fail to be
+   mounted on unseal if it had previously been mounted but not written to
+   [KV-31]
 
 ## 1.1.1 (April 11th, 2019)
 

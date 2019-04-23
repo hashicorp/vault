@@ -54,7 +54,7 @@ require (
 	github.com/go-errors/errors v1.0.1
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/go-stomp/stomp v2.0.2+incompatible // indirect
-	github.com/go-test/deep v1.0.1
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
 	github.com/golang/protobuf v1.3.1
 	github.com/google/go-github v17.0.0+incompatible
@@ -85,7 +85,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-azure v0.5.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1
-	github.com/hashicorp/vault-plugin-secrets-kv v0.5.1
+	github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0
 	github.com/hashicorp/vault/api v1.0.1
 	github.com/hashicorp/vault/sdk v0.1.8
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4

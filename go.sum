@@ -157,6 +157,8 @@ github.com/go-stomp/stomp v2.0.2+incompatible h1:0yPknMJh32lE2xiCFGW5t/KgamhUC4O
 github.com/go-stomp/stomp v2.0.2+incompatible/go.mod h1:VqCtqNZv1226A1/79yh+rMiFUcfY3R109np+7ke4n0c=
 github.com/go-test/deep v1.0.1 h1:UQhStjbkDClarlmv0am7OXXO4/GaPdCGiUiMTvi28sg=
 github.com/go-test/deep v1.0.1/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
+github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31 h1:28FVBuwkwowZMjbA7M0wXsI6t3PYulRTMio3SO+eKCM=
+github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
 github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df h1:fwXmhM0OqixzJDOGgTSyNH9eEDij9uGTXwsyWXvyR0A=
 github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df/go.mod h1:4Fw1eo5iaEhDUs8XyuhSVCVy52Jq3L+/3GJgYkwc+/0=
 github.com/gogo/googleapis v1.1.0/go.mod h1:gf4bu3Q80BeJ6H1S1vYPm8/ELATdvryBaNFGgqEef3s=
@@ -296,8 +298,8 @@ github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2 h1:oH5EVMJCOHb81Ib9E7/ps1Wr
 github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2/go.mod h1:2VjVlKHTwqvcVCkZBhYks+HASDzQ4/bIsJoOpO2YJFY=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1 h1:v25YWb7eMPe9DjGsUexRRuWwPlFNh+lbEGOeNrZalf8=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.1/go.mod h1:seBkt6x33ZT20koMcUwV/viMomnXDipsLgK5KUKz2ik=
-github.com/hashicorp/vault-plugin-secrets-kv v0.5.1 h1:awaZ/UoeiDD0j3xF1E0kmXWJvAZw8ULayQu46mB6Un4=
-github.com/hashicorp/vault-plugin-secrets-kv v0.5.1/go.mod h1:PIjaafaRr2QlkGl2SNhIywxlejeW0iMUtmx8u9u/a6c=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0 h1:pb5DaAqWgGsKWFMsGotmQJREcv/B1EZGHO1hqWOxDAI=
+github.com/hashicorp/vault-plugin-secrets-kv v0.5.2-0.20190416155133-fd495225dea0/go.mod h1:PIjaafaRr2QlkGl2SNhIywxlejeW0iMUtmx8u9u/a6c=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb h1:b5rjCoWHc7eqmAS4/qyk21ZsHyb6Mxv/jykxvNTkU4M=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d h1:kJCB4vdITiW1eC1vq2e6IsrXKrZit1bv/TDYFGMp4BQ=

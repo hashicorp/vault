@@ -26,6 +26,10 @@ func TestS3BackendSseKms(t *testing.T) {
 }
 
 func DoS3BackendTest(t *testing.T, kmsKeyId string) {
+	if enabled := os.Getenv("VAULT_ACC"); enabled == "" {
+		t.Skip()
+	}
+
 	credsConfig := &awsutil.CredentialsConfig{}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()

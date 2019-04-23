@@ -1,6 +1,11 @@
 #!/bin/sh
 
 remote="$1"
+remote_url=$(git remote get-url $remote)
+
+if [[ $remote_url == *"vault-enterprise"* ]]; then
+    exit 0
+fi
 
 if [ "$remote" = "enterprise" ]; then
     exit 0
