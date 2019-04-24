@@ -47,7 +47,7 @@ $ pip install ansible-modules-hashivault
 
 ### C&#35;
 
-* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
+* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard 2.0 & 1.3, .NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
 
 ```shell
 $ Install-Package VaultSharp

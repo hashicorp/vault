@@ -194,7 +194,7 @@ github.com/dgraph-io/badger/table
 github.com/dgraph-io/badger/y
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
-# github.com/dgryski/go-farm v0.0.0-20190416075124-e1214b5e05dc
+# github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2
 github.com/dgryski/go-farm
 # github.com/dimchansky/utfbom v1.1.0
 github.com/dimchansky/utfbom
@@ -253,8 +253,6 @@ github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
 github.com/golang/protobuf/protoc-gen-go/plugin
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
-# github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
-github.com/google/btree
 # github.com/google/go-cmp v0.2.0
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
@@ -278,9 +276,8 @@ github.com/grpc-ecosystem/grpc-gateway/utilities
 github.com/grpc-ecosystem/grpc-gateway/internal
 # github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed
 github.com/hailocab/go-hostpool
-# github.com/hashicorp/consul v1.4.4
-github.com/hashicorp/consul/lib
-github.com/hashicorp/consul/version
+# github.com/hashicorp/consul/api v1.0.1
+github.com/hashicorp/consul/api
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
@@ -326,8 +323,6 @@ github.com/hashicorp/hcl/hcl/scanner
 github.com/hashicorp/hcl/hcl/strconv
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/hashicorp/memberlist v0.1.3
-github.com/hashicorp/memberlist
 # github.com/hashicorp/nomad/api v0.0.0-20190412184103-1c38ced33adf
 github.com/hashicorp/nomad/api
 github.com/hashicorp/nomad/api/contexts
@@ -335,7 +330,6 @@ github.com/hashicorp/nomad/api/contexts
 github.com/hashicorp/raft
 # github.com/hashicorp/serf v0.8.2
 github.com/hashicorp/serf/coordinate
-github.com/hashicorp/serf/serf
 # github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1
 github.com/hashicorp/vault-plugin-auth-alicloud
 github.com/hashicorp/vault-plugin-auth-alicloud/tools
@@ -472,8 +466,6 @@ github.com/mattn/go-isatty
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/michaelklishin/rabbit-hole v1.5.0
 github.com/michaelklishin/rabbit-hole
-# github.com/miekg/dns v1.0.14
-github.com/miekg/dns
 # github.com/mitchellh/cli v1.0.0
 github.com/mitchellh/cli
 # github.com/mitchellh/copystructure v1.0.0
@@ -570,8 +562,6 @@ github.com/ryanuber/go-glob
 github.com/samuel/go-zookeeper/zk
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
-github.com/sean-/seed
 # github.com/sirupsen/logrus v1.2.0
 github.com/sirupsen/logrus
 # github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926
@@ -661,11 +651,6 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/trace
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/timeseries
-golang.org/x/net/ipv4
-golang.org/x/net/ipv6
-golang.org/x/net/bpf
-golang.org/x/net/internal/iana
-golang.org/x/net/internal/socket
 # golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 golang.org/x/oauth2
 golang.org/x/oauth2/internal

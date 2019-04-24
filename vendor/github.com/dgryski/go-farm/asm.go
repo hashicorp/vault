@@ -3,6 +3,8 @@
 package main
 
 import (
+	"flag"
+
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
@@ -533,9 +535,9 @@ func fmix(h GPVirtual) GPVirtual {
 }
 
 func mur(a, h GPVirtual) GPVirtual {
-	IMUL3L(U32(c1), a, a)
+	imul3l(c1, a, a)
 	RORL(Imm(17), a)
-	IMUL3L(U32(c2), a, a)
+	imul3l(c2, a, a)
 	XORL(a, h)
 	RORL(Imm(19), h)
 
@@ -749,6 +751,7 @@ func fp32() {
 	shuf(h, -16)
 	shuf(g, -12)
 
+	PREFETCHT0(Mem{Base: sbase})
 	{
 		a := GP32()
 		MOVL(Mem{Base: send, Disp: -20}, a)
@@ -786,7 +789,7 @@ func fp32() {
 		g = mur(t, g)
 		ADDL(a, g)
 
-		IMUL3L(U32(c1), e, t)
+		imul3l(c1, e, t)
 		ADDL(b, t)
 		f = mur(t, f)
 		ADDL(d, f)
@@ -799,9 +802,13 @@ func fp32() {
 	CMPQ(slen, Imm(80+20))
 	JL(LabelRef("loop20"))
 	{
+		PREFETCHT0(Mem{Base: sbase, Disp: 20})
 		loop32Body(f, g, h, sbase, slen, 0)
+		PREFETCHT0(Mem{Base: sbase, Disp: 40})
 		loop32Body(f, g, h, sbase, slen, 20)
+		PREFETCHT0(Mem{Base: sbase, Disp: 60})
 		loop32Body(f, g, h, sbase, slen, 40)
+		PREFETCHT0(Mem{Base: sbase, Disp: 80})
 		loop32Body(f, g, h, sbase, slen, 60)
 
 		ADDQ(Imm(80), sbase)
@@ -865,7 +872,22 @@ func fp32() {
 	RET()
 }
 
+var go111 = flag.Bool("go111", true, "use assembly instructions present in go1.11 and later")
+
+func imul3l(m uint32, x, y Register) {
+	if *go111 {
+		IMUL3L(U32(m), x, y)
+	} else {
+		t := GP32()
+		MOVL(U32(m), t)
+		IMULL(t, x)
+		MOVL(x, y)
+	}
+}
+
 func main() {
+
+	flag.Parse()
 
 	ConstraintExpr("amd64,!purego")
 
