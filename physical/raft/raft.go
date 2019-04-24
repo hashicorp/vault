@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	proto "github.com/golang/protobuf/proto"
-	"github.com/hashicorp/consul/lib"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
@@ -49,6 +49,14 @@ type RaftBackend struct {
 	bootstrapConfig *raft.Configuration
 }
 
+// EnsurePath is used to make sure a path exists
+func EnsurePath(path string, dir bool) error {
+	if !dir {
+		path = filepath.Dir(path)
+	}
+	return os.MkdirAll(path, 0755)
+}
+
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Create the FSM.
@@ -83,7 +91,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	} else {
 		// Create the base raft path.
 		path := filepath.Join(path, raftState)
-		if err := lib.EnsurePath(path, true); err != nil {
+		if err := EnsurePath(path, true); err != nil {
 			return nil, err
 		}
 
