@@ -120,8 +120,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 }
 
 type Peer struct {
-	ID      string
-	Address string
+	ID      string `json:"id"`
+	Address string `json:"address"`
 }
 
 func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
@@ -247,6 +247,27 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 
 	return future.Error()
+}
+
+func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
+	if b.raft == nil {
+		return nil, errors.New("raft storage backend is sealed")
+	}
+
+	future := b.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+
+	ret := make([]Peer, len(future.Configuration().Servers))
+	for i, s := range future.Configuration().Servers {
+		ret[i] = Peer{
+			ID:      string(s.ID),
+			Address: string(s.Address),
+		}
+	}
+
+	return ret, nil
 }
 
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {

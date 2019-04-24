@@ -338,7 +338,16 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		}
 
 		// TODO: return list of peers here
-		return nil, nil
+		peers, err := raftStorage.Peers(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"peers": peers,
+			},
+		}, nil
 	}
 }
 

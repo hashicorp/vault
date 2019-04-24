@@ -64,7 +64,8 @@ func (c *Core) joinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		}
 
 		secret, err = client.Logical().Write("sys/storage/raft/bootstrap/answer", map[string]interface{}{
-			"answer": pt,
+			"answer":       pt,
+			"cluster_addr": c.clusterAddr,
 		})
 		if err != nil {
 			return errwrap.Wrapf("error sending answer: {{err}}", err)
@@ -73,35 +74,40 @@ func (c *Core) joinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 			return errors.New("no response when sending answer")
 		}
 
-		tlsCertRaw, ok := secret.Data["tls_cert"]
-		if !ok {
-			return errors.New("error during raft bootstrap call, no tls cert given")
-		}
-
-		tlsKeyRaw, ok := secret.Data["tls_key"]
-		if !ok {
-			return errors.New("error during raft bootstrap call, no tls key given")
-		}
-		tlsCARaw, ok := secret.Data["tls_ca_cert"]
-		if !ok {
-			return errors.New("error during raft bootstrap call, no tls CA cert given")
-		}
+		/*	tlsCertRaw, ok := secret.Data["tls_cert"]
+			if !ok {
+				return errors.New("error during raft bootstrap call, no tls cert given")
+			}
+			tlsKeyRaw, ok := secret.Data["tls_key"]
+			if !ok {
+				return errors.New("error during raft bootstrap call, no tls key given")
+			}
+			tlsCARaw, ok := secret.Data["tls_ca_cert"]
+			if !ok {
+				return errors.New("error during raft bootstrap call, no tls CA cert given")
+			}*/
 		peersRaw, ok := secret.Data["peers"]
 		if !ok {
 			return errors.New("error during raft bootstrap call, no peers given")
 		}
 
-		c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, []raft.Peer{})
+		peers := []raft.Peer{}
+		for _, peerRaw := range peersRaw.([]interface{}) {
+			peer := peerRaw.(map[string]interface{})
+			peers = append(peers, raft.Peer{
+				ID:      peer["id"].(string),
+				Address: peer["address"].(string),
+			})
+		}
+
+		c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, peers)
 
 		err = c.startClusterListener(ctx)
 		if err != nil {
 			return errwrap.Wrapf("error starting cluster: {{err}}", err)
 		}
 
-		c.underlyingPhysical.(*raft.RaftBackend).SetupCluster(ctx, &physical.NetworkConfig{
-			Cert: tlsCertRaw.([]byte),
-			Addr: c.clusterListener.Addr(),
-		}, c.clusterListener)
+		c.underlyingPhysical.(*raft.RaftBackend).SetupCluster(ctx, nil, c.clusterListener)
 
 		return nil
 	}
