@@ -85,7 +85,7 @@ func (c *ServerCommand) enableFourClusterDev(base *vault.CoreConfig, info map[st
 			return errors.New("")
 		}
 		base.Physical = backend
-		base.Seal = vault.NewDefaultSeal()
+		base.Seal = vault.NewDefaultSeal(nil)
 
 		testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
