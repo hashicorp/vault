@@ -95,6 +95,7 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (p *PostgreSQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
+	// TODO use default?
 	if len(statements) == 0 {
 		return "", "", errors.New("empty creation or rotation statements")
 	}

@@ -880,18 +880,6 @@ func TestBackend_roleCrud(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		// TODO check without fields?
-		// exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
-		// 	Raw:    data,
-		// 	Schema: pathRoles(b).Fields,
-		// })
-		// if err != nil {
-		// 	t.Fatal(err)
-		// }
-		// if exists {
-		// 	t.Fatal("expected not exists")
-		// }
-
 		// Read the role
 		data = map[string]interface{}{}
 		req = &logical.Request{
@@ -950,18 +938,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
-
-		// TODO: test fields check?
-		// exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
-		// 	Raw:    data,
-		// 	Schema: pathRoles(b).Fields,
-		// })
-		// if err != nil {
-		// 	t.Fatal(err)
-		// }
-		// if !exists {
-		// 	t.Fatal("expected exists")
-		// }
 
 		// Read the role
 		data = map[string]interface{}{}
@@ -1025,18 +1001,6 @@ func TestBackend_roleCrud(t *testing.T) {
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%v resp:%#v\n", err, resp)
 		}
-
-		// TODO path role exist check
-		// exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
-		// 	Raw:    data,
-		// 	Schema: pathRoles(b).Fields,
-		// })
-		// if err != nil {
-		// 	t.Fatal(err)
-		// }
-		// if !exists {
-		// 	t.Fatal("expected exists")
-		// }
 
 		// Read the role
 		data = map[string]interface{}{}
@@ -1479,25 +1443,6 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 	}
-	// TODO
-	data = map[string]interface{}{
-		"db_name":               "plugin-test",
-		"creation_statements":   testRole,
-		"revocation_statements": defaultRevocationSQL,
-		"default_ttl":           "5m",
-		"max_ttl":               "10m",
-	}
-	req = &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "roles/normal-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-	// END TODO
 
 	// verify the queue has 3 items in it
 	if bd.credRotationQueue.Len() != 3 {
@@ -1566,7 +1511,6 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 
 // copied from plugins/database/mongodb_test.go
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	t.Skip()
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1614,13 +1558,11 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	// create three static roles with different rotation periods
 	testCases := []string{"65", "130", "5400"}
 	for _, tc := range testCases {
-		roleName := "mongo-static-role-" + tc
+		roleName := "plugin-static-role-" + tc
 		data = map[string]interface{}{
 			"name":                roleName,
 			"db_name":             "plugin-mongo-test",
 			"creation_statements": testMongoDBRole,
-			// TODO: don't require rotation statements
-			"rotation_statements": "empty",
 			"username":            "statictestMongo" + tc,
 			"rotation_period":     tc,
 		}
@@ -1637,25 +1579,6 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 	}
-	// TODO
-	data = map[string]interface{}{
-		"db_name":               "plugin-test",
-		"creation_statements":   testRole,
-		"revocation_statements": defaultRevocationSQL,
-		"default_ttl":           "5m",
-		"max_ttl":               "10m",
-	}
-	req = &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "roles/normal-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-	// END TODO
 
 	// verify the queue has 3 items in it
 	if bd.credRotationQueue.Len() != 3 {

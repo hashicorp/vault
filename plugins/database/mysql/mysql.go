@@ -111,16 +111,6 @@ func (m *MySQL) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-// func (m *MySQL) SetCredentials(ctx context.Context, req *dbplugin.SetCredentialsRequest) (username, password string,  err error) {
-// 	return
-// }
-
 func (m *MySQL) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
@@ -272,9 +262,9 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		return nil, errors.New("username and password are required to rotate")
 	}
 
-	rotateStatents := statements
-	if len(rotateStatents) == 0 {
-		rotateStatents = []string{defaultMySQLRotateRootCredentialsSQL}
+	rotateStatements := statements
+	if len(rotateStatements) == 0 {
+		rotateStatements = []string{defaultMySQLRotateRootCredentialsSQL}
 	}
 
 	db, err := m.getConnection(ctx)
@@ -295,7 +285,7 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 		return nil, err
 	}
 
-	for _, stmt := range rotateStatents {
+	for _, stmt := range rotateStatements {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -324,6 +314,90 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 	m.RawConfig["password"] = password
 	return m.RawConfig, nil
+}
+
+// SetCredentials uses provided information to set/create a user in the
+// database. Unlike CreateUser, this method requires a username be provided and
+// uses the name given, instead of generating a name. This is used for creating
+// and setting the password of static accounts, as well as rolling back
+// passwords in the database in the event an updated database fails to save in
+// Vault's storage.
+func (m *MySQL) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
+	// TODO use default rotation?
+	if len(statements) == 0 {
+		return "", "", errors.New("empty creation or rotation statements")
+	}
+
+	username = staticUser.Username
+	password = staticUser.Password
+	if username == "" || password == "" {
+		return "", "", errors.New("must provide both username and password")
+	}
+
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	// Get the connection
+	db, err := m.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	// Return the secret
+
+	// Execute each query
+	for _, stmt := range statements {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+			query = dbutil.QueryHelper(query, map[string]string{
+				"name":     username,
+				"password": password,
+			})
+
+			stmt, err := tx.PrepareContext(ctx, query)
+			if err != nil {
+				// If the error code we get back is Error 1295: This command is not
+				// supported in the prepared statement protocol yet, we will execute
+				// the statement without preparing it. This allows the caller to
+				// manually prepare statements, as well as run other not yet
+				// prepare supported commands. If there is no error when running we
+				// will continue to the next statement.
+				if e, ok := err.(*stdmysql.MySQLError); ok && e.Number == 1295 {
+					_, err = tx.ExecContext(ctx, query)
+					if err != nil {
+						return "", "", err
+					}
+					continue
+				}
+
+				return "", "", err
+			}
+			if _, err := stmt.ExecContext(ctx); err != nil {
+				stmt.Close()
+				return "", "", err
+			}
+			stmt.Close()
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
 }
 
 // GenerateCredentials returns a generated password

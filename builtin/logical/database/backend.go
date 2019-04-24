@@ -607,7 +607,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 
 			resp, err := b.setStaticAccount(ctx, s, input)
 			if err != nil {
-				b.logger.Warn("unable rotate credentials in periodic function", "error", err)
+				b.logger.Warn("unable to rotate credentials in periodic function", "error", err)
 				// update the priority to re-try this rotation and re-add the item to
 				// the queue
 				item.Priority = item.Priority + 10

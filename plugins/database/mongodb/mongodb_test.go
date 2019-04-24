@@ -165,3 +165,37 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	session.SetSocketTimeout(1 * time.Minute)
 	return session.Ping()
 }
+
+func TestMongoDB_SetCredentials(t *testing.T) {
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	password, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usernameConfig := dbplugin.StaticUserConfig{
+		Username: "test",
+		Password: password,
+	}
+
+	username, password, err := db.SetCredentials(context.Background(), usernameConfig, dbplugin.Statements{}.Rotation)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
