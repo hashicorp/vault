@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
-func (c *Core) joinRaftCluster(ctx context.Context, leaderAddr string, retry bool) (bool, error) {
+func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry bool) (bool, error) {
 	if len(leaderAddr) == 0 {
 		return false, errors.New("No leader address provided")
 	}
