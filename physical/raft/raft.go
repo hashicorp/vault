@@ -132,7 +132,9 @@ type Peer struct {
 	Address string `json:"address"`
 }
 
-func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
+var myID string
+
+func (b *RaftBackend) Bootstrap(ctx context.Context, localID string, peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -145,6 +147,7 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 		return errors.New("error bootstrapping cluster: cluster already has state")
 	}
 
+	myID = localID
 	raftConfig := &raft.Configuration{
 		Servers: make([]raft.Server, len(peers)),
 	}
@@ -166,6 +169,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 
 	// We are already unsealed
 	if b.raft != nil {
+		b.logger.Debug("raft already started, not setting up cluster")
 		return nil
 	}
 
@@ -178,8 +182,13 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	case networkConfig == nil:
 		_, b.raftTransport = raft.NewInmemTransport(raft.ServerAddress(clusterListener.Addr().String()))
 	default:
+		baseTLSConfig, err := clusterListener.TLSConfig(ctx)
+		if err != nil {
+			return err
+		}
+
 		// Set the local address and localID in the streaming layer and the raft config.
-		raftLayer, err := NewRaftLayer(b.logger.Named("stream"), networkConfig)
+		raftLayer, err := NewRaftLayer(b.logger.Named("stream"), networkConfig, baseTLSConfig)
 		if err != nil {
 			return err
 		}
@@ -195,7 +204,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 		b.raftTransport = transport
 	}
 
-	raftConfig.LocalID = raft.ServerID(clusterListener.Addr().String())
+	raftConfig.LocalID = raft.ServerID(myID)
 
 	// Set up a channel for reliable leader notifications.
 	raftNotifyCh := make(chan bool, 1)

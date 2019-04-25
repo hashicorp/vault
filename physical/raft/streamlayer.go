@@ -43,9 +43,11 @@ type raftLayer struct {
 	certBytes  []byte
 	parsedCert *x509.Certificate
 	parsedKey  *ecdsa.PrivateKey
+
+	baseTLSConfig *tls.Config
 }
 
-func NewRaftLayer(logger log.Logger, conf *physicalstd.NetworkConfig) (*raftLayer, error) {
+func NewRaftLayer(logger log.Logger, conf *physicalstd.NetworkConfig, baseTLSConfig *tls.Config) (*raftLayer, error) {
 	switch {
 	case conf.Addr == nil:
 		// Clustering disabled on the server, don't try to look for params
@@ -94,6 +96,7 @@ func NewRaftLayer(logger log.Logger, conf *physicalstd.NetworkConfig) (*raftLaye
 			},
 			D: conf.KeyParams.D,
 		},
+		baseTLSConfig: baseTLSConfig,
 	}, nil
 }
 
@@ -113,6 +116,7 @@ func (l *raftLayer) ClientLookup(ctx context.Context, requestInfo *tls.Certifica
 
 	return nil, nil
 }
+
 func (l *raftLayer) ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if l.parsedKey == nil {
 		return nil, errors.New("got raft connection but no local cert")
@@ -127,6 +131,7 @@ func (l *raftLayer) ServerLookup(context.Context, *tls.ClientHelloInfo) (*tls.Ce
 		Leaf:        l.parsedCert,
 	}, nil
 }
+
 func (l *raftLayer) CALookup(context.Context) (*x509.Certificate, error) {
 	return l.parsedCert, nil
 }
@@ -203,18 +208,18 @@ func (l *raftLayer) Addr() net.Addr {
 
 // Dial is used to create a new outgoing connection
 func (l *raftLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
-	tlsConfig := &tls.Config{}
 
-	/*
-		if caCert != nil {
-			pool := x509.NewCertPool()
-			pool.AddCert(caCert)
-			tlsConfig.RootCAs = pool
-			tlsConfig.ClientCAs = pool
-		}*/
+	tlsConfig := l.baseTLSConfig.Clone()
+
 	l.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
 	tlsConfig.NextProtos = []string{consts.RaftStorageALPN}
+	tlsConfig.ServerName = l.parsedCert.Subject.CommonName
+
+	pool := x509.NewCertPool()
+	pool.AddCert(l.parsedCert)
+	tlsConfig.RootCAs = pool
+	tlsConfig.ClientCAs = pool
+
 	dialer := &net.Dialer{
 		Timeout: timeout,
 	}

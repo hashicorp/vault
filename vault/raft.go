@@ -42,7 +42,7 @@ func generateRaftTLS() (*raftTLSConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	host = fmt.Sprintf("fw-%s", host)
+	host = fmt.Sprintf("raft-%s", host)
 	template := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: host,
@@ -134,7 +134,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		answerReq := client.NewRequest("PUT", "/v1/sys/storage/raft/bootstrap/answer")
 		if err := answerReq.SetJSONBody(map[string]interface{}{
 			"answer":       base64.StdEncoding.EncodeToString(pt),
-			"cluster_addr": c.clusterAddr,
+			"cluster_addr": c.clusterListenerAddrs[0].String(),
 			"peer_id":      peerIDRaw.(string),
 		}); err != nil {
 			return err
@@ -148,17 +148,18 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 			return err
 		}
 
-		var answerResp answerResp
+		var answerResp answerRespData
 		if err := jsonutil.DecodeJSONFromReader(answerRespJson.Body, &answerResp); err != nil {
 			return err
 		}
 
-		tlsCert, err := base64.StdEncoding.DecodeString(answerResp.TLSCertRaw)
+		fmt.Println(answerResp)
+		tlsCert, err := base64.StdEncoding.DecodeString(answerResp.Data.TLSCertRaw)
 		if err != nil {
 			return errwrap.Wrapf("error decoding tls cert: {{err}}", err)
 		}
 
-		c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, answerResp.Peers)
+		c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, peerIDRaw.(string), answerResp.Data.Peers)
 
 		err = c.startClusterListener(ctx)
 		if err != nil {
@@ -168,7 +169,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		c.underlyingPhysical.(*raft.RaftBackend).SetupCluster(ctx, &physicalstd.NetworkConfig{
 			Addr:      c.clusterListenerAddrs[0],
 			Cert:      tlsCert,
-			KeyParams: answerResp.TLSKey,
+			KeyParams: answerResp.Data.TLSKey,
 		}, c.clusterListener)
 
 		return nil
@@ -196,6 +197,10 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 	}
 
 	return true, nil
+}
+
+type answerRespData struct {
+	Data answerResp `json:"data"`
 }
 
 type answerResp struct {
