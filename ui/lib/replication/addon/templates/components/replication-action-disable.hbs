@@ -16,7 +16,7 @@
       <div class="field is-expanded">
         <div class="control select is-fullwidth">
           <select onchange={{action (mut mode) value="target.value"}} id="replication-mode" name="replication-mode">
-            {{#each (reduce-to-array 'primary' 'secondary') as |modeOption|}}
+            {{#each (array 'primary' 'secondary') as |modeOption|}}
               <option
                 selected={{if mode (eq mode modeOption) (eq modeOption 'primary')}}
                 value={{modeOption}}

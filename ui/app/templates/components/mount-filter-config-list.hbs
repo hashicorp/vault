@@ -8,7 +8,7 @@
       onchange={{action (mut config.mode) value="target.value"}}
       data-test-replication-filter-mount-mode=true
     >
-      {{#each (reduce-to-array "whitelist" "blacklist") as |mode|}}
+      {{#each (array "whitelist" "blacklist") as |mode|}}
         <option selected={{eq config.mode mode}} value="{{mode}}">
         {{capitalize mode}}
         </option>
