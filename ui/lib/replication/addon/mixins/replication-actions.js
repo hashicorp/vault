@@ -7,8 +7,9 @@ import Promise from 'rsvp';
 
 export default Mixin.create({
   store: service(),
-  router: service(),
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
+  onEnable() {},
+  onDisable() {},
   submitHandler(action, clusterMode, data, event) {
     let replicationMode = (data && data.replicationMode) || this.get('replicationMode');
     if (event && event.preventDefault) {
@@ -28,7 +29,7 @@ export default Mixin.create({
       delete data.replicationMode;
     }
 
-    return this.get('save').perform(action, replicationMode, clusterMode, data);
+    return this.save.perform(action, replicationMode, clusterMode, data);
   },
 
   save: task(function*(action, replicationMode, clusterMode, data) {
@@ -40,7 +41,7 @@ export default Mixin.create({
     } catch (e) {
       return this.submitError(e);
     }
-    yield this.get('submitSuccess').perform(resp, action, clusterMode);
+    yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
   submitSuccess: task(function*(resp, action, mode) {
@@ -62,7 +63,9 @@ export default Mixin.create({
       });
       return cluster;
     }
-    this.reset();
+    if (this.reset) {
+      this.reset();
+    }
     if (action === 'enable') {
       // do something to show model is pending
       cluster.set(
@@ -77,18 +80,17 @@ export default Mixin.create({
         store.unloadAll('secret-engine');
       }
     }
-    const router = this.get('router');
-    if (action === 'disable') {
-      yield router.transitionTo('mode', replicationMode);
-    }
     try {
       yield cluster.reload();
     } catch (e) {
       // no error handling here
     }
     cluster.rollbackAttributes();
+    if (action === 'disable') {
+      yield this.onDisable();
+    }
     if (action === 'enable') {
-      yield router.transitionTo('mode', replicationMode);
+      yield this.onEnable(replicationMode);
     }
 
     if (mode === 'secondary' && replicationMode === 'dr') {

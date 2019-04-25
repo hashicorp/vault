@@ -1,11 +1,5 @@
-{{#each (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl) as |replicationAction index|}}
-  {{#if (get model (concat 'can' (camelize replicationAction)))}}
-    <div class="box is-fullwidth is-marginless {{if (gt index 0) 'is-bottomless' 'is-shadowless'}}">
-      {{component (concat 'replication-action-' replicationAction)
-        replicationMode=replicationMode
-        model=model
-        selectedAction=replicationAction
-      }}
-    </div>
-  {{/if}}
-{{/each}}
+<ReplicationActions
+  @model={{model}}
+  @onDisable={{action "onDisable"}}
+  @replicationMode={{replicationMode}}
+/>
