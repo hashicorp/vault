@@ -363,11 +363,15 @@ func (l *PostgreSQLLock) Value() (bool, string, error) {
 	var result string
 	err := pg.client.QueryRow(pg.haGetLockValueQuery, l.key).Scan(&result)
 
-	if err != nil {
+	switch err {
+	case nil:
+		return true, result, nil
+	case sql.ErrNoRows:
+		return false, "", nil
+	default:
 		return false, "", err
-	}
 
-	return true, result, nil
+	}
 }
 
 // tryToLock tries to create a new item in PostgreSQL every `retryInterval`.
