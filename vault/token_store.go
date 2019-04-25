@@ -19,8 +19,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-sockaddr"
 
-	metrics "github.com/armon/go-metrics"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -2231,37 +2231,48 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
+		// Create alias for later processing
+		alias := &logical.Alias{
+			Name:          data.EntityAlias,
+			MountAccessor: mountValidationResp.Accessor,
+			MountType:     mountValidationResp.Type,
+		}
+
 		switch {
 		case aliasByFactors == nil:
 			// Entity alias does not exist. Create a new entity and entity alias
-			newAlias := &logical.Alias{
-				Name: data.EntityAlias,
-				MountAccessor: mountValidationResp.Accessor,
-				MountType: mountValidationResp.Type,
-			}
-
-			newEntity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, newAlias)
+			newEntity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 			if err != nil {
 				return logical.ErrorResponse(err.Error()), nil
+			}
+			if newEntity == nil {
+				return logical.ErrorResponse("failed to create new entity for given entity alias"), nil
 			}
 
 			// Set new entity id
 			overwriteEntityID = newEntity.ID
 		default:
-			// Verify that the specified entity alias is included in the allowed entity alias list
-			foundEntityAlias := false
-			for _, entityAlias := range role.AllowedEntityAliases {
-				if strings.Compare(entityAlias, data.EntityAlias) == 0 {
-					foundEntityAlias = true
-				}
-			}
-
-			if !foundEntityAlias {
+			// Check if provided entity alias name is in the allowed entity aliases list
+			if !strutil.StrListContains(role.AllowedEntityAliases, data.EntityAlias) {
 				return logical.ErrorResponse("invalid 'entity_alias' value"), logical.ErrInvalidRequest
 			}
 
+			// Lookup entity
+			entity, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			if entity == nil {
+				return logical.ErrorResponse("failed to lookup entity from given entity alias"), nil
+			}
+
+			// Validate that the entity is not disabled
+			if entity.Disabled {
+				return logical.ErrorResponse("entity from given entity alias is disabled"), logical.ErrPermissionDenied
+			}
+
 			// Set new entity id
-			overwriteEntityID = aliasByFactors.CanonicalID
+			overwriteEntityID = entity.ID
 		}
 	}
 
