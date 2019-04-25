@@ -1,7 +1,7 @@
 <div class="auth-form">
   {{#if showLoading}}
     <div class="vault-loader">
-      {{partial 'svg/vault-loading'}}
+      <VaultLogoSpinner />
     </div>
   {{/if}}
   {{#if hasMethodsWithPath}}
