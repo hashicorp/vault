@@ -1,3 +1,3 @@
-import Actions from './replication-actions';
+import Actions from './replication-actions-single';
 
 export default Actions.extend();

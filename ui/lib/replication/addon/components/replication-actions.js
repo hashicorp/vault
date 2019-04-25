@@ -17,17 +17,12 @@ const DEFAULTS = {
 export default Component.extend(ReplicationActions, DEFAULTS, {
   layout,
   replicationMode: null,
-  selectedAction: null,
-  tagName: 'form',
+  model: null,
+  cluster: alias('model'),
 
   didReceiveAttrs() {
     this._super(...arguments);
   },
-
-  model: null,
-  cluster: alias('model'),
-  loading: false,
-  onSubmit: null,
 
   reset() {
     if (!this || this.isDestroyed || this.isDestroying) {

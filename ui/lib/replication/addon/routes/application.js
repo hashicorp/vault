@@ -36,4 +36,9 @@ export default Route.extend(ClusterRoute, {
       return model;
     });
   },
+  actions: {
+    refresh() {
+      this.refresh();
+    },
+  },
 });
