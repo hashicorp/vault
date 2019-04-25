@@ -103,7 +103,7 @@
             id="bits"
             onchange={{action (mut bits) value="target.value"}}
           >
-            {{#each (reduce-to-array 128 256 512) as |bitOption|}}
+            {{#each (array 128 256 512) as |bitOption|}}
               <option selected={{eq bits bitOption}} value={{bitOption}}>
                 <code>{{bitOption}}</code>
               </option>
