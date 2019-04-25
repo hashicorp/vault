@@ -605,6 +605,7 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 		select {
 		case <-stop:
 			ticker.Stop()
+			return
 		case <-ticker.C:
 			err := l.updateItem(true)
 			if err != nil {
