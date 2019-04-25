@@ -11,7 +11,7 @@ import (
 func handleSysRaftJoin(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "POST":
+		case "POST", "PUT":
 			handleSysRaftJoinPost(core, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)

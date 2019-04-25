@@ -14,15 +14,15 @@ import (
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault/cluster"
 
+	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify RaftBackend satisfies the correct interfaces
 var _ physical.Backend = (*RaftBackend)(nil)
 var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.Clustered = (*RaftBackend)(nil)
+var _ physicalstd.Clustered = (*RaftBackend)(nil)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -160,7 +160,7 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	return nil
 }
 
-func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physical.NetworkConfig, clusterListener cluster.ClusterHook) error {
+func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicalstd.NetworkConfig, clusterListener physicalstd.ClusterHook) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -233,7 +233,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physical.
 	return nil
 }
 
-func (b *RaftBackend) TeardownCluster(clusterListener cluster.ClusterHook) error {
+func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) error {
 	clusterListener.StopHandler(consts.RaftStorageALPN)
 	clusterListener.RemoveClient(consts.RaftStorageALPN)
 	b.l.Lock()

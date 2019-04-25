@@ -126,6 +126,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"storage/raft/bootstrap/challenge",
+				"storage/raft/bootstrap/answer",
 			},
 
 			LocalStorage: []string{
@@ -287,7 +289,7 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"id":        peerID,
+				"peer_id":   peerID,
 				"challenge": base64.StdEncoding.EncodeToString(protoBlob),
 			},
 		}, nil
@@ -333,6 +335,19 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
 		}
 
+		raftTLSEntry, err := b.Core.barrier.Get(ctx, raftTLSStoragePath)
+		if err != nil {
+			return nil, err
+		}
+		if raftTLSEntry == nil {
+			return nil, errors.New("could not find raft TLS configuration")
+		}
+
+		raftTLS := new(raftTLSConfig)
+		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+			return nil, err
+		}
+
 		if err := raftStorage.AddPeer(ctx, peerID, clusterAddr); err != nil {
 			return nil, err
 		}
@@ -345,7 +360,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"peers": peers,
+				"peers":    peers,
+				"tls_cert": base64.StdEncoding.EncodeToString(raftTLS.Cert),
+				"tls_key":  raftTLS.KeyParams,
 			},
 		}, nil
 	}

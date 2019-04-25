@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/raft"
 
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -144,7 +145,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	// If we have clustered storage, set it up now
-	if clusteredStorage, ok := c.underlyingPhysical.(physical.Clustered); ok {
+	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
 		if err := c.startClusterListener(ctx); err != nil {
 			return nil, errwrap.Wrapf("could not start cluster listener: {{err}}", err)
 		}
@@ -288,6 +289,18 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 			return nil, err
 		}
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
+	}
+
+	if _, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
+		raftTLS, err := generateRaftTLS()
+		if err != nil {
+			return nil, err
+		}
+
+		entry, err := logical.StorageEntryJSON(raftTLSStoragePath, raftTLS)
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			return nil, err
+		}
 	}
 
 	// Prepare to re-seal

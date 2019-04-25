@@ -16,9 +16,9 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // RaftLayer implements the raft.StreamLayer interface,
@@ -45,22 +45,22 @@ type raftLayer struct {
 	parsedKey  *ecdsa.PrivateKey
 }
 
-func NewRaftLayer(logger log.Logger, conf *physical.NetworkConfig) (*raftLayer, error) {
+func NewRaftLayer(logger log.Logger, conf *physicalstd.NetworkConfig) (*raftLayer, error) {
 	switch {
 	case conf.Addr == nil:
 		// Clustering disabled on the server, don't try to look for params
 		return nil, errors.New("no raft addr found")
 
-	case conf.ClusterKeyParams == nil:
+	case conf.KeyParams == nil:
 		logger.Error("no key params found loading raft cluster TLS information")
 		return nil, errors.New("no raft cluster key params found")
 
-	case conf.ClusterKeyParams.X == nil, conf.ClusterKeyParams.Y == nil, conf.ClusterKeyParams.D == nil:
+	case conf.KeyParams.X == nil, conf.KeyParams.Y == nil, conf.KeyParams.D == nil:
 		logger.Error("failed to parse raft cluster key due to missing params")
 		return nil, errors.New("failed to parse raft cluster key")
 
-	case conf.ClusterKeyParams.Type != certutil.PrivateKeyTypeP521:
-		logger.Error("unknown raft cluster key type", "key_type", conf.ClusterKeyParams.Type)
+	case conf.KeyParams.Type != certutil.PrivateKeyTypeP521:
+		logger.Error("unknown raft cluster key type", "key_type", conf.KeyParams.Type)
 		return nil, errors.New("failed to find valid raft cluster key type")
 
 	case len(conf.Cert) == 0:
@@ -89,10 +89,10 @@ func NewRaftLayer(logger log.Logger, conf *physical.NetworkConfig) (*raftLayer, 
 		parsedKey: &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: elliptic.P521(),
-				X:     conf.ClusterKeyParams.X,
-				Y:     conf.ClusterKeyParams.Y,
+				X:     conf.KeyParams.X,
+				Y:     conf.KeyParams.Y,
 			},
-			D: conf.ClusterKeyParams.D,
+			D: conf.KeyParams.D,
 		},
 	}, nil
 }

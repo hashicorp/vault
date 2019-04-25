@@ -271,6 +271,7 @@ github.com/hashicorp/raft v1.0.1 h1:94uRdS11oEneUkxmXq6Vg9shNhBILh2UTb9crQjJWl0=
 github.com/hashicorp/raft v1.0.1/go.mod h1:DVSAWItjLjTOkVbSpWQ0j0kUADIvDaCtBxIcbNAQLkI=
 github.com/hashicorp/serf v0.8.2 h1:YZ7UKsJv+hKjqGVUUbtE3HNj79Eln2oQ75tniF6iPt0=
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
+github.com/hashicorp/vault-enterprise v0.0.0-20190423142223-dffa0d214b70 h1:Z/uAIbdDXjSVcXOBVNSXUdhs9xyDytj0Hxkmc2R5/7U=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1 h1:CldlLfMGlcXy+5CvnNsOWJjE9/C1i+Nho4ClSJe+63k=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.5.1/go.mod h1:v0d6/ft2ESFHG/PB2pqcwDPlvtAWWfOmfsY0nfbIMy0=
 github.com/hashicorp/vault-plugin-auth-azure v0.5.1 h1:1CTmC68zYhp/cKuHW8K0QbnWEetFK7UUu5jaWhmzbHw=
