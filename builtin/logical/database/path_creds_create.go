@@ -139,18 +139,15 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		if !strutil.StrListContains(dbConfig.AllowedRoles, "*") && !strutil.StrListContainsGlob(dbConfig.AllowedRoles, name) {
 			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
-		ttl := role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod)
-		ttlD := ttl.Sub(time.Now())
-		if ttlD < 0 {
-			ttlD = time.Duration(0)
-		}
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"username":            role.StaticAccount.Username,
-				"password":            role.StaticAccount.Password,
-				"ttl":                 fmt.Sprintf("%v", ttlD),
-				"rotation_period":     fmt.Sprintf("%v", role.StaticAccount.RotationPeriod),
+				"username": role.StaticAccount.Username,
+				"password": role.StaticAccount.Password,
+				// "ttl":                 fmt.Sprintf("%v", role.StaticAccount.PasswordTTL()),
+				// "rotation_period":     fmt.Sprintf("%v", role.StaticAccount.RotationPeriod),
+				"ttl":                 role.StaticAccount.PasswordTTL(),
+				"rotation_period":     role.StaticAccount.RotationPeriod,
 				"last_vault_rotation": role.StaticAccount.LastVaultRotation,
 			},
 		}, nil

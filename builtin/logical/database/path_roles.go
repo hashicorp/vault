@@ -581,7 +581,31 @@ type staticAccount struct {
 	// previousPassword is used to preserve the previous password during a
 	// rotation. If any step in the process fails, we have record of the previous
 	// password and can attempt to roll back.
+	// TODO verify this is needed
 	previousPassword string
+}
+
+// NextRotationTime calculates the next rotation by adding the Rotation Period
+// to the last known vault rotation
+func (s *staticAccount) NextRotationTime() time.Time {
+	return s.LastVaultRotation.Add(s.RotationPeriod)
+}
+
+// PasswordTTL calculates the approximate time remaining until the password is
+// no longer valid. This is approximate because the periodic rotation is only
+// checked approximately every 5 seconds, and each rotation can take a small
+// amount of time to process. This can result in a negative TTL time while the
+// rotation function processes the Static Role and performs the rotation. If the
+// TTL is negative, zero is returned. Users should not trust passwords with a
+// Zero TTL, as they are likely in the process of being rotated an will quickly
+// be invalidated.
+func (s *staticAccount) PasswordTTL() time.Duration {
+	next := s.NextRotationTime()
+	ttl := next.Sub(time.Now())
+	if ttl < 0 {
+		ttl = time.Duration(0)
+	}
+	return ttl
 }
 
 const pathRoleHelpSyn = `
