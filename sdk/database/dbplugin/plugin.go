@@ -44,7 +44,7 @@ type Database interface {
 	// the API.
 	RotateRootCredentials(ctx context.Context, statements []string) (config map[string]interface{}, err error)
 	GenerateCredentials(ctx context.Context) (string, error)
-	SetCredentials(ctx context.Context, staticConfig StaticUserConfig, statements []string) (username string, password string, err error)
+	SetCredentials(ctx context.Context, statements Statements, staticConfig StaticUserConfig) (username string, password string, err error)
 
 	// Init is called on `$ vault write database/config/:db-name`, or when you
 	// do a creds call after Vault's been restarted. The config provided won't

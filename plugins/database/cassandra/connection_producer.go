@@ -286,6 +286,6 @@ func (c *cassandraConnectionProducer) secretValues() map[string]interface{} {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
+func (c *cassandraConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	return
 }

@@ -269,6 +269,6 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
+func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	return
 }

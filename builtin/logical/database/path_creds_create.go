@@ -146,8 +146,8 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 				"password": role.StaticAccount.Password,
 				// "ttl":                 fmt.Sprintf("%v", role.StaticAccount.PasswordTTL()),
 				// "rotation_period":     fmt.Sprintf("%v", role.StaticAccount.RotationPeriod),
-				"ttl":                 role.StaticAccount.PasswordTTL(),
-				"rotation_period":     role.StaticAccount.RotationPeriod,
+				"ttl":                 role.StaticAccount.PasswordTTL().Seconds(),
+				"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
 				"last_vault_rotation": role.StaticAccount.LastVaultRotation,
 			},
 		}, nil

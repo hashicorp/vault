@@ -305,6 +305,84 @@ func TestMySQL_RevokeUser(t *testing.T) {
 	}
 }
 
+func TestMySQL_SetCredentials(t *testing.T) {
+	cleanup, connURL := prepareMySQLTestContainer(t, false)
+	defer cleanup()
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	db := new(MetadataLen, MetadataLen, UsernameLen)
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	password, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usernameConfig := dbplugin.StaticUserConfig{
+		Username: "test",
+		Password: password,
+	}
+
+	// Test with no configured Creation Statement
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
+	if err == nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	statements := dbplugin.Statements{
+		Creation: []string{testMySQLStaticCreateSQL},
+	}
+	// User should not exist, make sure we can create
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// call SetCredentials again, the user will already exist, password will
+	// change. Without rotation statements, this should use the defaults
+	newPassword, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if password != newPassword {
+		t.Fatal("passwords should have changed")
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// generate a new password and supply owr own rotation statements
+	newPassword2, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword2
+	statements.Rotation = []string{testMySQLStaticRotateSQL, testMySQLGrantSQL}
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if password != newPassword2 {
+		t.Fatal("passwords should have changed")
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+}
+
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "root:secret", fmt.Sprintf("%s:%s", username, password), 1)
@@ -330,4 +408,16 @@ GRANT SELECT ON *.* TO '{{name}}'@'%';
 const testMySQLRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 DROP USER '{{name}}'@'%';
+`
+
+const testMySQLStaticCreateSQL = `
+CREATE USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+GRANT SELECT ON *.* TO '{{username}}'@'%';
+`
+const testMySQLStaticRotateSQL = `
+ALTER USER '{{username}}'@'%' IDENTIFIED BY '{{password}}';
+`
+
+const testMySQLGrantSQL = `
+GRANT SELECT ON *.* TO '{{username}}'@'%';
 `

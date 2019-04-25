@@ -259,7 +259,6 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
 	}
-	// TODO add TTL
 
 	return &logical.Response{
 		Data: data,
@@ -601,7 +600,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 // be invalidated.
 func (s *staticAccount) PasswordTTL() time.Duration {
 	next := s.NextRotationTime()
-	ttl := next.Sub(time.Now())
+	ttl := next.Sub(time.Now()).Round(time.Second)
 	if ttl < 0 {
 		ttl = time.Duration(0)
 	}

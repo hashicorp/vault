@@ -130,7 +130,7 @@ func (s *gRPCServer) GenerateCredentials(ctx context.Context, _ *Empty) (*Genera
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-	username, password, err := s.impl.SetCredentials(ctx, *req.StaticUserConfig, req.Statements)
+	username, password, err := s.impl.SetCredentials(ctx, *req.Statements, *req.StaticUserConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -337,18 +337,15 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 
 	return resp.Password, nil
 }
-func (c *gRPCClient) SetCredentials(ctx context.Context, staticUser StaticUserConfig, statements []string) (username, password string, err error) {
+func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, staticUser StaticUserConfig) (username, password string, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
 	defer close(quitCh)
 	defer cancel()
 
-	// TODO: Question: CreateUser takes the CreateUserRequest and splits the
-	// statements and the config. Here we just pass on the request without
-	// splitting anything
 	resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
 		StaticUserConfig: &staticUser,
-		Statements:       statements,
+		Statements:       &statements,
 	})
 
 	if err != nil {

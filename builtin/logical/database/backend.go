@@ -293,6 +293,10 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing database rotation queue")
 
+		// Sleep a few seconds to allow Vault to mount and complete setup, so
+		// that we can write to storage
+		time.Sleep(3 * time.Second)
+
 		b.Lock()
 		if b.credRotationQueue == nil {
 			b.credRotationQueue = queue.NewPriorityQueue()
@@ -306,7 +310,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 
 		// search through WAL for any rotations that were interrupted
 		if err := b.loadStaticWALs(ctx, conf); err != nil {
-			b.Logger().Warn("error(s) loading WAL entries into queue: ", err)
+			b.Logger().Warn("error(s) loading WAL entries into queue: ", err.Error())
 		}
 
 		// load roles and populate queue with static accounts
@@ -362,7 +366,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 		if role == nil || role.StaticAccount == nil {
 			b.Logger().Warn("role or static account not found")
 			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with no static account", err)
+				b.Logger().Warn("error deleting WAL for role with no static account", err.Error())
 				merr = multierror.Append(merr, err)
 			}
 			continue
@@ -372,7 +376,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 			// role password has been rotated since the WAL was created, so let's
 			// delete this
 			if err = framework.DeleteWAL(ctx, conf.StorageView, walID); err != nil {
-				b.Logger().Warn("error deleting WAL for role with newer rotation date", err)
+				b.Logger().Warn("error deleting WAL for role with newer rotation date", err.Error())
 				merr = multierror.Append(merr, err)
 			}
 			continue
@@ -557,7 +561,7 @@ type setCredentialsWAL struct {
 	Username    string
 
 	LastVaultRotation time.Time
-	Statements        []string
+	Statements        dbplugin.Statements
 }
 
 // rotateCredentials sets a new password for a static account. This method is
@@ -610,7 +614,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 				b.logger.Warn("unable to rotate credentials in periodic function", "error", err)
 				// update the priority to re-try this rotation and re-add the item to
 				// the queue
-				item.Priority = item.Priority + 10
+				item.Priority = time.Now().Add(10 * time.Second).Unix()
 
 				// preserve the WALID if it was returned
 				if resp.WALID != "" {
@@ -741,19 +745,13 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		Password: newPassword,
 	}
 
-	// Create or rotate the user
-	stmts := input.Role.Statements.Creation
-	if !input.CreateUser {
-		stmts = input.Role.Statements.Rotation
-	}
-
 	if output.WALID == "" {
 		output.WALID, err = framework.PutWAL(ctx, s, staticWALKey, &setCredentialsWAL{
 			RoleName:          input.RoleName,
 			Username:          config.Username,
 			NewPassword:       config.Password,
 			OldPassword:       input.Role.StaticAccount.Password,
-			Statements:        stmts,
+			Statements:        input.Role.Statements,
 			LastVaultRotation: input.Role.StaticAccount.LastVaultRotation,
 		})
 		if err != nil {
@@ -761,7 +759,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		}
 	}
 
-	_, password, err := db.SetCredentials(ctx, config, stmts)
+	_, password, err := db.SetCredentials(ctx, input.Role.Statements, config)
 	if err != nil {
 		b.CloseIfShutdown(db, err)
 		return output, errwrap.Wrapf("error setting credentials: {{err}}", err)

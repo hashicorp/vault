@@ -190,7 +190,7 @@ func TestMongoDB_SetCredentials(t *testing.T) {
 		Password: password,
 	}
 
-	username, password, err := db.SetCredentials(context.Background(), usernameConfig, dbplugin.Statements{}.Rotation)
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

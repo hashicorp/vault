@@ -85,7 +85,7 @@ func (m *MongoDB) getConnection(ctx context.Context) (*mgo.Session, error) {
 // and setting the password of static accounts, as well as rolling back
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
-func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.StaticUserConfig, statements []string) (username, password string, err error) {
+func (m *MongoDB) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -100,8 +100,8 @@ func (m *MongoDB) SetCredentials(ctx context.Context, staticUser dbplugin.Static
 
 	// Unmarshal statements.CreationStatements into mongodbRoles
 	var mongoCS mongoDBStatement
-	if len(statements) >= 1 {
-		err = json.Unmarshal([]byte(statements[0]), &mongoCS)
+	if len(statements.Creation) >= 1 {
+		err = json.Unmarshal([]byte(statements.Creation[0]), &mongoCS)
 		if err != nil {
 			return "", "", err
 		}
@@ -176,7 +176,7 @@ func (m *MongoDB) CreateUser(ctx context.Context, statements dbplugin.Statements
 		Create:   true,
 	}
 
-	username, password, err = m.SetCredentials(ctx, stu, statements.Creation)
+	username, password, err = m.SetCredentials(ctx, statements, stu)
 	return username, password, err
 }
 
