@@ -4,8 +4,13 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, blur, render, find } from '@ember/test-helpers';
+import { camelize } from '@ember/string';
+import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+
+const resolver = engineResolverFor('replication');
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -27,7 +32,7 @@ const routerService = Service.extend({
 });
 
 module('Integration | Component | replication actions', function(hooks) {
-  setupRenderingTest(hooks);
+  setupRenderingTest(hooks, { resolver });
 
   hooks.beforeEach(function() {
     run(() => {
@@ -94,6 +99,7 @@ module('Integration | Component | replication actions', function(hooks) {
           mode: clusterMode,
           modeForUrl: clusterMode,
         },
+        [`can${camelize(action)}`]: true,
         reload() {
           return resolve();
         },
@@ -114,11 +120,7 @@ module('Integration | Component | replication actions', function(hooks) {
         hbs`{{replication-actions model=model replicationMode=replicationMode selectedAction=selectedAction onSubmit=(action onSubmit)}}`
       );
 
-      assert.equal(
-        find('h4').textContent.trim(),
-        headerText,
-        `${testKey}: renders the correct partial as default`
-      );
+      assert.equal(find('h4').textContent.trim(), headerText, `${testKey}: renders the correct component`);
 
       if (typeof fillInFn === 'function') {
         await fillInFn.call(this);
