@@ -1,9 +1,7 @@
 import Component from '@ember/component';
 import { set, get, computed } from '@ember/object';
-import layout from '../templates/components/mount-filter-config-list';
 
 export default Component.extend({
-  layout,
   config: null,
   mounts: null,
 

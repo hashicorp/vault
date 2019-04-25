@@ -5,7 +5,6 @@ import Component from '@ember/component';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 import ReplicationActions from 'replication/mixins/replication-actions';
 import { task } from 'ember-concurrency';
-import layout from '../templates/components/replication-summary';
 
 const DEFAULTS = {
   mode: 'primary',
@@ -21,7 +20,6 @@ const DEFAULTS = {
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
-  layout,
   wizard: service(),
   version: service(),
   didReceiveAttrs() {

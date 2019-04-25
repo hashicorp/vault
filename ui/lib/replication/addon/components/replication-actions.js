@@ -2,7 +2,6 @@ import { alias } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import ReplicationActions from 'replication/mixins/replication-actions';
-import layout from '../templates/components/replication-actions';
 
 const DEFAULTS = {
   token: null,
@@ -15,7 +14,6 @@ const DEFAULTS = {
 };
 
 export default Component.extend(ReplicationActions, DEFAULTS, {
-  layout,
   replicationMode: null,
   model: null,
   cluster: alias('model'),
