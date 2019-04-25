@@ -600,11 +600,11 @@ func (l *DynamoDBLock) Value() (bool, string, error) {
 // channel is closed.
 func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error) {
 	ticker := time.NewTicker(DynamoDBLockRetryInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-stop:
-			ticker.Stop()
 			return
 		case <-ticker.C:
 			err := l.updateItem(true)
@@ -621,7 +621,6 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 					return
 				}
 			} else {
-				ticker.Stop()
 				close(success)
 				return
 			}
