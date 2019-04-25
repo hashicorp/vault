@@ -90,8 +90,8 @@ message StaticUserConfig{
 }
 
 message SetCredentialsRequest {
-  StaticUserConfig static_user_config = 1;
-  repeated string statements = 2;
+	Statements     statements = 1;
+  StaticUserConfig static_user_config = 2;
 }
 
 message SetCredentialsResponse {
