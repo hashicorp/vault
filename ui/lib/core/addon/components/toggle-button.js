@@ -1,5 +1,6 @@
 import Component from '@ember/component';
 import { set, get, defineProperty, computed } from '@ember/object';
+import layout from '../templates/components/toggle-button';
 
 /**
  * @module ToggleButton
@@ -22,6 +23,7 @@ import { set, get, defineProperty, computed } from '@ember/object';
  * @param closedLabel=More options {String} - The message to display when the toggle is closed.
  */
 export default Component.extend({
+  layout,
   tagName: 'button',
   type: 'button',
   toggleTarget: null,
