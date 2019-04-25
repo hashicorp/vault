@@ -472,16 +472,16 @@ func TestBackend_StaticRole_RoleUpgrade_Check(t *testing.T) {
 }
 
 const testRoleStaticCreate = `
-CREATE ROLE "{{name}}" WITH
+CREATE ROLE "{{username}}" WITH
   LOGIN
   PASSWORD '{{password}}';
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";
 `
 
 const testRoleStaticUpdate = `
-ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
+ALTER USER "{{username}}" WITH PASSWORD '{{password}}';
 `
 
 const testRoleStaticUpdateRotation = `
-ALTER USER "{{name}}" WITH PASSWORD '{{password}}';GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+ALTER USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";
 `
