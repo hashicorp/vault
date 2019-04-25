@@ -42,7 +42,7 @@
   </div>
 </div>
 {{#each mounts as |mount|}}
-  {{#unless (or mount.local (includes singletonMountTypes mount.type))}}
+  {{#unless (or mount.local (contains singletonMountTypes mount.type))}}
     {{!-- auth mounts have apiPath, secret mounts use path --}}
     {{#with (or mount.apiPath mount.path) as |path| }}
       <label for="filter-{{mount.accessor}}" class="columns is-mobile is-gapless is-marginless table">
@@ -54,7 +54,7 @@
                 id="filter-{{mount.accessor}}"
                 type="checkbox"
                 class="styled"
-                checked={{includes config.paths path}}
+                checked={{contains config.paths path}}
                 onChange={{action 'addOrRemovePath' path}}
                 data-test-mount-filter="{{mount.type}}"
               />
