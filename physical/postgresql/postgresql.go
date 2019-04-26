@@ -166,7 +166,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		" SELECT ha_value FROM " + quoted_ha_table + " WHERE NOW() <= valid_until AND ha_key = $1 ",
 		haUpsertLockIdentityExec:
 		// $1=identity $2=ha_key $3=ha_value $4=TTL in seconds
-		//update either steal expired lock OR update expiry for lock owned by me
+		// update either steal expired lock OR update expiry for lock owned by me
 		" INSERT INTO " + quoted_ha_table + " as t (ha_identity, ha_key, ha_value, valid_until) VALUES ($1, $2, $3, NOW() + $4 * INTERVAL '1 seconds'  ) " +
 			" ON CONFLICT (ha_key) DO " +
 			" UPDATE SET (ha_identity, ha_key, ha_value, valid_until) = ($1, $2, $3, NOW() + $4 * INTERVAL '1 seconds') " +
