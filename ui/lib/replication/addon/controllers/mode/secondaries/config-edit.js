@@ -24,12 +24,8 @@ export default Controller.extend({
       const flash = this.get('flashMessages');
       const id = config.id;
       const redirectArgs = isDelete
-        ? [
-            'vault.cluster.replication.mode.secondaries',
-            this.model.cluster.get('name'),
-            this.get('replicationMode'),
-          ]
-        : ['vault.cluster.replication.mode.secondaries.config-show', id];
+        ? ['mode.secondaries', this.get('replicationMode')]
+        : ['mode.secondaries.config-show', id];
       const modelMethod = isDelete ? config.destroyRecord : config.save;
 
       modelMethod

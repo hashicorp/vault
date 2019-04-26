@@ -41,7 +41,7 @@ export default Base.extend({
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')
     ) {
-      return this.transitionTo('mode', cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', replicationMode);
     }
   },
 
