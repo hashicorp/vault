@@ -11,7 +11,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/dgraph-io/badger"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
@@ -44,8 +43,7 @@ type FSM struct {
 	logger     log.Logger
 	permitPool *physical.PermitPool
 
-	db     *bolt.DB
-	badger *badger.DB
+	db *bolt.DB
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -54,37 +52,22 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	if !ok {
 		return nil, fmt.Errorf("'path' must be set")
 	}
-	dbType := conf["db_type"]
 
-	var err error
-	var boltDB *bolt.DB
-	var badgerDB *badger.DB
-	switch dbType {
-	case "badger":
-		opts := badger.DefaultOptions
-		opts.Dir = path
-		opts.ValueDir = path
-		badgerDB, err = badger.Open(opts)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		dbPath := filepath.Join(path, "vault.db")
+	dbPath := filepath.Join(path, "vault.db")
 
-		boltDB, err = bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
-		if err != nil {
-			return nil, err
-		}
-
-		// make sure we have a bucket created
-		err = boltDB.Update(func(tx *bolt.Tx) error {
-			_, err := tx.CreateBucketIfNotExists(bucketName)
-			if err != nil {
-				return fmt.Errorf("create bucket: %s", err)
-			}
-			return nil
-		})
+	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return nil, err
 	}
+
+	// make sure we have a bucket created
+	err = boltDB.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists(bucketName)
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +77,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		logger:     logger,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
 
-		badger: badgerDB,
-		db:     boltDB,
+		db: boltDB,
 	}, nil
 }
 
@@ -104,12 +86,6 @@ func (b *FSM) Delete(ctx context.Context, path string) error {
 
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
-
-	if b.badger != nil {
-		return b.badger.Update(func(txn *badger.Txn) error {
-			return txn.Delete([]byte(path))
-		})
-	}
 
 	return b.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(bucketName).Delete([]byte(path))
@@ -124,35 +100,6 @@ func (b *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 
 	var valCopy []byte
 	var found bool
-
-	if b.badger != nil {
-		err := b.badger.View(func(txn *badger.Txn) error {
-			item, err := txn.Get([]byte(path))
-			if err == badger.ErrKeyNotFound {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-
-			found = true
-			valCopy, err = item.ValueCopy(nil)
-
-			return err
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if !found {
-			return nil, nil
-		}
-
-		return &physical.Entry{
-			Key:   path,
-			Value: valCopy,
-		}, nil
-	}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 
@@ -184,12 +131,6 @@ func (b *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
-	if b.badger != nil {
-		return b.badger.Update(func(txn *badger.Txn) error {
-			return txn.Set([]byte(entry.Key), entry.Value)
-		})
-	}
-
 	// Start a write transaction.
 	return b.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(bucketName).Put([]byte(entry.Key), entry.Value)
@@ -202,36 +143,6 @@ func (b *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 	var keys []string
-
-	if b.badger != nil {
-		err := b.badger.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			opts.PrefetchValues = false
-			it := txn.NewIterator(opts)
-			defer it.Close()
-			prefixBytes := []byte(prefix)
-			for it.Seek(prefixBytes); it.ValidForPrefix(prefixBytes); it.Next() {
-				item := it.Item()
-				key := string(item.Key())
-
-				key = strings.TrimPrefix(key, prefix)
-				if i := strings.Index(key, "/"); i == -1 {
-					// Add objects only from the current 'folder'
-					keys = append(keys, key)
-				} else if i != -1 {
-					// Add truncated 'folder' paths
-					keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
-				}
-
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		return keys, nil
-	}
 
 	err := b.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
@@ -284,11 +195,6 @@ func (b *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 func (b *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	return &snapshotter{
 		f: func(sink raft.SnapshotSink) error {
-			if b.badger != nil {
-				_, err := b.badger.Backup(sink, 0)
-				return err
-			}
-
 			err := b.db.View(func(tx *bolt.Tx) error {
 				_, err := tx.WriteTo(sink)
 				return err

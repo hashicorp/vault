@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,6 +48,9 @@ type RaftBackend struct {
 	logStore        raft.LogStore
 	stableStore     raft.StableStore
 	bootstrapConfig *raft.Configuration
+
+	dataDir string
+	localID string
 }
 
 // EnsurePath is used to make sure a path exists
@@ -117,6 +121,16 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snap = snapshots
 	}
 
+	localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
+	if err != nil {
+		return nil, err
+	}
+
+	var localID string
+	if len(localIDRaw) > 0 {
+		localID = string(localIDRaw)
+	}
+
 	return &RaftBackend{
 		logger:      logger,
 		fsm:         fsm,
@@ -124,6 +138,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		logStore:    log,
 		stableStore: stable,
 		snapStore:   snap,
+		dataDir:     path,
+		localID:     localID,
 	}, nil
 }
 
@@ -131,8 +147,6 @@ type Peer struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
 }
-
-var myID string
 
 func (b *RaftBackend) Bootstrap(ctx context.Context, localID string, peers []Peer) error {
 	b.l.Lock()
@@ -147,7 +161,11 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, localID string, peers []Pee
 		return errors.New("error bootstrapping cluster: cluster already has state")
 	}
 
-	myID = localID
+	b.localID = localID
+	if err := ioutil.WriteFile(filepath.Join(b.dataDir, "node-id"), []byte(localID), 0600); err != nil {
+		return err
+	}
+
 	raftConfig := &raft.Configuration{
 		Servers: make([]raft.Server, len(peers)),
 	}
@@ -171,6 +189,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	if b.raft != nil {
 		b.logger.Debug("raft already started, not setting up cluster")
 		return nil
+	}
+
+	if len(b.localID) == 0 {
+		return errors.New("no local node id configured")
 	}
 
 	raftConfig := raft.DefaultConfig()
@@ -204,7 +226,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 		b.raftTransport = transport
 	}
 
-	raftConfig.LocalID = raft.ServerID(myID)
+	raftConfig.LocalID = raft.ServerID(b.localID)
 
 	// Set up a channel for reliable leader notifications.
 	raftNotifyCh := make(chan bool, 1)
