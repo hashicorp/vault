@@ -709,7 +709,14 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 
 func valueInSlice(v interface{}, list []interface{}) bool {
 	for _, el := range list {
-		if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
+		if el == nil || v == nil {
+			// It doesn't seem possible to set up a nil entry in the list, but it is possible
+			// to pass in a null entry in the API request being checked. Just in case,
+			// nil will match nil.
+			if el == v {
+				return true
+			}
+		} else if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
 			item := el.(string)
 			val := v.(string)
 
