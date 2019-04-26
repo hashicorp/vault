@@ -194,6 +194,10 @@ $ curl \
 | :------------------------| :------------------------ |
 | `GET`    | `/gcp/roleset/:name`     |
 
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
+
 ### Sample Request
 
 ```
@@ -234,10 +238,6 @@ $ curl \
 | `LIST`   | `/gcp/rolesets`          |
 
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/gcp/roleset`           |
-
 ### Sample Request
 
 ```
@@ -267,6 +267,10 @@ This endpoint deletes an existing roleset by the given name.
 | Method   | Path                     |
 | :------------------------| :------------------------ |
 | `DELETE`    | `/gcp/roleset/:name`     |
+
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
 
 ### Sample Request
 
