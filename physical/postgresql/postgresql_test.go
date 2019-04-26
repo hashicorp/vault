@@ -59,7 +59,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 	pg := b1.(*PostgreSQLBackend)
 
-	//Read postgres version to test basic connects works
+	// Read postgres version to test basic connects works
 	var pgversion string
 	if err = pg.client.QueryRow("SELECT current_setting('server_version_num')").Scan(&pgversion); err != nil {
 		t.Fatalf("Failed to check for Postgres version: %v", err)
@@ -296,7 +296,7 @@ func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retC
 	if err != nil {
 		t.Fatalf("Failed to connect to docker: %s", err)
 	}
-	//using 11.1 which is currently latest, use hard version for stabillity of tests
+	// using 11.1 which is currently latest, use hard version for stability of tests
 	resource, err := pool.Run("postgres", "11.1", []string{})
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
@@ -359,7 +359,7 @@ func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend
 			" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
 			" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
 			" ha_value                                    TEXT COLLATE \"C\", " +
-			" valid_until                                 TIMESTAMP NOT NULL, " +
+			" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
 			" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
 			" ); "
 

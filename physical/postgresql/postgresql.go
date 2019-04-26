@@ -114,12 +114,6 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		maxParInt = physical.DefaultParallelOperations
 	}
 
-	var hae bool = false
-	haestr, ok := conf["ha_enabled"]
-	if ok && haestr == "true" {
-		hae = true
-	}
-
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
@@ -162,7 +156,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 			" UNION SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " + quoted_table +
 			" WHERE parent_path LIKE $1 || '%'",
 		haGetLockValueQuery:
-		//only read non expired data
+		// only read non expired data
 		" SELECT ha_value FROM " + quoted_ha_table + " WHERE NOW() <= valid_until AND ha_key = $1 ",
 		haUpsertLockIdentityExec:
 		// $1=identity $2=ha_key $3=ha_value $4=TTL in seconds
@@ -177,7 +171,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		" DELETE FROM " + quoted_ha_table + " WHERE ha_identity=$1 AND ha_key=$2 ",
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
-		haEnabled:  hae,
+		haEnabled:  conf["ha_enabled"] == "true",
 	}
 
 	return m, nil
@@ -369,11 +363,15 @@ func (l *PostgreSQLLock) Value() (bool, string, error) {
 	var result string
 	err := pg.client.QueryRow(pg.haGetLockValueQuery, l.key).Scan(&result)
 
-	if err != nil {
+	switch err {
+	case nil:
+		return true, result, nil
+	case sql.ErrNoRows:
+		return false, "", nil
+	default:
 		return false, "", err
-	}
 
-	return true, result, nil
+	}
 }
 
 // tryToLock tries to create a new item in PostgreSQL every `retryInterval`.
@@ -383,11 +381,12 @@ func (l *PostgreSQLLock) Value() (bool, string, error) {
 // is closed.
 func (l *PostgreSQLLock) tryToLock(stop <-chan struct{}, success chan struct{}, errors chan error) {
 	ticker := time.NewTicker(l.retryInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-stop:
-			ticker.Stop()
+			return
 		case <-ticker.C:
 			gotlock, err := l.writeItem()
 			switch {
@@ -395,7 +394,6 @@ func (l *PostgreSQLLock) tryToLock(stop <-chan struct{}, success chan struct{}, 
 				errors <- err
 				return
 			case gotlock:
-				ticker.Stop()
 				close(success)
 				return
 			}
@@ -430,7 +428,7 @@ func (l *PostgreSQLLock) writeItem() (bool, error) {
 		return false, err
 	}
 	if sqlResult == nil {
-		return false, fmt.Errorf("no error but no sql result")
+		return false, fmt.Errorf("empty SQL response received")
 	}
 
 	ar, err := sqlResult.RowsAffected()
