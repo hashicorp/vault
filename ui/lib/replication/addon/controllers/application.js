@@ -44,7 +44,6 @@ export default Controller.extend(DEFAULTS, {
 
   submitSuccess(resp, action) {
     const cluster = this.get('model');
-    const store = this.get('store');
     if (!cluster) {
       return;
     }
@@ -58,18 +57,11 @@ export default Controller.extend(DEFAULTS, {
         primary_api_addr: null,
         primary_cluster_addr: null,
       });
-      return cluster;
+      return cluster.reload();
     }
     this.reset();
-    return store
-      .adapterFor('cluster')
-      .replicationStatus()
-      .then(status => {
-        return store.pushPayload('cluster', status);
-      })
-      .finally(() => {
-        this.set('loading', false);
-      });
+    this.send('refresh');
+    return;
   },
 
   submitHandler(action, clusterMode, data, event) {
@@ -124,6 +116,10 @@ export default Controller.extend(DEFAULTS, {
         token: null,
         id: null,
       });
+    },
+    refresh() {
+      // bubble to the route
+      return true;
     },
   },
 });

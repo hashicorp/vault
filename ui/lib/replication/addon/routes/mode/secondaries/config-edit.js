@@ -14,14 +14,14 @@ export default Base.extend({
 
   redirect(model) {
     const cluster = model.cluster;
-    const replicationMode = this.get('replicationMode');
+    let replicationMode = this.paramsFor('mode').replication_mode;
     if (
       !this.get('version.hasPerfReplication') ||
       replicationMode !== 'performance' ||
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')
     ) {
-      return this.transitionTo('mode', cluster.get('name'), replicationMode);
+      return this.transitionTo('mode', replicationMode);
     }
   },
 });

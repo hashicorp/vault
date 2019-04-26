@@ -1,4 +1,3 @@
-import { on } from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
@@ -14,10 +13,8 @@ export default Route.extend({
     }
   },
   model() {
+    const replicationMode = this.paramsFor(this.routeName).replication_mode;
+    this.replicationMode.setMode(replicationMode);
     return this.modelFor('application');
   },
-  setReplicationMode: on('activate', 'enter', function() {
-    const replicationMode = this.paramsFor(this.routeName).replication_mode;
-    this.get('replicationMode').setMode(replicationMode);
-  }),
 });
