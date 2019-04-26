@@ -173,7 +173,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 			" WHERE (t.valid_until < NOW() AND t.ha_key = $2) OR " +
 			" (t.ha_identity = $1 AND t.ha_key = $2)  ",
 		haDeleteLockExec:
-		//$1=ha_identity $2=ha_key
+		// $1=ha_identity $2=ha_key
 		" DELETE FROM " + quoted_ha_table + " WHERE ha_identity=$1 AND ha_key=$2 ",
 		logger:     logger,
 		permitPool: physical.NewPermitPool(maxParInt),
