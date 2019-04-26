@@ -152,7 +152,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
 			}
 
 			m := map[string]string{
-				"username": staticUser.Username,
+				"name":     staticUser.Username,
 				"password": password,
 			}
 			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {

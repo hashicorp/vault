@@ -478,16 +478,16 @@ DROP ROLE IF EXISTS "{{name}}";
 `
 
 const testPostgresStaticRole = `
-CREATE ROLE "{{username}}" WITH
+CREATE ROLE "{{name}}" WITH
   LOGIN
   PASSWORD '{{password}}';
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
 const testPostgresStaticRoleRotate = `
-ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
+ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
 `
 
 const testPostgresStaticRoleGrant = `
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{username}}";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
