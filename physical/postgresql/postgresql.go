@@ -355,7 +355,7 @@ func (l *PostgreSQLLock) Unlock() error {
 		l.renewTicker.Stop()
 	}
 
-	//Delete lock owned by me
+	// Delete lock owned by me
 	_, err := pg.client.Exec(pg.haDeleteLockExec, l.identity, l.key)
 	return err
 }
