@@ -304,8 +304,8 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		peerID := d.Get("server_id").(string)
-		if len(peerID) == 0 {
+		serverID := d.Get("server_id").(string)
+		if len(serverID) == 0 {
 			return logical.ErrorResponse("no server_id provided"), logical.ErrInvalidRequest
 		}
 		answerRaw := d.Get("answer").(string)
@@ -322,7 +322,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("could not base64 decode answer"), logical.ErrInvalidRequest
 		}
 
-		expectedAnswer, ok := pendingRaftPeers[peerID]
+		expectedAnswer, ok := pendingRaftPeers[serverID]
 		if !ok {
 			// TODO: Should we return error or hid the fact the peer ID was
 			// invalid
@@ -330,7 +330,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 		}
 
 		// TODO: Should we delete after every attempt or allow multiple tries?
-		delete(pendingRaftPeers, peerID)
+		delete(pendingRaftPeers, serverID)
 
 		if subtle.ConstantTimeCompare(answer, expectedAnswer) == 0 {
 			return logical.ErrorResponse("invalid answer given"), logical.ErrInvalidRequest
@@ -349,7 +349,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, err
 		}
 
-		if err := raftStorage.AddPeer(ctx, peerID, clusterAddr); err != nil {
+		if err := raftStorage.AddPeer(ctx, serverID, clusterAddr); err != nil {
 			return nil, err
 		}
 

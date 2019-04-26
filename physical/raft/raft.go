@@ -125,7 +125,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	var localID string
 	{
 		// Determine the local node ID
-		localID = conf["node-id"]
+		localID = conf["node_id"]
 
 		if len(localID) == 0 {
 			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
