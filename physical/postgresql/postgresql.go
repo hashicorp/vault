@@ -121,17 +121,21 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 	db.SetMaxOpenConns(maxParInt)
 
-	// Determine if we should use an upsert function (versions < 9.5)
-	var upsert_required bool
-	upsert_required_query := "SELECT current_setting('server_version_num')::int < 90500"
-	if err := db.QueryRow(upsert_required_query).Scan(&upsert_required); err != nil {
+	// Determine if we should use a function to work around lack of upsert (versions < 9.5)
+	var upsertAvailable bool
+	upsertAvailableQuery := "SELECT current_setting('server_version_num')::int >= 90500"
+	if err := db.QueryRow(upsertAvailableQuery).Scan(&upsertAvailable); err != nil {
 		return nil, errwrap.Wrapf("failed to check for native upsert: {{err}}", err)
+	}
+
+	if !upsertAvailable && conf["ha_enabled"] == "true" {
+		return nil, fmt.Errorf("ha_enabled=true in config but PG version doesn't support HA, must be at least 9.5")
 	}
 
 	// Setup our put strategy based on the presence or absence of a native
 	// upsert.
 	var put_query string
-	if upsert_required {
+	if !upsertAvailable {
 		put_query = "SELECT vault_kv_put($1, $2, $3, $4)"
 	} else {
 		put_query = "INSERT INTO " + quoted_table + " VALUES($1, $2, $3, $4)" +
