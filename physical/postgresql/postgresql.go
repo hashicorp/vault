@@ -423,7 +423,7 @@ func (l *PostgreSQLLock) writeItem() (bool, error) {
 	pg.permitPool.Acquire()
 	defer pg.permitPool.Release()
 
-	//Try steal lock or update expiry on my lock
+	// Try steal lock or update expiry on my lock
 
 	sqlResult, err := pg.client.Exec(pg.haUpsertLockIdentityExec, l.identity, l.key, l.value, l.ttlSeconds)
 	if err != nil {
