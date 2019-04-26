@@ -332,7 +332,7 @@ func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retC
 
 func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend) {
 	var err error
-	//Setup tables and indexes if not exists.
+	// Setup tables and indexes if not exists.
 	createTableSQL := fmt.Sprintf(
 		"  CREATE TABLE IF NOT EXISTS %v ( "+
 			"  parent_path TEXT COLLATE \"C\" NOT NULL, "+
