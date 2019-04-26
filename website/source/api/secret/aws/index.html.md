@@ -230,6 +230,9 @@ updated with the new attributes.
   TTL are capped to `max_sts_ttl`). Valid only when `credential_type` is one of 
   `assumed_role` or `federation_token`.
 
+- `user_path` `(string)` - The path for the user name. Valid only when
+  `credential_type` is `iam_user`. Default is `/`
+
 Legacy parameters:
 
 These parameters are supported for backwards compatibility only. They cannot be

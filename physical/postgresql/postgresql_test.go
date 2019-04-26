@@ -7,11 +7,12 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
-	"github.com/ory/dockertest"
 )
 
 func TestPostgreSQLBackend(t *testing.T) {
@@ -305,10 +306,7 @@ func prepareTestContainer(t *testing.T, logger log.Logger) (cleanup func(), retC
 	retConnString = fmt.Sprintf("postgres://postgres@localhost:%v/postgres?sslmode=disable", resource.GetPort("5432/tcp"))
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup docker Postgres: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	// Provide a test function to the pool to test if docker instance service is up.

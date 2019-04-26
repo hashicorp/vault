@@ -661,6 +661,7 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"local":       entry.Local,
 		"seal_wrap":   entry.SealWrap,
 		"options":     entry.Options,
+		"uuid":        entry.UUID,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
