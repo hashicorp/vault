@@ -5,9 +5,11 @@
   ],
   "dependencies": {
     "ember-auto-import": "*",
+    "ember-basic-dropdown": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-htmlbars-inline-precompile": "*",
     "ember-cli-babel": "*",
+    "ember-cli-clipboard": "*",
     "ember-radio-button": "*",
     "ember-composable-helpers": "*",
     "ember-cli-string-helpers": "*",
