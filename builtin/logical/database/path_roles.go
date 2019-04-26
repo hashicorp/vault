@@ -309,7 +309,6 @@ func pathRoleReadCommon(role *roleEntry) map[string]interface{} {
 }
 
 func (b *databaseBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// TODO: update for static
 	path := "role/"
 	if req.Path == "static-roles/" {
 		path = "static-role/"
@@ -576,12 +575,6 @@ type staticAccount struct {
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
-
-	// previousPassword is used to preserve the previous password during a
-	// rotation. If any step in the process fails, we have record of the previous
-	// password and can attempt to roll back.
-	// TODO verify this is needed
-	previousPassword string
 }
 
 // NextRotationTime calculates the next rotation by adding the Rotation Period

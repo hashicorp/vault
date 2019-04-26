@@ -101,18 +101,6 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				Data:      data,
 			}
 
-			// TODO path role exist check
-			// exists, err := b.pathRoleExistenceCheck(context.Background(), req, &framework.FieldData{
-			// 	Raw:    data,
-			// 	Schema: pathRoles(b).Fields,
-			// })
-			// if err != nil {
-			// 	t.Fatal(err)
-			// }
-			// if exists {
-			// 	t.Fatal("expected not exists")
-			// }
-
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 			if err != nil || (resp != nil && resp.IsError()) {
 				if tc.err == nil {

@@ -323,7 +323,6 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	// TODO use default rotation?
 	if len(statements.Creation) == 0 {
 		return "", "", errors.New("empty creation statements")
 	}
@@ -346,7 +345,6 @@ func (m *MySQL) SetCredentials(ctx context.Context, statements dbplugin.Statemen
 
 	// Check if the role exists
 	var exists bool
-
 	err = db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user=?);", username).Scan(&exists)
 	if err != nil && err != sql.ErrNoRows {
 		return "", "", err
