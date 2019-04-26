@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	uuid "github.com/hashicorp/go-uuid"
 	physicalstd "github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/physical/raft"
 
@@ -147,18 +146,13 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 
 	// If we have clustered storage, set it up now
 	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
-		localID, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
-		}
-
 		if err := c.startClusterListener(ctx); err != nil {
 			return nil, errwrap.Wrapf("could not start cluster listener: {{err}}", err)
 		}
 
-		if err := c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, localID, []raft.Peer{
+		if err := c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, []raft.Peer{
 			{
-				ID:      localID,
+				ID:      c.underlyingPhysical.(*raft.RaftBackend).NodeID(),
 				Address: c.clusterListener.Addr().String(),
 			},
 		}); err != nil {

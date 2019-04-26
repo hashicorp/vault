@@ -12,6 +12,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -121,14 +122,37 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snap = snapshots
 	}
 
-	localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
-	if err != nil {
-		return nil, err
-	}
-
 	var localID string
-	if len(localIDRaw) > 0 {
-		localID = string(localIDRaw)
+	{
+		// Determine the local node ID
+		localID = conf["node-id"]
+
+		if len(localID) == 0 {
+			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
+			switch {
+			case err == nil:
+				if len(localIDRaw) > 0 {
+					localID = string(localIDRaw)
+				}
+			case os.IsNotExist(err):
+			default:
+				return nil, err
+
+			}
+		}
+
+		if len(localID) == 0 {
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+				return nil, err
+			}
+
+			localID = id
+		}
 	}
 
 	return &RaftBackend{
@@ -148,7 +172,11 @@ type Peer struct {
 	Address string `json:"address"`
 }
 
-func (b *RaftBackend) Bootstrap(ctx context.Context, localID string, peers []Peer) error {
+func (b *RaftBackend) NodeID() string {
+	return b.localID
+}
+
+func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -159,11 +187,6 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, localID string, peers []Pee
 
 	if hasState {
 		return errors.New("error bootstrapping cluster: cluster already has state")
-	}
-
-	b.localID = localID
-	if err := ioutil.WriteFile(filepath.Join(b.dataDir, "node-id"), []byte(localID), 0600); err != nil {
-		return err
 	}
 
 	raftConfig := &raft.Configuration{

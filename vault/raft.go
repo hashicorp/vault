@@ -82,6 +82,11 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		return false, errors.New("No leader address provided")
 	}
 
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
+		return false, errors.New("raft storage not configured")
+	}
+
 	join := func() error {
 		// Unwrap the token
 		clientConf := api.DefaultConfig()
@@ -98,7 +103,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		}
 
 		secret, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
-			"cluster_addr": c.clusterAddr,
+			"server_id": raftStorage.NodeID(),
 		})
 		if err != nil {
 			return errwrap.Wrapf("error during bootstrap init call: {{err}}", err)
@@ -120,10 +125,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 			return errwrap.Wrapf("error decoding challenge: {{err}}", err)
 		}
-		peerIDRaw, ok := secret.Data["peer_id"]
-		if !ok {
-			return errors.New("error during raft bootstrap call, no peer id given")
-		}
 
 		sealAccess := c.seal.GetAccess()
 		pt, err := sealAccess.Decrypt(ctx, eBlob)
@@ -135,7 +136,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 		if err := answerReq.SetJSONBody(map[string]interface{}{
 			"answer":       base64.StdEncoding.EncodeToString(pt),
 			"cluster_addr": c.clusterListenerAddrs[0].String(),
-			"peer_id":      peerIDRaw.(string),
+			"server_id":    raftStorage.NodeID(),
 		}); err != nil {
 			return err
 		}
@@ -153,20 +154,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry boo
 			return err
 		}
 
-		fmt.Println(answerResp)
 		tlsCert, err := base64.StdEncoding.DecodeString(answerResp.Data.TLSCertRaw)
 		if err != nil {
 			return errwrap.Wrapf("error decoding tls cert: {{err}}", err)
 		}
 
-		c.underlyingPhysical.(*raft.RaftBackend).Bootstrap(ctx, peerIDRaw.(string), answerResp.Data.Peers)
+		raftStorage.Bootstrap(ctx, answerResp.Data.Peers)
 
 		err = c.startClusterListener(ctx)
 		if err != nil {
 			return errwrap.Wrapf("error starting cluster: {{err}}", err)
 		}
 
-		c.underlyingPhysical.(*raft.RaftBackend).SetupCluster(ctx, &physicalstd.NetworkConfig{
+		raftStorage.SetupCluster(ctx, &physicalstd.NetworkConfig{
 			Addr:      c.clusterListenerAddrs[0],
 			Cert:      tlsCert,
 			KeyParams: answerResp.Data.TLSKey,

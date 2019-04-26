@@ -218,7 +218,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/bootstrap/answer",
 
 			Fields: map[string]*framework.FieldSchema{
-				"peer_id": {
+				"server_id": {
 					Type: framework.TypeString,
 				},
 				"answer": {
@@ -243,7 +243,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/bootstrap/challenge",
 
 			Fields: map[string]*framework.FieldSchema{
-				"cluster_addr": {
+				"server_id": {
 					Type: framework.TypeString,
 				},
 			},
@@ -265,10 +265,12 @@ var pendingRaftPeers = make(map[string][]byte)
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		peerID, err := uuid.GenerateUUID()
-		if err != nil {
-			return nil, err
+		serverID := d.Get("server_id").(string)
+		if len(serverID) == 0 {
+			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
 		}
+
+		// TODO: Make sure the serverID isn't already part of the cluster?
 
 		uuid, err := uuid.GenerateRandomBytes(16)
 		if err != nil {
@@ -285,11 +287,10 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			return nil, err
 		}
 
-		pendingRaftPeers[peerID] = uuid
+		pendingRaftPeers[serverID] = uuid
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"peer_id":   peerID,
 				"challenge": base64.StdEncoding.EncodeToString(protoBlob),
 			},
 		}, nil
@@ -303,9 +304,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
 
-		peerID := d.Get("peer_id").(string)
+		peerID := d.Get("server_id").(string)
 		if len(peerID) == 0 {
-			return logical.ErrorResponse("no peer_id provided"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("no server_id provided"), logical.ErrInvalidRequest
 		}
 		answerRaw := d.Get("answer").(string)
 		if len(answerRaw) == 0 {
@@ -352,7 +353,6 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, err
 		}
 
-		// TODO: return list of peers here
 		peers, err := raftStorage.Peers(ctx)
 		if err != nil {
 			return nil, err
