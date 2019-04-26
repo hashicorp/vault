@@ -654,7 +654,7 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 			// This should not renew the lock if the lock was deleted from under you.
 			err := l.updateItem(false)
 			if err != nil {
-				l.backend.logger.Error("error renewing leadership lock", err)
+				l.backend.logger.Error("error renewing leadership lock", "error", err)
 			}
 		case <-done:
 			ticker.Stop()
@@ -686,8 +686,8 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 	_, err := l.backend.client.UpdateItem(&dynamodb.UpdateItemInput{
 		TableName: aws.String(l.backend.table),
 		Key: map[string]*dynamodb.AttributeValue{
-			"Path": &dynamodb.AttributeValue{S: aws.String(recordPathForVaultKey(l.key))},
-			"Key":  &dynamodb.AttributeValue{S: aws.String(recordKeyForVaultKey(l.key))},
+			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
+			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
 		},
 		UpdateExpression: aws.String("SET #value=:value, #identity=:identity, #expires=:expires"),
 		// If both key and path already exist, we can only write if
@@ -703,10 +703,10 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 			"#value":    aws.String("Value"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":identity": &dynamodb.AttributeValue{B: []byte(l.identity)},
-			":value":    &dynamodb.AttributeValue{B: []byte(l.value)},
-			":now":      &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(now.UnixNano(), 10))},
-			":expires":  &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
+			":identity": {B: []byte(l.identity)},
+			":value":    {B: []byte(l.value)},
+			":now":      {N: aws.String(strconv.FormatInt(now.UnixNano(), 10))},
+			":expires":  {N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
 		},
 	})
 	return err
