@@ -24,6 +24,23 @@ Both methods allow additional processing of the claims data in the JWT. Some of
 the concepts common to both methods will be covered first, followed by specific
 examples of OIDC and JWT usage.
 
+### JWT Verification
+
+JWT signatures will be verified against public keys from the issuer. This process can be done in
+three different ways, though only one method may be configured for a single backend:
+
+- **Static Keys**. A set of public keys is stored directly in the backend configuration.
+
+- **JWKS**. A JSON Web Key Set ([JWKS](https://tools.ietf.org/html/rfc7517)) URL (and optional
+certificate chain) is configured. Keys will be fetched from this endpoint during authentication.
+
+- **OIDC Discovery**. An OIDC Discovery URL (and optional certificate chain) is configured. Keys
+will be fetched from this URL during authentication. When OIDC Discovery is used, OIDC validation
+criteria (e.g. `iss`, `aud`, etc.) will be applied.
+
+If multiple methods are needed, another instance of the backend can be mounted and configured
+at a different path.
+
 ### Bound Claims
 
 Once a JWT has been validated as being properly signed and not expired, the
