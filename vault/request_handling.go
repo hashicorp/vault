@@ -1035,6 +1035,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		var entity *identity.Entity
 		auth = resp.Auth
 
+		// Only the token store can toggle this off, and that's via a different
+		// path since it's not a login request; it's explicitly disallowed
+		// above
+		auth.Renewable = true
+
 		mEntry := c.router.MatchingMountEntry(ctx, req.Path)
 
 		if auth.Alias != nil &&
@@ -1110,7 +1115,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, ErrInternalError
 		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, policyutil.AddDefaultPolicy)
+		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
 		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
 
 		// Prevent internal policies from being assigned to tokens. We check
