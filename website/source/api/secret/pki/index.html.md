@@ -545,7 +545,8 @@ $ curl \
 
 This endpoint allows submitting the signed CA certificate corresponding to a
 private key generated via `/pki/intermediate/generate`. The certificate should
-be submitted in PEM format; see the documentation for `/pki/config/ca` for some
+be submitted in PEM format; see the documentation for
+[/pki/config/ca](/api/secret/pki/index.html#submit-ca-information) for some
 hints on submitting.
 
 | Method   | Path                         |

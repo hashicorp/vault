@@ -13,6 +13,10 @@ IMPROVEMENTS:
 
 BUG FIXES: 
 
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * replication: Properly update mount entry cache on a secondary to apply all
+   new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
 

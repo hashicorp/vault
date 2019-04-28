@@ -123,16 +123,13 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
-		if _, err := db.Exec("USE " + database); err != nil {
-			return nil, errwrap.Wrapf("failed to switch mssql database: {{err}}", err)
-		}
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM " + database + ".sys.schemas WHERE name = '" + schema + "'").Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
-			if _, err := db.Exec("CREATE SCHEMA " + schema); err != nil {
+			if _, err := db.Exec("USE " + database + "; EXEC ('CREATE SCHEMA " + schema + "')"); err != nil {
 				return nil, errwrap.Wrapf("failed to create mssql schema: {{err}}", err)
 			}
 
