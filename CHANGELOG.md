@@ -14,6 +14,7 @@ IMPROVEMENTS:
 BUG FIXES: 
 
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
+ * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
  * replication: Properly update mount entry cache on a secondary to apply all
