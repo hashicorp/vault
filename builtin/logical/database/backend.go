@@ -297,11 +297,11 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		// that we can write to storage
 		time.Sleep(3 * time.Second)
 
-		b.Lock()
-		if b.credRotationQueue == nil {
-			b.credRotationQueue = queue.NewPriorityQueue()
-		}
-		b.Unlock()
+		// b.Lock()
+		// if b.credRotationQueue == nil {
+		// 	b.credRotationQueue = queue.NewPriorityQueue()
+		// }
+		// b.Unlock()
 
 		// create a context with a cancel method for processing any WAL entries and
 		// populating the queue
@@ -396,7 +396,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 			merr = multierror.Append(merr, err)
 			if resp.WALID != "" {
 				// Add their rotation to the queue
-				if err := b.credRotationQueue.PushItem(&queue.Item{
+				if err := b.pushItem(&queue.Item{
 					Key:      walEntry.RoleName,
 					Value:    walID,
 					Priority: walEntry.LastVaultRotation.Add(time.Second * 60).Unix(),
@@ -501,13 +501,6 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 		return
 	}
 
-	// guard against a nil queue
-	b.Lock()
-	if b.credRotationQueue == nil {
-		b.credRotationQueue = queue.NewPriorityQueue()
-	}
-	b.Unlock()
-
 	for _, roleName := range roles {
 		select {
 		case <-ctx.Done():
@@ -525,7 +518,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			continue
 		}
 
-		if err := b.credRotationQueue.PushItem(&queue.Item{
+		if err := b.pushItem(&queue.Item{
 			Key:      roleName,
 			Priority: role.StaticAccount.LastVaultRotation.Add(role.StaticAccount.RotationPeriod).Unix(),
 		}); err != nil {
@@ -621,7 +614,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 					item.Value = resp.WALID
 				}
 
-				if err := b.credRotationQueue.PushItem(item); err != nil {
+				if err := b.pushItem(item); err != nil {
 					b.logger.Warn("unable to push item on to queue", "error", err)
 				}
 				// go to next item
@@ -636,13 +629,13 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 			// update priority and push updated Item to the queue
 			nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
 			item.Priority = nextRotation.Unix()
-			if err := b.credRotationQueue.PushItem(item); err != nil {
+			if err := b.pushItem(item); err != nil {
 				b.logger.Warn("unable to push item on to queue", "error", err)
 			}
 		} else {
 			// highest priority item does not need rotation, so we push it back on
 			// the queue and break the loop
-			b.credRotationQueue.PushItem(item)
+			b.pushItem(item)
 			break
 		}
 	}
@@ -790,4 +783,26 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 
 	// the WAL has been deleted, return new setStaticAccountOutput without it
 	return &setStaticAccountOutput{RotationTime: lvr}, merr
+}
+
+func (b *databaseBackend) pushItem(item *queue.Item) error {
+	b.RLock()
+	unlockFunc := b.RUnlock
+	defer func() { unlockFunc() }()
+
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.PushItem(item)
+	}
+	// Upgrade lock
+	b.RUnlock()
+	b.Lock()
+	unlockFunc = b.Unlock
+
+	// check again
+	if b.credRotationQueue != nil {
+		return b.credRotationQueue.PushItem(item)
+	}
+	b.credRotationQueue = queue.NewPriorityQueue()
+
+	return b.credRotationQueue.PushItem(item)
 }

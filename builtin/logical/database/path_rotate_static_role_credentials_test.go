@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func TestBackend_StaticRole_Rotate(t *testing.T) {
+func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -158,7 +158,7 @@ func TestBackend_StaticRole_Rotate(t *testing.T) {
 // sanity check to make sure we don't allow an attempt of rotating credentials
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
-func TestBackend_StaticRole_NonStaticError(t *testing.T) {
+func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 

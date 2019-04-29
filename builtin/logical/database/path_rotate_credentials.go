@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -126,13 +127,21 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				Role:     role,
 			})
 			if err != nil {
-				return nil, err
+				b.logger.Warn("unable to rotate credentials in rotate-role", "error", err)
+				// update the priority to re-try this rotation and re-add the item to
+				// the queue
+				item.Priority = time.Now().Add(10 * time.Second).Unix()
+
+				// preserve the WALID if it was returned
+				if resp.WALID != "" {
+					item.Value = resp.WALID
+				}
+			} else {
+				item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
 			}
 
-			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
-
 			// Add their rotation to the queue
-			if err := b.credRotationQueue.PushItem(item); err != nil {
+			if err := b.pushItem(item); err != nil {
 				return nil, err
 			}
 		}

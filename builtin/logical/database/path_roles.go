@@ -484,7 +484,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	// Add their rotation to the queue
-	if err := b.credRotationQueue.PushItem(&queue.Item{
+	if err := b.pushItem(&queue.Item{
 		Key:      name,
 		Priority: lvr.Add(role.StaticAccount.RotationPeriod).Unix(),
 	}); err != nil {
@@ -504,7 +504,7 @@ func pathRoleCreateUpdateCommon(ctx context.Context, role *roleEntry, operation 
 			role.DBName = data.Get("db_name").(string)
 		}
 		if role.DBName == "" {
-			errors.New("empty database name attribute")
+			return errors.New("empty database name attribute")
 		}
 	}
 
