@@ -194,6 +194,10 @@ $ curl \
 | :------------------------| :------------------------ |
 | `GET`    | `/gcp/roleset/:name`     |
 
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
+
 ### Sample Request
 
 ```
@@ -234,10 +238,6 @@ $ curl \
 | `LIST`   | `/gcp/rolesets`          |
 
 
-| Method   | Path                     |
-| :------------------------| :------------------------ |
-| `LIST`   | `/gcp/roleset`           |
-
 ### Sample Request
 
 ```
@@ -258,6 +258,27 @@ $ curl \
      ]
    }
  }
+```
+
+## Delete Roleset
+
+This endpoint deletes an existing roleset by the given name.
+
+| Method   | Path                     |
+| :------------------------| :------------------------ |
+| `DELETE`    | `/gcp/roleset/:name`     |
+
+### Parameters
+
+- `name` (`string:<required>`): Name of the roleset to delete.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://127.0.0.1:8200/v1/gcp/roleset/my-token-roleset
 ```
 
 ## Generate Secret (IAM Service Account Creds): OAuth2 Access Token
