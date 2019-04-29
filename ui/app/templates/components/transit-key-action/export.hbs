@@ -1,5 +1,5 @@
 <form {{action 'doSubmit'
-       (hash param=(array exportKeyType (if exportVersion exportKeyVersion)))
+       (hash param=(compact (array exportKeyType (if exportVersion exportKeyVersion))))
        (hash wrapTTL=wrapTTL)
        on="submit" }}
 >
