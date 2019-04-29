@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
@@ -270,5 +271,5 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	return
+	return "", "", dbutil.Unimplemented()
 }

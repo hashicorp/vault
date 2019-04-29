@@ -1525,7 +1525,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	defer b.Cleanup(context.Background())
 
 	// allow initQueue to finish
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 	bd := b.(*databaseBackend)
 	if bd.credRotationQueue == nil {
 		t.Fatal("database backend had no credential rotation queue")
