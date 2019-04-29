@@ -9,10 +9,11 @@ description: |-
 
 # Vault Agent Cert AppRole Method
 
-The `cert` method reads uses the configured TLS cerificates from the agent config
+The `cert` method uses the configured TLS cerificates from the agent configuration
 and takes an optional `name` parameters. There is no option to use certificates
 which differ from those used in the `vault` block.
-See [Agent Overview](https://vaultproject.io/docs/agent/index.html)
+
+See TLS settings in the [Agent Overview](https://vaultproject.io/docs/agent/index.html)
 
 ## Configuration
 
