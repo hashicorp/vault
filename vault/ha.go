@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"sync/atomic"
 	"time"
 
@@ -577,7 +579,14 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				}
 
 				if err := c.heldHALock.Unlock(); err != nil {
-					c.logger.Error("unlocking HA lock failed", "error", err)
+					if err, ok := err.(awserr.Error); ok {
+						// Catch condition check failure, for case where unlock is called after
+						// new leader has already assumed the key ownership
+						if err.Code() != dynamodb.ErrCodeConditionalCheckFailedException {
+							c.logger.Error("unlocking HA lock failed", "error", err)
+						}
+					}
+
 				}
 				c.heldHALock = nil
 			}
