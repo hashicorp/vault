@@ -9,11 +9,11 @@ description: |-
 
 # Vault Agent Auto-Auth Cert Method
 
-The `cert` method uses the configured TLS cerificates from the agent configuration
-and takes an optional `name` parameters. There is no option to use certificates
-which differ from those used in the `vault` block.
+The `cert` method uses the configured TLS certificates from the `vault` stanza of
+the agent configuration and takes an optional `name` parameter. There is no option
+to use certificates which differ from those used in the `vault` stanza.
 
-See TLS settings in the [Agent Overview](https://vaultproject.io/docs/agent/index.html)
+See TLS settings in the [`vault` Stanza](https://vaultproject.io/docs/agent/index.html#vault-stanza)
 
 ## Configuration
 
