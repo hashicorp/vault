@@ -8,9 +8,12 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarButton @params={{array 'vault.cluster.settings.auth.enable'}}>
+    <ToolbarLink
+      @type="add"
+      @params={{array 'vault.cluster.settings.auth.enable'}}
+    >
       Enable new method
-    </ToolbarButton>
+    </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 

@@ -4,20 +4,19 @@
 
 .toolbar {
   background-color: $ui-gray-010;
-  border: 1px solid $ui-gray-200;
+  border: 1px solid $ui-gray-100;
   border-bottom-color: $ui-gray-300;
   border-top-color: $ui-gray-300;
   position: relative;
 
   &::after {
-    background: linear-gradient(to right, rgba($ui-gray-010, 0), $ui-gray-010);
-    border-radius: $radius-large;
-    bottom: 1px;
+    background: linear-gradient(to right, $ui-gray-010, rgba($ui-gray-010, 0));
+    bottom: 0;
     content: '';
     position: absolute;
-    right: 1px;
-    top: 1px;
-    width: $spacing-s;
+    right: 0;
+    top: 0;
+    width: $spacing-xxs;
     z-index: 2;
   }
 
@@ -72,7 +71,7 @@
   }
 }
 
-.toolbar-button {
+.toolbar-link {
   @extend .button;
   @extend .is-ghost;
   @extend .has-icon-right;

@@ -23,19 +23,19 @@
 <Toolbar>
   <ToolbarActions>
     <ToolbarDownloadButton
-      @classNames="toolbar-button"
+      @classNames="toolbar-link"
       @actionText="Download policy"
       @extension={{if (eq policyType "acl") model.format "sentinel"}}
       @filename=model.name
       @data=model.policy
     />
     {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
-      <ToolbarButton
+      <ToolbarLink
         @params={{array 'vault.cluster.policy.edit' model.id}}
-        data-test-policy-edit-toggle=true
+        @data-test-policy-edit-toggle=true
       >
         Edit policy
-      </ToolbarButton>
+      </ToolbarLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>

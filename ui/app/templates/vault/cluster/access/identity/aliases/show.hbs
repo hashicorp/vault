@@ -32,12 +32,12 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarButton
+    <ToolbarLink
       @params={{array "vault.cluster.access.identity.aliases.edit" model.id}}
-      data-test-alias-edit-link=true
+      @data-test-alias-edit-link=true
     >
       Edit {{lowercase (humanize model.identityType)}}
-    </ToolbarButton>
+    </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 {{component (concat 'identity/item-alias/alias-' section) model=model}}

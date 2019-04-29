@@ -19,12 +19,12 @@
 {{#if (eq section "configuration")}}
   <Toolbar>
     <ToolbarActions>
-        <ToolbarButton
+        <ToolbarLink
           @params={{array "vault.cluster.settings.auth.configure" model.id}}
-          data-test-configure-link=true
+          @data-test-configure-link=true
         >
           Configure
-        </ToolbarButton>
+        </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}

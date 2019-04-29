@@ -29,18 +29,19 @@
   {{/if}}
   <ToolbarActions>
     {{#if (eq identityType "entity")}}
-      <ToolbarButton
+      <ToolbarLink
         @params={{array "vault.cluster.access.identity.merge" (pluralize identityType)}}
-        data-test-entity-merge-link=true
+        @data-test-entity-merge-link=true
       >
         Merge {{pluralize identityType}}
-      </ToolbarButton>
+      </ToolbarLink>
     {{/if}}
-    <ToolbarButton
+    <ToolbarLink
+      @type="add"
       @params={{array "vault.cluster.access.identity.create" (pluralize identityType)}}
-      data-test-entity-create-link=true
+      @data-test-entity-create-link=true
     >
       Create {{identityType}}
-    </ToolbarButton>
+    </ToolbarLink>
   </ToolbarActions>
 </Toolbar>

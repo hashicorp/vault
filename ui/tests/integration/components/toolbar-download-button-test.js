@@ -11,7 +11,7 @@ module('Integration | Component | toolbar-download-button', function(hooks) {
     await render(hbs`<ToolbarDownloadButton @actionText="Link" />`);
 
     assert.equal(this.element.textContent.trim(), 'Link');
-    assert.ok(isPresent('.toolbar-button'));
+    assert.ok(isPresent('.toolbar-link'));
     assert.ok(isPresent('.icon'));
   });
 });

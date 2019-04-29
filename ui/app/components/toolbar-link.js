@@ -10,4 +10,5 @@ export default OuterHTML.extend({
     }
   }),
   tagName: 'span',
+  type: null,
 });

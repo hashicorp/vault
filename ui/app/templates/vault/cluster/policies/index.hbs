@@ -38,12 +38,13 @@
         {{/if}}
       </ToolbarFilters>
       <ToolbarActions>
-        <ToolbarButton
+        <ToolbarLink
+          @type="add"
           @params={{array 'vault.cluster.policies.create'}}
-          data-test-policy-create-link=true
+          @data-test-policy-create-link=true
         >
           Create {{uppercase policyType}} policy
-        </ToolbarButton>
+        </ToolbarLink>
       </ToolbarActions>
     </Toolbar>
     {{#each model as |item|}}

@@ -1,7 +1,7 @@
 {{#if (eq selectedAction 'rotate')}}
   {{#if key.canRotate}}
     {{#confirm-action
-        buttonClasses="toolbar-button"
+        buttonClasses="toolbar-link"
         onConfirmAction=(action "doSubmit")
         confirmMessage=(concat 'Are you sure you want to rotate "' key.id '"?')
         confirmButtonText="Confirm rotation"

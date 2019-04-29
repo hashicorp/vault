@@ -3,21 +3,21 @@
     <ToolbarActions>
       {{#if model.replicationAttrs.knownSecondaries.length}}
         {{#if model.canRevokeSecondary}}
-          <ToolbarButton
+          <ToolbarLink
             @params={{array 'vault.cluster.replication.mode.secondaries.revoke' model.name replicationMode}}
-            data-test-secondary-add=true
           >
             Revoke secondary
-          </ToolbarButton>
+          </ToolbarLink>
         {{/if}}
       {{/if}}
       {{#if model.canAddSecondary}}
-        <ToolbarAddButton
+        <ToolbarLink
+          @type="add"
           @params={{array 'vault.cluster.replication.mode.secondaries.add' model.name replicationMode}}
           @data-test-secondary-add=true
         >
           Add secondary
-        </ToolbarAddButton>
+        </ToolbarLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>

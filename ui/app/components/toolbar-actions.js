@@ -1,5 +1,3 @@
-import Component from '@ember/component';
+import OuterHTML from './outer-html';
 
-export default Component.extend({
-  classNames: ['toolbar-actions'],
-});
+export default OuterHTML.extend({});

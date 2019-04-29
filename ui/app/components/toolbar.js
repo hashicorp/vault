@@ -1,6 +1,6 @@
-import Component from '@ember/component';
+import OuterHTML from './outer-html';
 
-export default Component.extend({
+export default OuterHTML.extend({
   classNames: ['toolbar'],
   tagName: 'nav',
 });
