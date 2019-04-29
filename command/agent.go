@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/approle"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
+	"github.com/hashicorp/vault/command/agent/auth/cert"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
@@ -331,6 +332,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = aws.NewAWSAuthMethod(authConfig)
 		case "azure":
 			method, err = azure.NewAzureAuthMethod(authConfig)
+		case "cert":
+			method, err = cert.NewCertAuthMethod(authConfig)
 		case "gcp":
 			method, err = gcp.NewGCPAuthMethod(authConfig)
 		case "jwt":
@@ -457,9 +460,9 @@ func (c *AgentCommand) Run(args []string) int {
 	// Start auto-auth and sink servers
 	if method != nil {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       c.client,
-			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			Logger:  c.logger.Named("auth.handler"),
+			Client:  c.client,
+			WrapTTL: config.AutoAuth.Method.WrapTTL,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 		})
 		ahDoneCh = ah.DoneCh
