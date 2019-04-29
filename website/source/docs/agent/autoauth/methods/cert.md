@@ -17,5 +17,6 @@ See TLS settings in the [`vault` Stanza](https://vaultproject.io/docs/agent/inde
 
 ## Configuration
 
-* `name` `(string: optional)` - The trusted cert `name` which should be used
-  when authenticating with TLS.
+* `name` `(string: optional)` - The trusted certificate role which should be used
+  when authenticating with TLS. If a `name` is not specificed, the auth method will
+  try to authenticate against [all trusted certificates](https://www.vaultproject.io/docs/auth/cert.html#authentication).
