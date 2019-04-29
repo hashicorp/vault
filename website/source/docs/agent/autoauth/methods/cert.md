@@ -7,7 +7,7 @@ description: |-
   Cert Method for Vault Agent Auto-Auth
 ---
 
-# Vault Agent Cert AppRole Method
+# Vault Agent Auto-Auth Cert Method
 
 The `cert` method uses the configured TLS cerificates from the agent configuration
 and takes an optional `name` parameters. There is no option to use certificates
