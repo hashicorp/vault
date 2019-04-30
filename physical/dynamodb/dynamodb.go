@@ -591,8 +591,7 @@ func (l *DynamoDBLock) Unlock() error {
 	}
 
 	 _, err := l.backend.client.DeleteItem(deleteMyLock)
-
-	return err
+	return filterError(err)
 }
 
 // Value checks whether or not the lock is held by any instance of DynamoDBLock,
@@ -627,11 +626,7 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 			err := l.updateItem(true)
 			if err != nil {
 				if err, ok := err.(awserr.Error); ok {
-					// Don't report a condition check failure, this means that the lock
-					// is already being held.
-					if err.Code() != dynamodb.ErrCodeConditionalCheckFailedException {
-						errors <- err
-					}
+					errors <- err
 				} else {
 					// Its not an AWS error, and is probably not transient, bail out.
 					errors <- err
@@ -709,7 +704,8 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 			":expires":  {N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
 		},
 	})
-	return err
+
+	return filterError(err)
 }
 
 // watch checks whether the lock has changed in the
@@ -851,4 +847,17 @@ func unescapeEmptyPath(s string) string {
 		return ""
 	}
 	return s
+}
+
+// filterError filters out expected errors which are expected
+// under normal operation.
+func filterError(err error) error{
+	if err, ok := err.(awserr.Error); ok {
+		// Don't report a condition check failure, this means that the lock
+		// is already being held by another vault
+		if err.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
+			return nil
+		}
+	}
+	return err
 }

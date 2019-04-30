@@ -579,14 +579,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				}
 
 				if err := c.heldHALock.Unlock(); err != nil {
-					if err, ok := err.(awserr.Error); ok {
-						// Catch condition check failure, for case where unlock is called after
-						// new leader has already assumed the key ownership
-						if err.Code() != dynamodb.ErrCodeConditionalCheckFailedException {
-							c.logger.Error("unlocking HA lock failed", "error", err)
-						}
-					}
-
+					c.logger.Error("unlocking HA lock failed", "error", err)
 				}
 				c.heldHALock = nil
 			}
