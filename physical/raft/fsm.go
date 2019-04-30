@@ -5,17 +5,20 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	protoio "github.com/gogo/protobuf/io"
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -87,6 +90,9 @@ func (b *FSM) Delete(ctx context.Context, path string) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	return b.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(bucketName).Delete([]byte(path))
 	})
@@ -97,6 +103,9 @@ func (b *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	b.l.RLock()
+	defer b.l.RUnlock()
 
 	var valCopy []byte
 	var found bool
@@ -131,6 +140,9 @@ func (b *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
 
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	// Start a write transaction.
 	return b.db.Update(func(tx *bolt.Tx) error {
 		return tx.Bucket(bucketName).Put([]byte(entry.Key), entry.Value)
@@ -142,6 +154,10 @@ func (b *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	var keys []string
 
 	err := b.db.View(func(tx *bolt.Tx) error {
@@ -168,6 +184,12 @@ func (b *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 }
 
 func (b *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
+
+	b.l.RLock()
+	defer b.l.RUnlock()
+
 	// TODO: should this be a Batch?
 	// Start a write transaction.
 	err := b.db.Update(func(tx *bolt.Tx) error {
@@ -195,12 +217,35 @@ func (b *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 func (b *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	return &snapshotter{
 		f: func(sink raft.SnapshotSink) error {
-			err := b.db.View(func(tx *bolt.Tx) error {
-				_, err := tx.WriteTo(sink)
-				return err
-			})
+			protoWriter := protoio.NewDelimitedWriter(sink)
 
-			return err
+			b.l.RLock()
+			defer b.l.RUnlock()
+
+			err := b.db.View(func(tx *bolt.Tx) error {
+				b := tx.Bucket(bucketName)
+
+				c := b.Cursor()
+
+				for k, v := c.First(); k != nil; k, v = c.Next() {
+					err := protoWriter.WriteMsg(&pb.StorageEntry{
+						Key:   string(k),
+						Value: v,
+					})
+					if err != nil {
+						return err
+					}
+				}
+
+				return nil
+			})
+			if err != nil {
+				sink.Cancel()
+				return err
+			}
+
+			sink.Close()
+			return nil
 		},
 	}, nil
 }
@@ -211,6 +256,9 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	if err != nil {
 		panic("error proto unmarshaling log data")
 	}
+
+	f.l.RLock()
+	defer f.l.RUnlock()
 
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketName)
@@ -240,7 +288,41 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	}
 }
 
-func (f *FSM) Restore(io.ReadCloser) error {
+func (f *FSM) Restore(r io.ReadCloser) error {
+	protoReader := protoio.NewDelimitedReader(r, math.MaxInt64)
+	defer protoReader.Close()
+
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	// Start a write transaction.
+	err := f.db.Update(func(tx *bolt.Tx) error {
+		err := tx.DeleteBucket(bucketName)
+		if err != nil {
+			return err
+		}
+
+		b, err := tx.CreateBucket(bucketName)
+		if err != nil {
+			return err
+		}
+
+		for {
+			s := new(pb.StorageEntry)
+			err := protoReader.ReadMsg(s)
+			if err != nil {
+				if err == io.EOF {
+					return nil
+				}
+				return err
+			}
+			err = b.Put([]byte(s.Key), s.Value)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
