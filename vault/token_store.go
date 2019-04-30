@@ -2955,9 +2955,12 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 		return nil, nil
 	}
 
+	// TODO (1.4): Remove "period" and "explicit_max_ttl" if they're zero
 	resp := &logical.Response{
 		Data: map[string]interface{}{
+			"period":                 int64(role.Period.Seconds()),
 			"token_period":           int64(role.TokenPeriod.Seconds()),
+			"explicit_max_ttl":       int64(role.ExplicitMaxTTL.Seconds()),
 			"token_explicit_max_ttl": int64(role.TokenExplicitMaxTTL.Seconds()),
 			"disallowed_policies":    role.DisallowedPolicies,
 			"allowed_policies":       role.AllowedPolicies,
@@ -2967,14 +2970,6 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"renewable":              role.Renewable,
 			"token_type":             role.TokenType.String(),
 		},
-	}
-
-	if role.Period > 0 {
-		resp.Data["period"] = int64(role.Period.Seconds())
-	}
-
-	if role.ExplicitMaxTTL > 0 {
-		resp.Data["explicit_max_ttl"] = int64(role.ExplicitMaxTTL.Seconds())
 	}
 
 	if len(role.TokenBoundCIDRs) > 0 {
@@ -3087,6 +3082,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.Period = time.Second * time.Duration(periodRaw.(int))
 			entry.TokenPeriod = 0
 		}
+	} else {
+		entry.Period = 0
 	}
 
 	boundCIDRsRaw, ok := data.GetOk("token_bound_cidrs")
@@ -3100,6 +3097,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.BoundCIDRs = boundCIDRs
 			entry.TokenBoundCIDRs = nil
 		}
+	} else {
+		entry.BoundCIDRs = nil
 	}
 
 	var resp *logical.Response
@@ -3113,6 +3112,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.TokenExplicitMaxTTL = 0
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
+	} else {
+		entry.ExplicitMaxTTL = 0
 	}
 	if finalExplicitMaxTTL != 0 {
 		sysView := ts.System()

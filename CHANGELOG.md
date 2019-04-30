@@ -1,7 +1,14 @@
 ## Next
 
-CHANGES:
+CHANGES/DEPRECATIONS:
 
+ * auth/token: Token store roles use new, common token fields for the values
+   that overlap with other auth backends. `period`, `explicit_max_ttl`, and
+   `bound_cidrs` will continue to work, with priority being given to the
+   `token_` prefixed versions of those parameters. They will also be returned
+   when doing a read on the role if they were used to provide values initially;
+   however, in Vault 1.4 if `period` or `explicit_max_ttl` is zero they will no
+   longer be returned. (`explicit_max_ttl` was already not returned if empty.)
  * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
    will now be preferred over regions set in the enclosing environment.
    This is a _breaking_ change.
