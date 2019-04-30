@@ -93,6 +93,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 
 		"token_type": &framework.FieldSchema{
 			Type:        framework.TypeString,
+			Default:     "default-service",
 			Description: "The type of token to generate, service or batch",
 		},
 
@@ -146,7 +147,7 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 			tokenType = logical.TokenTypeService
 		case "batch":
 			tokenType = logical.TokenTypeBatch
-		case "default-service":
+		case "", "default", "default-service":
 			tokenType = logical.TokenTypeDefaultService
 		case "default-batch":
 			tokenType = logical.TokenTypeDefaultBatch
