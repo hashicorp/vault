@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 func pathRotateCredentials(b *databaseBackend) []*framework.Path {

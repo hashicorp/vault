@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/helper/queue"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
