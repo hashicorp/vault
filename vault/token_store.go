@@ -377,7 +377,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"path_suffix": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     "",
 				Description: tokenPathSuffixHelp + pathSuffixSanitize.String(),
 			},
 
@@ -389,6 +388,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 			"renewable": &framework.FieldSchema{
 				Type:        framework.TypeBool,
+				Default:     true,
 				Description: tokenRenewableHelp,
 			},
 
@@ -3077,12 +3077,15 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 
 	// Now handle backwards compat. Prefer token_ fields over others if both
 	// are set. We set the original fields here so that on read of token role
-	// we can return the same values that were set.
+	// we can return the same values that were set. We clear out the Token*
+	// values because otherwise when we read the role back we'll read stale
+	// data since if they're not emptied they'll take precedence.
 	periodRaw, ok := data.GetOk("token_period")
 	if !ok {
 		periodRaw, ok = data.GetOk("period")
 		if ok {
 			entry.Period = time.Second * time.Duration(periodRaw.(int))
+			entry.TokenPeriod = 0
 		}
 	}
 
@@ -3095,6 +3098,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				return logical.ErrorResponse(errwrap.Wrapf("error parsing bound_cidrs: {{err}}", err).Error()), nil
 			}
 			entry.BoundCIDRs = boundCIDRs
+			entry.TokenBoundCIDRs = nil
 		}
 	}
 
@@ -3106,6 +3110,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		explicitMaxTTLRaw, ok = data.GetOk("explicit_max_ttl")
 		if ok {
 			entry.ExplicitMaxTTL = time.Second * time.Duration(explicitMaxTTLRaw.(int))
+			entry.TokenExplicitMaxTTL = 0
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
 	}
