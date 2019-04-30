@@ -2679,6 +2679,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": "test1,test2",
 		"path_suffix":      "happenin",
 		"bound_cidrs":      []string{"0.0.0.0/0"},
+		"explicit_max_ttl": "2h",
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2703,21 +2704,27 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"period":              int64(259200),
-		"allowed_policies":    []string{"test1", "test2"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"explicit_max_ttl":    int64(0),
-		"renewable":           true,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"token_period":           int64(259200),
+		"period":                 int64(259200),
+		"allowed_policies":       []string{"test1", "test2"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"explicit_max_ttl":       int64(7200),
+		"token_explicit_max_ttl": int64(7200),
+		"renewable":              true,
+		"token_type":             "default-service",
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2731,6 +2738,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": "test3",
 		"path_suffix":      "happenin",
 		"renewable":        false,
+		"explicit_max_ttl": "80h",
 	}
 
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
@@ -2754,21 +2762,27 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"period":              int64(284400),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"explicit_max_ttl":    int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"period":                 int64(284400),
+		"token_period":           int64(284400),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"token_explicit_max_ttl": int64(288000),
+		"explicit_max_ttl":       int64(288000),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2797,21 +2811,26 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"explicit_max_ttl":    int64(5),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "happenin",
-		"period":              int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"explicit_max_ttl":       int64(5),
+		"token_explicit_max_ttl": int64(5),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "happenin",
+		"token_period":           int64(0),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
 		t.Fatal("unexpected bound cidrs")
 	}
 	delete(resp.Data, "bound_cidrs")
+	if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "0.0.0.0/0" {
+		t.Fatal("unexpected bound cidrs")
+	}
+	delete(resp.Data, "token_bound_cidrs")
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2840,15 +2859,16 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":                "test",
-		"orphan":              true,
-		"explicit_max_ttl":    int64(5),
-		"allowed_policies":    []string{"test3"},
-		"disallowed_policies": []string{},
-		"path_suffix":         "",
-		"period":              int64(0),
-		"renewable":           false,
-		"token_type":          "default-service",
+		"name":                   "test",
+		"orphan":                 true,
+		"token_explicit_max_ttl": int64(5),
+		"explicit_max_ttl":       int64(5),
+		"allowed_policies":       []string{"test3"},
+		"disallowed_policies":    []string{},
+		"path_suffix":            "",
+		"token_period":           int64(0),
+		"renewable":              false,
+		"token_type":             "default-service",
 	}
 
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
