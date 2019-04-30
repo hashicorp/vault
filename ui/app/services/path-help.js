@@ -7,6 +7,7 @@ import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
 import DS from 'ember-data';
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
@@ -31,8 +32,26 @@ export default Service.extend({
   getProps(helpUrl, backend) {
     return this.ajax(helpUrl, backend).then(help => {
       let path = Object.keys(help.openapi.paths)[0];
-      let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
-      return expandOpenApiProps(props);
+      path = help.openapi.paths[path];
+      const params = path.parameters;
+      let param = {};
+      //put params at the front of the props list
+      if (params) {
+        let label = params[0].name;
+        if (label.toLowerCase() !== 'name') {
+          label += ' name';
+        }
+        param[params[0].name] = {
+          name: params[0].name,
+          label: label,
+          type: params[0].schema.type,
+          description: params[0].description,
+          isId: true,
+        };
+      }
+      let props = path.post.requestBody.content['application/json'].schema.properties;
+      let newProps = { ...param, ...props };
+      return expandOpenApiProps(newProps);
     });
   },
 
@@ -97,8 +116,12 @@ export default Service.extend({
     }
 
     return this.getProps(helpUrl, backend).then(props => {
-      let { attrs, newFields } = combineAttributes(newModel.attributes, props);
+      const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       newModel = newModel.extend(attrs, { newFields });
+      if (!newModel.fieldGroups) {
+        const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
+        newModel = newModel.extend({ fieldGroups });
+      }
       newModel.reopenClass({ merged: true });
       owner.unregister(name);
       owner.register(name, newModel);

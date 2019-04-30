@@ -12,13 +12,22 @@
       {{capitalize method}}
     </h1>
   </p.levelLeft>
+  <p.levelRight>
+    {{#link-to
+      "vault.cluster.access.method.item.create"
+      (pluralize itemType)
+      class="button has-icon-right is-ghost is-compact"
+      data-test-entity-create-link=true
+    }}
+      Create{{itemType}}{{i-con glyph="chevron-right" size=11}}
+    {{/link-to}}
+  </p.levelRight>
 </PageHeader>
 {{section-tabs model "authShow" paths}}
 {{#if model.meta.total}}
   {{#each model as |item|}}
-    {{debugger}}
     {{#linked-block
-      "vault.cluster.access.method.show"
+      "vault.cluster.access.method.item.show"
       (pluralize itemType)
       item.id
       class="list-item-row"
@@ -27,7 +36,7 @@
       <div class="columns is-mobile">
         <div class="column is-7-tablet is-10-mobile">
           {{#link-to
-            "vault.cluster.access.method.show"
+            "vault.cluster.access.method.item.show"
             (pluralize itemType)
             item.id
             class="is-block has-text-black has-text-weight-semibold"
@@ -49,7 +58,7 @@
     {{list-pagination
       page=model.meta.currentPage
       lastPage=model.meta.lastPage
-      link="vault.cluster.access.method.list"
+      link="vault.cluster.access.method.item.list"
     }}
   {{/if}}
 {{else}}
@@ -61,8 +70,9 @@
       {{itemType}}
        to get started."
   >
+    {{debugger}}
     {{#link-to
-      "vault.cluster.access.method.create"
+      "vault.cluster.access.method.item.create"
       (pluralize itemType)
       tagName="button"
       class="link"

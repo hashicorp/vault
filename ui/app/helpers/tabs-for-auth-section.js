@@ -94,7 +94,7 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
                 pluralize(path.slice(1))
                   .charAt(0)
                   .toUpperCase() + pluralize(path.slice(1)).slice(1),
-              routeParams: ['vault.cluster.access.method.list', path.slice(1)],
+              routeParams: ['vault.cluster.access.method.item.list', path.slice(1)],
             };
           })
         : [];

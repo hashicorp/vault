@@ -3,8 +3,10 @@
     {{#if (or (not renderGroup) (and renderGroup (eq group renderGroup)))}}
       {{#if (eq group "default")}}
         {{#each fields as |attr|}}
-          {{#unless (and (not-eq mode 'create') (eq attr.name "name"))}}
-            {{form-field data-test-field attr=attr model=model onChange=onChange}}
+          {{debugger}}
+          {{#unless (and (not-eq mode "create") (eq attr.name "name"))}}
+            {{form-field data-test-field attr=attr model=model onChange=onChange
+            }}
           {{/unless}}
         {{/each}}
       {{else}}

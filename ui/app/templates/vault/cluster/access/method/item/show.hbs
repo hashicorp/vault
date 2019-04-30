@@ -1,3 +1,4 @@
+{{debugger}}
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -6,7 +7,10 @@
           <span class="sep">
             /
           </span>
-          {{#link-to "vault.cluster.access.method.list" (pluralize itemType)}}
+          {{#link-to
+            "vault.cluster.access.method.item.list"
+            (pluralize itemType)
+          }}
             {{pluralize itemType}}
           {{/link-to}}
         </li>
@@ -31,7 +35,6 @@
   </p.levelRight> --}}
 </PageHeader>
 <div class="box is-shadowless is-marginless is-fullwidth">
-  {{debugger}}
   {{info-table-row label="ID" value=id}}
   {{#each-in props as |name value|}}
     {{info-table-row

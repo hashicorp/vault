@@ -1,0 +1,26 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">
+            /
+          </span>
+          {{#link-to
+            "vault.cluster.access.method.item.list"
+            (pluralize model.itemType)
+          }}
+            {{pluralize model.itemType}}
+          {{/link-to}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Create
+      {{model.itemType}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+{{auth-config-form/config model}}

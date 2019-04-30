@@ -16,6 +16,7 @@ export const expandOpenApiProps = function(props) {
       details.type = 'number';
     }
     let editType = details.type;
+
     if (details.format === 'seconds') {
       editType = 'ttl';
     } else if (details.items) {
@@ -26,8 +27,9 @@ export const expandOpenApiProps = function(props) {
       type: details.type,
       helpText: details.description,
       sensitive: details['x-vault-displaySensitive'],
-      label: details['x-vault-displayName'],
+      label: details['x-vault-displayName'] || details.label,
       possibleValues: details['enum'],
+      fieldValue: details.isId ? 'id' : null,
       defaultValue:
         details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
     };
@@ -45,13 +47,15 @@ export const expandOpenApiProps = function(props) {
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
-  oldAttrs.forEach(function(value, name) {
-    if (newProps[name]) {
-      newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
-    } else {
-      newAttrs[name] = attr(value.type, value.options);
-    }
-  });
+  if (oldAttrs) {
+    oldAttrs.forEach(function(value, name) {
+      if (newProps[name]) {
+        newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
+      } else {
+        newAttrs[name] = attr(value.type, value.options);
+      }
+    });
+  }
   for (let prop in newProps) {
     if (newAttrs[prop]) {
       continue;
