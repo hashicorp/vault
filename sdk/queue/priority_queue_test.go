@@ -2,7 +2,6 @@ package queue
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -70,11 +69,39 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 	if tc[0].Priority != item.Priority {
 		t.Fatalf("expected tc[0] and popped item to match, got (%q) and (%q)", tc[0], item.Priority)
 	}
-	if !reflect.DeepEqual(tc[0], item) {
-		t.Fatal("expected test case and popped item match")
+	if tc[0].Key != item.Key {
+		t.Fatalf("expected tc[0] and popped item to match, got (%q) and (%q)", tc[0], item.Priority)
+	}
+
+	testValidateInternalData(t, pq, len(tc)-1, false)
+
+	// push item with no key
+	dErr := pq.PushItem(tc[1])
+	if dErr != ErrDuplicateItem {
+		t.Fatal(err)
+	}
+	// push item with no key
+	tc[2].Key = ""
+	kErr := pq.PushItem(tc[2])
+	if kErr != nil && kErr.Error() != "error adding item: Item Key is required" {
+		t.Fatal(kErr)
 	}
 
 	testValidateInternalData(t, pq, len(tc)-1, true)
+
+	// check err not found
+	_, fErr := pq.PopItemByKey("empty")
+	if fErr == nil {
+		t.Fatalf("expected not found error")
+	}
+	switch fErr.(type) {
+	case *ErrItemNotFound:
+		if fErr.Error() != "queue item with key (empty) not found" {
+			t.Fatalf("expected error not found item message to match, got (%s)", fErr.Error())
+		}
+	default:
+		t.Fatalf("expected ErrItemNotFound error, got: %#v", fErr)
+	}
 }
 
 func TestPriorityQueue_PopItem(t *testing.T) {
@@ -94,8 +121,8 @@ func TestPriorityQueue_PopItem(t *testing.T) {
 	if tc[0].Priority != topItem.Priority {
 		t.Fatalf("expected tc[0] and popped item to match, got (%q) and (%q)", tc[0], topItem.Priority)
 	}
-	if !reflect.DeepEqual(tc[0], topItem) {
-		t.Fatal("expected test case and popped item match")
+	if tc[0].Key != topItem.Key {
+		t.Fatalf("expected tc[0] and popped item to match, got (%q) and (%q)", tc[0], topItem.Priority)
 	}
 
 	var items []*Item
@@ -108,8 +135,6 @@ func TestPriorityQueue_PopItem(t *testing.T) {
 	if len(items) != len(tc) {
 		t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
 	}
-
-	testValidateInternalData(t, pq, 0, true)
 }
 
 func TestPriorityQueue_PopItemByKey(t *testing.T) {

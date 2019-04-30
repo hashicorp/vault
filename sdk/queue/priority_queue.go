@@ -7,8 +7,31 @@ import (
 	"sync"
 )
 
+// ErrEmpty is returned for queues with no items
 var ErrEmpty = errors.New("queue is empty")
+
+// ErrDuplicateItem is returned when the queue attmepts to push an item to a key that
+// already exists. The queue does not attempt to update, instead returns this
+// error. If an Item needs to be updated or replaced, pop the item first.
 var ErrDuplicateItem = errors.New("duplicate item")
+
+// ErrItemNotFound is a struct that implements the error interface
+var _ error = &ErrItemNotFound{}
+
+type ErrItemNotFound struct {
+	Key string
+}
+
+func (e *ErrItemNotFound) Error() string {
+	return fmt.Sprintf("queue item with key (%s) not found", e.Key)
+}
+
+// NewErrItemNotFound creates a "not found" error for the given key
+func NewErrItemNotFound(key string) *ErrItemNotFound {
+	return &ErrItemNotFound{
+		Key: key,
+	}
+}
 
 // NewPriorityQueue initializes a PriorityQueue struct for use as a PriorityQueue
 func NewPriorityQueue() *PriorityQueue {
@@ -46,7 +69,6 @@ func (pq *PriorityQueue) PopItem() (*Item, error) {
 	if pq.Len() == 0 {
 		return nil, ErrEmpty
 	}
-
 	item := heap.Pop(pq).(*Item)
 	delete(pq.dataMap, item.Key)
 	return item, nil
@@ -67,8 +89,9 @@ func (pq *PriorityQueue) PushItem(i *Item) error {
 		return ErrDuplicateItem
 	}
 
-	pq.dataMap[i.Key] = i
-	heap.Push(pq, i)
+	x := *i
+	pq.dataMap[x.Key] = &x
+	heap.Push(pq, &x)
 	return nil
 }
 
@@ -140,21 +163,3 @@ func (pq *PriorityQueue) Pop() interface{} {
 //////
 // end heap.Interface methods
 //////
-
-// NewErrItemNotFound creates a "not found" error for the given key
-func NewErrItemNotFound(key string) error {
-	return &ErrItemNotFound{
-		Key: key,
-	}
-}
-
-// ErrItemNotFound is a struct that implements the error interface
-var _ error = &ErrItemNotFound{}
-
-type ErrItemNotFound struct {
-	Key string
-}
-
-func (e *ErrItemNotFound) Error() string {
-	return fmt.Sprintf("queue item with key (%s) not found", e.Key)
-}
