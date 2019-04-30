@@ -630,6 +630,8 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 			err := l.updateItem(true)
 			if err != nil {
 				if err, ok := err.(awserr.Error); ok {
+					// Don't report a condition check failure, this means that the lock
+					// is already being held.
 					if !isConditionCheckFailed(err) {
 						errors <- err
 					}
