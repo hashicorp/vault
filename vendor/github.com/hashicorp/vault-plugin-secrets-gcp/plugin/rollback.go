@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/iamutil"
 	"github.com/hashicorp/vault-plugin-secrets-gcp/plugin/util"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iam/v1"
@@ -76,7 +76,7 @@ func (b *backend) serviceAccountRollback(ctx context.Context, req *logical.Reque
 	}
 
 	// Delete service account.
-	iamC, err := newIamAdmin(ctx, req.Storage)
+	iamC, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (b *backend) serviceAccountKeyRollback(ctx context.Context, req *logical.Re
 		return nil
 	}
 
-	iamC, err := newIamAdmin(ctx, req.Storage)
+	iamC, err := b.IAMClient(req.Storage)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (b *backend) serviceAccountPolicyRollback(ctx context.Context, req *logical
 		return err
 	}
 
-	httpC, err := newHttpClient(ctx, req.Storage)
+	httpC, err := b.HTTPClient(req.Storage)
 	if err != nil {
 		return err
 	}

@@ -76,13 +76,13 @@ func (client *Client) SetSecurityPreferenceWithCallback(request *SetSecurityPref
 // SetSecurityPreferenceRequest is the request struct for api SetSecurityPreference
 type SetSecurityPreferenceRequest struct {
 	*requests.RpcRequest
-	EnableSaveMFATicket         requests.Boolean `position:"Query" name:"EnableSaveMFATicket"`
-	AllowUserToChangePassword   requests.Boolean `position:"Query" name:"AllowUserToChangePassword"`
 	AllowUserToManageAccessKeys requests.Boolean `position:"Query" name:"AllowUserToManageAccessKeys"`
-	AllowUserToManagePublicKeys requests.Boolean `position:"Query" name:"AllowUserToManagePublicKeys"`
 	AllowUserToManageMFADevices requests.Boolean `position:"Query" name:"AllowUserToManageMFADevices"`
-	LoginSessionDuration        requests.Integer `position:"Query" name:"LoginSessionDuration"`
+	AllowUserToManagePublicKeys requests.Boolean `position:"Query" name:"AllowUserToManagePublicKeys"`
+	EnableSaveMFATicket         requests.Boolean `position:"Query" name:"EnableSaveMFATicket"`
 	LoginNetworkMasks           string           `position:"Query" name:"LoginNetworkMasks"`
+	AllowUserToChangePassword   requests.Boolean `position:"Query" name:"AllowUserToChangePassword"`
+	LoginSessionDuration        requests.Integer `position:"Query" name:"LoginSessionDuration"`
 }
 
 // SetSecurityPreferenceResponse is the response struct for api SetSecurityPreference
@@ -97,7 +97,7 @@ func CreateSetSecurityPreferenceRequest() (request *SetSecurityPreferenceRequest
 	request = &SetSecurityPreferenceRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "SetSecurityPreference", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "SetSecurityPreference", "ram", "openAPI")
 	return
 }
 

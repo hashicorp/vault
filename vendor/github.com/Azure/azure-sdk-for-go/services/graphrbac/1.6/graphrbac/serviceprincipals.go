@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -45,10 +46,19 @@ func NewServicePrincipalsClientWithBaseURI(baseURI string, tenantID string) Serv
 // Parameters:
 // parameters - parameters to create a service principal.
 func (client ServicePrincipalsClient) Create(ctx context.Context, parameters ServicePrincipalCreateParameters) (result ServicePrincipal, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.Create")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
-			Constraints: []validation.Constraint{{Target: "parameters.AppID", Name: validation.Null, Rule: true, Chain: nil},
-				{Target: "parameters.AccountEnabled", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
+			Constraints: []validation.Constraint{{Target: "parameters.AppID", Name: validation.Null, Rule: true, Chain: nil}}}}); err != nil {
 		return result, validation.NewError("graphrbac.ServicePrincipalsClient", "Create", err.Error())
 	}
 
@@ -118,6 +128,16 @@ func (client ServicePrincipalsClient) CreateResponder(resp *http.Response) (resu
 // Parameters:
 // objectID - the object ID of the service principal to delete.
 func (client ServicePrincipalsClient) Delete(ctx context.Context, objectID string) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.Delete")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.DeletePreparer(ctx, objectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Delete", nil, "Failure preparing request")
@@ -182,6 +202,16 @@ func (client ServicePrincipalsClient) DeleteResponder(resp *http.Response) (resu
 // Parameters:
 // objectID - the object ID of the service principal to get.
 func (client ServicePrincipalsClient) Get(ctx context.Context, objectID string) (result ServicePrincipal, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.GetPreparer(ctx, objectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Get", nil, "Failure preparing request")
@@ -247,7 +277,17 @@ func (client ServicePrincipalsClient) GetResponder(resp *http.Response) (result 
 // Parameters:
 // filter - the filter to apply to the operation.
 func (client ServicePrincipalsClient) List(ctx context.Context, filter string) (result ServicePrincipalListResultPage, err error) {
-	result.fn = func(lastResult ServicePrincipalListResult) (ServicePrincipalListResult, error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.List")
+		defer func() {
+			sc := -1
+			if result.splr.Response.Response != nil {
+				sc = result.splr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.fn = func(ctx context.Context, lastResult ServicePrincipalListResult) (ServicePrincipalListResult, error) {
 		if lastResult.OdataNextLink == nil || len(to.String(lastResult.OdataNextLink)) < 1 {
 			return ServicePrincipalListResult{}, nil
 		}
@@ -318,6 +358,16 @@ func (client ServicePrincipalsClient) ListResponder(resp *http.Response) (result
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client ServicePrincipalsClient) ListComplete(ctx context.Context, filter string) (result ServicePrincipalListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx, filter)
 	return
 }
@@ -326,6 +376,16 @@ func (client ServicePrincipalsClient) ListComplete(ctx context.Context, filter s
 // Parameters:
 // objectID - the object ID of the service principal for which to get keyCredentials.
 func (client ServicePrincipalsClient) ListKeyCredentials(ctx context.Context, objectID string) (result KeyCredentialListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.ListKeyCredentials")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListKeyCredentialsPreparer(ctx, objectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListKeyCredentials", nil, "Failure preparing request")
@@ -391,6 +451,16 @@ func (client ServicePrincipalsClient) ListKeyCredentialsResponder(resp *http.Res
 // Parameters:
 // nextLink - next link for the list operation.
 func (client ServicePrincipalsClient) ListNext(ctx context.Context, nextLink string) (result ServicePrincipalListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.ListNext")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListNextPreparer(ctx, nextLink)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListNext", nil, "Failure preparing request")
@@ -455,7 +525,18 @@ func (client ServicePrincipalsClient) ListNextResponder(resp *http.Response) (re
 // ListOwners the owners are a set of non-admin users who are allowed to modify this object.
 // Parameters:
 // objectID - the object ID of the service principal for which to get owners.
-func (client ServicePrincipalsClient) ListOwners(ctx context.Context, objectID string) (result DirectoryObjectListResult, err error) {
+func (client ServicePrincipalsClient) ListOwners(ctx context.Context, objectID string) (result DirectoryObjectListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.ListOwners")
+		defer func() {
+			sc := -1
+			if result.dolr.Response.Response != nil {
+				sc = result.dolr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.fn = client.listOwnersNextResults
 	req, err := client.ListOwnersPreparer(ctx, objectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListOwners", nil, "Failure preparing request")
@@ -464,12 +545,12 @@ func (client ServicePrincipalsClient) ListOwners(ctx context.Context, objectID s
 
 	resp, err := client.ListOwnersSender(req)
 	if err != nil {
-		result.Response = autorest.Response{Response: resp}
+		result.dolr.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListOwners", resp, "Failure sending request")
 		return
 	}
 
-	result, err = client.ListOwnersResponder(resp)
+	result.dolr, err = client.ListOwnersResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListOwners", resp, "Failure responding to request")
 	}
@@ -517,10 +598,57 @@ func (client ServicePrincipalsClient) ListOwnersResponder(resp *http.Response) (
 	return
 }
 
+// listOwnersNextResults retrieves the next set of results, if any.
+func (client ServicePrincipalsClient) listOwnersNextResults(ctx context.Context, lastResults DirectoryObjectListResult) (result DirectoryObjectListResult, err error) {
+	req, err := lastResults.directoryObjectListResultPreparer(ctx)
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "listOwnersNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListOwnersSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "listOwnersNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListOwnersResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "listOwnersNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListOwnersComplete enumerates all values, automatically crossing page boundaries as required.
+func (client ServicePrincipalsClient) ListOwnersComplete(ctx context.Context, objectID string) (result DirectoryObjectListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.ListOwners")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.page, err = client.ListOwners(ctx, objectID)
+	return
+}
+
 // ListPasswordCredentials gets the passwordCredentials associated with a service principal.
 // Parameters:
 // objectID - the object ID of the service principal.
 func (client ServicePrincipalsClient) ListPasswordCredentials(ctx context.Context, objectID string) (result PasswordCredentialListResult, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.ListPasswordCredentials")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.ListPasswordCredentialsPreparer(ctx, objectID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "ListPasswordCredentials", nil, "Failure preparing request")
@@ -582,11 +710,98 @@ func (client ServicePrincipalsClient) ListPasswordCredentialsResponder(resp *htt
 	return
 }
 
+// Update updates a service principal in the directory.
+// Parameters:
+// objectID - the object ID of the service principal to delete.
+// parameters - parameters to update a service principal.
+func (client ServicePrincipalsClient) Update(ctx context.Context, objectID string, parameters ServicePrincipalUpdateParameters) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.Update")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.UpdatePreparer(ctx, objectID, parameters)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Update", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.UpdateSender(req)
+	if err != nil {
+		result.Response = resp
+		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Update", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.UpdateResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "Update", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// UpdatePreparer prepares the Update request.
+func (client ServicePrincipalsClient) UpdatePreparer(ctx context.Context, objectID string, parameters ServicePrincipalUpdateParameters) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"objectId": autorest.Encode("path", objectID),
+		"tenantID": autorest.Encode("path", client.TenantID),
+	}
+
+	const APIVersion = "1.6"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
+		autorest.AsPatch(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/{tenantID}/servicePrincipals/{objectId}", pathParameters),
+		autorest.WithJSON(parameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// UpdateSender sends the Update request. The method will close the
+// http.Response Body if it receives an error.
+func (client ServicePrincipalsClient) UpdateSender(req *http.Request) (*http.Response, error) {
+	return autorest.SendWithSender(client, req,
+		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+}
+
+// UpdateResponder handles the response to the Update request. The method always
+// closes the http.Response Body.
+func (client ServicePrincipalsClient) UpdateResponder(resp *http.Response) (result autorest.Response, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusNoContent),
+		autorest.ByClosing())
+	result.Response = resp
+	return
+}
+
 // UpdateKeyCredentials update the keyCredentials associated with a service principal.
 // Parameters:
 // objectID - the object ID for which to get service principal information.
 // parameters - parameters to update the keyCredentials of an existing service principal.
 func (client ServicePrincipalsClient) UpdateKeyCredentials(ctx context.Context, objectID string, parameters KeyCredentialsUpdateParameters) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.UpdateKeyCredentials")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdateKeyCredentialsPreparer(ctx, objectID, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "UpdateKeyCredentials", nil, "Failure preparing request")
@@ -654,6 +869,16 @@ func (client ServicePrincipalsClient) UpdateKeyCredentialsResponder(resp *http.R
 // objectID - the object ID of the service principal.
 // parameters - parameters to update the passwordCredentials of an existing service principal.
 func (client ServicePrincipalsClient) UpdatePasswordCredentials(ctx context.Context, objectID string, parameters PasswordCredentialsUpdateParameters) (result autorest.Response, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ServicePrincipalsClient.UpdatePasswordCredentials")
+		defer func() {
+			sc := -1
+			if result.Response != nil {
+				sc = result.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	req, err := client.UpdatePasswordCredentialsPreparer(ctx, objectID, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "graphrbac.ServicePrincipalsClient", "UpdatePasswordCredentials", nil, "Failure preparing request")

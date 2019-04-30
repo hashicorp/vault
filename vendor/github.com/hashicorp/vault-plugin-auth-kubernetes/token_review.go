@@ -103,8 +103,11 @@ func (t *tokenReviewAPI) Review(jwt string) (*tokenReviewResult, error) {
 	r, err := parseResponse(resp)
 	switch {
 	case kubeerrors.IsUnauthorized(err):
-		// If the err is unauthorized that means the token has since been deleted
-		return nil, errors.New("lookup failed: service account unauthorized; this could mean it has been deleted")
+		// If the err is unauthorized that means the token has since been deleted;
+		// this can happen if the service account is deleted, and even if it has
+		// since been recreated the token will have changed, which means our
+		// caller will need to be updated accordingly.
+		return nil, errors.New("lookup failed: service account unauthorized; this could mean it has been deleted or recreated with a new token")
 	case err != nil:
 		return nil, err
 	}

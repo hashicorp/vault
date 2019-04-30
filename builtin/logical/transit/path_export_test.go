@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {

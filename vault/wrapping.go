@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	jose "gopkg.in/square/go-jose.v2"
 	squarejwt "gopkg.in/square/go-jose.v2/jwt"
 )
@@ -333,8 +333,12 @@ func (c *Core) ValidateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
-	// internal client token from it and use that during lookup.
-	if strings.Count(token, ".") == 2 {
+	// internal client token from it and use that during lookup. The second
+	// check is a quick check to verify that we don't consider a namespaced
+	// token to be a JWT -- namespaced tokens have two dots too, but Vault
+	// token types (for now at least) begin with a letter representing a type
+	// and then a dot.
+	if strings.Count(token, ".") == 2 && token[1] != '.' {
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {

@@ -1,21 +1,27 @@
-package transit
+package transit_test
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"reflect"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/vault/seal/transit"
 	"github.com/ory/dockertest"
 )
 
 func TestTransitSeal_Lifecycle(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip()
+	}
 	cleanup, retAddress, token, mountPath, keyName, _ := prepareTestContainer(t)
 	defer cleanup()
 
@@ -25,7 +31,7 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err := s.SetConfig(sealConfig)
 	if err != nil {
 		t.Fatalf("error setting seal config: %v", err)
@@ -49,6 +55,9 @@ func TestTransitSeal_Lifecycle(t *testing.T) {
 }
 
 func TestTransitSeal_TokenRenewal(t *testing.T) {
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip()
+	}
 	cleanup, retAddress, token, mountPath, keyName, tlsConfig := prepareTestContainer(t)
 	defer cleanup()
 
@@ -79,7 +88,7 @@ func TestTransitSeal_TokenRenewal(t *testing.T) {
 		"mount_path": mountPath,
 		"key_name":   keyName,
 	}
-	s := NewSeal(logging.NewVaultLogger(log.Trace))
+	s := transit.NewSeal(logging.NewVaultLogger(log.Trace))
 	_, err = s.SetConfig(sealConfig)
 	if err != nil {
 		t.Fatalf("error setting seal config: %v", err)
@@ -135,9 +144,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress, token, moun
 	}
 
 	cleanup = func() {
-		if err := pool.Purge(resource); err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retAddress = fmt.Sprintf("http://127.0.0.1:%s", resource.GetPort("8200/tcp"))

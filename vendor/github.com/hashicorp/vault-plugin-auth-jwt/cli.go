@@ -133,6 +133,7 @@ func openURL(url string) error {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start"}
+		url = strings.Replace(url, "&", "^&", -1)
 	case "darwin":
 		cmd = "open"
 	default: // "linux", "freebsd", "openbsd", "netbsd"

@@ -25,8 +25,8 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -600,13 +600,14 @@ func (l *DynamoDBLock) Value() (bool, string, error) {
 // channel is closed.
 func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error) {
 	ticker := time.NewTicker(DynamoDBLockRetryInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-stop:
-			ticker.Stop()
+			return
 		case <-ticker.C:
-			err := l.writeItem()
+			err := l.updateItem(true)
 			if err != nil {
 				if err, ok := err.(awserr.Error); ok {
 					// Don't report a condition check failure, this means that the lock
@@ -620,7 +621,6 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 					return
 				}
 			} else {
-				ticker.Stop()
 				close(success)
 				return
 			}
@@ -633,7 +633,8 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			l.writeItem()
+			// This should not renew the lock if the lock was deleted from under you.
+			l.updateItem(false)
 		case <-done:
 			ticker.Stop()
 			return
@@ -643,8 +644,23 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 
 // Attempts to put/update the dynamodb item using condition expressions to
 // evaluate the TTL.
-func (l *DynamoDBLock) writeItem() error {
+func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 	now := time.Now()
+
+	conditionExpression := ""
+	if createIfMissing {
+		conditionExpression += "attribute_not_exists(#path) or " +
+			"attribute_not_exists(#key) or "
+	} else {
+		conditionExpression += "attribute_exists(#path) and " +
+			"attribute_exists(#key) and "
+	}
+
+	// To work when upgrading from older versions that did not include the
+	// Identity attribute, we first check if the attr doesn't exist, and if
+	// it does, then we check if the identity is equal to our own.
+	// We also write if the lock expired.
+	conditionExpression += "(attribute_not_exists(#identity) or #identity = :identity or #expires <= :now)"
 
 	_, err := l.backend.client.UpdateItem(&dynamodb.UpdateItemInput{
 		TableName: aws.String(l.backend.table),
@@ -657,15 +673,7 @@ func (l *DynamoDBLock) writeItem() error {
 		// A. identity is equal to our identity (or the identity doesn't exist)
 		// or
 		// B. The ttl on the item is <= to the current time
-		ConditionExpression: aws.String(
-			"attribute_not_exists(#path) or " +
-				"attribute_not_exists(#key) or " +
-				// To work when upgrading from older versions that did not include the
-				// Identity attribute, we first check if the attr doesn't exist, and if
-				// it does, then we check if the identity is equal to our own.
-				"(attribute_not_exists(#identity) or #identity = :identity) or " +
-				"#expires <= :now",
-		),
+		ConditionExpression: aws.String(conditionExpression),
 		ExpressionAttributeNames: map[string]*string{
 			"#path":     aws.String("Path"),
 			"#key":      aws.String("Key"),
@@ -722,6 +730,7 @@ WatchLoop:
 				break WatchLoop
 			}
 		}
+		retries = DynamoDBWatchRetryMax
 	}
 
 	close(lost)

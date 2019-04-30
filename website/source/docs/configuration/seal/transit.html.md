@@ -42,7 +42,7 @@ seal "transit" {
 }
 ```
 
-## `tranist` Parameters
+## `transit` Parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 

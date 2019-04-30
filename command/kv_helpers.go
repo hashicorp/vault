@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 // kvData is a helper struct for `listRecursive'.

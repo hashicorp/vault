@@ -56,7 +56,7 @@
     {{/if}}
   {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
     <AuthJwt
-      @onError={{action (mut this.error)}}
+      @onError={{action "handleError"}}
       @onLoading={{action (mut this.isLoading)}}
       @onToken={{action (mut this.token)}}
       @namespace={{this.namespace}}

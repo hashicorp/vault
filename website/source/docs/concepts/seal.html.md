@@ -75,13 +75,13 @@ access to the master key shards.
 ## Auto Unseal
 
 Auto Unseal was developed to aid in reducing the operational complexity of 
-keeping the master key secure.  This feature delegates the responsibility of 
-securing the master key from users to a trusted device or service.  Instead of 
+keeping the master key secure. This feature delegates the responsibility of 
+securing the master key from users to a trusted device or service. Instead of 
 only constructing the key in memory, the master key is encrypted with one of 
 these services or devices and then stored in the storage backend allowing Vault 
 to decrypt the master key at startup and unseal automatically. 
 
-When using a Auto Unseal, there are certain operations in Vault that still
+When using Auto Unseal there are certain operations in Vault that still
 require a quorum of users to perform an operation such as generating a root token. 
 During the initialization process, a set of Shamir keys are generated that are called 
 Recovery Keys and are used for these operations.
@@ -113,6 +113,6 @@ To migrate from Auto Unseal to Shamir keys, take your server cluster offline and
 the [seal configuration](/docs/configuration/seal/index.html) and add `disabled = "true"`
 to the seal block.  This allows the migration to use this information to decrypt the key
 but will not unseal Vault.  When you bring up your server back up, run the unseal process 
-with the `-migrate` flag and use the Recovery Keys to perform the migration.  All unseal 
-commands must specify the `-migrate` flag.  Once the required threshold of recovery keys
+with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal 
+commands must specify the `-migrate` flag. Once the required threshold of recovery keys
 are entered, the recovery keys will be migrated to be used as unseal keys.

@@ -3,7 +3,7 @@ package seal
 import (
 	"context"
 
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (

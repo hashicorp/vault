@@ -189,16 +189,15 @@ label {
 }
 
 .select:not(.is-multiple)::after {
-  border-color: $black;
-  border-width: 2px;
-  margin-top: 0;
-  transform: translateY(30%) rotate(-45deg);
-}
-
-.select:not(.is-multiple)::before {
-  content: '';
-  transform: translateY(-70%) rotate(135deg);
-  z-index: 5;
+  content: svg-uri(
+    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
+  );
+  border: 0;
+  height: 24px;
+  margin: 0;
+  right: $spacing-xs;
+  transform: translateY(-50%);
+  width: 24px;
 }
 
 .field:not(:last-child) {

@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -132,7 +132,7 @@ func (c *client) createSP(
 		now := time.Now().UTC()
 		result, err := c.provider.CreateServicePrincipal(ctx, graphrbac.ServicePrincipalCreateParameters{
 			AppID:          app.AppID,
-			AccountEnabled: to.BoolPtr(true),
+			AccountEnabled: to.StringPtr("true"),
 			PasswordCredentials: &[]graphrbac.PasswordCredential{
 				graphrbac.PasswordCredential{
 					StartDate: &date.Time{Time: now},

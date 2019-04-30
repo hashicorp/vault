@@ -458,6 +458,8 @@ const (
 	POLLWRNORM = 0x4
 )
 
+type Sigset_t uint32
+
 type Utsname struct {
 	Sysname  [256]byte
 	Nodename [256]byte
@@ -555,4 +557,14 @@ type Uvmexp struct {
 	Pdrevtext          int32
 	Fpswtch            int32
 	Kmapent            int32
+}
+
+const SizeofClockinfo = 0x14
+
+type Clockinfo struct {
+	Hz      int32
+	Tick    int32
+	Tickadj int32
+	Stathz  int32
+	Profhz  int32
 }

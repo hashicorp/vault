@@ -11,8 +11,9 @@ import (
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -168,6 +169,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 
 	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 	testDynamoDBLockTTL(t, b.(physical.HABackend))
+	testDynamoDBLockRenewal(t, b.(physical.HABackend))
 }
 
 // Similar to testHABackend, but using internal implementation details to
@@ -276,6 +278,90 @@ func testDynamoDBLockTTL(t *testing.T, ha physical.HABackend) {
 	lock2.Unlock()
 }
 
+// Similar to testHABackend, but using internal implementation details to
+// trigger a renewal before a "watch" check, which has been a source of
+// race conditions.
+func testDynamoDBLockRenewal(t *testing.T, ha physical.HABackend) {
+	renewInterval := time.Second * 1
+	watchInterval := time.Second * 5
+
+	// Get the lock
+	origLock, err := ha.LockWith("dynamodbrenewal", "bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// customize the renewal and watch intervals
+	lock := origLock.(*DynamoDBLock)
+	lock.renewInterval = renewInterval
+	lock.watchRetryInterval = watchInterval
+
+	// Attempt to lock
+	leaderCh, err := lock.Lock(nil)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh == nil {
+		t.Fatalf("failed to get leader ch")
+	}
+
+	// Check the value
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "bar" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Release the lock, which will delete the stored item
+	if err := lock.Unlock(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Wait longer than the renewal time, but less than the watch time
+	time.Sleep(1500 * time.Millisecond)
+
+	// Attempt to lock with new lock
+	newLock, err := ha.LockWith("dynamodbrenewal", "baz")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Cancel attempt in 6 sec so as not to block unit tests forever
+	stopCh := make(chan struct{})
+	time.AfterFunc(6*time.Second, func() {
+		close(stopCh)
+	})
+
+	// Attempt to lock should work
+	leaderCh2, err := newLock.Lock(stopCh)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if leaderCh2 == nil {
+		t.Fatalf("should get leader ch")
+	}
+
+	// Check the value
+	held, val, err = newLock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Fatalf("should be held")
+	}
+	if val != "baz" {
+		t.Fatalf("bad value: %v", err)
+	}
+
+	// Cleanup
+	newLock.Unlock()
+}
+
 func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress string, creds *credentials.Credentials) {
 	// If environment variable is set, assume caller wants to target a real
 	// DynamoDB.
@@ -295,10 +381,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 
 	retAddress = "http://localhost:" + resource.GetPort("8000/tcp")
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local DynamoDB: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	// exponential backoff-retry, because the DynamoDB may not be able to accept

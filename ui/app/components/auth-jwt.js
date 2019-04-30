@@ -5,6 +5,7 @@ import { next, later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
 
+/* eslint-disable ember/no-ember-testing-in-module-scope */
 const WAIT_TIME = Ember.testing ? 0 : 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';

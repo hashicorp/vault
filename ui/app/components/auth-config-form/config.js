@@ -3,6 +3,19 @@ import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import DS from 'ember-data';
 
+/**
+ * @module AuthConfigForm/Config
+ * The `AuthConfigForm/Config` is the base form to configure auth methods.
+ *
+ * @example
+ * ```js
+ * {{auth-config-form/config model.model}}
+ * ```
+ *
+ * @property model=null {DS.Model} - The corresponding auth model that is being configured.
+ *
+ */
+
 const AuthConfigBase = Component.extend({
   tagName: '',
   model: null,
@@ -26,7 +39,7 @@ const AuthConfigBase = Component.extend({
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }),
+  }).withTestWaiter(),
 });
 
 AuthConfigBase.reopenClass({

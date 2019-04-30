@@ -12,7 +12,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 type approleMethod struct {
@@ -54,34 +54,33 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	}
 
 	secretIDFilePathRaw, ok := conf.Config["secret_id_file_path"]
-	if !ok {
-		return nil, errors.New("missing 'secret_id_file_path' value")
-	}
-	a.secretIDFilePath, ok = secretIDFilePathRaw.(string)
-	if !ok {
-		return nil, errors.New("could not convert 'secret_id_file_path' config value to string")
-	}
-	if a.secretIDFilePath == "" {
-		return nil, errors.New("'secret_id_file_path' value is empty")
-	}
-
-	removeSecretIDFileAfterReadingRaw, ok := conf.Config["remove_secret_id_file_after_reading"]
 	if ok {
-		removeSecretIDFileAfterReading, err := parseutil.ParseBool(removeSecretIDFileAfterReadingRaw)
-		if err != nil {
-			return nil, errwrap.Wrapf("error parsing 'remove_secret_id_file_after_reading' value: {{err}}", err)
-		}
-		a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
-	}
-
-	secretIDResponseWrappingPathRaw, ok := conf.Config["secret_id_response_wrapping_path"]
-	if ok {
-		a.secretIDResponseWrappingPath, ok = secretIDResponseWrappingPathRaw.(string)
+		a.secretIDFilePath, ok = secretIDFilePathRaw.(string)
 		if !ok {
-			return nil, errors.New("could not convert 'secret_id_response_wrapping_path' config value to string")
+			return nil, errors.New("could not convert 'secret_id_file_path' config value to string")
 		}
-		if a.secretIDResponseWrappingPath == "" {
-			return nil, errors.New("'secret_id_response_wrapping_path' value is empty")
+		if a.secretIDFilePath == "" {
+			return a, nil
+		}
+
+		removeSecretIDFileAfterReadingRaw, ok := conf.Config["remove_secret_id_file_after_reading"]
+		if ok {
+			removeSecretIDFileAfterReading, err := parseutil.ParseBool(removeSecretIDFileAfterReadingRaw)
+			if err != nil {
+				return nil, errwrap.Wrapf("error parsing 'remove_secret_id_file_after_reading' value: {{err}}", err)
+			}
+			a.removeSecretIDFileAfterReading = removeSecretIDFileAfterReading
+		}
+
+		secretIDResponseWrappingPathRaw, ok := conf.Config["secret_id_response_wrapping_path"]
+		if ok {
+			a.secretIDResponseWrappingPath, ok = secretIDResponseWrappingPathRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'secret_id_response_wrapping_path' config value to string")
+			}
+			if a.secretIDResponseWrappingPath == "" {
+				return nil, errors.New("'secret_id_response_wrapping_path' value is empty")
+			}
 		}
 	}
 
@@ -106,6 +105,17 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 			a.cachedRoleID = strings.TrimSpace(string(roleID))
 		}
 	}
+
+	if a.cachedRoleID == "" {
+		return "", nil, errors.New("no known role ID")
+	}
+
+	if a.secretIDFilePath == "" {
+		return fmt.Sprintf("%s/login", a.mountPath), map[string]interface{}{
+			"role_id": a.cachedRoleID,
+		}, nil
+	}
+
 	if _, err := os.Stat(a.secretIDFilePath); err == nil {
 		secretID, err := ioutil.ReadFile(a.secretIDFilePath)
 		if err != nil {
@@ -180,9 +190,6 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 		}
 	}
 
-	if a.cachedRoleID == "" {
-		return "", nil, errors.New("no known role ID")
-	}
 	if a.cachedSecretID == "" {
 		return "", nil, errors.New("no known secret ID")
 	}

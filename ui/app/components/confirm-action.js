@@ -1,6 +1,27 @@
 import Component from '@ember/component';
 import hbs from 'htmlbars-inline-precompile';
 
+/**
+ * @module ConfirmAction
+ * `ConfirmAction` is a button followed by a confirmation message and button used to prevent users from performing actions they do not intend to.
+ *
+ * @example
+ * ```js
+ *  <ConfirmAction
+ *    @onConfirmAction={{ () => { console.log('Action!') } }}
+ *    @confirmMessage="Are you sure you want to delete this config?">
+ *    Delete
+ *  </ConfirmAction>
+ * ```
+ *
+ * @property {Func} onConfirmAction=null - The action to take upon confirming.
+ * @property {String} [confirmMessage=Are you sure you want to do this?] - The message to display upon confirming.
+ * @property {String} [confirmButtonText=Delete] - The confirm button text.
+ * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @property {String} [disabledMessage=Complete the form to complete this action] - The message to display when the button is disabled.
+ *
+ */
+
 export default Component.extend({
   tagName: 'span',
   classNames: ['confirm-action'],

@@ -15,6 +15,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -22,7 +23,6 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
 	raw "google.golang.org/api/storage/v1"
 )

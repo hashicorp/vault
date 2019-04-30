@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/validation"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -45,6 +46,16 @@ func NewVirtualMachineRunCommandsClientWithBaseURI(baseURI string, subscriptionI
 // location - the location upon which run commands is queried.
 // commandID - the command id.
 func (client VirtualMachineRunCommandsClient) Get(ctx context.Context, location string, commandID string) (result RunCommandDocument, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineRunCommandsClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.Pattern, Rule: `^[-\w\._]+$`, Chain: nil}}}}); err != nil {
@@ -117,6 +128,16 @@ func (client VirtualMachineRunCommandsClient) GetResponder(resp *http.Response) 
 // Parameters:
 // location - the location upon which run commands is queried.
 func (client VirtualMachineRunCommandsClient) List(ctx context.Context, location string) (result RunCommandListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineRunCommandsClient.List")
+		defer func() {
+			sc := -1
+			if result.rclr.Response.Response != nil {
+				sc = result.rclr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: location,
 			Constraints: []validation.Constraint{{Target: "location", Name: validation.Pattern, Rule: `^[-\w\._]+$`, Chain: nil}}}}); err != nil {
@@ -186,8 +207,8 @@ func (client VirtualMachineRunCommandsClient) ListResponder(resp *http.Response)
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client VirtualMachineRunCommandsClient) listNextResults(lastResults RunCommandListResult) (result RunCommandListResult, err error) {
-	req, err := lastResults.runCommandListResultPreparer()
+func (client VirtualMachineRunCommandsClient) listNextResults(ctx context.Context, lastResults RunCommandListResult) (result RunCommandListResult, err error) {
+	req, err := lastResults.runCommandListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "compute.VirtualMachineRunCommandsClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -208,6 +229,16 @@ func (client VirtualMachineRunCommandsClient) listNextResults(lastResults RunCom
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
 func (client VirtualMachineRunCommandsClient) ListComplete(ctx context.Context, location string) (result RunCommandListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/VirtualMachineRunCommandsClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.page, err = client.List(ctx, location)
 	return
 }

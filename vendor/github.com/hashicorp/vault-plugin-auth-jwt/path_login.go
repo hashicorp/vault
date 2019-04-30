@@ -8,9 +8,9 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -68,6 +68,10 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse("role %q could not be found", roleName), nil
 	}
 
+	if role.RoleType == "oidc" {
+		return logical.ErrorResponse("role with oidc role_type is not allowed"), nil
+	}
+
 	token := d.Get("jwt").(string)
 	if len(token) == 0 {
 		return logical.ErrorResponse("missing token"), nil
@@ -103,21 +107,30 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 		}
 
 		// We require notbefore or expiry; if only one is provided, we allow 5 minutes of leeway.
-		if claims.IssuedAt == 0 && claims.Expiry == 0 && claims.NotBefore == 0 {
+		if claims.IssuedAt == nil {
+			claims.IssuedAt = new(jwt.NumericDate)
+		}
+		if claims.Expiry == nil {
+			claims.Expiry = new(jwt.NumericDate)
+		}
+		if claims.NotBefore == nil {
+			claims.NotBefore = new(jwt.NumericDate)
+		}
+		if *claims.IssuedAt == 0 && *claims.Expiry == 0 && *claims.NotBefore == 0 {
 			return logical.ErrorResponse("no issue time, notbefore, or expiration time encoded in token"), nil
 		}
-		if claims.Expiry == 0 {
-			latestStart := claims.IssuedAt
-			if claims.NotBefore > claims.IssuedAt {
-				latestStart = claims.NotBefore
+		if *claims.Expiry == 0 {
+			latestStart := *claims.IssuedAt
+			if *claims.NotBefore > *claims.IssuedAt {
+				latestStart = *claims.NotBefore
 			}
-			claims.Expiry = latestStart + 300
+			*claims.Expiry = latestStart + 300
 		}
-		if claims.NotBefore == 0 {
-			if claims.IssuedAt != 0 {
-				claims.NotBefore = claims.IssuedAt
+		if *claims.NotBefore == 0 {
+			if *claims.IssuedAt != 0 {
+				*claims.NotBefore = *claims.IssuedAt
 			} else {
-				claims.NotBefore = claims.Expiry - 300
+				*claims.NotBefore = *claims.Expiry - 300
 			}
 		}
 
@@ -212,20 +225,16 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
 	allClaims := make(map[string]interface{})
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
 	}
 
 	oidcConfig := &oidc.Config{
 		SupportedSigningAlgs: config.JWTSupportedAlgs,
+		SkipClientIDCheck:    true,
 	}
 
-	if role.RoleType == "oidc" {
-		oidcConfig.ClientID = config.OIDCClientID
-	} else {
-		oidcConfig.SkipClientIDCheck = true
-	}
 	verifier := provider.Verifier(oidcConfig)
 
 	idToken, err := verifier.Verify(ctx, rawToken)
