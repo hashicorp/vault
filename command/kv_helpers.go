@@ -182,8 +182,8 @@ func kvParseVersionsFlags(versions []string) []string {
 func kvListRecursive(r *kvListRecursiveParams, base string, sub []interface{}) {
 	// Decrement the wait-group count, and also mark the go-routine as done.
 	defer func() {
-		r.wg.Done()
 		r.sem <- int32(1)
+		r.wg.Done()
 	}()
 
 	// Increment the go-routine tracker.
