@@ -39,10 +39,12 @@ Router.map(function() {
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function() {
           this.route('index', { path: '/' });
-          this.route('list', { path: '/list/:item_type' });
-          this.route('create');
-          this.route('edit', { path: '/edit/:item_id' });
-          this.route('show', { path: '/show/:item_type/:item_id' });
+          this.route('item', { path: '/item/:item_type' }, function() {
+            this.route('list', { path: '/' });
+            this.route('create');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/:item_id' });
+          });
           this.route('section', { path: '/:section_name' });
         });
         this.route('leases', function() {
