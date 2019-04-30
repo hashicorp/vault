@@ -174,7 +174,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 	}
-	var dynamodbMaxRetry int = aws.UseServiceDefaultRetries
+	var dynamodbMaxRetry = aws.UseServiceDefaultRetries
 	if dynamodbMaxRetryString != "" {
 		var err error
 		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
@@ -579,19 +579,23 @@ func (l *DynamoDBLock) Unlock() error {
 		TableName:           &l.backend.table,
 		ConditionExpression: &condition,
 		Key: map[string]*dynamodb.AttributeValue{
-			"Path": &dynamodb.AttributeValue{S: aws.String(recordPathForVaultKey(l.key))},
-			"Key":  &dynamodb.AttributeValue{S: aws.String(recordKeyForVaultKey(l.key))},
+			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
+			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
 		},
 		ExpressionAttributeNames: map[string]*string{
 			"#identity": aws.String("Identity"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":identity": &dynamodb.AttributeValue{B: []byte(l.identity)},
+			":identity": {B: []byte(l.identity)},
 		},
 	}
 
-	 _, err := l.backend.client.DeleteItem(deleteMyLock)
-	return filterError(err)
+	_, err := l.backend.client.DeleteItem(deleteMyLock)
+	if isConditionCheckFailed(err) {
+		err = nil
+	}
+
+	return err
 }
 
 // Value checks whether or not the lock is held by any instance of DynamoDBLock,
@@ -626,7 +630,9 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 			err := l.updateItem(true)
 			if err != nil {
 				if err, ok := err.(awserr.Error); ok {
-					errors <- err
+					if !isConditionCheckFailed(err) {
+						errors <- err
+					}
 				} else {
 					// Its not an AWS error, and is probably not transient, bail out.
 					errors <- err
@@ -649,7 +655,9 @@ func (l *DynamoDBLock) periodicallyRenewLock(done chan struct{}) {
 			// This should not renew the lock if the lock was deleted from under you.
 			err := l.updateItem(false)
 			if err != nil {
-				l.backend.logger.Error("error renewing leadership lock", "error", err)
+				if !isConditionCheckFailed(err) {
+					l.backend.logger.Error("error renewing leadership lock", "error", err)
+				}
 			}
 		case <-done:
 			ticker.Stop()
@@ -705,7 +713,7 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 		},
 	})
 
-	return filterError(err)
+	return err
 }
 
 // watch checks whether the lock has changed in the
@@ -849,15 +857,14 @@ func unescapeEmptyPath(s string) string {
 	return s
 }
 
-// filterError filters out expected errors which are expected
-// under normal operation.
-func filterError(err error) error{
-	if err, ok := err.(awserr.Error); ok {
-		// Don't report a condition check failure, this means that the lock
-		// is already being held by another vault
-		if err.Code() == dynamodb.ErrCodeConditionalCheckFailedException {
-			return nil
+// isConditionCheckFailed tests whether err is an ErrCodeConditionalCheckFailedException
+// from the AWS SDK.
+func isConditionCheckFailed(err error) bool {
+	if err != nil {
+		if err, ok := err.(awserr.Error); ok {
+			return err.Code() == dynamodb.ErrCodeConditionalCheckFailedException
 		}
 	}
-	return err
+
+	return false
 }
