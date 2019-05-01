@@ -17,6 +17,8 @@ BUG FIXES:
  * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
+ * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
+   constant switching of the active node [GH-6637]
  * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was
    received from the DynamoDB API [GH-6640]
  * replication: Properly update mount entry cache on a secondary to apply all
