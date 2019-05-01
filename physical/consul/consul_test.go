@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 type consulConf map[string]string
@@ -525,15 +524,12 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsul_TooLarge(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := PrepareConsulTestContainer(t)
-		if cid != "" {
-			defer CleanupConsulTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
