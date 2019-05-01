@@ -168,7 +168,7 @@ func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *fr
 }
 
 func groupList(ctx context.Context, s logical.Storage) ([]string, error) {
-	keys, err := logical.CollectKeysPrefix(ctx, s, "group/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, s, "group/")
 	if err != nil {
 		return nil, err
 	}

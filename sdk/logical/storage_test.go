@@ -51,7 +51,7 @@ func TestCollectKeys(t *testing.T) {
 func TestCollectKeysPrefix(t *testing.T) {
 	s := prepKeyStorage(t)
 
-	keys, err := CollectKeysPrefix(context.Background(), s, "foo")
+	keys, err := CollectKeysWithPrefix(context.Background(), s, "foo")
 
 	if err != nil {
 		t.Fatal(err)

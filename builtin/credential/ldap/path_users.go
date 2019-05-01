@@ -148,7 +148,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 }
 
 func (b *backend) pathUserList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keys, err := logical.CollectKeysPrefix(ctx, req.Storage, "user/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "user/")
 	if err != nil {
 		return nil, err
 	}
