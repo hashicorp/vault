@@ -1771,7 +1771,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
         cleanup, _ := preparePostgresTestContainer(t, config.StorageView, b)
         defer cleanup()
 
-        time.Sleep(1 * time.Second)
+        time.Sleep(5 * time.Second)
         bd := b.(*databaseBackend)
         if bd.credRotationQueue == nil {
                 t.Fatal("database backend had no credential rotation queue")

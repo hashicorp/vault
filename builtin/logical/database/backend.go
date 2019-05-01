@@ -297,11 +297,11 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
                 // that we can write to storage
                 time.Sleep(3 * time.Second)
 
-                // b.Lock()
-                // if b.credRotationQueue == nil {
-                // 	b.credRotationQueue = queue.NewPriorityQueue()
-                // }
-                // b.Unlock()
+                b.Lock()
+                if b.credRotationQueue == nil {
+                        b.credRotationQueue = queue.NewPriorityQueue()
+                }
+                b.Unlock()
 
                 // create a context with a cancel method for processing any WAL entries and
                 // populating the queue
@@ -785,6 +785,9 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
         return &setStaticAccountOutput{RotationTime: lvr}, merr
 }
 
+// pushItem wraps the internal queue's PushItem call, to make sure a queue is
+// actually available. This is needed because both runTicker and initQueue
+// operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) pushItem(item *queue.Item) error {
         b.RLock()
         unlockFunc := b.RUnlock
