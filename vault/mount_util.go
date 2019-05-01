@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func addPathCheckers(*Core, *MountEntry, logical.Backend, string)             {}

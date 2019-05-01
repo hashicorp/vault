@@ -60,6 +60,7 @@ type GraphDatapoint struct {
 	MetricName    string      `json:"metric_name,omitempty"`  // string
 	MetricType    string      `json:"metric_type,omitempty"`  // string
 	Name          string      `json:"name"`                   // string
+	Search        *string     `json:"search"`                 // string or null
 	Stack         *uint       `json:"stack"`                  // uint or null
 }
 

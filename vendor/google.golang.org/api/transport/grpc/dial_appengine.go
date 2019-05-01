@@ -17,10 +17,10 @@
 package grpc
 
 import (
+	"context"
 	"net"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/socket"
 	"google.golang.org/grpc"

@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -156,10 +156,10 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		}
 
 		// Always forward requests that are using a limited use count token.
-		// origBody will not be nil if it's a perf standby as it checks
-		// PerfStandby() but will be nil otherwise.
-		if origBody != nil && req.ClientTokenRemainingUses > 0 {
-			r.Body = origBody
+		if core.PerfStandby() && req.ClientTokenRemainingUses > 0 {
+			if origBody != nil {
+				r.Body = origBody
+			}
 			forwardRequest(core, w, r)
 			return
 		}
@@ -275,7 +275,9 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool) http.H
 		// success.
 		resp, ok, needsForward := request(core, w, r, req)
 		if needsForward {
-			r.Body = origBody
+			if origBody != nil {
+				r.Body = origBody
+			}
 			forwardRequest(core, w, r)
 			return
 		}

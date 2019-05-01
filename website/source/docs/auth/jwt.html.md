@@ -43,6 +43,15 @@ to:
 
 Only JWTs containing both the "division" and "department" claims, and
 respective matching values of "Europe" and "Engineering", would be authorized.
+If the expected value is a list, the claim must match one of the items in the list.
+To limit authorization to a set of email addresses:
+
+```json
+{
+  "email": ["fred@example.com", "julie@example.com"]
+}
+```
+
 
 ### Claims as Metadata
 
@@ -164,6 +173,8 @@ why things aren't working. Some tips for setting up OIDC:
 http/https, 127.0.0.1/localhost, port numbers, whether trailing slashes are present.
 - Start simple. The only claim configuration a role requires is `user_claim`. After authentication is
 known to work, you can add additional claims bindings and metadata copying.
+- `bound_audiences` is optional for OIDC roles and typically not required. OIDC providers will use
+the client_id as the audience and OIDC validation expects this.
 - If you're seeing claim-related errors in logs, review the provider's docs very carefully to see
 how they're naming and structuring their claims. Depending on the provider, you may be able to
 construct a simple `curl` implicit grant request to obtain a JWT that you can inspect. An example

@@ -69,8 +69,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-
-	"cloud.google.com/go/internal/atomiccache"
+	"sync"
 )
 
 // A Field records information about a struct field.
@@ -85,10 +84,17 @@ type Field struct {
 	equalFold func(s, t []byte) bool
 }
 
+// ParseTagFunc is a function that accepts a struct tag and returns four values: an alternative name for the field
+// extracted from the tag, a boolean saying whether to keep the field or ignore  it, additional data that is stored
+// with the field information to avoid having to parse the tag again, and an error.
 type ParseTagFunc func(reflect.StructTag) (name string, keep bool, other interface{}, err error)
 
+// ValidateFunc is a function that accepts a reflect.Type and returns an error if the struct type is invalid in any
+// way.
 type ValidateFunc func(reflect.Type) error
 
+// LeafTypesFunc is a function that accepts a reflect.Type and returns true if the struct type a leaf, or false if not.
+// TODO(deklerk) is this description accurate?
 type LeafTypesFunc func(reflect.Type) bool
 
 // A Cache records information about the fields of struct types.
@@ -98,7 +104,7 @@ type Cache struct {
 	parseTag  ParseTagFunc
 	validate  ValidateFunc
 	leafTypes LeafTypesFunc
-	cache     atomiccache.Cache // from reflect.Type to cacheValue
+	cache     sync.Map // from reflect.Type to cacheValue
 }
 
 // NewCache constructs a Cache.
@@ -205,13 +211,19 @@ type cacheValue struct {
 // This code has been copied and modified from
 // https://go.googlesource.com/go/+/go1.7.3/src/encoding/json/encode.go.
 func (c *Cache) cachedTypeFields(t reflect.Type) (List, error) {
-	cv := c.cache.Get(t, func() interface{} {
+	var cv cacheValue
+	x, ok := c.cache.Load(t)
+	if ok {
+		cv = x.(cacheValue)
+	} else {
 		if err := c.validate(t); err != nil {
-			return cacheValue{nil, err}
+			cv = cacheValue{nil, err}
+		} else {
+			f, err := c.typeFields(t)
+			cv = cacheValue{List(f), err}
 		}
-		f, err := c.typeFields(t)
-		return cacheValue{List(f), err}
-	}).(cacheValue)
+		c.cache.Store(t, cv)
+	}
 	return cv.fields, cv.err
 }
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 func TestLoadConfigFile_AgentCache(t *testing.T) {
@@ -70,12 +70,13 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			},
 		},
 		Vault: &Vault{
-			Address:       "http://127.0.0.1:1111",
-			CACert:        "config_ca_cert",
-			CAPath:        "config_ca_path",
-			TLSSkipVerify: true,
-			ClientCert:    "config_client_cert",
-			ClientKey:     "config_client_key",
+			Address:          "http://127.0.0.1:1111",
+			CACert:           "config_ca_cert",
+			CAPath:           "config_ca_path",
+			TLSSkipVerifyRaw: interface{}("true"),
+			TLSSkipVerify:    true,
+			ClientCert:       "config_client_cert",
+			ClientKey:        "config_client_key",
 		},
 		PidFile: "./pidfile",
 	}
@@ -88,6 +89,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	expected.Vault.TLSSkipVerifyRaw = interface{}(true)
 
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)

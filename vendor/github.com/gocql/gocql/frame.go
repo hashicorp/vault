@@ -1011,6 +1011,10 @@ type resultMetadata struct {
 	actualColCount int
 }
 
+func (r *resultMetadata) morePages() bool {
+	return r.flags&flagHasMorePages == flagHasMorePages
+}
+
 func (r resultMetadata) String() string {
 	return fmt.Sprintf("[metadata flags=0x%x paging_state=% X columns=%v]", r.flags, r.pagingState, r.columns)
 }
@@ -1737,7 +1741,7 @@ func (w *writeOptionsFrame) writeFrame(framer *framer, streamID int) error {
 }
 
 func (f *framer) writeOptionsFrame(stream int, _ *writeOptionsFrame) error {
-	f.writeHeader(f.flags, opOptions, stream)
+	f.writeHeader(f.flags&^flagCompress, opOptions, stream)
 	return f.finishWrite()
 }
 

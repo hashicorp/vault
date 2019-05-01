@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hashicorp/vault/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/vault"
 )
 

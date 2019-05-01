@@ -1,15 +1,82 @@
-## 1.1.1 (unreleased)
+## Next
+
+CHANGES:
+
+ * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
+   will now be preferred over regions set in the enclosing environment.
+   This is a _breaking_ change.
+
+IMPROVEMENTS: 
+
+ * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
+   workflow in the UI [GH-6570]
+
+BUG FIXES: 
+
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * replication: Properly update mount entry cache on a secondary to apply all
+   new values after a tune
+ * ui: fix an issue where sensitive input values weren't being saved to the
+   server [GH-6586]
+
+## 1.1.2 (April 18th, 2019)
+
+This is a bug fix release containing the two items below. It is otherwise
+unchanged from 1.1.1.
+
+BUG FIXES:
+
+ * auth/okta: Fix a potential dropped error [GH-6592]
+ * secrets/kv: Fix a regression on upgrade where a KVv2 mount could fail to be
+   mounted on unseal if it had previously been mounted but not written to
+   [KV-31]
+
+## 1.1.1 (April 11th, 2019)
+
+SECURITY:
+
+ * Given: (a) performance replication is enabled; (b) performance standbys are
+   in use on the performance replication secondary cluster; and (c) mount
+   filters are in use, if a mount that was previously available to a secondary
+   is updated to be filtered out, although the data would be removed from the
+   secondary cluster, the in-memory cache of the data would not be purged on
+   the performance standby nodes. As a result, the previously-available data
+   could still be read from memory if it was ever read from disk, and if this
+   included mount configuration data this could result in token or lease
+   issuance. The issue is fixed in this release; in prior releases either an
+   active node changeover (such as a step-down) or a restart of the standby
+   nodes is sufficient to cause the performance standby nodes to clear their
+   cache. A CVE is in the process of being issued; the number is
+   CVE-2019-11075.
+ * Roles in the JWT Auth backend using the OIDC login flow (i.e. role_type of
+   “oidc”) were not enforcing bound_cidrs restrictions, if any were configured
+   for the role. This issue did not affect roles of type “jwt”.
 
 CHANGES:
 
  * auth/jwt: Disallow logins of role_type "oidc" via the `/login` path [JWT-38]
+ * core/acl:  New ordering defines which policy wins when there are multiple 
+   inexact matches and at least one path contains `+`. `+*` is now illegal in
+   policy paths. The previous behavior simply selected any matching
+   segment-wildcard path that matched. [GH-6532]
+ * replication: Due to technical limitations, mounting and unmounting was not
+   previously possible from a performance secondary. These have been resolved,
+   and these operations may now be run from a performance secondary.
 
 IMPROVEMENTS: 
 
  * agent: Allow AppRole auto-auth without a secret-id [GH-6324]
+ * auth/gcp: Cache clients to improve performance and reduce open file usage
+ * auth/jwt: Bounds claims validiation will now allow matching the received
+   claims against a list of expected values [JWT-41] 
+ * secret/gcp: Cache clients to improve performance and reduce open file usage
+ * replication: Mounting/unmounting/remounting/mount-tuning is now supported
+   from a performance secondary cluster
  * ui: Suport for authentication via the RADIUS auth method [GH-6488]
  * ui: Navigating away from secret list view will clear any page-specific
    filter that was applied [GH-6511]
+ * ui: Improved the display when OIDC auth errors [GH-6553] 
 
 BUG FIXES: 
 
@@ -27,12 +94,18 @@ BUG FIXES:
  * core: Fix unwrapping when using namespaced wrapping tokens [GH-6536]
  * core: Fix incorrect representation of required properties in OpenAPI output
    [GH-6490]
+ * core: Fix deadlock that could happen when using the UI [GH-6560]
  * identity: Fix updating groups removing existing members [GH-6527]
+ * identity: Properly invalidate group alias in performance secondary [GH-6564]
+ * identity: Use namespace context when loading entities and groups to ensure
+   merging of duplicate entries works properly [GH-6563]
+ * replication: Fix performance standby election failure [GH-6561]
  * replication: Fix mount filter invalidation on performance standby nodes
  * replication: Fix license reloading on performance standby nodes
  * replication: Fix handling of control groups on performance standby nodes
  * replication: Fix some forwarding scenarios with request bodies using
    performance standby nodes [GH-6538]
+ * secret/gcp: Fix roleset binding when using JSON [GCP-27]
  * secret/pki: Use `uri_sans` param in when not using CSR parameters [GH-6505]
  * storage/dynamodb: Fix a race condition possible in HA configurations that could
    leave the cluster without a leader [GH-6512]
@@ -41,7 +114,9 @@ BUG FIXES:
  * ui: Fix issue nav-hiding when moving between namespaces [GH-6473]
  * ui: Secrets will always show in the nav regardless of access to cubbyhole [GH-6477]
  * ui: fix SSH OTP generation [GH-6540]
- 
+ * ui: add polyfill to load UI in IE11 [GH-6567]
+ * ui: Fix issue where some elements would fail to work properly if using ACLs
+   with segment-wildcard paths (`/+/` segments) [GH-6525]
  
 ## 1.1.0 (March 18th, 2019)
 

@@ -104,7 +104,9 @@ import (
 // v6: removed unsafe from gen, and now uses codecgen.exec tag
 // v7:
 // v8: current - we now maintain compatibility with old generated code.
-const genVersion = 8
+// v9: skipped
+// v10: modified encDriver and decDriver interfaces. Remove deprecated methods after Jan 1, 2019
+const genVersion = 10
 
 const (
 	genCodecPkg        = "codec1978"
@@ -299,7 +301,7 @@ func Gen(w io.Writer, buildTags, pkgName, uid string, noExtensions bool,
 	// x.out(`panic(fmt.Errorf("codecgen version mismatch: current: %v, need %v. Re-generate file: %v", `)
 	// x.linef(`%v, %sGenVersion, file))`, genVersion, x.cpfx)
 	x.linef("}")
-	x.line("if false { // reference the types, but skip this branch at build/run time")
+	x.line("if false { var _ byte = 0; // reference the types, but skip this branch at build/run time")
 	// x.line("_ = strconv.ParseInt")
 	var n int
 	// for k, t := range x.im {
@@ -796,7 +798,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	case reflect.Bool:
 		x.line("r.EncodeBool(bool(" + varname + "))")
 	case reflect.String:
-		x.line("r.EncodeString(codecSelferCcUTF8" + x.xs + ", string(" + varname + "))")
+		x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + ", string(" + varname + "))")
 	case reflect.Chan:
 		x.xtraSM(varname, t, true, false)
 		// x.encListFallback(varname, rtid, t)
@@ -810,7 +812,7 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 		// - if elements are primitives or Selfers, call dedicated function on each member.
 		// - else call Encoder.encode(XXX) on it.
 		if rtid == uint8SliceTypId {
-			x.line("r.EncodeStringBytes(codecSelferCcRAW" + x.xs + ", []byte(" + varname + "))")
+			x.line("r.EncodeStringBytesRaw([]byte(" + varname + "))")
 		} else if fastpathAV.index(rtid) != -1 {
 			g := x.newGenV(t)
 			x.line("z.F." + g.MethodNamePfx("Enc", false) + "V(" + varname + ", e)")
@@ -860,7 +862,7 @@ func (x *genRunner) encZero(t reflect.Type) {
 	case reflect.Bool:
 		x.line("r.EncodeBool(false)")
 	case reflect.String:
-		x.line("r.EncodeString(codecSelferCcUTF8" + x.xs + `, "")`)
+		x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + `, "")`)
 	default:
 		x.line("r.EncodeNil()")
 	}
@@ -1049,7 +1051,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		}
 		x.line("r.WriteMapElemKey()")
 
-		// x.line("r.EncodeString(codecSelferCcUTF8" + x.xs + ", `" + si.encName + "`)")
+		// x.line("r.EncodeStringEnc(codecSelferCcUTF8" + x.xs + ", `" + si.encName + "`)")
 		// emulate EncStructFieldKey
 		switch ti.keyType {
 		case valueTypeInt:
@@ -1062,7 +1064,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 			if si.encNameAsciiAlphaNum {
 				x.linef(`if z.IsJSONHandle() { z.WriteStr("\"%s\"") } else { `, si.encName)
 			}
-			x.linef("r.EncodeString(codecSelferCcUTF8%s, `%s`)", x.xs, si.encName)
+			x.linef("r.EncodeStringEnc(codecSelferCcUTF8%s, `%s`)", x.xs, si.encName)
 			if si.encNameAsciiAlphaNum {
 				x.linef("}")
 			}
@@ -1092,11 +1094,11 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 func (x *genRunner) encListFallback(varname string, t reflect.Type) {
 	elemBytes := t.Elem().Kind() == reflect.Uint8
 	if t.AssignableTo(uint8SliceTyp) {
-		x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, []byte(%s))", x.xs, varname)
+		x.linef("r.EncodeStringBytesRaw([]byte(%s))", varname)
 		return
 	}
 	if t.Kind() == reflect.Array && elemBytes {
-		x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, ((*[%d]byte)(%s))[:])", x.xs, t.Len(), varname)
+		x.linef("r.EncodeStringBytesRaw(((*[%d]byte)(%s))[:])", t.Len(), varname)
 		return
 	}
 	i := x.varsfx()
@@ -1116,7 +1118,7 @@ func (x *genRunner) encListFallback(varname string, t reflect.Type) {
 		}
 		// x.linef("%s = sch%s", varname, i)
 		if elemBytes {
-			x.linef("r.EncodeStringBytes(codecSelferCcRAW%s, []byte(%s))", x.xs, "sch"+i)
+			x.linef("r.EncodeStringBytesRaw([]byte(%s))", "sch"+i)
 			x.line("}")
 			return
 		}
@@ -1935,7 +1937,7 @@ func genInternalEncCommandAsString(s string, vname string) string {
 	case "int", "int8", "int16", "int32", "int64":
 		return "ee.EncodeInt(int64(" + vname + "))"
 	case "string":
-		return "ee.EncodeString(cUTF8, " + vname + ")"
+		return "ee.EncodeStringEnc(cUTF8, " + vname + ")"
 	case "float32":
 		return "ee.EncodeFloat32(" + vname + ")"
 	case "float64":

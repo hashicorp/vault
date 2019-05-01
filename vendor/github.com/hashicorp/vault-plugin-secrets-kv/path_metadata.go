@@ -3,11 +3,12 @@ package kv
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // pathMetadata returns the path configuration for CRUD operations on the
@@ -54,6 +55,13 @@ func (b *versionedKVBackend) metadataExistenceCheck() framework.ExistenceFunc {
 
 		meta, err := b.getKeyMetadata(ctx, req.Storage, key)
 		if err != nil {
+			// If we are returning a readonly error it means we are attempting
+			// to write the policy for the first time. This means no data exists
+			// yet and we can safely return false here.
+			if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return false, nil
+			}
+
 			return false, err
 		}
 
