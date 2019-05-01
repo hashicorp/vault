@@ -576,7 +576,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					c.logger.Error("clearing leader advertisement failed", "error", err)
 				}
 
-				c.heldHALock.Unlock()
+				if err := c.heldHALock.Unlock(); err != nil {
+					c.logger.Error("unlocking HA lock failed", "error", err)
+				}
 				c.heldHALock = nil
 			}
 
