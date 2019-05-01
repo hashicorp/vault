@@ -35,6 +35,23 @@ func NewErrItemNotFound(key string) *ErrItemNotFound {
 	}
 }
 
+// Item is something managed in the priority queue
+type Item struct {
+	// Key is a unique string used to identify items in the internal data map
+	Key string
+	// Value is an unspecified type that implementations can use to store
+	// information
+	Value interface{}
+
+	// Priority determines ordering in the queue, with the lowest value being the
+	// highest priority
+	Priority int64
+
+	// index is an internal value used by the heap package, and should not be
+	// modified by any consumer of the priority queue
+	index int
+}
+
 // NewPriorityQueue initializes a PriorityQueue struct for use as a PriorityQueue
 func NewPriorityQueue() *PriorityQueue {
 	pq := PriorityQueue{
