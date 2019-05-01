@@ -106,6 +106,7 @@ type ServerCommand struct {
 	flagDevAutoSeal      bool
 	flagTestVerifyOnly   bool
 	flagCombineLogs      bool
+	flagTestServerConfig bool
 }
 
 type ServerListener struct {
@@ -301,6 +302,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
 		Target:  &c.flagTestVerifyOnly,
+		Default: false,
+		Hidden:  true,
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    "test-server-config",
+		Target:  &c.flagTestServerConfig,
 		Default: false,
 		Hidden:  true,
 	})
@@ -1126,6 +1134,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("")
 	}
 
+	// Continuing configuration testing at this point
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
@@ -1146,6 +1155,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			}
 		}
 
+		// server defaults
 		server := &http.Server{
 			Handler:           handler,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -1153,6 +1163,49 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
 		}
+
+		// override server defaults with config values for read/write/idle timeouts if configured
+		if readHeaderTimeoutInterface, ok := ln.config["http_read_header_timeout"]; ok {
+			readHeaderTimeout, err := parseutil.ParseDurationSecond(readHeaderTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_header_timeout %v", readHeaderTimeout))
+				return 1
+			}
+			server.ReadHeaderTimeout = readHeaderTimeout
+		}
+
+		if readTimeoutInterface, ok := ln.config["http_read_timeout"]; ok {
+			readTimeout, err := parseutil.ParseDurationSecond(readTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_read_timeout %v", readTimeout))
+				return 1
+			}
+			server.ReadTimeout = readTimeout
+		}
+
+		if writeTimeoutInterface, ok := ln.config["http_write_timeout"]; ok {
+			writeTimeout, err := parseutil.ParseDurationSecond(writeTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_write_timeout %v", writeTimeout))
+				return 1
+			}
+			server.WriteTimeout = writeTimeout
+		}
+
+		if idleTimeoutInterface, ok := ln.config["http_idle_timeout"]; ok {
+			idleTimeout, err := parseutil.ParseDurationSecond(idleTimeoutInterface)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Could not parse a time value for http_idle_timeout %v", idleTimeout))
+				return 1
+			}
+			server.IdleTimeout = idleTimeout
+		}
+
+		// server config tests can exit now
+		if c.flagTestServerConfig {
+			return 0
+		}
+
 		go server.Serve(ln.Listener)
 	}
 
