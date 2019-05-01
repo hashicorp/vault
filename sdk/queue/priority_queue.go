@@ -65,6 +65,7 @@ func NewPriorityQueue() *PriorityQueue {
 // PriorityQueue satisfies heap.Interface and adds a few additional methods. The
 // ordering (priority) is an integer value with the smallest value is the
 // highest priority.
+// See https://golang.org/pkg/container/heap/#example__priorityQueue
 type PriorityQueue struct {
 	// data is the internal structure that holds the queue, and is operated on by
 	// heap functions
