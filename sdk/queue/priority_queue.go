@@ -52,7 +52,8 @@ type Item struct {
 	index int
 }
 
-// NewPriorityQueue initializes a PriorityQueue struct for use as a PriorityQueue
+// NewPriorityQueue initializes the internal data structures and returns a new
+// PriorityQueue
 func NewPriorityQueue() *PriorityQueue {
 	pq := PriorityQueue{
 		data:    make([]*Item, 0),
@@ -62,9 +63,9 @@ func NewPriorityQueue() *PriorityQueue {
 	return &pq
 }
 
-// PriorityQueue satisfies heap.Interface and adds a few additional methods. The
-// ordering (priority) is an integer value with the smallest value is the
-// highest priority.
+// PriorityQueue satisfies heap.Interface and sort.Interface, and adds a few
+// convenience methods. The ordering (priority) is an int64 value with the
+// smallest value is the highest priority.
 // See https://golang.org/pkg/container/heap/#example__priorityQueue
 type PriorityQueue struct {
 	// data is the internal structure that holds the queue, and is operated on by
@@ -72,7 +73,7 @@ type PriorityQueue struct {
 	data []*Item
 
 	// dataMap represents all the items in the queue, with unique indexes, used
-	// for finding specific items. dataMap must be kept in sync with data
+	// for finding specific items. dataMap is kept in sync with the data slice
 	dataMap map[string]*Item
 
 	// mapMutex is used to facilitate read/write locks on the dataMap
@@ -96,7 +97,9 @@ func (pq *PriorityQueue) PopItem() (*Item, error) {
 
 // PushItem pushes an item on to the queue. This is a wrapper/convenience
 // method that calls heap.Push, so consumers do not need to invoke heap
-// functions directly
+// functions directly. Items must have unique Keys, and Items in the queue
+// cannot be updated. To modify an Item, users must first remove it and re-push
+// it after modifications
 func (pq *PriorityQueue) PushItem(i *Item) error {
 	if i.Key == "" {
 		return errors.New("error adding item: Item Key is required")
@@ -109,6 +112,8 @@ func (pq *PriorityQueue) PushItem(i *Item) error {
 		return ErrDuplicateItem
 	}
 
+	// copy the item value(s) so that modifications to the source item does not
+	// affect the item on the queue
 	clone, err := copystructure.Copy(i)
 	if err != nil {
 		return err
@@ -142,15 +147,12 @@ func (pq *PriorityQueue) PopItemByKey(key string) (*Item, error) {
 	return nil, NewErrItemNotFound(key)
 }
 
-//////
-// begin heap.Interface and sort.Interface methods
-//////
-
 // Len returns the count of items in the queue.
 func (pq *PriorityQueue) Len() int { return len(pq.data) }
 
 // Less returns the less of two things, which in this case, we return the
-// highest thing.
+// highest thing, because the priority ordering is "lowest value, highest
+// priority"
 func (pq *PriorityQueue) Less(i, j int) bool {
 	return pq.data[i].Priority < pq.data[j].Priority
 }
@@ -164,7 +166,7 @@ func (pq *PriorityQueue) Swap(i, j int) {
 
 // Push is used by heap.Interface to push items onto the heap. Do not use this
 // method to add items to a queue: use PushItem instead.
-// See also: https://golang.org/pkg/container/heap/#Interface
+// See: https://golang.org/pkg/container/heap/#Interface
 func (pq *PriorityQueue) Push(x interface{}) {
 	n := len(pq.data)
 	item := x.(*Item)
@@ -174,7 +176,7 @@ func (pq *PriorityQueue) Push(x interface{}) {
 
 // Pop is used by heap.Interface to pop items off of the heap. Do not use this
 // method to remove items from a queue: use PopItem instead.
-// See also: https://golang.org/pkg/container/heap/#Interface
+// See: https://golang.org/pkg/container/heap/#Interface
 func (pq *PriorityQueue) Pop() interface{} {
 	old := pq.data
 	n := len(old)
@@ -183,7 +185,3 @@ func (pq *PriorityQueue) Pop() interface{} {
 	pq.data = old[0 : n-1]
 	return item
 }
-
-//////
-// end heap.Interface methods
-//////
