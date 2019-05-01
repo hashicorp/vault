@@ -90,14 +90,16 @@ func connConfig(cfg *ClusterConfig) (*ConnConfig, error) {
 	}
 
 	return &ConnConfig{
-		ProtoVersion:   cfg.ProtoVersion,
-		CQLVersion:     cfg.CQLVersion,
-		Timeout:        cfg.Timeout,
-		ConnectTimeout: cfg.ConnectTimeout,
-		Compressor:     cfg.Compressor,
-		Authenticator:  cfg.Authenticator,
-		Keepalive:      cfg.SocketKeepalive,
-		tlsConfig:      tlsConfig,
+		ProtoVersion:    cfg.ProtoVersion,
+		CQLVersion:      cfg.CQLVersion,
+		Timeout:         cfg.Timeout,
+		ConnectTimeout:  cfg.ConnectTimeout,
+		Compressor:      cfg.Compressor,
+		Authenticator:   cfg.Authenticator,
+		AuthProvider:    cfg.AuthProvider,
+		Keepalive:       cfg.SocketKeepalive,
+		tlsConfig:       tlsConfig,
+		disableCoalesce: tlsConfig != nil, // write coalescing doesn't work with framing on top of TCP like in TLS.
 	}, nil
 }
 

@@ -11,16 +11,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cluster"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/physical"
-	"github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	testing "github.com/mitchellh/go-testing-interface"
 )
@@ -267,6 +269,7 @@ func ConfClusterAndCore(t testing.T, conf *vault.CoreConfig, opts *vault.TestClu
 		"local-kv":  PassthroughWithLocalPathsFactory,
 		"leased-kv": vault.LeasedPassthroughBackendFactory,
 	}
+	vault.AddNoopAudit(&coreConfig)
 	cluster := vault.NewTestCluster(t, &coreConfig, opts)
 	cluster.Start()
 
@@ -288,12 +291,19 @@ func GetClusterAndCore(t testing.T, logger log.Logger, handlerFunc func(*vault.H
 func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.TestClusterOptions) *ReplicatedTestClusters {
 	ret := &ReplicatedTestClusters{}
 
-	logger := log.New(&log.LoggerOptions{
-		Mutex: &sync.Mutex{},
-		Level: log.Trace,
-	})
+	var logger hclog.Logger
+	if opts != nil {
+		logger = opts.Logger
+	}
+	if logger == nil {
+		logger = log.New(&log.LoggerOptions{
+			Mutex: &sync.Mutex{},
+			Level: log.Trace,
+		})
+	}
+
 	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
+	cluster.HeartbeatInterval = 2 * time.Second
 
 	opts1 := *opts
 	opts1.Logger = logger.Named("perf-pri")
@@ -316,7 +326,7 @@ func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerPrope
 		Level: log.Trace,
 	})
 	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
+	cluster.HeartbeatInterval = 2 * time.Second
 
 	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
 
@@ -508,6 +518,21 @@ func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestCluste
 	return nil
 }
 
+func DeriveStandbyCores(t testing.T, cluster *vault.TestCluster) []*vault.TestClusterCore {
+	cores := make([]*vault.TestClusterCore, 0, 2)
+	for _, core := range cluster.Cores {
+		leaderResp, err := core.Client.Sys().Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !leaderResp.IsSelf {
+			cores = append(cores, core)
+		}
+	}
+
+	return cores
+}
+
 func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
@@ -570,4 +595,17 @@ func WaitForMatchingMerkleRoots(t testing.T, endpoint string, primary, secondary
 	}
 
 	t.Fatalf("roots did not become equal")
+}
+
+func WaitForWAL(t testing.T, c *vault.TestClusterCore, wal uint64) {
+	timeout := time.Now().Add(3 * time.Second)
+	for {
+		if time.Now().After(timeout) {
+			t.Fatal("timeout waiting for WAL")
+		}
+		if vault.LastRemoteWAL(c.Core) >= wal {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 }

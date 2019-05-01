@@ -13,16 +13,16 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -380,13 +380,24 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 // HandleRequest is used to handle a new incoming request
 func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-	c.stateLock.RLock()
+	return c.switchedLockHandleRequest(httpCtx, req, true)
+}
+
+func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.Request, doLocking bool) (resp *logical.Response, err error) {
+	if doLocking {
+		c.stateLock.RLock()
+	}
+	unlockFunc := func() {
+		if doLocking {
+			c.stateLock.RUnlock()
+		}
+	}
 	if c.Sealed() {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrSealed
 	}
 	if c.standby && !c.perfStandby {
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, consts.ErrStandby
 	}
 
@@ -402,7 +413,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 	ns, err := namespace.FromContext(httpCtx)
 	if err != nil {
 		cancel()
-		c.stateLock.RUnlock()
+		unlockFunc()
 		return nil, errwrap.Wrapf("could not parse namespace from http context: {{err}}", err)
 	}
 	ctx = namespace.ContextWithNamespace(ctx, ns)
@@ -411,7 +422,7 @@ func (c *Core) HandleRequest(httpCtx context.Context, req *logical.Request) (res
 
 	req.SetTokenEntry(nil)
 	cancel()
-	c.stateLock.RUnlock()
+	unlockFunc()
 	return resp, err
 }
 
@@ -903,9 +914,17 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	req.Unauthenticated = true
 
-	var auth *logical.Auth
+	var nonHMACReqDataKeys []string
+	entry := c.router.MatchingMountEntry(ctx, req.Path)
+	if entry != nil {
+		// Get and set ignored HMAC'd value.
+		if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
+			nonHMACReqDataKeys = rawVals.([]string)
+		}
+	}
 
 	// Do an unauth check. This will cause EGP policies to be checked
+	var auth *logical.Auth
 	var ctErr error
 	auth, _, ctErr = c.checkToken(ctx, req, true)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
@@ -920,15 +939,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			errType = ctErr
 		default:
 			errType = logical.ErrInvalidRequest
-		}
-
-		var nonHMACReqDataKeys []string
-		entry := c.router.MatchingMountEntry(ctx, req.Path)
-		if entry != nil {
-			// Get and set ignored HMAC'd value.
-			if rawVals, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
-				nonHMACReqDataKeys = rawVals.([]string)
-			}
 		}
 
 		logInput := &audit.LogInput{
@@ -954,8 +964,9 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Create an audit trail of the request. Attach auth if it was returned,
 	// e.g. if a token was provided.
 	logInput := &audit.LogInput{
-		Auth:    auth,
-		Request: req,
+		Auth:               auth,
+		Request:            req,
+		NonHMACReqDataKeys: nonHMACReqDataKeys,
 	}
 	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
 		c.logger.Error("failed to audit request", "path", req.Path, "error", err)

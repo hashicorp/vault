@@ -13,8 +13,8 @@ import (
 	"github.com/cockroachdb/cockroach-go/crdb"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/lib/pq"

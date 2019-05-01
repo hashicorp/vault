@@ -76,8 +76,8 @@ func (client *Client) DeleteAccessKeyWithCallback(request *DeleteAccessKeyReques
 // DeleteAccessKeyRequest is the request struct for api DeleteAccessKey
 type DeleteAccessKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserAccessKeyId string `position:"Query" name:"UserAccessKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 }
 
 // DeleteAccessKeyResponse is the response struct for api DeleteAccessKey
@@ -91,7 +91,7 @@ func CreateDeleteAccessKeyRequest() (request *DeleteAccessKeyRequest) {
 	request = &DeleteAccessKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteAccessKey", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "DeleteAccessKey", "ram", "openAPI")
 	return
 }
 

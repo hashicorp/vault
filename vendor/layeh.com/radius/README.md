@@ -21,13 +21,13 @@ import (
 	"log"
 
 	"layeh.com/radius"
-	. "layeh.com/radius/rfc2865"
+	"layeh.com/radius/rfc2865"
 )
 
 func main() {
 	packet := radius.New(radius.CodeAccessRequest, []byte(`secret`))
-	UserName_SetString(packet, "tim")
-	UserPassword_SetString(packet, "12345")
+	rfc2865.UserName_SetString(packet, "tim")
+	rfc2865.UserPassword_SetString(packet, "12345")
 	response, err := radius.Exchange(context.Background(), packet, "localhost:1812")
 	if err != nil {
 		log.Fatal(err)
@@ -46,13 +46,13 @@ import (
 	"log"
 
 	"layeh.com/radius"
-	. "layeh.com/radius/rfc2865"
+	"layeh.com/radius/rfc2865"
 )
 
 func main() {
 	handler := func(w radius.ResponseWriter, r *radius.Request) {
-		username := UserName_GetString(r.Packet)
-		password := UserPassword_GetString(r.Packet)
+		username := rfc2865.UserName_GetString(r.Packet)
+		password := rfc2865.UserPassword_GetString(r.Packet)
 
 		var code radius.Code
 		if username == "tim" && password == "12345" {

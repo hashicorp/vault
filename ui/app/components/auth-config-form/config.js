@@ -12,7 +12,7 @@ import DS from 'ember-data';
  * {{auth-config-form/config model.model}}
  * ```
  *
- * @property model=null {String} - The corresponding auth model that is being configured.
+ * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *
  */
 
@@ -39,7 +39,7 @@ const AuthConfigBase = Component.extend({
     }
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
-  }),
+  }).withTestWaiter(),
 });
 
 AuthConfigBase.reopenClass({

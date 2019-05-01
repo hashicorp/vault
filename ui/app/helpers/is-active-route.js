@@ -9,6 +9,7 @@ const startsWith = (a, b) => a.indexOf(b) === 0;
 export default Helper.extend({
   router: service(),
 
+  /* eslint-disable-next-line ember/no-observers */
   onRouteChange: observer('router.currentURL', 'router.currentRouteName', function() {
     this.recompute();
   }),

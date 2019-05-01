@@ -19,14 +19,14 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	cachememdb "github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/helper/base62"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/cryptoutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (

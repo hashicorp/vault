@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathUsersList(b *backend) *framework.Path {

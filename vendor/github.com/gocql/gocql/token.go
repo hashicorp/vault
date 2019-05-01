@@ -192,18 +192,17 @@ func (t *tokenRing) String() string {
 	return string(buf.Bytes())
 }
 
-func (t *tokenRing) GetHostForPartitionKey(partitionKey []byte) *HostInfo {
+func (t *tokenRing) GetHostForPartitionKey(partitionKey []byte) (host *HostInfo, endToken token) {
 	if t == nil {
-		return nil
+		return nil, nil
 	}
 
-	token := t.partitioner.Hash(partitionKey)
-	return t.GetHostForToken(token)
+	return t.GetHostForToken(t.partitioner.Hash(partitionKey))
 }
 
-func (t *tokenRing) GetHostForToken(token token) *HostInfo {
+func (t *tokenRing) GetHostForToken(token token) (host *HostInfo, endToken token) {
 	if t == nil || len(t.tokens) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// find the primary replica
@@ -216,5 +215,6 @@ func (t *tokenRing) GetHostForToken(token token) *HostInfo {
 		ringIndex = 0
 	}
 
-	return t.tokens[ringIndex].host
+	v := t.tokens[ringIndex]
+	return v.host, v.token
 }

@@ -10,8 +10,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 )
 
@@ -72,10 +73,7 @@ func prepareCouchdbDBTestContainer(t *testing.T) (cleanup func(), retAddress, us
 
 	retAddress = "http://localhost:" + resource.GetPort("5984/tcp")
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local DynamoDB: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	// exponential backoff-retry, because the couchDB may not be able to accept

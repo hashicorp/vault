@@ -30,15 +30,18 @@ audit logs.
 
 The audit logs contain the full request and response objects for every
 interaction with Vault. The request and response can be matched utilizing a
-unique identifier assigned to each request. The data in the request and the
-data in the response (including secrets and authentication tokens) will be
-hashed with a salt using HMAC-SHA256.
+unique identifier assigned to each request.
 
-The purpose of the hash is so that secrets aren't in plaintext within your
-audit logs. However, you're still able to check the value of secrets by
-generating HMACs yourself; this can be done with the audit device's hash
-function and salt by using the `/sys/audit-hash` API endpoint (see the
-documentation for more details).
+With a few specific exceptions, all strings (including authentication tokens and lease information) contained within requests and
+responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is
+so that secrets aren't in plaintext within your audit logs. However, you're
+still able to check the value of secrets by generating HMACs yourself; this can
+be done with the audit device's hash function and salt by using the
+`/sys/audit-hash` API endpoint (see the documentation for more details).
+
+Note that currently only strings coming from JSON or being returned in JSON are
+HMAC'd. Other data types, like integers, booleans, and so on, are passed
+through in plaintext.
 
 ## Enabling/Disabling Audit Devices
 

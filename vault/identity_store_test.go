@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {

@@ -8,8 +8,6 @@ package github
 import (
 	"context"
 	"fmt"
-
-	"encoding/json"
 )
 
 // RepositoryListForksOptions specifies the optional parameters to the
@@ -80,15 +78,10 @@ func (s *RepositoriesService) CreateFork(ctx context.Context, owner, repo string
 
 	fork := new(Repository)
 	resp, err := s.client.Do(ctx, req, fork)
+	if _, ok := err.(*AcceptedError); ok {
+		return fork, resp, err
+	}
 	if err != nil {
-		// Persist AcceptedError's metadata to the Repository object.
-		if aerr, ok := err.(*AcceptedError); ok {
-			if err := json.Unmarshal(aerr.Raw, fork); err != nil {
-				return fork, resp, err
-			}
-
-			return fork, resp, err
-		}
 		return nil, resp, err
 	}
 

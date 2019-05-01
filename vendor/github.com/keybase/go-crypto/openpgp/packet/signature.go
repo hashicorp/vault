@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/dsa"
 	"crypto/ecdsa"
-	"crypto/rsa"
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 const (

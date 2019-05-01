@@ -1,13 +1,33 @@
 package rabbithole
 
 import (
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
+	"math/rand"
 	"net/http"
 )
 
+type HashingAlgorithm string
+
+func (algo HashingAlgorithm) String() string {
+	return string(algo)
+}
+
+const (
+	HashingAlgorithmSHA256 HashingAlgorithm = "rabbit_password_hashing_sha256"
+	HashingAlgorithmSHA512 HashingAlgorithm = "rabbit_password_hashing_sha512"
+
+	// deprecated, provided to support responses that include users created
+	// before RabbitMQ 3.6 and other legacy scenarios. MK.
+	HashingAlgorithmMD5 HashingAlgorithm = "rabbit_password_hashing_md5"
+)
+
 type UserInfo struct {
-	Name         string `json:"name"`
-	PasswordHash string `json:"password_hash"`
+	Name             string           `json:"name"`
+	PasswordHash     string           `json:"password_hash"`
+	HashingAlgorithm HashingAlgorithm `json:"hashing_algorithm,omitempty"`
 	// Tags control permissions. Built-in tags: administrator, management, policymaker.
 	Tags string `json:"tags"`
 }
@@ -22,8 +42,9 @@ type UserSettings struct {
 
 	// *never* returned by RabbitMQ. Set by the client
 	// to create/update a user. MK.
-	Password     string `json:"password,omitempty"`
-	PasswordHash string `json:"password_hash,omitempty"`
+	Password         string           `json:"password,omitempty"`
+	PasswordHash     string           `json:"password_hash,omitempty"`
+	HashingAlgorithm HashingAlgorithm `json:"hashing_algorithm,omitempty"`
 }
 
 //
@@ -125,4 +146,43 @@ func (c *Client) DeleteUser(username string) (res *http.Response, err error) {
 	}
 
 	return res, nil
+}
+
+//
+// Password Hash generation
+//
+
+const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func GenerateSalt(n int) string {
+	bs := make([]byte, n)
+	for i := range bs {
+		bs[i] = characters[rand.Intn(len(characters))]
+	}
+	return string(bs)
+}
+
+func SaltedPasswordHashSHA256(password string) (string, string) {
+	salt := GenerateSalt(4)
+	hashed := sha256.Sum256([]byte(salt + password))
+	return salt, string(hashed[:])
+}
+
+// Produces a salted hash value expected by the HTTP API.
+// See https://www.rabbitmq.com/passwords.html#computing-password-hash
+// for details.
+func Base64EncodedSaltedPasswordHashSHA256(password string) string {
+	salt, saltedHash := SaltedPasswordHashSHA256(password)
+	return base64.URLEncoding.EncodeToString([]byte(salt + saltedHash))
+}
+
+func SaltedPasswordHashSHA512(password string) (string, string) {
+	salt := GenerateSalt(4)
+	hashed := sha512.Sum512([]byte(salt + password))
+	return salt, string(hashed[:])
+}
+
+func Base64EncodedSaltedPasswordHashSHA512(password string) string {
+	salt, saltedHash := SaltedPasswordHashSHA512(password)
+	return base64.URLEncoding.EncodeToString([]byte(salt + saltedHash))
 }

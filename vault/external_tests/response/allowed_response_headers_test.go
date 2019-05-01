@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/kr/pretty"
 )

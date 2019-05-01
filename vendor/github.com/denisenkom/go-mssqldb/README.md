@@ -117,6 +117,45 @@ _, err := db.ExecContext(ctx, "sp_RunMe",
 )
 ```
 
+## Caveat for local temporary tables
+
+Due to protocol limitations, temporary tables will only be allocated on the connection
+as a result of executing a query with zero parameters. The following query
+will, due to the use of a parameter, execute in its own session,
+and `#mytemp` will be de-allocated right away:
+
+```go
+conn, err := pool.Conn(ctx)
+defer conn.Close()
+_, err := conn.ExecContext(ctx, "select @p1 as x into #mytemp", 1)
+// at this point #mytemp is already dropped again as the session of the ExecContext is over
+```
+
+To work around this, always explicitly create the local temporary
+table in a query without any parameters. As a special case, the driver
+will then be able to execute the query directly on the
+connection-scoped session. The following example works:
+
+```go
+conn, err := pool.Conn(ctx)
+
+// Set us up so that temp table is always cleaned up, since conn.Close()
+// merely returns conn to pool, rather than actually closing the connection.
+defer func() {
+	_, _ = conn.ExecContext(ctx, "drop table #mytemp")  // always clean up
+	conn.Close() // merely returns conn to pool
+}()
+
+
+// Since we not pass any parameters below, the query will execute on the scope of
+// the connection and succeed in creating the table.
+_, err := conn.ExecContext(ctx, "create table #mytemp ( x int )")
+
+// #mytemp is now available even if you pass parameters
+_, err := conn.ExecContext(ctx, "insert into #mytemp (x) values (@p1)", 1)
+
+```
+
 ## Return Status
 
 To get the procedure return status, pass into the parameters a
@@ -150,6 +189,7 @@ are supported:
  * "cloud.google.com/go/civil".Date -> date
  * "cloud.google.com/go/civil".DateTime -> datetime2
  * "cloud.google.com/go/civil".Time -> time
+ * mssql.TVPType -> Table Value Parameter (TDS version dependent)
 
 ## Important Notes
 

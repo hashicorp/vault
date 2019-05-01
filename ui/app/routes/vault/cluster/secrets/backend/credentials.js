@@ -20,7 +20,7 @@ export default Route.extend({
     }
     let modelType = 'ssh-otp-credential';
     let owner = getOwner(this);
-    return this.pathHelp.getNewModel(modelType, backend, owner);
+    return this.pathHelp.getNewModel(modelType, owner, backend);
   },
 
   model(params) {

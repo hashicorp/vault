@@ -91,7 +91,7 @@ func CreateListPoliciesForGroupRequest() (request *ListPoliciesForGroupRequest) 
 	request = &ListPoliciesForGroupRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "ListPoliciesForGroup", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "ListPoliciesForGroup", "ram", "openAPI")
 	return
 }
 

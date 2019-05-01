@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/physical"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/physical"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
 )
 
