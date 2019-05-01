@@ -6,6 +6,7 @@ import { inject as service } from '@ember/service';
 export default Route.extend({
   pathHelp: service('path-help'),
   model(params) {
+    // eslint-disable-line rule
     const { path } = params;
     return this.store.findAll('auth-method').then(modelArray => {
       const model = modelArray.findBy('id', path);
@@ -14,11 +15,10 @@ export default Route.extend({
         set(error, 'httpStatus', 404);
         throw error;
       }
-      this.pathHelp.getPaths(model.apiPath, path).then(paths => {
+      return this.pathHelp.getPaths(model.apiPath, path).then(paths => {
         model.set('paths', paths);
         return model;
       });
-      return model;
     });
   },
 });

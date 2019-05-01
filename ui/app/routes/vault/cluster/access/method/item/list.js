@@ -34,10 +34,12 @@ export default Route.extend(ListRoute, {
   setupController(controller, model) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const { paths } = this.modelFor('vault.cluster.access.method');
     let { path } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
     controller.set('method', path);
-    controller.set('paths', paths);
+    const { apiPath } = this.modelFor('vault.cluster.access.method');
+    this.pathHelp.getPaths(apiPath, path, itemType).then(paths => {
+      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
+    });
   },
 });

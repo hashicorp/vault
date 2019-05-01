@@ -4,7 +4,7 @@
   has less (or no) information about.
 */
 import Service from '@ember/service';
-
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { capitalize } from '@ember/string';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
@@ -68,64 +68,112 @@ export default Service.extend({
     });
   },
 
-  getPaths(apiPath, backend) {
-    let helpUrl = `/v1/${apiPath}?help=1`;
-    return this.ajax(helpUrl, backend).then(help => {
-      let paths = Object.keys(help.openapi.paths);
-      let listPaths = paths
+  getPaths(apiPath, backend, itemType) {
+    debugger; // eslint-disable-line
+    return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
+      const pathInfo = help.openapi.paths;
+      let paths = Object.keys(pathInfo);
+      const listPaths = paths
         .map(path => {
           if (
-            help.openapi.paths[path].get &&
-            help.openapi.paths[path].get.parameters &&
-            help.openapi.paths[path].get.parameters[0].name == 'list'
+            pathInfo[path].get &&
+            pathInfo[path].get.parameters &&
+            pathInfo[path].get.parameters[0].name == 'list'
           ) {
-            return path;
+            return { path: path, tag: pathInfo[path].get.tags[0] };
           }
         })
         .filter(path => path != undefined);
-      let createPaths = paths.filter(path => path.includes('{') && !path.includes('login'));
-      return { apiPath: apiPath, list: listPaths, create: createPaths };
+
+      //we always want to keep list endpoints, but best to only use relevant post/delete endpoints
+      if (itemType) {
+        paths = paths.filter(path => path.includes(itemType));
+      }
+      const deletePaths = paths
+        .map(path => {
+          if (pathInfo[path].delete) {
+            return { path: path, tag: pathInfo[path].delete.tags[0] };
+          }
+        })
+        .filter(path => path != undefined);
+      const createPaths = paths
+        .map(path => {
+          if (pathInfo[path].post && path.includes('{') && !path.includes('login')) {
+            return { path: path, tag: pathInfo[path].post.tags[0] };
+          }
+        })
+        .filter(path => path != undefined);
+      return { apiPath: apiPath, list: listPaths, create: createPaths, delete: deletePaths };
     });
   },
 
-  // getPathsForModel(modelType, owner, backend){
-  //   let name = `model:${modelType}`;
-  //   let newModel = owner.factoryFor(name).class;
-  //   let modelProto = newModel.proto();
-  //   let helpUrl = modelProto.getHelpUrl(backend);
-  //   return this.getPaths(helpUrl, backend).then(paths => {
-  //     return paths;
-  //   });
-  // },
+  getNewAdapter(backend, paths, itemType) {
+    const { list, create } = paths;
+    return generatedItemAdapter.extend({
+      urlForItem(method, id, type) {
+        debugger; // eslint-disable-line
+        let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
+        let { tag, path } = listPath;
+        let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
+        if (id) {
+          url = url + encodePath(id);
+        }
+        return url;
+      },
+
+      urlForFindRecord(id, modelName, snapshot) {
+        return this.urlForItem(null, id, null);
+      },
+
+      urlForUpdateRecord(id, modelName, snapshot) {
+        let { tag, path } = create[0];
+        path = path.slice(0, path.indexOf('{') - 1);
+        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+      },
+
+      urlForCreateRecord(modelType, snapshot) {
+        const { id } = snapshot;
+        let { tag, path } = create[0];
+        path = path.slice(0, path.indexOf('{') - 1);
+        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+      },
+    });
+  },
 
   getNewModel(modelType, owner, backend, apiPath, itemType) {
-    let name = `model:${modelType}`;
-    let factory = owner.factoryFor(name);
+    let modelFactory = owner.factoryFor(`model:${modelType}`);
     let newModel, helpUrl;
-    if (factory) {
-      newModel = factory.class;
+    if (modelFactory) {
+      newModel = modelFactory.class;
       let modelProto = newModel.proto();
       if (newModel.merged || modelProto.useOpenAPI !== true) {
         return resolve();
       }
-      helpUrl = apiPath ? `/v1/${apiPath}?help=1` : modelProto.getHelpUrl(backend);
     } else {
       newModel = DS.Model.extend({});
-      helpUrl = `/v1/${apiPath}?help=1`;
-      let newAdapter = generatedItemAdapter.extend({ itemType });
-      owner.register(`adapter:${modelType}`, newAdapter);
     }
-
-    return this.getProps(helpUrl, backend).then(props => {
-      const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-      newModel = newModel.extend(attrs, { newFields });
-      if (!newModel.fieldGroups) {
-        const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
-        newModel = newModel.extend({ fieldGroups });
-      }
-      newModel.reopenClass({ merged: true });
-      owner.unregister(name);
-      owner.register(name, newModel);
-    });
+    return this.getPaths(apiPath, backend, itemType)
+      .then(paths => {
+        let adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+        if (!adapterFactory) {
+          let adapter = this.getNewAdapter(backend, paths, itemType);
+          owner.register(`adapter:${modelType}`, adapter);
+        }
+        let { tag, path } = paths.create[0];
+        helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+      })
+      .then(() => {
+        return this.getProps(helpUrl, backend).then(props => {
+          const { attrs, newFields } = combineAttributes(newModel.attributes, props);
+          newModel = newModel.extend(attrs, { newFields });
+          if (!newModel.fieldGroups) {
+            const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
+            newModel = newModel.extend({ fieldGroups });
+          }
+          newModel.reopenClass({ merged: true });
+          owner.unregister(`model:${modelType}`);
+          owner.register(`model:${modelType}`, newModel);
+        });
+      });
   },
 });

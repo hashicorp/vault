@@ -1,4 +1,3 @@
-{{debugger}}
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -22,9 +21,9 @@
       {{model.id}}
     </h1>
   </p.levelLeft>
-  {{!-- <p.levelRight>
+  <p.levelRight>
     {{#link-to
-      "vault.cluster.access.method.edit"
+      "vault.cluster.access.method.item.edit"
       (pluralize itemType)
       model.id
       class="button has-icon-right is-ghost is-compact"
@@ -32,11 +31,10 @@
     }}
       Edit{{itemType}}{{i-con glyph="chevron-right" size=11}}
     {{/link-to}}
-  </p.levelRight> --}}
+  </p.levelRight>
 </PageHeader>
 <div class="box is-shadowless is-marginless is-fullwidth">
   {{info-table-row label="ID" value=id}}
-  {{debugger}}
   {{#each-in props as |name value|}}
     {{info-table-row
       alwaysRender=true

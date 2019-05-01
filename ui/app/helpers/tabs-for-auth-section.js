@@ -1,5 +1,6 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { pluralize } from 'ember-inflector';
+import { capitalize } from '@ember/string';
 
 const TABS_FOR_SETTINGS = {
   aws: [
@@ -86,18 +87,14 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
   }
 
   if (paths) {
-    tabs =
-      paths.list.length > 0
-        ? paths.list.map(path => {
-            return {
-              label:
-                pluralize(path.slice(1))
-                  .charAt(0)
-                  .toUpperCase() + pluralize(path.slice(1)).slice(1),
-              routeParams: ['vault.cluster.access.method.item.list', path.slice(1)],
-            };
-          })
-        : [];
+    debugger; // eslint-disable-line
+    tabs = paths.map(path => {
+      let itemName = path.slice(1); //get rid of leading slash
+      return {
+        label: capitalize(pluralize(itemName)),
+        routeParams: ['vault.cluster.access.method.item.list', itemName],
+      };
+    });
   } else {
     tabs = (TABS_FOR_SHOW[model.type] || []).slice();
   }

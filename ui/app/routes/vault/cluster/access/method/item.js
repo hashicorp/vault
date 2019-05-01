@@ -13,8 +13,8 @@ export default Route.extend({
     let methodModel = this.modelFor('vault.cluster.access.method');
     let { apiPath, type } = methodModel;
     let modelType = `generated-${singularize(itemType)}-${type}`;
-    let path = `${apiPath}${itemType}/example`;
-    return this.pathHelp.getNewModel(modelType, getOwner(this), method, path, itemType);
+    debugger; // eslint-disable-line
+    return this.pathHelp.getNewModel(modelType, getOwner(this), method, apiPath, itemType);
   },
 
   setupController(controller) {
@@ -24,8 +24,8 @@ export default Route.extend({
     const { apiPath } = this.modelFor('vault.cluster.access.method');
     controller.set('itemType', itemType);
     controller.set('method', path);
-    this.pathHelp.getPaths(apiPath, path).then(paths => {
-      controller.set('paths', paths);
+    this.pathHelp.getPaths(apiPath, path, itemType).then(paths => {
+      controller.set('paths', Array.from(paths.list, pathInfo => pathInfo.path));
     });
   },
 });
