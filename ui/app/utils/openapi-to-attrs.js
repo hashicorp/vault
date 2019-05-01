@@ -23,7 +23,7 @@ export const expandOpenApiProps = function(props) {
       editType = details.items.type + capitalize(details.type);
     }
     let attrDefn = {
-      editType: editType,
+      editType,
       type: details.type,
       helpText: details.description,
       sensitive: details['x-vault-displaySensitive'],

@@ -6,6 +6,7 @@
 import Service from '@ember/service';
 
 import { getOwner } from '@ember/application';
+import { capitalize } from '@ember/string';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
@@ -37,7 +38,7 @@ export default Service.extend({
       let param = {};
       //put params at the front of the props list
       if (params) {
-        let label = params[0].name;
+        let label = capitalize(params[0].name);
         if (label.toLowerCase() !== 'name') {
           label += ' name';
         }

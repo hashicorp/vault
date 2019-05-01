@@ -23,7 +23,7 @@ export default Route.extend({
     let { path } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
     controller.set('method', path);
-    controller.set('props', model.toJSON());
+    controller.set('props', model.serialize());
     controller.set('id', itemId);
   },
 });

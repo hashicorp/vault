@@ -1,14 +1,8 @@
 <form {{action (perform saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <NamespaceReminder @mode="save" @noun="Auth Method" />
-    {{message-error model=model}}
-    {{#if model.attrs}}
-      {{#each model.attrs as |attr|}}
-        {{form-field data-test-field attr=attr model=model}}
-      {{/each}}
-    {{else if model.fieldGroups}}
-      {{form-field-groups model=model mode=mode}}
-    {{/if}}
+    <NamespaceReminder @mode="save" @noun={{model.itemType}} />
+    <MessageError @model={{model}} />
+    <FormFieldGroups @model={{model}} @mode={{mode}}/>
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <button

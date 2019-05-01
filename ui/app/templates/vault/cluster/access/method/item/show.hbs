@@ -36,6 +36,7 @@
 </PageHeader>
 <div class="box is-shadowless is-marginless is-fullwidth">
   {{info-table-row label="ID" value=id}}
+  {{debugger}}
   {{#each-in props as |name value|}}
     {{info-table-row
       alwaysRender=true

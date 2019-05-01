@@ -52,8 +52,9 @@ export default ApplicationAdapter.extend({
     return url;
   },
 
-  urlForCreateRecord(id, modelName, snapshot) {
-    let url = `${this.buildURL()}/auth/${snapshot.adapterOptions.path}/${id}`;
+  urlForCreateRecord(modelType, snapshot) {
+    let { id } = snapshot;
+    let url = `${this.buildURL()}/auth/${snapshot.record.adapterOptions.path}/${id}`;
     return url;
   },
 
