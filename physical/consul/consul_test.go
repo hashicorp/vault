@@ -534,7 +534,7 @@ func TestConsul_TooLarge(t *testing.T) {
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
