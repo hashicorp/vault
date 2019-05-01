@@ -21,6 +21,8 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/tokenhelper"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -3603,6 +3605,248 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		}
 		if err == nil {
 			t.Fatalf("expected error")
+		}
+	}
+}
+
+func TestTokenStore_RoleTokenFields(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	//c, _, root := TestCoreUnsealed(t)
+	ts := c.tokenStore
+	rootContext := namespace.RootContext(context.Background())
+
+	boundCIDRs, err := parseutil.ParseAddrs([]string{"127.0.0.1/32"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First test the upgrade case. Create a role with values and ensure they
+	// are reflected properly on read.
+	{
+		roleEntry := &tsRoleEntry{
+			Name: "test",
+			TokenParams: tokenhelper.TokenParams{
+				TokenType: logical.TokenTypeBatch,
+			},
+			Period:         time.Second,
+			ExplicitMaxTTL: time.Hour,
+		}
+		roleEntry.BoundCIDRs = boundCIDRs
+		ns := namespace.RootNamespace
+		jsonEntry, err := logical.StorageEntryJSON("test", roleEntry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := ts.rolesView(ns).Put(rootContext, jsonEntry); err != nil {
+			t.Fatal(err)
+		}
+		// Read it back
+		roleEntry, err = ts.tokenStoreRole(rootContext, "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expRoleEntry := &tsRoleEntry{
+			Name: "test",
+			TokenParams: tokenhelper.TokenParams{
+				TokenPeriod:         time.Second,
+				TokenExplicitMaxTTL: time.Hour,
+				TokenBoundCIDRs:     boundCIDRs,
+				TokenType:           logical.TokenTypeBatch,
+			},
+			Period:         time.Second,
+			ExplicitMaxTTL: time.Hour,
+			BoundCIDRs:     boundCIDRs,
+		}
+		if diff := deep.Equal(expRoleEntry, roleEntry); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
+	// Now, read that back through the API and verify we see what we expect
+	{
+		req := logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(1),
+			"token_period":           int64(1),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(3600),
+			"explicit_max_ttl":       int64(3600),
+			"renewable":              false,
+			"token_type":             "batch",
+		}
+
+		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected bound cidrs: %s", resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "bound_cidrs")
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+
+	// Put values in just the old locations, but through the API
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"explicit_max_ttl": 7200,
+			"token_type":       "default-batch",
+			"period":           5,
+			"bound_cidrs":      boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("expected a nil response")
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(5),
+			"token_period":           int64(5),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(7200),
+			"explicit_max_ttl":       int64(7200),
+			"renewable":              false,
+			"token_type":             "default-batch",
+		}
+
+		if resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected bound cidrs: %s", resp.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "bound_cidrs")
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Same thing for just the new locations
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"token_explicit_max_ttl": 5200,
+			"token_type":             "default-service",
+			"token_period":           7,
+			"token_bound_cidrs":      boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp != nil {
+			t.Fatalf("expected a nil response")
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(0),
+			"token_period":           int64(7),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(5200),
+			"explicit_max_ttl":       int64(0),
+			"renewable":              false,
+			"token_type":             "default-service",
+		}
+
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
+		}
+	}
+	// Put values in both locations
+	{
+		req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+		req.Data = map[string]interface{}{
+			"token_explicit_max_ttl": 7200,
+			"explicit_max_ttl":       5200,
+			"token_type":             "service",
+			"token_period":           5,
+			"period":                 1,
+			"token_bound_cidrs":      boundCIDRs[0].String(),
+			"bound_cidrs":            boundCIDRs[0].String(),
+		}
+
+		resp, err := ts.HandleRequest(rootContext, req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err: %v\nresp: %#v", err, resp)
+		}
+		if resp == nil {
+			t.Fatalf("expected a non-nil response")
+		}
+		if len(resp.Warnings) != 3 {
+			t.Fatalf("expected 3 warnings, got %#v", resp.Warnings)
+		}
+
+		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
+		resp, err = ts.HandleRequest(rootContext, req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		expected := map[string]interface{}{
+			"name":                   "test",
+			"orphan":                 false,
+			"period":                 int64(0),
+			"token_period":           int64(5),
+			"allowed_policies":       []string(nil),
+			"disallowed_policies":    []string(nil),
+			"path_suffix":            "",
+			"token_explicit_max_ttl": int64(7200),
+			"explicit_max_ttl":       int64(0),
+			"renewable":              false,
+			"token_type":             "service",
+		}
+
+		if resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String() != "127.0.0.1" {
+			t.Fatalf("unexpected token bound cidrs: %s", resp.Data["token_bound_cidrs"].([]*sockaddr.SockAddrMarshaler)[0].String())
+		}
+		delete(resp.Data, "token_bound_cidrs")
+
+		if diff := deep.Equal(expected, resp.Data); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 }

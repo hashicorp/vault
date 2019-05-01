@@ -3070,6 +3070,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		return logical.ErrorResponse(errwrap.Wrapf("error parsing role fields: {{err}}", err).Error()), nil
 	}
 
+	var resp *logical.Response
+
 	// Now handle backwards compat. Prefer token_ fields over others if both
 	// are set. We set the original fields here so that on read of token role
 	// we can return the same values that were set. We clear out the Token*
@@ -3083,6 +3085,13 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.TokenPeriod = 0
 		}
 	} else {
+		_, ok = data.GetOk("period")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_period' and deprecated 'period' value supplied, ignoring the deprecated value")
+		}
 		entry.Period = 0
 	}
 
@@ -3098,10 +3107,15 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			entry.TokenBoundCIDRs = nil
 		}
 	} else {
+		_, ok = data.GetOk("bound_cidrs")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_bound_cidrs' and deprecated 'bound_cidrs' value supplied, ignoring the deprecated value")
+		}
 		entry.BoundCIDRs = nil
 	}
-
-	var resp *logical.Response
 
 	finalExplicitMaxTTL := entry.TokenExplicitMaxTTL
 	explicitMaxTTLRaw, ok := data.GetOk("token_explicit_max_ttl")
@@ -3113,6 +3127,13 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 		}
 		finalExplicitMaxTTL = entry.ExplicitMaxTTL
 	} else {
+		_, ok = data.GetOk("explicit_max_ttl")
+		if ok {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			resp.AddWarning("Both 'token_explicit_max_ttl' and deprecated 'explicit_max_ttl' value supplied, ignoring the deprecated value")
+		}
 		entry.ExplicitMaxTTL = 0
 	}
 	if finalExplicitMaxTTL != 0 {
