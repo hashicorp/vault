@@ -7202,6 +7202,14 @@ ember-cli-version-checker@^2.0.0, ember-cli-version-checker@^2.1.0, ember-cli-ve
     resolve "^1.3.3"
     semver "^5.3.0"
 
+ember-cli-version-checker@^3.1.2:
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/ember-cli-version-checker/-/ember-cli-version-checker-3.1.3.tgz#7c9b4f5ff30fdebcd480b1c06c4de43bb51c522c"
+  integrity sha512-PZNSvpzwWgv68hcXxyjREpj3WWb81A7rtYNQq1lLEgrWIchF8ApKJjWP3NBpHjaatwILkZAV8klair5WFlXAKg==
+  dependencies:
+    resolve-package-path "^1.2.6"
+    semver "^5.6.0"
+
 ember-cli@~3.5.1:
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/ember-cli/-/ember-cli-3.5.1.tgz#a1c7295eed935726891d40a81e0cc389f2d15fdf"
@@ -7607,13 +7615,13 @@ ember-template-lint@^1.0.0-beta.5:
     resolve "^1.1.3"
     strip-bom "^3.0.0"
 
-ember-test-selectors@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/ember-test-selectors/-/ember-test-selectors-1.0.0.tgz#a2f8cd86f4fb4c320004a2bf0e4c450d41668a21"
-  integrity sha1-ovjNhvT7TDIABKK/DkxFDUFmiiE=
+ember-test-selectors@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/ember-test-selectors/-/ember-test-selectors-2.1.0.tgz#faebdf06702aaa0bc510d55eb721ce54d2e85793"
+  integrity sha512-c5HmvefmeABH8hg380TSNZiE9VAK1CBeXWrgyXy+IXHtsew4lZHHw7GnqCAqsakxwvmaMARbAKY9KfSAE91s1g==
   dependencies:
     ember-cli-babel "^6.8.2"
-    ember-cli-version-checker "^2.0.0"
+    ember-cli-version-checker "^3.1.2"
 
 ember-text-measurer@^0.4.0:
   version "0.4.1"
@@ -15325,6 +15333,14 @@ resolve-package-path@^1.0.11:
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/resolve-package-path/-/resolve-package-path-1.2.2.tgz#0c6f7cfeffdd96215c97a0082eadd6dc98a1de57"
   integrity sha512-Rva99mD09iKulXPC7JnH3CAtdD3n5pZtTHtyhqknXcPKyu+bVkYUvUV0qxaO/+STvY8/JQsZdlmcBEgbPdFU4w==
+  dependencies:
+    path-root "^0.1.1"
+    resolve "^1.10.0"
+
+resolve-package-path@^1.2.6:
+  version "1.2.7"
+  resolved "https://registry.yarnpkg.com/resolve-package-path/-/resolve-package-path-1.2.7.tgz#2a7bc37ad96865e239330e3102c31322847e652e"
+  integrity sha512-fVEKHGeK85bGbVFuwO9o1aU0n3vqQGrezPc51JGu9UTXpFQfWq5qCeKxyaRUSvephs+06c5j5rPq/dzHGEo8+Q==
   dependencies:
     path-root "^0.1.1"
     resolve "^1.10.0"
