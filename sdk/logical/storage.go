@@ -89,7 +89,7 @@ func CollectKeys(ctx context.Context, view ClearableView) ([]string, error) {
 	return CollectKeysWithPrefix(ctx, view, "")
 }
 
-// CollectKeysPrefix is used to collect all the keys in a view with a given prefix string
+// CollectKeysWithPrefix is used to collect all the keys in a view with a given prefix string
 func CollectKeysWithPrefix(ctx context.Context, view ClearableView, prefix string) ([]string, error) {
 	var keys []string
 
