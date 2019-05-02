@@ -66,7 +66,11 @@ export default Service.extend({
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.keys(pathInfo);
+      //remove deprecated endpoints
       paths = paths.filter(path => pathInfo[path]['x-vault-sudo'] !== true); //get rid of deprecated paths
+
+      //config is a get/post endpoint that doesn't take route params
+      //and isn't also a list endpoint
       const configPath = paths
         .map(path => {
           if (
@@ -80,6 +84,7 @@ export default Service.extend({
         })
         .filter(path => path != undefined);
 
+      //list endpoints all have { name: "list" } in their route params
       const listPaths = paths
         .map(path => {
           if (
@@ -92,7 +97,8 @@ export default Service.extend({
         })
         .filter(path => path != undefined);
 
-      //we always want to keep list endpoints, but best to only use relevant post/delete endpoints
+      //we always want to keep list endpoints for menus
+      //but only use scoped post/delete endpoints
       if (itemType) {
         paths = paths.filter(path => path.includes(itemType));
       }
@@ -103,6 +109,9 @@ export default Service.extend({
           }
         })
         .filter(path => path != undefined);
+
+      //create endpoints have path params, signified by "{}"
+      //we have to filter out login endpoints for auth methods
       const createPaths = paths
         .map(path => {
           if (pathInfo[path].post && path.includes('{') && !path.includes('login')) {
@@ -110,6 +119,8 @@ export default Service.extend({
           }
         })
         .filter(path => path != undefined);
+
+      //return paths object with all relevant information
       return {
         apiPath: apiPath,
         configPath: configPath,
@@ -121,6 +132,7 @@ export default Service.extend({
   },
 
   getNewAdapter(backend, paths, itemType) {
+    //we need list and create paths to set the correct urls for actions
     const { list, create } = paths;
     return generatedItemAdapter.extend({
       urlForItem(method, id, type) {
@@ -156,6 +168,7 @@ export default Service.extend({
     const modelName = `model:${modelType}`;
     const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
+    //if we have a factory, we need to take the existing model into account
     if (modelFactory) {
       newModel = modelFactory.class;
       const modelProto = newModel.proto();
@@ -163,16 +176,18 @@ export default Service.extend({
         return resolve();
       }
       helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModel(helpUrl, backend, newModel, modelName, owner);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
     } else {
       newModel = DS.Model.extend({});
+      //use paths to dynamically create our openapi help url
+      //if we have a brand new model
       return this.getPaths(apiPath, backend, itemType).then(paths => {
         const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+        //if we have an adapter already use that, otherwise create one
         if (!adapterFactory) {
           const adapter = this.getNewAdapter(backend, paths, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-
         //if we have an item we want the create info for that itemType
         if (itemType) {
           let { tag, path } = paths.create[0];
@@ -183,18 +198,26 @@ export default Service.extend({
           let { tag, path } = paths.configPath[0];
           helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
         }
-        return this.registerNewModel(helpUrl, backend, newModel, modelName, owner);
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
       });
     }
   },
 
-  registerNewModel(helpUrl, backend, newModel, modelName, owner) {
+  registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner) {
     return this.getProps(helpUrl, backend).then(props => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
       newModel = newModel.extend(attrs, { newFields });
-      if (!newModel.fieldGroups) {
-        const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
-        newModel = newModel.extend({ fieldGroups });
+
+      //if our newModel doesn't have fieldGroups already
+      //we need to create them (add all fields to default group)
+      try {
+        let fieldGroups = newModel.proto().fieldGroups;
+        if (!fieldGroups) {
+          const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
+          newModel = newModel.extend({ fieldGroups });
+        }
+      } catch (err) {
+        //eat the error, fieldGroups is computed in the model definition
       }
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
