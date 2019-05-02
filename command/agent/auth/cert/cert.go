@@ -27,15 +27,18 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	c := &certMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
+		name:      "",
 	}
 
-	nameRaw, ok := conf.Config["name"]
-	if !ok {
-		nameRaw = ""
-	}
-	c.name, ok = nameRaw.(string)
-	if !ok {
-		return nil, errors.New("could not convert 'name' config value to string")
+	if conf.Config != nil {
+		nameRaw, ok := conf.Config["name"]
+		if !ok {
+			nameRaw = ""
+		}
+		c.name, ok = nameRaw.(string)
+		if !ok {
+			return nil, errors.New("could not convert 'name' config value to string")
+		}
 	}
 
 	return c, nil

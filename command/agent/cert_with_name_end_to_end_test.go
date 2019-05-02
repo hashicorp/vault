@@ -24,12 +24,12 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestCertEndToEnd(t *testing.T) {
-	testCertEndToEnd(t, false)
-	testCertEndToEnd(t, true)
+func TestCertWithNameEndToEnd(t *testing.T) {
+	testCertWithNameEndToEnd(t, false)
+	testCertWithNameEndToEnd(t, true)
 }
 
-func testCertEndToEnd(t *testing.T, ahWrapping bool) {
+func testCertWithNameEndToEnd(t *testing.T, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
 		Logger: logger,
@@ -110,6 +110,9 @@ func testCertEndToEnd(t *testing.T, ahWrapping bool) {
 	am, err := agentcert.NewCertAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.cert"),
 		MountPath: "auth/cert",
+		Config: map[string]interface{}{
+			"name": "test",
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
