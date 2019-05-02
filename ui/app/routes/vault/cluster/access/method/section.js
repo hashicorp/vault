@@ -25,7 +25,10 @@ export default Route.extend({
     const { section_name: section } = this.paramsFor(this.routeName);
     this._super(...arguments);
     controller.set('section', section);
-    let paths = this.modelFor('vault.cluster.access.method').paths.list.map(pathInfo => pathInfo.path);
-    controller.set('paths', paths);
+    let method = this.modelFor('vault.cluster.access.method');
+    if (method.type === 'ldap') {
+      let paths = method.paths.list.map(pathInfo => pathInfo.path);
+      controller.set('paths', paths);
+    }
   },
 });

@@ -87,7 +87,6 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
   }
 
   if (paths) {
-    debugger; // eslint-disable-line
     tabs = paths.map(path => {
       let itemName = path.slice(1); //get rid of leading slash
       return {

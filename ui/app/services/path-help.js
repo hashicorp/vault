@@ -69,10 +69,23 @@ export default Service.extend({
   },
 
   getPaths(apiPath, backend, itemType) {
-    debugger; // eslint-disable-line
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then(help => {
       const pathInfo = help.openapi.paths;
       let paths = Object.keys(pathInfo);
+      paths = paths.filter(path => pathInfo[path]['x-vault-sudo'] !== true); //get rid of deprecated paths
+      const configPath = paths
+        .map(path => {
+          if (
+            pathInfo[path].post &&
+            !path.includes('{') &&
+            pathInfo[path].get &&
+            (!pathInfo[path].get.parameters || pathInfo[path].get.parameters[0].name !== 'list')
+          ) {
+            return { path: path, tag: pathInfo[path].get.tags[0] };
+          }
+        })
+        .filter(path => path != undefined);
+
       const listPaths = paths
         .map(path => {
           if (
@@ -103,7 +116,13 @@ export default Service.extend({
           }
         })
         .filter(path => path != undefined);
-      return { apiPath: apiPath, list: listPaths, create: createPaths, delete: deletePaths };
+      return {
+        apiPath: apiPath,
+        configPath: configPath,
+        list: listPaths,
+        create: createPaths,
+        delete: deletePaths,
+      };
     });
   },
 
@@ -111,7 +130,6 @@ export default Service.extend({
     const { list, create } = paths;
     return generatedItemAdapter.extend({
       urlForItem(method, id, type) {
-        debugger; // eslint-disable-line
         let listPath = list.find(pathInfo => pathInfo.path.includes(itemType));
         let { tag, path } = listPath;
         let url = `${this.buildURL()}/${tag}/${backend}${path}/`;
@@ -159,8 +177,17 @@ export default Service.extend({
           let adapter = this.getNewAdapter(backend, paths, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let { tag, path } = paths.create[0];
-        helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+
+        //if we have an item we want the create info for that itemType
+        if (itemType) {
+          let { tag, path } = paths.create[0];
+          path = path.slice(0, path.indexOf('{') - 1) + '/example';
+          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        } else {
+          //we need the mount config
+          let { tag, path } = paths.configPath[0];
+          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        }
       })
       .then(() => {
         return this.getProps(helpUrl, backend).then(props => {

@@ -13,7 +13,6 @@ export default Route.extend({
     let methodModel = this.modelFor('vault.cluster.access.method');
     let { apiPath, type } = methodModel;
     let modelType = `generated-${singularize(itemType)}-${type}`;
-    debugger; // eslint-disable-line
     return this.pathHelp.getNewModel(modelType, getOwner(this), method, apiPath, itemType);
   },
 
