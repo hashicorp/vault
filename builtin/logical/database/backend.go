@@ -299,7 +299,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 
                 b.Lock()
                 if b.credRotationQueue == nil {
-                        b.credRotationQueue = queue.NewPriorityQueue()
+                        b.credRotationQueue = queue.New()
                 }
                 b.Unlock()
 
@@ -566,7 +566,7 @@ type setCredentialsWAL struct {
 // based on the current time.
 func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Storage) error {
         for {
-                item, err := b.credRotationQueue.PopItem()
+                item, err := b.credRotationQueue.Pop()
                 if err != nil {
                         if err == queue.ErrEmpty {
                                 return nil
@@ -794,7 +794,7 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
         defer func() { unlockFunc() }()
 
         if b.credRotationQueue != nil {
-                return b.credRotationQueue.PushItem(item)
+                return b.credRotationQueue.Push(item)
         }
         // Upgrade lock
         b.RUnlock()
@@ -803,9 +803,9 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 
         // check again
         if b.credRotationQueue != nil {
-                return b.credRotationQueue.PushItem(item)
+                return b.credRotationQueue.Push(item)
         }
-        b.credRotationQueue = queue.NewPriorityQueue()
+        b.credRotationQueue = queue.New()
 
-        return b.credRotationQueue.PushItem(item)
+        return b.credRotationQueue.Push(item)
 }

@@ -23,11 +23,11 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
 
                         Callbacks: map[logical.Operation]framework.OperationFunc{
                                 logical.UpdateOperation: b.pathRotateCredentialsUpdate(),
-			},
+                        },
 
                         HelpSynopsis:    pathCredsCreateReadHelpSyn,
                         HelpDescription: pathCredsCreateReadHelpDesc,
-		},
+                },
                 &framework.Path{
                         Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
                         Fields: map[string]*framework.FieldSchema{
@@ -115,7 +115,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
                 if role.StaticAccount != nil {
                         // in create/update of static accounts, we only care if the operation
                         // err'd , and this call does not return credentials
-                        item, err := b.credRotationQueue.PopItemByKey(name)
+                        item, err := b.credRotationQueue.PopByKey(name)
                         if err != nil {
                                 item = &queue.Item{
                                         Key: name,

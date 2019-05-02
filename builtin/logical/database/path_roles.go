@@ -233,7 +233,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
         }
 
         if b.credRotationQueue != nil {
-                if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+                if _, err := b.credRotationQueue.PopByKey(name); err != nil {
                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
                                 return nil, err
                         }
@@ -408,7 +408,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
         username := data.Get("username").(string)
         if username == "" && createRole {
                 return logical.ErrorResponse("username is a required field to create a static account"), nil
-	}
+        }
 
         if role.StaticAccount.Username != "" && role.StaticAccount.Username != username {
                 return logical.ErrorResponse("cannot update static account username"), nil
@@ -476,7 +476,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
                         return nil, err
 		}
                 // In case this is an update, remove any previous version of the item from the queue
-                if _, err := b.credRotationQueue.PopItemByKey(name); err != nil {
+                if _, err := b.credRotationQueue.PopByKey(name); err != nil {
                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
                                 return nil, err
 			}
@@ -514,7 +514,7 @@ func pathRoleCreateUpdateCommon(ctx context.Context, role *roleEntry, operation 
                         role.Statements.Creation = creationStmtsRaw.([]string)
                 } else if operation == logical.CreateOperation {
                         role.Statements.Creation = data.Get("creation_statements").([]string)
-		}
+                }
 
                 if revocationStmtsRaw, ok := data.GetOk("revocation_statements"); ok {
                         role.Statements.Revocation = revocationStmtsRaw.([]string)
