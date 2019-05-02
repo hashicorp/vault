@@ -8,8 +8,8 @@ import (
 
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
@@ -134,27 +134,27 @@ func TestPki_MultipleOUs(t *testing.T) {
 
 	apiData := &framework.FieldData{
 		Schema: fields,
-		Raw: map[string]interface{} {
-			"cn" : "example.com",
-			"ttl" : 3600,
+		Raw: map[string]interface{}{
+			"cn":  "example.com",
+			"ttl": 3600,
 		},
 	}
 	input := &dataBundle{
-		apiData : apiData,
-		role : &roleEntry{
-			MaxTTL : 3600,
-			OU: []string{ "Z","E","V" },
+		apiData: apiData,
+		role: &roleEntry{
+			MaxTTL: 3600,
+			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	err := generateCreationBundle( &b, input )
+	err := generateCreationBundle(&b, input)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
 
-	expected := []string{ "Z","E","V" }
+	expected := []string{"Z", "E", "V"}
 	actual := input.params.Subject.OrganizationalUnit
 
-	if !reflect.DeepEqual( expected, actual ) {
-		t.Fatalf( "Expected %v, got %v", expected, actual )
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Expected %v, got %v", expected, actual)
 	}
 }

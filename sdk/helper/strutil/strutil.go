@@ -246,7 +246,7 @@ func RemoveDuplicates(items []string, lowercase bool) []string {
 func RemoveDuplicatesStable(items []string, caseInsensitive bool) []string {
 	itemsMap := make(map[string]bool, len(items))
 	deduplicated := make([]string, 0, len(items))
-	
+
 	for _, item := range items {
 		key := strings.TrimSpace(item)
 		if caseInsensitive {
@@ -256,7 +256,7 @@ func RemoveDuplicatesStable(items []string, caseInsensitive bool) []string {
 			continue
 		}
 		itemsMap[key] = true
-		deduplicated = append( deduplicated, item )
+		deduplicated = append(deduplicated, item)
 	}
 	return deduplicated
 }

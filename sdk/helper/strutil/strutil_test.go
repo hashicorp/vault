@@ -440,7 +440,6 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 	}
 }
 
-
 func TestStrUtil_RemoveDuplicatesStable(t *testing.T) {
 	type tCase struct {
 		input           []string
@@ -455,8 +454,8 @@ func TestStrUtil_RemoveDuplicatesStable(t *testing.T) {
 		tCase{[]string{"A", "b", "a"}, []string{"A", "b", "a"}, false},
 		tCase{[]string{"A", "b", "a"}, []string{"A", "b"}, true},
 		tCase{[]string{" ", "d", "c", "d"}, []string{"d", "c"}, false},
-		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ","y"}, true},
-		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z "," z","y"}, false},
+		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", "y"}, true},
+		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", " z", "y"}, false},
 	}
 
 	for _, tc := range tCases {
