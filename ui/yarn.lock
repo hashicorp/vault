@@ -7185,15 +7185,15 @@ ember-cli-normalize-entity-name@^1.0.0:
   dependencies:
     silent-error "^1.0.0"
 
-ember-cli-page-object@1.15.0-beta.3:
-  version "1.15.0-beta.3"
-  resolved "https://registry.yarnpkg.com/ember-cli-page-object/-/ember-cli-page-object-1.15.0-beta.3.tgz#e41f3a33e35a6717c507b1a4c13fc990950c7d35"
-  integrity sha512-RuFhCuz32Ww4oguG0DdF4pxrqoxfmE1RMQ3aXw/IyzpAEKe9cPWY7ZZovW7zPKEoeu9hNQ9qRttH/vnlVMGalg==
+ember-cli-page-object@^1.15.3:
+  version "1.15.3"
+  resolved "https://registry.yarnpkg.com/ember-cli-page-object/-/ember-cli-page-object-1.15.3.tgz#4b1814e270367a455353aeb81019fb8d8c641886"
+  integrity sha512-wGZqQnsyFHcJilf0xcWa53my/bprtZWHXg7m6wZPbWbnJCXNf1aAouj9uwH77r3PnE+/uYt0MIKMfX3Cnd607g==
   dependencies:
     broccoli-file-creator "^2.1.1"
     broccoli-merge-trees "^2.0.0"
     ceibo "~2.0.0"
-    ember-cli-babel "^6.12.0"
+    ember-cli-babel "^6.16.0"
     ember-cli-node-assets "^0.2.2"
     ember-native-dom-helpers "^0.5.3"
     jquery "^3.2.1"
