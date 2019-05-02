@@ -460,9 +460,9 @@ func (c *AgentCommand) Run(args []string) int {
 	// Start auto-auth and sink servers
 	if method != nil {
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
-			Logger:  c.logger.Named("auth.handler"),
-			Client:  c.client,
-			WrapTTL: config.AutoAuth.Method.WrapTTL,
+			Logger:                       c.logger.Named("auth.handler"),
+			Client:                       c.client,
+			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 		})
 		ahDoneCh = ah.DoneCh
