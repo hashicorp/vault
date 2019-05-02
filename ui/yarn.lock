@@ -3107,6 +3107,13 @@ babel-plugin-debug-macros@^0.1.10, babel-plugin-debug-macros@^0.1.11:
   dependencies:
     semver "^5.3.0"
 
+babel-plugin-debug-macros@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-debug-macros/-/babel-plugin-debug-macros-0.2.0.tgz#0120ac20ce06ccc57bf493b667cf24b85c28da7a"
+  integrity sha512-Wpmw4TbhR3Eq2t3W51eBAQSdKlr+uAyF0GI4GtPfMCD12Y4cIdpKC9l0RjNTH/P9isFypSqqewMPm7//fnZlNA==
+  dependencies:
+    semver "^5.3.0"
+
 babel-plugin-debug-macros@^0.2.0-beta.6:
   version "0.2.0-beta.6"
   resolved "https://registry.yarnpkg.com/babel-plugin-debug-macros/-/babel-plugin-debug-macros-0.2.0-beta.6.tgz#ecdf6e408d5c863ab21740d7ad7f43f027d2f912"
@@ -7314,6 +7321,15 @@ ember-compatibility-helpers@^1.0.0:
     ember-cli-version-checker "^2.1.1"
     semver "^5.4.1"
 
+ember-compatibility-helpers@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/ember-compatibility-helpers/-/ember-compatibility-helpers-1.2.0.tgz#feee16c5e9ef1b1f1e53903b241740ad4b01097e"
+  integrity sha512-pUW4MzJdcaQtwGsErYmitFRs0rlCYBAnunVzlFFUBr4xhjlCjgHJo0b53gFnhTgenNM3d3/NqLarzRhDTjXRTg==
+  dependencies:
+    babel-plugin-debug-macros "^0.2.0"
+    ember-cli-version-checker "^2.1.1"
+    semver "^5.4.1"
+
 ember-composable-helpers@^2.0.3:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/ember-composable-helpers/-/ember-composable-helpers-2.1.0.tgz#71f75ab2de1c696d21939b5f9dcc62eaf2c947e5"
@@ -7336,13 +7352,14 @@ ember-concurrency-test-waiter@^0.3.1:
   dependencies:
     ember-cli-babel "^6.6.0"
 
-ember-concurrency@^0.8.14:
-  version "0.8.20"
-  resolved "https://registry.yarnpkg.com/ember-concurrency/-/ember-concurrency-0.8.20.tgz#2c4f84ed3eb86cd0c7be9c2d21dd23f560757ac7"
-  integrity sha512-pZ0+F6UoGvDWL6boRLoQ0/qrEw3K8CHZcRRswOLdsPIGboYwquPD8pStm6haS7QIaEd+gfYxXYpdGfBo3fIUmg==
+ember-concurrency@^0.10.0:
+  version "0.10.0"
+  resolved "https://registry.yarnpkg.com/ember-concurrency/-/ember-concurrency-0.10.0.tgz#9c7c79dca411e01466119f02d7197c0a4ff0df08"
+  integrity sha512-KhNNkUqnAN0isuAwSHaTJtmY/MdHJogSSAj7lCigzfJn2+21yafQcwzoVqf5LdMOn2+owWYURr1YiwzuOvlGyQ==
   dependencies:
     babel-core "^6.24.1"
     ember-cli-babel "^6.8.2"
+    ember-compatibility-helpers "^1.2.0"
     ember-maybe-import-regenerator "^0.1.5"
 
 ember-concurrency@^0.8.19:
