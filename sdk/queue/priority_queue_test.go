@@ -45,13 +45,13 @@ func TestPriorityQueue_New(t *testing.T) {
 	}
 }
 
-func TestPriorityQueue_PushItem(t *testing.T) {
+func TestPriorityQueue_Push(t *testing.T) {
 	pq := New()
 
 	tc := testCases()
 	tcl := len(tc)
 	for _, i := range tc {
-		if err := pq.PushItem(i); err != nil {
+		if err := pq.Push(i); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -62,7 +62,7 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 
 	testValidateInternalData(t, pq, len(tc), false)
 
-	item, err := pq.PopItem()
+	item, err := pq.Pop()
 	if err != nil {
 		t.Fatalf("error popping item: %s", err)
 	}
@@ -76,13 +76,13 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 	testValidateInternalData(t, pq, len(tc)-1, false)
 
 	// push item with no key
-	dErr := pq.PushItem(tc[1])
+	dErr := pq.Push(tc[1])
 	if dErr != ErrDuplicateItem {
 		t.Fatal(err)
 	}
 	// push item with no key
 	tc[2].Key = ""
-	kErr := pq.PushItem(tc[2])
+	kErr := pq.Push(tc[2])
 	if kErr != nil && kErr.Error() != "error adding item: Item Key is required" {
 		t.Fatal(kErr)
 	}
@@ -90,7 +90,7 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 	testValidateInternalData(t, pq, len(tc)-1, true)
 
 	// check err not found
-	_, fErr := pq.PopItemByKey("empty")
+	_, fErr := pq.PopByKey("empty")
 	if fErr == nil {
 		t.Fatalf("expected not found error")
 	}
@@ -104,17 +104,17 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 	}
 }
 
-func TestPriorityQueue_PopItem(t *testing.T) {
+func TestPriorityQueue_Pop(t *testing.T) {
 	pq := New()
 
 	tc := testCases()
 	for _, i := range tc {
-		if err := pq.PushItem(i); err != nil {
+		if err := pq.Push(i); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	topItem, err := pq.PopItem()
+	topItem, err := pq.Pop()
 	if err != nil {
 		t.Fatalf("error calling pop: %s", err)
 	}
@@ -128,8 +128,8 @@ func TestPriorityQueue_PopItem(t *testing.T) {
 	var items []*Item
 	items = append(items, topItem)
 	// pop the remaining items, compare size of input and output
-	it, _ := pq.PopItem()
-	for ; it != nil; it, _ = pq.PopItem() {
+	it, _ := pq.Pop()
+	for ; it != nil; it, _ = pq.Pop() {
 		items = append(items, it)
 	}
 	if len(items) != len(tc) {
@@ -137,31 +137,31 @@ func TestPriorityQueue_PopItem(t *testing.T) {
 	}
 }
 
-func TestPriorityQueue_PopItemByKey(t *testing.T) {
+func TestPriorityQueue_PopByKey(t *testing.T) {
 	pq := New()
 
 	tc := testCases()
 	for _, i := range tc {
-		if err := pq.PushItem(i); err != nil {
+		if err := pq.Push(i); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	// grab the top priority item, to capture it's value for checking later
-	item, _ := pq.PopItem()
+	item, _ := pq.Pop()
 	oldPriority := item.Priority
 	oldKey := item.Key
 
-	// push the item back on, so it gets removed with PopItemByKey and we verify
+	// push the item back on, so it gets removed with PopByKey and we verify
 	// the top item has changed later
-	err := pq.PushItem(item)
+	err := pq.Push(item)
 	if err != nil {
 		t.Fatalf("error re-pushing top item: %s", err)
 	}
 
 	popKeys := []int{2, 4, 7, 1, 0}
 	for _, i := range popKeys {
-		item, err := pq.PopItemByKey(fmt.Sprintf("item-%d", i))
+		item, err := pq.PopByKey(fmt.Sprintf("item-%d", i))
 		if err != nil || item == nil {
 			t.Fatalf("failed to pop item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
 		}
@@ -171,7 +171,7 @@ func TestPriorityQueue_PopItemByKey(t *testing.T) {
 
 	// grab the top priority item again, to compare with the top item priority
 	// from above
-	item, _ = pq.PopItem()
+	item, _ = pq.Pop()
 	newPriority := item.Priority
 	newKey := item.Key
 
@@ -197,8 +197,8 @@ func testValidateInternalData(t *testing.T, pq *PriorityQueue, expectedSize int,
 
 	if drain && pq.Len() > 0 {
 		// pop all the items, verify lengths
-		i, _ := pq.PopItem()
-		for ; i != nil; i, _ = pq.PopItem() {
+		i, _ := pq.Pop()
+		for ; i != nil; i, _ = pq.Pop() {
 			expectedSize--
 			if len(pq.data) != len(pq.dataMap) || len(pq.data) != expectedSize {
 				t.Fatalf("error in queue/map size, expected data and map to be (%d), got (%d) and (%d)", expectedSize, len(pq.data), len(pq.dataMap))

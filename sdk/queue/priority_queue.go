@@ -51,8 +51,8 @@ func New() *PriorityQueue {
 	return &pq
 }
 
-// PriorityQueue facilitates queue of Items, providing PushItem, PopItem, and
-// PopItemByKey convenience methods. The ordering (priority) is an int64 value
+// PriorityQueue facilitates queue of Items, providing Push, Pop, and
+// PopByKey convenience methods. The ordering (priority) is an int64 value
 // with the smallest value is the highest priority. PriorityQueue maintains both
 // an internal slice for the queue as well as a map of the same items with their
 // keys as the index. This enables users to find specific items by key. The map
@@ -95,10 +95,10 @@ type Item struct {
 	index int
 }
 
-// PopItem pops the highest priority item from the queue. This is a
+// Pop pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
-func (pq *PriorityQueue) PopItem() (*Item, error) {
+func (pq *PriorityQueue) Pop() (*Item, error) {
 	pq.dataMutex.Lock()
 	defer pq.dataMutex.Unlock()
 
@@ -110,12 +110,12 @@ func (pq *PriorityQueue) PopItem() (*Item, error) {
 	return item, nil
 }
 
-// PushItem pushes an item on to the queue. This is a wrapper/convenience
+// Push pushes an item on to the queue. This is a wrapper/convenience
 // method that calls heap.Push, so consumers do not need to invoke heap
 // functions directly. Items must have unique Keys, and Items in the queue
 // cannot be updated. To modify an Item, users must first remove it and re-push
 // it after modifications
-func (pq *PriorityQueue) PushItem(i *Item) error {
+func (pq *PriorityQueue) Push(i *Item) error {
 	if i.Key == "" {
 		return errors.New("error adding item: Item Key is required")
 	}
@@ -139,10 +139,10 @@ func (pq *PriorityQueue) PushItem(i *Item) error {
 	return nil
 }
 
-// PopItemByKey searches the queue for an item with the given key and removes it
+// PopByKey searches the queue for an item with the given key and removes it
 // from the queue if found. Returns ErrItemNotFound(key) if not found. This
 // method must fix the queue after removal.
-func (pq *PriorityQueue) PopItemByKey(key string) (*Item, error) {
+func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 	pq.dataMutex.Lock()
 	defer pq.dataMutex.Unlock()
 
@@ -162,26 +162,29 @@ func (pq *PriorityQueue) PopItemByKey(key string) (*Item, error) {
 	return nil, newErrItemNotFound(key)
 }
 
-// Len returns the count of items in the queue.
-func (pq pQueue) Len() int        { return len(pq) }
+// Len returns the number of items in the queue data structure. Do not use this
+// method directly on the queue, use PriorityQueue.Len() instead.
+func (pq pQueue) Len() int { return len(pq) }
+
+// Len returns the count of items in the Priority Queue
 func (q *PriorityQueue) Len() int { return q.data.Len() }
 
 // Less returns the less of two things, which in this case, we return the
-// highest thing, because the priority ordering is "lowest value, highest
+// highest value thing, because the priority ordering is "lowest value, highest
 // priority"
 func (pq pQueue) Less(i, j int) bool {
 	return pq[i].Priority < pq[j].Priority
 }
 
-// Swap swaps things in-place
+// Swap swaps things in-place; part of sort.Interface
 func (pq pQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
 	pq[i].index = i
 	pq[j].index = j
 }
 
-// Push is used by heap.Interface to push items onto the heap. Do not use this
-// method to add items to a queue: use PushItem instead.
+// Push is used by heap.Interface to push items onto the heap. This method is
+// invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
 func (pq *pQueue) Push(x interface{}) {
 	n := len(*pq)
@@ -190,8 +193,8 @@ func (pq *pQueue) Push(x interface{}) {
 	*pq = append(*pq, item)
 }
 
-// Pop is used by heap.Interface to pop items off of the heap. Do not use this
-// method to remove items from a queue: use PopItem instead.
+// Pop is used by heap.Interface to pop items off of the heap. This method is
+// invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
 func (pq *pQueue) Pop() interface{} {
 	old := *pq
