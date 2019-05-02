@@ -32,9 +32,9 @@ export default Service.extend({
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     return this.ajax(helpUrl, backend).then(help => {
-      let path = Object.keys(help.openapi.paths)[0];
-      path = help.openapi.paths[path];
-      const params = path.parameters;
+      const path = Object.keys(help.openapi.paths)[0];
+      const pathInfo = help.openapi.paths[path];
+      const params = pathInfo.parameters;
       let param = {};
       //put params at the front of the props list
       if (params) {
@@ -50,8 +50,10 @@ export default Service.extend({
           isId: true,
         };
       }
-      let props = path.post.requestBody.content['application/json'].schema.properties;
-      let newProps = { ...param, ...props };
+      const schema = pathInfo.post.requestBody.content['application/json'].schema.properties;
+      const newProps = { ...param, ...schema };
+      debugger; // eslint-disable-line
+
       return expandOpenApiProps(newProps);
     });
   },
@@ -159,22 +161,23 @@ export default Service.extend({
   },
 
   getNewModel(modelType, owner, backend, apiPath, itemType) {
-    let modelFactory = owner.factoryFor(`model:${modelType}`);
+    const modelName = `model:${modelType}`;
+    const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
     if (modelFactory) {
       newModel = modelFactory.class;
-      let modelProto = newModel.proto();
+      const modelProto = newModel.proto();
       if (newModel.merged || modelProto.useOpenAPI !== true) {
         return resolve();
       }
+      helpUrl = modelProto.getHelpUrl(backend);
+      return this.registerNewModel(helpUrl, backend, newModel, modelName, owner);
     } else {
       newModel = DS.Model.extend({});
-    }
-    return this.getPaths(apiPath, backend, itemType)
-      .then(paths => {
-        let adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+      return this.getPaths(apiPath, backend, itemType).then(paths => {
+        const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
         if (!adapterFactory) {
-          let adapter = this.getNewAdapter(backend, paths, itemType);
+          const adapter = this.getNewAdapter(backend, paths, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
 
@@ -188,19 +191,22 @@ export default Service.extend({
           let { tag, path } = paths.configPath[0];
           helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
         }
-      })
-      .then(() => {
-        return this.getProps(helpUrl, backend).then(props => {
-          const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-          newModel = newModel.extend(attrs, { newFields });
-          if (!newModel.fieldGroups) {
-            const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
-            newModel = newModel.extend({ fieldGroups });
-          }
-          newModel.reopenClass({ merged: true });
-          owner.unregister(`model:${modelType}`);
-          owner.register(`model:${modelType}`, newModel);
-        });
+        return this.registerNewModel(helpUrl, backend, newModel, modelName, owner);
       });
+    }
+  },
+
+  registerNewModel(helpUrl, backend, newModel, modelName, owner) {
+    return this.getProps(helpUrl, backend).then(props => {
+      const { attrs, newFields } = combineAttributes(newModel.attributes, props);
+      newModel = newModel.extend(attrs, { newFields });
+      if (!newModel.fieldGroups) {
+        const fieldGroups = fieldToAttrs(newModel, [{ default: newFields }]);
+        newModel = newModel.extend({ fieldGroups });
+      }
+      newModel.reopenClass({ merged: true });
+      owner.unregister(modelName);
+      owner.register(modelName, newModel);
+    });
   },
 });
