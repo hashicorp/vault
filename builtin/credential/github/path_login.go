@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathLogin(b *backend) *framework.Path {

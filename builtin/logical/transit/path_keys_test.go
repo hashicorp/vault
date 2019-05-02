@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 

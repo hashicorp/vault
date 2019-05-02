@@ -91,7 +91,7 @@ func CreateCreateAccessKeyRequest() (request *CreateAccessKeyRequest) {
 	request = &CreateAccessKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreateAccessKey", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreateAccessKey", "ram", "openAPI")
 	return
 }
 

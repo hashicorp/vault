@@ -645,6 +645,13 @@ $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_security_token=<security_token>
 ```
 
+The region used defaults to `us-east-1`, but you can specify a custom region like so:
+```
+$ vault login -method=aws region=us-west-2 role=dev-role-iam
+```
+When using a custom region, be sure the designated region corresponds to that of the 
+STS endpoint you're using.
+
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli
 source code](https://github.com/hashicorp/vault/blob/master/builtin/credential/aws/cli.go).

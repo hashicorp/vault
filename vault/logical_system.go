@@ -22,17 +22,17 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -121,6 +121,19 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"replication/dr/secondary/operation-token/delete",
 				"replication/dr/secondary/license",
 				"replication/dr/secondary/reindex",
+				"init",
+				"seal-status",
+				"unseal",
+				"leader",
+				"health",
+				"generate-root/attempt",
+				"generate-root/update",
+				"rekey/init",
+				"rekey/update",
+				"rekey/verify",
+				"rekey-recovery-key/init",
+				"rekey-recovery-key/update",
+				"rekey-recovery-key/verify",
 			},
 
 			LocalStorage: []string{
@@ -661,6 +674,7 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"local":       entry.Local,
 		"seal_wrap":   entry.SealWrap,
 		"options":     entry.Options,
+		"uuid":        entry.UUID,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -734,8 +748,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -930,8 +947,12 @@ func (b *SystemBackend) handleUnmount(ctx context.Context, req *logical.Request,
 
 	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(ctx, path)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// We return success when the mount does not exists to not expose if the
@@ -976,8 +997,11 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	}
 
 	entry := b.Core.router.MatchingMountEntry(ctx, fromPath)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Attempt remount
@@ -1113,7 +1137,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	var lock *sync.RWMutex
@@ -1134,7 +1158,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return handleError(fmt.Errorf("tune of path %q failed: no mount entry found", path))
 	}
 	if mountEntry != nil && !mountEntry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Timing configuration parameters
@@ -1197,7 +1221,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			return handleError(err)
 		}
 		if b.Core.logger.IsInfo() {
-			b.Core.logger.Info("mount tuning of description successful", "path", path)
+			b.Core.logger.Info("mount tuning of description successful", "path", path, "description", description)
 		}
 	}
 
@@ -1657,8 +1681,12 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	repState := b.Core.ReplicationState()
 	local := data.Get("local").(bool)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -1812,8 +1840,12 @@ func (b *SystemBackend) handleDisableAuth(ctx context.Context, req *logical.Requ
 
 	repState := b.Core.ReplicationState()
 	entry := b.Core.router.MatchingMountEntry(ctx, fullPath)
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if entry != nil && !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// We return success when the mount does not exists to not expose if the
@@ -2049,8 +2081,11 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 	repState := b.Core.ReplicationState()
 
 	local := data.Get("local").(bool)
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
-		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+		return nil, logical.ErrReadOnly
 	}
 
 	// Get all the options
@@ -2080,6 +2115,35 @@ func (b *SystemBackend) handleEnableAudit(ctx context.Context, req *logical.Requ
 // handleDisableAudit is used to disable an audit backend
 func (b *SystemBackend) handleDisableAudit(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
+
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	if path == "/" {
+		return handleError(errors.New("audit device path must be specified"))
+	}
+
+	b.Core.auditLock.RLock()
+	table := b.Core.audit.shallowClone()
+	entry, err := table.find(ctx, path)
+	b.Core.auditLock.RUnlock()
+
+	if err != nil {
+		return handleError(err)
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	repState := b.Core.ReplicationState()
+
+	// If we are a performance secondary cluster we should forward the request
+	// to the primary. We fail early here since the view in use isn't marked as
+	// readonly
+	if !entry.Local && repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return nil, logical.ErrReadOnly
+	}
 
 	// Attempt disable
 	if existed, err := b.Core.disableAudit(ctx, path, true); existed && err != nil {
@@ -2819,7 +2883,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 		return false
 	}
 
-	// If an earlier policy is giving us access to the mount path then we can do
+	// If a policy is giving us direct access to the mount path then we can do
 	// a fast return.
 	capabilities := acl.Capabilities(ctx, ns.TrimmedPath(path))
 	if !strutil.StrListContains(capabilities, DenyCapability) {
@@ -2846,6 +2910,7 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
+
 			return true
 		}
 
@@ -2855,6 +2920,12 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 	acl.exactRules.WalkPrefix(path, walkFn)
 	if !aclCapabilitiesGiven {
 		acl.prefixRules.WalkPrefix(path, walkFn)
+	}
+
+	if !aclCapabilitiesGiven {
+		if perms := acl.CheckAllowedFromNonExactPaths(path, true); perms != nil {
+			return true
+		}
 	}
 
 	return aclCapabilitiesGiven

@@ -2,13 +2,14 @@ package responses
 
 import (
 	"encoding/json"
-	"github.com/json-iterator/go"
 	"io"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 const maxUint = ^uint(0)
@@ -21,7 +22,12 @@ var initJson = &sync.Once{}
 func initJsonParserOnce() {
 	initJson.Do(func() {
 		registerBetterFuzzyDecoder()
-		jsonParser = jsoniter.ConfigCompatibleWithStandardLibrary
+		jsonParser = jsoniter.Config{
+			EscapeHTML:             true,
+			SortMapKeys:            true,
+			ValidateJsonRawMessage: true,
+			CaseSensitive:          true,
+		}.Froze()
 	})
 }
 
@@ -211,21 +217,6 @@ func (decoder *fuzzyBoolDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Itera
 	}
 }
 
-type tolerateEmptyArrayDecoder struct {
-	valDecoder jsoniter.ValDecoder
-}
-
-func (decoder *tolerateEmptyArrayDecoder) Decode(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
-	if iter.WhatIsNext() == jsoniter.ArrayValue {
-		iter.Skip()
-		newIter := iter.Pool().BorrowIterator([]byte("{}"))
-		defer iter.Pool().ReturnIterator(newIter)
-		decoder.valDecoder.Decode(ptr, newIter)
-	} else {
-		decoder.valDecoder.Decode(ptr, iter)
-	}
-}
-
 type nullableFuzzyIntegerDecoder struct {
 	fun func(isFloat bool, ptr unsafe.Pointer, iter *jsoniter.Iterator)
 }
@@ -336,6 +327,6 @@ func (decoder *nullableFuzzyFloat64Decoder) Decode(ptr unsafe.Pointer, iter *jso
 		iter.ReadNil()
 		*((*float64)(ptr)) = 0
 	default:
-		iter.ReportError("nullableFuzzyFloat32Decoder", "not number or string")
+		iter.ReportError("nullableFuzzyFloat64Decoder", "not number or string")
 	}
 }

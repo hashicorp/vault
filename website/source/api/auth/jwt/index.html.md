@@ -124,6 +124,7 @@ entities attempting to login. At least one of the bound values must be set.
   source address for login requests. This value is also encoded into any
   resulting token.
 - `bound_claims` `(map: <optional>)` - If set, a map of claims/values to match against.
+  The expected value may be a single string or a list of strings.
 - `groups_claim` `(string: <optional>)` - The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim

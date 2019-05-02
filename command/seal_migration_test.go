@@ -9,10 +9,10 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/logging"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/physical"
-	physInmem "github.com/hashicorp/vault/physical/inmem"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
+	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"

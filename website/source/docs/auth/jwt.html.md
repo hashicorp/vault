@@ -43,6 +43,15 @@ to:
 
 Only JWTs containing both the "division" and "department" claims, and
 respective matching values of "Europe" and "Engineering", would be authorized.
+If the expected value is a list, the claim must match one of the items in the list.
+To limit authorization to a set of email addresses:
+
+```json
+{
+  "email": ["fred@example.com", "julie@example.com"]
+}
+```
+
 
 ### Claims as Metadata
 

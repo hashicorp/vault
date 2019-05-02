@@ -6,11 +6,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ory/dockertest"
-
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/ory/dockertest"
 
 	_ "github.com/lib/pq"
 )
@@ -41,10 +41,7 @@ func prepareCockroachDBTestContainer(t *testing.T) (cleanup func(), retURL, tabl
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retURL = fmt.Sprintf("postgresql://root@localhost:%s/?sslmode=disable", resource.GetPort("26257/tcp"))

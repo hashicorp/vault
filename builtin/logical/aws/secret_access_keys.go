@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/awsutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const secretAccessKeyType = "access_keys"
@@ -180,9 +180,15 @@ func (b *backend) secretAccessKeysCreate(
 		return nil, errwrap.Wrapf("error writing WAL entry: {{err}}", err)
 	}
 
+	userPath := role.UserPath
+	if userPath == "" {
+		userPath = "/"
+	}
+
 	// Create the user
 	_, err = iamClient.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(username),
+		Path:     aws.String(userPath),
 	})
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {

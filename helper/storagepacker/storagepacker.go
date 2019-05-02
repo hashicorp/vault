@@ -11,9 +11,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -142,7 +142,7 @@ func (s *StoragePacker) BucketKey(itemID string) string {
 
 // DeleteItem removes the storage entry which the given key refers to from its
 // corresponding bucket.
-func (s *StoragePacker) DeleteItem(itemID string) error {
+func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 
 	if itemID == "" {
 		return fmt.Errorf("empty item ID")
@@ -269,7 +269,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores a storage entry in its corresponding bucket
-func (s *StoragePacker) PutItem(item *Item) error {
+func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}

@@ -76,8 +76,8 @@ func (client *Client) GetPublicKeyWithCallback(request *GetPublicKeyRequest, cal
 // GetPublicKeyRequest is the request struct for api GetPublicKey
 type GetPublicKeyRequest struct {
 	*requests.RpcRequest
-	UserName        string `position:"Query" name:"UserName"`
 	UserPublicKeyId string `position:"Query" name:"UserPublicKeyId"`
+	UserName        string `position:"Query" name:"UserName"`
 }
 
 // GetPublicKeyResponse is the response struct for api GetPublicKey
@@ -92,7 +92,7 @@ func CreateGetPublicKeyRequest() (request *GetPublicKeyRequest) {
 	request = &GetPublicKeyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetPublicKey", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetPublicKey", "ram", "openAPI")
 	return
 }
 

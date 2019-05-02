@@ -1,19 +1,21 @@
 package gocql
 
 import (
-	"sync"
+	"context"
 	"time"
 )
 
 type ExecutableQuery interface {
-	execute(conn *Conn) *Iter
+	execute(ctx context.Context, conn *Conn) *Iter
 	attempt(keyspace string, end, start time.Time, iter *Iter, host *HostInfo)
 	retryPolicy() RetryPolicy
 	speculativeExecutionPolicy() SpeculativeExecutionPolicy
 	GetRoutingKey() ([]byte, error)
 	Keyspace() string
-	Cancel()
 	IsIdempotent() bool
+
+	withContext(context.Context) ExecutableQuery
+
 	RetryableQuery
 }
 
@@ -22,14 +24,9 @@ type queryExecutor struct {
 	policy HostSelectionPolicy
 }
 
-type queryResponse struct {
-	iter *Iter
-	err  error
-}
-
-func (q *queryExecutor) attemptQuery(qry ExecutableQuery, conn *Conn) *Iter {
+func (q *queryExecutor) attemptQuery(ctx context.Context, qry ExecutableQuery, conn *Conn) *Iter {
 	start := time.Now()
-	iter := qry.execute(conn)
+	iter := qry.execute(ctx, conn)
 	end := time.Now()
 
 	qry.attempt(q.pool.keyspace, end, start, iter, conn.host)
@@ -37,133 +34,128 @@ func (q *queryExecutor) attemptQuery(qry ExecutableQuery, conn *Conn) *Iter {
 	return iter
 }
 
-func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
+func (q *queryExecutor) speculate(ctx context.Context, qry ExecutableQuery, sp SpeculativeExecutionPolicy, results chan *Iter) *Iter {
+	ticker := time.NewTicker(sp.Delay())
+	defer ticker.Stop()
 
+	for i := 0; i < sp.Attempts(); i++ {
+		select {
+		case <-ticker.C:
+			go q.run(ctx, qry, results)
+		case <-ctx.Done():
+			return &Iter{err: ctx.Err()}
+		case iter := <-results:
+			return iter
+		}
+	}
+
+	return nil
+}
+
+func (q *queryExecutor) executeQuery(qry ExecutableQuery) (*Iter, error) {
 	// check if the query is not marked as idempotent, if
 	// it is, we force the policy to NonSpeculative
 	sp := qry.speculativeExecutionPolicy()
-	if !qry.IsIdempotent() {
-		sp = NonSpeculativeExecution{}
+	if !qry.IsIdempotent() || sp.Attempts() == 0 {
+		return q.do(qry.Context(), qry), nil
 	}
 
-	results := make(chan queryResponse, 1)
-	stop := make(chan struct{})
-	defer close(stop)
-	var specWG sync.WaitGroup
+	ctx, cancel := context.WithCancel(qry.Context())
+	defer cancel()
+
+	results := make(chan *Iter, 1)
 
 	// Launch the main execution
-	specWG.Add(1)
-	go q.run(qry, &specWG, results, stop)
+	go q.run(ctx, qry, results)
 
 	// The speculative executions are launched _in addition_ to the main
 	// execution, on a timer. So Speculation{2} would make 3 executions running
 	// in total.
-	go func() {
-		// Handle the closing of the resources. We do it here because it's
-		// right after we finish launching executions. Otherwise clearing the
-		// wait group is complicated.
-		defer func() {
-			specWG.Wait()
-			close(results)
-		}()
-
-		// setup a ticker
-		ticker := time.NewTicker(sp.Delay())
-		defer ticker.Stop()
-
-		for i := 0; i < sp.Attempts(); i++ {
-			select {
-			case <-ticker.C:
-				// Launch the additional execution
-				specWG.Add(1)
-				go q.run(qry, &specWG, results, stop)
-			case <-qry.GetContext().Done():
-				// not starting additional executions
-				return
-			case <-stop:
-				// not starting additional executions
-				return
-			}
-		}
-	}()
-
-	res := <-results
-	if res.iter == nil && res.err == nil {
-		// if we're here, the results channel was closed, so no more hosts
-		return nil, ErrNoConnections
+	if iter := q.speculate(ctx, qry, sp, results); iter != nil {
+		return iter, nil
 	}
-	return res.iter, res.err
+
+	select {
+	case iter := <-results:
+		return iter, nil
+	case <-ctx.Done():
+		return &Iter{err: ctx.Err()}, nil
+	}
 }
 
-func (q *queryExecutor) run(qry ExecutableQuery, specWG *sync.WaitGroup, results chan queryResponse, stop chan struct{}) {
-	// Handle the wait group
-	defer specWG.Done()
-
+func (q *queryExecutor) do(ctx context.Context, qry ExecutableQuery) *Iter {
 	hostIter := q.policy.Pick(qry)
 	selectedHost := hostIter()
 	rt := qry.retryPolicy()
 
+	var lastErr error
 	var iter *Iter
 	for selectedHost != nil {
 		host := selectedHost.Info()
 		if host == nil || !host.IsUp() {
+			selectedHost = hostIter()
 			continue
 		}
 
 		pool, ok := q.pool.getPool(host)
 		if !ok {
+			selectedHost = hostIter()
 			continue
 		}
 
 		conn := pool.Pick()
 		if conn == nil {
+			selectedHost = hostIter()
 			continue
 		}
 
-		select {
-		case <-stop:
-			// stop this execution and return
-			return
+		iter = q.attemptQuery(ctx, qry, conn)
+		iter.host = selectedHost.Info()
+		// Update host
+		switch iter.err {
+		case context.Canceled, context.DeadlineExceeded, ErrNotFound:
+			// those errors represents logical errors, they should not count
+			// toward removing a node from the pool
+			selectedHost.Mark(nil)
+			return iter
 		default:
-			// Run the query
-			iter = q.attemptQuery(qry, conn)
-			iter.host = selectedHost.Info()
-			// Update host
 			selectedHost.Mark(iter.err)
-
-			// Exit if the query was successful
-			// or no retry policy defined or retry attempts were reached
-			if iter.err == nil || rt == nil || !rt.Attempt(qry) {
-				results <- queryResponse{iter: iter}
-				return
-			}
-
-			// If query is unsuccessful, check the error with RetryPolicy to retry
-			switch rt.GetRetryType(iter.err) {
-			case Retry:
-				// retry on the same host
-				continue
-			case Rethrow:
-				results <- queryResponse{err: iter.err}
-				return
-			case Ignore:
-				results <- queryResponse{iter: iter}
-				return
-			case RetryNextHost:
-				// retry on the next host
-				selectedHost = hostIter()
-				if selectedHost == nil {
-					results <- queryResponse{iter: iter}
-					return
-				}
-				continue
-			default:
-				// Undefined? Return nil and error, this will panic in the requester
-				results <- queryResponse{iter: nil, err: ErrUnknownRetryType}
-				return
-			}
 		}
 
+		// Exit if the query was successful
+		// or no retry policy defined or retry attempts were reached
+		if iter.err == nil || rt == nil || !rt.Attempt(qry) {
+			return iter
+		}
+		lastErr = iter.err
+
+		// If query is unsuccessful, check the error with RetryPolicy to retry
+		switch rt.GetRetryType(iter.err) {
+		case Retry:
+			// retry on the same host
+			continue
+		case Rethrow, Ignore:
+			return iter
+		case RetryNextHost:
+			// retry on the next host
+			selectedHost = hostIter()
+			continue
+		default:
+			// Undefined? Return nil and error, this will panic in the requester
+			return &Iter{err: ErrUnknownRetryType}
+		}
 	}
-	// All hosts are exhausted, return nothing
+
+	if lastErr != nil {
+		return &Iter{err: lastErr}
+	}
+
+	return &Iter{err: ErrNoConnections}
+}
+
+func (q *queryExecutor) run(ctx context.Context, qry ExecutableQuery, results chan<- *Iter) {
+	select {
+	case results <- q.do(ctx, qry):
+	case <-ctx.Done():
+	}
 }

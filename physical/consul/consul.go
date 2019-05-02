@@ -24,14 +24,13 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/parseutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -178,7 +177,7 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 			return nil, err
 		}
 
-		min, _ := lib.DurationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
+		min, _ := DurationMinusBufferDomain(d, checkMinBuffer, checkJitterFactor)
 		if min < checkMinBuffer {
 			return nil, fmt.Errorf("consul check_timeout must be greater than %v", min)
 		}
@@ -402,6 +401,9 @@ func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEnt
 
 	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
 	if err != nil {
+		if strings.Contains(err.Error(), "is too large") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
 		return err
 	}
 	if ok && len(resp.Errors) == 0 {
@@ -432,7 +434,13 @@ func (c *ConsulBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	writeOpts = writeOpts.WithContext(ctx)
 
 	_, err := c.kv.Put(pair, writeOpts)
-	return err
+	if err != nil {
+		if strings.Contains(err.Error(), "Value exceeds") {
+			return errwrap.Wrapf(fmt.Sprintf("%s: {{err}}", physical.ErrValueTooLarge), err)
+		}
+		return err
+	}
+	return nil
 }
 
 // Get is used to fetch an entry
@@ -623,7 +631,7 @@ func (c *ConsulBackend) NotifySealedStateChange() error {
 }
 
 func (c *ConsulBackend) checkDuration() time.Duration {
-	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
+	return DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
 func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh physical.ShutdownChannel, redirectAddr string, activeFunc physical.ActiveFunction, sealedFunc physical.SealedFunction, perfStandbyFunc physical.PerformanceStandbyFunction) (err error) {
@@ -680,7 +688,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ph
 			checkTimer.Reset(0)
 		case <-reconcileTimer.C:
 			// Unconditionally rearm the reconcileTimer
-			reconcileTimer.Reset(reconcileTimeout - lib.RandomStagger(reconcileTimeout/checkJitterFactor))
+			reconcileTimer.Reset(reconcileTimeout - RandomStagger(reconcileTimeout/checkJitterFactor))
 
 			// Abort if service discovery is disabled or a
 			// reconcile handler is already active

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
 )
 

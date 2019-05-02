@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -471,7 +472,7 @@ func (h *Histogram) Reset() {
 
 // RecordIntScale records an integer scaler value, returning an error if the
 // value is out of range.
-func (h *Histogram) RecordIntScale(val, scale int) error {
+func (h *Histogram) RecordIntScale(val int64, scale int) error {
 	return h.RecordIntScales(val, scale, 1)
 }
 
@@ -479,6 +480,12 @@ func (h *Histogram) RecordIntScale(val, scale int) error {
 // of range.
 func (h *Histogram) RecordValue(v float64) error {
 	return h.RecordValues(v, 1)
+}
+
+// RecordDuration records the given time.Duration in seconds, returning an error
+// if the value is out of range.
+func (h *Histogram) RecordDuration(v time.Duration) error {
+	return h.RecordIntScale(int64(v), -9)
 }
 
 // RecordCorrectedValue records the given value, correcting for stalls in the
@@ -596,11 +603,12 @@ func (h *Histogram) insertBin(hb *bin, count int64) uint64 {
 
 // RecordIntScales records n occurrences of the given value, returning an error if
 // the value is out of range.
-func (h *Histogram) RecordIntScales(val, scale int, n int64) error {
-	sign := 1
+func (h *Histogram) RecordIntScales(val int64, scale int, n int64) error {
+	sign := int64(1)
 	if val == 0 {
 		scale = 0
 	} else {
+		scale++
 		if val < 0 {
 			val = 0 - val
 			sign = -1
@@ -787,28 +795,53 @@ func (h *Histogram) Equals(other *Histogram) bool {
 	return true
 }
 
-func (h *Histogram) CopyAndReset() *Histogram {
+// Copy creates and returns an exact copy of a histogram.
+func (h *Histogram) Copy() *Histogram {
 	if h.useLocks {
 		h.mutex.Lock()
 		defer h.mutex.Unlock()
 	}
-	newhist := &Histogram{
-		allocd: h.allocd,
-		used:   h.used,
-		bvs:    h.bvs,
+
+	newhist := New()
+	newhist.allocd = h.allocd
+	newhist.used = h.used
+	newhist.useLocks = h.useLocks
+
+	newhist.bvs = []bin{}
+	for _, v := range h.bvs {
+		newhist.bvs = append(newhist.bvs, v)
 	}
+
+	for i, u := range h.lookup {
+		for _, v := range u {
+			newhist.lookup[i] = append(newhist.lookup[i], v)
+		}
+	}
+
+	return newhist
+}
+
+// FullReset resets a histogram to default empty values.
+func (h *Histogram) FullReset() {
+	if h.useLocks {
+		h.mutex.Lock()
+		defer h.mutex.Unlock()
+	}
+
 	h.allocd = defaultHistSize
 	h.bvs = make([]bin, defaultHistSize)
 	h.used = 0
-	for i := 0; i < 256; i++ {
-		if h.lookup[i] != nil {
-			for j := range h.lookup[i] {
-				h.lookup[i][j] = 0
-			}
-		}
-	}
+	h.lookup = [256][]uint16{}
+}
+
+// CopyAndReset creates and returns an exact copy of a histogram,
+// and resets it to default empty values.
+func (h *Histogram) CopyAndReset() *Histogram {
+	newhist := h.Copy()
+	h.FullReset()
 	return newhist
 }
+
 func (h *Histogram) DecStrings() []string {
 	if h.useLocks {
 		h.mutex.Lock()
