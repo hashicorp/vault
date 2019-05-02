@@ -236,8 +236,8 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-bootstrap-answer"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-bootstrap-answer"][1]),
 		},
 		{
 			Pattern: "storage/raft/bootstrap/challenge",
@@ -255,13 +255,52 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    strings.TrimSpace(sysHelp["raw"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["raw"][1]),
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-bootstrap-challenge"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-bootstrap-challenge"][1]),
+		},
+		{
+			Pattern: "storage/raft/remove-peer",
+
+			Fields: map[string]*framework.FieldSchema{
+				"server_id": {
+					Type: framework.TypeString,
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRaftRemovePeer(),
+					Summary:  "Remove a peer from the raft cluster.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
 		},
 	}
 }
 
 var pendingRaftPeers = make(map[string][]byte)
+
+func (b *SystemBackend) handleRaftRemovePeer() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		serverID := d.Get("server_id").(string)
+		if len(serverID) == 0 {
+			return logical.ErrorResponse("no server id provided"), logical.ErrInvalidRequest
+		}
+
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		if err := raftStorage.RemovePeer(ctx, serverID); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+}
 
 func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4179,5 +4218,17 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Count of requests seen by this Vault cluster over time.",
 		"Count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
+	},
+	"raft-bootstrap-challenge": {
+		"Creates a challenge for the new peer to be joined to the raft cluster.",
+		"",
+	},
+	"raft-bootstrap-answer": {
+		"Accepts an answer from the peer to be joined to the fact cluster.",
+		"",
+	},
+	"raft-remove-peer": {
+		"Removes a peer from the raft cluster.",
+		"",
 	},
 }

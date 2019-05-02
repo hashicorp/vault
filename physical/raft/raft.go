@@ -172,10 +172,12 @@ type Peer struct {
 	Address string `json:"address"`
 }
 
+// NodeID returns the identifier of the node
 func (b *RaftBackend) NodeID() string {
 	return b.localID
 }
 
+// Bootstrap prepares the given peers to be part of the raft cluster
 func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -204,6 +206,7 @@ func (b *RaftBackend) Bootstrap(ctx context.Context, peers []Peer) error {
 	return nil
 }
 
+// SetupCluster creates a new raft cluster
 func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicalstd.NetworkConfig, clusterListener physicalstd.ClusterHook) error {
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -287,6 +290,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	return nil
 }
 
+// TeardownCluster shuts down the raft cluster
 func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) error {
 	clusterListener.StopHandler(consts.RaftStorageALPN)
 	clusterListener.RemoveClient(consts.RaftStorageALPN)
@@ -298,12 +302,26 @@ func (b *RaftBackend) TeardownCluster(clusterListener physicalstd.ClusterHook) e
 	return future.Error()
 }
 
+func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return errors.New("raft storage is not initialized")
+	}
+
+	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+
+	return future.Error()
+}
+
+// AddPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return errors.New("raft storage backend is sealed")
+		return errors.New("raft storage is not initialized")
 	}
 
 	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
@@ -311,6 +329,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 	return future.Error()
 }
 
+// Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	if b.raft == nil {
 		return nil, errors.New("raft storage backend is sealed")
@@ -332,6 +351,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	return ret, nil
 }
 
+// Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	command := &LogData{
 		Operations: []*LogOperation{
@@ -345,6 +365,7 @@ func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	return b.applyLog(ctx, command)
 }
 
+// Get returns the value corresponding to the given path from the fsm
 func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	if b.fsm == nil {
 		return nil, errors.New("raft: fsm not configured")
@@ -353,6 +374,7 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 	return b.fsm.Get(ctx, path)
 }
 
+// Put inserts an entry in the log for the put operation
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	command := &LogData{
 		Operations: []*LogOperation{
@@ -367,6 +389,7 @@ func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	return b.applyLog(ctx, command)
 }
 
+// List enumerates all the items under the prefix from the fsm
 func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	if b.fsm == nil {
 		return nil, errors.New("raft: fsm not configured")
@@ -375,6 +398,8 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 	return b.fsm.List(ctx, prefix)
 }
 
+// Transaction applies all the given operations into a single command and
+// applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
@@ -425,7 +450,10 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	return nil
 }
 
+// HAEnabled is the implemention of the HABackend interface
 func (b *RaftBackend) HAEnabled() bool { return true }
+
+// HAEnabled is the implemention of the HABackend interface
 func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	return &RaftLock{
 		key:   key,
