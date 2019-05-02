@@ -126,10 +126,10 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 	}
 }
 
-// Demonstrate  that multiple OUs in the name are handled in an
+// Demonstrate that multiple OUs in the name are handled in an
 // order-preserving way.
 func TestPki_MultipleOUs(t *testing.T) {
-	var b backend;
+	var b backend
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
 	apiData := &framework.FieldData{

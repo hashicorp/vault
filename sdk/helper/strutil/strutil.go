@@ -244,8 +244,8 @@ func RemoveDuplicates(items []string, lowercase bool) []string {
 // In all cases, strings are compared after trimming whitespace
 // If caseInsensitive, strings will be compared after ToLower()
 func RemoveDuplicatesStable(items []string, caseInsensitive bool) []string {
-	itemsMap := map[string]bool{}
-	deduplicated := make([]string, 0, len(itemsMap))
+	itemsMap := make(map[string]bool, len(items))
+	deduplicated := make([]string, 0, len(items))
 	
 	for _, item := range items {
 		key := strings.TrimSpace(item)
