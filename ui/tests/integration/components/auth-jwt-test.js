@@ -1,13 +1,14 @@
-import { later, run } from '@ember/runloop';
+import { next, later, run } from '@ember/runloop';
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { render, settled, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import Pretender from 'pretender';
+import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
 import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS } from 'vault/components/auth-jwt';
@@ -36,11 +37,12 @@ const fakeWindow = EmberObject.extend(Evented, {
 
 fakeWindow.reopen({
   open() {
+    this._super(...arguments);
     return fakeWindow.create();
   },
 
   close() {
-    fakeWindow.prototype.trigger('close');
+    fakeWindow.proto().trigger('close');
   },
 });
 
@@ -59,9 +61,9 @@ const routerStub = Service.extend({
 const renderIt = async (context, path = 'jwt') => {
   let handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
+    return resolve();
   };
   let fake = fakeWindow.create();
-  sinon.spy(fake, 'open');
   context.set('window', fake);
   context.set('handler', sinon.spy(handler));
   context.set('roleName', '');
@@ -86,6 +88,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function() {
+    this.openSpy = sinon.spy(fakeWindow.proto(), 'open');
     this.owner.register('service:router', routerStub);
     this.server = new Pretender(function() {
       this.get('/v1/auth/:path/oidc/callback', function() {
@@ -121,6 +124,7 @@ module('Integration | Component | auth jwt', function(hooks) {
   });
 
   hooks.afterEach(function() {
+    this.openSpy.restore();
     this.server.shutdown();
   });
 
@@ -172,22 +176,16 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-
-    later(async () => {
-      run.cancelTimers();
-      await settled();
-      let call = this.window.open.getCall(0);
-      assert.deepEqual(
-        call.args,
-        [
-          'http://example.com',
-          'vaultOIDCWindow',
-          'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
-        ],
-        'called with expected args'
-      );
-    }, 50);
-    await settled();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    run.cancelTimers();
+    let call = this.openSpy.getCall(0);
+    assert.deepEqual(
+      call.args,
+      ['http://example.com', 'vaultOIDCWindow', 'width=500,height=600,resizable,scrollbars=yes,top=0,left=0'],
+      'called with expected args'
+    );
   });
 
   test('oidc: it calls error handler when popup is closed', async function(assert) {
@@ -195,13 +193,12 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-
-    later(async () => {
-      this.window.close();
-      await settled();
-      assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
-    }, 50);
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.close();
     await settled();
+    assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
   test('oidc: storage event fires with wrong key', async function(assert) {
@@ -209,12 +206,12 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    later(async () => {
-      run.cancelTimers();
-      this.window.trigger('storage', { key: 'wrongThing' });
-      assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
-    }, 50);
-    await settled();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger('storage', { key: 'wrongThing' });
+    assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
+    run.cancelTimers();
   });
 
   test('oidc: storage event fires with correct key, wrong params', async function(assert) {
@@ -222,13 +219,13 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    later(async () => {
-      this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
-      await settled();
-      assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
-      assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-    }, 50);
-    await settled();
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
+    assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
+    assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
+    run.cancelTimers();
   });
 
   test('oidc: storage event fires with correct key, correct params', async function(assert) {
@@ -236,20 +233,20 @@ module('Integration | Component | auth jwt', function(hooks) {
     this.set('selectedAuthPath', 'foo');
     await component.role('test');
     component.login();
-    later(async () => {
-      this.window.trigger('storage', {
-        key: 'oidcState',
-        newValue: JSON.stringify({
-          path: 'foo',
-          state: 'state',
-          code: 'code',
-        }),
-      });
-      await settled();
-      assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
-      assert.equal(this.token, 'token', 'calls onToken with token');
-      assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
-    }, 50);
+    await waitUntil(() => {
+      return this.openSpy.calledOnce;
+    });
+    this.window.trigger('storage', {
+      key: 'oidcState',
+      newValue: JSON.stringify({
+        path: 'foo',
+        state: 'state',
+        code: 'code',
+      }),
+    });
     await settled();
+    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
+    assert.equal(this.token, 'token', 'calls onToken with token');
+    assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
 });
