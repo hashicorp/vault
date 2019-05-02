@@ -7,6 +7,7 @@ import Service from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { capitalize } from '@ember/string';
+import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
@@ -32,17 +33,20 @@ export default Service.extend({
   //as determined by the expandOpenApiProps util
   getProps(helpUrl, backend) {
     return this.ajax(helpUrl, backend).then(help => {
+      //paths is an array but it will have a single entry
+      // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0];
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
-      let param = {};
-      //put params at the front of the props list
+      let paramProp = {};
+
+      //include url params
       if (params) {
         let label = capitalize(params[0].name);
         if (label.toLowerCase() !== 'name') {
           label += ' name';
         }
-        param[params[0].name] = {
+        paramProp[params[0].name] = {
           name: params[0].name,
           label: label,
           type: params[0].schema.type,
@@ -50,23 +54,11 @@ export default Service.extend({
           isId: true,
         };
       }
-      const schema = pathInfo.post.requestBody.content['application/json'].schema.properties;
-      const newProps = { ...param, ...schema };
-      debugger; // eslint-disable-line
-
+      const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
+      //put url params (e.g. {name}, {role})
+      //at the front of the props list
+      const newProps = assign({}, paramProp, props);
       return expandOpenApiProps(newProps);
-    });
-  },
-
-  //Makes a call to grab the OpenAPI document.
-  //Returns relevant information from OpenAPI
-  //as determined by the expandOpenApiProps util
-  getPathHelp(apiPath, backend) {
-    let helpUrl = `/v1/${apiPath}?help=1`;
-    return this.ajax(helpUrl, backend).then(help => {
-      let path = Object.keys(help.openapi.paths)[0];
-      let props = help.openapi.paths[path].post.requestBody.content['application/json'].schema.properties;
-      return expandOpenApiProps(props);
     });
   },
 

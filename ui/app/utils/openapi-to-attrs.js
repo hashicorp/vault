@@ -30,6 +30,7 @@ export const expandOpenApiProps = function(props) {
       label: details['x-vault-displayName'] || details.label,
       possibleValues: details['enum'],
       fieldValue: details.isId ? 'id' : null,
+      readOnly: details.isId,
       defaultValue:
         details['x-vault-displayValue'] || (!isEmpty(details['default']) ? details['default'] : null),
     };
@@ -47,6 +48,7 @@ export const expandOpenApiProps = function(props) {
 export const combineAttributes = function(oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
+  debugger; // eslint-disable-line
   if (oldAttrs) {
     oldAttrs.forEach(function(value, name) {
       if (newProps[name]) {
