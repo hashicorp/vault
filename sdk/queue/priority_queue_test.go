@@ -34,7 +34,7 @@ func testCases() (tc []*Item) {
 }
 
 func TestPriorityQueue_New(t *testing.T) {
-	pq := NewPriorityQueue()
+	pq := New()
 
 	if len(pq.data) != len(pq.dataMap) || len(pq.data) != 0 {
 		t.Fatalf("error in queue/map size, expected data and map to be initialized, got (%d) and (%d)", len(pq.data), len(pq.dataMap))
@@ -46,7 +46,7 @@ func TestPriorityQueue_New(t *testing.T) {
 }
 
 func TestPriorityQueue_PushItem(t *testing.T) {
-	pq := NewPriorityQueue()
+	pq := New()
 
 	tc := testCases()
 	tcl := len(tc)
@@ -105,7 +105,7 @@ func TestPriorityQueue_PushItem(t *testing.T) {
 }
 
 func TestPriorityQueue_PopItem(t *testing.T) {
-	pq := NewPriorityQueue()
+	pq := New()
 
 	tc := testCases()
 	for _, i := range tc {
@@ -138,7 +138,7 @@ func TestPriorityQueue_PopItem(t *testing.T) {
 }
 
 func TestPriorityQueue_PopItemByKey(t *testing.T) {
-	pq := NewPriorityQueue()
+	pq := New()
 
 	tc := testCases()
 	for _, i := range tc {
