@@ -16,6 +16,7 @@ BUG FIXES:
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
  * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
  * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
+ * pki: fix a panic when a client submits a null value [GH-5679]
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
  * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
