@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -68,6 +69,9 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	secret, err := api.ParseSecret(resp.Body)
 	if err != nil {
 		return "", 0, err
+	}
+	if secret == nil {
+		return "", 0, errors.New("nil response from pre-flight request")
 	}
 	var mountPath string
 	if mountPathRaw, ok := secret.Data["path"]; ok {
