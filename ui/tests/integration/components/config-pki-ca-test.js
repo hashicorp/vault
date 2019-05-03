@@ -45,7 +45,7 @@ module('Integration | Component | config pki ca', function(hooks) {
       pem: pem,
       backend: 'pki',
       caChain: 'caChain',
-      der: new File(['der'], { type: 'text/plain' }),
+      der: new Blob(['der'], { type: 'text/plain' }),
     });
   };
 
