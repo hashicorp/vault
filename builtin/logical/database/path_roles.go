@@ -233,11 +233,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
         }
 
         if b.credRotationQueue != nil {
-                if _, err := b.credRotationQueue.PopByKey(name); err != nil {
-                        if _, ok := err.(*queue.ErrItemNotFound); !ok {
-                                return nil, err
-                        }
-                }
+                b.credRotationQueue.PopByKey(name)
         }
 
         return nil, nil
@@ -475,12 +471,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
                 if err := req.Storage.Put(ctx, entry); err != nil {
                         return nil, err
                 }
-                // In case this is an update, remove any previous version of the item from the queue
-                if _, err := b.credRotationQueue.PopByKey(name); err != nil {
-                        if _, ok := err.(*queue.ErrItemNotFound); !ok {
-                                return nil, err
-                        }
-                }
+
+                // In case this is an update, remove any previous version of the item from
+                // the queue
+                b.credRotationQueue.PopByKey(name)
         }
 
         // Add their rotation to the queue
