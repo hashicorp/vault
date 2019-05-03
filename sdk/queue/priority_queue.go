@@ -8,7 +8,6 @@ package queue
 import (
 	"container/heap"
 	"errors"
-	"sort"
 	"sync"
 
 	"github.com/mitchellh/copystructure"
@@ -58,7 +57,6 @@ type PriorityQueue struct {
 type queue []*Item
 
 var _ heap.Interface = &queue{}
-var _ sort.Interface = &queue{}
 
 // Item is something managed in the priority queue
 type Item struct {
@@ -182,7 +180,8 @@ func (q *queue) Pop() interface{} {
 	old := *q
 	n := len(old)
 	item := old[n-1]
-	item.index = -1 //for saftey
+	old[n-1] = nil  // avoid memory leak
+	item.index = -1 // for safety
 	*q = old[0 : n-1]
 	return item
 }
