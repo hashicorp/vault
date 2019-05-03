@@ -8,7 +8,6 @@ package queue
 import (
 	"container/heap"
 	"errors"
-	"fmt"
 	"sort"
 	"sync"
 
@@ -22,23 +21,6 @@ var ErrEmpty = errors.New("queue is empty")
 // already exists. The queue does not attempt to update, instead returns this
 // error. If an Item needs to be updated or replaced, pop the item first.
 var ErrDuplicateItem = errors.New("duplicate item")
-
-// ErrItemNotFound is a struct that implements the error interface
-var _ error = &ErrItemNotFound{}
-
-type ErrItemNotFound struct {
-	Key string
-}
-
-func (e *ErrItemNotFound) Error() string {
-	return fmt.Sprintf("queue item with key (%s) not found", e.Key)
-}
-
-func newErrItemNotFound(key string) *ErrItemNotFound {
-	return &ErrItemNotFound{
-		Key: key,
-	}
-}
 
 // New initializes the internal data structures and returns a new
 // PriorityQueue
@@ -95,6 +77,9 @@ type Item struct {
 	index int
 }
 
+// Len returns the count of items in the Priority Queue
+func (q *PriorityQueue) Len() int { return q.data.Len() }
+
 // Pop pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
@@ -126,7 +111,6 @@ func (pq *PriorityQueue) Push(i *Item) error {
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
 	}
-
 	// copy the item value(s) so that modifications to the source item does not
 	// affect the item on the queue
 	clone, err := copystructure.Copy(i)
@@ -148,7 +132,7 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 
 	item, ok := pq.dataMap[key]
 	if !ok {
-		return nil, newErrItemNotFound(key)
+		return nil, nil
 	}
 
 	// remove the item the heap and delete it from the dataMap
@@ -159,19 +143,17 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 		return i, nil
 	}
 
-	return nil, newErrItemNotFound(key)
+	return nil, nil
 }
 
 // Len returns the number of items in the queue data structure. Do not use this
 // method directly on the queue, use PriorityQueue.Len() instead.
 func (pq pQueue) Len() int { return len(pq) }
 
-// Len returns the count of items in the Priority Queue
-func (q *PriorityQueue) Len() int { return q.data.Len() }
-
-// Less returns the less of two things, which in this case, we return the
-// highest value thing, because the priority ordering is "lowest value, highest
-// priority"
+// Less returns whether the Item with index i should sort before the Item with
+// index j in the queue. This method is used by the queue to determine priority
+// internally; the Item with the lower value wins. (priority zero is higher
+// priority than 1). The priority of Items with equal values is undetermined.
 func (pq pQueue) Less(i, j int) bool {
 	return pq[i].Priority < pq[j].Priority
 }

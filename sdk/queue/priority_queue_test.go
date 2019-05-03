@@ -89,18 +89,10 @@ func TestPriorityQueue_Push(t *testing.T) {
 
 	testValidateInternalData(t, pq, len(tc)-1, true)
 
-	// check err not found
-	_, fErr := pq.PopByKey("empty")
-	if fErr == nil {
-		t.Fatalf("expected not found error")
-	}
-	switch fErr.(type) {
-	case *ErrItemNotFound:
-		if fErr.Error() != "queue item with key (empty) not found" {
-			t.Fatalf("expected error not found item message to match, got (%s)", fErr.Error())
-		}
-	default:
-		t.Fatalf("expected ErrItemNotFound error, got: %#v", fErr)
+	// check nil,nil error for not found
+	i, err := pq.PopByKey("empty")
+	if err != nil && i != nil {
+		t.Fatalf("expected nil error for PopByKey of non-existing key, got: %s", err)
 	}
 }
 
@@ -128,9 +120,9 @@ func TestPriorityQueue_Pop(t *testing.T) {
 	var items []*Item
 	items = append(items, topItem)
 	// pop the remaining items, compare size of input and output
-	it, _ := pq.Pop()
-	for ; it != nil; it, _ = pq.Pop() {
-		items = append(items, it)
+	i, _ := pq.Pop()
+	for ; i != nil; i, _ = pq.Pop() {
+		items = append(items, i)
 	}
 	if len(items) != len(tc) {
 		t.Fatalf("expected popped item count to match test cases, got (%d)", len(items))
@@ -162,7 +154,7 @@ func TestPriorityQueue_PopByKey(t *testing.T) {
 	popKeys := []int{2, 4, 7, 1, 0}
 	for _, i := range popKeys {
 		item, err := pq.PopByKey(fmt.Sprintf("item-%d", i))
-		if err != nil || item == nil {
+		if err != nil {
 			t.Fatalf("failed to pop item-%d, \n\terr: %s\n\titem: %#v", i, err, item)
 		}
 	}
