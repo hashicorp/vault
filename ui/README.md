@@ -73,11 +73,11 @@ acceptance tests then run, proxing requests back to that server.
 - `yarn run test-oss -s` to keep the test server running after the initial run.
 - `yarn run test -f="policies"` to filter the tests that are run. `-f` gets passed into
   [QUnit's `filter` config](https://api.qunitjs.com/config/QUnit.config#qunitconfigfilter-string--default-undefined)
-- `yarn run test:browserstack` to run the OSS acceptance tests in Browserstack
+- `yarn run test:browserstack` to run the kv acceptance tests in Browserstack
 
 #### Automated Cross-Browser Testing
 
-Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all of the OSS acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`. 
+Vault uses [Browserstack Automate](https://automate.browserstack.com/) to run all the kv acceptance tests on various browsers. You can view the list of browsers we test by viewing `testem.browserstack.js`. 
 
 ##### Running Browserstack Locally
 
