@@ -101,7 +101,7 @@ func (pq *PriorityQueue) Pop() (*Item, error) {
 // cannot be updated. To modify an Item, users must first remove it and re-push
 // it after modifications
 func (pq *PriorityQueue) Push(i *Item) error {
-	if i.Key == "" {
+	if i == nil || i.Key == "" {
 		return errors.New("error adding item: Item Key is required")
 	}
 
