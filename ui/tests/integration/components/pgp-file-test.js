@@ -84,12 +84,10 @@ module('Integration | Component | pgp file', function(hooks) {
     await settled();
     await click('[data-test-text-toggle]');
     assert.equal(findAll('[data-test-pgp-file-textarea]').length, 1, 'renders the textarea on toggle');
-
     assert.equal(
       find('[data-test-pgp-file-textarea]').textContent.trim(),
       this.lastOnChangeCall[1].value,
       'textarea shows the value of the base64d key'
     );
-    await settled();
   });
 });

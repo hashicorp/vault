@@ -37,7 +37,6 @@ const fakeWindow = EmberObject.extend(Evented, {
 
 fakeWindow.reopen({
   open() {
-    this._super(...arguments);
     return fakeWindow.create();
   },
 
@@ -210,8 +209,8 @@ module('Integration | Component | auth jwt', function(hooks) {
       return this.openSpy.calledOnce;
     });
     this.window.trigger('storage', { key: 'wrongThing' });
-    assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
     run.cancelTimers();
+    assert.equal(this.window.localStorage.removeItem.callCount, 0, 'never calls removeItem');
   });
 
   test('oidc: storage event fires with correct key, wrong params', async function(assert) {
@@ -223,9 +222,9 @@ module('Integration | Component | auth jwt', function(hooks) {
       return this.openSpy.calledOnce;
     });
     this.window.trigger('storage', { key: 'oidcState', newValue: JSON.stringify({}) });
+    run.cancelTimers();
     assert.equal(this.window.localStorage.removeItem.callCount, 1, 'calls removeItem');
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
-    run.cancelTimers();
   });
 
   test('oidc: storage event fires with correct key, correct params', async function(assert) {
