@@ -304,21 +304,14 @@ export default Service.extend({
     });
   },
 
-  authenticate(/*{clusterId, backend, data}*/) {
+  async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
-    return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path')).then(
-        authData => {
-          return this.get('permissions')
-            .getPaths.perform()
-            .then(() => {
-              return authData;
-            });
-        }
-      );
-    });
+    let resp = await adapter.authenticate(options);
+    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
+    await this.get('permissions').getPaths.perform();
+    return authData;
   },
 
   deleteCurrentToken() {
