@@ -71,7 +71,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 
 	var resp *logical.Response
-	input := &dataBundle{
+	input := &inputBundle{
 		role:    role,
 		req:     req,
 		apiData: data,

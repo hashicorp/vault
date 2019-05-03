@@ -139,12 +139,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	input := &dataBundle{
+	input := &inputBundle{
 		req:     req,
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(ctx, b, input, true)
+	parsedBundle, err := generateCert(ctx, b, input, nil, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -296,13 +296,12 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		role.MaxPathLength = &maxPathLength
 	}
 
-	input := &dataBundle{
-		req:           req,
-		apiData:       data,
-		signingBundle: signingBundle,
-		role:          role,
+	input := &inputBundle{
+		req:     req,
+		apiData: data,
+		role:    role,
 	}
-	parsedBundle, err := signCert(b, input, true, useCSRValues)
+	parsedBundle, err := signCert(b, input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
