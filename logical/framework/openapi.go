@@ -257,13 +257,6 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 				required = false
 			}
 
-			// Header parameters are part of the Parameters group but with
-			// a dedicated "header" location, a header parameter is not required.
-			if field.Type == TypeHeader {
-				location = "header"
-				required = false
-			}
-
 			t := convertType(field.Type)
 			p := OASParameter{
 				Name:        name,
@@ -608,8 +601,7 @@ func splitFields(allFields map[string]*FieldSchema, pattern string) (pathFields,
 
 	for name, field := range allFields {
 		if _, ok := pathFields[name]; !ok {
-			// Header fields are in "parameters" with other path fields
-			if field.Type == TypeHeader || field.Query {
+			if field.Query {
 				pathFields[name] = field
 			} else {
 				bodyFields[name] = field
