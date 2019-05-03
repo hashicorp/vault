@@ -54,7 +54,9 @@ func (b *backend) getGenerationParams(
 		return
 	}
 
-	errorResp = certutil.ValidateKeyTypeLength(role.KeyType, role.KeyBits)
+	if err := certutil.ValidateKeyTypeLength(role.KeyType, role.KeyBits); err != nil {
+		errorResp = logical.ErrorResponse(err.Error())
+	}
 
 	return
 }

@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/cryptobyte"
 	asn12 "golang.org/x/crypto/cryptobyte/asn1"
@@ -456,7 +455,7 @@ func StringToOid(in string) (asn1.ObjectIdentifier, error) {
 	return asn1.ObjectIdentifier(ret), nil
 }
 
-func ValidateKeyTypeLength(keyType string, keyBits int) *logical.Response {
+func ValidateKeyTypeLength(keyType string, keyBits int) error {
 	switch keyType {
 	case "rsa":
 		switch keyBits {
@@ -464,8 +463,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 		case 4096:
 		case 8192:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for RSA key: %d", keyBits))
+			return fmt.Errorf("unsupported bit length for RSA key: %d", keyBits)
 		}
 	case "ec":
 		switch keyBits {
@@ -474,13 +472,11 @@ func ValidateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 		case 384:
 		case 521:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for EC key: %d", keyBits))
+			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
 	case "any":
 	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"unknown key type %s", keyType))
+		return fmt.Errorf("unknown key type %s", keyType)
 	}
 
 	return nil
