@@ -1,12 +1,12 @@
 package database
 
 import (
-	"context"
-	"fmt"
+        "context"
+        "fmt"
         "time"
 
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
+        "github.com/hashicorp/vault/sdk/framework"
+        "github.com/hashicorp/vault/sdk/logical"
         "github.com/hashicorp/vault/sdk/queue"
 )
 
@@ -44,7 +44,7 @@ func pathRotateCredentials(b *databaseBackend) []*framework.Path {
                         HelpSynopsis:    pathCredsCreateReadHelpSyn,
                         HelpDescription: pathCredsCreateReadHelpDesc,
                 },
-	}
+        }
 }
 
 func (b *databaseBackend) pathRotateCredentialsUpdate() framework.OperationFunc {

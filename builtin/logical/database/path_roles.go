@@ -1,15 +1,15 @@
 package database
 
 import (
-	"context"
+        "context"
         "errors"
         "fmt"
-	"time"
+        "time"
 
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
+        "github.com/hashicorp/vault/sdk/database/dbplugin"
+        "github.com/hashicorp/vault/sdk/framework"
+        "github.com/hashicorp/vault/sdk/helper/strutil"
+        "github.com/hashicorp/vault/sdk/logical"
         "github.com/hashicorp/vault/sdk/queue"
 )
 
@@ -24,7 +24,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 
                         HelpSynopsis:    pathRoleHelpSyn,
                         HelpDescription: pathRoleHelpDesc,
-		},
+                },
                 &framework.Path{
                         Pattern: "static-roles/?$",
 
@@ -35,7 +35,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
                         HelpSynopsis:    pathStaticRoleHelpSyn,
                         HelpDescription: pathStaticRoleHelpDesc,
                 },
-	}
+        }
 }
 
 func pathRoles(b *databaseBackend) []*framework.Path {
@@ -55,29 +55,29 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                                 "creation_statements": {
                                         Type: framework.TypeStringSlice,
                                         Description: `Specifies the database statements executed to
-				create and configure a user. See the plugin's API page for more
-				information on support and formatting for this parameter.`,
+                                create and configure a user. See the plugin's API page for more
+                                information on support and formatting for this parameter.`,
                                 },
                                 "revocation_statements": {
                                         Type: framework.TypeStringSlice,
                                         Description: `Specifies the database statements to be executed
-				to revoke a user. See the plugin's API page for more information
-				on support and formatting for this parameter.`,
+                                to revoke a user. See the plugin's API page for more information
+                                on support and formatting for this parameter.`,
                                 },
                                 "renew_statements": {
                                         Type: framework.TypeStringSlice,
                                         Description: `Specifies the database statements to be executed
-				to renew a user. Not every plugin type will support this
-				functionality. See the plugin's API page for more information on
-				support and formatting for this parameter. `,
+                                to renew a user. Not every plugin type will support this
+                                functionality. See the plugin's API page for more information on
+                                support and formatting for this parameter. `,
                                 },
                                 "rollback_statements": {
                                         Type: framework.TypeStringSlice,
                                         Description: `Specifies the database statements to be executed
-				rollback a create operation in the event of an error. Not every
-				plugin type will support this functionality. See the plugin's
-				API page for more information on support and formatting for this
-				parameter.`,
+                                rollback a create operation in the event of an error. Not every
+                                plugin type will support this functionality. See the plugin's
+                                API page for more information on support and formatting for this
+                                parameter.`,
                                 },
 
                                 "default_ttl": {
@@ -89,7 +89,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                                         Type:        framework.TypeDurationSecond,
                                         Description: "Maximum time a credential is valid for",
                                 },
-			},
+                        },
 
                         ExistenceCheck: b.pathRoleExistenceCheck,
                         Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -97,11 +97,11 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                                 logical.CreateOperation: b.pathRoleCreateUpdate,
                                 logical.UpdateOperation: b.pathRoleCreateUpdate,
                                 logical.DeleteOperation: b.pathRoleDelete,
-			},
+                        },
 
                         HelpSynopsis:    pathRoleHelpSyn,
                         HelpDescription: pathRoleHelpDesc,
-		},
+                },
 
                 &framework.Path{
                         Pattern: "static-roles/" + framework.GenericNameRegex("name"),
@@ -171,7 +171,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
                         HelpSynopsis:    pathStaticRoleHelpSyn,
                         HelpDescription: pathStaticRoleHelpDesc,
                 },
-	}
+        }
 }
 
 func (b *databaseBackend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
@@ -186,7 +186,7 @@ func (b *databaseBackend) pathStaticRoleExistenceCheck(ctx context.Context, req 
         role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
         if err != nil {
                 return false, err
-	}
+        }
         return role != nil, nil
 }
 
@@ -208,15 +208,15 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
                 return nil, err
         }
         if role == nil {
-		return nil, nil
-	}
+                return nil, nil
+        }
 
         // clean up the static useraccount, if it exists
         if role.StaticAccount != nil {
                 db, err := b.GetConnection(ctx, req.Storage, role.DBName)
-		if err != nil {
-			return nil, err
-		}
+                if err != nil {
+                        return nil, err
+                }
 
                 db.RLock()
                 defer db.RUnlock()
@@ -224,7 +224,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
                 if err := db.RevokeUser(ctx, role.Statements, role.StaticAccount.Username); err != nil {
                         b.CloseIfShutdown(db, err)
                         return nil, err
-		}
+                }
         }
 
         err = req.Storage.Delete(ctx, databaseStaticRolePath+name)
@@ -237,7 +237,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
                                 return nil, err
                         }
-		}
+                }
         }
 
         return nil, nil
@@ -257,7 +257,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
                 data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
                 if !role.StaticAccount.LastVaultRotation.IsZero() {
                         data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
-		}
+                }
         }
 
         return &logical.Response{
@@ -345,12 +345,12 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
                         role.DefaultTTL = time.Duration(defaultTTLRaw.(int)) * time.Second
                 } else if req.Operation == logical.CreateOperation {
                         role.DefaultTTL = time.Duration(data.Get("default_ttl").(int)) * time.Second
-		}
+                }
                 if maxTTLRaw, ok := data.GetOk("max_ttl"); ok {
                         role.MaxTTL = time.Duration(maxTTLRaw.(int)) * time.Second
                 } else if req.Operation == logical.CreateOperation {
                         role.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
-		}
+                }
         }
 
         // Store it
@@ -361,7 +361,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 
         if err := req.Storage.Put(ctx, entry); err != nil {
                 return nil, err
-	}
+        }
 
         return nil, nil
 }
@@ -401,7 +401,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
         if role.StaticAccount == nil {
                 if !createRole {
                         return logical.ErrorResponse("cannot change an existing role to a static account"), nil
-		}
+                }
                 role.StaticAccount = &staticAccount{}
         }
 
@@ -427,7 +427,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
                         // must be at least 5 seconds because our periodic func runs about once a
                         // minute.
                         return logical.ErrorResponse("rotation_period must be 5 seconds or more"), nil
-		}
+                }
                 role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
         }
 
@@ -458,28 +458,28 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
                         Role:       role,
                         CreateUser: createRole,
                 })
-		if err != nil {
-			return nil, err
-		}
+                if err != nil {
+                        return nil, err
+                }
                 // guard against RotationTime not being set or zero-value
                 lvr = resp.RotationTime
                 if lvr.IsZero() {
                         lvr = time.Now()
-		}
+                }
         case logical.UpdateOperation:
                 // store updated Role
                 entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
                 if err != nil {
                         return nil, err
-		}
+                }
                 if err := req.Storage.Put(ctx, entry); err != nil {
                         return nil, err
-		}
+                }
                 // In case this is an update, remove any previous version of the item from the queue
                 if _, err := b.credRotationQueue.PopByKey(name); err != nil {
                         if _, ok := err.(*queue.ErrItemNotFound); !ok {
                                 return nil, err
-			}
+                        }
                 }
         }
 
@@ -526,20 +526,20 @@ func pathRoleCreateUpdateCommon(ctx context.Context, role *roleEntry, operation 
                         role.Statements.Rollback = rollbackStmtsRaw.([]string)
                 } else if operation == logical.CreateOperation {
                         role.Statements.Rollback = data.Get("rollback_statements").([]string)
-		}
+                }
 
                 if renewStmtsRaw, ok := data.GetOk("renew_statements"); ok {
                         role.Statements.Renewal = renewStmtsRaw.([]string)
                 } else if operation == logical.CreateOperation {
                         role.Statements.Renewal = data.Get("renew_statements").([]string)
-		}
+                }
 
                 // Do not persist deprecated statements that are populated on role read
                 role.Statements.CreationStatements = ""
                 role.Statements.RevocationStatements = ""
                 role.Statements.RenewStatements = ""
                 role.Statements.RollbackStatements = ""
-	}
+        }
 
         role.Statements.Revocation = strutil.RemoveEmpty(role.Statements.Revocation)
 

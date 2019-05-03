@@ -20,15 +20,15 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
                                         Type:        framework.TypeString,
                                         Description: "Name of the role.",
                                 },
-                        },
+			},
 
                         Callbacks: map[logical.Operation]framework.OperationFunc{
                                 logical.ReadOperation: b.pathCredsCreateRead(),
-			},
+                        },
 
                         HelpSynopsis:    pathCredsCreateReadHelpSyn,
                         HelpDescription: pathCredsCreateReadHelpDesc,
-		},
+                },
                 &framework.Path{
                         Pattern: "static-creds/" + framework.GenericNameRegex("name"),
                         Fields: map[string]*framework.FieldSchema{
@@ -44,7 +44,7 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 
                         HelpSynopsis:    pathStaticCredsReadHelpSyn,
                         HelpDescription: pathStaticCredsReadHelpDesc,
-                },
+		},
 	}
 }
 
