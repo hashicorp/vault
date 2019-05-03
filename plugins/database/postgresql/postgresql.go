@@ -27,6 +27,10 @@ ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 	defaultPostgresRotateRootCredentialsSQL = `
 ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
+
+        defaultPostgresRotateCredentialsSQL = `
+ALTER ROLE "{{name}}" WITH PASSWORD '{{password}}';
+`
 )
 
 var _ dbplugin.Database = &PostgreSQL{}
@@ -129,7 +133,7 @@ func (p *PostgreSQL) SetCredentials(ctx context.Context, statements dbplugin.Sta
         if exists == true {
                 stmts = statements.Rotation
                 if len(stmts) == 0 {
-                        stmts = []string{defaultPostgresRotateRootCredentialsSQL}
+                        stmts = []string{defaultPostgresRotateCredentialsSQL}
                 }
         }
 
