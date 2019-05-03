@@ -158,9 +158,9 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		bucket:    bucket,
-		haEnabled: haEnabled,
-
+		bucket:     bucket,
+		haEnabled:  haEnabled,
+		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,
