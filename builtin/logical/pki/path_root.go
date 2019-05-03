@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"reflect"
 	"strings"
 	"time"
@@ -419,7 +420,7 @@ func (b *backend) pathCASignSelfIssued(ctx context.Context, req *logical.Request
 		return nil, errwrap.Wrapf("error converting raw signing bundle to cert bundle: {{err}}", err)
 	}
 
-	urls := &urlEntries{}
+	urls := &certutil.URLEntries{}
 	if signingBundle.URLs != nil {
 		urls = signingBundle.URLs
 	}

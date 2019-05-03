@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -552,13 +553,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
+	if errResp := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
 		return errResp, nil
 	}
 
 	if len(entry.ExtKeyUsageOIDs) > 0 {
 		for _, oidstr := range entry.ExtKeyUsageOIDs {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
 			}
@@ -567,7 +568,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	if len(entry.PolicyIdentifiers) > 0 {
 		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
 			}

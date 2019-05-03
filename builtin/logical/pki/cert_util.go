@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -17,7 +16,6 @@ import (
 	"net"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -27,98 +25,14 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	glob "github.com/ryanuber/go-glob"
-	"golang.org/x/crypto/cryptobyte"
-	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
+	"github.com/ryanuber/go-glob"
 	"golang.org/x/net/idna"
 )
-
-type certExtKeyUsage int
-
-const (
-	anyExtKeyUsage certExtKeyUsage = 1 << iota
-	serverAuthExtKeyUsage
-	clientAuthExtKeyUsage
-	codeSigningExtKeyUsage
-	emailProtectionExtKeyUsage
-	ipsecEndSystemExtKeyUsage
-	ipsecTunnelExtKeyUsage
-	ipsecUserExtKeyUsage
-	timeStampingExtKeyUsage
-	ocspSigningExtKeyUsage
-	microsoftServerGatedCryptoExtKeyUsage
-	netscapeServerGatedCryptoExtKeyUsage
-	microsoftCommercialCodeSigningExtKeyUsage
-	microsoftKernelCodeSigningExtKeyUsage
-)
-
-type creationBundle struct {
-	params        *creationParameters
-	signingBundle *caInfoBundle
-	csr           *x509.CertificateRequest
-}
 
 type inputBundle struct {
 	role    *roleEntry
 	req     *logical.Request
 	apiData *framework.FieldData
-}
-
-type creationParameters struct {
-	Subject                       pkix.Name
-	DNSNames                      []string
-	EmailAddresses                []string
-	IPAddresses                   []net.IP
-	URIs                          []*url.URL
-	OtherSANs                     map[string][]string
-	IsCA                          bool
-	KeyType                       string
-	KeyBits                       int
-	NotAfter                      time.Time
-	KeyUsage                      x509.KeyUsage
-	ExtKeyUsage                   certExtKeyUsage
-	ExtKeyUsageOIDs               []string
-	PolicyIdentifiers             []string
-	BasicConstraintsValidForNonCA bool
-
-	// Only used when signing a CA cert
-	UseCSRValues        bool
-	PermittedDNSDomains []string
-
-	// URLs to encode into the certificate
-	URLs *urlEntries
-
-	// The maximum path length to encode
-	MaxPathLength int
-
-	// The duration the certificate will use NotBefore
-	NotBeforeDuration time.Duration
-}
-
-type caInfoBundle struct {
-	certutil.ParsedCertBundle
-	URLs *urlEntries
-}
-
-func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
-	chain := []*certutil.CertBlock{}
-
-	// Include issuing CA in Chain, not including Root Authority
-	if (len(b.Certificate.AuthorityKeyId) > 0 &&
-		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)) ||
-		(len(b.Certificate.AuthorityKeyId) == 0 &&
-			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
-
-		chain = append(chain, &certutil.CertBlock{
-			Certificate: b.Certificate,
-			Bytes:       b.CertificateBytes,
-		})
-		if b.CAChain != nil && len(b.CAChain) > 0 {
-			chain = append(chain, b.CAChain...)
-		}
-	}
-
-	return chain
 }
 
 var (
@@ -151,39 +65,9 @@ func getFormat(data *framework.FieldData) string {
 	return format
 }
 
-func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
-	switch keyType {
-	case "rsa":
-		switch keyBits {
-		case 2048:
-		case 4096:
-		case 8192:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for RSA key: %d", keyBits))
-		}
-	case "ec":
-		switch keyBits {
-		case 224:
-		case 256:
-		case 384:
-		case 521:
-		default:
-			return logical.ErrorResponse(fmt.Sprintf(
-				"unsupported bit length for EC key: %d", keyBits))
-		}
-	case "any":
-	default:
-		return logical.ErrorResponse(fmt.Sprintf(
-			"unknown key type %s", keyType))
-	}
-
-	return nil
-}
-
 // Fetches the CA info. Unlike other certificates, the CA info is stored
 // in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(ctx context.Context, req *logical.Request) (*caInfoBundle, error) {
+func fetchCAInfo(ctx context.Context, req *logical.Request) (*certutil.CAInfoBundle, error) {
 	bundleEntry, err := req.Storage.Get(ctx, "config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
@@ -206,14 +90,14 @@ func fetchCAInfo(ctx context.Context, req *logical.Request) (*caInfoBundle, erro
 		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
 
-	caInfo := &caInfoBundle{*parsedBundle, nil}
+	caInfo := &certutil.CAInfoBundle{*parsedBundle, nil}
 
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
 	if entries == nil {
-		entries = &urlEntries{
+		entries = &certutil.URLEntries{
 			IssuingCertificates:   []string{},
 			CRLDistributionPoints: []string{},
 			OCSPServers:           []string{},
@@ -551,7 +435,7 @@ func validateSerialNumber(data *inputBundle, serialNumber string) string {
 func generateCert(ctx context.Context,
 	b *backend,
 	input *inputBundle,
-	caSign *caInfoBundle,
+	caSign *certutil.CAInfoBundle,
 	isCA bool) (*certutil.ParsedCertBundle, error) {
 
 	if input.role == nil {
@@ -566,38 +450,38 @@ func generateCert(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-	if data.params == nil {
+	if data.Params == nil {
 		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
 	if isCA {
-		data.params.IsCA = isCA
-		data.params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
+		data.Params.IsCA = isCA
+		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
 
-		if data.signingBundle == nil {
+		if data.SigningBundle == nil {
 			// Generating a self-signed root certificate
 			entries, err := getURLs(ctx, input.req)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 			}
 			if entries == nil {
-				entries = &urlEntries{
+				entries = &certutil.URLEntries{
 					IssuingCertificates:   []string{},
 					CRLDistributionPoints: []string{},
 					OCSPServers:           []string{},
 				}
 			}
-			data.params.URLs = entries
+			data.Params.URLs = entries
 
 			if input.role.MaxPathLength == nil {
-				data.params.MaxPathLength = -1
+				data.Params.MaxPathLength = -1
 			} else {
-				data.params.MaxPathLength = *input.role.MaxPathLength
+				data.Params.MaxPathLength = *input.role.MaxPathLength
 			}
 		}
 	}
 
-	parsedBundle, err := createCertificate(data)
+	parsedBundle, err := certutil.CreateCertificate(data)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +496,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCS
 	if err != nil {
 		return nil, err
 	}
-	if creation.params == nil {
+	if creation.Params == nil {
 		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
@@ -627,7 +511,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCS
 
 func signCert(b *backend,
 	data *inputBundle,
-	caSign *caInfoBundle,
+	caSign *certutil.CAInfoBundle,
 	isCA bool,
 	useCSRValues bool) (*certutil.ParsedCertBundle, error) {
 
@@ -718,18 +602,18 @@ func signCert(b *backend,
 	if err != nil {
 		return nil, err
 	}
-	if creation.params == nil {
+	if creation.Params == nil {
 		return nil, errutil.InternalError{Err: "nil parameters received from parameter bundle generation"}
 	}
 
-	creation.params.IsCA = isCA
-	creation.params.UseCSRValues = useCSRValues
+	creation.Params.IsCA = isCA
+	creation.Params.UseCSRValues = useCSRValues
 
 	if isCA {
-		creation.params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
+		creation.Params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 	}
 
-	parsedBundle, err := signCertificate(creation)
+	parsedBundle, err := SignCertificate(creation)
 	if err != nil {
 		return nil, err
 	}
@@ -738,9 +622,9 @@ func signCert(b *backend,
 }
 
 // generateCreationBundle is a shared function that reads parameters supplied
-// from the various endpoints and generates a creationParameters with the
+// from the various endpoints and generates a CreationParameters with the
 // parameters that can be used to issue or sign
-func generateCreationBundle(b *backend, data *inputBundle, caSign *caInfoBundle, csr *x509.CertificateRequest) (*creationBundle, error) {
+func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle, csr *x509.CertificateRequest) (*certutil.CreationBundle, error) {
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
@@ -1020,8 +904,8 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *caInfoBundle,
 		}
 	}
 
-	creation := &creationBundle{
-		params: &creationParameters{
+	creation := &certutil.CreationBundle{
+		Params: &certutil.CreationParameters{
 			Subject:                       subject,
 			DNSNames:                      dnsNames,
 			EmailAddresses:                emailAddresses,
@@ -1038,8 +922,8 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *caInfoBundle,
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
 		},
-		signingBundle: caSign,
-		csr:           csr,
+		SigningBundle: caSign,
+		CSR:           csr,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1049,268 +933,53 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *caInfoBundle,
 	}
 
 	// This will have been read in from the getURLs function
-	creation.params.URLs = caSign.URLs
+	creation.Params.URLs = caSign.URLs
 
 	// If the max path length in the role is not nil, it was specified at
 	// generation time with the max_path_length parameter; otherwise derive it
 	// from the signing certificate
 	if data.role.MaxPathLength != nil {
-		creation.params.MaxPathLength = *data.role.MaxPathLength
+		creation.Params.MaxPathLength = *data.role.MaxPathLength
 	} else {
 		switch {
 		case caSign.Certificate.MaxPathLen < 0:
-			creation.params.MaxPathLength = -1
+			creation.Params.MaxPathLength = -1
 		case caSign.Certificate.MaxPathLen == 0 &&
 			caSign.Certificate.MaxPathLenZero:
 			// The signing function will ensure that we do not issue a CA cert
-			creation.params.MaxPathLength = 0
+			creation.Params.MaxPathLength = 0
 		default:
 			// If this takes it to zero, we handle this case later if
 			// necessary
-			creation.params.MaxPathLength = caSign.Certificate.MaxPathLen - 1
+			creation.Params.MaxPathLength = caSign.Certificate.MaxPathLen - 1
 		}
 	}
 
 	return creation, nil
 }
 
-// addKeyUsages adds appropriate key usages to the template given the creation
-// information
-func addKeyUsages(data *creationBundle, certTemplate *x509.Certificate) {
-	if data.params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
-		return
-	}
-
-	certTemplate.KeyUsage = data.params.KeyUsage
-
-	if data.params.ExtKeyUsage&anyExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageAny)
-	}
-
-	if data.params.ExtKeyUsage&serverAuthExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
-	}
-
-	if data.params.ExtKeyUsage&clientAuthExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
-	}
-
-	if data.params.ExtKeyUsage&codeSigningExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
-	}
-
-	if data.params.ExtKeyUsage&emailProtectionExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
-	}
-
-	if data.params.ExtKeyUsage&ipsecEndSystemExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECEndSystem)
-	}
-
-	if data.params.ExtKeyUsage&ipsecTunnelExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECTunnel)
-	}
-
-	if data.params.ExtKeyUsage&ipsecUserExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageIPSECUser)
-	}
-
-	if data.params.ExtKeyUsage&timeStampingExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageTimeStamping)
-	}
-
-	if data.params.ExtKeyUsage&ocspSigningExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning)
-	}
-
-	if data.params.ExtKeyUsage&microsoftServerGatedCryptoExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftServerGatedCrypto)
-	}
-
-	if data.params.ExtKeyUsage&netscapeServerGatedCryptoExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageNetscapeServerGatedCrypto)
-	}
-
-	if data.params.ExtKeyUsage&microsoftCommercialCodeSigningExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftCommercialCodeSigning)
-	}
-
-	if data.params.ExtKeyUsage&microsoftKernelCodeSigningExtKeyUsage != 0 {
-		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
-	}
-}
-
-// addPolicyIdentifiers adds certificate policies extension
-//
-func addPolicyIdentifiers(data *creationBundle, certTemplate *x509.Certificate) {
-	for _, oidstr := range data.params.PolicyIdentifiers {
-		oid, err := stringToOid(oidstr)
-		if err == nil {
-			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
-		}
-	}
-}
-
-// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
-func addExtKeyUsageOids(data *creationBundle, certTemplate *x509.Certificate) {
-	for _, oidstr := range data.params.ExtKeyUsageOIDs {
-		oid, err := stringToOid(oidstr)
-		if err == nil {
-			certTemplate.UnknownExtKeyUsage = append(certTemplate.UnknownExtKeyUsage, oid)
-		}
-	}
-}
-
-// Performs the heavy lifting of creating a certificate. Returns
-// a fully-filled-in ParsedCertBundle.
-func createCertificate(data *creationBundle) (*certutil.ParsedCertBundle, error) {
-	var err error
-	result := &certutil.ParsedCertBundle{}
-
-	serialNumber, err := certutil.GenerateSerialNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := certutil.GeneratePrivateKey(data.params.KeyType,
-		data.params.KeyBits,
-		result); err != nil {
-		return nil, err
-	}
-
-	subjKeyID, err := certutil.GetSubjKeyID(result.PrivateKey)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error getting subject key ID: %s", err)}
-	}
-
-	certTemplate := &x509.Certificate{
-		SerialNumber:   serialNumber,
-		NotBefore:      time.Now().Add(-30 * time.Second),
-		NotAfter:       data.params.NotAfter,
-		IsCA:           false,
-		SubjectKeyId:   subjKeyID,
-		Subject:        data.params.Subject,
-		DNSNames:       data.params.DNSNames,
-		EmailAddresses: data.params.EmailAddresses,
-		IPAddresses:    data.params.IPAddresses,
-		URIs:           data.params.URIs,
-	}
-	if data.params.NotBeforeDuration > 0 {
-		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
-	}
-
-	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
-		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
-	}
-
-	// Add this before calling addKeyUsages
-	if data.signingBundle == nil {
-		certTemplate.IsCA = true
-	} else if data.params.BasicConstraintsValidForNonCA {
-		certTemplate.BasicConstraintsValid = true
-		certTemplate.IsCA = false
-	}
-
-	// This will only be filled in from the generation paths
-	if len(data.params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
-		certTemplate.PermittedDNSDomainsCritical = true
-	}
-
-	addPolicyIdentifiers(data, certTemplate)
-
-	addKeyUsages(data, certTemplate)
-
-	addExtKeyUsageOids(data, certTemplate)
-
-	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
-	certTemplate.CRLDistributionPoints = data.params.URLs.CRLDistributionPoints
-	certTemplate.OCSPServer = data.params.URLs.OCSPServers
-
-	var certBytes []byte
-	if data.signingBundle != nil {
-		switch data.signingBundle.PrivateKeyType {
-		case certutil.RSAPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-		case certutil.ECPrivateKey:
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-		}
-
-		caCert := data.signingBundle.Certificate
-		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
-
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, result.PrivateKey.Public(), data.signingBundle.PrivateKey)
-	} else {
-		// Creating a self-signed root
-		if data.params.MaxPathLength == 0 {
-			certTemplate.MaxPathLen = 0
-			certTemplate.MaxPathLenZero = true
-		} else {
-			certTemplate.MaxPathLen = data.params.MaxPathLength
-		}
-
-		switch data.params.KeyType {
-		case "rsa":
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-		case "ec":
-			certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-		}
-
-		certTemplate.AuthorityKeyId = subjKeyID
-		certTemplate.BasicConstraintsValid = true
-		certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
-	}
-
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
-	}
-
-	result.CertificateBytes = certBytes
-	result.Certificate, err = x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
-	}
-
-	if data.signingBundle != nil {
-		if len(data.signingBundle.Certificate.AuthorityKeyId) > 0 &&
-			!bytes.Equal(data.signingBundle.Certificate.AuthorityKeyId, data.signingBundle.Certificate.SubjectKeyId) {
-
-			result.CAChain = []*certutil.CertBlock{
-				&certutil.CertBlock{
-					Certificate: data.signingBundle.Certificate,
-					Bytes:       data.signingBundle.CertificateBytes,
-				},
-			}
-			result.CAChain = append(result.CAChain, data.signingBundle.CAChain...)
-		}
-	}
-
-	return result, nil
-}
-
 // Creates a CSR. This is currently only meant for use when
 // generating an intermediate certificate.
-func createCSR(data *creationBundle, addBasicConstraints bool) (*certutil.ParsedCSRBundle, error) {
+func createCSR(data *certutil.CreationBundle, addBasicConstraints bool) (*certutil.ParsedCSRBundle, error) {
 	var err error
 	result := &certutil.ParsedCSRBundle{}
 
-	if err := certutil.GeneratePrivateKey(data.params.KeyType,
-		data.params.KeyBits,
+	if err := certutil.GeneratePrivateKey(data.Params.KeyType,
+		data.Params.KeyBits,
 		result); err != nil {
 		return nil, err
 	}
 
 	// Like many root CAs, other information is ignored
 	csrTemplate := &x509.CertificateRequest{
-		Subject:        data.params.Subject,
-		DNSNames:       data.params.DNSNames,
-		EmailAddresses: data.params.EmailAddresses,
-		IPAddresses:    data.params.IPAddresses,
-		URIs:           data.params.URIs,
+		Subject:        data.Params.Subject,
+		DNSNames:       data.Params.DNSNames,
+		EmailAddresses: data.Params.EmailAddresses,
+		IPAddresses:    data.Params.IPAddresses,
+		URIs:           data.Params.URIs,
 	}
 
-	if err := handleOtherCSRSANs(csrTemplate, data.params.OtherSANs); err != nil {
+	if err := certutil.HandleOtherCSRSANs(csrTemplate, data.Params.OtherSANs); err != nil {
 		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
 	}
 
@@ -1331,7 +1000,7 @@ func createCSR(data *creationBundle, addBasicConstraints bool) (*certutil.Parsed
 		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, ext)
 	}
 
-	switch data.params.KeyType {
+	switch data.Params.KeyType {
 	case "rsa":
 		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 	case "ec":
@@ -1354,19 +1023,19 @@ func createCSR(data *creationBundle, addBasicConstraints bool) (*certutil.Parsed
 
 // Performs the heavy lifting of generating a certificate from a CSR.
 // Returns a ParsedCertBundle sans private keys.
-func signCertificate(data *creationBundle) (*certutil.ParsedCertBundle, error) {
+func SignCertificate(data *certutil.CreationBundle) (*certutil.ParsedCertBundle, error) {
 	switch {
 	case data == nil:
 		return nil, errutil.UserError{Err: "nil data bundle given to signCertificate"}
-	case data.params == nil:
+	case data.Params == nil:
 		return nil, errutil.UserError{Err: "nil parameters given to signCertificate"}
-	case data.signingBundle == nil:
+	case data.SigningBundle == nil:
 		return nil, errutil.UserError{Err: "nil signing bundle given to signCertificate"}
-	case data.csr == nil:
+	case data.CSR == nil:
 		return nil, errutil.UserError{Err: "nil csr given to signCertificate"}
 	}
 
-	err := data.csr.CheckSignature()
+	err := data.CSR.CheckSignature()
 	if err != nil {
 		return nil, errutil.UserError{Err: "request signature invalid"}
 	}
@@ -1378,95 +1047,95 @@ func signCertificate(data *creationBundle) (*certutil.ParsedCertBundle, error) {
 		return nil, err
 	}
 
-	marshaledKey, err := x509.MarshalPKIXPublicKey(data.csr.PublicKey)
+	marshaledKey, err := x509.MarshalPKIXPublicKey(data.CSR.PublicKey)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
 	}
 	subjKeyID := sha1.Sum(marshaledKey)
 
-	caCert := data.signingBundle.Certificate
+	caCert := data.SigningBundle.Certificate
 
 	certTemplate := &x509.Certificate{
 		SerialNumber:   serialNumber,
-		Subject:        data.params.Subject,
+		Subject:        data.Params.Subject,
 		NotBefore:      time.Now().Add(-30 * time.Second),
-		NotAfter:       data.params.NotAfter,
+		NotAfter:       data.Params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
 	}
-	if data.params.NotBeforeDuration > 0 {
-		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
+	if data.Params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.signingBundle.PrivateKeyType {
+	switch data.SigningBundle.PrivateKeyType {
 	case certutil.RSAPrivateKey:
 		certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
 	case certutil.ECPrivateKey:
 		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
 	}
 
-	if data.params.UseCSRValues {
-		certTemplate.Subject = data.csr.Subject
+	if data.Params.UseCSRValues {
+		certTemplate.Subject = data.CSR.Subject
 		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
 
-		certTemplate.DNSNames = data.csr.DNSNames
-		certTemplate.EmailAddresses = data.csr.EmailAddresses
-		certTemplate.IPAddresses = data.csr.IPAddresses
-		certTemplate.URIs = data.csr.URIs
+		certTemplate.DNSNames = data.CSR.DNSNames
+		certTemplate.EmailAddresses = data.CSR.EmailAddresses
+		certTemplate.IPAddresses = data.CSR.IPAddresses
+		certTemplate.URIs = data.CSR.URIs
 
-		for _, name := range data.csr.Extensions {
+		for _, name := range data.CSR.Extensions {
 			if !name.Id.Equal(oidExtensionBasicConstraints) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}
 
 	} else {
-		certTemplate.DNSNames = data.params.DNSNames
-		certTemplate.EmailAddresses = data.params.EmailAddresses
-		certTemplate.IPAddresses = data.params.IPAddresses
-		certTemplate.URIs = data.params.URIs
+		certTemplate.DNSNames = data.Params.DNSNames
+		certTemplate.EmailAddresses = data.Params.EmailAddresses
+		certTemplate.IPAddresses = data.Params.IPAddresses
+		certTemplate.URIs = data.Params.URIs
 	}
 
-	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
+	if err := certutil.HandleOtherSANs(certTemplate, data.Params.OtherSANs); err != nil {
 		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
 	}
 
-	addPolicyIdentifiers(data, certTemplate)
+	certutil.AddPolicyIdentifiers(data, certTemplate)
 
-	addKeyUsages(data, certTemplate)
+	certutil.AddKeyUsages(data, certTemplate)
 
-	addExtKeyUsageOids(data, certTemplate)
+	certutil.AddExtKeyUsageOids(data, certTemplate)
 
 	var certBytes []byte
 
-	certTemplate.IssuingCertificateURL = data.params.URLs.IssuingCertificates
-	certTemplate.CRLDistributionPoints = data.params.URLs.CRLDistributionPoints
-	certTemplate.OCSPServer = data.signingBundle.URLs.OCSPServers
+	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
+	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
+	certTemplate.OCSPServer = data.SigningBundle.URLs.OCSPServers
 
-	if data.params.IsCA {
+	if data.Params.IsCA {
 		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = true
 
-		if data.signingBundle.Certificate.MaxPathLen == 0 &&
-			data.signingBundle.Certificate.MaxPathLenZero {
+		if data.SigningBundle.Certificate.MaxPathLen == 0 &&
+			data.SigningBundle.Certificate.MaxPathLenZero {
 			return nil, errutil.UserError{Err: "signing certificate has a max path length of zero, and cannot issue further CA certificates"}
 		}
 
-		certTemplate.MaxPathLen = data.params.MaxPathLength
+		certTemplate.MaxPathLen = data.Params.MaxPathLength
 		if certTemplate.MaxPathLen == 0 {
 			certTemplate.MaxPathLenZero = true
 		}
-	} else if data.params.BasicConstraintsValidForNonCA {
+	} else if data.Params.BasicConstraintsValidForNonCA {
 		certTemplate.BasicConstraintsValid = true
 		certTemplate.IsCA = false
 	}
 
-	if len(data.params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.params.PermittedDNSDomains
+	if len(data.Params.PermittedDNSDomains) > 0 {
+		certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
 		certTemplate.PermittedDNSDomainsCritical = true
 	}
 
-	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.csr.PublicKey, data.signingBundle.PrivateKey)
+	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
 
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
@@ -1478,7 +1147,7 @@ func signCertificate(data *creationBundle) (*certutil.ParsedCertBundle, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
-	result.CAChain = data.signingBundle.GetCAChain()
+	result.CAChain = data.SigningBundle.GetCAChain()
 
 	return result, nil
 }
@@ -1544,130 +1213,4 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	}
 
 	return nil
-}
-
-func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) error {
-	certTemplate := &x509.Certificate{
-		DNSNames:       in.DNSNames,
-		IPAddresses:    in.IPAddresses,
-		EmailAddresses: in.EmailAddresses,
-		URIs:           in.URIs,
-	}
-	if err := handleOtherSANs(certTemplate, sans); err != nil {
-		return err
-	}
-	if len(certTemplate.ExtraExtensions) > 0 {
-		for _, v := range certTemplate.ExtraExtensions {
-			in.ExtraExtensions = append(in.ExtraExtensions, v)
-		}
-	}
-	return nil
-}
-
-func handleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
-	// If other SANs is empty we return which causes normal Go stdlib parsing
-	// of the other SAN types
-	if len(sans) == 0 {
-		return nil
-	}
-
-	var rawValues []asn1.RawValue
-
-	// We need to generate an IMPLICIT sequence for compatibility with OpenSSL
-	// -- it's an open question what the default for RFC 5280 actually is, see
-	// https://github.com/openssl/openssl/issues/5091 -- so we have to use
-	// cryptobyte because using the asn1 package's marshaling always produces
-	// an EXPLICIT sequence. Note that asn1 is way too magical according to
-	// agl, and cryptobyte is modeled after the CBB/CBS bits that agl put into
-	// boringssl.
-	for oid, vals := range sans {
-		for _, val := range vals {
-			var b cryptobyte.Builder
-			oidStr, err := stringToOid(oid)
-			if err != nil {
-				return err
-			}
-			b.AddASN1ObjectIdentifier(oidStr)
-			b.AddASN1(cbbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
-				b.AddASN1(cbbasn1.UTF8String, func(b *cryptobyte.Builder) {
-					b.AddBytes([]byte(val))
-				})
-			})
-			m, err := b.Bytes()
-			if err != nil {
-				return err
-			}
-			rawValues = append(rawValues, asn1.RawValue{Tag: 0, Class: 2, IsCompound: true, Bytes: m})
-		}
-	}
-
-	// If other SANs is empty we return which causes normal Go stdlib parsing
-	// of the other SAN types
-	if len(rawValues) == 0 {
-		return nil
-	}
-
-	// Append any existing SANs, sans marshalling
-	rawValues = append(rawValues, marshalSANs(in.DNSNames, in.EmailAddresses, in.IPAddresses, in.URIs)...)
-
-	// Marshal and add to ExtraExtensions
-	ext := pkix.Extension{
-		// This is the defined OID for subjectAltName
-		Id: asn1.ObjectIdentifier{2, 5, 29, 17},
-	}
-	var err error
-	ext.Value, err = asn1.Marshal(rawValues)
-	if err != nil {
-		return err
-	}
-	in.ExtraExtensions = append(in.ExtraExtensions, ext)
-
-	return nil
-}
-
-// Note: Taken from the Go source code since it's not public, and used in the
-// modified function below (which also uses these consts upstream)
-const (
-	nameTypeEmail = 1
-	nameTypeDNS   = 2
-	nameTypeURI   = 6
-	nameTypeIP    = 7
-)
-
-// Note: Taken from the Go source code since it's not public, plus changed to not marshal
-// marshalSANs marshals a list of addresses into a the contents of an X.509
-// SubjectAlternativeName extension.
-func marshalSANs(dnsNames, emailAddresses []string, ipAddresses []net.IP, uris []*url.URL) []asn1.RawValue {
-	var rawValues []asn1.RawValue
-	for _, name := range dnsNames {
-		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeDNS, Class: 2, Bytes: []byte(name)})
-	}
-	for _, email := range emailAddresses {
-		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeEmail, Class: 2, Bytes: []byte(email)})
-	}
-	for _, rawIP := range ipAddresses {
-		// If possible, we always want to encode IPv4 addresses in 4 bytes.
-		ip := rawIP.To4()
-		if ip == nil {
-			ip = rawIP
-		}
-		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeIP, Class: 2, Bytes: ip})
-	}
-	for _, uri := range uris {
-		rawValues = append(rawValues, asn1.RawValue{Tag: nameTypeURI, Class: 2, Bytes: []byte(uri.String())})
-	}
-	return rawValues
-}
-
-func stringToOid(in string) (asn1.ObjectIdentifier, error) {
-	split := strings.Split(in, ".")
-	ret := make(asn1.ObjectIdentifier, 0, len(split))
-	for _, v := range split {
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, i)
-	}
-	return asn1.ObjectIdentifier(ret), nil
 }
