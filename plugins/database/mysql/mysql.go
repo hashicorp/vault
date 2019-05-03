@@ -318,9 +318,9 @@ func (m *MySQL) RotateRootCredentials(ctx context.Context, statements []string) 
 
 // GenerateCredentials returns a generated password
 func (m *MySQL) GenerateCredentials(ctx context.Context) (string, error) {
-        password, err := m.GeneratePassword()
-        if err != nil {
-                return "", err
-        }
-        return password, nil
+	password, err := m.GeneratePassword()
+	if err != nil {
+		return "", err
+	}
+	return password, nil
 }

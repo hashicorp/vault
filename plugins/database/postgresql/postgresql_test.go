@@ -318,81 +318,81 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 }
 
 func TestPostgresSQL_SetCredentials(t *testing.T) {
-        cleanup, connURL := preparePostgresTestContainer(t)
-        defer cleanup()
+	cleanup, connURL := preparePostgresTestContainer(t)
+	defer cleanup()
 
-        connectionDetails := map[string]interface{}{
-                "connection_url": connURL,
-        }
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
 
-        db := new()
-        _, err := db.Init(context.Background(), connectionDetails, true)
-        if err != nil {
-                t.Fatalf("err: %s", err)
-        }
+	db := new()
+	_, err := db.Init(context.Background(), connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-        password, err := db.GenerateCredentials(context.Background())
-        if err != nil {
-                t.Fatal(err)
-        }
+	password, err := db.GenerateCredentials(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 
-        usernameConfig := dbplugin.StaticUserConfig{
-                Username: "test",
-                Password: password,
-        }
+	usernameConfig := dbplugin.StaticUserConfig{
+		Username: "test",
+		Password: password,
+	}
 
-        // Test with no configured Creation Statement
-        username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
-        if err == nil {
-                t.Fatalf("err: %s", err)
-        }
+	// Test with no configured Creation Statement
+	username, password, err := db.SetCredentials(context.Background(), dbplugin.Statements{}, usernameConfig)
+	if err == nil {
+		t.Fatalf("err: %s", err)
+	}
 
-        statements := dbplugin.Statements{
-                Creation: []string{testPostgresStaticRole},
-        }
-        // User should not exist, make sure we can create
-        username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
-        if err != nil {
-                t.Fatalf("err: %s", err)
-        }
+	statements := dbplugin.Statements{
+		Creation: []string{testPostgresStaticRole},
+	}
+	// User should not exist, make sure we can create
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-        if err := testCredsExist(t, connURL, username, password); err != nil {
-                t.Fatalf("Could not connect with new credentials: %s", err)
-        }
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
 
-        // call SetCredentials again, the user will already exist, password will
-        // change. Without rotation statements, this should use the defaults
-        newPassword, _ := db.GenerateCredentials(context.Background())
-        usernameConfig.Password = newPassword
-        username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
-        if err != nil {
-                t.Fatalf("err: %s", err)
-        }
+	// call SetCredentials again, the user will already exist, password will
+	// change. Without rotation statements, this should use the defaults
+	newPassword, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-        if password != newPassword {
-                t.Fatal("passwords should have changed")
-        }
+	if password != newPassword {
+		t.Fatal("passwords should have changed")
+	}
 
-        if err := testCredsExist(t, connURL, username, password); err != nil {
-                t.Fatalf("Could not connect with new credentials: %s", err)
-        }
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
 
-        // generate a new password and supply owr own rotation statements
-        newPassword2, _ := db.GenerateCredentials(context.Background())
-        usernameConfig.Password = newPassword2
-        statements.Rotation = []string{testPostgresStaticRoleRotate, testPostgresStaticRoleGrant}
-        username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
-        if err != nil {
-                t.Fatalf("err: %s", err)
-        }
+	// generate a new password and supply owr own rotation statements
+	newPassword2, _ := db.GenerateCredentials(context.Background())
+	usernameConfig.Password = newPassword2
+	statements.Rotation = []string{testPostgresStaticRoleRotate, testPostgresStaticRoleGrant}
+	username, password, err = db.SetCredentials(context.Background(), statements, usernameConfig)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
-        if password != newPassword2 {
-                t.Fatal("passwords should have changed")
-        }
+	if password != newPassword2 {
+		t.Fatal("passwords should have changed")
+	}
 
-        if err := testCredsExist(t, connURL, username, password); err != nil {
-                t.Fatalf("Could not connect with new credentials: %s", err)
-        }
+	if err := testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
 }
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {

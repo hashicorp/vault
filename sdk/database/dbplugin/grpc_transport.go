@@ -15,9 +15,9 @@ import (
 )
 
 var (
-        ErrPluginShutdown            = errors.New("plugin shutdown")
-        ErrPluginGenCredsUnsupported = errors.New("backend/version does not support generating credentials")
-        ErrPluginStaticUnsupported   = errors.New("backend/version does not support Static Accounts")
+	ErrPluginShutdown            = errors.New("plugin shutdown")
+	ErrPluginGenCredsUnsupported = errors.New("backend/version does not support generating credentials")
+	ErrPluginStaticUnsupported   = errors.New("backend/version does not support Static Accounts")
 )
 
 // ---- gRPC Server domain ----
@@ -118,27 +118,27 @@ func (s *gRPCServer) Close(_ context.Context, _ *Empty) (*Empty, error) {
 }
 
 func (s *gRPCServer) GenerateCredentials(ctx context.Context, _ *Empty) (*GenerateCredentialsResponse, error) {
-        p, err := s.impl.GenerateCredentials(ctx)
-        if err != nil {
-                return nil, err
-        }
+	p, err := s.impl.GenerateCredentials(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-        return &GenerateCredentialsResponse{
-                Password: p,
-        }, nil
+	return &GenerateCredentialsResponse{
+		Password: p,
+	}, nil
 }
 
 func (s *gRPCServer) SetCredentials(ctx context.Context, req *SetCredentialsRequest) (*SetCredentialsResponse, error) {
 
-        username, password, err := s.impl.SetCredentials(ctx, *req.Statements, *req.StaticUserConfig)
-        if err != nil {
-                return nil, err
-        }
+	username, password, err := s.impl.SetCredentials(ctx, *req.Statements, *req.StaticUserConfig)
+	if err != nil {
+		return nil, err
+	}
 
-        return &SetCredentialsResponse{
-                Username: username,
-                Password: password,
-        }, err
+	return &SetCredentialsResponse{
+		Username: username,
+		Password: password,
+	}, err
 }
 
 // ---- gRPC client domain ----
@@ -311,56 +311,56 @@ func (c *gRPCClient) Close() error {
 }
 
 func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
-        ctx, cancel := context.WithCancel(ctx)
-        quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
-        defer close(quitCh)
-        defer cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
-        // TODO: Question: CreateUser takes the CreateUserRequest and splits the
-        // statements and the config. Here we just pass on the request without
-        // splitting anything
-        resp, err := c.client.GenerateCredentials(ctx, &Empty{})
+	// TODO: Question: CreateUser takes the CreateUserRequest and splits the
+	// statements and the config. Here we just pass on the request without
+	// splitting anything
+	resp, err := c.client.GenerateCredentials(ctx, &Empty{})
 
-        if err != nil {
-                // Fall back to old call if not implemented
-                grpcStatus, ok := status.FromError(err)
-                if ok && grpcStatus.Code() == codes.Unimplemented {
-                        // TODO: a better or const error type here
-                        return "", ErrPluginGenCredsUnsupported
-                }
+	if err != nil {
+		// Fall back to old call if not implemented
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			// TODO: a better or const error type here
+			return "", ErrPluginGenCredsUnsupported
+		}
 
-                if c.doneCtx.Err() != nil {
-                        return "", ErrPluginShutdown
-                }
-                return "", err
-        }
+		if c.doneCtx.Err() != nil {
+			return "", ErrPluginShutdown
+		}
+		return "", err
+	}
 
-        return resp.Password, nil
+	return resp.Password, nil
 }
 func (c *gRPCClient) SetCredentials(ctx context.Context, statements Statements, staticUser StaticUserConfig) (username, password string, err error) {
-        ctx, cancel := context.WithCancel(ctx)
-        quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
-        defer close(quitCh)
-        defer cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	quitCh := pluginutil.CtxCancelIfCanceled(cancel, c.doneCtx)
+	defer close(quitCh)
+	defer cancel()
 
-        resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
-                StaticUserConfig: &staticUser,
-                Statements:       &statements,
-        })
+	resp, err := c.client.SetCredentials(ctx, &SetCredentialsRequest{
+		StaticUserConfig: &staticUser,
+		Statements:       &statements,
+	})
 
-        if err != nil {
-                // Fall back to old call if not implemented
-                grpcStatus, ok := status.FromError(err)
-                if ok && grpcStatus.Code() == codes.Unimplemented {
-                        // TODO: a better or const error type here
-                        return "", "", ErrPluginStaticUnsupported
-                }
+	if err != nil {
+		// Fall back to old call if not implemented
+		grpcStatus, ok := status.FromError(err)
+		if ok && grpcStatus.Code() == codes.Unimplemented {
+			// TODO: a better or const error type here
+			return "", "", ErrPluginStaticUnsupported
+		}
 
-                if c.doneCtx.Err() != nil {
-                        return "", "", ErrPluginShutdown
-                }
-                return "", "", err
-        }
+		if c.doneCtx.Err() != nil {
+			return "", "", ErrPluginShutdown
+		}
+		return "", "", err
+	}
 
-        return resp.Username, resp.Password, err
+	return resp.Username, resp.Password, err
 }

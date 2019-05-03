@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-        "github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/mitchellh/mapstructure"
@@ -161,7 +161,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *mongoDBConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-        return "", "", dbutil.Unimplemented()
+	return "", "", dbutil.Unimplemented()
 }
 
 func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {

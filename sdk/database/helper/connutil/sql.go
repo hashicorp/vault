@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-        "github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -171,5 +171,5 @@ func (c *SQLConnectionProducer) Close() error {
 // passwords in the database in the event an updated database fails to save in
 // Vault's storage.
 func (c *SQLConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-        return "", "", dbutil.Unimplemented()
+	return "", "", dbutil.Unimplemented()
 }
