@@ -26,7 +26,7 @@ var ErrDuplicateItem = errors.New("duplicate item")
 // PriorityQueue
 func New() *PriorityQueue {
 	pq := PriorityQueue{
-		data:    make(pQueue, 0),
+		data:    make(queue, 0),
 		dataMap: make(map[string]*Item),
 	}
 	heap.Init(&pq.data)
@@ -43,22 +43,22 @@ func New() *PriorityQueue {
 type PriorityQueue struct {
 	// data is the internal structure that holds the queue, and is operated on by
 	// heap functions
-	data pQueue
+	data queue
 
 	// dataMap represents all the items in the queue, with unique indexes, used
 	// for finding specific items. dataMap is kept in sync with the data slice
 	dataMap map[string]*Item
 
 	// mapMutex is used to facilitate read/write locks on the dataMap
-	dataMutex sync.Mutex
+	sync.Mutex
 }
 
-// pQueue is the internal data structure used to satisfy heap.Interface. This
+// queue is the internal data structure used to satisfy heap.Interface. This
 // prevents users from calling Pop and Push heap methods directly
-type pQueue []*Item
+type queue []*Item
 
-var _ heap.Interface = &pQueue{}
-var _ sort.Interface = &pQueue{}
+var _ heap.Interface = &queue{}
+var _ sort.Interface = &queue{}
 
 // Item is something managed in the priority queue
 type Item struct {
@@ -78,14 +78,14 @@ type Item struct {
 }
 
 // Len returns the count of items in the Priority Queue
-func (q *PriorityQueue) Len() int { return q.data.Len() }
+func (pq *PriorityQueue) Len() int { return pq.data.Len() }
 
 // Pop pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
 // invoke heap functions directly
 func (pq *PriorityQueue) Pop() (*Item, error) {
-	pq.dataMutex.Lock()
-	defer pq.dataMutex.Unlock()
+	pq.Lock()
+	defer pq.Unlock()
 
 	if pq.Len() == 0 {
 		return nil, ErrEmpty
@@ -105,8 +105,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 		return errors.New("error adding item: Item Key is required")
 	}
 
-	pq.dataMutex.Lock()
-	defer pq.dataMutex.Unlock()
+	pq.Lock()
+	defer pq.Unlock()
 
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
@@ -127,8 +127,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 // from the queue if found. Returns ErrItemNotFound(key) if not found. This
 // method must fix the queue after removal.
 func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
-	pq.dataMutex.Lock()
-	defer pq.dataMutex.Unlock()
+	pq.Lock()
+	defer pq.Unlock()
 
 	item, ok := pq.dataMap[key]
 	if !ok {
@@ -148,41 +148,41 @@ func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
 
 // Len returns the number of items in the queue data structure. Do not use this
 // method directly on the queue, use PriorityQueue.Len() instead.
-func (pq pQueue) Len() int { return len(pq) }
+func (q queue) Len() int { return len(q) }
 
 // Less returns whether the Item with index i should sort before the Item with
 // index j in the queue. This method is used by the queue to determine priority
 // internally; the Item with the lower value wins. (priority zero is higher
 // priority than 1). The priority of Items with equal values is undetermined.
-func (pq pQueue) Less(i, j int) bool {
-	return pq[i].Priority < pq[j].Priority
+func (q queue) Less(i, j int) bool {
+	return q[i].Priority < q[j].Priority
 }
 
 // Swap swaps things in-place; part of sort.Interface
-func (pq pQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
+func (q queue) Swap(i, j int) {
+	q[i], q[j] = q[j], q[i]
+	q[i].index = i
+	q[j].index = j
 }
 
 // Push is used by heap.Interface to push items onto the heap. This method is
 // invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
-func (pq *pQueue) Push(x interface{}) {
-	n := len(*pq)
+func (q *queue) Push(x interface{}) {
+	n := len(*q)
 	item := x.(*Item)
 	item.index = n
-	*pq = append(*pq, item)
+	*q = append(*q, item)
 }
 
 // Pop is used by heap.Interface to pop items off of the heap. This method is
 // invoked by container/heap, and should not be used directly.
 // See: https://golang.org/pkg/container/heap/#Interface
-func (pq *pQueue) Pop() interface{} {
-	old := *pq
+func (q *queue) Pop() interface{} {
+	old := *q
 	n := len(old)
 	item := old[n-1]
 	item.index = -1 //for saftey
-	*pq = old[0 : n-1]
+	*q = old[0 : n-1]
 	return item
 }
