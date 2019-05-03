@@ -109,7 +109,7 @@ and [`cluster_addr`][cluster-addr] ([example][listener-example]).
   lesser value.
 
 - `lock_wait_time` `(string: "15s")` - Specifies the wait time before a lock
-  lock acquisition is made. This affects the minimum time it takes to cancel a
+  acquisition is made. This affects the minimum time it takes to cancel a
   lock acquisition.
 
 The following settings apply when communicating with Consul via an encrypted
