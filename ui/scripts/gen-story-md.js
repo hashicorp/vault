@@ -4,7 +4,10 @@ const fs = require('fs');
 const jsdoc2md = require('jsdoc-to-markdown');
 var args = process.argv.slice(2);
 const name = args[0];
-const inputFile = `app/components/${name}.js`;
+const addonOrEngine = args[1];
+const inputFile = addonOrEngine
+  ? `lib/${addonOrEngine}/addon/components/${name}.js`
+  : `app/components/${name}.js`;
 const outputFile = `stories/${name}.md`;
 const component = name
   .split('-')
