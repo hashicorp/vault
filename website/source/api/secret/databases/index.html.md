@@ -594,3 +594,28 @@ $ curl \
   }
 }
 ```
+
+## Rotate Static Role Credentials
+
+This endpoint is used to rotate the Static Role credentials stored for a given
+role name. While Static Roles are rotated automatically by Vault at configured
+rotation periods, users can use this endpoint to manually trigger a rotation to
+change the stored password and reset the TTL of the Static Role's password.
+
+| Method   | Path                          |
+| :---------------------------- | :--------------------- |
+| `POST`   | `/database/rotate-role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the Static Role to
+  trigger the password rotation for. The name is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/database/rotate-role/my-static-role
+```
