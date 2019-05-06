@@ -2,7 +2,8 @@
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
 import notes from './alert-banner.md';
-import { MESSAGE_TYPES } from '../app/helpers/message-types.js';
+import { MESSAGE_TYPES } from '../lib/core/addon/helpers/message-types.js';
+
 
 storiesOf('Alerts/AlertBanner/', module)
   .addParameters({ options: { showPanel: false } })
