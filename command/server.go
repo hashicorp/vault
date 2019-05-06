@@ -1134,7 +1134,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		c.UI.Warn("")
 	}
 
-	// Continuing configuration testing at this point
 	// Initialize the HTTP servers
 	for _, ln := range lns {
 		handler := vaulthttp.Handler(&vault.HandlerProperties{
@@ -1203,10 +1202,14 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 		// server config tests can exit now
 		if c.flagTestServerConfig {
-			return 0
+			continue
 		}
 
 		go server.Serve(ln.Listener)
+	}
+
+	if c.flagTestServerConfig {
+		return 0
 	}
 
 	if sealConfigError != nil {
