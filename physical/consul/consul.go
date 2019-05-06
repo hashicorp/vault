@@ -224,6 +224,19 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		if logger.IsDebug() {
 			logger.Debug("config address set", "address", addr)
 		}
+
+		// Copied from the Consul API module; set the Scheme based on
+		// the protocol field if address looks ike a URL.
+		// This can enable the TLS configuration below.
+		parts := strings.SplitN(addr, "://", 2)
+		if len(parts) == 2 {
+			switch parts[0] {
+			case "http":
+				consulConf.Scheme = "http"
+			case "https":
+				consulConf.Scheme = "https"
+			}
+		}
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
