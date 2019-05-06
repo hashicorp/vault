@@ -1815,9 +1815,9 @@
     webpack-dev-middleware "^3.5.1"
     webpack-hot-middleware "^2.24.3"
 
-"@storybook/ember-cli-storybook@meirish/ember-cli-storybook":
+"@storybook/ember-cli-storybook@meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93":
   version "0.1.0"
-  resolved "https://codeload.github.com/meirish/ember-cli-storybook/tar.gz/f4e63a0cc9ba8e3b7f8865b8632abbff67ec42a4"
+  resolved "https://codeload.github.com/meirish/ember-cli-storybook/tar.gz/6bd58326d8c21e986d390b541ae5e49089d61b93"
   dependencies:
     cheerio "^1.0.0-rc.2"
     ember-cli-babel "^7.1.2"
