@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 remote="$1"
 remote_url=$(git remote get-url $remote)

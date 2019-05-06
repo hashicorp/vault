@@ -32,7 +32,7 @@ Docs](/docs/secrets/kv/kv-v1.html)
 When running v2 of the `kv` backend a key can retain a configurable number of
 versions. This defaults to 10 versions. The older versions' metadata and data
 can be retrieved. Additionally, Check-and-Set operations can be used to avoid
-overwritting data unintentionally.  
+overwriting data unintentionally.  
 
 When a version is deleted the underlying data is not removed, rather it is
 marked as deleted. Deleted versions can be undeleted. To permanently remove a
