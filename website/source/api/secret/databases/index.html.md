@@ -397,3 +397,200 @@ $ curl \
   }
 }
 ```
+
+## Create Static Role
+
+This endpoint creates or updates a static role definition. Static Roles are
+1-to-1 mapping of a Vault Role to a user in a database which are automatically
+rotated based on the configured `rotation_period`. 
+
+~> This endpoint distinguishes between `create` and `update` ACL capabilities.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `POST`   | `/database/static-roles/:name`      |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the role to create. This
+  is specified as part of the URL.
+
+- `username` `(string: <required>)` – Specifies the database username that this
+  Vault role corresponds to. 
+
+- `rotation_period` `(string/int: <required>)` – Specifies the amount of time
+  Vault should wait before rotating the password. The minimum is 5 seconds.
+
+- `db_name` `(string: <required>)` - The name of the database connection to use
+  for this role.
+
+- `creation_statements` `(list: <required>)` – Specifies the database
+  statements executed to create and configure a user. See the plugin's API page
+  for more information on support and formatting for this parameter.
+
+- `revocation_statements` `(list: [])` – Specifies the database statements to
+  be executed to revoke a user. See the plugin's API page for more information
+  on support and formatting for this parameter.
+
+- `rollback_statements` `(list: [])` – Specifies the database statements to be
+  executed rollback a create operation in the event of an error. Not every
+  plugin type will support this functionality. See the plugin's API page for
+  more information on support and formatting for this parameter.
+
+- `renew_statements` `(list: [])` – Specifies the database statements to be
+  executed to renew a user. Not every plugin type will support this
+  functionality. See the plugin's API page for more information on support and
+  formatting for this parameter.
+
+- `rotation_statements` `(list: [])` – Specifies the database statements to be
+  executed to rotate the password for the configured database user. Not every
+  plugin type will support this functionality. See the plugin's API page for
+  more information on support and formatting for this parameter.
+
+
+
+### Sample Payload
+
+```json
+{
+    "db_name": "mysql",
+    "username": "static-database-user",
+    "creation_statements": ["CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}'", "GRANT SELECT ON *.* TO '{{name}}'@'%'"],
+    "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
+    "rotation_period": "1h"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/database/static-roles/my-static-role
+```
+
+## Read Static Role
+
+This endpoint queries the static role definition.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/static-roles/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to read.
+  This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/database/static-roles/my-static-role
+```
+
+### Sample Response
+
+```json
+{
+    "data": {
+		"db_name": "mysql",
+    "username":"static-user",
+		"creation_statements": ["CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';"], "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";"],
+    "rotation_statements": ["ALTER USER "{{name}}" WITH PASSWORD '{{password}}';"],
+    "rotation_period":"1h",
+		"renew_statements": [],
+		"revocation_statements": [],
+		"rollback_statements": []
+	},
+}
+```
+
+## List Static Roles
+
+This endpoint returns a list of available static roles. Only the role names are
+returned, not any values.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `LIST`   | `/database/static-roles`          |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/database/static-roles
+```
+
+### Sample Response
+
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["dev-static", "prod-static"]
+  }
+}
+```
+
+## Delete Static Role
+
+This endpoint deletes the static role definition and revokes the database user.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `DELETE` | `/database/static-roles/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to
+  delete. This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/database/static-roles/my-role
+```
+
+## Get Static Credentials
+
+This endpoint returns the current credentials based on the named static role.
+
+| Method   | Path                         |
+| :--------------------------- | :--------------------- |
+| `GET`    | `/database/static-creds/:name`    |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the static role to get
+  credentials for. This is specified as part of the URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/database/static-creds/my-static-role
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "username": "static-user",
+    "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
+    "last_vault_rotation": "2019-05-06T15:26:42.525302-05:00",
+    "rotation_period": 30,
+    "ttl": 28,
+  }
+}
+```
