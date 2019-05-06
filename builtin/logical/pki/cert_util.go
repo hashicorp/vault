@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -40,8 +38,7 @@ var (
 	// when doing the idna conversion, this appears to only affect output, not
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
-	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	hostnameRegex = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$`)
 )
 
 func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
@@ -501,7 +498,7 @@ func generateIntermediateCSR(b *backend, input *inputBundle) (*certutil.ParsedCS
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := createCSR(creation, addBasicConstraints)
+	parsedBundle, err := certutil.CreateCSR(creation, addBasicConstraints)
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +610,7 @@ func signCert(b *backend,
 		creation.Params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
 	}
 
-	parsedBundle, err := SignCertificate(creation)
+	parsedBundle, err := certutil.SignCertificate(creation)
 	if err != nil {
 		return nil, err
 	}
@@ -956,200 +953,6 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	}
 
 	return creation, nil
-}
-
-// Creates a CSR. This is currently only meant for use when
-// generating an intermediate certificate.
-func createCSR(data *certutil.CreationBundle, addBasicConstraints bool) (*certutil.ParsedCSRBundle, error) {
-	var err error
-	result := &certutil.ParsedCSRBundle{}
-
-	if err := certutil.GeneratePrivateKey(data.Params.KeyType,
-		data.Params.KeyBits,
-		result); err != nil {
-		return nil, err
-	}
-
-	// Like many root CAs, other information is ignored
-	csrTemplate := &x509.CertificateRequest{
-		Subject:        data.Params.Subject,
-		DNSNames:       data.Params.DNSNames,
-		EmailAddresses: data.Params.EmailAddresses,
-		IPAddresses:    data.Params.IPAddresses,
-		URIs:           data.Params.URIs,
-	}
-
-	if err := certutil.HandleOtherCSRSANs(csrTemplate, data.Params.OtherSANs); err != nil {
-		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
-	}
-
-	if addBasicConstraints {
-		type basicConstraints struct {
-			IsCA       bool `asn1:"optional"`
-			MaxPathLen int  `asn1:"optional,default:-1"`
-		}
-		val, err := asn1.Marshal(basicConstraints{IsCA: true, MaxPathLen: -1})
-		if err != nil {
-			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
-		}
-		ext := pkix.Extension{
-			Id:       oidExtensionBasicConstraints,
-			Value:    val,
-			Critical: true,
-		}
-		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, ext)
-	}
-
-	switch data.Params.KeyType {
-	case "rsa":
-		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-	case "ec":
-		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-	}
-
-	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, result.PrivateKey)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
-	}
-
-	result.CSRBytes = csr
-	result.CSR, err = x509.ParseCertificateRequest(csr)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
-	}
-
-	return result, nil
-}
-
-// Performs the heavy lifting of generating a certificate from a CSR.
-// Returns a ParsedCertBundle sans private keys.
-func SignCertificate(data *certutil.CreationBundle) (*certutil.ParsedCertBundle, error) {
-	switch {
-	case data == nil:
-		return nil, errutil.UserError{Err: "nil data bundle given to signCertificate"}
-	case data.Params == nil:
-		return nil, errutil.UserError{Err: "nil parameters given to signCertificate"}
-	case data.SigningBundle == nil:
-		return nil, errutil.UserError{Err: "nil signing bundle given to signCertificate"}
-	case data.CSR == nil:
-		return nil, errutil.UserError{Err: "nil csr given to signCertificate"}
-	}
-
-	err := data.CSR.CheckSignature()
-	if err != nil {
-		return nil, errutil.UserError{Err: "request signature invalid"}
-	}
-
-	result := &certutil.ParsedCertBundle{}
-
-	serialNumber, err := certutil.GenerateSerialNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	marshaledKey, err := x509.MarshalPKIXPublicKey(data.CSR.PublicKey)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshalling public key: %s", err)}
-	}
-	subjKeyID := sha1.Sum(marshaledKey)
-
-	caCert := data.SigningBundle.Certificate
-
-	certTemplate := &x509.Certificate{
-		SerialNumber:   serialNumber,
-		Subject:        data.Params.Subject,
-		NotBefore:      time.Now().Add(-30 * time.Second),
-		NotAfter:       data.Params.NotAfter,
-		SubjectKeyId:   subjKeyID[:],
-		AuthorityKeyId: caCert.SubjectKeyId,
-	}
-	if data.Params.NotBeforeDuration > 0 {
-		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
-	}
-
-	switch data.SigningBundle.PrivateKeyType {
-	case certutil.RSAPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-	case certutil.ECPrivateKey:
-		certTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
-	}
-
-	if data.Params.UseCSRValues {
-		certTemplate.Subject = data.CSR.Subject
-		certTemplate.Subject.ExtraNames = certTemplate.Subject.Names
-
-		certTemplate.DNSNames = data.CSR.DNSNames
-		certTemplate.EmailAddresses = data.CSR.EmailAddresses
-		certTemplate.IPAddresses = data.CSR.IPAddresses
-		certTemplate.URIs = data.CSR.URIs
-
-		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) {
-				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
-			}
-		}
-
-	} else {
-		certTemplate.DNSNames = data.Params.DNSNames
-		certTemplate.EmailAddresses = data.Params.EmailAddresses
-		certTemplate.IPAddresses = data.Params.IPAddresses
-		certTemplate.URIs = data.Params.URIs
-	}
-
-	if err := certutil.HandleOtherSANs(certTemplate, data.Params.OtherSANs); err != nil {
-		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
-	}
-
-	certutil.AddPolicyIdentifiers(data, certTemplate)
-
-	certutil.AddKeyUsages(data, certTemplate)
-
-	certutil.AddExtKeyUsageOids(data, certTemplate)
-
-	var certBytes []byte
-
-	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
-	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
-	certTemplate.OCSPServer = data.SigningBundle.URLs.OCSPServers
-
-	if data.Params.IsCA {
-		certTemplate.BasicConstraintsValid = true
-		certTemplate.IsCA = true
-
-		if data.SigningBundle.Certificate.MaxPathLen == 0 &&
-			data.SigningBundle.Certificate.MaxPathLenZero {
-			return nil, errutil.UserError{Err: "signing certificate has a max path length of zero, and cannot issue further CA certificates"}
-		}
-
-		certTemplate.MaxPathLen = data.Params.MaxPathLength
-		if certTemplate.MaxPathLen == 0 {
-			certTemplate.MaxPathLenZero = true
-		}
-	} else if data.Params.BasicConstraintsValidForNonCA {
-		certTemplate.BasicConstraintsValid = true
-		certTemplate.IsCA = false
-	}
-
-	if len(data.Params.PermittedDNSDomains) > 0 {
-		certTemplate.PermittedDNSDomains = data.Params.PermittedDNSDomains
-		certTemplate.PermittedDNSDomainsCritical = true
-	}
-
-	certBytes, err = x509.CreateCertificate(rand.Reader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
-
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
-	}
-
-	result.CertificateBytes = certBytes
-	result.Certificate, err = x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
-	}
-
-	result.CAChain = data.SigningBundle.GetCAChain()
-
-	return result, nil
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {
