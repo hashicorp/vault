@@ -46,7 +46,7 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 	// get target size
 	cacheSize := d.Get("size").(int)
 	if cacheSize < 0 {
-		return nil, errors.New("size must be greater or equal to 0")
+		return logical.ErrorResponse("size must be greater or equal to 0"), logical.ErrInvalidRequest
 	}
 
 	// store cache size
@@ -75,11 +75,11 @@ func (b *backend) pathCacheConfigRead(ctx context.Context, req *logical.Request,
 	// error if no cache is configured
 	if !b.lm.GetUseCache() {
 		return nil, errors.New(
-			"There is no cache for this backend. It was enabled with {force_no_cache: true}",
+			"caching is disabled for this transit mount",
 		)
 	}
 
-	// compare current and stored cache sizes. If they are different warn the user.
+	// Compare current and stored cache sizes. If they are different warn the user.
 	currentCacheSize := b.lm.GetCacheSize()
 	storedCacheSize, err := GetCacheSizeFromStorage(ctx, req.Storage)
 	if err != nil {
