@@ -233,7 +233,7 @@ Sets a named CRL.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
@@ -325,7 +325,7 @@ Configuration options for the method.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
@@ -361,7 +361,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 ```
 $ curl \
     --request POST \
-    --date @payload.json \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/auth/cert/login
 ```
 

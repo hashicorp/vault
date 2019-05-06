@@ -12,7 +12,7 @@ import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
-const ROOT_PREFIX = '🗝';
+const ROOT_PREFIX = '_root_';
 const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
@@ -296,29 +296,23 @@ export default Service.extend({
     if (this.environment() === 'development') {
       return;
     }
+
     this.getTokensFromStorage().forEach(key => {
       const data = this.getTokenData(key);
-      if (data.policies.includes('root')) {
+      if (data && data.policies.includes('root')) {
         this.removeTokenData(key);
       }
     });
   },
 
-  authenticate(/*{clusterId, backend, data}*/) {
+  async authenticate(/*{clusterId, backend, data}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
-    return adapter.authenticate(options).then(resp => {
-      return this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path')).then(
-        authData => {
-          return this.get('permissions')
-            .getPaths.perform()
-            .then(() => {
-              return authData;
-            });
-        }
-      );
-    });
+    let resp = await adapter.authenticate(options);
+    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.get('namespace.path'));
+    await this.get('permissions').getPaths.perform();
+    return authData;
   },
 
   deleteCurrentToken() {

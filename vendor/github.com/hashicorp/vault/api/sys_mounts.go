@@ -159,6 +159,7 @@ type MountConfigInput struct {
 }
 
 type MountOutput struct {
+	UUID        string            `json:"uuid"`
 	Type        string            `json:"type"`
 	Description string            `json:"description"`
 	Accessor    string            `json:"accessor"`
