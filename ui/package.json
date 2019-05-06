@@ -135,7 +135,7 @@
     "@storybook/addon-viewport": "^5.0.5",
     "@storybook/addons": "^5.0.5",
     "@storybook/ember": "^5.0.5",
-    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook",
+    "@storybook/ember-cli-storybook": "meirish/ember-cli-storybook#6bd58326d8c21e986d390b541ae5e49089d61b93",
     "babel-loader": "^8.0.5",
     "husky": "^1.1.3",
     "jsdoc-to-markdown": "^4.0.1",
