@@ -7,14 +7,35 @@ import layout from '../templates/components/ttl-picker';
 
 const ERROR_MESSAGE = 'TTLs must be specified in whole number increments, please enter a whole number.';
 
+/**
+ * @module TtlPicker
+ * `TtlPicker` components are used to expand and collapse content with a toggle.
+ *
+ * @example
+ * ```js
+    <TtlPicker @labelText="Lease" @initialValue={{lease}} @onChange={{action (mut lease)}} />
+ * ```
+ *
+ * @param labelClass="" {String} - A CSS class to add to the label.
+ * @param labelText="TTL" {String} - The text content of the label associated with the widget.
+ * @param initialValue=null {Number} - The starting value of the TTL;
+ * @param setDefaultValue=true {Boolean} - If true, the component will trigger onChange on the initial
+ * render, causing a value to be set.
+ * @param onChange=Function.prototype{Function} - The function to call when the value of the ttl changes.
+ * @param outputSeconds=false{Boolean} - If true, the component will trigger onChange with a value
+ * converted to seconds instead of a Golang duration string.
+ */
 export default Component.extend({
   layout,
   'data-test-component': 'ttl-picker',
   classNames: 'field',
-  setDefaultValue: true,
+
   onChange: () => {},
+  setDefaultValue: true,
   labelText: 'TTL',
   labelClass: '',
+  ouputSeconds: false,
+
   time: 30,
   unit: 'm',
   initialValue: null,
@@ -27,8 +48,6 @@ export default Component.extend({
       { label: 'days', value: 'd' },
     ];
   }),
-
-  ouputSeconds: false,
 
   convertToSeconds(time, unit) {
     const toSeconds = {
