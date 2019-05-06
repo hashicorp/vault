@@ -1093,27 +1093,8 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) (bool, erro
 		return false, err
 	}
 
-	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
-		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-		if err != nil {
-			return false, err
-		}
-		if raftTLSEntry == nil {
-			return false, errors.New("could not find raft TLS configuration")
-		}
-
-		raftTLS := new(raftTLSConfig)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
-			return false, err
-		}
-
-		if err := clusteredStorage.SetupCluster(ctx, &physicalstd.NetworkConfig{
-			Addr:      c.clusterListenerAddrs[0],
-			Cert:      raftTLS.Cert,
-			KeyParams: raftTLS.KeyParams,
-		}, c.clusterListener); err != nil {
-			return false, err
-		}
+	if err := c.startRaftStorage(ctx); err != nil {
+		return false, err
 	}
 
 	// Do post-unseal setup if HA is not enabled

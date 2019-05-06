@@ -225,6 +225,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, networkConfig *physicals
 	// Make sure we set the LogOutput.
 	//	s.config.RaftConfig.LogOutput = s.config.LogOutput
 	//raftConfig.Logger = logger
+	raftConfig.SnapshotThreshold = 100
+	raftConfig.TrailingLogs = 100
+	raftConfig.ElectionTimeout = raftConfig.ElectionTimeout * 5
+	raftConfig.HeartbeatTimeout = raftConfig.HeartbeatTimeout * 5
+	raftConfig.LeaderLeaseTimeout = raftConfig.LeaderLeaseTimeout * 5
 
 	switch {
 	case networkConfig == nil:

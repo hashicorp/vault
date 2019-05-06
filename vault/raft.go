@@ -77,6 +77,33 @@ func generateRaftTLS() (*raftTLSConfig, error) {
 	}, nil
 }
 
+func (c *Core) startRaftStorage(ctx context.Context) error {
+	if clusteredStorage, ok := c.underlyingPhysical.(physicalstd.Clustered); ok {
+		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
+		if err != nil {
+			return err
+		}
+		if raftTLSEntry == nil {
+			return errors.New("could not find raft TLS configuration")
+		}
+
+		raftTLS := new(raftTLSConfig)
+		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+			return err
+		}
+
+		if err := clusteredStorage.SetupCluster(ctx, &physicalstd.NetworkConfig{
+			Addr:      c.clusterListenerAddrs[0],
+			Cert:      raftTLS.Cert,
+			KeyParams: raftTLS.KeyParams,
+		}, c.clusterListener); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *Core) JoinRaftCluster(ctx context.Context, leaderAddr string, retry bool) (bool, error) {
 	if len(leaderAddr) == 0 {
 		return false, errors.New("No leader address provided")

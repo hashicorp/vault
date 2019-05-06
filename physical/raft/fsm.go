@@ -317,9 +317,15 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 				return err
 			}
 			err = b.Put([]byte(s.Key), s.Value)
+			if err != nil {
+				return err
+			}
 		}
+
+		return nil
 	})
 	if err != nil {
+		f.logger.Error("could not restore snapshot", "error", err)
 		return err
 	}
 
