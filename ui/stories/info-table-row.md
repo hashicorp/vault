@@ -9,7 +9,7 @@ that the value breaks under the label on smaller viewports.
 | --- | --- | --- | --- |
 | value | <code>any</code> | <code></code> | The the data to be displayed - by default the content of the component will only show if there is a value. Also note that special handling is given to boolean values - they will render `Yes` for true and `No` for false. |
 | label | <code>string</code> | <code>null</code> | The display name for the value. |
-| alwaysRender | <code>Boolean</code> | <code>[false</code> | Indicates if the component content should be always be rendered.  When false, the value of `value` will be used to determine if the component should render. |
+| alwaysRender | <code>Boolean</code> | <code>false</code> | Indicates if the component content should be always be rendered.  When false, the value of `value` will be used to determine if the component should render. |
 
 **Example**
   
@@ -19,7 +19,7 @@ that the value breaks under the label on smaller viewports.
 
 **See**
 
-- [Uses of InfoTableRow](https://github.com/hashicorp/vault/search?l=Handlebars&q=InfoTableRow)
+- [Uses of InfoTableRow](https://github.com/hashicorp/vault/search?l=Handlebars&q=InfoTableRow+OR+info-table-row)
 - [InfoTableRow Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/info-table-row.js)
 
 ---

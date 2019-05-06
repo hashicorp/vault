@@ -23,7 +23,7 @@ const pageBreakIndex = md.lastIndexOf('---'); //this is our last page break
 
 const seeLinks = `**See**
 
-- [Uses of ${component}](https://github.com/hashicorp/vault/search?l=Handlebars&q=${component})
+- [Uses of ${component}](https://github.com/hashicorp/vault/search?l=Handlebars&q=${component}+OR+${name})
 - [${component} Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/${name}.js)
 
 `;
