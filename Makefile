@@ -128,6 +128,12 @@ test-ember:
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
+ember-ci-test:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn --ignore-optional
+	@echo "--> Running ember tests in Browserstack"
+	@cd ui && yarn run test:browserstack
+
 ember-dist:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
