@@ -397,6 +397,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 				Description: "(DEPRECATED) Use 'token_bound_cidrs' instead. If this and 'token_bound_cidrs' are both specified both will be retained but 'token_bound_cidrs' will take precedence.",
 				Deprecated:  true,
 			},
+
+			//todo add token token_num_uses and fixed_token_num_uses
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -409,7 +411,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		ExistenceCheck: ts.tokenStoreRoleExistenceCheck,
 	}
 
-	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy"})
+	tokenhelper.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses", "token_fixed_num_uses"})
 	p = append(p, rolesPath)
 
 	return p
@@ -2234,6 +2236,21 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			renewable = false
 		}
 
+		fmt.Printf("-- -- --\nnum_uses:\ndata: %d\nrole.TokenFixedNumUses:%d\nrole.TokenNumuses:%d", data.NumUses, role.TokenFixedNumUses, role.TokenNumUses)
+
+		// Update num_uses which is equal to req.Data["num_uses"] at this point
+		// 0 means unlimited so 1 is actually less than 0
+		switch {
+		case role.TokenFixedNumUses > 0:
+			te.NumUses = role.TokenFixedNumUses
+		case role.TokenNumUses > 0 && te.NumUses == 0:
+			te.NumUses = role.TokenNumUses
+		case role.TokenNumUses < te.NumUses:
+			te.NumUses = role.TokenNumUses
+		default:
+		}
+		fmt.Printf("\n-- -- --\nte.NumUses:%d\n", te.NumUses)
+
 		if role.PathSuffix != "" {
 			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
 		}
@@ -2969,6 +2986,8 @@ func (ts *TokenStore) tokenStoreRoleRead(ctx context.Context, req *logical.Reque
 			"path_suffix":            role.PathSuffix,
 			"renewable":              role.Renewable,
 			"token_type":             role.TokenType.String(),
+			"token_num_uses":         role.TokenNumUses,
+			"token_fixed_num_uses":   role.TokenFixedNumUses,
 		},
 	}
 
@@ -3147,6 +3166,18 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
 				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
+	}
+
+	// no legacy version without the token_ prefix to check for
+	tokenNumUses, ok := data.GetOk("token_num_uses")
+	if ok {
+		entry.TokenNumUses = tokenNumUses.(int)
+	}
+
+	// no legacy version without the token_ prefix to check for
+	tokenFixedNumUses, ok := data.GetOk("token_fixed_num_uses")
+	if ok {
+		entry.TokenFixedNumUses = tokenFixedNumUses.(int)
 	}
 
 	// Run validity checks on token type

@@ -213,6 +213,10 @@ message Auth {
 
 	// Whether the default policy should be added automatically by core
 	bool no_default_policy = 18;
+
+  // Fixed number of allowed uses of the issued token
+	int64 fixed_num_uses = 19;
+
 }
 
 message TokenEntry {

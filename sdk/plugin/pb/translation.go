@@ -518,6 +518,7 @@ func LogicalAuthToProtoAuth(a *logical.Auth) (*Auth, error) {
 		GroupAliases:     a.GroupAliases,
 		BoundCIDRs:       boundCIDRs,
 		ExplicitMaxTTL:   int64(a.ExplicitMaxTTL),
+		FixedNumUses:     int64(a.FixedNumUses),
 	}, nil
 }
 
@@ -566,6 +567,7 @@ func ProtoAuthToLogicalAuth(a *Auth) (*logical.Auth, error) {
 		GroupAliases:     a.GroupAliases,
 		BoundCIDRs:       boundCIDRs,
 		ExplicitMaxTTL:   time.Duration(a.ExplicitMaxTTL),
+		FixedNumUses:     int(a.FixedNumUses),
 	}, nil
 }
 

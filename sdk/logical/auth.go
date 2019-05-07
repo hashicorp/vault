@@ -72,6 +72,9 @@ type Auth struct {
 	// Number of allowed uses of the issued token
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
+	// Number of allowed uses of the issued token, cannot be overriden
+	FixedNumUses int `json:"fixed_num_uses" mapstructure:"fixed_num_uses" structs:"fixed_num_uses"`
+
 	// EntityID is the identifier of the entity in identity store to which the
 	// identity of the authenticating client belongs to.
 	EntityID string `json:"entity_id" mapstructure:"entity_id" structs:"entity_id"`
