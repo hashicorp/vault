@@ -15,6 +15,7 @@
     "ember-cli-string-helpers": "*",
     "ember-truth-helpers": "*",
     "ember-concurrency": "*",
+    "ember-svg-jar": "*",
     "base64-js": "*",
     "Duration.js": "*"
   }

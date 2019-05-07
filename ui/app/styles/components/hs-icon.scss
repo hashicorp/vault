@@ -1,0 +1,21 @@
+.hs-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+}
+
+.hs-icon svg {
+  flex: 1 1 0;
+}
+.hs-icon-s {
+  width: 12px;
+}
+
+.hs-icon-l {
+  width: 20px;
+}
+
+.hs-icon-xl {
+  width: 32px;
+}
