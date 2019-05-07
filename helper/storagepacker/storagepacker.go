@@ -16,7 +16,9 @@ import (
 )
 
 const (
-	bucketCount                = 256
+	bucketCount = 256
+	// StoragePackerBucketsPrefix is the default storage key prefix under which
+	// bucket data will be stored.
 	StoragePackerBucketsPrefix = "packer/buckets/"
 )
 
@@ -35,7 +37,7 @@ func (s *StoragePacker) View() logical.Storage {
 	return s.view
 }
 
-// Get returns a bucket for a given key
+// GetBucket returns a bucket for a given key
 func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
@@ -110,7 +112,12 @@ func (s *Bucket) upsert(item *Item) error {
 // stored.
 func (s *StoragePacker) BucketKey(itemID string) string {
 	hf := md5.New()
-	hf.Write([]byte(itemID))
+	input := []byte(itemID)
+	n, err := hf.Write(input)
+	// Make linter happy
+	if err != nil || n != len(input) {
+		return ""
+	}
 	index := uint8(hf.Sum(nil)[0])
 	return s.viewPrefix + strconv.Itoa(int(index))
 }
