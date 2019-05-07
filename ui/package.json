@@ -42,6 +42,7 @@
   "devDependencies": {
     "@ember/jquery": "^0.5.2",
     "@ember/optional-features": "^0.6.3",
+    "@hashicorp/structure-icons": "^1.3.0",
     "Duration.js": "icholy/Duration.js#golang_compatible",
     "autosize": "^4.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
@@ -102,6 +103,7 @@
     "ember-responsive": "^3.0.0-beta.3",
     "ember-sinon": "^1.0.1",
     "ember-source": "~3.4.0",
+    "ember-svg-jar": "^1.2.2",
     "ember-test-selectors": "^2.1.0",
     "ember-truth-helpers": "^2.1.0",
     "escape-string-regexp": "^1.0.5",
