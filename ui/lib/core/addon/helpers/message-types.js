@@ -4,13 +4,13 @@ export const MESSAGE_TYPES = {
   info: {
     class: 'is-info',
     glyphClass: 'has-text-info',
-    glyph: 'information-circled',
+    glyph: 'info-circle-outline',
     text: 'Info',
   },
   success: {
     class: 'is-success',
     glyphClass: 'has-text-success',
-    glyph: 'checkmark-circled',
+    glyph: 'check-circle-outline',
     text: 'Success',
   },
   danger: {
@@ -22,7 +22,7 @@ export const MESSAGE_TYPES = {
   warning: {
     class: 'is-highlight',
     glyphClass: 'has-text-highlight',
-    glyph: 'alert-circled',
+    glyph: 'alert-circle-outline',
     text: 'Warning',
   },
 };
