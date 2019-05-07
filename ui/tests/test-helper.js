@@ -6,4 +6,6 @@ import './helpers/flash-message';
 
 setApplication(Application.create(config.APP));
 
-start();
+start({
+  setupTestIsolationValidation: true,
+});
