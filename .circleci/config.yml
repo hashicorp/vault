@@ -41,9 +41,6 @@ jobs:
       - image: *GOLANG_IMAGE
     working_directory: /go/src/github.com/hashicorp/vault
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "c6:96:98:82:dc:04:6c:39:dd:ac:83:05:e3:15:1c:98" # circleci-key of hashicorp-ci user in GitHub
       - checkout
       - restore_cache:
           key: go-vendor-modules-v1-{{ checksum "vendor/modules.txt" }}
