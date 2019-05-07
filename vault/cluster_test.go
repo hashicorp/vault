@@ -101,17 +101,17 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
+	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
+	addrs := cores[0].clusterListener.Addrs()
+
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	checkListenersFunc := func(expectFail bool) {
-		cores[0].clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
-
 		parsedCert := cores[0].localClusterParsedCert.Load().(*x509.Certificate)
-		dialer := cores[0].getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+		dialer := cores[0].getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 		for i := range cores[0].Listeners {
 
-			clnAddr := cores[0].clusterListener.clusterListenerAddrs[i]
+			clnAddr := addrs[i]
 			netConn, err := dialer(clnAddr.String(), 0)
-			conn := netConn.(*tls.Conn)
 			if err != nil {
 				if expectFail {
 					t.Logf("testing %s unsuccessful as expected", clnAddr)
@@ -122,6 +122,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			if expectFail {
 				t.Fatalf("testing %s not unsuccessful as expected", clnAddr)
 			}
+			conn := netConn.(*tls.Conn)
 			err = conn.Handshake()
 			if err != nil {
 				t.Fatal(err)
@@ -130,7 +131,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			switch {
 			case connState.Version != tls.VersionTLS12:
 				t.Fatal("version mismatch")
-			case connState.NegotiatedProtocol != requestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
+			case connState.NegotiatedProtocol != consts.RequestForwardingALPN || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
 			t.Logf("testing %s successful", clnAddr)
@@ -155,7 +156,8 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	checkListenersFunc(true)
 
 	// After this period it should be active again
-	time.Sleep(manualStepDownSleepPeriod)
+	TestWaitActive(t, cores[0].Core)
+	cores[0].clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{cores[0].Core})
 	checkListenersFunc(false)
 
 	err = cores[0].Core.Seal(cluster.RootToken)
@@ -382,12 +384,12 @@ func TestCluster_CustomCipherSuites(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, core.Core)
 
-	core.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{core.Core})
+	core.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{core.Core})
 
 	parsedCert := core.localClusterParsedCert.Load().(*x509.Certificate)
-	dialer := core.getGRPCDialer(context.Background(), requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
+	dialer := core.getGRPCDialer(context.Background(), consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)
 
-	netConn, err := dialer(core.clusterListener.clusterListenerAddrs[0].String(), 0)
+	netConn, err := dialer(core.clusterListener.Addrs()[0].String(), 0)
 	conn := netConn.(*tls.Conn)
 	if err != nil {
 		t.Fatal(err)

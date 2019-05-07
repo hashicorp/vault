@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cluster"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -302,7 +303,7 @@ func GetPerfReplicatedClusters(t testing.T, conf *vault.CoreConfig, opts *vault.
 	}
 
 	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
+	cluster.HeartbeatInterval = 2 * time.Second
 
 	opts1 := *opts
 	opts1.Logger = logger.Named("perf-pri")
@@ -325,7 +326,7 @@ func GetFourReplicatedClusters(t testing.T, handlerFunc func(*vault.HandlerPrope
 		Level: log.Trace,
 	})
 	// Set this lower so that state populates quickly to standby nodes
-	vault.HeartbeatInterval = 2 * time.Second
+	cluster.HeartbeatInterval = 2 * time.Second
 
 	ret.PerfPrimaryCluster, _ = GetClusterAndCore(t, logger.Named("perf-pri"), handlerFunc)
 

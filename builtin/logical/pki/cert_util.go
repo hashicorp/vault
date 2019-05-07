@@ -1014,12 +1014,14 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
+	// Most of these could also be RemoveDuplicateStable, or even
+	// leave duplicates in, but OU is the one most likely to be duplicated.
 	subject := pkix.Name{
 		CommonName:         cn,
 		SerialNumber:       ridSerialNumber,
 		Country:            strutil.RemoveDuplicates(data.role.Country, false),
 		Organization:       strutil.RemoveDuplicates(data.role.Organization, false),
-		OrganizationalUnit: strutil.RemoveDuplicates(data.role.OU, false),
+		OrganizationalUnit: strutil.RemoveDuplicatesStable(data.role.OU, false),
 		Locality:           strutil.RemoveDuplicates(data.role.Locality, false),
 		Province:           strutil.RemoveDuplicates(data.role.Province, false),
 		StreetAddress:      strutil.RemoveDuplicates(data.role.StreetAddress, false),

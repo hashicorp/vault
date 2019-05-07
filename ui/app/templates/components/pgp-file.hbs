@@ -1,6 +1,6 @@
 <div class="level is-mobile">
   <div class="level-left">
-    <label class="is-label" data-test-pgp-label=true>
+    <label class="is-label" data-test-pgp-label>
       {{#if label}}
         {{label}}
       {{else}}
@@ -11,7 +11,7 @@
   <div class="level-right">
     <div class="control is-flex">
       <input
-        data-test-text-toggle=true
+        data-test-text-toggle
         id={{concat "useText-" elementId}}
         type="checkbox"
         name={{concat "useText-" elementId}}

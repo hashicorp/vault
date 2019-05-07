@@ -1,10 +1,11 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import Component from './outer-html';
-import { next, later } from '@ember/runloop';
+import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
 
+/* eslint-disable ember/no-ember-testing-in-module-scope */
 const WAIT_TIME = Ember.testing ? 0 : 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
@@ -26,18 +27,16 @@ export default Component.extend({
   onNamespace() {},
 
   didReceiveAttrs() {
-    next(() => {
-      let { oldSelectedAuthPath, selectedAuthPath } = this;
-      let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
-      if (oldSelectedAuthPath !== selectedAuthPath) {
-        this.set('role', null);
-        this.onRoleName(this.roleName);
-        this.fetchRole.perform(null, { debounce: false });
-      } else if (shouldDebounce) {
-        this.fetchRole.perform(this.roleName);
-      }
-      this.set('oldSelectedAuthPath', selectedAuthPath);
-    });
+    let { oldSelectedAuthPath, selectedAuthPath } = this;
+    let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
+    if (oldSelectedAuthPath !== selectedAuthPath) {
+      this.set('role', null);
+      this.onRoleName(this.roleName);
+      this.fetchRole.perform(null, { debounce: false });
+    } else if (shouldDebounce) {
+      this.fetchRole.perform(this.roleName);
+    }
+    this.set('oldSelectedAuthPath', selectedAuthPath);
   },
 
   // OIDC roles in the JWT/OIDC backend are those with an authUrl,
@@ -67,7 +66,9 @@ export default Component.extend({
       }
     }
     this.set('role', role);
-  }).restartable(),
+  })
+    .restartable()
+    .withTestWaiter(),
 
   handleOIDCError(err) {
     this.onLoading(false);

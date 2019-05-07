@@ -16,32 +16,13 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	cache "github.com/patrickmn/go-cache"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-)
-
-const (
-	clusterListenerAcceptDeadline = 500 * time.Millisecond
-
-	// PerformanceReplicationALPN is the negotiated protocol used for
-	// performance replication.
-	PerformanceReplicationALPN = "replication_v1"
-
-	// DRReplicationALPN is the negotiated protocol used for
-	// dr replication.
-	DRReplicationALPN = "replication_dr_v1"
-
-	perfStandbyALPN = "perf_standby_v1"
-
-	requestForwardingALPN = "req_fw_sb-act_v1"
-)
-
-var (
-	// Making this a package var allows tests to modify
-	HeartbeatInterval = 5 * time.Second
 )
 
 type requestForwardingHandler struct {
@@ -65,7 +46,7 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 
 	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
@@ -190,7 +171,7 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 // Stop stops the request forwarding server and closes connections.
 func (rf *requestForwardingHandler) Stop() error {
 	// Give some time for existing RPCs to drain.
-	time.Sleep(clusterListenerAcceptDeadline)
+	time.Sleep(cluster.ListenerAcceptDeadline)
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
 	return nil
@@ -198,16 +179,16 @@ func (rf *requestForwardingHandler) Stop() error {
 
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding(ctx context.Context) error {
-	c.logger.Debug("cluster listener setup function")
-	defer c.logger.Debug("leaving cluster listener setup function")
+	c.logger.Debug("request forwarding setup function")
+	defer c.logger.Debug("leaving request forwarding setup function")
 
 	// Clean up in case we have transitioned from a client to a server
 	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
 	c.requestForwardingConnectionLock.Unlock()
 
-	// Resolve locally to avoid races
 	if c.ha == nil || c.clusterListener == nil {
+		c.logger.Debug("request forwarding not setup")
 		return nil
 	}
 
@@ -221,15 +202,15 @@ func (c *Core) startForwarding(ctx context.Context) error {
 		return err
 	}
 
-	c.clusterListener.AddHandler(requestForwardingALPN, handler)
+	c.clusterListener.AddHandler(consts.RequestForwardingALPN, handler)
 
 	return nil
 }
 
 func (c *Core) stopForwarding() {
 	if c.clusterListener != nil {
-		c.clusterListener.StopHandler(requestForwardingALPN)
-		c.clusterListener.StopHandler(perfStandbyALPN)
+		c.clusterListener.StopHandler(consts.RequestForwardingALPN)
+		c.clusterListener.StopHandler(consts.PerfStandbyALPN)
 	}
 }
 
@@ -264,7 +245,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	}
 
 	if c.clusterListener != nil {
-		c.clusterListener.AddClient(requestForwardingALPN, &requestForwardingClusterClient{
+		c.clusterListener.AddClient(consts.RequestForwardingALPN, &requestForwardingClusterClient{
 			core: c,
 		})
 	}
@@ -275,10 +256,10 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
 	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
-		grpc.WithDialer(c.getGRPCDialer(ctx, requestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
+		grpc.WithDialer(c.getGRPCDialer(ctx, consts.RequestForwardingALPN, parsedCert.Subject.CommonName, parsedCert)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time: 2 * HeartbeatInterval,
+			Time: 2 * cluster.HeartbeatInterval,
 		}),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
@@ -294,7 +275,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
 		core:                    c,
-		echoTicker:              time.NewTicker(HeartbeatInterval),
+		echoTicker:              time.NewTicker(cluster.HeartbeatInterval),
 		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
@@ -319,7 +300,7 @@ func (c *Core) clearForwardingClients() {
 	c.rpcForwardingClient = nil
 
 	if c.clusterListener != nil {
-		c.clusterListener.RemoveClient(requestForwardingALPN)
+		c.clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 }

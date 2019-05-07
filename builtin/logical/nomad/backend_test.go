@@ -10,6 +10,7 @@ import (
 
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory/dockertest"
@@ -41,10 +42,7 @@ func prepareTestContainer(t *testing.T) (cleanup func(), retAddress string, noma
 	}
 
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local container: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	retAddress = fmt.Sprintf("http://localhost:%s/", resource.GetPort("4646/tcp"))

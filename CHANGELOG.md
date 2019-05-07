@@ -13,9 +13,35 @@ IMPROVEMENTS:
 
 BUG FIXES: 
 
+ * auth/okta: Fix handling of group names containing slashes [GH-6665]
+ * core: Correctly honor non-HMAC request keys when auditing requests [GH-6653]
+ * core: Fix the `x-vault-unauthenticated` value in OpenAPI for a number of endpoints [GH-6654]
+ * core: Fix issue where some OpenAPI parameters were incorrectly listed as being sent
+   as a header [GH-6679]
+ * pki: fix a panic when a client submits a null value [GH-5679]
+ * replication: Fix an issue causing startup problems if a namespace policy
+   wasn't replicated properly
+ * storage/consule: recognize `https://` address even if schema not specified [GH-6602]
+ * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
+   constant switching of the active node [GH-6637]
+ * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was
+   received from the DynamoDB API [GH-6640]
+ * replication: Properly update mount entry cache on a secondary to apply all
+   new values after a tune
  * ui: fix an issue where sensitive input values weren't being saved to the
    server [GH-6586]
-   
+
+## 1.1.2 (April 18th, 2019)
+
+This is a bug fix release containing the two items below. It is otherwise
+unchanged from 1.1.1.
+
+BUG FIXES:
+
+ * auth/okta: Fix a potential dropped error [GH-6592]
+ * secrets/kv: Fix a regression on upgrade where a KVv2 mount could fail to be
+   mounted on unseal if it had previously been mounted but not written to
+   [KV-31]
 
 ## 1.1.1 (April 11th, 2019)
 
