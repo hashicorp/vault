@@ -2236,8 +2236,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			renewable = false
 		}
 
-		fmt.Printf("-- -- --\nnum_uses:\ndata: %d\nrole.TokenFixedNumUses:%d\nrole.TokenNumuses:%d", data.NumUses, role.TokenFixedNumUses, role.TokenNumUses)
-
 		// Update num_uses which is equal to req.Data["num_uses"] at this point
 		// 0 means unlimited so 1 is actually less than 0
 		switch {
@@ -2249,7 +2247,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			te.NumUses = role.TokenNumUses
 		default:
 		}
-		fmt.Printf("\n-- -- --\nte.NumUses:%d\n", te.NumUses)
 
 		if role.PathSuffix != "" {
 			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
