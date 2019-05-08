@@ -39,13 +39,8 @@ type TokenParams struct {
 	// The TTL to user for the token
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
 
-	// The number of times a token issued from this role may be used. Can be
-	// overriden at create.
-	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses"`
-
-	// The number of times a token issued from this role may be used. Cannot
-	// be overriden at create. If set, NumUses is ignored when creating a token.
-	TokenFixedNumUses int `json:"token_fixed_num_uses" mapstructure:"token_fixed_num_uses"`
+	// The maximum number of times a token issued from this role may be used.
+	TokenMaxNumUses int `json:"token_max_num_uses" mapstructure:"token_max_num_uses"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would
@@ -110,14 +105,9 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Description: "The initial ttl of the token to generate",
 		},
 
-		"token_num_uses": &framework.FieldSchema{
+		"token_max_num_uses": &framework.FieldSchema{
 			Type:        framework.TypeInt,
-			Description: "Number of allowed uses of the issued token, can be overriden at create with a lesser value",
-		},
-
-		"token_fixed_num_uses": &framework.FieldSchema{
-			Type:        framework.TypeInt,
-			Description: "Number of allowed uses of the issued token, cannot be overriden at create",
+			Description: "The maximum number of times a token issued from this role may be used.",
 		},
 	}
 }
@@ -185,18 +175,11 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
 	}
 
-	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
-		t.TokenNumUses = tokenNumUses.(int)
+	if tokenMaxNumUses, ok := d.GetOk("token_max_num_uses"); ok {
+		t.TokenMaxNumUses = tokenMaxNumUses.(int)
 	}
-	if t.TokenNumUses < 0 {
-		return errors.New("'token_num_uses' cannot be negative")
-	}
-
-	if tokenFixedNumUses, ok := d.GetOk("token_fixed_num_uses"); ok {
-		t.TokenFixedNumUses = tokenFixedNumUses.(int)
-	}
-	if t.TokenFixedNumUses < 0 {
-		return errors.New("'token_fixed_num_uses' cannot be negative")
+	if t.TokenMaxNumUses < 0 {
+		return errors.New("'token_max_num_uses' cannot be negative")
 	}
 
 	return nil
@@ -211,8 +194,7 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_policies"] = t.TokenPolicies
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = t.TokenTTL.Seconds()
-	m["token_num_uses"] = t.TokenNumUses
-	m["token_fixed_num_uses"] = t.TokenFixedNumUses
+	m["token_max_num_uses"] = t.TokenMaxNumUses
 }
 
 func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
@@ -224,8 +206,7 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.Policies = t.TokenPolicies
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
-	auth.NumUses = t.TokenNumUses
-	auth.FixedNumUses = t.TokenFixedNumUses
+	auth.NumUses = t.TokenMaxNumUses
 }
 
 const (
