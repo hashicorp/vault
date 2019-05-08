@@ -169,7 +169,7 @@ The following parameters are only used with Vault Enterprise
 - `disable_performance_standby` `(bool: false)` – Specifies whether performance
   standbys should be disabled on this node. Setting this to true on one Vault
   node will disable this feature when this node is Active or Standby. It's
-  recomended to sync this setting across all nodes in the cluster.
+  recommended to sync this setting across all nodes in the cluster.
 
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html

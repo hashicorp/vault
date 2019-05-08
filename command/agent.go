@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/auth/approle"
 	"github.com/hashicorp/vault/command/agent/auth/aws"
 	"github.com/hashicorp/vault/command/agent/auth/azure"
+	"github.com/hashicorp/vault/command/agent/auth/cert"
 	"github.com/hashicorp/vault/command/agent/auth/gcp"
 	"github.com/hashicorp/vault/command/agent/auth/jwt"
 	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
@@ -29,10 +30,10 @@ import (
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/command/agent/sink/file"
 	"github.com/hashicorp/vault/command/agent/sink/inmem"
-	"github.com/hashicorp/vault/helper/consts"
 	gatedwriter "github.com/hashicorp/vault/helper/gated-writer"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/version"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -331,6 +332,8 @@ func (c *AgentCommand) Run(args []string) int {
 			method, err = aws.NewAWSAuthMethod(authConfig)
 		case "azure":
 			method, err = azure.NewAzureAuthMethod(authConfig)
+		case "cert":
+			method, err = cert.NewCertAuthMethod(authConfig)
 		case "gcp":
 			method, err = gcp.NewGCPAuthMethod(authConfig)
 		case "jwt":

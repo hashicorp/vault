@@ -8,6 +8,7 @@
 
 # dependencies
 /bower_components/
+/stories/
 
 # misc
 /coverage/

@@ -19,9 +19,8 @@ func NewAuthApi(api duoapi.DuoApi) *AuthApi {
 	return &AuthApi{api}
 }
 
-// API calls will return a StatResult object.  On success, Stat is 'OK'.
-// On error, Stat is 'FAIL', and Code, Message, and Message_Detail
-// contain error information.
+// Leaving for backwards compatibility.
+// The struct in use has been moved to the duoapi package, to be shared between the admin and authapi packages.
 type StatResult struct {
 	Stat           string
 	Code           *int32
@@ -31,7 +30,7 @@ type StatResult struct {
 
 // Return object for the 'Ping' API call.
 type PingResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		Time int64
 	}
@@ -54,7 +53,7 @@ func (api *AuthApi) Ping() (*PingResult, error) {
 
 // Return object for the 'Check' API call.
 type CheckResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		Time int64
 	}
@@ -78,7 +77,7 @@ func (api *AuthApi) Check() (*CheckResult, error) {
 
 // Return object for the 'Logo' API call.
 type LogoResult struct {
-	StatResult
+	duoapi.StatResult
 	png *[]byte
 }
 
@@ -91,7 +90,7 @@ func (api *AuthApi) Logo() (*LogoResult, error) {
 		return nil, err
 	}
 	if resp.StatusCode == 200 {
-		ret := &LogoResult{StatResult: StatResult{Stat: "OK"},
+		ret := &LogoResult{StatResult: duoapi.StatResult{Stat: "OK"},
 			png: &body}
 		return ret, nil
 	}
@@ -118,7 +117,7 @@ func EnrollValidSeconds(secs uint64) func(*url.Values) {
 
 // Enroll return type.
 type EnrollResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		Activation_Barcode string
 		Activation_Code    string
@@ -151,7 +150,7 @@ func (api *AuthApi) Enroll(options ...func(*url.Values)) (*EnrollResult, error) 
 
 // Response is "success", "invalid" or "waiting".
 type EnrollStatusResult struct {
-	StatResult
+	duoapi.StatResult
 	Response string
 }
 
@@ -180,7 +179,7 @@ func (api *AuthApi) EnrollStatus(userid string,
 
 // Preauth return type.
 type PreauthResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		Result            string
 		Status_Msg        string
@@ -299,7 +298,7 @@ func AuthPasscode(passcode string) func(*url.Values) {
 
 // Auth return type.
 type AuthResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		// Synchronous
 		Result               string
@@ -354,7 +353,7 @@ func (api *AuthApi) Auth(factor string, options ...func(*url.Values)) (*AuthResu
 
 // AuthStatus return type.
 type AuthStatusResult struct {
-	StatResult
+	duoapi.StatResult
 	Response struct {
 		Result               string
 		Status               string

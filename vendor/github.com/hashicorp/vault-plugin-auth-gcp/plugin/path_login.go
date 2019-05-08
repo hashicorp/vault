@@ -10,10 +10,10 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iam/v1"
@@ -213,11 +213,12 @@ func (b *GcpAuthBackend) getSigningKey(ctx context.Context, token *jwt.JSONWebTo
 			Key:       keyId,
 		})
 		if err != nil {
+			saErr := err
 			// Attempt to get a normal Google Oauth cert in case of GCE inferrence.
 			key, err := gcputil.OAuth2RSAPublicKey(keyId, "")
 			if err != nil {
 				return nil, errwrap.Wrapf(
-					fmt.Sprintf("could not find service account key or Google Oauth cert with given 'kid' id %s: {{err}}", keyId),
+					fmt.Sprintf("%s or could not find Google Oauth cert with given 'kid' id %s: {{err}}", saErr.Error(), keyId),
 					err)
 			}
 			return key, nil

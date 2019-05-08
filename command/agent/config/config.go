@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/parseutil"
 
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -28,12 +28,13 @@ type Config struct {
 }
 
 type Vault struct {
-	Address       string `hcl:"address"`
-	CACert        string `hcl:"ca_cert"`
-	CAPath        string `hcl:"ca_path"`
-	TLSSkipVerify bool   `hcl:"tls_skip_verify"`
-	ClientCert    string `hcl:"client_cert"`
-	ClientKey     string `hcl:"client_key"`
+	Address          string      `hcl:"address"`
+	CACert           string      `hcl:"ca_cert"`
+	CAPath           string      `hcl:"ca_path"`
+	TLSSkipVerify    bool        `hcl:"-"`
+	TLSSkipVerifyRaw interface{} `hcl:"tls_skip_verify"`
+	ClientCert       string      `hcl:"client_cert"`
+	ClientKey        string      `hcl:"client_key"`
 }
 
 type Cache struct {
@@ -127,8 +128,19 @@ func LoadConfig(path string, logger log.Logger) (*Config, error) {
 			return nil, fmt.Errorf("at least one listener required when cache enabled")
 		}
 
-		if result.Cache.UseAutoAuthToken && result.AutoAuth == nil {
-			return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+		if result.Cache.UseAutoAuthToken {
+			if result.AutoAuth == nil {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+			}
+			if result.AutoAuth.Method.WrapTTL > 0 {
+				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+			}
+		}
+	}
+
+	if result.AutoAuth != nil {
+		if len(result.AutoAuth.Sinks) == 0 && (result.Cache == nil || !result.Cache.UseAutoAuthToken) {
+			return nil, fmt.Errorf("auto_auth requires at least one sink or cache.use_auto_auth_token=true ")
 		}
 	}
 
@@ -158,6 +170,13 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	err := hcl.DecodeObject(&v, item.Val)
 	if err != nil {
 		return err
+	}
+
+	if v.TLSSkipVerifyRaw != nil {
+		v.TLSSkipVerify, err = parseutil.ParseBool(v.TLSSkipVerifyRaw)
+		if err != nil {
+			return err
+		}
 	}
 
 	result.Vault = &v
@@ -266,6 +285,16 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 
 	if err := parseSinks(result, subList); err != nil {
 		return errwrap.Wrapf("error parsing 'sink' stanzas: {{err}}", err)
+	}
+
+	if result.AutoAuth.Method.WrapTTL > 0 {
+		if len(result.AutoAuth.Sinks) != 1 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
+		}
+
+		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
+			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
+		}
 	}
 
 	return nil

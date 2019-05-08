@@ -37,7 +37,26 @@ organization grow.
 environments to support *Secure Multi-tenancy* (or *SMT*) within a single Vault
 infrastructure. Through namespaces, Vault administrators can support tenant isolation
 for teams and individuals as well as empower delegated administrators to manage their
-own tenant environment. 
+own tenant environment.
+
+## Usage
+
+API operations performed under a namespace can be done by providing the relative
+request path along with the namespace path using the `X-Vault-Namespace` header.
+Similarly, the namespace header value can be provided in full or partially when
+reaching into nested namespaces. When provided partially, the remaining
+namespace path must be provided in the request path in order to reach into the
+desired nested namespace.
+
+Alternatively, the fully qualified path can be provided without using the
+`X-Vault-Namespace` header. In either scenario, Vault will construct the fully
+qualified path from these two sources to correctly route the request to the
+appropriate namespace.
+
+For example, these three requests are equivalent:
+1. Path: `ns1/ns2/secret/foo`
+2. Path: `secret/foo`, Header: `X-Vault-Namespace: ns1/ns2/`
+3. Path: `ns2/secret/foo`, Header: `X-Vault-Namespace: ns1/`
 
 ## Architecture
 

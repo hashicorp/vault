@@ -8,9 +8,9 @@ import (
 
 	"github.com/coreos/go-oidc"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -66,6 +66,10 @@ func (b *jwtAuthBackend) pathLogin(ctx context.Context, req *logical.Request, d 
 	}
 	if role == nil {
 		return logical.ErrorResponse("role %q could not be found", roleName), nil
+	}
+
+	if role.RoleType == "oidc" {
+		return logical.ErrorResponse("role with oidc role_type is not allowed"), nil
 	}
 
 	token := d.Get("jwt").(string)
@@ -221,20 +225,16 @@ func (b *jwtAuthBackend) pathLoginRenew(ctx context.Context, req *logical.Reques
 func (b *jwtAuthBackend) verifyOIDCToken(ctx context.Context, config *jwtConfig, role *jwtRole, rawToken string) (map[string]interface{}, error) {
 	allClaims := make(map[string]interface{})
 
-	provider, err := b.getProvider(ctx, config)
+	provider, err := b.getProvider(config)
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting provider for login operation: {{err}}", err)
 	}
 
 	oidcConfig := &oidc.Config{
 		SupportedSigningAlgs: config.JWTSupportedAlgs,
+		SkipClientIDCheck:    true,
 	}
 
-	if role.RoleType == "oidc" {
-		oidcConfig.ClientID = config.OIDCClientID
-	} else {
-		oidcConfig.SkipClientIDCheck = true
-	}
 	verifier := provider.Verifier(oidcConfig)
 
 	idToken, err := verifier.Verify(ctx, rawToken)

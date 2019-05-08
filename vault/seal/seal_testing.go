@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 type TestSeal struct {

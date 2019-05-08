@@ -117,6 +117,8 @@ flags](/docs/commands/index.html) included on all commands.
   maximumTTLs. This is specified as a numeric string with suffix like "30s" or
   "5m".
 
+- `-type` `(string: "service")` - The type of token to create. Can be "service" or "batch".
+
 - `-use-limit` `(int: 0)` - Number of times this token can be used. After the
   last use, the token is automatically revoked. By default, tokens can be used
   an unlimited number of times until their expiration.

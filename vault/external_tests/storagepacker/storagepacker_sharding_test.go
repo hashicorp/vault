@@ -12,31 +12,26 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	consulapi "github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/plugin/pb"
-	"github.com/hashicorp/vault/physical/consul"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/hashicorp/vault/vault"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 func TestStoragePacker_Sharding(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := consul.PrepareConsulTestContainer(t)
-		if cid != "" {
-			defer consul.CleanupConsulTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := consulapi.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	consulClient, err := consulapi.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)

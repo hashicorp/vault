@@ -1,3 +1,8 @@
+# v2.2.7
+
+* add: `search` (`*string`) attribute to graph datapoint
+* add: `cluster_ip` (`*string`) attribute to broker details
+
 # v2.2.6
 
 * fix: func signature to match go-retryablehttp update

@@ -47,6 +47,8 @@ func getStrategy(ks *KeyspaceMetadata) placementStrategy {
 			dcs[dc] = getReplicationFactorFromOpts(ks.Name+":dc="+dc, rf)
 		}
 		return &networkTopology{dcs: dcs}
+	case strings.Contains(ks.StrategyClass, "LocalStrategy"):
+		return nil
 	default:
 		// TODO: handle unknown replicas and just return the primary host for a token
 		panic(fmt.Sprintf("unsupported strategy class: %v", ks.StrategyClass))

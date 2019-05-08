@@ -12,12 +12,12 @@ import (
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/elliptic"
-	"crypto/rsa"
 	"io"
 	"math/big"
 
 	"github.com/keybase/go-crypto/cast5"
 	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 // readFull is the same as io.ReadFull except that reading zero bytes returns

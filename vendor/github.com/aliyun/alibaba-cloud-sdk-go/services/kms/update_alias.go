@@ -76,9 +76,8 @@ func (client *Client) UpdateAliasWithCallback(request *UpdateAliasRequest, callb
 // UpdateAliasRequest is the request struct for api UpdateAlias
 type UpdateAliasRequest struct {
 	*requests.RpcRequest
-	KeyId     string `position:"Query" name:"KeyId"`
 	AliasName string `position:"Query" name:"AliasName"`
-	STSToken  string `position:"Query" name:"STSToken"`
+	KeyId     string `position:"Query" name:"KeyId"`
 }
 
 // UpdateAliasResponse is the response struct for api UpdateAlias

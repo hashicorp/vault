@@ -74,7 +74,7 @@ calling the `Serve` method:
 package main
 
 import (
-    "github.com/hashicorp/vault/plugins"
+    "github.com/hashicorp/vault/api/plugins"
 )
 
 func main() {

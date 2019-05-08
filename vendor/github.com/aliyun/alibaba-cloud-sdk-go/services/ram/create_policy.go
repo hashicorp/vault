@@ -76,8 +76,8 @@ func (client *Client) CreatePolicyWithCallback(request *CreatePolicyRequest, cal
 // CreatePolicyRequest is the request struct for api CreatePolicy
 type CreatePolicyRequest struct {
 	*requests.RpcRequest
-	PolicyName     string `position:"Query" name:"PolicyName"`
 	Description    string `position:"Query" name:"Description"`
+	PolicyName     string `position:"Query" name:"PolicyName"`
 	PolicyDocument string `position:"Query" name:"PolicyDocument"`
 }
 
@@ -93,7 +93,7 @@ func CreateCreatePolicyRequest() (request *CreatePolicyRequest) {
 	request = &CreatePolicyRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicy", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "CreatePolicy", "ram", "openAPI")
 	return
 }
 

@@ -1,6 +1,6 @@
 import { helper as buildHelper } from '@ember/component/helper';
 
-const MESSAGE_TYPES = {
+export const MESSAGE_TYPES = {
   info: {
     class: 'is-info',
     glyphClass: 'has-text-info',

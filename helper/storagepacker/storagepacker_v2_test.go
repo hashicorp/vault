@@ -11,7 +11,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func getStoragePacker(tb testing.TB) *StoragePackerV2 {
@@ -32,6 +32,8 @@ func BenchmarkStoragePackerV2(b *testing.B) {
 	storagePacker := getStoragePacker(b)
 
 	ctx := namespace.RootContext(nil)
+
+	ctx := context.Background()
 
 	for i := 0; i < b.N; i++ {
 		itemID, err := uuid.GenerateUUID()
@@ -124,6 +126,8 @@ func TestStoragePackerV2(t *testing.T) {
 func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) {
 	storagePacker := getStoragePacker(t)
 
+	ctx := context.Background()
+
 	timeNow := ptypes.TimestampNow()
 
 	alias1 := &identity.Alias{
@@ -150,7 +154,7 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 		},
 		CreationTime:    timeNow,
 		LastUpdateTime:  timeNow,
-		BucketKeyHash:   "entity_hash",
+		BucketKey:       "entity_hash",
 		MergedEntityIDs: []string{"merged_entity_id1", "merged_entity_id2"},
 		Policies:        []string{"policy1", "policy2"},
 	}
@@ -161,7 +165,6 @@ func TestStoragePackerV2_SerializeDeserializeComplexItem_Version1(t *testing.T) 
 	}
 
 	ctx := namespace.RootContext(nil)
-
 	err = storagePacker.PutItem(ctx, &Item{
 		ID:      entity.ID,
 		Message: marshaledEntity,

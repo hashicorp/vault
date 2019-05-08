@@ -40,7 +40,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	// Parse the request
 	var req InitRequest
-	if err := parseRequest(r, w, &req); err != nil {
+	if _, err := parseRequest(core, r, w, &req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}

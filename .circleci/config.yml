@@ -1,0 +1,203 @@
+version: 2
+
+references:
+  images:
+    go: &GOLANG_IMAGE golang:1.12.4-stretch  # Pin Go to patch version (ex: 1.2.3)
+    node: &NODE_IMAGE node:10-stretch  # Pin Node.js to major version (ex: 10)
+
+  environment: &ENVIRONMENT
+    CIRCLECI_CLI_VERSION: 0.1.5546  # Pin CircleCI CLI to patch version (ex: 1.2.3)
+    GO_VERSION: 1.12.4  # Pin Go to patch version (ex: 1.2.3)
+    GOTESTSUM_VERSION: 0.3.3  # Pin gotestsum to patch version (ex: 1.2.3)
+
+jobs:
+  install-ui-dependencies:
+    docker:
+      - image: *NODE_IMAGE
+    working_directory: /src/vault/ui
+    steps:
+      - checkout:
+          path: /src/vault
+      - restore_cache:
+          key: yarn-lock-{{ checksum "yarn.lock" }}
+      - run:
+          name: Install UI dependencies
+          command: |
+            set -eux -o pipefail
+
+            yarn install --ignore-optional
+            npm rebuild node-sass
+      - save_cache:
+          key: yarn-lock-{{ checksum "yarn.lock" }}
+          paths:
+            - node_modules
+      - persist_to_workspace:
+          root: ..
+          paths:
+            - ui/node_modules
+
+  go-mod-vendor:
+    docker:
+      - image: *GOLANG_IMAGE
+    working_directory: /go/src/github.com/hashicorp/vault
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-vendor-modules-v1-{{ checksum "vendor/modules.txt" }}
+      - run:
+          name: Fix git url config
+          command: git config --local url."git@github.com:".insteadof https://github.com/
+      - run:
+          name: Check go mod vendor
+          command: |
+            GO111MODULE=on go mod vendor
+            out=$(git status vendor --porcelain)
+            if [ "$out" != "" ] ; then
+              echo "'go mod vendor' was not clean! Please check go modules for updates (notably api and sdk)"
+              echo "output was:"
+              echo "$out"
+              exit 1
+            fi
+      - save_cache:
+          key: go-vendor-modules-v1-{{ checksum "vendor/modules.txt" }}
+          paths:
+            - /root/.cache/go-build
+
+  build-go-dev:
+    docker:
+      - image: *GOLANG_IMAGE
+    working_directory: /go/src/github.com/hashicorp/vault
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build dev binary
+          command: |
+            set -eux -o pipefail
+
+            # Move dev UI assets to expected location
+            rm -rf ./pkg
+            mkdir ./pkg
+
+            # Build dev binary
+            make bootstrap dev
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bin
+
+  test-ui:
+    docker:
+      - image: *NODE_IMAGE
+    working_directory: /src/vault/ui
+    resource_class: medium+
+    steps:
+      - checkout:
+          path: /src/vault
+      - attach_workspace:
+          at: ..
+      - run:
+          name: Test UI
+          command: |
+            set -eux -o pipefail
+
+            # Install Chrome
+            wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
+              | apt-key add -
+            echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
+              | tee /etc/apt/sources.list.d/google-chrome.list
+            apt-get update
+            apt-get -y install google-chrome-stable
+            rm /etc/apt/sources.list.d/google-chrome.list
+            rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+
+            # Add ./bin to the PATH so vault binary can be run by Ember tests
+            export PATH="${PWD}"/../bin:${PATH}
+
+            # Run Ember tests
+            mkdir -p test-results/qunit
+            yarn run test-oss
+      - store_artifacts:
+          path: test-results
+      - store_test_results:
+          path: test-results
+
+  test-go:
+    machine: true
+    environment:
+      <<: *ENVIRONMENT
+      GO_TAGS:
+    parallelism: 2
+    working_directory: ~/go/src/github.com/hashicorp/vault
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run Go tests
+          command: |
+            set -eux -o pipefail
+
+            # Install Go
+            curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+            sudo rm -rf /usr/local/go
+            sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
+            rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
+            export GOPATH="${HOME}/go"
+            export PATH="${PATH}:${GOPATH}/bin:/usr/local/go/bin"
+
+            # Install CircleCI CLI
+            curl -sSL \
+                "https://github.com/CircleCI-Public/circleci-cli/releases/download/v${CIRCLECI_CLI_VERSION}/circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64.tar.gz" \
+              | sudo tar --overwrite -xz \
+                -C /usr/local/bin \
+                "circleci-cli_${CIRCLECI_CLI_VERSION}_linux_amd64/circleci"
+
+            # Split Go tests by prior test times
+            package_names=$(go list \
+                -tags "${GO_TAGS}" \
+                ./... \
+              | grep -v /vendor/ \
+              | sort \
+              | circleci tests split --split-by=timings --timings-type=classname)
+
+            # Install gotestsum
+            curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_VERSION}/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" \
+              | sudo tar --overwrite -xz -C /usr/local/bin gotestsum
+
+            # Run tests
+            make prep
+            mkdir -p test-results/go-test
+            CGO_ENABLED= \
+              VAULT_ADDR= \
+              VAULT_TOKEN= \
+              VAULT_DEV_ROOT_TOKEN_ID= \
+              VAULT_ACC= \
+              gotestsum --format=short-verbose --junitfile test-results/go-test/results.xml -- \
+                -tags "${GO_TAGS}" \
+                -timeout=40m \
+                -parallel=20 \
+                ${package_names}
+      - store_artifacts:
+          path: test-results
+      - store_test_results:
+          path: test-results
+
+workflows:
+  version: 2
+
+  ci:
+    jobs:
+      - install-ui-dependencies
+      - go-mod-vendor
+      - build-go-dev:
+          requires:
+            - go-mod-vendor
+      - test-ui:
+          requires:
+            - install-ui-dependencies
+            - build-go-dev
+      - test-go:
+          requires:
+            - build-go-dev

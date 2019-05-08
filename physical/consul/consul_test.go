@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/consul/api"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/physical"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 type consulConf map[string]string
@@ -25,12 +24,6 @@ type consulConf map[string]string
 var (
 	addrCount int = 0
 )
-
-func testHostIP() string {
-	a := addrCount
-	addrCount++
-	return fmt.Sprintf("127.0.0.%d", a)
-}
 
 func testConsulBackend(t *testing.T) *ConsulBackend {
 	return testConsulBackendConfig(t, &consulConf{})
@@ -493,20 +486,17 @@ func TestConsul_serviceID(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := PrepareConsulTestContainer(t)
-		if cid != "" {
-			defer CleanupConsulTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -534,20 +524,17 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsul_TooLarge(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := PrepareConsulTestContainer(t)
-		if cid != "" {
-			defer CleanupConsulTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -608,20 +595,17 @@ func TestConsul_TooLarge(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	var token string
+	consulToken := os.Getenv("CONSUL_HTTP_TOKEN")
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		cid, connURL := PrepareConsulTestContainer(t)
-		if cid != "" {
-			defer CleanupConsulTestContainer(t, cid)
-		}
-		addr = connURL
-		token = dockertest.ConsulACLMasterToken
+		cleanup, connURL, token := consul.PrepareTestContainer(t, "1.4.4")
+		defer cleanup()
+		addr, consulToken = connURL, token
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
-	conf.Token = token
+	conf.Token = consulToken
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)

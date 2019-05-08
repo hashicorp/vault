@@ -10,13 +10,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	memdb "github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -127,8 +127,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	switch {
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, i.entityPacker.BucketsView().Prefix()):
-		bucketKeyHash := i.entityPacker.GetCacheKey(strings.TrimPrefix(key, i.entityPacker.BucketsView().Prefix()))
-
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
@@ -137,9 +135,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// entry key of the entity bucket. Fetch all the entities that
 		// belong to this bucket using the hash value. Remove these entities
 		// from MemDB along with all the aliases of each entity.
-		entitiesFetched, err := i.MemDBEntitiesByBucketEntryKeyHashInTxn(txn, bucketKeyHash)
+		entitiesFetched, err := i.MemDBEntitiesByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch entities using bucket hash key", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch entities using the bucket key", "key", key)
 			return
 		}
 
@@ -209,15 +207,13 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 
 	// Check if the key is a storage entry key for an group bucket
 	case strings.HasPrefix(key, i.groupPacker.BucketsView().Prefix()):
-		bucketKeyHash := i.groupPacker.GetCacheKey(strings.TrimPrefix(key, i.groupPacker.BucketsView().Prefix()))
-
 		// Create a MemDB transaction
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		groupsFetched, err := i.MemDBGroupsByBucketEntryKeyHashInTxn(txn, string(bucketKeyHash))
+		groupsFetched, err := i.MemDBGroupsByBucketKeyInTxn(txn, key)
 		if err != nil {
-			i.logger.Error("failed to fetch groups using the bucket entry key hash", "bucket_entry_key_hash", bucketKeyHash)
+			i.logger.Error("failed to fetch groups using the bucket key", "key", key)
 			return
 		}
 
@@ -227,6 +223,14 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			if err != nil {
 				i.logger.Error("failed to delete group from MemDB", "group_id", group.ID, "error", err)
 				return
+			}
+
+			if group.Alias != nil {
+				err := i.MemDBDeleteAliasByIDInTxn(txn, group.Alias.ID, true)
+				if err != nil {
+					i.logger.Error("failed to delete group alias from MemDB", "error", err)
+					return
+				}
 			}
 		}
 
@@ -321,6 +325,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.LastUpdateTime = oldEntity.LastUpdateTime
 		entity.MergedEntityIDs = oldEntity.MergedEntityIDs
 		entity.Policies = oldEntity.Policies
+		entity.BucketKey = oldEntity.BucketKeyHash
 		entity.MFASecrets = oldEntity.MFASecrets
 		// Copy each alias individually since the format of aliases were
 		// also different
@@ -342,7 +347,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		persistNeeded = true
 	}
 
-	entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = i.entityPacker.BucketKey(entity.ID)
 
 	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
 	if err != nil {
@@ -392,7 +397,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 		group.NamespaceID = namespace.RootNamespaceID
 	}
 
-	group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
+	group.BucketKey = i.groupPacker.BucketKey(group.ID)
 
 	return &group, nil
 }

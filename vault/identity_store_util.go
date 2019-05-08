@@ -12,13 +12,13 @@ import (
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -360,13 +360,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 			for {
 				select {
-				case bucketKey, ok := <-broker:
+				case key, ok := <-broker:
 					// broker has been closed, we are done
 					if !ok {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(ctx, bucketKey, false)
+					bucket, err := i.entityPacker.GetBucket(ctx, key, false)
 					if err != nil {
 						errs <- err
 						continue
@@ -436,13 +436,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 					continue
 				}
 
-				// Remove dangling entities
-				if entity.NamespaceID != "" && !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
-					ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
-					if err != nil {
-						return err
-					}
-					if ns == nil {
+				ns, err := NamespaceByID(ctx, entity.NamespaceID, i.core)
+				if err != nil {
+					return err
+				}
+				if ns == nil {
+					// Remove dangling entities
+					if !(i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.core.perfStandby) {
 						// Entity's namespace doesn't exist anymore but the
 						// entity from the namespace still exists.
 						i.logger.Warn("deleting entity and its any existing aliases", "name", entity.Name, "namespace_id", entity.NamespaceID)
@@ -450,12 +450,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 						if err != nil {
 							return err
 						}
-						continue
 					}
+					continue
 				}
+				nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 
 				// Ensure that there are no entities with duplicate names
-				entityByName, err := i.MemDBEntityByName(ctx, entity.Name, false)
+				entityByName, err := i.MemDBEntityByName(nsCtx, entity.Name, false)
 				if err != nil {
 					return nil
 				}
@@ -467,7 +468,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				}
 
 				// Only update MemDB and don't hit the storage again
-				err = i.upsertEntity(ctx, entity, nil, false)
+				err = i.upsertEntity(nsCtx, entity, nil, false)
 				if err != nil {
 					return errwrap.Wrapf("failed to update entity in MemDB: {{err}}", err)
 				}
@@ -939,16 +940,16 @@ func (i *IdentityStore) MemDBEntityByNameInTxn(ctx context.Context, txn *memdb.T
 	return entity, nil
 }
 
-func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntitiesByBucketKeyInTxn(txn *memdb.Txn, bucketKey string) ([]*identity.Entity, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
 	}
 
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
+	if bucketKey == "" {
+		return nil, fmt.Errorf("empty bucket key")
 	}
 
-	entitiesIter, err := txn.Get(entitiesTable, "bucket_key_hash", hashValue)
+	entitiesIter, err := txn.Get(entitiesTable, "bucket_key", bucketKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to lookup entities using bucket entry key hash: {{err}}", err)
 	}
@@ -1136,8 +1137,8 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 			return fmt.Errorf("failed to generate entity id")
 		}
 
-		// Set the hash value of the storage bucket key in entity
-		entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
+		// Set the storage bucket key in entity
+		entity.BucketKey = i.entityPacker.BucketKey(entity.ID)
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1197,7 +1198,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 
 		// Set the hash value of the storage bucket key in group
-		group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
+		group.BucketKey = i.groupPacker.BucketKey(group.ID)
 	}
 
 	if group.NamespaceID == "" {
@@ -1252,14 +1253,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	txn := i.db.Txn(true)
 	defer txn.Abort()
 
+	var currentMemberGroupIDs []string
+	var currentMemberGroups []*identity.Group
+
+	// If there are no member group IDs supplied, then it shouldn't be
+	// processed. If an empty set of member group IDs are supplied, then it
+	// should be processed. Hence the nil check instead of the length check.
+	if memberGroupIDs == nil {
+		goto ALIAS
+	}
+
 	memberGroupIDs = strutil.RemoveDuplicates(memberGroupIDs, false)
 
 	// For those group member IDs that are removed from the list, remove current
 	// group ID as their respective ParentGroupID.
 
 	// Get the current MemberGroups IDs for this group
-	var currentMemberGroupIDs []string
-	currentMemberGroups, err := i.MemDBGroupsByParentGroupID(group.ID, false)
+	currentMemberGroups, err = i.MemDBGroupsByParentGroupID(group.ID, false)
 	if err != nil {
 		return err
 	}
@@ -1350,6 +1360,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 	}
 
+ALIAS:
 	// Sanitize the group alias
 	if group.Alias != nil {
 		group.Alias.CanonicalID = group.ID
@@ -1947,16 +1958,16 @@ OUTER:
 	return name, nil
 }
 
-func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Group, error) {
+func (i *IdentityStore) MemDBGroupsByBucketKeyInTxn(txn *memdb.Txn, bucketKey string) ([]*identity.Group, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
 	}
 
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
+	if bucketKey == "" {
+		return nil, fmt.Errorf("empty bucket key")
 	}
 
-	groupsIter, err := txn.Get(groupsTable, "bucket_key_hash", hashValue)
+	groupsIter, err := txn.Get(groupsTable, "bucket_key", bucketKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to lookup groups using bucket entry key hash: {{err}}", err)
 	}

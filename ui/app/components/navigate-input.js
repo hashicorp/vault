@@ -1,5 +1,4 @@
 import { schedule, debounce } from '@ember/runloop';
-import { observer } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import utils from 'vault/lib/key-utils';
@@ -57,10 +56,11 @@ export default Component.extend(FocusOnInsertMixin, {
 
   shouldFocus: false,
 
-  focusFilter: observer('filter', function() {
+  didReceiveAttrs() {
+    this._super(...arguments);
     if (!this.get('filter')) return;
     schedule('afterRender', this, 'forceFocus');
-  }).on('didInsertElement'),
+  },
 
   keyForNav(key) {
     if (this.get('mode') !== 'secrets-cert') {

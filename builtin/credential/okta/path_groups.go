@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathGroupsList(b *backend) *framework.Path {
@@ -26,12 +26,12 @@ func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `groups/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the Okta group.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
 			},
@@ -57,10 +57,12 @@ func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*Grou
 		return nil, "", err
 	}
 	if entry == nil {
-		entries, err := s.List(ctx, "group/")
+		entries, err := groupList(ctx, s)
 		if err != nil {
 			return nil, "", err
+
 		}
+
 		for _, groupName := range entries {
 			if strings.EqualFold(groupName, n) {
 				entry, err = s.Get(ctx, "group/"+groupName)
@@ -157,11 +159,25 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	groups, err := req.Storage.List(ctx, "group/")
+	groups, err := groupList(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
+
 	return logical.ListResponse(groups), nil
+}
+
+func groupList(ctx context.Context, s logical.Storage) ([]string, error) {
+	keys, err := logical.CollectKeysWithPrefix(ctx, s, "group/")
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "group/")
+	}
+
+	return keys, nil
 }
 
 type GroupEntry struct {

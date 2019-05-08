@@ -102,8 +102,8 @@ entities attempting to login. At least one of the bound values must be set.
 ### Parameters
 - `name` `(string: <required>)` - Name of the role.
 - `role_type` `(string: <optional>)` - Type of role, either "oidc" (default) or "jwt".
-- `bound_audiences` `(array: <required>)` - List of `aud` claims to match
-  against. Any match is sufficient.
+- `bound_audiences` `(array: <optional>)` - List of `aud` claims to match against.
+   Any match is sufficient. Required for "jwt" roles, optional for "oidc" roles. 
 - `user_claim` `(string: <required>)` - The claim to use to uniquely identify
   the user; this will be used as the name for the Identity entity alias created
   due to a successful login. The claim value must be a string.
@@ -124,6 +124,7 @@ entities attempting to login. At least one of the bound values must be set.
   source address for login requests. This value is also encoded into any
   resulting token.
 - `bound_claims` `(map: <optional>)` - If set, a map of claims/values to match against.
+  The expected value may be a single string or a list of strings.
 - `groups_claim` `(string: <optional>)` - The claim to use to uniquely identify
   the set of groups to which the user belongs; this will be used as the names
   for the Identity group aliases created due to a successful login. The claim

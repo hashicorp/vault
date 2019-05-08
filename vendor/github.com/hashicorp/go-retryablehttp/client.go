@@ -385,9 +385,9 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 				return resp, err
 			}
 			if c, ok := body.(io.ReadCloser); ok {
-				req.Request.Body = c
+				req.Body = c
 			} else {
-				req.Request.Body = ioutil.NopCloser(body)
+				req.Body = ioutil.NopCloser(body)
 			}
 		}
 
@@ -402,7 +402,7 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		}
 
 		// Check if we should continue with retries.
-		checkOK, checkErr := c.CheckRetry(req.Request.Context(), resp, err)
+		checkOK, checkErr := c.CheckRetry(req.Context(), resp, err)
 
 		if err != nil {
 			if c.Logger != nil {
@@ -445,7 +445,11 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 		if c.Logger != nil {
 			c.Logger.Printf("[DEBUG] %s: retrying in %s (%d left)", desc, wait, remain)
 		}
-		time.Sleep(wait)
+		select {
+		case <-req.Context().Done():
+			return nil, req.Context().Err()
+		case <-time.After(wait):
+		}
 	}
 
 	if c.ErrorHandler != nil {

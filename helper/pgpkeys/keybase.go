@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/keybase/go-crypto/openpgp"
 )
 

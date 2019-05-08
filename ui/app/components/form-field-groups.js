@@ -1,30 +1,39 @@
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
+/**
+ * @module FormFieldGroups
+ * `FormFieldGroups` components are field groups associated with a particular model. They render individual `FormField` components.
+ *
+ * @example
+ * ```js
+ * {{if model.fieldGroups}}
+ *  <FormFieldGroups @model={{model}} />
+ * {{/if}}
+ *
+ * ...
+ *
+ * <FormFieldGroups
+ *  @model={{mountModel}}
+ *  @onChange={{action "onTypeChange"}}
+ *  @renderGroup="Method Options"
+ * />
+ * ```
+ *
+ * @param [renderGroup=null] {String} - A whitelist of groups to include in the render.
+ * @param model=null {DS.Model} - Model to be passed down to form-field component. If `fieldGroups` is present on the model then it will be iterated over and groups of `FormField` components will be rendered.
+ * @param onChange=null {Func} - Handler that will get set on the `FormField` component.
+ *
+ */
+
 export default Component.extend({
   tagName: '',
 
-  /*
-   * @public String
-   * A whitelist of groups to include in the render
-   */
   renderGroup: computed(function() {
     return null;
   }),
 
-  /*
-   * @public DS.Model
-   * model to be passed down to form-field component
-   * if `fieldGroups` is present on the model then it will be iterated over and
-   * groups of `form-field` components will be rendered
-   *
-   */
   model: null,
 
-  /*
-   * @public Function
-   * onChange handler that will get set on the form-field component
-   *
-   */
   onChange: () => {},
 });

@@ -16,11 +16,11 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/compressutil"
-	"github.com/hashicorp/vault/helper/cryptoutil"
-	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -33,7 +33,7 @@ var (
 )
 
 type Config struct {
-// BucketStorageView is the storage to be used by all the buckets
+	// BucketStorageView is the storage to be used by all the buckets
 	BucketStorageView *logical.StorageView `json:"-"`
 
 	// ConfigStorageView is the storage to store config info
@@ -109,7 +109,7 @@ func (s *StoragePackerV2) BucketStorageKeyForItemID(itemID string) string {
 	return hexVal[0 : s.BaseBucketBits/4]
 }
 
-func (s *StoragePackerV2) BucketKeyHashByItemID(itemID string) string {
+func (s *StoragePackerV2) BucketKey(itemID string) string {
 	return s.GetCacheKey(s.BucketStorageKeyForItemID(itemID))
 }
 

@@ -3,14 +3,14 @@ package storagepacker
 import (
 	"context"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type StoragePackerFactory func(context.Context, *Config) (StoragePacker, error)
 
 type StoragePacker interface {
 	BucketsView() *logical.StorageView
-	BucketKeyHashByItemID(string) string
+	BucketKey(string) string
 	GetCacheKey(string) string
 	BucketKeys(context.Context) ([]string, error)
 	GetBucket(context.Context, string, bool) (*LockedBucket, error)
