@@ -48,8 +48,9 @@ type PriorityQueue struct {
 	// for finding specific items. dataMap is kept in sync with the data slice
 	dataMap map[string]*Item
 
-	// mapMutex is used to facilitate read/write locks on the dataMap
-	sync.Mutex
+	// lock is a read/write mutex, and used to facilitate read/write locks on the
+	// data and dataMap fields
+	lock sync.RWMutex
 }
 
 // queue is the internal data structure used to satisfy heap.Interface. This
@@ -75,8 +76,8 @@ type Item struct {
 
 // Len returns the count of items in the Priority Queue
 func (pq *PriorityQueue) Len() int {
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.RLock()
+	defer pq.lock.RUnlock()
 	return pq.data.Len()
 }
 
@@ -88,8 +89,8 @@ func (pq *PriorityQueue) Pop() (*Item, error) {
 		return nil, ErrEmpty
 	}
 
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
 
 	item := heap.Pop(&pq.data).(*Item)
 	delete(pq.dataMap, item.Key)
@@ -106,8 +107,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 		return errors.New("error adding item: Item Key is required")
 	}
 
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
 
 	if _, ok := pq.dataMap[i.Key]; ok {
 		return ErrDuplicateItem
@@ -128,8 +129,8 @@ func (pq *PriorityQueue) Push(i *Item) error {
 // from the queue if found. Returns ErrItemNotFound(key) if not found. This
 // method must fix the queue after removal.
 func (pq *PriorityQueue) PopByKey(key string) (*Item, error) {
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lock.Lock()
+	defer pq.lock.Unlock()
 
 	item, ok := pq.dataMap[key]
 	if !ok {
