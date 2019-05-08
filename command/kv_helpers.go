@@ -184,14 +184,17 @@ func kvParseVersionsFlags(versions []string) []string {
 // kvListRecursive is a helper function for listing paths
 // upto a given depth, recursively.
 func kvListRecursive(r *kvListRecursiveParams, base string, sub []interface{}) {
-	// Decrement the wait-group count, and also mark the go-routine as done.
 	defer func() {
-		r.sem <- int32(1)
+		// Increment the go-routine tracker.
+		atomic.AddInt32(&r.track, 1)
+
+		// Decrement the wait-group count.
 		r.wg.Done()
 	}()
 
-	// Increment the go-routine tracker.
-	atomic.AddInt32(&r.track, 1)
+	// Wait in the queue.
+	r.sem <- int32(1)
+
 
 	// No need to recursively list values that don't have any sub-paths.
 	if !strings.HasSuffix(base, "/") {
