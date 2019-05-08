@@ -1003,12 +1003,6 @@ along with its RSA digest can be supplied to this endpoint.
   the signed headers.  This is required when using the iam auth method.
 
 
-### Sample Payload
-
-```json
-{}
-```
-
 ### Sample Request
 
 ```
