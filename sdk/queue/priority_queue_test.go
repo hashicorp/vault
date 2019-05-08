@@ -1,10 +1,14 @@
 package queue
 
 import (
+	"container/heap"
 	"fmt"
 	"testing"
 	"time"
 )
+
+// Ensure we satisfy the heap.Interface
+var _ heap.Interface = &queue{}
 
 // some tests rely on the ordering of items from this method
 func testCases() (tc []*Item) {

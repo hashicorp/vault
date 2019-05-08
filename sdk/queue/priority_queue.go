@@ -56,8 +56,6 @@ type PriorityQueue struct {
 // prevents users from calling Pop and Push heap methods directly
 type queue []*Item
 
-var _ heap.Interface = &queue{}
-
 // Item is something managed in the priority queue
 type Item struct {
 	// Key is a unique string used to identify items in the internal data map
@@ -76,7 +74,11 @@ type Item struct {
 }
 
 // Len returns the count of items in the Priority Queue
-func (pq *PriorityQueue) Len() int { return pq.data.Len() }
+func (pq *PriorityQueue) Len() int {
+	pq.Lock()
+	defer pq.Unlock()
+	return pq.data.Len()
+}
 
 // Pop pops the highest priority item from the queue. This is a
 // wrapper/convenience method that calls heap.Pop, so consumers do not need to
