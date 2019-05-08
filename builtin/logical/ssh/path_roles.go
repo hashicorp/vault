@@ -291,7 +291,7 @@ func pathRoles(b *backend) *framework.Path {
 				The following variables are available for use: '{{token_display_name}}' - The display name of
 				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
 				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
-				'{{client_token_accessor}}' - the token accessor for when the user was authenticated
+				'{{client_token_accessor}}' - The token accessor for when the user was authenticated
 				`,
 				DisplayName: "Key ID Format",
 			},
