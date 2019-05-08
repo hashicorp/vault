@@ -295,6 +295,7 @@ func (b *backend) calculateKeyID(data *framework.FieldData, req *logical.Request
 	}
 
 	keyID := substQuery(keyIDFormat, map[string]string{
+		"client_token_accessor": req.ClientTokenAccessor,
 		"token_display_name": req.DisplayName,
 		"role_name":          data.Get("role").(string),
 		"public_key_hash":    fmt.Sprintf("%x", sha256.Sum256(pubKey.Marshal())),
