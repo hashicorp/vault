@@ -67,7 +67,11 @@ module('Integration | Component | search select', function(hooks) {
     await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
-    assert.equal(component.options[0].text, component.selectedOptionText, 'first object in list is focused');
+    assert.equal(
+      component.options.objectAt(0).text,
+      component.selectedOptionText,
+      'first object in list is focused'
+    );
   });
 
   test('it filters options when text is entered', async function(assert) {
@@ -114,7 +118,7 @@ module('Integration | Component | search select', function(hooks) {
     this.set('inputValue', ['8']);
     await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
-    await component.deleteButtons[0].click();
+    await component.deleteButtons.objectAt(0).click();
     assert.equal(component.selectedOptions.length, 0, 'there are no selected options');
     assert.ok(this.onChange.calledOnce);
     assert.ok(this.onChange.calledWith([]));
@@ -141,7 +145,11 @@ module('Integration | Component | search select', function(hooks) {
     );
     await clickTrigger();
     assert.equal(component.options.length, 1, 'has the disabled no results option');
-    assert.equal(component.options[0].text, 'No results found', 'text of option shows No results found');
+    assert.equal(
+      component.options.objectAt(0).text,
+      'No results found',
+      'text of option shows No results found'
+    );
   });
 
   test('it shows both name and smaller id for identity endpoints', async function(assert) {

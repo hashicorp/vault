@@ -87,7 +87,7 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 	i.logger.Debug("groups collected", "num_existing", len(existing))
 
 	for _, key := range existing {
-		bucket, err := i.groupPacker.GetBucket(i.groupPacker.BucketPath(key))
+		bucket, err := i.groupPacker.GetBucket(groupBucketsPrefix + key)
 		if err != nil {
 			return err
 		}
@@ -203,13 +203,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 			for {
 				select {
-				case bucketKey, ok := <-broker:
+				case key, ok := <-broker:
 					// broker has been closed, we are done
 					if !ok {
 						return
 					}
 
-					bucket, err := i.entityPacker.GetBucket(i.entityPacker.BucketPath(bucketKey))
+					bucket, err := i.entityPacker.GetBucket(storagepacker.StoragePackerBucketsPrefix + key)
 					if err != nil {
 						errs <- err
 						continue
@@ -230,7 +230,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for j, bucketKey := range existing {
+		for j, key := range existing {
 			if j%500 == 0 {
 				i.logger.Debug("entities loading", "progress", j)
 			}
@@ -240,7 +240,7 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 				return
 
 			default:
-				broker <- bucketKey
+				broker <- key
 			}
 		}
 
@@ -774,16 +774,16 @@ func (i *IdentityStore) MemDBEntityByNameInTxn(ctx context.Context, txn *memdb.T
 	return entity, nil
 }
 
-func (i *IdentityStore) MemDBEntitiesByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntitiesByBucketKeyInTxn(txn *memdb.Txn, bucketKey string) ([]*identity.Entity, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
 	}
 
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
+	if bucketKey == "" {
+		return nil, fmt.Errorf("empty bucket key")
 	}
 
-	entitiesIter, err := txn.Get(entitiesTable, "bucket_key_hash", hashValue)
+	entitiesIter, err := txn.Get(entitiesTable, "bucket_key", bucketKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to lookup entities using bucket entry key hash: {{err}}", err)
 	}
@@ -971,8 +971,8 @@ func (i *IdentityStore) sanitizeEntity(ctx context.Context, entity *identity.Ent
 			return fmt.Errorf("failed to generate entity id")
 		}
 
-		// Set the hash value of the storage bucket key in entity
-		entity.BucketKeyHash = i.entityPacker.BucketKeyHashByItemID(entity.ID)
+		// Set the storage bucket key in entity
+		entity.BucketKey = i.entityPacker.BucketKey(entity.ID)
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1032,7 +1032,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 		}
 
 		// Set the hash value of the storage bucket key in group
-		group.BucketKeyHash = i.groupPacker.BucketKeyHashByItemID(group.ID)
+		group.BucketKey = i.groupPacker.BucketKey(group.ID)
 	}
 
 	if group.NamespaceID == "" {
@@ -1792,16 +1792,16 @@ OUTER:
 	return name, nil
 }
 
-func (i *IdentityStore) MemDBGroupsByBucketEntryKeyHashInTxn(txn *memdb.Txn, hashValue string) ([]*identity.Group, error) {
+func (i *IdentityStore) MemDBGroupsByBucketKeyInTxn(txn *memdb.Txn, bucketKey string) ([]*identity.Group, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
 	}
 
-	if hashValue == "" {
-		return nil, fmt.Errorf("empty hash value")
+	if bucketKey == "" {
+		return nil, fmt.Errorf("empty bucket key")
 	}
 
-	groupsIter, err := txn.Get(groupsTable, "bucket_key_hash", hashValue)
+	groupsIter, err := txn.Get(groupsTable, "bucket_key", bucketKey)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to lookup groups using bucket entry key hash: {{err}}", err)
 	}
