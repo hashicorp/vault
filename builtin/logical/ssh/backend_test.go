@@ -779,7 +779,7 @@ func TestBackend_CustomKeyIDFormat(t *testing.T) {
 
 			createRoleStep("customrole", map[string]interface{}{
 				"key_type":                 "ca",
-				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}",
+				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}-{{client_token_accessor}}",
 				"allowed_users":            "tuber",
 				"default_user":             "tuber",
 				"allow_user_certificates":  true,
