@@ -205,7 +205,8 @@ This endpoint creates or updates a named role.
   format for the key id of a signed certificate. The following variables are
   available for use: '{{token_display_name}}' - The display name of the token used
   to make the request. '{{role_name}}' - The name of the role signing the request.
-  '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
+  '{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.he t
+  '{{client_token_accessor}}' -  The token accessor for when the user was authenticated
   e.g. "custom-keyid-{{token_display_name}}"
 
 - `allowed_user_key_lengths` `(map<string|int>: "")` – Specifies a map of ssh key types
