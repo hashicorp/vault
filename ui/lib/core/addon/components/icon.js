@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <IcOn @param1={param1} @param2={param2} />
+ * <Icon @param1={param1} @param2={param2} />
  * ```
  *
  * @param param1 {String} - param1 is...
