@@ -19,7 +19,9 @@
       class="button has-icon-right is-ghost is-compact"
       data-test-entity-create-link=true
     }}
-      Create{{itemType}}{{i-con glyph="chevron-right" size=11}}
+      <span>
+        Create {{itemType}} {{i-con glyph="chevron-right" size=11}}
+      </span>    
     {{/link-to}}
   </p.levelRight>
 </PageHeader>
@@ -76,7 +78,9 @@
       tagName="button"
       class="link"
     }}
-      Create{{itemType}}
+      <span>
+        Create {{itemType}} {{i-con glyph="chevron-right" size=11}}
+      </span>
     {{/link-to}}
   </EmptyState>
 {{/if}}

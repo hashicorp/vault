@@ -4,6 +4,7 @@
   has less (or no) information about.
 */
 import Service from '@ember/service';
+import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { getOwner } from '@ember/application';
 import { capitalize } from '@ember/string';
@@ -11,7 +12,7 @@ import { assign } from '@ember/polyfills';
 import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve } from 'rsvp';
-import DS from 'ember-data';
+
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
   //remove whitespace + remove trailing and leading slashes
@@ -28,38 +29,43 @@ export default Service.extend({
     });
   },
 
-  //Makes a call to grab the OpenAPI document.
-  //Returns relevant information from OpenAPI
-  //as determined by the expandOpenApiProps util
-  getProps(helpUrl, backend) {
-    return this.ajax(helpUrl, backend).then(help => {
-      //paths is an array but it will have a single entry
-      // for the scope we're in
-      const path = Object.keys(help.openapi.paths)[0];
-      const pathInfo = help.openapi.paths[path];
-      const params = pathInfo.parameters;
-      let paramProp = {};
-
-      //include url params
-      if (params) {
-        let label = capitalize(params[0].name);
-        if (label.toLowerCase() !== 'name') {
-          label += ' name';
-        }
-        paramProp[params[0].name] = {
-          name: params[0].name,
-          label: label,
-          type: params[0].schema.type,
-          description: params[0].description,
-          isId: true,
-        };
+  getNewModel(modelType, owner, backend, apiPath, itemType) {
+    const modelName = `model:${modelType}`;
+    const modelFactory = owner.factoryFor(modelName);
+    let newModel, helpUrl;
+    //if we have a factory, we need to take the existing model into account
+    if (modelFactory) {
+      newModel = modelFactory.class;
+      const modelProto = newModel.proto();
+      if (newModel.merged || modelProto.useOpenAPI !== true) {
+        return resolve();
       }
-      const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
-      //put url params (e.g. {name}, {role})
-      //at the front of the props list
-      const newProps = assign({}, paramProp, props);
-      return expandOpenApiProps(newProps);
-    });
+      helpUrl = modelProto.getHelpUrl(backend);
+      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
+    } else {
+      newModel = DS.Model.extend({});
+      //use paths to dynamically create our openapi help url
+      //if we have a brand new model
+      return this.getPaths(apiPath, backend, itemType).then(paths => {
+        const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
+        //if we have an adapter already use that, otherwise create one
+        if (!adapterFactory) {
+          const adapter = this.getNewAdapter(backend, paths, itemType);
+          owner.register(`adapter:${modelType}`, adapter);
+        }
+        //if we have an item we want the create info for that itemType
+        if (itemType) {
+          let { tag, path } = paths.create[0];
+          path = path.slice(0, path.indexOf('{') - 1) + '/example';
+          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        } else {
+          //we need the mount config
+          let { tag, path } = paths.configPath[0];
+          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
+        }
+        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
+      });
+    }
   },
 
   getPaths(apiPath, backend, itemType) {
@@ -84,7 +90,7 @@ export default Service.extend({
         })
         .filter(path => path != undefined);
 
-      //list endpoints all have { name: "list" } in their route params
+      //list endpoints all have { name: "list" } in their get parameters
       const listPaths = paths
         .map(path => {
           if (
@@ -131,6 +137,40 @@ export default Service.extend({
     });
   },
 
+  //Makes a call to grab the OpenAPI document.
+  //Returns relevant information from OpenAPI
+  //as determined by the expandOpenApiProps util
+  getProps(helpUrl, backend) {
+    return this.ajax(helpUrl, backend).then(help => {
+      //paths is an array but it will have a single entry
+      // for the scope we're in
+      const path = Object.keys(help.openapi.paths)[0];
+      const pathInfo = help.openapi.paths[path];
+      const params = pathInfo.parameters;
+      let paramProp = {};
+
+      //include url params
+      if (params) {
+        let label = capitalize(params[0].name);
+        if (label.toLowerCase() !== 'name') {
+          label += ' name';
+        }
+        paramProp[params[0].name] = {
+          name: params[0].name,
+          label: label,
+          type: params[0].schema.type,
+          description: params[0].description,
+          isId: true,
+        };
+      }
+      const props = pathInfo.post.requestBody.content['application/json'].schema.properties;
+      //put url params (e.g. {name}, {role})
+      //at the front of the props list
+      const newProps = assign({}, paramProp, props);
+      return expandOpenApiProps(newProps);
+    });
+  },
+
   getNewAdapter(backend, paths, itemType) {
     //we need list and create paths to set the correct urls for actions
     const { list, create } = paths;
@@ -161,46 +201,13 @@ export default Service.extend({
         path = path.slice(0, path.indexOf('{') - 1);
         return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
       },
-    });
-  },
 
-  getNewModel(modelType, owner, backend, apiPath, itemType) {
-    const modelName = `model:${modelType}`;
-    const modelFactory = owner.factoryFor(modelName);
-    let newModel, helpUrl;
-    //if we have a factory, we need to take the existing model into account
-    if (modelFactory) {
-      newModel = modelFactory.class;
-      const modelProto = newModel.proto();
-      if (newModel.merged || modelProto.useOpenAPI !== true) {
-        return resolve();
-      }
-      helpUrl = modelProto.getHelpUrl(backend);
-      return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
-    } else {
-      newModel = DS.Model.extend({});
-      //use paths to dynamically create our openapi help url
-      //if we have a brand new model
-      return this.getPaths(apiPath, backend, itemType).then(paths => {
-        const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
-        //if we have an adapter already use that, otherwise create one
-        if (!adapterFactory) {
-          const adapter = this.getNewAdapter(backend, paths, itemType);
-          owner.register(`adapter:${modelType}`, adapter);
-        }
-        //if we have an item we want the create info for that itemType
-        if (itemType) {
-          let { tag, path } = paths.create[0];
-          path = path.slice(0, path.indexOf('{') - 1) + '/example';
-          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
-        } else {
-          //we need the mount config
-          let { tag, path } = paths.configPath[0];
-          helpUrl = `/v1/${tag}/${backend}${path}?help=true`;
-        }
-        return this.registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner);
-      });
-    }
+      urlForDeleteRecord(id, modelName, snapshot) {
+        let { tag, path } = paths.delete[0];
+        path = path.slice(0, path.indexOf('{') - 1);
+        return `${this.buildURL()}/${tag}/${backend}${path}/${id}`;
+      },
+    });
   },
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName, owner) {

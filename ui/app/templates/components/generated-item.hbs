@@ -1,0 +1,111 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">
+            /
+          </span>
+          {{#link-to
+            "vault.cluster.access.method.item.list"
+            (pluralize itemType)
+          }}
+            {{pluralize itemType}}
+          {{/link-to}}
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    {{#if (eq mode "show")}}
+      <h1 class="title is-3">
+        {{model.id}}
+      </h1>
+    {{else}}
+      <h1 class="title is-3">
+        {{capitalize mode}}
+        {{singularize itemType}}
+      </h1>
+    {{/if}}
+  </p.levelLeft>
+  {{#if (not (eq mode "create"))}}
+    <p.levelRight>
+      <ConfirmAction
+        @buttonClasses="button is-compact is-ghost has-icon-right"
+        @onConfirmAction={{action "deleteItem"}}
+        @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
+        @cancelButtonText="Cancel"
+        data-test-secret-delete="true"
+      >
+        Delete
+        {{itemType}}
+        <ICon @glyph="chevron-right" @size="11" />
+      </ConfirmAction>
+      {{#link-to
+        "vault.cluster.access.method.item.edit"
+        (pluralize itemType)
+        model.id
+        class="button has-icon-right is-ghost is-compact"
+        data-test-entity-edit-link=true
+      }}
+        <span>
+          Edit {{itemType}} {{i-con glyph="chevron-right" size=11}}
+        </span>
+      {{/link-to}}
+    </p.levelRight>
+  {{/if}}
+</PageHeader>
+{{#if (eq mode "show")}}
+  <div class="box is-shadowless is-marginless is-fullwidth">
+    {{info-table-row label="ID" value=id}}
+    {{#each-in props as |name value|}}
+      {{info-table-row
+        alwaysRender=true
+        label=(capitalize name)
+        value=(stringify value)
+      }}
+    {{/each-in}}
+  </div>
+{{else}}
+<form {{action (perform saveModel) on="submit"}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <NamespaceReminder @mode="save" @noun={{itemType}} />
+    <MessageError @model={{model}} />
+    <FormFieldGroups @model={{model}} @mode={{mode}}/>
+  </div>
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        data-test-save-config="true"
+        class="button is-primary {{if saveModel.isRunning "loading"}}"
+        disabled={{saveModel.isRunning}}
+      >
+        Save
+      </button>
+      {{#if (eq mode "create")}}
+        {{#link-to 'vault.cluster.access.method.item.list' class="button" data-test-cancel-link=true}}
+          Cancel
+        {{/link-to}}
+      {{else}}
+        {{#link-to 'vault.cluster.access.method.item.show' model.id class="button" data-test-cancel-link=true}}
+          Cancel
+        {{/link-to}}
+      {{/if}}
+    </div>
+    <div class="control">
+      {{#if (eq mode "edit")}}
+        <ConfirmAction
+          @buttonClasses="button"
+          @onConfirmAction={{action "deleteItem"}}
+          @confirmMessage={{concat "Are you sure you want to delete " model.id "?"}}
+          @cancelButtonText="Cancel"
+          data-test-item-delete="true"
+          >
+          Delete
+        </ConfirmAction>
+      {{/if}}
+    </div>
+  </div>
+</form>
+{{/if}}
