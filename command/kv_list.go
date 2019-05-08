@@ -173,7 +173,7 @@ func (c *KVListCommand) Run(args []string) int {
 	if c.flagRecursive {
 		if c.flagDepth != 0 {
 			var (
-				i = int32(-1)
+				i = int32(1)
 				r = &kvListRecursiveParams{
 					v2:     &v2,
 					client: client,
@@ -212,17 +212,22 @@ func (c *KVListCommand) Run(args []string) int {
 			// Launch the recursive call and wait for it them to finish.
 			r.wg.Add(1)
 			go kvListRecursive(r, path, s)
-			for i < atomic.LoadInt32(&r.track) {
+			for atomic.LoadInt32(&r.track) < i {
 				select {
 				case x, ok := <-r.sem:
 					if ok {
-						if i == -1 {
-							i++
+						// For loop termination.
+						if atomic.LoadInt32(&r.track) == 0 {
+							atomic.AddInt32(&r.track, 1)
 						}
+
+						// For continuing the loop.
 						i += x
 					} else {
 						break
 					}
+				default:
+					continue
 				}
 			}
 			r.wg.Wait()
