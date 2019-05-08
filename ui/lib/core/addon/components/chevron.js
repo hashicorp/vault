@@ -4,26 +4,31 @@
  *
  * @example
  * ```js
- * <Icon @param1={param1} @param2={param2} />
+ * <Chevron @param1={param1} @param2={param2} />
  * ```
  *
  * @param param1 {String} - param1 is...
  * @param [param2=value] {String} - param2 is... //brackets mean it is optional and = sets the default value
  */
-import Icon from './icon';
+import Component from '@ember/component';
+import { computed } from '@ember/object';
+import { assert } from '@ember/debug';
 
-const DEFAULT_GLYPH = 'chevron-right';
+import layout from '../templates/components/chevron';
 
-export default Icon.extend({
-  'aria-hidden': 'true',
-  direction: null,
-  didReceiveAttrs() {
-    this._super(...arguments);
-    if (!this.glyph) {
-      this.set('glyph', DEFAULT_GLYPH);
-    }
-    if (this.direction) {
-      this.set('glyph', `chevron-${this.direction}`);
-    }
-  },
+const DIRECTIONS = ['right', 'left', 'up', 'down'];
+
+export default Component.extend({
+  tagName: '',
+  layout,
+  direction: 'right',
+  isButton: false,
+  glyph: computed('direction', function() {
+    let { direction } = this;
+    assert(
+      `The direction property of ${this.toString()} must be one of the following: ${DIRECTIONS.join(', ')}`,
+      DIRECTIONS.includes(direction)
+    );
+    return `chevron-${direction}`;
+  }),
 });
