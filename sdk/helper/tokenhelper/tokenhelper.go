@@ -115,7 +115,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Description: "Number of allowed uses of the issued token, can be overriden at create with a lesser value",
 		},
 
-		"fixed_token_num_uses": &framework.FieldSchema{
+		"token_fixed_num_uses": &framework.FieldSchema{
 			Type:        framework.TypeInt,
 			Description: "Number of allowed uses of the issued token, cannot be overriden at create",
 		},
