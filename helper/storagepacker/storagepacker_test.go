@@ -145,7 +145,7 @@ func TestStoragePacker_SerializeDeserializeComplexItem(t *testing.T) {
 		},
 		CreationTime:    timeNow,
 		LastUpdateTime:  timeNow,
-		BucketKeyHash:   "entity_hash",
+		BucketKey:       "entity_hash",
 		MergedEntityIDs: []string{"merged_entity_id1", "merged_entity_id2"},
 		Policies:        []string{"policy1", "policy2"},
 	}

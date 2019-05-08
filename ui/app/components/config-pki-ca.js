@@ -107,7 +107,8 @@ export default Component.extend({
     if (!pem) {
       return [];
     }
-    const pemFile = new File([pem], { type: 'text/plain' });
+
+    const pemFile = new Blob([pem], { type: 'text/plain' });
     const links = [
       {
         display: 'Download CA Certificate in PEM format',
@@ -121,7 +122,7 @@ export default Component.extend({
       },
     ];
     if (caChain) {
-      const caChainFile = new File([caChain], { type: 'text/plain' });
+      const caChainFile = new Blob([caChain], { type: 'text/plain' });
       links.push({
         display: 'Download CA Certificate Chain',
         name: `${backend}_ca_chain.pem`,
