@@ -157,7 +157,7 @@ and can change from renewal to renewal, so the value cannot be displayed when a
 token's information is looked up. It is based on a combination of factors:
 
 1. The system max TTL, which is 32 days but can be changed in Vault's
-   configuration file
+   configuration file.
 2. The max TTL set on a mount using [mount
    tuning](/api/system/mounts.html). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
