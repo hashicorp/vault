@@ -21,8 +21,8 @@
   </footer>
   {{#if (eq env "development") }}
     <div class="env-banner level development">
-      <div class="level-item notification has-background-dark has-text-white">
-        {{i-con glyph="wand" class="type-icon"}}Local development
+      <div class="level-item notification">
+        <Icon @glyph="git-branch" /><Icon @glyph="edit" /> Local development <Icon @glyph="edit" /><Icon @glyph="git-branch" />
       </div>
     </div>
   {{/if}}

@@ -40,12 +40,7 @@
           data-test-string-list-button="delete"
           {{action "removeInput" index}}
         >
-          {{i-con
-            size=22
-            glyph="trash-a"
-            excludeIconClass=true
-            class="is-large has-text-grey-light"
-          }}
+          <Icon @glyph="trash" class="hs-icon-l" />
         </button>
       {{/if}}
     </div>

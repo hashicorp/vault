@@ -50,11 +50,11 @@
     {{#each model as |item|}}
       {{#if (eq item.id "root")}}
         <div class="list-item-row is-flex" data-test-policy-item>
-          {{i-con
-            glyph='file'
-            size=14
+          <Icon
+            aria-hidden="true"
             class="has-text-grey-light"
-          }}
+            @glyph="file-outline"
+          />
           <div>
             <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
               {{item.id}}
@@ -78,11 +78,11 @@
               {{#link-to "vault.cluster.policy.show" policyType item.id
                 class="has-text-black has-text-weight-semibold"
                 data-test-policy-item=true
-              }}{{i-con
-                  glyph='file'
-                  size=14
+              }}<Icon
+                  aria-hidden="true"
                   class="has-text-grey-light"
-                }}<span class="is-underline" data-test-policy-name>{{item.id}}</span>
+                  @glyph="file-outline"
+                /><span class="is-underline" data-test-policy-name>{{item.id}}</span>
               {{/link-to}}
             </div>
             <div class="column has-text-right">

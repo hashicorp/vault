@@ -15,10 +15,8 @@
         @mode={{if item.isFolder "list" "show" }}
         @secret={{item.id}}
         @class="has-text-black has-text-weight-semibold"
-      >
-        <ICon
-          @glyph={{if item.isFolder 'folder' 'file' }}
-          @size="14"
+      ><Icon
+          @glyph={{if item.isFolder 'folder-outline' 'file-outline' }}
           @class="has-text-grey-light"
         />{{if (eq item.id ' ') '(self)' (or item.keyWithoutParent item.id)}}
       </SecretLink>

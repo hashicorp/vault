@@ -1,16 +1,24 @@
 .hs-icon {
+  flex: 0 0 auto;
   display: inline-flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   vertical-align: middle;
   width: 16px;
   min-width: fit-content;
+  margin: 2px 4px;
 }
 
 .hs-icon svg {
   fill: currentColor;
   flex: 1 1 0;
 }
+
+.hs-icon-button-right {
+  margin-left: 0.25rem;
+  margin-right: -0.5rem;
+}
+
 .hs-icon-s {
   width: 12px;
 }
