@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/cryptobyte"
-	asn12 "golang.org/x/crypto/cryptobyte/asn1"
+	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 )
 
 // GetHexFormatted returns the byte buffer formatted in hex with
@@ -371,8 +371,8 @@ func HandleOtherSANs(in *x509.Certificate, sans map[string][]string) error {
 				return err
 			}
 			b.AddASN1ObjectIdentifier(oidStr)
-			b.AddASN1(asn12.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
-				b.AddASN1(asn12.UTF8String, func(b *cryptobyte.Builder) {
+			b.AddASN1(cbasn1.Tag(0).ContextSpecific().Constructed(), func(b *cryptobyte.Builder) {
+				b.AddASN1(cbasn1.UTF8String, func(b *cryptobyte.Builder) {
 					b.AddBytes([]byte(val))
 				})
 			})
