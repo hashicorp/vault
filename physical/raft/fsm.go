@@ -67,7 +67,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists(bucketName)
 		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
+			return fmt.Errorf("failed to create bucket: %v", err)
 		}
 		return nil
 	})
@@ -79,8 +79,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		path:       path,
 		logger:     logger,
 		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
-
-		db: boltDB,
+		db:         boltDB,
 	}, nil
 }
 

@@ -269,8 +269,21 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftRemovePeer(),
+					Callback: b.handleRaftRemovePeerUpdate(),
 					Summary:  "Remove a peer from the raft cluster.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["raft-remove-peer"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["raft-remove-peer"][1]),
+		},
+		{
+			Pattern: "storage/raft/configuration",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRaftConfigurationGet(),
+					Summary:  "Returns the configuration of the raft cluster.",
 				},
 			},
 
@@ -282,7 +295,28 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 var pendingRaftPeers = make(map[string][]byte)
 
-func (b *SystemBackend) handleRaftRemovePeer() framework.OperationFunc {
+func (b *SystemBackend) handleRaftConfigurationGet() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
+		if !ok {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		config, err := raftStorage.GetConfiguration(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"config": config,
+			},
+		}, nil
+	}
+}
+
+func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {

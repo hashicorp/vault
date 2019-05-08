@@ -167,6 +167,35 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}, nil
 }
 
+// RaftServer has information about a server in the Raft configuration
+type RaftServer struct {
+	// NodeID is the name of the server
+	NodeID string `json:"node_id"`
+
+	// Address is the IP:port of the server, used for Raft communications
+	Address string `json:"address"`
+
+	// Leader is true if this server is the current cluster leader
+	Leader bool `json:"leader"`
+
+	// Protocol version is the raft protocol version used by the server
+	ProtocolVersion string `json:"protocol_version"`
+
+	// Voter is true if this server has a vote in the cluster. This might
+	// be false if the server is staging and still coming online.
+	Voter bool `json:"voter"`
+}
+
+// RaftConfigurationResponse is returned when querying for the current Raft
+// configuration.
+type RaftConfigurationResponse struct {
+	// Servers has the list of servers in the Raft configuration.
+	Servers []*RaftServer `json:"servers"`
+
+	// Index has the Raft index of this configuration.
+	Index uint64 `json:"index"`
+}
+
 type Peer struct {
 	ID      string `json:"id"`
 	Address string `json:"address"`
@@ -318,6 +347,37 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 
 	return future.Error()
+}
+
+func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft == nil {
+		return nil, errors.New("raft storage is not initialized")
+	}
+
+	future := b.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+
+	config := &RaftConfigurationResponse{
+		Index: future.Index(),
+	}
+
+	for _, server := range future.Configuration().Servers {
+		entry := &RaftServer{
+			NodeID:          string(server.ID),
+			Address:         string(server.Address),
+			Leader:          server.Address == b.raft.Leader(),
+			Voter:           server.Suffrage == raft.Voter,
+			ProtocolVersion: string(raft.ProtocolVersionMax),
+		}
+		config.Servers = append(config.Servers, entry)
+	}
+
+	return config, nil
 }
 
 // AddPeer adds a new server to the raft cluster
