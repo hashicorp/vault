@@ -31,7 +31,7 @@ export default Route.extend(ListRoute, {
       });
   },
 
-  setupController(controller, model) {
+  setupController(controller) {
     this._super(...arguments);
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
     let { path } = this.paramsFor('vault.cluster.access.method');

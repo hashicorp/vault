@@ -3,8 +3,7 @@ import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
-  urlForItem: {},
-
+  urlForItem() {},
   optionsForQuery(id) {
     let data = {};
     if (!id) {

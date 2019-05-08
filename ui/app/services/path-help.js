@@ -186,7 +186,7 @@ export default Service.extend({
       },
 
       urlForFindRecord(id, modelName, snapshot) {
-        return this.urlForItem(null, id, null);
+        return this.urlForItem(modelName, id, snapshot);
       },
 
       urlForUpdateRecord(id, modelName, snapshot) {
