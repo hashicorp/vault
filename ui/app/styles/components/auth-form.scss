@@ -19,9 +19,7 @@
   align-items: center;
 }
 
-.auth-form .toolbar {
-  border-top: 0;
-  border-bottom: $light-border;
+.toolbar-namespace-picker {
   padding: 0 $spacing-s;
 
   .field {
