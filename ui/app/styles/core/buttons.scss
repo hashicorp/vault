@@ -158,10 +158,6 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   .has-text-info & {
     font-weight: $font-weight-semibold;
-
-    .icon {
-      vertical-align: middle;
-    }
   }
 
   &.tool-tip-trigger {
@@ -172,7 +168,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   &.has-icon-left,
   &.has-icon-right {
-    .icon {
+    .hs-icon {
       height: 16px;
       min-width: auto;
       width: 16px;
@@ -180,7 +176,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 
   &.has-icon-left {
-    .icon {
+    .hs-icon {
       &,
       &:first-child:last-child {
         position: relative;
@@ -190,7 +186,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   }
 
   &.has-icon-right {
-    .icon {
+    .hs-icon {
       &,
       &:first-child:last-child {
         margin-left: $spacing-xxs;

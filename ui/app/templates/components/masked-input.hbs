@@ -18,11 +18,11 @@
   {{#if allowCopy}}
     <CopyButton
       @clipboardText={{value}}
-      @class="copy-button button {{if displayOnly "is-compact"}}"
       @success={{success}}
+      class="copy-button button {{if displayOnly "is-compact"}}"
       data-test-copy-button
     >
-      <ICon @glyph="copy" aria-hidden="true" @size=16 />
+      <Icon @glyph="copy-action" aria-hidden="Copy value" />
     </CopyButton>
   {{/if}}
   <button {{action "toggleMask"}}  class="{{if (eq value "") "has-text-grey"}} masked-input-toggle button {{if displayOnly "is-compact"}}" data-test-button>
