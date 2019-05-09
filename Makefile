@@ -128,6 +128,12 @@ test-ember:
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test-oss
 
+ember-ci-test:
+	@echo "--> Installing JavaScript assets"
+	@cd ui && yarn --ignore-optional
+	@echo "--> Running ember tests in Browserstack"
+	@cd ui && yarn run test:browserstack
+
 ember-dist:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
@@ -147,17 +153,17 @@ static-dist: ember-dist static-assets
 static-dist-dev: ember-dist-dev static-assets
 
 proto:
-	protoc vault/*.proto --go_out=plugins=grpc:../../..
-	protoc helper/storagepacker/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/forwarding/types.proto --go_out=plugins=grpc:../../..
-	protoc logical/*.proto --go_out=plugins=grpc:../../..
-	protoc physical/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc:../../..
-	protoc helper/identity/types.proto --go_out=plugins=grpc:../../..
-	protoc builtin/logical/database/dbplugin/*.proto --go_out=plugins=grpc:../../..
-	protoc logical/plugin/pb/*.proto --go_out=plugins=grpc:../../..
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go logical/plugin/pb/backend.pb.go logical/identity.pb.go
-	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' physical/types.pb.go
+	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/physical/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go
+	sed -i -e 's/Iv/IV/' -e 's/Hmac/HMAC/' sdk/physical/types.pb.go
 
 fmtcheck:
 	@true

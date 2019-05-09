@@ -482,9 +482,9 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	if err != nil {
 		return nil, err
 	}
-
-	req.Header.Set(headerAuthorization, fmt.Sprintf(headerAuthorizationFormat, c.apiKey))
-
+	if c.apiKey != "" {
+		req.Header.Set(headerAuthorization, fmt.Sprintf(headerAuthorizationFormat, c.apiKey))
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", mediaTypeJSON)
 	}

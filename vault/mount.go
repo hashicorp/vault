@@ -12,11 +12,11 @@ import (
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -168,6 +168,21 @@ func (t *MountTable) remove(ctx context.Context, path string) (*MountEntry, erro
 		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
 			t.Entries[i], t.Entries[n-1] = t.Entries[n-1], nil
 			t.Entries = t.Entries[:n-1]
+			return entry, nil
+		}
+	}
+	return nil, nil
+}
+
+func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error) {
+	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < n; i++ {
+		if entry := t.Entries[i]; entry.Path == path && entry.Namespace().ID == ns.ID {
 			return entry, nil
 		}
 	}

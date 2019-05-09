@@ -17,12 +17,12 @@ package ram
 
 // Role is a nested struct in ram response
 type Role struct {
-	CreateDate               string `json:"CreateDate" xml:"CreateDate"`
-	AssumeRolePolicyDocument string `json:"AssumeRolePolicyDocument" xml:"AssumeRolePolicyDocument"`
 	RoleId                   string `json:"RoleId" xml:"RoleId"`
-	RoleName                 string `json:"RoleName" xml:"RoleName"`
-	Description              string `json:"Description" xml:"Description"`
+	CreateDate               string `json:"CreateDate" xml:"CreateDate"`
 	AttachDate               string `json:"AttachDate" xml:"AttachDate"`
 	Arn                      string `json:"Arn" xml:"Arn"`
 	UpdateDate               string `json:"UpdateDate" xml:"UpdateDate"`
+	Description              string `json:"Description" xml:"Description"`
+	RoleName                 string `json:"RoleName" xml:"RoleName"`
+	AssumeRolePolicyDocument string `json:"AssumeRolePolicyDocument" xml:"AssumeRolePolicyDocument"`
 }

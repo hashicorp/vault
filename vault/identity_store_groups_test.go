@@ -9,7 +9,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestIdentityStore_FixOverwrittenMemberGroupIDs(t *testing.T) {
@@ -100,8 +100,10 @@ func TestIdentityStore_GroupEntityMembershipUpgrade(t *testing.T) {
 	// Manually add an invalid entity as the group's member
 	group.MemberEntityIDs = []string{"invalidentityid"}
 
+	ctx := namespace.RootContext(nil)
+
 	// Persist the group
-	err = c.identityStore.UpsertGroupInTxn(txn, group, true)
+	err = c.identityStore.UpsertGroupInTxn(ctx, txn, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,7 +498,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	// Insert it into memdb
@@ -519,7 +521,7 @@ func TestIdentityStore_MemDBGroupIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid2", "testparentgroupid3"},
 		MemberEntityIDs: []string{"testentityid2", "testentityid3"},
 		Policies:        []string{"testpolicy2", "testpolicy3"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid2"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid2"),
 	}
 
 	// Insert it into memdb

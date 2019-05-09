@@ -6,8 +6,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -235,7 +236,9 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	ctx := namespace.RootContext(nil)
+
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +259,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +280,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	// Remove its member entities
 	group.MemberEntityIDs = nil
 
-	err = identityStore.UpsertGroup(group, true)
+	err = identityStore.UpsertGroup(ctx, group, true)
 	if err != nil {
 		t.Fatal(err)
 	}

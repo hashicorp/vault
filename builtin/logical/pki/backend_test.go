@@ -28,11 +28,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/strutil"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
@@ -855,7 +855,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.OU, true)
+			expected := strutil.RemoveDuplicatesStable(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("error: returned certificate has OU of %s but %s was specified in the role", cert.Subject.OrganizationalUnit, expected)
 			}

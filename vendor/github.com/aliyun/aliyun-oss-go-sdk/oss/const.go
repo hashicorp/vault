@@ -44,6 +44,14 @@ const (
 	StorageArchive StorageClassType = "Archive"
 )
 
+// PayerType the type of request payer
+type PayerType string
+
+const (
+	// Requester the requester who send the request
+	Requester PayerType = "requester"
+)
+
 // HTTPMethod HTTP request method
 type HTTPMethod string
 
@@ -95,6 +103,7 @@ const (
 	HTTPHeaderOssObjectACL                   = "X-Oss-Object-Acl"
 	HTTPHeaderOssSecurityToken               = "X-Oss-Security-Token"
 	HTTPHeaderOssServerSideEncryption        = "X-Oss-Server-Side-Encryption"
+	HTTPHeaderOssServerSideEncryptionKeyID   = "X-Oss-Server-Side-Encryption-Key-Id"
 	HTTPHeaderOssCopySource                  = "X-Oss-Copy-Source"
 	HTTPHeaderOssCopySourceRange             = "X-Oss-Copy-Source-Range"
 	HTTPHeaderOssCopySourceIfMatch           = "X-Oss-Copy-Source-If-Match"
@@ -106,6 +115,10 @@ const (
 	HTTPHeaderOssRequestID                   = "X-Oss-Request-Id"
 	HTTPHeaderOssCRC64                       = "X-Oss-Hash-Crc64ecma"
 	HTTPHeaderOssSymlinkTarget               = "X-Oss-Symlink-Target"
+	HTTPHeaderOssStorageClass                = "X-Oss-Storage-Class"
+	HTTPHeaderOssCallback                    = "X-Oss-Callback"
+	HTTPHeaderOssCallbackVar                 = "X-Oss-Callback-Var"
+	HTTPHeaderOSSRequester                   = "X-Oss-Request-Payer"
 )
 
 // HTTP Param
@@ -114,6 +127,7 @@ const (
 	HTTPParamAccessKeyID   = "OSSAccessKeyId"
 	HTTPParamSignature     = "Signature"
 	HTTPParamSecurityToken = "security-token"
+	HTTPParamPlaylistName  = "playlistName"
 )
 
 // Other constants
@@ -123,10 +137,10 @@ const (
 
 	FilePermMode = os.FileMode(0664) // Default file permission
 
-	TempFilePrefix = "oss-go-temp-"  // Temp file prefix
-	TempFileSuffix = ".temp"         // Temp file suffix
+	TempFilePrefix = "oss-go-temp-" // Temp file prefix
+	TempFileSuffix = ".temp"        // Temp file suffix
 
-	CheckpointFileSuffix = ".cp"     // Checkpoint file suffix
+	CheckpointFileSuffix = ".cp" // Checkpoint file suffix
 
-	Version = "1.9.0" // Go SDK version
+	Version = "1.9.5" // Go SDK version
 )

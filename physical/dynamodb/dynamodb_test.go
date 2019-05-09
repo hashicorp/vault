@@ -11,8 +11,9 @@ import (
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/logging"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ory/dockertest"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -380,10 +381,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (cleanup func(), retAddress stri
 
 	retAddress = "http://localhost:" + resource.GetPort("8000/tcp")
 	cleanup = func() {
-		err := pool.Purge(resource)
-		if err != nil {
-			t.Fatalf("Failed to cleanup local DynamoDB: %s", err)
-		}
+		docker.CleanupResource(t, pool, resource)
 	}
 
 	// exponential backoff-retry, because the DynamoDB may not be able to accept

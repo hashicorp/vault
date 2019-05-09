@@ -199,7 +199,7 @@ few different formats:
   include the resource nested in the parent project.
 
     ```text
-    # compute alpha zome
+    # compute alpha zone
     https://www.googleapis.com/compute/alpha/projects/my-project/zones/us-central1-c
     ```
 

@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/useragent"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/sdk/helper/useragent"
+	"github.com/hashicorp/vault/sdk/physical"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
@@ -158,9 +158,9 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 
 	return &Backend{
-		bucket:    bucket,
-		haEnabled: haEnabled,
-
+		bucket:     bucket,
+		haEnabled:  haEnabled,
+		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
 		logger:     logger,

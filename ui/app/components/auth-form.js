@@ -152,7 +152,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `Token unwrap failed: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   fetchMethods: task(function*() {
     let store = this.get('store');
@@ -169,11 +169,11 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.set('error', `There was an error fetching Auth Methods: ${e.errors[0]}`);
     }
-  }),
+  }).withTestWaiter(),
 
   showLoading: or('isLoading', 'authenticate.isRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
 
-  handleError(e) {
+  handleError(e, prefixMessage = true) {
     this.set('loading', false);
     if (!e.errors) {
       return e;
@@ -184,7 +184,8 @@ export default Component.extend(DEFAULTS, {
       }
       return error;
     });
-    this.set('error', `Authentication failed: ${errors.join('.')}`);
+    let message = prefixMessage ? 'Authentication failed: ' : '';
+    this.set('error', `${message}${errors.join('.')}`);
   },
 
   authenticate: task(function*(backendType, data) {
@@ -197,7 +198,7 @@ export default Component.extend(DEFAULTS, {
       let transition = this.router.transitionTo(targetRoute, { queryParams: { namespace } });
       // returning this w/then because if we keep it
       // in the task, it will get cancelled when the component in un-rendered
-      return transition.followRedirects().then(() => {
+      yield transition.followRedirects().then(() => {
         if (isRoot) {
           this.flashMessages.warning(
             'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
@@ -207,7 +208,7 @@ export default Component.extend(DEFAULTS, {
     } catch (e) {
       this.handleError(e);
     }
-  }),
+  }).withTestWaiter(),
 
   actions: {
     doSubmit() {
@@ -238,6 +239,13 @@ export default Component.extend(DEFAULTS, {
         data.path = this.get('customPath') || get(backend, 'id');
       }
       return this.authenticate.unlinked().perform(backend.type, data);
+    },
+    handleError(e) {
+      if (e) {
+        this.handleError(e, false);
+      } else {
+        this.set('error', null);
+      }
     },
   },
 });

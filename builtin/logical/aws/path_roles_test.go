@@ -4,9 +4,10 @@ import (
 	"context"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestBackend_PathListRoles(t *testing.T) {
@@ -152,5 +153,63 @@ func TestUpgradeLegacyPolicyEntry(t *testing.T) {
 	output = upgradeLegacyPolicyEntry(input)
 	if !reflect.DeepEqual(*output, expected) {
 		t.Fatalf("bad: expected %#v; received %#v", expected, *output)
+	}
+}
+
+func TestUserPathValidity(t *testing.T) {
+
+	testCases := []struct {
+		description string
+		userPath    string
+		isValid     bool
+	}{
+		{
+			description: "Default",
+			userPath:    "/",
+			isValid:     true,
+		},
+		{
+			description: "Empty",
+			userPath:    "",
+			isValid:     false,
+		},
+		{
+			description: "Valid",
+			userPath:    "/path/",
+			isValid:     true,
+		},
+		{
+			description: "Missing leading slash",
+			userPath:    "path/",
+			isValid:     false,
+		},
+		{
+			description: "Missing trailing slash",
+			userPath:    "/path",
+			isValid:     false,
+		},
+		{
+			description: "Invalid character",
+			userPath:    "/šiauliai/",
+			isValid:     false,
+		},
+		{
+			description: "Max length",
+			userPath:    "/" + strings.Repeat("a", 510) + "/",
+			isValid:     true,
+		},
+		{
+			description: "Too long",
+			userPath:    "/" + strings.Repeat("a", 511) + "/",
+			isValid:     false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			if tc.isValid != userPathRegex.MatchString(tc.userPath) {
+				t.Fatalf("bad: expected %s", strconv.FormatBool(tc.isValid))
+			}
+		})
 	}
 }

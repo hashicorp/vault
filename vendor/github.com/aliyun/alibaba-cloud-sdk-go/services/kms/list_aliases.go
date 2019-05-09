@@ -76,9 +76,8 @@ func (client *Client) ListAliasesWithCallback(request *ListAliasesRequest, callb
 // ListAliasesRequest is the request struct for api ListAliases
 type ListAliasesRequest struct {
 	*requests.RpcRequest
-	PageNumber requests.Integer `position:"Query" name:"PageNumber"`
 	PageSize   requests.Integer `position:"Query" name:"PageSize"`
-	STSToken   string           `position:"Query" name:"STSToken"`
+	PageNumber requests.Integer `position:"Query" name:"PageNumber"`
 }
 
 // ListAliasesResponse is the response struct for api ListAliases

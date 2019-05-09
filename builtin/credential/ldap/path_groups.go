@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathGroupsList(b *backend) *framework.Path {
@@ -26,12 +26,12 @@ func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `groups/(?P<name>.+)`,
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the LDAP group.",
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
 			},
@@ -132,17 +132,14 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathGroupList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	keys, err := logical.CollectKeys(ctx, req.Storage)
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "group/")
 	if err != nil {
 		return nil, err
 	}
-	retKeys := make([]string, 0)
-	for _, key := range keys {
-		if strings.HasPrefix(key, "group/") && !strings.HasPrefix(key, "/") {
-			retKeys = append(retKeys, strings.TrimPrefix(key, "group/"))
-		}
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "group/")
 	}
-	return logical.ListResponse(retKeys), nil
+	return logical.ListResponse(keys), nil
 }
 
 type GroupEntry struct {

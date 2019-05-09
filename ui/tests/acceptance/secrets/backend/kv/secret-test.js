@@ -10,7 +10,6 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import withFlash from 'vault/tests/helpers/with-flash';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
@@ -64,17 +63,13 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -86,14 +81,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
 
@@ -118,7 +110,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.ok(secretLink, 'link to the 3/ branch displays properly');
 
     await listPage.secrets.filterBy('text', '3/')[0].click();
-    await listPage.secrets[0].menuToggle();
+    await listPage.secrets.objectAt(0).menuToggle();
     await settled();
     await listPage.delete();
     await listPage.confirmDelete();
@@ -126,7 +118,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.equal(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
 
-    await listPage.secrets[0].menuToggle();
+    await listPage.secrets.objectAt(0).menuToggle();
     await listPage.delete();
     await listPage.confirmDelete();
     await settled();
@@ -143,14 +135,11 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // mount version 1 engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await withFlash(
-      mountSecrets
-        .next()
-        .path(enginePath)
-        .version(1)
-        .submit()
-    );
-
+    await mountSecrets
+      .next()
+      .path(enginePath)
+      .version(1)
+      .submit();
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
     await showPage.deleteSecret();
@@ -330,9 +319,113 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.equal(listPage.secrets.length, 3, 'renders three secrets');
     await listPage.filterInput('filter/foo1');
     assert.equal(listPage.secrets.length, 1, 'renders only one secret');
-    await listPage.secrets[0].click();
+    await listPage.secrets.objectAt(0).click();
     await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
     assert.equal(listPage.secrets.length, 3, 'renders three secrets');
     assert.equal(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
+  });
+
+  let setupNoRead = async function(backend, canReadMeta = false) {
+    const V2_WRITE_ONLY_POLICY = `'
+      path "${backend}/+/+" {
+        capabilities = ["create", "update", "list"]
+      }
+      path "${backend}/+" {
+        capabilities = ["list"]
+      }
+    '`;
+
+    const V2_WRITE_WITH_META_READ_POLICY = `'
+      path "${backend}/+/+" {
+        capabilities = ["create", "update", "list"]
+      }
+      path "${backend}/metadata/+" {
+        capabilities = ["read"]
+      }
+      path "${backend}/+" {
+        capabilities = ["list"]
+      }
+    '`;
+    const V1_WRITE_ONLY_POLICY = `'
+     path "${backend}/+" {
+        capabilities = ["create", "update", "list"]
+      }
+    '`;
+
+    let policy;
+    if (backend === 'kv-v2' && canReadMeta) {
+      policy = V2_WRITE_WITH_META_READ_POLICY;
+    } else if (backend === 'kv-v2') {
+      policy = V2_WRITE_ONLY_POLICY;
+    } else if (backend === 'kv-v1') {
+      policy = V1_WRITE_ONLY_POLICY;
+    }
+    await consoleComponent.runCommands([
+      // disable any kv previously enabled kv
+      `delete sys/mounts/${backend}`,
+      `write sys/mounts/${backend} type=kv options=version=${backend === 'kv-v2' ? 2 : 1}`,
+      `write sys/policies/acl/${backend} policy=${policy}`,
+      `write -field=client_token auth/token/create policies=${backend}`,
+    ]);
+
+    return consoleComponent.lastLogOutput;
+  };
+  test('write without read: version 2', async function(assert) {
+    let backend = 'kv-v2';
+    let userToken = await setupNoRead(backend);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+    assert.ok(editPage.showsNoCASWarning, 'shows no CAS write warning');
+
+    await editPage.editSecret('bar', 'baz');
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
+  });
+
+  test('write without read: version 2 with metadata read', async function(assert) {
+    let backend = 'kv-v2';
+    let userToken = await setupNoRead(backend, true);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.notOk(editPage.hasMetadataFields, 'hides the metadata form');
+    assert.ok(editPage.showsV2WriteWarning, 'shows v2 warning');
+
+    await editPage.editSecret('bar', 'baz');
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
+  });
+
+  test('write without read: version 1', async function(assert) {
+    let backend = 'kv-v1';
+    let userToken = await setupNoRead(backend);
+    await writeSecret(backend, 'secret', 'foo', 'bar');
+    await logout.visit();
+    await authPage.login(userToken);
+
+    await showPage.visit({ backend, id: 'secret' });
+    assert.ok(showPage.noReadIsPresent, 'shows no read empty state');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await editPage.visitEdit({ backend, id: 'secret' });
+    assert.ok(editPage.showsV1WriteWarning, 'shows v1 warning');
+
+    await editPage.editSecret('bar', 'baz');
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    await logout.visit();
   });
 });

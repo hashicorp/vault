@@ -90,7 +90,7 @@ func CreateGetAccountAliasRequest() (request *GetAccountAliasRequest) {
 	request = &GetAccountAliasRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ram", "2015-05-01", "GetAccountAlias", "", "")
+	request.InitWithApiInfo("Ram", "2015-05-01", "GetAccountAlias", "ram", "openAPI")
 	return
 }
 
