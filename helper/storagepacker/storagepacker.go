@@ -168,7 +168,7 @@ func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 		bucket.Items = append(bucket.Items[:foundIdx], bucket.Items[foundIdx+1:]...)
 
 		// Persist bucket entry only if there is an update
-		err = s.putBucket(&bucket)
+		err = s.PutBucket(&bucket)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
 	return nil
 }
 
-func (s *StoragePacker) putBucket(bucket *Bucket) error {
+func (s *StoragePacker) PutBucket(bucket *Bucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -298,7 +298,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 		}
 	}
 
-	return s.putBucket(bucket)
+	return s.PutBucket(bucket)
 }
 
 // NewStoragePacker creates a new storage packer for a given view
