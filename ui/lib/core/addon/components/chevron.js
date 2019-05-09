@@ -1,14 +1,16 @@
 /**
  * @module Chevron
- * Icon components are used to...
+ * `Chevron` components render `Icon` with one of the `chevron-` glyphs.
  *
  * @example
  * ```js
- * <Chevron @param1={param1} @param2={param2} />
+ * <Chevron @direction="up" />
  * ```
  *
- * @param param1 {String} - param1 is...
- * @param [param2=value] {String} - param2 is... //brackets mean it is optional and = sets the default value
+ * @param [direction="right"] {String} - the direction the chevron icon points. Accepted values are
+ * "right", "down", "left", "up".
+ * @param [isButton=false] {String} - if true, adjusts the CSS classes to push the icon closer to the right of a button.
+ *
  */
 import Component from '@ember/component';
 import { computed } from '@ember/object';

@@ -1,15 +1,16 @@
 /* eslint-disable import/extensions */
 import hbs from 'htmlbars-inline-precompile';
 import { storiesOf } from '@storybook/ember';
-import notes from './i-con.md';
-import { GLYPHS_WITH_SVG_TAG } from '../app/components/i-con.js';
+import notes from './icon.md';
+import icons from '../node_modules/@hashicorp/structure-icons/dist/index.js';
 
-storiesOf('ICon/', module)
+storiesOf('Icon/', module)
   .addParameters({ options: { showPanel: false } })
   .add(
-    'ICon',
+    'Icon',
     () => ({
       template: hbs`
+      <h5 class="title is-5">Icons from HashiCorp Structure</h5>
       <table class="table">
         <thead>
           <tr>
@@ -24,7 +25,7 @@ storiesOf('ICon/', module)
                 <h5>{{humanize type}}</h5>
               </td>
               <td>
-                <ICon @glyph={{type}} />
+                <Icon @glyph={{type}} />
               </td>
             </tr>
           {{/each}}
@@ -32,7 +33,7 @@ storiesOf('ICon/', module)
       </table>
       `,
       context: {
-        types: GLYPHS_WITH_SVG_TAG,
+        types: icons,
       },
     }),
     { notes }
