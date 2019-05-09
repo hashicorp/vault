@@ -395,17 +395,17 @@ type AuditRequestEntry struct {
 	Type    string       `json:"type"`
 	Auth    AuditAuth    `json:"auth"`
 	Request AuditRequest `json:"request"`
-	Error   string       `json:"error"`
+	Error   string       `json:"error,omitempty"`
 }
 
 // AuditResponseEntry is the structure of a response audit log entry in Audit.
 type AuditResponseEntry struct {
 	Time     string        `json:"time,omitempty"`
 	Type     string        `json:"type"`
-	Auth     AuditAuth     `json:"auth"`
+	Auth     AuditAuth     `json:"auth,omitempty"`
 	Request  AuditRequest  `json:"request"`
 	Response AuditResponse `json:"response"`
-	Error    string        `json:"error"`
+	Error    string        `json:"error,omitempty"`
 }
 
 type AuditRequest struct {
@@ -416,11 +416,11 @@ type AuditRequest struct {
 	ClientTokenAccessor string                 `json:"client_token_accessor"`
 	Namespace           AuditNamespace         `json:"namespace"`
 	Path                string                 `json:"path"`
-	Data                map[string]interface{} `json:"data"`
-	PolicyOverride      bool                   `json:"policy_override"`
+	Data                map[string]interface{} `json:"data,omitempty"`
+	PolicyOverride      bool                   `json:"policy_override,omitempty"`
 	RemoteAddr          string                 `json:"remote_address"`
-	WrapTTL             int                    `json:"wrap_ttl"`
-	Headers             map[string][]string    `json:"headers"`
+	WrapTTL             int                    `json:"wrap_ttl,omitempty"`
+	Headers             map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditResponse struct {
@@ -430,18 +430,18 @@ type AuditResponse struct {
 	Warnings []string               `json:"warnings,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
-	Headers  map[string][]string    `json:"headers"`
+	Headers  map[string][]string    `json:"headers,omitempty"`
 }
 
 type AuditAuth struct {
 	ClientToken               string              `json:"client_token"`
 	Accessor                  string              `json:"accessor"`
-	DisplayName               string              `json:"display_name"`
+	DisplayName               string              `json:"display_name,omitempty"`
 	Policies                  []string            `json:"policies"`
 	TokenPolicies             []string            `json:"token_policies,omitempty"`
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
-	Metadata                  map[string]string   `json:"metadata"`
+	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
 	EntityID                  string              `json:"entity_id"`
@@ -463,7 +463,7 @@ type AuditResponseWrapInfo struct {
 
 type AuditNamespace struct {
 	ID   string `json:"id"`
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
