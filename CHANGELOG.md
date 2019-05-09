@@ -21,7 +21,7 @@ BUG FIXES:
  * pki: fix a panic when a client submits a null value [GH-5679]
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
- * storage/consule: recognize `https://` address even if schema not specified [GH-6602]
+ * storage/consul: recognize `https://` address even if schema not specified [GH-6602]
  * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
    constant switching of the active node [GH-6637]
  * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was

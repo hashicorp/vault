@@ -100,7 +100,7 @@ The seal can be migrated from Shamir keys to Auto Unseal and vice versa.
 
 To migrate from Shamir keys to Auto Unseal, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal/index.html) with the appropriate seal
-configuration.  When you bring up your server back up, run the unseal process with the
+configuration.  When you bring your server back up, run the unseal process with the
 `-migrate` flag.  All unseal commands must specify the `-migrate` flag.  Once the
 required threshold of unseal keys are entered, the unseal keys will be migrated to 
 recovery keys.
@@ -112,7 +112,7 @@ $ vault operator unseal -migrate
 To migrate from Auto Unseal to Shamir keys, take your server cluster offline and update
 the [seal configuration](/docs/configuration/seal/index.html) and add `disabled = "true"`
 to the seal block.  This allows the migration to use this information to decrypt the key
-but will not unseal Vault.  When you bring up your server back up, run the unseal process 
+but will not unseal Vault.  When you bring your server back up, run the unseal process 
 with the `-migrate` flag and use the Recovery Keys to perform the migration. All unseal 
 commands must specify the `-migrate` flag. Once the required threshold of recovery keys
 are entered, the recovery keys will be migrated to be used as unseal keys.
