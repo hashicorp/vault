@@ -14,6 +14,7 @@ Router.map(function() {
       this.route('init');
       this.route('logout');
       this.route('license');
+      this.route('requests', { path: '/metrics/requests' });
       this.route('settings', function() {
         this.route('index', { path: '/' });
         this.route('seal');
