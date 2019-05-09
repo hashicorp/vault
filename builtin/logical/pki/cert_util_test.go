@@ -139,20 +139,20 @@ func TestPki_MultipleOUs(t *testing.T) {
 			"ttl": 3600,
 		},
 	}
-	input := &dataBundle{
+	input := &inputBundle{
 		apiData: apiData,
 		role: &roleEntry{
 			MaxTTL: 3600,
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	err := generateCreationBundle(&b, input)
+	cb, err := generateCreationBundle(&b, input, nil, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
 
 	expected := []string{"Z", "E", "V"}
-	actual := input.params.Subject.OrganizationalUnit
+	actual := cb.Params.Subject.OrganizationalUnit
 
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("Expected %v, got %v", expected, actual)
