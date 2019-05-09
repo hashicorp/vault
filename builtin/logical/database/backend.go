@@ -495,7 +495,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 	log := b.Logger()
 	log.Info("populating role rotation queue")
 
-	roles, err := s.List(ctx, "static-role/")
+	roles, err := s.List(ctx, databaseStaticRolePath)
 	if err != nil {
 		log.Warn("unable to list role for enqueueing", "error", err)
 		return

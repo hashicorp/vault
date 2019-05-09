@@ -305,9 +305,9 @@ func pathRoleReadCommon(role *roleEntry) map[string]interface{} {
 }
 
 func (b *databaseBackend) pathRoleList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	path := "role/"
+	path := databaseRolePath
 	if req.Path == "static-roles/" {
-		path = "static-role/"
+		path = databaseStaticRolePath
 	}
 	entries, err := req.Storage.List(ctx, path)
 	if err != nil {
