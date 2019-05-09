@@ -22,7 +22,7 @@ export const MESSAGE_TYPES = {
   warning: {
     class: 'is-highlight',
     glyphClass: 'has-text-highlight',
-    glyph: 'alert-circle-outline',
+    glyph: 'alert-triangle',
     text: 'Warning',
   },
 };
