@@ -8,6 +8,7 @@ CHANGES:
 
 IMPROVEMENTS: 
 
+ * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
 
