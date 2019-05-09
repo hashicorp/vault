@@ -13,7 +13,9 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
+	physConsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -44,7 +46,7 @@ func TestStoragePacker_Sharding(t *testing.T) {
 
 	logger := logging.NewVaultLogger(log.Trace)
 
-	b, err := consul.NewConsulBackend(map[string]string{
+	b, err := physConsul.NewConsulBackend(map[string]string{
 		"address":      conf.Address,
 		"path":         randPath,
 		"max_parallel": "256",

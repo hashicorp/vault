@@ -205,7 +205,7 @@ func (s *LegacyStoragePacker) DeleteItem(ctx context.Context, itemID string) err
 		bucket.Items = append(bucket.Items[:foundIdx], bucket.Items[foundIdx+1:]...)
 
 		// Persist bucket entry only if there is an update
-		err = s.putBucket(ctx, &sp2.LockedBucket{Bucket: &bucket})
+		err = s.PutBucket(ctx, &sp2.LockedBucket{Bucket: &bucket})
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ func (s *LegacyStoragePacker) DeleteItem(ctx context.Context, itemID string) err
 }
 
 // Put stores a packed bucket entry
-func (s *LegacyStoragePacker) putBucket(ctx context.Context, bucket *sp2.LockedBucket) error {
+func (s *LegacyStoragePacker) PutBucket(ctx context.Context, bucket *sp2.LockedBucket) error {
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -294,7 +294,7 @@ func (s *LegacyStoragePacker) PutItem(ctx context.Context, item *sp2.Item) error
 	bucketKey := s.BucketKey(item.ID)
 
 	bucket := &sp2.Bucket{
-		Key: bucketPath,
+		Key: bucketKey,
 	}
 
 	// In this case, we persist the storage entry regardless of the read
@@ -336,7 +336,7 @@ func (s *LegacyStoragePacker) PutItem(ctx context.Context, item *sp2.Item) error
 		}
 	}
 
-	return s.putBucket(ctx, &sp2.LockedBucket{Bucket: bucket})
+	return s.PutBucket(ctx, &sp2.LockedBucket{Bucket: bucket})
 }
 
 // NewLegacyStoragePacker creates a new storage packer for a given view
