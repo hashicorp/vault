@@ -335,7 +335,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 		return err
 	}
 	if len(keys) == 0 {
-		b.Logger().Info("no WAL entries found in loadStaticWALs")
+		b.Logger().Debug("no WAL entries found")
 		return nil
 	}
 
@@ -345,7 +345,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, conf *logical.Back
 		// allow cancellation from context
 		select {
 		case <-ctx.Done():
-			b.Logger().Info("loadStaticWALs cancelled")
+			b.Logger().Info("loading WAL entries cancelled")
 			return merr
 		default:
 		}
@@ -577,11 +577,11 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 		// validate the role still exists
 		role, err := b.StaticRole(ctx, s, item.Key)
 		if err != nil {
-			b.logger.Warn(fmt.Sprintf("unable load role (%s)", item.Key), "error", err)
+			b.logger.Warn("unable load role", "role", item.Key, "error", err)
 			continue
 		}
 		if role == nil {
-			b.logger.Warn(fmt.Sprintf("role (%s) not found", item.Key), "error", err)
+			b.logger.Warn("role not found", "role", item.Key, "error", err)
 			continue
 		}
 
@@ -647,7 +647,7 @@ func (b *databaseBackend) rotateCredentials(ctx context.Context, s logical.Stora
 func (b *databaseBackend) findStaticWAL(ctx context.Context, s logical.Storage, id string) *setCredentialsWAL {
 	wal, err := framework.GetWAL(ctx, s, id)
 	if err != nil {
-		b.Logger().Warn(fmt.Sprintf("error reading WAL for ID (%s):", id), err)
+		b.Logger().Warn("error reading WAL", "id", id, "error", err)
 		return nil
 	}
 
