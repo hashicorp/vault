@@ -1,0 +1,24 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      HTTP Request Volume
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if model.counters}}
+  <table>
+    <thead>
+      <td>start time</td>
+      <td>total</td>
+    </thead>
+    <tbody>
+    {{#each model.counters as |c|}}
+        <td>{{c.start_time}}</td>
+        <td>{{c.total}}</td>
+    {{/each}}
+    </tbody>
+  </table>
+{{else}}
+  <EmptyState @title={{'There were no requests recorded'}}/>
+{{/if}}
