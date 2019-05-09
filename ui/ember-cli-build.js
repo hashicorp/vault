@@ -73,6 +73,9 @@ module.exports = function(defaults) {
   app.import('node_modules/text-encoder-lite/index.js');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
+
+  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
+  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //
