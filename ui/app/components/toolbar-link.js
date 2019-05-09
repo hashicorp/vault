@@ -9,6 +9,7 @@ export default OuterHTML.extend({
       return 'chevron-right';
     }
   }),
-  tagName: 'span',
+  tagName: '',
   type: null,
+  supportsDataTestProperties: true,
 });
