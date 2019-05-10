@@ -37,6 +37,7 @@ export const GLYPHS_WITH_SVG_TAG = [
   'neutral-circled-outline',
   'perf-replication',
   'person',
+  'plus-plain',
   'role',
   'status-indicator',
   'stopwatch',

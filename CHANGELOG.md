@@ -5,12 +5,34 @@ CHANGES:
  * autoseal/aws: The user-configured regions on the AWSKMS seal stanza 
    will now be preferred over regions set in the enclosing environment.
    This is a _breaking_ change.
+ * audit: Several more values in audit logs now are omitted if they are empty.
+   This helps reduce the size of audit log entries by not reproducing keys in
+   each entry that commonly don't contain any value, which can help in cases
+   where audit log entries are above the maximum UDP packet size and others.
+   See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
+ * backends: both PeriodicFunc and WALRollback functions will be called if 
+   both are provided. Previously WALRollback would only be called if PeriodicFunc 
+   was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
+   details.
+ * Go Modules change: Vault now uses Go Modules to manage dependencies. As a
+   result to both reduce transitive dependencies for API library users and
+   plugin authors, and to work around various conflicts, we have moved various
+   helpers around, mostly under an `sdk/` submodule. A couple of functions have
+   also moved from plugin helper code to the `api/` submodule. If you are a
+   plugin author, take a look at some of our official plugins and the paths
+   they are importing for guidance.
+   
+FEATURES:
+
+ * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
 
+ * auth/jwt: A JWKS endpoint may now be configured for signature verification [JWT-43]
  * ui: KV v1 and v2 will now gracefully degrade allowing a write without read
    workflow in the UI [GH-6570]
-
+ * storage/postgres: LIST now performs better on large datasets. [GH-6546]
+ 
 BUG FIXES: 
 
  * auth/okta: Fix handling of group names containing slashes [GH-6665]
@@ -21,6 +43,7 @@ BUG FIXES:
  * pki: fix a panic when a client submits a null value [GH-5679]
  * replication: Fix an issue causing startup problems if a namespace policy
    wasn't replicated properly
+ * storage/consul: recognize `https://` address even if schema not specified [GH-6602]
  * storage/dynamodb: Fix an issue where a deleted lock key in DynamoDB (HA) could cause
    constant switching of the active node [GH-6637]
  * storage/dynamodb: Eliminate a high-CPU condition that could occur if an error was

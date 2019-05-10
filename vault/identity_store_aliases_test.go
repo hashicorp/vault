@@ -220,7 +220,7 @@ func TestIdentityStore_MemDBAliasIndexes(t *testing.T) {
 		Name: "testentityname",
 	}
 
-	entity.BucketKeyHash = is.entityPacker.BucketKeyHashByItemID(entity.ID)
+	entity.BucketKey = is.entityPacker.BucketKey(entity.ID)
 
 	txn := is.db.Txn(true)
 	defer txn.Abort()

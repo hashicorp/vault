@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -53,7 +54,9 @@ func (b *backend) getGenerationParams(
 		return
 	}
 
-	errorResp = validateKeyTypeLength(role.KeyType, role.KeyBits)
+	if err := certutil.ValidateKeyTypeLength(role.KeyType, role.KeyBits); err != nil {
+		errorResp = logical.ErrorResponse(err.Error())
+	}
 
 	return
 }
