@@ -1,8 +1,10 @@
 import { later } from '@ember/runloop';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
+import layout from '../templates/components/upgrade-link';
 
 export default Component.extend({
+  layout,
   modalContainer: computed('isActive', function() {
     return document.getElementById('modal-wormhole');
   }),
