@@ -11,7 +11,6 @@ import (
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -724,15 +723,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	if persist && !isPerfSecondaryOrStandby {
 		// Persist the entity which we are merging to
-		toEntityAsAny, err := ptypes.MarshalAny(toEntity)
+		item, err := i.encodeEntity(toEntity)
 		if err != nil {
 			return nil, err
 		}
-		item := &storagepacker.Item{
-			ID:      toEntity.ID,
-			Message: toEntityAsAny,
-		}
-
 		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return nil, err

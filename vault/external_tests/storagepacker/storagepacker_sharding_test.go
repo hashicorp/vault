@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/proto"
 	consulapi "github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/storagepacker"
@@ -93,18 +93,18 @@ func TestStoragePacker_Sharding(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	protoSecret := &pb.Secret{
+	secret := &pb.Secret{
 		InternalData: randString,
 	}
-	messageAsAny, err := ptypes.MarshalAny(protoSecret)
+	secretProto, err := proto.Marshal(secret)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for i := 0; i < numEntries; i++ {
 		if err := packer.PutItem(ctx, &storagepacker.Item{
-			ID:      fmt.Sprintf("%05d", i),
-			Message: messageAsAny,
+			ID:   fmt.Sprintf("%05d", i),
+			Data: secretProto,
 		}); err != nil {
 			t.Fatal(err)
 		}

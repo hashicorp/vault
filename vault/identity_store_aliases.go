@@ -8,7 +8,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -396,14 +395,10 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 
-		// Persist the entity object
-		entityAsAny, err := ptypes.MarshalAny(entity)
+		// Persist the entity
+		item, err := i.encodeEntity(entity)
 		if err != nil {
 			return nil, err
-		}
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
 		}
 
 		err = i.entityPacker.PutItem(ctx, item)

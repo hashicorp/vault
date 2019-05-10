@@ -177,7 +177,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
 			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				items = append(items, &storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Data: message})
 			}
 			for _, item := range items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
@@ -246,7 +246,7 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
 			items = append(items, bucket.Items...)
 			for id, message := range bucket.ItemMap {
-				items = append(items, &storagepacker.Item{ID: id, Message: message})
+				items = append(items, &storagepacker.Item{ID: id, Data: message})
 			}
 			for _, item := range items {
 				group, err := i.parseGroupFromBucketItem(item)
@@ -302,8 +302,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 
 	persistNeeded := false
 
-	var entity identity.Entity
-	err := ptypes.UnmarshalAny(item.Message, &entity)
+	entity, err := i.decodeEntity(item)
 	if err != nil {
 		// If we encounter an error, it would mean that the format of the
 		// entity is an older one. Try decoding using the older format and if
@@ -349,7 +348,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 
 	entity.BucketKey = i.entityPacker.BucketKey(entity.ID)
 
-	pN, err := parseExtraEntityFromBucket(ctx, i, &entity)
+	pN, err := parseExtraEntityFromBucket(ctx, i, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -358,14 +357,9 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 	}
 
 	if persistNeeded && !i.core.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) {
-		entityAsAny, err := ptypes.MarshalAny(&entity)
+		item, err := i.encodeEntity(entity)
 		if err != nil {
 			return nil, err
-		}
-
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
 		}
 
 		// Store the entity with new format
@@ -379,7 +373,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 		entity.NamespaceID = namespace.RootNamespaceID
 	}
 
-	return &entity, nil
+	return entity, nil
 }
 
 func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*identity.Group, error) {
@@ -387,8 +381,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 		return nil, fmt.Errorf("nil item")
 	}
 
-	var group identity.Group
-	err := ptypes.UnmarshalAny(item.Message, &group)
+	group, err := i.decodeGroup(item)
 	if err != nil {
 		return nil, errwrap.Wrapf("failed to decode group from storage bucket item: {{err}}", err)
 	}
@@ -399,7 +392,7 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 
 	group.BucketKey = i.groupPacker.BucketKey(group.ID)
 
-	return &group, nil
+	return group, nil
 }
 
 // entityByAliasFactors fetches the entity based on factors of alias, i.e mount
