@@ -432,7 +432,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 }
 
 func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
-	expected := urlEntries{
+	expected := certutil.URLEntries{
 		IssuingCertificates: []string{
 			"http://example.com/ca1",
 			"http://example.com/ca2",
@@ -499,7 +499,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				if resp.Data == nil {
 					return fmt.Errorf("no data returned")
 				}
-				var entries urlEntries
+				var entries certutil.URLEntries
 				err := mapstructure.Decode(resp.Data, &entries)
 				if err != nil {
 					return err
@@ -855,7 +855,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.RemoveDuplicates(role.OU, true)
+			expected := strutil.RemoveDuplicatesStable(role.OU, true)
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("error: returned certificate has OU of %s but %s was specified in the role", cert.Subject.OrganizationalUnit, expected)
 			}

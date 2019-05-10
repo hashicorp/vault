@@ -1,4 +1,4 @@
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
       <li class="{{if (eq tab '') 'is-active'}}">
@@ -27,6 +27,37 @@
     </ul>
   </nav>
 </div>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if (eq tab 'versions')}}
+      <TransitKeyActions
+        @key={{key}}
+        @selectedAction="rotate"
+        @capabilities={{capabilities}}
+        @onRefresh={{action "refresh"}}
+      />
+    {{/if}}
+    {{#if (eq mode "show") }}
+      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
+        <ToolbarSecretLink
+          @secret={{key.id}}
+          @mode="edit"
+          replace=true
+        >
+          Edit encryption key
+        </ToolbarSecretLink>
+      {{/if}}
+      <ToolbarSecretLink
+        @secret={{key.id}}
+        @mode="actions"
+        @data-test-transit-key-actions-link=true
+      >
+        Key actions
+      </ToolbarSecretLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 
 {{#if (eq tab 'versions')}}
   {{#if (or
@@ -161,14 +192,6 @@
       {{/if}}
     {{/each-in}}
   {{/if}}
-  <p>
-    {{transit-key-actions
-      key=key
-      selectedAction="rotate"
-      capabilities=capabilities
-      onRefresh=(action "refresh")
-    }}
-  </p>
 {{else}}
   {{info-table-row label="Type" value=key.type}}
   {{info-table-row label="Deletion allowed" value=(stringify key.deletionAllowed)}}
