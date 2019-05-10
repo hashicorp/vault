@@ -7,18 +7,10 @@
 </PageHeader>
 
 {{#if model.counters}}
-  <table>
-    <thead>
-      <td>start time</td>
-      <td>total</td>
-    </thead>
-    <tbody>
-    {{#each model.counters as |c|}}
-        <td>{{c.start_time}}</td>
-        <td>{{c.total}}</td>
-    {{/each}}
-    </tbody>
-  </table>
+  {{!--
+    <HttpRequestsBarChart @counters=counters />
+  --}}
+    <HttpRequestsTable @counters={{model.counters}} />
 {{else}}
   <EmptyState @title={{'There were no requests recorded'}}/>
 {{/if}}
