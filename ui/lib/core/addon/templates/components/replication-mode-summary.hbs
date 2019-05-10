@@ -31,7 +31,10 @@
       {{#if replicationEnabled}}
         {{#if (get cluster (concat mode 'StateGlyph'))}}
           <span class="has-text-success">
-            {{i-con size=16 glyph=(get cluster (concat mode 'StateGlyph'))}}
+            <Icon
+              aria-hidden="true"
+              @glyph={{get cluster (concat mode 'StateGlyph')}}
+            />
           </span>
         {{else if syncProgress}}
           <progress value="{{syncProgressPercent}}" max="100" class="progress is-small is-narrow is-info">
@@ -39,7 +42,11 @@
           </progress>
         {{/if}}
       {{else}}
-        <ICon @glyph="neutral-circled-outline" @size="16" @class="has-text-grey-light" />
+        <Icon
+          aria-label="Replication not enabled"
+          @glyph="minus-circle-outline"
+          class="has-text-grey-light"
+        />
       {{/if}}
     </div>
   </div>
@@ -53,7 +60,7 @@
         <p class="has-text-centered">
           {{#upgrade-link linkClass="button is-ghost has-icon-right" pageName="Performance Replication"}}
             Learn more
-            {{i-con glyph="chevron-right"}}
+            <Icon @glyph="chevron-right" />
           {{/upgrade-link}}
         </p>
       {{else if replicationEnabled}}
@@ -97,5 +104,4 @@
       {{cluster.perfReplicationStateDisplay}}
     {{/if}}
   </div>
-
 {{/if}}

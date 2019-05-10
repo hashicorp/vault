@@ -38,9 +38,11 @@
       {{#if initialReplicationMode}}
         {{#if (eq initialReplicationMode 'dr')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            {{!-- TODO convert to a new component that doesn't use partials
-            {{i-con class="is-medium" glyph="replication" size=24}}
-            --}}
+            <Icon
+              class="hs-icon-xl"
+              aria-hidden="true"
+              @glyph="replication"
+            />
             Disaster Recovery (DR) Replication
           </h3>
           <p class="help has-text-grey-dark">
@@ -48,9 +50,11 @@
           </p>
         {{else if (eq initialReplicationMode 'performance')}}
           <h3 class="title is-flex-center is-5 is-marginless">
-            {{!-- TODO convert to a new component that doesn't use partials
-            {{i-con class="is-medium" glyph="perf-replication" size=20}}
-            --}}
+            <Icon
+              class="hs-icon-xl"
+              aria-hidden="true"
+              @glyph="perf-replication"
+            />
             Performance Replication
           </h3>
           {{#if (not (has-feature "Performance Replication"))}}
@@ -75,9 +79,11 @@
             <label for="dr" class="box-label is-column {{if (eq replicationMode 'dr') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  {{!-- TODO convert to a new component that doesn't use partials
-                  {{i-con class="is-medium" glyph="replication" size=24}}
-                  --}}
+                  <Icon
+                    class="hs-icon-xl"
+                    aria-hidden="true"
+                    @glyph="replication"
+                  />
                   Disaster Recovery (DR)
                 </h3>
                 <p class="help has-text-grey-dark">
@@ -99,9 +105,11 @@
             <label for="performance" class="box-label is-column {{if (eq replicationMode 'performance') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
-                  {{!-- TODO convert to a new component that doesn't use partials
-                  {{i-con class="is-medium" glyph="perf-replication" size=20}}
-                  --}}
+                  <Icon
+                    class="hs-icon-xl"
+                    aria-hidden="true"
+                    @glyph="perf-replication"
+                  />
                    Performance
                    {{#if (not (has-feature "Performance Replication"))}}
                      {{edition-badge edition="Premium"}}
@@ -277,9 +285,11 @@
   </PageHeader>
   <div class="box is-sideless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
-      {{!-- TODO convert to a new component that doesn't use partials
-      {{i-con class="has-text-grey is-medium" glyph="replication" size=20}}
-      --}}
+      <Icon
+        class="hs-icon-xl"
+        aria-hidden="true"
+        @glyph="replication"
+      />
       Disaster Recovery (DR)
     </h3>
     {{#if cluster.dr.replicationEnabled}}
@@ -304,9 +314,11 @@
   </div>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <h3 class="title is-flex-center is-5 is-marginless">
-      {{!-- TODO convert to a new component that doesn't use partials
-      {{i-con class="has-text-grey is-medium" glyph="perf-replication" size=20}}
-      --}}
+      <Icon
+        class="hs-icon-xl"
+        aria-hidden="true"
+        @glyph="perf-replication"
+      />
       Performance
     </h3>
     {{#if cluster.dr.replicationEnabled}}

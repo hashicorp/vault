@@ -7,9 +7,17 @@
       {{yield}}
     {{else if valueIsBoolean}}
       {{#if value}}
-        {{i-con glyph="true" size=15}} Yes
+        <Icon
+          aria-hidden="true"
+          class="hs-icon-l icon-true"
+          @glyph="check-circle-outline"
+        /> Yes
       {{else}}
-        {{i-con glyph="false" size=15}} No
+        <Icon
+          aria-hidden="true"
+          class="hs-icon-l icon-false"
+          @glyph="cancel-circle-outline"
+        /> No
       {{/if}}
     {{else}}
       <code class="is-word-break has-text-black" data-test-row-value="{{label}}">{{value}}</code>

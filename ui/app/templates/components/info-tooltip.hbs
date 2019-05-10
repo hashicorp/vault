@@ -1,11 +1,9 @@
 {{#tool-tip as |d|}}
-  {{#d.trigger tagName="button" type="button" class=(concat "tool-tip-trigger button") data-test-tool-tip-trigger=true}}
-    {{i-con glyph="information-reversed"
+  {{#d.trigger tagName="button" type="button" class="tool-tip-trigger button is-ghost is-compact" data-test-tool-tip-trigger=true}}
+    <Icon @glyph="info-circle-outline"
       class="auto-width"
-      size=16
       aria-label="help"
-      excludeIconClass=true
-    }}
+    />
   {{/d.trigger}}
   {{#d.content class="tool-tip"}}
     <div class="box">

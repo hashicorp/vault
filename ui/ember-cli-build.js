@@ -11,6 +11,13 @@ const isCI = !!process.env.CI;
 
 module.exports = function(defaults) {
   var app = new EmberApp(defaults, {
+    svgJar: {
+      //optimize: false,
+      //paths: [],
+      optimizer: {},
+      sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
+      rootURL: '/ui/',
+    },
     assetLoader: {
       generateURI: function(filePath) {
         return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
@@ -66,6 +73,9 @@ module.exports = function(defaults) {
   app.import('node_modules/text-encoder-lite/index.js');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
+
+  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
+  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
   // Use `app.import` to add additional libraries to the generated
   // output files.
   //

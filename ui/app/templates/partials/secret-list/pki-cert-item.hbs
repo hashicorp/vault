@@ -21,11 +21,10 @@
         item.idForNav
         class="has-text-black has-text-weight-semibold"
       }}
-      {{i-con
-        glyph="file"
-        size=14
+      <Icon
+        @glyph="file-outline"
         class="has-text-grey-light is-pulled-left"
-      }}
+      />
       <div class="role-item-details">
         <span class="is-underline">{{if (eq item.id " ") "(self)" (or item.keyWithoutParent item.id)}}</span>
       </div>
