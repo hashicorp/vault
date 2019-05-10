@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -552,13 +553,13 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		), nil
 	}
 
-	if errResp := validateKeyTypeLength(entry.KeyType, entry.KeyBits); errResp != nil {
-		return errResp, nil
+	if err := certutil.ValidateKeyTypeLength(entry.KeyType, entry.KeyBits); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	if len(entry.ExtKeyUsageOIDs) > 0 {
 		for _, oidstr := range entry.ExtKeyUsageOIDs {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for an extended key usage", oidstr)), nil
 			}
@@ -567,7 +568,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 
 	if len(entry.PolicyIdentifiers) > 0 {
 		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := stringToOid(oidstr)
+			_, err := certutil.StringToOid(oidstr)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
 			}
@@ -614,51 +615,51 @@ func parseKeyUsages(input []string) int {
 	return int(parsedKeyUsages)
 }
 
-func parseExtKeyUsages(role *roleEntry) certExtKeyUsage {
-	var parsedKeyUsages certExtKeyUsage
+func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
+	var parsedKeyUsages certutil.CertExtKeyUsage
 
 	if role.ServerFlag {
-		parsedKeyUsages |= serverAuthExtKeyUsage
+		parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
 	}
 
 	if role.ClientFlag {
-		parsedKeyUsages |= clientAuthExtKeyUsage
+		parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
 	}
 
 	if role.CodeSigningFlag {
-		parsedKeyUsages |= codeSigningExtKeyUsage
+		parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
 	}
 
 	if role.EmailProtectionFlag {
-		parsedKeyUsages |= emailProtectionExtKeyUsage
+		parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
 	}
 
 	for _, k := range role.ExtKeyUsage {
 		switch strings.ToLower(strings.TrimSpace(k)) {
 		case "any":
-			parsedKeyUsages |= anyExtKeyUsage
+			parsedKeyUsages |= certutil.AnyExtKeyUsage
 		case "serverauth":
-			parsedKeyUsages |= serverAuthExtKeyUsage
+			parsedKeyUsages |= certutil.ServerAuthExtKeyUsage
 		case "clientauth":
-			parsedKeyUsages |= clientAuthExtKeyUsage
+			parsedKeyUsages |= certutil.ClientAuthExtKeyUsage
 		case "codesigning":
-			parsedKeyUsages |= codeSigningExtKeyUsage
+			parsedKeyUsages |= certutil.CodeSigningExtKeyUsage
 		case "emailprotection":
-			parsedKeyUsages |= emailProtectionExtKeyUsage
+			parsedKeyUsages |= certutil.EmailProtectionExtKeyUsage
 		case "ipsecendsystem":
-			parsedKeyUsages |= ipsecEndSystemExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecEndSystemExtKeyUsage
 		case "ipsectunnel":
-			parsedKeyUsages |= ipsecTunnelExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecTunnelExtKeyUsage
 		case "ipsecuser":
-			parsedKeyUsages |= ipsecUserExtKeyUsage
+			parsedKeyUsages |= certutil.IpsecUserExtKeyUsage
 		case "timestamping":
-			parsedKeyUsages |= timeStampingExtKeyUsage
+			parsedKeyUsages |= certutil.TimeStampingExtKeyUsage
 		case "ocspsigning":
-			parsedKeyUsages |= ocspSigningExtKeyUsage
+			parsedKeyUsages |= certutil.OcspSigningExtKeyUsage
 		case "microsoftservergatedcrypto":
-			parsedKeyUsages |= microsoftServerGatedCryptoExtKeyUsage
+			parsedKeyUsages |= certutil.MicrosoftServerGatedCryptoExtKeyUsage
 		case "netscapeservergatedcrypto":
-			parsedKeyUsages |= netscapeServerGatedCryptoExtKeyUsage
+			parsedKeyUsages |= certutil.NetscapeServerGatedCryptoExtKeyUsage
 		}
 	}
 

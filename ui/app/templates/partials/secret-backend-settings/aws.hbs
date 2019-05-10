@@ -1,4 +1,4 @@
-<div class="box is-sideless is-fullwidth is-paddingless is-marginless">
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
       {{#link-to "vault.cluster.settings.configure-secret-backend" model.id (query-params tab='') tagName="li"}}
@@ -15,6 +15,7 @@
     </ul>
   </nav>
 </div>
+
 {{#if (eq tab "leases")}}
   <form
     {{action "save" "saveAWSLease" (hash lease=model.lease lease_max=model.leaseMax) on="submit"}}

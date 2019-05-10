@@ -15,53 +15,10 @@
       {{/link-to}}
     </h1>
   </p.levelLeft>
-  <p.levelRight>
-    <div class="field is-grouped">
-      {{#if (not-eq baseKey.id '')}}
-        <div class="control">
-          {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
-            {{#confirm-action
-              buttonClasses="button is-ghost is-compact"
-              onConfirmAction=(action "revokePrefix" baseKey.id true)
-              confirmMessage= (concat
-              "Confirming removes all leases under "
-              baseKey.id
-              " and disregards any errors encountered."
-              )
-              confirmButtonText=(concat "Revoke " baseKey.id)
-              confirmButtonClasses="button is-danger is-outlined is-compact"
-              cancelButtonText="Cancel"
-              cancelButtonClasses="button is-outlined is-compact"
-              showConfirm=confirmingForceRevoke
-              }}
-              Force revoke prefix
-            {{/confirm-action}}
-          {{/if}}
-        </div>
-        <div class="control">
-          {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
-            {{#confirm-action
-              buttonClasses="button is-ghost is-compact"
-              onConfirmAction=(action "revokePrefix" baseKey.id)
-              confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
-              confirmButtonText=(concat "Revoke " baseKey.id)
-              confirmButtonClasses="button is-danger is-outlined is-compact"
-              cancelButtonText="Cancel"
-              cancelButtonClasses="button is-outlined is-compact"
-              showConfirm=confirmingRevoke
-              data-test-lease-revoke-prefix=true
-              }}
-              Revoke prefix
-            {{/confirm-action}}
-          {{/if}}
-        </div>
-      {{/if}}
-    </div>
-  </p.levelRight>
 </PageHeader>
-<div class="box is-sideless has-background-grey-lighter has-short-padding is-marginless">
-  <div class="level">
-    <div class="level-left">
+
+<Toolbar>
+  <ToolbarFilters>
     {{navigate-input
        filterFocusDidChange=(action "setFilterFocus")
        filterDidChange=(action "setFilter")
@@ -89,9 +46,49 @@
          </p>
        {{/if}}
      {{/if}}
-    </div>
-  </div>
-</div>
+  </ToolbarFilters>
+  <ToolbarActions>
+    {{#if (not-eq baseKey.id '')}}
+      <div class="control">
+        {{#if (and capabilities.forceRevokePrefix.canUpdate (not confirmingRevoke))}}
+          {{#confirm-action
+            buttonClasses="button is-ghost is-compact"
+            onConfirmAction=(action "revokePrefix" baseKey.id true)
+            confirmMessage= (concat
+            "Confirming removes all leases under "
+            baseKey.id
+            " and disregards any errors encountered."
+            )
+            confirmButtonText=(concat "Revoke " baseKey.id)
+            confirmButtonClasses="button is-danger is-outlined is-compact"
+            cancelButtonText="Cancel"
+            cancelButtonClasses="button is-outlined is-compact"
+            showConfirm=confirmingForceRevoke
+            }}
+            Force revoke prefix
+          {{/confirm-action}}
+        {{/if}}
+      </div>
+      <div class="control">
+        {{#if (and capabilities.revokePrefix.canUpdate (not confirmingForceRevoke))}}
+          {{#confirm-action
+            buttonClasses="button is-ghost is-compact"
+            onConfirmAction=(action "revokePrefix" baseKey.id)
+            confirmMessage= (concat "Confirming will remove all leases under " baseKey.id)
+            confirmButtonText=(concat "Revoke " baseKey.id)
+            confirmButtonClasses="button is-danger is-outlined is-compact"
+            cancelButtonText="Cancel"
+            cancelButtonClasses="button is-outlined is-compact"
+            showConfirm=confirmingRevoke
+            data-test-lease-revoke-prefix=true
+            }}
+            Revoke prefix
+          {{/confirm-action}}
+        {{/if}}
+      </div>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 
 {{#if model.meta.total}}
   {{#each model as |item|}}
