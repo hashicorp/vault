@@ -15,9 +15,8 @@ import (
 )
 
 var (
-	ErrPluginShutdown            = errors.New("plugin shutdown")
-	ErrPluginGenCredsUnsupported = errors.New("backend/version does not support generating credentials")
-	ErrPluginStaticUnsupported   = errors.New("backend/version does not support Static Accounts")
+	ErrPluginShutdown          = errors.New("plugin shutdown")
+	ErrPluginStaticUnsupported = errors.New("backend/version does not support Static Accounts")
 )
 
 // ---- gRPC Server domain ----
@@ -325,8 +324,7 @@ func (c *gRPCClient) GenerateCredentials(ctx context.Context) (string, error) {
 		// Fall back to old call if not implemented
 		grpcStatus, ok := status.FromError(err)
 		if ok && grpcStatus.Code() == codes.Unimplemented {
-			// TODO: a better or const error type here
-			return "", ErrPluginGenCredsUnsupported
+			return "", ErrPluginStaticUnsupported
 		}
 
 		if c.doneCtx.Err() != nil {
