@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <ICon @glyph="cancel-square-outline" />
+ * <Icon @glyph="cancel-square-outline" />
  * ```
  * @param glyph=null {String} - The name of the SVG to render inline.
  *

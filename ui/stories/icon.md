@@ -11,7 +11,7 @@
 **Example**
   
 ```js
-<ICon @glyph="cancel-square-outline" />
+<Icon @glyph="cancel-square-outline" />
 ```
 
 **See**
