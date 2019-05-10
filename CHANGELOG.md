@@ -17,6 +17,10 @@ CHANGES:
    also moved from plugin helper code to the `api/` submodule. If you are a
    plugin author, take a look at some of our official plugins and the paths
    they are importing for guidance.
+   
+FEATURES:
+
+ * storage/postgres: Add HA support for PostgreSQL versions >= 9.5 [GH-5731]
 
 IMPROVEMENTS: 
 
