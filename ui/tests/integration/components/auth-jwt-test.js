@@ -51,8 +51,6 @@ const OIDC_AUTH_RESPONSE = {
   },
 };
 
-const WAIT_TIME = 50;
-
 const routerStub = Service.extend({
   urlFor() {
     return 'http://example.com';
