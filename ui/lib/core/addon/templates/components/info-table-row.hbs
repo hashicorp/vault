@@ -3,7 +3,7 @@
     <span class="is-label has-text-grey-dark" data-test-row-label="{{label}}">{{label}}</span>
   </div>
   <div class="column is-flex">
-    {{#if hasBlock}}
+    {{#if (has-block)}}
       {{yield}}
     {{else if valueIsBoolean}}
       {{#if value}}

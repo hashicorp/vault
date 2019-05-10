@@ -1,7 +1,7 @@
 {{#link-to "vault.cluster.secrets" (query-params namespace=normalizedNamespace)
   class=(concat "is-block " class)
 }}
-  {{#if hasBlock}}
+  {{#if (has-block)}}
     {{yield}}
   {{else}}
     <div class="level is-mobile">

@@ -1,5 +1,5 @@
 <div class="box is-shadowless is-marginless is-fullwidth">
-  {{#if model.disabled}}
+  {{#if (and model.disabled)}}
     <AlertBanner
       @type="warning"
       @title="Attention"
