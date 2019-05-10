@@ -440,6 +440,33 @@ func TestStrUtil_RemoveDuplicates(t *testing.T) {
 	}
 }
 
+func TestStrUtil_RemoveDuplicatesStable(t *testing.T) {
+	type tCase struct {
+		input           []string
+		expect          []string
+		caseInsensitive bool
+	}
+
+	tCases := []tCase{
+		tCase{[]string{}, []string{}, false},
+		tCase{[]string{}, []string{}, true},
+		tCase{[]string{"a", "b", "a"}, []string{"a", "b"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"A", "b", "a"}, false},
+		tCase{[]string{"A", "b", "a"}, []string{"A", "b"}, true},
+		tCase{[]string{" ", "d", "c", "d"}, []string{"d", "c"}, false},
+		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", "y"}, true},
+		tCase{[]string{"Z ", " z", " z ", "y"}, []string{"Z ", " z", "y"}, false},
+	}
+
+	for _, tc := range tCases {
+		actual := RemoveDuplicatesStable(tc.input, tc.caseInsensitive)
+
+		if !reflect.DeepEqual(actual, tc.expect) {
+			t.Fatalf("Bad testcase %#v, expected %v, got %v", tc, tc.expect, actual)
+		}
+	}
+}
+
 func TestStrUtil_ParseStringSlice(t *testing.T) {
 	type tCase struct {
 		input  string

@@ -2603,9 +2603,9 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	}
 
 	if err := core.identityStore.upsertEntity(ctx, &identity.Entity{
-		ID:            "abcd",
-		Name:          "abcd",
-		BucketKeyHash: "abcd",
+		ID:        "abcd",
+		Name:      "abcd",
+		BucketKey: "abcd",
 	}, nil, false); err != nil {
 		t.Fatal(err)
 	}

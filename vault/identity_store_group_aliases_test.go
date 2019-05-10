@@ -358,7 +358,7 @@ func TestIdentityStore_GroupAliases_MemDBIndexes(t *testing.T) {
 		ParentGroupIDs:  []string{"testparentgroupid1", "testparentgroupid2"},
 		MemberEntityIDs: []string{"testentityid1", "testentityid2"},
 		Policies:        []string{"testpolicy1", "testpolicy2"},
-		BucketKeyHash:   i.groupPacker.BucketKeyHashByItemID("testgroupid"),
+		BucketKey:       i.groupPacker.BucketKey("testgroupid"),
 	}
 
 	txn := i.db.Txn(true)

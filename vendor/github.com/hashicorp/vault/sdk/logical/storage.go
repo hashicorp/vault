@@ -86,17 +86,24 @@ func ScanView(ctx context.Context, view ClearableView, cb func(path string)) err
 
 // CollectKeys is used to collect all the keys in a view
 func CollectKeys(ctx context.Context, view ClearableView) ([]string, error) {
-	// Accumulate the keys
-	var existing []string
+	return CollectKeysWithPrefix(ctx, view, "")
+}
+
+// CollectKeysWithPrefix is used to collect all the keys in a view with a given prefix string
+func CollectKeysWithPrefix(ctx context.Context, view ClearableView, prefix string) ([]string, error) {
+	var keys []string
+
 	cb := func(path string) {
-		existing = append(existing, path)
+		if strings.HasPrefix(path, prefix) {
+			keys = append(keys, path)
+		}
 	}
 
 	// Scan for all the keys
 	if err := ScanView(ctx, view, cb); err != nil {
 		return nil, err
 	}
-	return existing, nil
+	return keys, nil
 }
 
 // ClearView is used to delete all the keys in a view

@@ -953,7 +953,7 @@ $ curl \
     "allow_localhost": true,
     "allow_subdomains": false,
     "allowed_domains": ["example.com", "foobar.com"],
-    "allow_uri_sans": ["example.com","spiffe://*"],
+    "allowed_uri_sans": ["example.com","spiffe://*"],
     "client_flag": true,
     "code_signing_flag": false,
     "key_bits": 2048,

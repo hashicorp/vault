@@ -31,15 +31,6 @@
             "type": "string"
           },
           "required": true
-        },
-        {
-          "name": "x-abc-token",
-          "description": "a header value",
-          "in": "header",
-          "schema": {
-            "type": "string",
-            "enum": ["a", "b", "c"]
-          }
         }
       ],
       "get": {
@@ -95,6 +86,11 @@
                     "description": "the name",
                     "default": "Larry",
                     "pattern": "\\w([\\w-.]*\\w)?"
+                  },
+                  "x-abc-token": {
+                    "type": "string",
+                    "description": "a header value",
+                    "enum": ["a", "b", "c"]
                   }
                 }
               }
