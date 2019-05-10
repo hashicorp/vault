@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	consulapi "github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
 	physConsul "github.com/hashicorp/vault/physical/consul"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -96,7 +96,7 @@ func TestStoragePacker_Sharding(t *testing.T) {
 	secret := &pb.Secret{
 		InternalData: randString,
 	}
-	secretJSON, err := jsonutil.EncodeJSON(secret)
+	secretProto, err := proto.Marshal(secret)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestStoragePacker_Sharding(t *testing.T) {
 	for i := 0; i < numEntries; i++ {
 		if err := packer.PutItem(ctx, &storagepacker.Item{
 			ID:   fmt.Sprintf("%05d", i),
-			Data: secretJSON,
+			Data: secretProto,
 		}); err != nil {
 			t.Fatal(err)
 		}

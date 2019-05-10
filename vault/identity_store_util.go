@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	proto "github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -76,8 +76,8 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 			}
 			// Set to the new prefix
 			for _, item := range bucket.Items {
-				// Parse the entity or group from proto.Any and encode it as
-				// JSON.
+				// Parse the entity or group from the Message (proto.Any) field
+				// and re-encode it as a proto message into the 'Data' field.
 				switch kind {
 				case "entity":
 					entity, err := c.identityStore.decodeEntity(item)
@@ -175,14 +175,14 @@ func (i *IdentityStore) encodeEntity(entity *identity.Entity) (*storagepacker.It
 		return nil, fmt.Errorf("nil entity")
 	}
 
-	entityJSON, err := jsonutil.EncodeJSON(entity)
+	entityProto, err := proto.Marshal(entity)
 	if err != nil {
 		return nil, err
 	}
 
 	return &storagepacker.Item{
 		ID:   entity.ID,
-		Data: entityJSON,
+		Data: entityProto,
 	}, nil
 }
 
@@ -191,14 +191,14 @@ func (i *IdentityStore) encodeGroup(group *identity.Group) (*storagepacker.Item,
 		return nil, fmt.Errorf("nil group")
 	}
 
-	groupJSON, err := jsonutil.EncodeJSON(group)
+	groupProto, err := proto.Marshal(group)
 	if err != nil {
 		return nil, err
 	}
 
 	return &storagepacker.Item{
 		ID:   group.ID,
-		Data: groupJSON,
+		Data: groupProto,
 	}, nil
 }
 
@@ -212,7 +212,7 @@ func (i *IdentityStore) decodeGroup(item *storagepacker.Item) (*identity.Group, 
 		return &group, nil
 	}
 
-	err := jsonutil.DecodeJSON(item.Data, &group)
+	err := proto.Unmarshal(item.Data, &group)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (i *IdentityStore) decodeEntity(item *storagepacker.Item) (*identity.Entity
 		return &entity, nil
 	}
 
-	err := jsonutil.DecodeJSON(item.Data, &entity)
+	err := proto.Unmarshal(item.Data, &entity)
 	if err != nil {
 		return nil, err
 	}
@@ -672,14 +672,12 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if persist {
 			// Persist the previous entity object
-			previousEntityJSON, err := jsonutil.EncodeJSON(previousEntity)
+			item, err := i.encodeEntity(previousEntity)
 			if err != nil {
 				return err
 			}
-			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
-				ID:   previousEntity.ID,
-				Data: previousEntityJSON,
-			})
+
+			err = i.entityPacker.PutItem(ctx, item)
 			if err != nil {
 				return err
 			}
