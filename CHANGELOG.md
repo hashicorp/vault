@@ -10,6 +10,10 @@ CHANGES:
    each entry that commonly don't contain any value, which can help in cases
    where audit log entries are above the maximum UDP packet size and others.
    See [GH-6387](https://github.com/hashicorp/vault/pull/6387) for details.
+ * backends: both PeriodicFunc and WALRollback functions will be called if 
+   both are provided. Previously WALRollback would only be called if PeriodicFunc 
+   was not set. See [GH-6717](https://github.com/hashicorp/vault/pull/6717) for 
+   details.
  * Go Modules change: Vault now uses Go Modules to manage dependencies. As a
    result to both reduce transitive dependencies for API library users and
    plugin authors, and to work around various conflicts, we have moved various
