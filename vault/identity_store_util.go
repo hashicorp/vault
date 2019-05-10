@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -36,7 +37,7 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	}
 
 	// Check for the legacy -> v2 upgrade case
-	upgradeLegacyStoragePacker := func(prefix string, packer storagepacker.StoragePacker) error {
+	upgradeLegacyStoragePacker := func(prefix string, packer storagepacker.StoragePacker, kind string) error {
 		c.logger.Trace("checking for identity storagepacker upgrade", "prefix", prefix)
 		bucketStorageView := logical.NewStorageView(c.identityStore.view, prefix+"buckets/")
 		vals, err := bucketStorageView.List(ctx, "")
@@ -75,6 +76,28 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 			}
 			// Set to the new prefix
 			for _, item := range bucket.Items {
+				// Parse the entity or group from proto.Any and encode it as
+				// JSON.
+				switch kind {
+				case "entity":
+					entity, err := c.identityStore.decodeEntity(item)
+					if err != nil {
+						return err
+					}
+					item, err = c.identityStore.encodeEntity(entity)
+					if err != nil {
+						return err
+					}
+				case "group":
+					group, err := c.identityStore.decodeGroup(item)
+					if err != nil {
+						return err
+					}
+					item, err = c.identityStore.encodeGroup(group)
+					if err != nil {
+						return err
+					}
+				}
 				packer.PutItem(ctx, item)
 			}
 		}
@@ -103,10 +126,10 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 		return nil
 	}
 
-	if err := upgradeLegacyStoragePacker(entityStoragePackerPrefix, c.identityStore.entityPacker); err != nil {
+	if err := upgradeLegacyStoragePacker(entityStoragePackerPrefix, c.identityStore.entityPacker, "entity"); err != nil {
 		return err
 	}
-	if err := upgradeLegacyStoragePacker(groupStoragePackerPrefix, c.identityStore.groupPacker); err != nil {
+	if err := upgradeLegacyStoragePacker(groupStoragePackerPrefix, c.identityStore.groupPacker, "group"); err != nil {
 		return err
 	}
 
@@ -145,6 +168,74 @@ func (c *Core) loadIdentityStoreArtifacts(ctx context.Context) error {
 	// Attempt to load identity artifacts once more after memdb is reset to
 	// accept case sensitive names
 	return loadFunc(ctx)
+}
+
+func (i *IdentityStore) encodeEntity(entity *identity.Entity) (*storagepacker.Item, error) {
+	if entity == nil {
+		return nil, fmt.Errorf("nil entity")
+	}
+
+	entityJSON, err := jsonutil.EncodeJSON(entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &storagepacker.Item{
+		ID:   entity.ID,
+		Data: entityJSON,
+	}, nil
+}
+
+func (i *IdentityStore) encodeGroup(group *identity.Group) (*storagepacker.Item, error) {
+	if group == nil {
+		return nil, fmt.Errorf("nil group")
+	}
+
+	groupJSON, err := jsonutil.EncodeJSON(group)
+	if err != nil {
+		return nil, err
+	}
+
+	return &storagepacker.Item{
+		ID:   group.ID,
+		Data: groupJSON,
+	}, nil
+}
+
+func (i *IdentityStore) decodeGroup(item *storagepacker.Item) (*identity.Group, error) {
+	var group identity.Group
+	if item.Message != nil {
+		err := ptypes.UnmarshalAny(item.Message, &group)
+		if err != nil {
+			return nil, err
+		}
+		return &group, nil
+	}
+
+	err := jsonutil.DecodeJSON(item.Data, &group)
+	if err != nil {
+		return nil, err
+	}
+
+	return &group, nil
+}
+
+func (i *IdentityStore) decodeEntity(item *storagepacker.Item) (*identity.Entity, error) {
+	var entity identity.Entity
+	if item.Message != nil {
+		err := ptypes.UnmarshalAny(item.Message, &entity)
+		if err != nil {
+			return nil, err
+		}
+		return &entity, nil
+	}
+
+	err := jsonutil.DecodeJSON(item.Data, &entity)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity, nil
 }
 
 func (i *IdentityStore) sanitizeName(name string) string {
@@ -248,8 +339,8 @@ func (i *IdentityStore) loadGroups(ctx context.Context) error {
 			// Need to check both map and Items in case it's during upgrading
 			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
 			items = append(items, bucket.Items...)
-			for id, message := range bucket.ItemMap {
-				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			for id, data := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: data})
 			}
 			for _, item := range items {
 				group, err := i.parseGroupFromBucketItem(item)
@@ -424,8 +515,8 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 			items := make([]*storagepacker.Item, 0, len(bucket.Items)+len(bucket.ItemMap))
 			items = append(items, bucket.Items...)
-			for id, message := range bucket.ItemMap {
-				items = append(items, &storagepacker.Item{ID: id, Message: message})
+			for id, data := range bucket.ItemMap {
+				items = append(items, &storagepacker.Item{ID: id, Data: data})
 			}
 			for _, item := range items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
@@ -581,13 +672,13 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if persist {
 			// Persist the previous entity object
-			marshaledPreviousEntity, err := ptypes.MarshalAny(previousEntity)
+			previousEntityJSON, err := jsonutil.EncodeJSON(previousEntity)
 			if err != nil {
 				return err
 			}
 			err = i.entityPacker.PutItem(ctx, &storagepacker.Item{
-				ID:      previousEntity.ID,
-				Message: marshaledPreviousEntity,
+				ID:   previousEntity.ID,
+				Data: previousEntityJSON,
 			})
 			if err != nil {
 				return err
@@ -602,16 +693,11 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	if persist {
-		entityAsAny, err := ptypes.MarshalAny(entity)
+		// Persist the entity
+		item, err := i.encodeEntity(entity)
 		if err != nil {
 			return err
 		}
-		item := &storagepacker.Item{
-			ID:      entity.ID,
-			Message: entityAsAny,
-		}
-
-		// Persist the entity object
 		err = i.entityPacker.PutItem(ctx, item)
 		if err != nil {
 			return err
@@ -1552,16 +1638,10 @@ func (i *IdentityStore) UpsertGroupInTxn(ctx context.Context, txn *memdb.Txn, gr
 	}
 
 	if persist {
-		groupAsAny, err := ptypes.MarshalAny(group)
+		item, err := i.encodeGroup(group)
 		if err != nil {
 			return err
 		}
-
-		item := &storagepacker.Item{
-			ID:      group.ID,
-			Message: groupAsAny,
-		}
-
 		sent, err := sendGroupUpgrade(i, group)
 		if err != nil {
 			return err

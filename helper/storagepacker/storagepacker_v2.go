@@ -12,7 +12,6 @@ import (
 
 	radix "github.com/armon/go-radix"
 	"github.com/golang/protobuf/proto"
-	any "github.com/golang/protobuf/ptypes/any"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
@@ -312,7 +311,7 @@ func (s *StoragePackerV2) shardBucket(ctx context.Context, bucket *LockedBucket,
 			LockEntry: lock,
 			Bucket: &Bucket{
 				Key:     fmt.Sprintf("%s/%s", bucket.Key, shardKey),
-				ItemMap: make(map[string]*any.Any),
+				ItemMap: make(map[string][]byte),
 			},
 		}
 		shards[shardKey] = shardedBucket
@@ -472,12 +471,12 @@ func (s *LockedBucket) upsert(item *Item) error {
 	}
 
 	if s.ItemMap == nil {
-		s.ItemMap = make(map[string]*any.Any)
+		s.ItemMap = make(map[string][]byte)
 	}
 
 	itemHash := GetItemIDHash(item.ID)
 
-	s.ItemMap[itemHash] = item.Message
+	s.ItemMap[itemHash] = item.Data
 	return nil
 }
 
@@ -591,14 +590,14 @@ func (s *StoragePackerV2) GetItem(ctx context.Context, itemID string) (*Item, er
 
 	itemHash := GetItemIDHash(itemID)
 
-	item, ok := bucket.ItemMap[itemHash]
+	data, ok := bucket.ItemMap[itemHash]
 	if !ok {
 		return nil, nil
 	}
 
 	return &Item{
-		ID:      itemID,
-		Message: item,
+		ID:   itemID,
+		Data: data,
 	}, nil
 }
 
@@ -610,6 +609,14 @@ func (s *StoragePackerV2) PutItem(ctx context.Context, item *Item) error {
 
 	if item.ID == "" {
 		return fmt.Errorf("missing ID in item")
+	}
+
+	if item.Data == nil {
+		return fmt.Errorf("missing data in item")
+	}
+
+	if item.Message != nil {
+		return fmt.Errorf("'Message' is deprecated; use 'Data' instead")
 	}
 
 	// Get the bucket key
